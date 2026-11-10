@@ -1,0 +1,50 @@
+.sicost-mappings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.sicost-mapping-search {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.sicost-mapping-search > button {
+  margin-left: auto;
+}
+.sicost-mapping-toolbar button {
+  height: 28px;
+  font-size: 13px;
+  padding: 0 10px;
+}
+.sicost-mapping-search > .sicost-field:first-child {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+.sicost-mapping-search > .sicost-field:nth-child(2) {
+  flex: 0 1 220px;
+}
+.sicost-mapping-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sicost-mapping-toolbar > span {
+  flex: 1;
+}
+.sicost-mapping-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sicost-mapping-hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-sub);
+}

@@ -1,0 +1,122 @@
+.me-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.me-setting-row {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.me-setting-row .sicost-field {
+  flex: 1;
+}
+.me-setting-row .sicost-field span {
+  font-size: 13px;
+  font-weight: 500;
+}
+.me-setting-row > p {
+  flex-basis: 100%;
+}
+.me-help {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 8px;
+}
+.me-quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--divider);
+}
+.me-quick-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.me-quick-caption button {
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  color: var(--primary);
+}
+.me-quick-link {
+  border: 0;
+  border-left: 3px solid transparent;
+  text-align: left;
+  min-height: 36px;
+  padding: 6px 10px 6px 12px;
+  font-size: 14px;
+  color: var(--text-sub);
+  font-weight: 400;
+  border-radius: 4px;
+}
+.me-quick-link:hover {
+  background: var(--head-bg);
+}
+.me-quick-empty {
+  font-size: 12px;
+  color: var(--text-sub);
+  padding: 2px 12px 4px;
+}
+.me-star {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-sub);
+}
+.me-star svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.me-star-selected {
+  color: #f59e0b;
+}
+.me-star-selected svg {
+  fill: currentColor;
+}
+.me-favorite-row,
+.me-column-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.me-favorite-row > span,
+.me-column-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.me-favorite-row button,
+.me-column-row button {
+  height: 28px;
+  padding: 0 6px;
+  font-size: 13px;
+}
+.me-column-row label {
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .me-setting-row {
+    align-items: stretch;
+  }
+  .me-favorite-row button,
+  .me-column-row button {
+    height: 36px;
+  }
+}

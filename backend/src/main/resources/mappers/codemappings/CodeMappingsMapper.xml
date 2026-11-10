@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.codemappings.CodeMappingsMapper">
+  <sql id="columns">
+    m.MAP_ID AS "mapId", m.SRC_TEXT AS "sourceText", m.CODE_GRP_ID AS "groupId",
+    m.CODE AS "code", c.CODE_NM AS "codeName", m.REG_USER_ID AS "regUserId",
+    m.REG_DTTM AS "regDttm", m.MOD_USER_ID AS "modUserId", m.MOD_DTTM AS "modDttm"
+  </sql>
+  <sql id="filters">
+    <where>
+      <if test="sourceText != null">AND strpos(m.SRC_TEXT, #{sourceText}) &gt; 0</if>
+      <if test="groupId != null">AND m.CODE_GRP_ID = #{groupId}</if>
+    </where>
+  </sql>
+  <select id="list" resultType="com.sicost.codemappings.CodeMappingRow">
+    SELECT <include refid="columns"/>
+    FROM TB_SY_CODE_MAP m JOIN TB_SY_CODE c ON c.CODE_GRP_ID=m.CODE_GRP_ID AND c.CODE=m.CODE
+    <include refid="filters"/>
+    ORDER BY m.SRC_TEXT, m.CODE_GRP_ID, m.MAP_ID LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">
+    SELECT count(*) FROM TB_SY_CODE_MAP m JOIN TB_SY_CODE c ON c.CODE_GRP_ID=m.CODE_GRP_ID AND c.CODE=m.CODE
+    <include refid="filters"/>
+  </select>
+  <select id="activeCodeName" resultType="string">
+    SELECT c.CODE_NM FROM TB_SY_CODE c JOIN TB_SY_CODE_GRP g ON g.CODE_GRP_ID=c.CODE_GRP_ID
+    WHERE c.CODE_GRP_ID=#{groupId} AND c.CODE=#{code} AND c.USE_YN='Y' AND c.DEL_YN='N'
+    FOR SHARE OF c, g
+  </select>
+  <select id="insert" resultType="long" affectData="true" flushCache="true">
+    INSERT INTO TB_SY_CODE_MAP (SRC_TEXT, CODE_GRP_ID, CODE, REG_USER_ID, REG_DTTM)
+    VALUES (#{sourceText}, #{groupId}, #{code}, #{userId}, #{occurredAt})
+    ON CONFLICT (SRC_TEXT,CODE_GRP_ID) DO NOTHING RETURNING MAP_ID
+  </select>
+  <select id="lock" resultType="com.sicost.codemappings.CodeMappingRow" flushCache="true">
+    SELECT <include refid="columns"/>
+    FROM TB_SY_CODE_MAP m JOIN TB_SY_CODE c ON c.CODE_GRP_ID=m.CODE_GRP_ID AND c.CODE=m.CODE
+    WHERE m.MAP_ID=#{mapId} FOR UPDATE OF m
+  </select>
+  <delete id="delete">DELETE FROM TB_SY_CODE_MAP WHERE MAP_ID=#{mapId}</delete>
+</mapper>

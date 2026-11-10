@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.me.PreferenceMapper">
+  <sql id="columns">USER_ID as "userId", PREF_TYPE_CD as "type", PREF_KEY as "key", PREF_VAL as "value", REG_USER_ID as "regUserId", REG_DTTM as "regDttm", MOD_USER_ID as "modUserId", MOD_DTTM as "modDttm"</sql>
+  <select id="list" resultType="com.sicost.me.PreferenceDtos$StoredPreference">
+    SELECT <include refid="columns"/> FROM TB_SY_USER_PREF WHERE USER_ID=#{userId} ORDER BY PREF_TYPE_CD,PREF_KEY
+  </select>
+  <select id="lock" resultType="com.sicost.me.PreferenceDtos$StoredPreference" useCache="false" flushCache="true">
+    SELECT <include refid="columns"/> FROM TB_SY_USER_PREF
+    WHERE USER_ID=#{userId} AND PREF_TYPE_CD=#{type} AND PREF_KEY=#{key} FOR UPDATE
+  </select>
+  <insert id="insert">
+    INSERT INTO TB_SY_USER_PREF (USER_ID,PREF_TYPE_CD,PREF_KEY,PREF_VAL,REG_USER_ID)
+    VALUES (#{id.userId},#{id.type},#{id.key},#{value},#{id.userId})
+  </insert>
+  <update id="update">
+    UPDATE TB_SY_USER_PREF SET PREF_VAL=#{value}, MOD_USER_ID=#{id.userId}, MOD_DTTM=clock_timestamp()
+    WHERE USER_ID=#{id.userId} AND PREF_TYPE_CD=#{id.type} AND PREF_KEY=#{id.key}
+  </update>
+  <delete id="delete">
+    DELETE FROM TB_SY_USER_PREF WHERE USER_ID=#{userId} AND PREF_TYPE_CD=#{type} AND PREF_KEY=#{key}
+  </delete>
+  <select id="screens" resultType="string">
+    SELECT DISTINCT SCRN_ID FROM TB_SY_MENU WHERE SCRN_ID IS NOT NULL AND USE_YN='Y' AND MENU_LVL=2 ORDER BY SCRN_ID
+  </select>
+  <select id="cashBaseMonth" resultType="string">
+    SELECT lpad(trunc(STD_VAL)::text,6,'0') FROM TB_SY_OPER_STD WHERE STD_CD='CASH_BASE_YM' ORDER BY APLY_BGN_YM DESC LIMIT 1
+  </select>
+</mapper>

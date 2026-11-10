@@ -1,0 +1,5538 @@
+{
+  "TB_SY_USER": {
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "user_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "email_addr",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pwd_hash",
+        "type": "varchar(200)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pwd_chg_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "temp_pwd_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "pwd_err_cnt",
+        "type": "numeric(2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "user_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "last_login_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mfa_use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "mfa_code_hash",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mfa_expr_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mfa_err_cnt",
+        "type": "numeric(2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "user_id"
+    ]
+  },
+  "TB_SY_ROLE": {
+    "columns": [
+      {
+        "name": "role_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "role_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "data_scope_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "snstv_view_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "sys_role_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "role_id"
+    ]
+  },
+  "TB_SY_USER_ROLE": {
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "role_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "user_id",
+      "role_id"
+    ]
+  },
+  "TB_SY_USER_SCOPE": {
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "scope_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "scope_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "user_id",
+      "scope_sn"
+    ]
+  },
+  "TB_SY_MENU": {
+    "columns": [
+      {
+        "name": "menu_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upper_menu_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "menu_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "scrn_id",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "menu_lvl",
+        "type": "numeric(1)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "pc_only_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "icon_nm",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "lock_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "menu_id"
+    ]
+  },
+  "TB_SY_ROLE_MENU_AUTH": {
+    "columns": [
+      {
+        "name": "role_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "menu_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "inq_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "upd_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "del_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "upld_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "dnld_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "cnfm_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "role_id",
+      "menu_id"
+    ]
+  },
+  "TB_SY_CODE_GRP": {
+    "columns": [
+      {
+        "name": "code_grp_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "code_grp_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sys_code_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "val_code_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "code_grp_id"
+    ]
+  },
+  "TB_SY_CODE": {
+    "columns": [
+      {
+        "name": "code_grp_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "code",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "code_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "del_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "code_val",
+        "type": "numeric(15,4)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "unit_nm",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "add_val1",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "add_val2",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "add_val3",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "code_grp_id",
+      "code"
+    ]
+  },
+  "TB_SY_CODE_MAP": {
+    "columns": [
+      {
+        "name": "map_id",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_CODE_MAP')"
+      },
+      {
+        "name": "src_text",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "code_grp_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "code",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "map_id"
+    ]
+  },
+  "TB_SY_OPER_STD": {
+    "columns": [
+      {
+        "name": "std_cd",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "std_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "std_val",
+        "type": "numeric(15,4)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "unit_nm",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "std_desc",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "std_cd",
+      "aply_bgn_ym"
+    ]
+  },
+  "TB_SY_USER_PREF": {
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pref_type_cd",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pref_key",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pref_val",
+        "type": "varchar(2000)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "user_id",
+      "pref_type_cd",
+      "pref_key"
+    ]
+  },
+  "TB_SY_NOTI": {
+    "columns": [
+      {
+        "name": "noti_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_NOTI')"
+      },
+      {
+        "name": "rcvr_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "noti_type_cd",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "noti_cn",
+        "type": "varchar(300)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "link_scrn_id",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "link_key",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "send_mthd_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "read_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "read_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "noti_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "noti_id"
+    ]
+  },
+  "TB_SY_CHG_HIST": {
+    "columns": [
+      {
+        "name": "hist_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_CHG_HIST')"
+      },
+      {
+        "name": "trgt_tbl_nm",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "trgt_key",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chg_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chg_item_nm",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "bfr_val",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "aft_val",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chg_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "hist_id"
+    ]
+  },
+  "TB_SY_ACCS_LOG": {
+    "columns": [
+      {
+        "name": "log_id",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_ACCS_LOG')"
+      },
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "act_type_cd",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "scrn_id",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "trgt_desc",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "client_ip",
+        "type": "varchar(45)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "act_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "log_id"
+    ]
+  },
+  "TB_SY_UPLD": {
+    "columns": [
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_UPLD')"
+      },
+      {
+        "name": "form_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "scrn_id",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "file_nm",
+        "type": "varchar(200)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "file_size",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "trgt_ym",
+        "type": "char(6)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "trgt_proj_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "trgt_dstrb_step_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "tot_row_cnt",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "succ_cnt",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "warn_cnt",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "err_cnt",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upld_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "upld_id"
+    ]
+  },
+  "TB_SY_UPLD_ERR": {
+    "columns": [
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rslt_sn",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rslt_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "row_no",
+        "type": "numeric(7)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "col_nm",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "input_val",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rsn_cn",
+        "type": "varchar(300)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "upld_id",
+      "rslt_sn"
+    ]
+  },
+  "TB_SY_AI_QNA": {
+    "columns": [
+      {
+        "name": "qna_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SY_AI_QNA')"
+      },
+      {
+        "name": "user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "qstn_cn",
+        "type": "varchar(1000)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ans_cn",
+        "type": "text",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "use_data_desc",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "base_ym",
+        "type": "char(6)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "prvs_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "ans_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "qstn_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "qna_id"
+    ]
+  },
+  "TB_SY_ADM_AREA": {
+    "columns": [
+      {
+        "name": "area_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "area_lvl_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upper_area_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sido_nm",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sido_full_nm",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sgg_nm",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "emd_nm",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "area_cd"
+    ]
+  },
+  "TB_SY_ADM_HDONG": {
+    "columns": [
+      {
+        "name": "hdong_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "area_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hdong_nm",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "hdong_cd",
+      "area_cd"
+    ]
+  },
+  "TB_BS_CLNT": {
+    "columns": [
+      {
+        "name": "clnt_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "clnt_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "clnt_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "biz_reg_no",
+        "type": "varchar(12)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ceo_nm",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "induty_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chrg_nm",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "telno",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "tax_email_addr",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "bank_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "acct_no_enc",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "dpstr_nm",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "clnt_id"
+    ]
+  },
+  "TB_BS_PART": {
+    "columns": [
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_nm",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hq_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "part_id"
+    ]
+  },
+  "TB_BS_PART_STD": {
+    "columns": [
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_end_ym",
+        "type": "char(6)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "part_ldr_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prft_dstrb_rt",
+        "type": "numeric(5,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "part_id",
+      "aply_bgn_ym"
+    ]
+  },
+  "TB_HR_DEV": {
+    "columns": [
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "mng_no",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "emp_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "blng_clnt_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "grade_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sub_job_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "jbps_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "drct_cls_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "jncmp_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "retire_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "work_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "home_area_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "home_addr",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "telno",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "dev_id"
+    ]
+  },
+  "TB_HR_DEV_SKILL": {
+    "columns": [
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "skill_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "dev_id",
+      "skill_nm"
+    ]
+  },
+  "TB_HR_DEV_PRC": {
+    "columns": [
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_end_ym",
+        "type": "char(6)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mon_uprc",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mon_pay_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "dev_id",
+      "aply_bgn_ym"
+    ]
+  },
+  "TB_HR_DEV_STAT": {
+    "columns": [
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "stat_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "work_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bgn_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "end_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "stat_rsn",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "close_leave_sn",
+        "type": "numeric(5)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "orgnl_leave_end_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "dev_id",
+      "stat_sn"
+    ]
+  },
+  "TB_HR_MON_PAY": {
+    "columns": [
+      {
+        "name": "pay_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "alwnc_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "insr_cmpny_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "insr_self_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "retire_rsv_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "incm_tax_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "wthld_tax_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "real_pay_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "vndr_sply_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "emp_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "drct_cls_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "pay_ym",
+      "dev_id"
+    ]
+  },
+  "TB_HR_CAND": {
+    "columns": [
+      {
+        "name": "cand_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cand_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "emp_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "blng_clnt_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "telno",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "email_addr",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "prvc_agre_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "prvc_agre_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "prvc_agre_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sub_job_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "grade_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "home_area_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "home_addr",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "hope_uprc",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "input_psbl_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntc_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "last_cntc_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cand_src_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "memo_cn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "cand_id"
+    ]
+  },
+  "TB_HR_CAND_SKILL": {
+    "columns": [
+      {
+        "name": "cand_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "skill_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "cand_id",
+      "skill_nm"
+    ]
+  },
+  "TB_HR_CAND_CNTC": {
+    "columns": [
+      {
+        "name": "cand_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntc_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntc_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntc_memo",
+        "type": "varchar(200)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntc_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "cand_id",
+      "cntc_sn"
+    ]
+  },
+  "TB_PJ_PROJ": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cust_clnt_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "ctrt_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "lose_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "lose_rsn_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "lose_memo",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "ctrt_bgn_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ctrt_end_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "work_plc_addr",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "est_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "orgnl_ctrt_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "ctrt_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bdgt_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "bdgt_manual_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "team_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "feature_cn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id"
+    ]
+  },
+  "TB_PJ_PROJ_PART": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chg_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "aply_bgn_ym"
+    ]
+  },
+  "TB_PJ_PROJ_CHG": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hist_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chg_item_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chg_item_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bfr_val",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "aft_val",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chg_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "hist_sn"
+    ]
+  },
+  "TB_PJ_MNPW_PLAN": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "plan_mm",
+        "type": "numeric(6,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "src_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "job_cd"
+    ]
+  },
+  "TB_PJ_STEP": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "step_sn",
+        "type": "numeric(2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_step_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "step_wght_rt",
+        "type": "numeric(5,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "plan_bgn_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "plan_end_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cmpl_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "step_sn"
+    ]
+  },
+  "TB_PJ_WEEK_MEMO": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "memo_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "wrt_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "this_week_cn",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "next_week_cn",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "req_cn",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "actl_prgrs_rt",
+        "type": "numeric(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "memo_sn"
+    ]
+  },
+  "TB_PJ_ISSUE": {
+    "columns": [
+      {
+        "name": "issue_id",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_PJ_ISSUE')"
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "issue_ttl",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "impr_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ddln_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "issue_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "actn_cn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "issue_id"
+    ]
+  },
+  "TB_PJ_TK_DSTRB": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dstrb_step_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "row_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dstrb_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "row_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "item_nm",
+        "type": "varchar(50)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "dstrb_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "dstrb_step_cd",
+      "row_sn",
+      "dstrb_ym"
+    ]
+  },
+  "TB_PJ_DRCT_EXPS": {
+    "columns": [
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "exps_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "exps_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "drct_exps_item_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "proj_id",
+      "exps_ym",
+      "exps_sn"
+    ]
+  },
+  "TB_PJ_ASGN": {
+    "columns": [
+      {
+        "name": "asgn_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "input_bgn_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "input_end_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ctrt_mm",
+        "type": "numeric(4,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bill_uprc",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "input_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ctrt_dev_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "ext_psbl_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "ext_cnt",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "early_wthdr_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "asgn_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "asgn_id"
+    ]
+  },
+  "TB_PJ_ASGN_HIST": {
+    "columns": [
+      {
+        "name": "asgn_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hist_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "asgn_chg_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bfr_val",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "aft_val",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "asgn_chg_rsn_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chg_memo",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "new_uprc",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "new_ctrt_mm",
+        "type": "numeric(4,2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rtro_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "close_cross_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "crct_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "crct_trgt_sn",
+        "type": "numeric(5)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "asgn_id",
+      "hist_sn"
+    ]
+  },
+  "TB_PJ_ASGN_MON": {
+    "columns": [
+      {
+        "name": "asgn_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "input_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "input_day_cnt",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "mon_mm",
+        "type": "numeric(6,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aply_uprc",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sales_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "fix_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "asgn_id",
+      "input_ym"
+    ]
+  },
+  "TB_SL_OPP": {
+    "columns": [
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "opp_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cust_clnt_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_step_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "win_prbl_rt",
+        "type": "numeric(5,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prbl_manual_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "expct_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bgn_plan_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ctrt_type_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "expct_prd_mcnt",
+        "type": "numeric(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "next_todo_cn",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "next_todo_ddln_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "work_plc_addr",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "opp_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "expct_prft_rt",
+        "type": "numeric(7,2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "aprv_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aprv_prft_rt",
+        "type": "numeric(7,2)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rslt_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "lose_rsn_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "lose_memo",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "opp_id"
+    ]
+  },
+  "TB_SL_OPP_NEED": {
+    "columns": [
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "need_sn",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "grade_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "need_cnt",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prd_mcnt",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "mon_mm",
+        "type": "numeric(4,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "expct_uprc",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "opp_id",
+      "need_sn"
+    ]
+  },
+  "TB_SL_TENT_ASGN": {
+    "columns": [
+      {
+        "name": "tent_id",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_SL_TENT_ASGN')"
+      },
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "need_sn",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "tent_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "src_scrn_id",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proc_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "tent_id"
+    ]
+  },
+  "TB_SL_APRV_HIST": {
+    "columns": [
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hist_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "aprv_act_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prft_rt",
+        "type": "numeric(7,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "act_rsn",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "opp_id",
+      "hist_sn"
+    ]
+  },
+  "TB_SL_RCMD_LOG": {
+    "columns": [
+      {
+        "name": "rcmd_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rank_ord",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcmd_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "opp_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "need_sn",
+        "type": "numeric(3)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "job_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bgn_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "req_grade_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "tot_score",
+        "type": "numeric(5,1)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "score_dtl",
+        "type": "varchar(500)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcmd_rsn",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "user_act_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rcmd_excl_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "act_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "act_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "rcmd_id",
+      "rank_ord"
+    ]
+  },
+  "TB_BL_BILL": {
+    "columns": [
+      {
+        "name": "bill_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bill_ord",
+        "type": "numeric(3)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bill_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "bill_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sply_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "vat_rt",
+        "type": "numeric(5,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "vat_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "tot_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcpt_sum_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "unpaid_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_due_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "tax_invc_no",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "cncl_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "bill_id"
+    ]
+  },
+  "TB_BL_RCPT": {
+    "columns": [
+      {
+        "name": "rcpt_id",
+        "type": "numeric(12)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_BL_RCPT')"
+      },
+      {
+        "name": "bill_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcpt_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcpt_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cncl_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "cncl_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "rcpt_id"
+    ]
+  },
+  "TB_BL_DUN_HIST": {
+    "columns": [
+      {
+        "name": "bill_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dun_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dun_step",
+        "type": "numeric(1)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "send_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcvr_desc",
+        "type": "varchar(300)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "send_mthd_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "resend_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "bill_id",
+      "dun_sn"
+    ]
+  },
+  "TB_CO_MON_COST": {
+    "columns": [
+      {
+        "name": "cost_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "asgn_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "asgn_mm",
+        "type": "numeric(6,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "free_mm",
+        "type": "numeric(6,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "labor_alloc_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "team_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "drct_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cost_cls_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "ctrt_type_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "fix_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "cost_ym",
+      "dev_id",
+      "proj_id",
+      "asgn_id"
+    ]
+  },
+  "TB_CO_MON_PL": {
+    "columns": [
+      {
+        "name": "pl_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "alloc_cost_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "idle_cost_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "drct_exps_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sales_cost_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "gross_prft_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sga_input_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "indrct_labor_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rnd_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sga_tot_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prev_adj_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "oprt_prft_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "nopr_incm_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "nopr_exps_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "corp_tax_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "net_prft_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "migr_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "fix_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "pl_ym"
+    ]
+  },
+  "TB_CO_PREV_ADJ": {
+    "columns": [
+      {
+        "name": "adj_id",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_CO_PREV_ADJ')"
+      },
+      {
+        "name": "aply_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "trgt_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "adj_item_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "adj_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "adj_rsn",
+        "type": "varchar(300)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "adj_id"
+    ]
+  },
+  "TB_CO_PART_SETL": {
+    "columns": [
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "setl_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "corp_card_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_prft_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "setl_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cnfm_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cnfm_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "cncl_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "part_id",
+      "setl_ym"
+    ]
+  },
+  "TB_CO_PART_SETL_DTL": {
+    "columns": [
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "setl_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dev_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "emp_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "proj_nm_list",
+        "type": "varchar(1000)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "mm",
+        "type": "numeric(6,2)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "uprc_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_exps_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "retire_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cost_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "diff_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "prft_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "part_id",
+      "setl_ym",
+      "dev_id"
+    ]
+  },
+  "TB_FI_ITEM": {
+    "columns": [
+      {
+        "name": "fin_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "item_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "fin_cls_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sga_item_cd",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "item_nm",
+        "type": "varchar(50)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "vat_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "io_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rpt_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "auto_fill_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "fin_ym",
+      "item_sn"
+    ]
+  },
+  "TB_FI_CORP_TAX": {
+    "columns": [
+      {
+        "name": "tax_yr",
+        "type": "char(4)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "est_tax_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "tax_yr"
+    ]
+  },
+  "TB_FI_TAX_PAY": {
+    "columns": [
+      {
+        "name": "tax_yr",
+        "type": "char(4)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_type_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_due_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_amt",
+        "type": "numeric(15)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "pay_dt",
+        "type": "date",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "pay_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "tax_yr",
+      "pay_type_cd"
+    ]
+  },
+  "TB_FI_LOAN": {
+    "columns": [
+      {
+        "name": "loan_sn",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_FI_LOAN')"
+      },
+      {
+        "name": "loan_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "io_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cntprt_nm",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "loan_sn"
+    ]
+  },
+  "TB_FI_CARD": {
+    "columns": [
+      {
+        "name": "card_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "card_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "card_no_l4",
+        "type": "char(4)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'Y'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "card_id"
+    ]
+  },
+  "TB_FI_CARD_MON": {
+    "columns": [
+      {
+        "name": "pay_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "card_sum_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "cash_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "edit_yn",
+        "type": "char(1)",
+        "nullable": false,
+        "default": "'N'"
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "pay_ym"
+    ]
+  },
+  "TB_FI_CARD_PAY": {
+    "columns": [
+      {
+        "name": "pay_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "card_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "pay_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "pay_ym",
+      "card_id"
+    ]
+  },
+  "TB_FI_XFER": {
+    "columns": [
+      {
+        "name": "xfer_sn",
+        "type": "numeric(10)",
+        "nullable": false,
+        "default": "nextval('SQ_TB_FI_XFER')"
+      },
+      {
+        "name": "xfer_dt",
+        "type": "date",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "xfer_cls_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "item_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rcvr_nm",
+        "type": "varchar(100)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "rmrk",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "xfer_sn"
+    ]
+  },
+  "TB_FI_BIZ_PLAN": {
+    "columns": [
+      {
+        "name": "plan_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "part_id",
+        "type": "varchar(20)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sales_tgt_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "oprt_prft_tgt_amt",
+        "type": "numeric(15)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "upld_id",
+        "type": "numeric(12)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "plan_ym",
+      "part_id"
+    ]
+  },
+  "TB_CL_CLOSE": {
+    "columns": [
+      {
+        "name": "close_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "close_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "close_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "close_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "close_ym"
+    ]
+  },
+  "TB_CL_CLOSE_HIST": {
+    "columns": [
+      {
+        "name": "close_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "hist_sn",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "act_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "act_rsn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "remain_chk_cn",
+        "type": "varchar(500)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      }
+    ],
+    "primaryKey": [
+      "close_ym",
+      "hist_sn"
+    ]
+  },
+  "TB_CL_CLOSE_CHK": {
+    "columns": [
+      {
+        "name": "close_ym",
+        "type": "char(6)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chk_item_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chk_stat_cd",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "chk_cnt",
+        "type": "numeric(7)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chk_cn",
+        "type": "varchar(300)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "link_scrn_id",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "chk_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "close_ym",
+      "chk_item_cd"
+    ]
+  },
+  "TB_SY_CALC_RULE": {
+    "columns": [
+      {
+        "name": "calc_id",
+        "type": "varchar(10)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "sfr_id",
+        "type": "varchar(10)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "calc_nm",
+        "type": "varchar(100)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "frml_cn",
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "dtl_cn",
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "use_scrn_cn",
+        "type": "varchar(200)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "sort_ord",
+        "type": "numeric(5)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_user_id",
+        "type": "varchar(30)",
+        "nullable": false,
+        "default": null
+      },
+      {
+        "name": "reg_dttm",
+        "type": "timestamp",
+        "nullable": false,
+        "default": "CURRENT_TIMESTAMP"
+      },
+      {
+        "name": "mod_user_id",
+        "type": "varchar(30)",
+        "nullable": true,
+        "default": null
+      },
+      {
+        "name": "mod_dttm",
+        "type": "timestamp",
+        "nullable": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "calc_id"
+    ]
+  }
+}
