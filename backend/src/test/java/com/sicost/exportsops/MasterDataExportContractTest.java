@@ -41,6 +41,7 @@ class MasterDataExportContractTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @MockBean MasterDataExportMapper mapper;
+    @MockBean PeopleExportService people;
     @MockBean AccessLogMapper logs;
     @MockBean CurrentUserProvider users;
     @MockBean AccountCipher accounts;
@@ -171,4 +172,16 @@ class MasterDataExportContractTest {
         assertThat(spools()).isEqualTo(before); verify(clients).close(); verifyNoInteractions(logs);
     }
     @Test void successfulTransmissionDeletesSpool() throws Exception {var before=spools(); download(clientRequest()); assertThat(spools()).isEqualTo(before);}
+
+    @Test void peopleViewsAreRoutedToThePeopleExportAndExistingViewsAreNot() throws Exception {
+        when(people.create(any(), any())).thenThrow(new ApiException(400, "VALIDATION_ERROR", "조건 오류", "columns", null));
+        mvc.perform(post("/api/exports/master-data").contentType("application/json")
+            .content("{\"view\":\"DEVELOPERS\",\"filters\":{},\"columns\":[\"name\"]}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("columns"));
+        mvc.perform(post("/api/exports/master-data").contentType("application/json")
+            .content("{\"view\":\"CANDIDATES\",\"filters\":{},\"columns\":[\"name\"]}")).andExpect(status().isBadRequest());
+        verify(people, times(2)).create(any(), any());
+        mvc.perform(post("/api/exports/master-data").contentType("application/json")
+            .content("{\"view\":\"ZZZ\",\"filters\":{},\"columns\":[\"name\"]}")).andExpect(status().isBadRequest());
+        verify(people, times(2)).create(any(), any());
+    }
 }

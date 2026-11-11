@@ -35,7 +35,10 @@ export function MappingDeleteDialog({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.mapId}>
+                <tr
+                  data-testid={`mapping-delete-row-${String(row.mapId).toLowerCase()}`}
+                  key={row.mapId}
+                >
                   <td>{row.sourceText}</td>
                   <td>{row.groupId}</td>
                   <td>

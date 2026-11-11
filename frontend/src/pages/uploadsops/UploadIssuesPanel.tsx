@@ -7,12 +7,14 @@ export type UploadIssuesPanelProps = {
   uploadId: number;
   initialPage: api.UploadIssuesPage;
   disabled?: boolean;
+  screenId?: string;
 };
 // SCR-UI-15: readonly saved diagnostics inside the existing B7 dialog, never a new route.
 export function UploadIssuesPanel({
   uploadId,
   initialPage,
   disabled = false,
+  screenId = "UI-15",
 }: UploadIssuesPanelProps) {
   const [result, setResult] = useState(initialPage);
   const [severity, setSeverity] = useState<api.Severity>("");
@@ -97,7 +99,7 @@ export function UploadIssuesPanel({
     <section
       className="upload-issues"
       data-testid="upload-issues-panel"
-      data-screen-id="UI-15"
+      data-screen-id={screenId}
       aria-label="검사 문제"
     >
       <div className="upload-issues-toolbar">

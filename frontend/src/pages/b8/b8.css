@@ -1,0 +1,18 @@
+.b8-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.b8-upload-actions > [role="alert"] {
+  flex-basis: 100%;
+  color: var(--bad);
+  background: var(--bad-bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+@media (max-width: 767px) {
+  .b8-upload-actions {
+    display: none;
+  }
+}

@@ -1,0 +1,22 @@
+.sicost-address {
+  min-width: 0;
+}
+.sicost-address-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.sicost-address-fields .sicost-field {
+  flex: 1 1 140px;
+}
+.sicost-address-hint {
+  margin-top: 8px;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+@media (max-width: 767px) {
+  .sicost-address-fields .sicost-field {
+    flex-basis: 100%;
+  }
+}

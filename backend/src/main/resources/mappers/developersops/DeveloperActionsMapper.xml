@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.developersops.DeveloperActionsMapper">
+  <sql id="base">
+    d.dev_id AS "id",d.mng_no AS "managementNo",d.dev_nm AS "name",d.emp_type_cd AS "employeeType",
+    d.blng_clnt_id AS "companyId",d.grade_cd AS "gradeCode",d.job_cd AS "jobCode",d.sub_job_cd AS "subJobCode",
+    d.jbps_cd AS "positionCode",d.drct_cls_cd AS "directClass",d.part_id AS "partId",d.jncmp_dt AS "hireDate",
+    d.retire_dt AS "retireDate",d.work_stat_cd AS "status",d.home_area_cd AS "homeAreaCode",d.home_addr AS "homeAddress",
+    d.telno AS "phone",d.use_yn AS "useYn",d.reg_user_id AS "regUserId",d.reg_dttm AS "regDttm",
+    d.mod_user_id AS "modUserId",d.mod_dttm AS "modDttm"
+  </sql>
+  <select id="developer" resultType="com.sicost.developersops.DeveloperActionsDtos$Base">
+    SELECT <include refid="base"/> FROM tb_hr_dev d WHERE d.dev_id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="prices" resultType="map">
+    SELECT dev_id AS "devId",aply_bgn_ym AS "effectiveMonth",aply_end_ym AS "endMonth",mon_uprc AS "monthlyRate",
+    mon_pay_amt AS "monthlyPay",reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_hr_dev_prc WHERE dev_id=#{id} ORDER BY aply_bgn_ym<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="skills" resultType="map">
+    SELECT dev_id AS "devId",skill_nm AS "name",sort_ord AS "sortOrder",reg_user_id AS "regUserId",reg_dttm AS "regDttm",
+    mod_user_id AS "modUserId",mod_dttm AS "modDttm" FROM tb_hr_dev_skill WHERE dev_id=#{id} ORDER BY skill_nm<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="states" resultType="map">
+    SELECT dev_id AS "devId",stat_sn AS "sn",work_stat_cd AS "state",bgn_dt AS "startDate",end_dt AS "endDate",
+    stat_rsn AS "reason",close_leave_sn AS "closeLeaveSn",orgnl_leave_end_dt AS "originalLeaveEndDate",
+    reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_hr_dev_stat WHERE dev_id=#{id} ORDER BY stat_sn<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="selection" resultType="com.sicost.developersops.DeveloperActionsDtos$Base">
+    SELECT <include refid="base"/> FROM tb_hr_dev d LEFT JOIN tb_bs_clnt c ON c.clnt_id=d.blng_clnt_id
+    LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=d.grade_cd
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=d.job_cd
+    LEFT JOIN LATERAL (SELECT max(input_end_dt) withdrawal FROM tb_pj_asgn a WHERE a.dev_id=d.dev_id
+      AND a.asgn_stat_cd='ACT' AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today}) a ON true
+    LEFT JOIN LATERAL (SELECT mon_uprc FROM tb_hr_dev_prc p WHERE p.dev_id=d.dev_id
+      AND p.aply_bgn_ym&lt;=to_char(#{today}::date,'YYYYMM')
+      AND (p.aply_end_ym IS NULL OR p.aply_end_ym&gt;=to_char(#{today}::date,'YYYYMM')) ORDER BY p.aply_bgn_ym DESC LIMIT 1) p ON true
+    <where>
+      <if test="employeeType != null">AND d.emp_type_cd=#{employeeType}</if>
+      <if test="jobCode != null">AND d.job_cd=#{jobCode}</if>
+      <if test="directClass != null">AND d.drct_cls_cd=#{directClass}</if>
+      <if test="workStatus != null">AND d.work_stat_cd=#{workStatus}</if>
+      <if test="!includeStopped">AND d.use_yn='Y'</if>
+      <if test="q != null">AND (strpos(d.dev_nm,#{q})&gt;0 OR strpos(d.mng_no,#{q})&gt;0)</if>
+    </where>
+    ORDER BY <choose>
+      <when test="sort == 'companyName'">c.clnt_nm</when><when test="sort == 'employeeType'">d.emp_type_cd</when>
+      <when test="sort == 'grade'">g.code_nm</when><when test="sort == 'job'">j.code_nm</when>
+      <when test="sort == 'status'">d.work_stat_cd</when><when test="sort == 'withdrawalDate'">a.withdrawal</when>
+      <when test="sort == 'monthlyRate'">p.mon_uprc</when><otherwise>d.dev_nm</otherwise>
+    </choose><choose><when test="direction == 'DESC'"> DESC</when><otherwise> ASC</otherwise></choose> NULLS LAST,
+    <if test="sort == null">d.mng_no ASC,</if>d.dev_id ASC
+  </select>
+  <select id="ids" resultType="string">SELECT dev_id FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="calculatedStatus" resultType="string">
+    SELECT CASE WHEN d.retire_dt&lt;#{today} THEN 'RETIRE'
+      WHEN EXISTS(SELECT 1 FROM tb_hr_dev_stat s WHERE s.dev_id=d.dev_id AND s.work_stat_cd='LEAVE'
+        AND s.bgn_dt&lt;=#{today} AND (s.end_dt IS NULL OR s.end_dt&gt;=#{today})) THEN 'LEAVE'
+      WHEN EXISTS(SELECT 1 FROM tb_pj_asgn a WHERE a.dev_id=d.dev_id AND a.asgn_stat_cd='ACT'
+        AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today}) THEN
+        CASE WHEN (SELECT max(a.input_end_dt) FROM tb_pj_asgn a WHERE a.dev_id=d.dev_id AND a.asgn_stat_cd='ACT'
+          AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today})&lt;=#{threshold} THEN 'WTHDR' ELSE 'INPUT' END
+      ELSE 'IDLE' END FROM tb_hr_dev d WHERE d.dev_id=#{id}
+  </select>
+  <select id="blockingProjects" resultType="com.sicost.developersops.DeveloperActionsDtos$Project">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.dev_id=#{id} AND a.asgn_stat_cd='ACT'
+    AND a.input_end_dt&gt;=#{today} ORDER BY a.input_bgn_dt DESC,a.asgn_id
+  </select>
+  <select id="assignments" resultType="com.sicost.developersops.DeveloperActionsDtos$Assignment">
+    SELECT a.asgn_id AS "id",p.proj_id AS "projectId",p.proj_nm AS "projectName",a.job_cd AS "jobCode",
+    coalesce(j.code_nm,a.job_cd) AS "jobName",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate",
+    a.ctrt_mm::text AS "contractMm",a.asgn_stat_cd AS "assignmentStatus"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=a.job_cd WHERE a.dev_id=#{id}
+    ORDER BY a.input_bgn_dt DESC,a.asgn_id ASC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="assignmentCount" resultType="long">SELECT count(*) FROM tb_pj_asgn WHERE dev_id=#{id}</select>
+  <select id="activeJob" resultType="int">SELECT count(*) FROM tb_sy_code WHERE code_grp_id='JOB' AND code=#{code} AND use_yn='Y' AND del_yn='N'</select>
+  <update id="status">UPDATE tb_hr_dev SET use_yn=#{useYn},mod_user_id=#{actor},mod_dttm=#{now} WHERE dev_id=#{id}</update>
+  <update id="recalculate">UPDATE tb_hr_dev SET work_stat_cd=#{status},use_yn=#{useYn},mod_user_id=#{actor},mod_dttm=#{now} WHERE dev_id=#{id}</update>
+</mapper>

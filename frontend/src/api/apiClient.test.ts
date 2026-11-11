@@ -10,6 +10,144 @@ const cases: {
   status?: number;
 }[] = [
   {
+    name: "getAreaSidos",
+    path: "/api/areas/sidos",
+    method: "GET",
+    call: () => api.getAreaSidos(),
+  },
+  {
+    name: "getAreaChildren",
+    path: "/api/areas/children?parentCode=1100000000&level=SGG",
+    method: "GET",
+    call: () => api.getAreaChildren("1100000000", "SGG"),
+  },
+  {
+    name: "getAreaPath",
+    path: "/api/areas/1100000000/path",
+    method: "GET",
+    call: () => api.getAreaPath("1100000000"),
+  },
+  {
+    name: "getDevelopers",
+    path: "/api/developers?page=1&size=20",
+    method: "GET",
+    call: () => api.getDevelopers({ page: 1, size: 20 }),
+  },
+  {
+    name: "getDeveloper",
+    path: "/api/developers/DEV-000901",
+    method: "GET",
+    call: () => api.getDeveloper("DEV-000901"),
+  },
+  {
+    name: "getDeveloperSelection",
+    path: "/api/developers/selection?includeStopped=true",
+    method: "GET",
+    call: () => api.getDeveloperSelection({ includeStopped: true }),
+  },
+  {
+    name: "getDeveloperAssignments",
+    path: "/api/developers/DEV-000901/assignments?page=2&size=20",
+    method: "GET",
+    call: () => api.getDeveloperAssignments("DEV-000901", 2, 20),
+  },
+  {
+    name: "getDeveloperStates",
+    path: "/api/developers/DEV-000901/states",
+    method: "GET",
+    call: () => api.getDeveloperStates("DEV-000901"),
+  },
+  {
+    name: "createDeveloperState",
+    path: "/api/developers/DEV-000901/states",
+    method: "POST",
+    call: () =>
+      api.createDeveloperState("DEV-000901", {
+        state: "WORK",
+        startDate: "2026-11-11",
+        reason: null,
+        expectedRevision: "rev",
+      }),
+    body: {
+      state: "WORK",
+      startDate: "2026-11-11",
+      reason: null,
+      expectedRevision: "rev",
+    },
+  },
+  {
+    name: "putDeveloperStateEnd",
+    path: "/api/developers/DEV-000901/states/9/end",
+    method: "PATCH",
+    call: () =>
+      api.putDeveloperStateEnd("DEV-000901", 9, {
+        endDate: null,
+        expectedRevision: "rev",
+      }),
+    body: { endDate: null, expectedRevision: "rev" },
+  },
+  {
+    name: "saveDeveloperStateCancel",
+    path: "/api/developers/DEV-000901/states/9/cancel",
+    method: "POST",
+    call: () =>
+      api.saveDeveloperStateCancel("DEV-000901", 9, {
+        reason: "취소",
+        expectedRevision: "rev",
+      }),
+    body: { reason: "취소", expectedRevision: "rev" },
+  },
+  {
+    name: "saveDeveloperBulkStatus",
+    path: "/api/developers/bulk-status",
+    method: "POST",
+    call: () =>
+      api.saveDeveloperBulkStatus("N", [{ id: "DEV-000901", revision: "rev" }]),
+    body: { targetUseYn: "N", items: [{ id: "DEV-000901", revision: "rev" }] },
+  },
+  {
+    name: "getCandidates",
+    path: "/api/candidates?page=2&size=20",
+    method: "GET",
+    call: () => api.getCandidates({ page: 2, size: 20 }),
+  },
+  {
+    name: "getCandidate",
+    path: "/api/candidates/CAND-900001",
+    method: "GET",
+    call: () => api.getCandidate("CAND-900001"),
+  },
+  {
+    name: "getCandidateSummary",
+    path: "/api/candidates/summary",
+    method: "GET",
+    call: () => api.getCandidateSummary(),
+  },
+  {
+    name: "getCandidateContacts",
+    path: "/api/candidates/CAND-900001/contacts?page=2&size=20",
+    method: "GET",
+    call: () => api.getCandidateContacts("CAND-900001", 2, 20),
+  },
+  {
+    name: "createCandidateContact",
+    path: "/api/candidates/CAND-900001/contacts",
+    method: "POST",
+    call: () =>
+      api.createCandidateContact("CAND-900001", {
+        contactStatus: "DONE",
+        memo: "연락",
+        expectedRevision: "rev",
+      }),
+    body: { contactStatus: "DONE", memo: "연락", expectedRevision: "rev" },
+  },
+  {
+    name: "getPeopleHistory",
+    path: "/api/people-history?targetType=DEVELOPER&targetId=DEV-000901&page=1&size=50",
+    method: "GET",
+    call: () => api.getPeopleHistory("DEVELOPER", "DEV-000901"),
+  },
+  {
     name: "getBusinessUsers",
     path: "/api/business-users",
     method: "GET",
@@ -414,6 +552,32 @@ const cases: {
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
   it.each(["validate", "apply"] as const)(
+    "B8 %s 등록은 feature 전송 계층을 그대로 사용한다",
+    async (operation) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            meta: {},
+            data: { uploadId: 123 },
+          }),
+        ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "developers.xlsx");
+      if (operation === "validate") await api.createB8Validation(file);
+      else await api.saveB8Apply(file, 123);
+      const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
+      expect(path).toBe(`/api/excel/B8/${operation}`);
+      expect(options.method).toBe("POST");
+      expect(new Headers(options.headers).has("Content-Type")).toBe(false);
+      expect((options.body as FormData).get("file")).toBe(file);
+      expect((options.body as FormData).get("uploadId")).toBe(
+        operation === "apply" ? "123" : null,
+      );
+    },
+  );
+  it.each(["validate", "apply"] as const)(
     "B7 %s는 multipart 경계를 브라우저에 맡긴다",
     async (operation) => {
       const fetcher = vi.fn().mockResolvedValue(
@@ -442,6 +606,11 @@ describe("승인 API 등록", () => {
     },
   );
   it.each([
+    {
+      path: "/api/excel/B8/template",
+      call: () => api.getB8Template(),
+      filename: "B8_개발자양식_20261111_120000.xlsx",
+    },
     {
       path: "/api/excel/B7/template",
       call: () => api.getB7Template(),

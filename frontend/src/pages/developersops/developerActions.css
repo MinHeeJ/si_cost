@@ -1,0 +1,33 @@
+.developer-bulk-toolbar,
+.developer-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.developer-bulk-toolbar {
+  padding: 10px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--primary-bg);
+  font-size: 13px;
+}
+.developer-assignments-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.developer-secondary {
+  display: block;
+  color: var(--text-sub);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.developer-status-actions [role="alert"] {
+  flex-basis: 100%;
+}
+@media (max-width: 767px) {
+  .developer-bulk-toolbar {
+    display: none;
+  }
+}

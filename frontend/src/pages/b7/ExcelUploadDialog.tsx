@@ -4,21 +4,49 @@ import { Dialog } from "../../shared/Dialog";
 import { UploadIssuesPanel } from "../uploadsops/UploadIssuesPanel";
 import * as api from "./b7Api";
 import "./b7.css";
+export type ImportNumberRow = {
+  rowNumber: number;
+  managementNo: string;
+  id?: string;
+};
+export type UploadWorkflow = {
+  validate(
+    file: File,
+  ): Promise<api.B7Validation & { expectedNumbers?: ImportNumberRow[] }>;
+  apply(
+    file: File,
+    uploadId: number,
+  ): Promise<api.B7Applied & { finalNumbers?: ImportNumberRow[] }>;
+};
 
 // SCR-UI-15: B7 dialog lives in the retained clients tab, never in another route.
 export type ExcelUploadDialogProps = {
   onClose(): void;
   onApplied(): void | Promise<void>;
   onDirtyChange?(dirty: boolean): void;
+  workflow?: UploadWorkflow;
+  title?: string;
+  description?: string;
+  screenId?: string;
+  onTemplate?(): Promise<void>;
 };
 export function ExcelUploadDialog({
   onClose,
   onApplied,
   onDirtyChange,
+  workflow,
+  title = "엑셀 업로드 결과 · 거래처",
+  description = "B7 거래처 등록 · XLSX 10MiB 이하 · 첫 시트 최대 5,000행. 검사 후 같은 파일로 전량 반영합니다.",
+  screenId = "UI-15",
+  onTemplate,
 }: ExcelUploadDialogProps) {
   const [file, setFile] = useState<File>();
-  const [result, setResult] = useState<api.B7Validation>();
-  const [applied, setApplied] = useState<api.B7Applied>();
+  const [result, setResult] = useState<
+    api.B7Validation & { expectedNumbers?: ImportNumberRow[] }
+  >();
+  const [applied, setApplied] = useState<
+    api.B7Applied & { finalNumbers?: ImportNumberRow[] }
+  >();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false),
     [confirmClose, setConfirmClose] = useState(false);
@@ -36,7 +64,13 @@ export function ExcelUploadDialog({
     try {
       await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "요청을 처리하지 못했습니다.");
+      setError(
+        e instanceof ApiError
+          ? `${e.message} (요청 ID: ${e.body.requestId})`
+          : e instanceof Error
+            ? e.message
+            : "요청을 처리하지 못했습니다.",
+      );
     } finally {
       busy.current = false;
       setPending(false);
@@ -45,16 +79,19 @@ export function ExcelUploadDialog({
   async function check() {
     if (!file) return;
     await run(async () => {
-      setResult(await api.createB7Validation(file));
+      setResult(await (workflow?.validate ?? api.createB7Validation)(file));
       setApplied(undefined);
     });
   }
   async function apply() {
     if (!file || !result?.canApply || applied) return;
     await run(async () => {
-      let saved: api.B7Applied;
+      let saved: api.B7Applied & { finalNumbers?: ImportNumberRow[] };
       try {
-        saved = await api.saveB7Apply(file, result.uploadId);
+        saved = await (workflow?.apply ?? api.saveB7Apply)(
+          file,
+          result.uploadId,
+        );
       } catch (e) {
         if (e instanceof ApiError && e.status === 422) {
           const details = e.body.details as unknown as Omit<
@@ -62,7 +99,12 @@ export function ExcelUploadDialog({
             "status"
           >;
           if (details?.uploadId && details.issues && details.summary)
-            setResult({ ...details, status: "CHECKED", canApply: false });
+            setResult({
+              ...details,
+              status: "CHECKED",
+              canApply: false,
+              ...(workflow ? { expectedNumbers: [] } : {}),
+            });
         }
         throw e;
       }
@@ -81,7 +123,7 @@ export function ExcelUploadDialog({
     <>
       <Dialog
         open
-        title="엑셀 업로드 결과 · 거래처"
+        title={title}
         wide
         pending={pending}
         onConfirm={applied ? onClose : result ? apply : check}
@@ -95,17 +137,29 @@ export function ExcelUploadDialog({
           !applied && (!file || Boolean(result && !result.canApply))
         }
       >
-        <section className="b7-upload" data-testid="b7-upload-dialog">
-          <p className="b7-info">
-            B7 거래처 등록 · XLSX 10MiB 이하 · 첫 시트 최대 5,000행. 검사 후
-            같은 파일로 전량 반영합니다.
-          </p>
+        <section
+          className="b7-upload"
+          data-screen-id={screenId}
+          data-testid="b7-upload-dialog"
+        >
+          <p className="b7-info">{description}</p>
+          {onTemplate && (
+            <button
+              type="button"
+              data-testid="import-template-button"
+              disabled={pending}
+              onClick={() => void run(onTemplate)}
+            >
+              양식 내려받기
+            </button>
+          )}
           <label className="sicost-field">
             파일 선택
             <input
               data-testid="b7-file-input"
               type="file"
               accept=".xlsx"
+              aria-invalid={Boolean(error && !result)}
               disabled={pending || Boolean(applied)}
               onChange={(event) => {
                 const selected = event.target.files?.[0];
@@ -149,7 +203,9 @@ export function ExcelUploadDialog({
               <p className={result.canApply ? "b7-info" : "b7-bad"}>
                 {result.canApply
                   ? "오류가 없어 반영할 수 있습니다. 경고 내용을 확인해 주세요."
-                  : "오류를 수정한 파일을 다시 검사해 주세요. 등록된 거래처는 없습니다."}
+                  : screenId === "UI-02"
+                    ? "오류를 수정한 파일을 다시 검사해 주세요. 등록된 개발자는 없습니다."
+                    : "오류를 수정한 파일을 다시 검사해 주세요. 등록된 거래처는 없습니다."}
               </p>
               <div className="b7-actions">
                 <button
@@ -166,6 +222,7 @@ export function ExcelUploadDialog({
                 uploadId={result.uploadId}
                 initialPage={result.issues}
                 disabled={pending}
+                screenId={screenId}
               />
             </>
           )}
@@ -173,6 +230,41 @@ export function ExcelUploadDialog({
             <p role="status" className="b7-ok">
               {applied.appliedCount}건 반영 완료 · {applied.appliedAt}
             </p>
+          )}
+          {(applied?.finalNumbers ?? result?.expectedNumbers) && (
+            <section
+              data-testid="import-numbers-panel"
+              aria-label={applied ? "반영된 최종번호" : "예상 관리번호"}
+            >
+              <p>
+                {applied
+                  ? "반영된 최종번호 · APPLIED"
+                  : "새로 붙을 관리번호 · 예상·미예약"}
+              </p>
+              <table className="sicost-table">
+                <thead>
+                  <tr>
+                    <th>원래 행</th>
+                    <th>관리번호</th>
+                    {applied && <th>개발자 ID</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(applied?.finalNumbers ?? result?.expectedNumbers)?.map(
+                    (row) => (
+                      <tr
+                        key={row.rowNumber}
+                        data-testid={`import-number-row-${row.rowNumber}`}
+                      >
+                        <td>{row.rowNumber}</td>
+                        <td>{row.managementNo}</td>
+                        {applied && <td>{row.id}</td>}
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </section>
           )}
           {refreshFailed && (
             <div role="alert">

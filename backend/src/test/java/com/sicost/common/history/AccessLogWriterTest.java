@@ -21,6 +21,24 @@ class AccessLogWriterTest {
         verify(mapper,times(3)).insert(argThat(entry->entry.userId().equals("admin") && entry.clientIp().equals("127.0.0.1")
                 && entry.now().toString().equals("2026-01-02T08:59") && entry.description().equals("testuser 1")));
     }
+    @Test void peopleDownloadsAreBoundToTheirOwnScreenAndKind() {
+        when(users.userId()).thenReturn("admin");when(mapper.insert(any())).thenReturn(1);
+        for (String kind : new String[]{"개발자","개발자_등록양식","개발자_업로드검사"}) {
+            writer.append(new AccessLogWriter.Event("DNLD","UI-02",kind.endsWith("검사")?"123":null,kind,2L),new MockHttpServletRequest());
+        }
+        writer.append(new AccessLogWriter.Event("DNLD","UI-33",null,"외부인력후보",2L),new MockHttpServletRequest());
+        verify(mapper,times(3)).insert(argThat(entry -> entry.screenId().equals("UI-02") && entry.action().equals("DNLD")));
+        verify(mapper).insert(argThat(entry -> entry.screenId().equals("UI-33") && entry.description().contains("외부인력후보")));
+    }
+    @Test void peopleScreensCannotAcquireOtherAccessEventsOrMismatchedKinds() {
+        for (String action : new String[]{"USER_REG","ACCT_VIEW"}) {
+            assertThatThrownBy(() -> writer.append(new AccessLogWriter.Event(action,"UI-02",null,"개발자",1L),new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        }
+        assertThatThrownBy(() -> writer.append(new AccessLogWriter.Event("DNLD","UI-33",null,"개발자",1L),new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> writer.append(new AccessLogWriter.Event("DNLD","UI-02",null,null,1L),new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> writer.append(new AccessLogWriter.Event("DNLD","UI-02",null,"개발자\r\nunsafe",1L),new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        verifyNoInteractions(mapper);
+    }
     @Test void logFailureIsNotSwallowed() {
         when(users.userId()).thenReturn("admin");when(mapper.insert(any())).thenReturn(0);
         assertThatThrownBy(()->writer.append(new AccessLogWriter.Event("ACCT_VIEW","UI-15","C-001",null,null),new MockHttpServletRequest()))

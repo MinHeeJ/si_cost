@@ -1,6 +1,7 @@
 package com.sicost.b7;
 
 import com.sicost.common.api.ApiException;
+import com.sicost.common.excel.ImportDefinition;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -29,6 +30,10 @@ public class ExcelImportService {
         return name;
     }
     public Parsed parse(MultipartFile file) {
+        return parse(file, new ImportDefinition(HEADERS, REQUIRED, Set.of("사업자등록번호","연락처","계좌번호"), Set.of(),
+            Map.of("사업자번호","사업자등록번호","사업자등록번호(필수)","사업자등록번호")));
+    }
+    public Parsed parse(MultipartFile file, ImportDefinition definition) {
         String name = filename(file);
         byte[] bytes;
         try { bytes = file.getBytes().clone(); } catch (IOException e) { throw failure(400,"VALIDATION_ERROR","파일을 읽을 수 없습니다."); }
@@ -48,15 +53,15 @@ public class ExcelImportService {
                 if (columns == null) {
                     Map<String,Integer> candidate = new LinkedHashMap<>(); Set<String> duplicates = new HashSet<>();
                     for (Cell cell : row) {
-                        String title = header(formatter.formatCellValue(cell));
-                        if (HEADERS.contains(title) && candidate.putIfAbsent(title,cell.getColumnIndex()) != null) duplicates.add(title);
+                        String title = definition.header(formatter.formatCellValue(cell));
+                        if (definition.headers().contains(title) && candidate.putIfAbsent(title,cell.getColumnIndex()) != null) duplicates.add(title);
                     }
-                    if (!candidate.keySet().containsAll(REQUIRED)) continue;
+                    if (!candidate.keySet().containsAll(definition.required())) continue;
                     if (!duplicates.isEmpty()) throw failure(400,"INVALID_FILE_HEADER","동일 항목의 제목이 중복되었습니다.");
                     columns = candidate;
                     for (Cell cell : row) {
-                        String title = header(formatter.formatCellValue(cell));
-                        if (!title.isEmpty() && !HEADERS.contains(title)) fileIssues.add(new Issue(0,"WARN",row.getRowNum()+1,"[파일]",excerpt(title,200),"알 수 없는 열은 반영하지 않습니다."));
+                        String title = definition.header(formatter.formatCellValue(cell));
+                        if (!title.isEmpty() && !definition.headers().contains(title)) fileIssues.add(new Issue(0,"WARN",row.getRowNum()+1,"[파일]",excerpt(title,200),"알 수 없는 열은 반영하지 않습니다."));
                     }
                     continue;
                 }
@@ -65,7 +70,7 @@ public class ExcelImportService {
                 if (blank) continue;
                 if (rows.size() == 5000) throw failure(413,"TOO_MANY_ROWS","데이터는 5,000행 이하로 입력해 주세요.");
                 Map<String,CellValue> values = new LinkedHashMap<>();
-                for (String title : HEADERS) {
+                for (String title : definition.headers()) {
                     Integer index = columns.get(title); Cell cell = index == null ? null : row.getCell(index);
                     String value = "", error = null;
                     if (cell != null) {
@@ -78,7 +83,10 @@ public class ExcelImportService {
                         }
                         if (type == CellType.ERROR) error = "셀 오류를 수정해 주세요.";
                         else value = formatter.formatCellValue(cell).strip();
-                        if (Set.of("사업자등록번호","연락처","계좌번호").contains(title) && type == CellType.NUMERIC) {
+                        if (definition.dates().contains(title) && type == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                            value = cell.getLocalDateTimeCellValue().toLocalDate().toString();
+                        }
+                        if (definition.identifiers().contains(title) && type == CellType.NUMERIC) {
                             BigDecimal number = BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros();
                             if (number.scale() <= 0 && number.precision() - number.scale() >= 16) error = "텍스트 형식으로 입력하세요";
                         }
@@ -87,7 +95,7 @@ public class ExcelImportService {
                 }
                 rows.add(new SourceRow(row.getRowNum()+1,values));
             }
-            if (columns == null) throw failure(400,"INVALID_FILE_HEADER","구분·상호·사업자등록번호 제목이 필요합니다.");
+            if (columns == null) throw failure(400,"INVALID_FILE_HEADER",String.join("·", definition.required())+" 제목이 필요합니다.");
             if (rows.isEmpty()) throw failure(400,"EMPTY_FILE","검사할 데이터가 없습니다.");
             return new Parsed(name,bytes.length,columns,rows,fileIssues);
             }

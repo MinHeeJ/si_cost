@@ -16,8 +16,11 @@ import org.springframework.stereotype.Component;
 public class PersistenceBoundary implements Interceptor {
     private static final Set<String> WRITABLE = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP",
             "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST", "TB_SY_USER", "TB_SY_USER_ROLE",
-            "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG");
-    private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR");
+            "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG",
+            "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
+            "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC");
+    private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
+            "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT");
     private static final Pattern TARGET = Pattern.compile("(?is)^\\s*(INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+(TB_[A-Z0-9_]+)\\b");
     public static void requireAllowed(String sql) {
         // Group creation serializes duplicate-name checks and sort allocation before its INSERT.
@@ -35,6 +38,15 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         if (match.group(1).toUpperCase(Locale.ROOT).startsWith("DELETE")) {
             String table = match.group(2).toUpperCase(Locale.ROOT);
+            if (table.equals("TB_HR_DEV_SKILL") || table.equals("TB_HR_CAND_SKILL")) {
+                String key = table.equals("TB_HR_DEV_SKILL") ? "DEV_ID" : "CAND_ID";
+                if (!remainder.matches("(?is)\\s+WHERE\\s+" + key + "\\s*=\\s*\\?\\s*")) {
+                    throw new IllegalStateException("한 사람의 스킬 집합만 교체할 수 있습니다.");
+                }
+            }
+            if (table.equals("TB_HR_DEV_STAT") && !remainder.matches("(?is)\\s+WHERE\\s+DEV_ID\\s*=\\s*\\?\\s+AND\\s+STAT_SN\\s*=\\s*\\?\\s+AND\\s+WORK_STAT_CD\\s*(?:IN\\s*\\(\\s*'WORK'\\s*,\\s*'RETIRE'\\s*\\)|=\\s*'(?:WORK|RETIRE)')\\s*")) {
+                throw new IllegalStateException("지정 개발자의 복귀 또는 퇴사 이력 한 건만 취소할 수 있습니다.");
+            }
             if (table.equals("TB_SY_USER_ROLE") && (!remainder.matches("(?is).*\\bUSER_ID\\s*=\\s*\\?.*")
                     || !remainder.matches("(?is).*\\bROLE_ID\\s+IN\\s*\\(\\s*'PM'\\s*,\\s*'SALES_LDR'\\s*\\).*"))) {
                 throw new IllegalStateException("업무 자격 연결만 해제할 수 있습니다.");

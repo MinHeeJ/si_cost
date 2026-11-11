@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.states.DeveloperStateMapper">
+  <select id="developer" resultType="com.sicost.states.DeveloperStateDtos$Developer">
+    SELECT dev_id AS "id",jncmp_dt AS "hireDate",retire_dt AS "retireDate",work_stat_cd AS "status",use_yn AS "useYn" FROM tb_hr_dev WHERE dev_id=#{id}
+  </select>
+  <select id="developerIds" resultType="string">SELECT dev_id FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="states" resultType="com.sicost.states.DeveloperStateDtos$Stored">
+    SELECT stat_sn AS "sn",work_stat_cd AS "state",bgn_dt AS "startDate",end_dt AS "endDate",stat_rsn AS "reason",
+      close_leave_sn AS "closeLeaveSn",orgnl_leave_end_dt AS "originalLeaveEndDate",reg_user_id AS "regUserId",
+      reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_hr_dev_stat WHERE dev_id=#{id} ORDER BY bgn_dt DESC,stat_sn DESC
+  </select>
+  <select id="assignments" resultType="com.sicost.states.DeveloperStateDtos$Assignment">
+    SELECT a.proj_id AS "id",p.proj_nm AS "name",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id
+    WHERE a.dev_id=#{id} AND a.asgn_stat_cd='ACT' ORDER BY a.asgn_id
+  </select>
+  <select id="actorName" resultType="string">SELECT user_nm FROM tb_sy_user WHERE user_id=#{actor}</select>
+  <select id="cashBaseMonth" resultType="string">
+    SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std
+    WHERE std_cd='CASH_BASE_YM' AND aply_bgn_ym&lt;=#{month} ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="closedMonths" resultType="string">SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE' ORDER BY close_ym</select>
+  <select id="greatestSerial" resultType="int">
+    SELECT greatest(coalesce((SELECT max(stat_sn) FROM tb_hr_dev_stat WHERE dev_id=#{id}),0),
+      coalesce((SELECT max(substring(trgt_key FROM length(#{id})+2)::numeric) FROM tb_sy_chg_hist
+        WHERE trgt_tbl_nm='TB_HR_DEV_STAT' AND left(trgt_key,length(#{id})+1)=#{id}||':'
+          AND substring(trgt_key FROM length(#{id})+2) ~ '^[0-9]{1,5}$'),0))::integer
+  </select>
+  <insert id="insert">
+    INSERT INTO tb_hr_dev_stat(dev_id,stat_sn,work_stat_cd,bgn_dt,end_dt,stat_rsn,close_leave_sn,orgnl_leave_end_dt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{row.sn},#{row.state},#{row.startDate},#{row.endDate},#{row.reason},#{row.closeLeaveSn},#{row.originalLeaveEndDate},#{actor},#{now})
+  </insert>
+  <update id="update">
+    UPDATE tb_hr_dev_stat SET end_dt=#{row.endDate},close_leave_sn=#{row.closeLeaveSn},orgnl_leave_end_dt=#{row.originalLeaveEndDate},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE dev_id=#{id} AND stat_sn=#{row.sn}
+  </update>
+  <delete id="delete">DELETE FROM tb_hr_dev_stat WHERE dev_id=#{id} AND stat_sn=#{sn} AND work_stat_cd IN ('WORK','RETIRE')</delete>
+  <update id="updateDeveloper">
+    UPDATE tb_hr_dev SET retire_dt=#{retireDate},work_stat_cd=#{status},use_yn=#{useYn},mod_user_id=#{actor},mod_dttm=#{now} WHERE dev_id=#{id}
+  </update>
+</mapper>

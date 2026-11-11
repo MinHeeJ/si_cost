@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.PeopleHistoryMapper">
+  <select id="exists" resultType="boolean">
+    SELECT EXISTS (
+      <choose>
+        <when test="targetType == 'DEVELOPER'">SELECT 1 FROM tb_hr_dev WHERE dev_id = #{targetId}</when>
+        <otherwise>SELECT 1 FROM tb_hr_cand WHERE cand_id = #{targetId}</otherwise>
+      </choose>
+    )
+  </select>
+  <sql id="target">
+    <choose>
+      <when test="targetType == 'DEVELOPER'">
+        ((h.trgt_tbl_nm IN ('TB_HR_DEV', 'TB_HR_DEV_SKILL') AND h.trgt_key = #{targetId}) OR
+         (h.trgt_tbl_nm = 'TB_HR_DEV_PRC'
+          AND left(h.trgt_key, length(#{targetId}) + 1) = #{targetId} || ':'
+          AND substring(h.trgt_key FROM length(#{targetId}) + 2) ~ '^(?!0000)[0-9]{4}(0[1-9]|1[0-2])$') OR
+         (h.trgt_tbl_nm = 'TB_HR_DEV_STAT'
+          AND left(h.trgt_key, length(#{targetId}) + 1) = #{targetId} || ':'
+          AND substring(h.trgt_key FROM length(#{targetId}) + 2) ~ '^[1-9][0-9]{0,4}$'))
+      </when>
+      <otherwise>
+        ((h.trgt_tbl_nm IN ('TB_HR_CAND', 'TB_HR_CAND_SKILL') AND h.trgt_key = #{targetId}) OR
+         (h.trgt_tbl_nm = 'TB_HR_CAND_CNTC'
+          AND left(h.trgt_key, length(#{targetId}) + 1) = #{targetId} || ':'
+          AND substring(h.trgt_key FROM length(#{targetId}) + 2) ~ '^[1-9][0-9]{0,4}$'))
+      </otherwise>
+    </choose>
+  </sql>
+  <select id="count" resultType="long">
+    SELECT count(*) FROM tb_sy_chg_hist h WHERE <include refid="target"/>
+  </select>
+  <select id="list" resultType="com.sicost.apiops.PeopleHistoryDtos$Entry">
+    SELECT h.hist_id AS "historyId", h.trgt_tbl_nm AS "targetTable", h.trgt_key AS "targetKey",
+      h.chg_type_cd AS "changeType", coalesce(h.chg_item_nm, '') AS "itemName",
+      h.bfr_val AS "beforeValue", h.aft_val AS "afterValue", h.chg_rsn AS "reason",
+      h.reg_user_id AS "actorId", coalesce(u.user_nm, h.reg_user_id) AS "actorName",
+      to_char(h.reg_dttm, 'YYYY-MM-DD HH24:MI') AS "createdAt"
+    FROM tb_sy_chg_hist h LEFT JOIN tb_sy_user u ON u.user_id = h.reg_user_id
+    WHERE <include refid="target"/>
+    ORDER BY h.reg_dttm DESC, h.hist_id DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+</mapper>

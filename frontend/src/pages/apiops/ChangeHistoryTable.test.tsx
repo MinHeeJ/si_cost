@@ -180,3 +180,29 @@ it("긴 값은 원문을 잘라 저장하거나 HTML로 실행하지 않고 펼�
   expect(screen.getByText(value)).toBeInTheDocument();
   expect(screen.getByText(value).closest("details")).toHaveAttribute("open");
 });
+it("선택 loader와 row adapter는 기존 master-history를 호출하거나 응답 원본을 바꾸지 않는다", async () => {
+  const source = result([row]);
+  const loader = vi.fn().mockResolvedValue(source);
+  const adapter = (entry: MasterHistoryEntry) => ({
+    ...entry,
+    itemName: "변환된 항목",
+  });
+  render(
+    <ChangeHistoryTable
+      targetType="DEVELOPER"
+      targetId="selected-person"
+      loader={loader}
+      rowAdapter={adapter}
+    />,
+  );
+  await screen.findByText("변환된 항목");
+  expect(loader).toHaveBeenCalledWith(
+    "DEVELOPER",
+    "selected-person",
+    1,
+    50,
+    expect.any(AbortSignal),
+  );
+  expect(getMasterHistory).not.toHaveBeenCalled();
+  expect(source.items[0].itemName).toBe("상호");
+});

@@ -3,4 +3,8 @@
 <mapper namespace="com.sicost.common.persistence.MasterIdMapper">
   <select id="nextClient" resultType="java.math.BigInteger">SELECT nextval('SQ_TB_BS_CLNT_ID')</select>
   <select id="nextPart" resultType="java.math.BigInteger">SELECT nextval('SQ_TB_BS_PART_ID')</select>
+  <select id="nextDeveloper" resultType="java.math.BigInteger" flushCache="true" useCache="false">SELECT nextval('SQ_TB_HR_DEV_ID')</select>
+  <select id="nextCandidate" resultType="java.math.BigInteger" flushCache="true" useCache="false">SELECT nextval('SQ_TB_HR_CAND_ID')</select>
+  <select id="nextManagementNo" resultType="java.math.BigInteger" flushCache="true" useCache="false">SELECT nextval('SQ_TB_HR_DEV_MNG_NO')</select>
+  <select id="managementNoExists" resultType="boolean" flushCache="true" useCache="false">SELECT EXISTS(SELECT 1 FROM TB_HR_DEV WHERE MNG_NO=#{managementNo})</select>
 </mapper>

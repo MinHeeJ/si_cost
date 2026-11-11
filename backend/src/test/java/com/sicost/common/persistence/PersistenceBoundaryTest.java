@@ -6,11 +6,34 @@ import static org.assertj.core.api.Assertions.*;
 class PersistenceBoundaryTest {
     @Test void existingAndExplicitMasterTablesOnlyAreWritable() {
         for (String table : new String[]{"TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST",
-                "TB_SY_USER", "TB_SY_USER_ROLE", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG"}) {
+                "TB_SY_USER", "TB_SY_USER_ROLE", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG",
+                "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT", "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC"}) {
             assertThatCode(() -> PersistenceBoundary.requireAllowed("INSERT INTO " + table + " (x) VALUES (?)")).doesNotThrowAnyException();
         }
-        for (String table : new String[]{"TB_PJ_PROJ", "TB_CL_CLOSE", "TB_SY_ROLE", "TB_CO_PART_SETL", "TB_HR_DEV"}) {
+        for (String table : new String[]{"TB_PJ_PROJ", "TB_CL_CLOSE", "TB_SY_ROLE", "TB_CO_PART_SETL", "TB_SY_ADM_AREA", "TB_SY_ADM_HDONG", "TB_HR_MON_PAY", "TB_PJ_ASGN", "TB_PJ_ASGN_MON"}) {
             assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("UPDATE " + table + " SET x = ?")).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void peopleSkillReplacementRequiresExactlyOneParentKey() {
+        for (String table : new String[]{"TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL"}) {
+            String key = table.equals("TB_HR_DEV_SKILL") ? "dev_id" : "cand_id";
+            assertThatCode(() -> PersistenceBoundary.requireAllowed("DELETE FROM " + table + " WHERE " + key + " = ?")).doesNotThrowAnyException();
+            for (String where : new String[]{"", " WHERE " + key + "=? OR 1=1", " WHERE " + key + " IS NOT NULL", " WHERE " + key + "=?; DELETE FROM tb_hr_dev"}) {
+                assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM " + table + where)).isInstanceOf(IllegalStateException.class);
+            }
+        }
+    }
+    @Test void onlyTargetedWorkOrRetirementCancellationCanDeleteState() {
+        for (String state : new String[]{"work_stat_cd IN ('WORK','RETIRE')", "work_stat_cd='WORK'", "work_stat_cd='RETIRE'"}) {
+            assertThatCode(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_hr_dev_stat WHERE dev_id=? AND stat_sn=? AND " + state)).doesNotThrowAnyException();
+        }
+        for (String where : new String[]{"", " WHERE dev_id=?", " WHERE dev_id=? AND stat_sn=?", " WHERE dev_id=? AND stat_sn=? AND work_stat_cd='LEAVE'", " WHERE dev_id=? AND stat_sn=? AND work_stat_cd=?", " WHERE dev_id=? AND stat_sn=? AND work_stat_cd='WORK' OR 1=1"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_hr_dev_stat" + where)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void peopleParentPriceAndContactDeletionRemainForbidden() {
+        for (String table : new String[]{"TB_HR_DEV", "TB_HR_CAND", "TB_HR_DEV_PRC", "TB_HR_CAND_CNTC"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM " + table + " WHERE dev_id=?")).isInstanceOf(IllegalStateException.class);
         }
     }
     @Test void historyIsAppendOnly() {

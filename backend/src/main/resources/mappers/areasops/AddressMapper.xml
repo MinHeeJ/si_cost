@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.areasops.AddressMapper">
+  <sql id="columns">
+    area_cd AS "code",area_lvl_cd AS "level",upper_area_cd AS "parentCode",
+    CASE area_lvl_cd WHEN 'SIDO' THEN sido_nm WHEN 'SGG' THEN sgg_nm WHEN 'EMD' THEN emd_nm END AS "name",
+    use_yn AS "useYn"
+  </sql>
+  <select id="sidos" resultType="com.sicost.areasops.AddressDtos$Area">
+    SELECT <include refid="columns"/> FROM tb_sy_adm_area
+    WHERE area_lvl_cd='SIDO' AND use_yn='Y' ORDER BY area_cd
+  </select>
+  <select id="children" resultType="com.sicost.areasops.AddressDtos$Area">
+    SELECT <include refid="columns"/> FROM tb_sy_adm_area
+    WHERE upper_area_cd=#{parentCode} AND area_lvl_cd=#{level} AND use_yn='Y' ORDER BY area_cd
+  </select>
+  <select id="find" resultType="com.sicost.areasops.AddressDtos$Area">
+    SELECT <include refid="columns"/> FROM tb_sy_adm_area WHERE area_cd=#{code}
+  </select>
+</mapper>

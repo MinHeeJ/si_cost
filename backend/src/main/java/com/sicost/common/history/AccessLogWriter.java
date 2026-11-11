@@ -1,6 +1,7 @@
 package com.sicost.common.history;
 
 import com.sicost.common.context.CurrentUserProvider;
+import com.sicost.common.TimeConfiguration;
 import com.sicost.common.validation.InputValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
@@ -24,13 +25,20 @@ public class AccessLogWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-33").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+        boolean people = Set.of("UI-02", "UI-33").contains(event.screenId());
+        if (people && !"DNLD".equals(event.action())) throw InputValidator.invalid("accessLog");
         String target = event.targetId();
         if (target != null && !target.matches("(?:[a-z0-9]{4,20}|C-[0-9]{3,18}|PART-[0-9]{3,15}|[0-9]{1,12})")) {
             throw InputValidator.invalid("targetId");
         }
         String kind = event.fileType();
-        if (kind != null && !Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사").contains(kind)) {
+        Set<String> kinds = switch (event.screenId()) {
+            case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사");
+            case "UI-33" -> Set.of("외부인력후보");
+            default -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
+        };
+        if ((people && kind == null) || (kind != null && !kinds.contains(kind))) {
             throw InputValidator.invalid("fileType");
         }
         if (event.count() != null && event.count() < 0) throw InputValidator.invalid("count");
@@ -39,7 +47,7 @@ public class AccessLogWriter {
         InputValidator.text(description, 300, "targetDescription");
         String ip = request.getRemoteAddr();
         if (ip == null || ip.length() > 45 || !ip.matches("[0-9A-Fa-f:.%]+")) ip = null;
-        if (mapper.insert(new Entry(users.userId(), event.action(), event.screenId(), description, ip, LocalDateTime.now(clock))) != 1) {
+        if (mapper.insert(new Entry(users.userId(), event.action(), event.screenId(), description, ip, LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL))) != 1) {
             throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
         }
     }

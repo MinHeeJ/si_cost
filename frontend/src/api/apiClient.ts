@@ -78,3 +78,43 @@ export {
   getUploadIssuesXlsx,
 } from "../pages/uploadsops/uploadIssuesApi";
 export { createMasterDataExport } from "../pages/exportsops/masterDataExportApi";
+export {
+  getAreaSidos,
+  getAreaChildren,
+  getAreaPath,
+} from "../shared/areaClient";
+export {
+  getDevelopers,
+  getDeveloper,
+  createDeveloper,
+  putDeveloper,
+} from "../pages/developers/peopleClient";
+export {
+  getDeveloperSelection,
+  getDeveloperAssignments,
+  saveDeveloperBulkStatus,
+} from "../pages/developersops/peopleClient";
+export {
+  getDeveloperStates,
+  createDeveloperState,
+  putDeveloperStateEnd,
+  saveDeveloperStateCancel,
+} from "../pages/states/developerStatesApi";
+export {
+  getCandidates,
+  getCandidate,
+  createCandidate,
+  putCandidate,
+} from "../pages/candidates/peopleClient";
+export { getCandidateSummary } from "../pages/candidatesops/candidateSummaryApi";
+export type { CandidateSummary } from "../pages/candidatesops/candidateSummaryApi";
+export {
+  getCandidateContacts,
+  createCandidateContact,
+} from "../pages/contacts/peopleClient";
+export { getPeopleHistory } from "../pages/apiops/peopleClient";
+export {
+  getB8Template,
+  createB8Validation,
+  saveB8Apply,
+} from "../pages/b8/b8Api";

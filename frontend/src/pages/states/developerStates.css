@@ -1,0 +1,75 @@
+.developer-states {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.developer-states > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.developer-state-form {
+  display: grid;
+  gap: 16px;
+}
+.developer-state-form textarea {
+  min-height: 88px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+.developer-state-form textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.developer-state-guidance,
+.developer-state-hire {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.developer-state-hire {
+  padding: 12px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  background: var(--head-bg);
+}
+.developer-state-hire small {
+  margin-left: 8px;
+}
+.developer-state-active {
+  color: var(--lock);
+  font-size: 12px;
+}
+.developer-state-actions {
+  display: flex;
+  gap: 6px;
+}
+.developer-state-actions button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.developer-states td[data-column="reason"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 100px;
+  max-width: 240px;
+}
+@media (max-width: 767px) {
+  .developer-states {
+    gap: 12px;
+  }
+  .developer-states .sicost-table th,
+  .developer-states .sicost-table td {
+    padding: 6px 8px;
+  }
+  .developer-states .sicost-banner {
+    flex-wrap: wrap;
+  }
+  .developer-state-form {
+    gap: 12px;
+  }
+}

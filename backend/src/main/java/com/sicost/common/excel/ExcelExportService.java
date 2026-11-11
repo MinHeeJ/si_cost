@@ -37,14 +37,22 @@ public class ExcelExportService {
     }
     public enum CellType { TEXT, NUMBER, MASKED_ACCOUNT }
     public record Column(String id, String title, CellType type) {}
-    public record Specification(String kind, String uploadId, List<Column> columns, String conditions, String amountUnit) {}
+    public record Specification(String kind, String uploadId, List<Column> columns, String conditions, String amountUnit, String screenId) {
+        public Specification(String kind, String uploadId, List<Column> columns, String conditions, String amountUnit) {
+            this(kind, uploadId, columns, conditions, amountUnit, "UI-15");
+        }
+    }
     @FunctionalInterface public interface Rows { void read(Consumer<List<Object>> sink); }
 
     public Download generate(Specification specification, Rows rows, HttpServletRequest request) {
         return generate(specification, rows, request, workbook -> {});
     }
     public Download generateTemplate(List<Column> columns, List<String> instructions, HttpServletRequest request) {
-        return generate(new Specification("거래처_등록양식", null, columns, "B7", "원"), sink -> {}, request, workbook -> {
+        return generateTemplate(new Specification("거래처_등록양식", null, columns, "B7", "원"), instructions, request);
+    }
+    public Download generateTemplate(Specification specification, List<String> instructions, HttpServletRequest request) {
+        List<Column> columns = specification.columns();
+        return generate(specification, sink -> {}, request, workbook -> {
             var text = workbook.createCellStyle(); text.setDataFormat(workbook.createDataFormat().getFormat("@"));
             for (int i = 0; i < columns.size(); i++) workbook.getSheetAt(0).setDefaultColumnStyle(i, text);
             var guide = workbook.createSheet("입력안내");
@@ -83,8 +91,14 @@ public class ExcelExportService {
             });
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", "UI-15", specification.uploadId(), specification.kind(), total), request));
-            String kind = specification.kind() + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
+            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), total), request));
+            String prefix = switch (specification.kind()) {
+                case "개발자" -> "개발자목록";
+                case "개발자_등록양식" -> "B8_개발자양식";
+                case "개발자_업로드검사" -> "B8_검사";
+                default -> specification.kind();
+            };
+            String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
             return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx");
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
@@ -93,8 +107,14 @@ public class ExcelExportService {
         }
     }
     private void validate(Specification specification) {
-        if (!Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사").contains(specification.kind())) throw InputValidator.invalid("kind");
-        if (specification.kind().equals("거래처_업로드검사")) {
+        Set<String> kinds = switch (specification.screenId()) {
+            case "UI-15" -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
+            case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사");
+            case "UI-33" -> Set.of("외부인력후보");
+            default -> throw InputValidator.invalid("screenId");
+        };
+        if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
+        if (Set.of("거래처_업로드검사", "개발자_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");
