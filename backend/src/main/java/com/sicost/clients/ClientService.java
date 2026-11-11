@@ -112,7 +112,8 @@ public class ClientService {
     }
     private ApiException duplicate(Stored old){return new ApiException(409,"DUPLICATE_BUSINESS_NO","이미 등록된 사업자번호입니다.","businessNo",Map.of("clientName",old.name()));}
     private Client view(Stored row,LocalDate date) {
-        Labels labels=mapper().labels(row.id());Counts counts=mapper().counts(row.id(),date);
+        // 업종·은행이 모두 비면 labels 쿼리의 네 열이 전부 NULL이라 MyBatis가 행 대신 null을 돌려준다. 빈 라벨로 대신한다.
+        Labels labels=Objects.requireNonNullElse(mapper().labels(row.id()),new Labels(null,null,null,null));Counts counts=mapper().counts(row.id(),date);
         String mask=cipher.masked(row.encryptedAccount());
         return new Client(row.type(),row.name(),row.businessNo(),row.ceo(),row.industryCode(),row.contactName(),row.phone(),row.taxEmail(),row.bankCode(),row.depositor(),row.id(),labels.industry(),labels.bankName(),labels.industryActive(),labels.bankActive(),mask==null?null:Objects.toString(labels.bankName(),"")+" "+mask,row.useYn(),counts.projectCount(),counts.personCount(),date,revisions.revision(row),mapper().historyCount(row.id()));
     }
