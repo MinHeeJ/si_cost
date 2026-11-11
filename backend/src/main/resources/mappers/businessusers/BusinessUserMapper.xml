@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.businessusers.BusinessUserMapper">
+  <sql id="columns">u.user_id AS "userId",u.user_nm AS "name",u.email_addr AS "email",u.user_stat_cd AS "status",
+    u.last_login_dttm AS "lastLoginAt",u.reg_user_id AS "regUserId",u.reg_dttm AS "regDttm",u.mod_user_id AS "modUserId",u.mod_dttm AS "modDttm"</sql>
+  <sql id="filters">
+    <where>
+      <if test="q != null">AND (strpos(u.user_nm,#{q}) &gt; 0 OR strpos(u.user_id,#{q}) &gt; 0)</if>
+      <if test="businessRole != null">AND EXISTS (SELECT 1 FROM tb_sy_user_role ur WHERE ur.user_id=u.user_id AND ur.role_id=#{businessRole})</if>
+      <if test="status != null">AND u.user_stat_cd=#{status}</if>
+    </where>
+  </sql>
+  <select id="list" resultType="com.sicost.businessusers.BusinessUserDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_sy_user u <include refid="filters"/>
+    ORDER BY
+    <choose><when test="sort == 'userId'">u.user_id</when><when test="sort == 'email'">u.email_addr</when>
+      <when test="sort == 'status'">u.user_stat_cd</when><when test="sort == 'lastLoginAt'">u.last_login_dttm</when>
+      <otherwise>u.user_nm</otherwise></choose>
+    <choose><when test="direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose> NULLS LAST,u.user_id ASC
+    LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_sy_user u <include refid="filters"/></select>
+  <select id="find" resultType="com.sicost.businessusers.BusinessUserDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_sy_user u WHERE u.user_id=#{userId}<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="roles" resultType="com.sicost.businessusers.BusinessUserDtos$Role">
+    SELECT r.role_id AS "roleId",r.role_nm AS "name",r.use_yn AS "useYn"
+    FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id WHERE ur.user_id=#{userId} ORDER BY r.role_id
+  </select>
+  <select id="availableRoles" resultType="com.sicost.businessusers.BusinessUserDtos$Role">
+    SELECT role_id AS "roleId",role_nm AS "name",use_yn AS "useYn" FROM tb_sy_role
+    WHERE role_id IN ('PM','SALES_LDR') AND use_yn='Y' ORDER BY role_id
+  </select>
+  <insert id="insert">
+    INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_chg_dttm,temp_pwd_yn,pwd_err_cnt,user_stat_cd,
+      last_login_dttm,mfa_use_yn,mfa_code_hash,mfa_expr_dttm,mfa_err_cnt,reg_user_id,reg_dttm)
+    VALUES(#{input.userId},#{input.name},#{input.email},#{passwordHash},NULL,'Y',0,'USE',NULL,'N',NULL,NULL,0,#{actor},#{now})
+    ON CONFLICT (user_id) DO NOTHING
+  </insert>
+  <update id="update">UPDATE tb_sy_user SET user_nm=#{input.name},email_addr=#{input.email},mod_user_id=#{actor},mod_dttm=#{now} WHERE user_id=#{userId}</update>
+  <insert id="link">INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id,reg_dttm) VALUES(#{userId},#{roleId},#{actor},#{now})</insert>
+  <delete id="unlink">DELETE FROM tb_sy_user_role WHERE user_id=#{userId} AND role_id IN ('PM','SALES_LDR') AND role_id=#{roleId}</delete>
+  <select id="leaderParts" resultType="string">
+    SELECT DISTINCT p.part_nm FROM tb_bs_part p JOIN tb_bs_part_std s ON s.part_id=p.part_id
+    WHERE p.hq_yn='N' AND s.part_ldr_user_id=#{userId} AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month}) ORDER BY p.part_nm
+  </select>
+</mapper>

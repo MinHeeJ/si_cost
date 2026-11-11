@@ -10,6 +10,230 @@ const cases: {
   status?: number;
 }[] = [
   {
+    name: "getBusinessUsers",
+    path: "/api/business-users",
+    method: "GET",
+    call: () => api.getBusinessUsers(),
+  },
+  {
+    name: "getBusinessUser",
+    path: "/api/business-users/selected",
+    method: "GET",
+    call: () => api.getBusinessUser("selected"),
+  },
+  {
+    name: "createBusinessUser",
+    path: "/api/business-users",
+    method: "POST",
+    call: () =>
+      api.createBusinessUser({
+        userId: "newuser",
+        name: "담당자",
+        email: "user@example.org",
+        businessRoleIds: ["PM"],
+      }),
+    body: {
+      userId: "newuser",
+      name: "담당자",
+      email: "user@example.org",
+      businessRoleIds: ["PM"],
+    },
+  },
+  {
+    name: "putBusinessUser",
+    path: "/api/business-users/selected",
+    method: "PUT",
+    call: () =>
+      api.putBusinessUser("selected", {
+        name: "담당자",
+        email: "user@example.org",
+        businessRoleIds: [],
+        expectedRevision: "rev",
+      }),
+    body: {
+      name: "담당자",
+      email: "user@example.org",
+      businessRoleIds: [],
+      expectedRevision: "rev",
+    },
+  },
+  {
+    name: "getBusinessUserOptions",
+    path: "/api/business-users/options?purpose=PART_LEADER",
+    method: "GET",
+    call: () => api.getBusinessUserOptions("PART_LEADER"),
+  },
+  {
+    name: "getClients",
+    path: "/api/clients?page=1&size=50",
+    method: "GET",
+    call: () => api.getClients({ page: 1, size: 50 }),
+  },
+  {
+    name: "getClient",
+    path: "/api/clients/C-123",
+    method: "GET",
+    call: () => api.getClient("C-123"),
+  },
+  {
+    name: "createClient",
+    path: "/api/clients",
+    method: "POST",
+    call: () =>
+      api.createClient({
+        type: "CUST",
+        name: "거래처",
+        businessNo: "1234567890",
+        taxEmail: "client@example.org",
+      }),
+    body: {
+      type: "CUST",
+      name: "거래처",
+      businessNo: "1234567890",
+      taxEmail: "client@example.org",
+    },
+  },
+  {
+    name: "putClient",
+    path: "/api/clients/C-123",
+    method: "PUT",
+    call: () =>
+      api.putClient("C-123", {
+        type: "BOTH",
+        name: "거래처",
+        taxEmail: "client@example.org",
+        accountAction: "KEEP",
+        expectedRevision: "rev",
+      }),
+    body: {
+      type: "BOTH",
+      name: "거래처",
+      taxEmail: "client@example.org",
+      accountAction: "KEEP",
+      expectedRevision: "rev",
+    },
+  },
+  {
+    name: "getClientSelection",
+    path: "/api/clients/selection?useYn=Y",
+    method: "GET",
+    call: () => api.getClientSelection({ useYn: "Y" }),
+  },
+  {
+    name: "getClientOptions",
+    path: "/api/clients/options?purpose=CUSTOMER",
+    method: "GET",
+    call: () => api.getClientOptions("CUSTOMER"),
+  },
+  {
+    name: "getClientAccount",
+    path: "/api/clients/C-123/account",
+    method: "GET",
+    call: () => api.getClientAccount("C-123"),
+  },
+  {
+    name: "getClientAssignments",
+    path: "/api/clients/C-123/assignments?page=1&size=50",
+    method: "GET",
+    call: () => api.getClientAssignments("C-123"),
+  },
+  {
+    name: "saveClientBulkStatus",
+    path: "/api/clients/bulk-status",
+    method: "POST",
+    call: () =>
+      api.saveClientBulkStatus("N", [{ id: "C-123", expectedRevision: "rev" }]),
+    body: {
+      targetUseYn: "N",
+      items: [{ id: "C-123", expectedRevision: "rev" }],
+    },
+  },
+  {
+    name: "getSalesParts",
+    path: "/api/sales-parts?page=1&size=50&sort=name&direction=ASC",
+    method: "GET",
+    call: () =>
+      api.getSalesParts({ page: 1, size: 50, sort: "name", direction: "ASC" }),
+  },
+  {
+    name: "getSalesPart",
+    path: "/api/sales-parts/PART-123",
+    method: "GET",
+    call: () => api.getSalesPart("PART-123"),
+  },
+  {
+    name: "createSalesPart",
+    path: "/api/sales-parts",
+    method: "POST",
+    call: () =>
+      api.createSalesPart({
+        name: "파트",
+        effectiveMonth: "2026-11",
+        leaderUserId: "selected",
+        profitRate: "40.25",
+        salesExpenseAmount: "999999999999999",
+      }),
+    body: {
+      name: "파트",
+      effectiveMonth: "2026-11",
+      leaderUserId: "selected",
+      profitRate: "40.25",
+      salesExpenseAmount: "999999999999999",
+    },
+  },
+  {
+    name: "putSalesPart",
+    path: "/api/sales-parts/PART-123",
+    method: "PATCH",
+    call: () =>
+      api.putSalesPart("PART-123", { name: "파트", expectedRevision: "rev" }),
+    body: { name: "파트", expectedRevision: "rev" },
+  },
+  {
+    name: "getSalesPartDefaults",
+    path: "/api/sales-parts/defaults?effectiveMonth=2026-11",
+    method: "GET",
+    call: () => api.getSalesPartDefaults("2026-11"),
+  },
+  {
+    name: "getSalesPartOptions",
+    path: "/api/sales-parts/options",
+    method: "GET",
+    call: () => api.getSalesPartOptions(),
+  },
+  {
+    name: "createSalesPartStandard",
+    path: "/api/sales-parts/PART-123/standards",
+    method: "POST",
+    call: () =>
+      api.createSalesPartStandard("PART-123", {
+        effectiveMonth: "2026-11",
+        leaderUserId: "selected",
+        profitRate: "40.25",
+        salesExpenseAmount: "999999999999999",
+        expectedRevision: "rev",
+      }),
+    body: {
+      effectiveMonth: "2026-11",
+      leaderUserId: "selected",
+      profitRate: "40.25",
+      salesExpenseAmount: "999999999999999",
+      expectedRevision: "rev",
+    },
+  },
+  {
+    name: "getMasterHistory",
+    path: "/api/master-history?targetType=USER&targetId=selected&page=1&size=50",
+    method: "GET",
+    call: () => api.getMasterHistory("USER", "selected"),
+  },
+  {
+    name: "getUploadIssues",
+    path: "/api/uploads/123/issues?page=1&size=50&severity=WARN",
+    method: "GET",
+    call: () => api.getUploadIssues(123, "WARN", 1, 50),
+  },
+  {
     name: "getHealth",
     path: "/api/health",
     method: "GET",
@@ -189,6 +413,103 @@ const cases: {
 ];
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
+  it.each(["validate", "apply"] as const)(
+    "B7 %s는 multipart 경계를 브라우저에 맡긴다",
+    async (operation) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            meta: {},
+            data: { uploadId: 123 },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "clients.xlsx");
+      if (operation === "validate") await api.createB7Validation(file);
+      else await api.saveB7Apply(file, 123);
+      const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
+      expect(path).toBe(`/api/excel/B7/${operation}`);
+      expect(options.method).toBe("POST");
+      expect(new Headers(options.headers).has("Content-Type")).toBe(false);
+      expect(options.body).toBeInstanceOf(FormData);
+      expect((options.body as FormData).get("file")).toBe(file);
+      expect((options.body as FormData).get("uploadId")).toBe(
+        operation === "apply" ? "123" : null,
+      );
+    },
+  );
+  it.each([
+    {
+      path: "/api/excel/B7/template",
+      call: () => api.getB7Template(),
+      filename: "template.xlsx",
+    },
+    {
+      path: "/api/uploads/123/issues.xlsx?severity=ERR",
+      call: () => api.getUploadIssuesXlsx(123, "ERR"),
+      filename: "issues.xlsx",
+    },
+    {
+      path: "/api/exports/master-data",
+      call: () =>
+        api.createMasterDataExport({
+          view: "CLIENTS",
+          filters: {},
+          columns: ["name"],
+        }),
+      filename: "거래처_20261111_120000.xlsx",
+    },
+  ])("$path는 xlsx를 JSON으로 파싱하지 않고 반환한다", async (test) => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response("workbook", {
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(test.filename)}`,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const result = await test.call();
+    expect(result.filename).toBe(test.filename);
+    expect(result.blob.size).toBeGreaterThan(0);
+    expect(fetcher.mock.calls[0][0]).toBe(test.path);
+  });
+  it.each([
+    () => api.getB7Template(),
+    () => api.getUploadIssuesXlsx(123, ""),
+    () => api.createB7Validation(new File(["workbook"], "clients.xlsx")),
+    () => api.saveB7Apply(new File(["workbook"], "clients.xlsx"), 123),
+    () =>
+      api.createMasterDataExport({
+        view: "CLIENTS",
+        filters: {},
+        columns: ["name"],
+      }),
+  ])(
+    "파일 클라이언트는 JSON 오류를 유지하고 자동 재시도하지 않는다",
+    async (call) => {
+      const body = {
+        success: false,
+        meta: {},
+        code: "REQUEST_FAILED",
+        message: "요청 실패",
+        requestId: "request-test",
+      };
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(body), {
+          status: 409,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      await expect(call()).rejects.toMatchObject({ status: 409, body });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
   it.each(cases)(
     "$name은 기존 전송 계층과 정확한 경로/메서드/본문을 사용한다",
     async (test) => {

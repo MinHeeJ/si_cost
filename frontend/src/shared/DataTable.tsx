@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 export type Column<T> = {
   id: string;
-  label: string;
+  label: ReactNode;
   render(row: T): ReactNode;
   align?: "left" | "right" | "center";
 };

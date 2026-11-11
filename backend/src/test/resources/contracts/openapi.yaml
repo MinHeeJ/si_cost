@@ -2045,7 +2045,3171 @@ paths:
       - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
       x-open-questions:
       - OQ-003
+  /api/business-users:
+    get:
+      operationId: getBusinessUsers
+      summary: 업무 사용자 목록 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-184
+      - REQ-185
+      - REQ-186
+      - REQ-188
+      - REQ-244
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: trim 후0~100자·빈값조건없음·대소문자구분. 사용자이름/아이디·거래처상호/하이픈제거사업자번호·파트명 부분일치.
+        schema:
+          type: string
+          maxLength: 100
+      - name: businessRole
+        in: query
+        required: false
+        description: 전체생략·선택역할연결로필터
+        schema:
+          type: string
+          enum:
+          - PM
+          - SALES_LDR
+      - name: status
+        in: query
+        required: false
+        description: 전체생략
+        schema:
+          type: string
+          enum:
+          - USE
+          - LOCK
+          - STOP
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        description: 표시값기준·숫자는원값·동률ID항상ASC·NULL항상뒤·미등록키400
+        schema:
+          type: string
+          enum:
+          - userId
+          - name
+          - email
+          - status
+          - lastLoginAt
+          default: name
+      - name: direction
+        in: query
+        required: false
+        description: direction
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBusinessUsersResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - q
+        - businessRole
+        - status
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 이름/아이디부분일치·기본역할/상태전체·name ASC/ID ASC·NULL뒤. 전체역할표시명은DB에서읽고비밀필드제외.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    post:
+      operationId: createBusinessUser
+      summary: 업무 사용자 등록
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-166
+      - REQ-247
+      - REQ-248
+      - REQ-249
+      - REQ-250
+      - REQ-253
+      - REQ-258
+      - REQ-379
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-387
+      parameters: []
+      responses:
+        '201':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBusinessUserResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DUPLICATE_USER
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - userId[a-z0-9]{4,20}·name1~50·email필수형식·신규업무역할1~2개/중복금지·사용중역할원천검사. 중복409 DUPLICATE_USER;이메일중복허용. USER_STAT_CD=USE/PWD_ERR_CNT=MFA_ERR_CNT=0/MFA_USE_YN=N/TEMP_PWD_YN=Y;PWD_CHG_DTTM/LAST_LOGIN_DTTM/MFA_CODE_HASH/MFA_EXPR_DTTM=NULL.
+        PWD_HASH는SecureRandom32바이트임의값BCrypt강도10,응답/로그/이력/메일/로그인0회.
+      - 사용자·역할연결·NEW1건·USER_REG접근1건을한트랜잭션에저장. 접근기록실패포함하나라도실패하면전체롤백·500한국어사유·성공표시/자동재시도없음.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBusinessUserRequest'
+      x-side-effects:
+      - TB_SY_USER/TB_SY_USER_ROLE/NEW/USER_REG 각필수기록을원자commit;조회원천역할정의/기존admin은수정하지않음.
+      x-state-transitions:
+      - from: 대상userId미등록
+        event: 유효필드/활성업무역할등록commit
+        to: USE사용자·선택역할연결·NEW1건·USER_REG1건
+      x-required-tests:
+      - 'happy: 미등록 ab12·유효이름/메일·PM으로POST -> 201·GET상세USE/PM·비밀필드없음'
+      - 'auth: 인증헤더 없이 createBusinessUser 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: 대문자ID/51자이름/형식불량이메일/중복역할/처리자regUserId주입 -> 각각400·데이터/이력0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 기존userId로POST -> 409 DUPLICATE_USER·기존사용자불변'
+      - 'side-effect: USER_REG INSERT 실패fixture에서POST 후DB조회 -> 500·사용자/역할/NEW/접근기록모두0건;정상은각필수기록commit'
+  /api/business-users/{id}:
+    get:
+      operationId: getBusinessUser
+      summary: 업무 사용자 상세 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-201
+      - REQ-245
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBusinessUserResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 기본정보/전체표시역할/편집업무역할/revision. 인증필드/상태변경없음. 변경이력은getMasterHistory(USER,id)로조회한다.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    put:
+      operationId: putBusinessUser
+      summary: 업무 사용자 수정
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-166
+      - REQ-201
+      - REQ-202
+      - REQ-203
+      - REQ-250
+      - REQ-252
+      - REQ-255
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutBusinessUserResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - USER_IS_PART_LEADER
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 사용자행잠금·PM/SALES_LDR연결만변경·ADMIN/FIN/EXEC등보존·전체역할0개400. SALES_LDR해제는종료월NULL/현재월이상일반파트장(미래/중지포함)이면409 USER_IS_PART_LEADER·파트명과영업
+        파트에서 먼저 파트장을 바꾸세요. 과거종료만허용. 파트장지정과동시경합재검사.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutBusinessUserRequest'
+      x-side-effects:
+      - 이름/이메일/업무역할의실제변경과UPD만원자commit;기존인증필드변경0건·비업무역할보존.
+      x-state-transitions:
+      - from: revision일치·기존이름/이메일/업무역할
+        event: 기본정보수정commit
+        to: 새이름/이메일/업무역할·변경항목UPD;상태/인증필드그대로
+      x-required-tests:
+      - 'happy: 상세revision·유효이름/메일/업무역할수정 -> 200 changed=true·GET에서새값'
+      - 'auth: 인증헤더 없이 putBusinessUser 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: businessRoleIds중복/이메일공백/status또는regUserId주입 -> 400·기존값유지·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 현재/미래중지파트장SALES_LDR해제 -> 409 USER_IS_PART_LEADER·파트명;오래된revision -> 409 STALE_WRITE'
+      - 'side-effect: ADMIN보유사용자업무역할수정전후DB비교 -> ADMIN/인증필드보존·실제변경UPD만;동일값은changed=false·시각/이력불변'
+  /api/business-users/options:
+    get:
+      operationId: getBusinessUserOptions
+      summary: 자격 사용자 선택값 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-256
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: purpose
+        in: query
+        required: true
+        description: purpose
+        schema:
+          type: string
+          enum:
+          - PM
+          - PART_LEADER
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBusinessUserOptionsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - purpose
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - USE 사용자+사용중역할. PM=PM연결/PART_LEADER=SALES_LDR연결·이름/ID순·동명이인이름(아이디). 비페이지·전체선택값·0명빈배열·다음열기서버최신.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/clients:
+    get:
+      operationId: getClients
+      summary: 거래처 목록 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-171
+      - REQ-184
+      - REQ-185
+      - REQ-186
+      - REQ-188
+      - REQ-259
+      - REQ-263
+      - REQ-265
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: type
+        in: query
+        required: false
+        description: 전체생략·CUST=CUST+BOTH,VNDR=VNDR+BOTH,BOTH=BOTH만
+        schema:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+      - name: useYn
+        in: query
+        required: false
+        description: Y/N만. 전체=생략. 화면 초기 기본Y는 명시 전송; 생략을 강제로Y로 바꾸지 않는다.
+        schema:
+          $ref: '#/components/schemas/YesNo'
+      - name: q
+        in: query
+        required: false
+        description: trim 후0~100자·빈값조건없음·대소문자구분. 사용자이름/아이디·거래처상호/하이픈제거사업자번호·파트명 부분일치.
+        schema:
+          type: string
+          maxLength: 100
+      - name: sort
+        in: query
+        required: false
+        description: 표시값기준·숫자는원값·동률ID항상ASC·NULL항상뒤·미등록키400
+        schema:
+          type: string
+          enum:
+          - type
+          - name
+          - businessNo
+          - ceo
+          - industry
+          - contactName
+          - phone
+          - taxEmail
+          - projectCount
+          - personCount
+          - useYn
+          default: name
+      - name: direction
+        in: query
+        required: false
+        description: direction
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - type
+        - useYn
+        - q
+        - sort
+        - direction
+        - page
+        - size
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - basisDate=서버Asia/Seoul오늘. ACT·INPUT_BGN_DT≤오늘≤INPUT_END_DT·연결프로젝트ING/PRE. CUST=프로젝트CUST_CLNT_ID,VNDR=개발자BLNG_CLNT_ID,BOTH=합집합.
+        projectCount DISTINCT PROJ_ID/personCount DISTINCT DEV_ID;0건0/빈상세. 날짜변경시목록재조회.
+      - 기본화면useYn=Y·전체생략·type조건BOTH포함·name ASC/ID ASC. 사업자번호하이픈제거검색·total은필터전체건수·초과페이지빈items.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    post:
+      operationId: createClient
+      summary: 거래처 등록
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-166
+      - REQ-243
+      - REQ-266
+      - REQ-267
+      - REQ-268
+      - REQ-269
+      - REQ-270
+      - REQ-271
+      - REQ-272
+      - REQ-276
+      - REQ-277
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters: []
+      responses:
+        '201':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateClientResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DUPLICATE_BUSINESS_NO
+          - ID_EXHAUSTED
+        '503':
+          description: 계좌키/암복호화/태그실패·전체롤백·비밀미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - ENCRYPTION_CONFIG_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - AES-256-GCM·매번새IV12바이트·태그16바이트·v1.+Base64(IV+암호문+태그)·ACCT_NO_ENC200자. ACCOUNT_ENCRYPTION_KEY_BASE64 복호화32바이트.
+        키누락/길이/복호화/태그실패503 ENCRYPTION_CONFIG_ERROR·해당단건/반영전체롤백·평문대체0건. 동일계좌3값이면재암호화/계좌이력0건.
+      - type CUST/VNDR/BOTH·이름1~50·사업자번호10숫자/3-2-5만·체크섬/외부조회없음·000-00-00000저장·중지포함UK. 같은상호는기존상호/번호경고허용·같은번호409 DUPLICATE_BUSINESS_NO와거래처명.
+        INDUTY/BANK활성미삭제만신규선택·기존중지같은코드는유지허용. CUST/BOTH이메일필수·VNDR/BOTH은행/계좌/예금주필수. 비적용영역NULL·입력있으면필드명경고(계좌원문없음)·해당영역검사생략.
+      - C-ID자동발급·USE_YN=Y·accountAction금지·같은상호저장허용. SQ_TB_BS_CLNT_ID NO CYCLE·숫자18자리·기존최댓값다음으로최초설정·재시작재설정/재사용없음·결번허용·소진409
+        ID_EXHAUSTED.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClientRequest'
+      x-side-effects:
+      - 거래처와NEW/실제변경UPD를한트랜잭션commit·계좌암호화·번호이력은마스킹전후. 실패전체롤백·성공후관련조회최신화.
+      x-state-transitions:
+      - from: 미등록사업자번호
+        event: 유효등록commit
+        to: 새C-ID·USE_YN=Y·NEW1건
+      x-required-tests:
+      - 'happy: 미등록번호·CUST·유효이메일로요청 -> 201·자동ID·warnings·GET저장값'
+      - 'auth: 인증헤더 없이 createClient 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: 조건부필수누락/은행11자/계좌문자오류/처리자주입/accountAction주입 -> 400·거래처/이력0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 같은번호중지거래처존재시POST -> 409 DUPLICATE_BUSINESS_NO·동일상호다른번호는경고201'
+      - 'side-effect: 암호화키누락fixture로계좌저장 -> 503·데이터/이력전체롤백·평문로그0건;정상은DB암호문/마스킹이력만'
+  /api/clients/selection:
+    get:
+      operationId: getClientSelection
+      summary: 거래처 전체 선택값 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-188
+      - REQ-289
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: type
+        in: query
+        required: false
+        description: 전체생략·CUST=CUST+BOTH,VNDR=VNDR+BOTH,BOTH=BOTH만
+        schema:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+      - name: useYn
+        in: query
+        required: false
+        description: Y/N만. 전체=생략. 화면 초기 기본Y는 명시 전송; 생략을 강제로Y로 바꾸지 않는다.
+        schema:
+          $ref: '#/components/schemas/YesNo'
+      - name: q
+        in: query
+        required: false
+        description: trim 후0~100자·빈값조건없음·대소문자구분. 사용자이름/아이디·거래처상호/하이픈제거사업자번호·파트명 부분일치.
+        schema:
+          type: string
+          maxLength: 100
+      - name: sort
+        in: query
+        required: false
+        description: 표시값기준·숫자는원값·동률ID항상ASC·NULL항상뒤·미등록키400
+        schema:
+          type: string
+          enum:
+          - type
+          - name
+          - businessNo
+          - ceo
+          - industry
+          - contactName
+          - phone
+          - taxEmail
+          - projectCount
+          - personCount
+          - useYn
+          default: name
+      - name: direction
+        in: query
+        required: false
+        description: direction
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientSelectionResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - type
+        - useYn
+        - q
+        - sort
+        - direction
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - basisDate=서버Asia/Seoul오늘. ACT·INPUT_BGN_DT≤오늘≤INPUT_END_DT·연결프로젝트ING/PRE. CUST=프로젝트CUST_CLNT_ID,VNDR=개발자BLNG_CLNT_ID,BOTH=합집합.
+        projectCount DISTINCT PROJ_ID/personCount DISTINCT DEV_ID;0건0/빈상세. 날짜변경시목록재조회.
+      - 기본화면useYn=Y·전체생략·type조건BOTH포함·name ASC/ID ASC. 비페이지·필터전체ID/revision을고정해total과함께반환·사업자번호는하이픈제거후부분일치.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/clients/{id}:
+    get:
+      operationId: getClient
+      summary: 거래처 상세 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-201
+      - REQ-261
+      - REQ-278
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - basisDate=서버Asia/Seoul오늘. ACT·INPUT_BGN_DT≤오늘≤INPUT_END_DT·연결프로젝트ING/PRE. CUST=프로젝트CUST_CLNT_ID,VNDR=개발자BLNG_CLNT_ID,BOTH=합집합.
+        projectCount DISTINCT PROJ_ID/personCount DISTINCT DEV_ID;0건0/빈상세. 날짜변경시목록재조회.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 중지거래처도상세반환·계좌는은행명+****+숫자끝4자리·원문/암호문없음·이력건수. 기존중지INDUTY/BANK는이름/중지표시정보유지.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    put:
+      operationId: putClient
+      summary: 거래처 수정
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-166
+      - REQ-201
+      - REQ-202
+      - REQ-203
+      - REQ-262
+      - REQ-266
+      - REQ-270
+      - REQ-273
+      - REQ-274
+      - REQ-276
+      - REQ-277
+      - REQ-282
+      - REQ-284
+      - REQ-286
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutClientResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - REFERENCE_IN_USE
+        '503':
+          description: 계좌키/암복호화/태그실패·전체롤백·비밀미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - ENCRYPTION_CONFIG_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - AES-256-GCM·매번새IV12바이트·태그16바이트·v1.+Base64(IV+암호문+태그)·ACCT_NO_ENC200자. ACCOUNT_ENCRYPTION_KEY_BASE64 복호화32바이트.
+        키누락/길이/복호화/태그실패503 ENCRYPTION_CONFIG_ERROR·해당단건/반영전체롤백·평문대체0건. 동일계좌3값이면재암호화/계좌이력0건.
+      - type CUST/VNDR/BOTH·이름1~50·사업자번호10숫자/3-2-5만·체크섬/외부조회없음·000-00-00000저장·중지포함UK. 같은상호는기존상호/번호경고허용·같은번호409 DUPLICATE_BUSINESS_NO와거래처명.
+        INDUTY/BANK활성미삭제만신규선택·기존중지같은코드는유지허용. CUST/BOTH이메일필수·VNDR/BOTH은행/계좌/예금주필수. 비적용영역NULL·입력있으면필드명경고(계좌원문없음)·해당영역검사생략.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 고객자격제거/중지는ING/PRE연결프로젝트0건·협력자격제거/중지는소속개발자0명(중지/퇴사포함);BOTH한쪽제거도동일. 위반409 REFERENCE_IN_USE·참조유형/건수. DEL_YN/삭제없음.
+      - accountAction필수·CUST=CLEAR·VNDR/BOTH=KEEP/REPLACE. KEEP기존3값존재·요청3필드생략;REPLACE새3필드필수·CUST에서협력추가시REPLACE. ID/사업자번호변경400.
+        동일계좌3값재암호화/계좌이력0건.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutClientRequest'
+      x-side-effects:
+      - 거래처와NEW/실제변경UPD를한트랜잭션commit·계좌암호화·번호이력은마스킹전후. 실패전체롤백·성공후관련조회최신화.
+      x-state-transitions:
+      - from: revision일치·기존거래처/계좌
+        event: 기본정보/accountAction저장commit
+        to: 새기본정보·KEEP기존계좌/REPLACE새암호문/CLEAR계좌3값NULL·실제변경이력
+      x-required-tests:
+      - 'happy: 상세revision·VNDR KEEP·계좌3필드생략로요청 -> 200·기본정보반영·계좌보존'
+      - 'auth: 인증헤더 없이 putClient 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로 사용하지
+        않음'
+      - 'validation: 조건부필수누락/은행11자/계좌문자오류/처리자주입/KEEP계좌필드혼합 -> 400·거래처/이력0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: ING프로젝트있는고객자격제거 -> 409 REFERENCE_IN_USE·참조건수;stale revision ->409'
+      - 'side-effect: 암호화키누락fixture로계좌저장 -> 503·데이터/이력전체롤백·평문로그0건;정상은DB암호문/마스킹이력만'
+  /api/clients/{id}/account:
+    get:
+      operationId: getClientAccount
+      summary: 거래처 전체 계좌 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-276
+      - REQ-277
+      - REQ-279
+      - REQ-280
+      - REQ-379
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-385
+      - REQ-388
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientAccountResponse'
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: 영구/공통캐시 저장 금지
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '503':
+          description: 키/복호화/태그실패·번호미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - ENCRYPTION_CONFIG_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - AES-256-GCM·매번새IV12바이트·태그16바이트·v1.+Base64(IV+암호문+태그)·ACCT_NO_ENC200자. ACCOUNT_ENCRYPTION_KEY_BASE64 복호화32바이트.
+        키누락/길이/복호화/태그실패503 ENCRYPTION_CONFIG_ERROR·해당단건/반영전체롤백·평문대체0건. 동일계좌3값이면재암호화/계좌이력0건.
+      - 필수ACCT_VIEW1건의저장완료뒤에만전체번호반환·실패500·번호미노출·성공표시/자동재시도없음. no-store·영구/공통캐시0건. 닫기/거래처이동/숨기기시화면원문상태폐기.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+      x-side-effects:
+      - TB_SY_ACCS_LOG에ACCT_VIEW1건·USER_ID/REG_USER_ID=admin·서버시각/IP·UI-15·대상ID만·비밀값없음. 기록무기한보존.
+      x-state-transitions:
+      - from: 해당조회ACCT_VIEW미기록
+        event: ACCT_VIEW저장완료
+        to: 접근기록1건영속·그뒤평문응답허용
+      x-required-tests:
+      - 'happy: 암호화계좌존재거래처GET -> 200·전체앞0/하이픈보존·Cache-Control:no-store'
+      - 'auth: 인증헤더 없이 getClientAccount 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: id외regUserId query주입 -> 400 UNKNOWN_FIELD·원문미반환·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 변조된GCM태그fixture조회 -> 503 ENCRYPTION_CONFIG_ERROR·평문응답없음'
+      - 'side-effect: 접근기록INSERT실패fixture조회 -> 500·번호미노출;정상은ACCT_VIEW1건·비밀값기록0건'
+  /api/clients/{id}/assignments:
+    get:
+      operationId: getClientAssignments
+      summary: 거래처 투입 내역 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-184
+      - REQ-264
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientAssignmentsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - page
+        - size
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - basisDate=서버Asia/Seoul오늘. ACT·INPUT_BGN_DT≤오늘≤INPUT_END_DT·연결프로젝트ING/PRE. CUST=프로젝트CUST_CLNT_ID,VNDR=개발자BLNG_CLNT_ID,BOTH=합집합.
+        projectCount DISTINCT PROJ_ID/personCount DISTINCT DEV_ID;0건0/빈상세. 날짜변경시목록재조회.
+      - 목록basisDate와일치·프로젝트명/관리번호/ASGN_ID순고정. page/size만허용·0건빈items.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/clients/bulk-status:
+    post:
+      operationId: saveClientBulkStatus
+      summary: 거래처 중지 재개 처리
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-202
+      - REQ-287
+      - REQ-288
+      - REQ-291
+      - REQ-292
+      - REQ-293
+      - REQ-294
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveClientBulkStatusResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 고객자격제거/중지는ING/PRE연결프로젝트0건·협력자격제거/중지는소속개발자0명(중지/퇴사포함);BOTH한쪽제거도동일. 위반409 REFERENCE_IN_USE·참조유형/건수. DEL_YN/삭제없음.
+      - 중복ID400·잠금후revision→상태→참조순. 충돌은동일상태도rejected,일치동일목표noChange,변경가능applied,불가rejected. 항목별트랜잭션·세결과합=요청ID수·개별ID/상호/오류제공.
+        통신단절자동재전송0·재조회새revision수동요청.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientBulkStatusRequest'
+      x-side-effects:
+      - 적용항목USE_YN과STOP/RESUME만원자commit·실패항목데이터/이력0건. 거래처/참조/이력삭제없음.
+      x-state-transitions:
+      - from: revision일치·Y·중지참조0
+        event: targetUseYn=N
+        to: N·STOP1건
+      - from: revision일치·N
+        event: targetUseYn=Y
+        to: Y·RESUME1건
+      x-required-tests:
+      - 'happy: 참조없는Y거래처revision1건·targetN -> 200 applied1·GET useYn=N'
+      - 'auth: 인증헤더 없이 saveClientBulkStatus 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은
+        접근권한으로 사용하지 않음'
+      - 'validation: 중복id/targetUseYn=STOP/처리자regUserId주입 -> 400·전체 항목 변경0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: stale항목·이미목표일치항목·참조차단항목묶음 -> rejected/noChange/rejected·각오류/건수합일치'
+      - 'side-effect: 성공1건/실패1건혼합후DB조회 -> 성공만USE_YN/STOPcommit·실패이력0·정상화후수동새revision요청만'
+  /api/clients/options:
+    get:
+      operationId: getClientOptions
+      summary: 거래처 선택값 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-296
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: purpose
+        in: query
+        required: true
+        description: purpose
+        schema:
+          type: string
+          enum:
+          - CUSTOMER
+          - VENDOR
+      - name: q
+        in: query
+        required: false
+        description: trim 후0~100자·빈값조건없음·대소문자구분. 사용자이름/아이디·거래처상호/하이픈제거사업자번호·파트명 부분일치.
+        schema:
+          type: string
+          maxLength: 100
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetClientOptionsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - purpose
+        - q
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 비페이지·활성자격전체·CUSTOMER=Y인CUST/BOTH,VENDOR=Y인VNDR/BOTH·이름/ID순·q부분일치. 기존자료표시는getClient로중지도조회. 다음열기최신서버조회.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/sales-parts:
+    get:
+      operationId: getSalesParts
+      summary: 영업 파트 목록 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-171
+      - REQ-184
+      - REQ-185
+      - REQ-186
+      - REQ-188
+      - REQ-297
+      - REQ-299
+      - REQ-300
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: trim 후0~100자·빈값조건없음·대소문자구분. 사용자이름/아이디·거래처상호/하이픈제거사업자번호·파트명 부분일치.
+        schema:
+          type: string
+          maxLength: 100
+      - name: useYn
+        in: query
+        required: false
+        description: Y/N만. 전체=생략. 화면 초기 기본Y는 명시 전송; 생략을 강제로Y로 바꾸지 않는다.
+        schema:
+          $ref: '#/components/schemas/YesNo'
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        description: 표시값기준·숫자는원값·동률ID항상ASC·NULL항상뒤·미등록키400
+        schema:
+          type: string
+          enum:
+          - name
+          - leaderName
+          - profitRate
+          - salesExpenseAmount
+          - effectiveMonth
+          - personCount
+          - projectCount
+          - useYn
+          default: name
+      - name: direction
+        in: query
+        required: false
+        description: direction
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSalesPartsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - q
+        - useYn
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - q파트명부분일치·화면기본Y·전체생략. 현재월유효행만현재·미래만있으면현재NULL/적용전·가장가까운미래만예정변경. 인력중지포함PART_ID별DISTINCT DEV_ID·프로젝트ING/PRE현재월이하최신TB_PJ_PROJ_PART별DISTINCT
+        PROJ_ID. TB_PJ_PROJ.PART_ID가정없음.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    post:
+      operationId: createSalesPart
+      summary: 영업 파트와 첫 기준 등록
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-167
+      - REQ-168
+      - REQ-169
+      - REQ-243
+      - REQ-303
+      - REQ-305
+      - REQ-306
+      - REQ-310
+      - REQ-311
+      - REQ-312
+      - REQ-314
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters: []
+      responses:
+        '201':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSalesPartResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DUPLICATE_PART_NAME
+          - CLOSED_MONTH
+          - ID_EXHAUSTED
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - name1~30·중지포함유일·SQ_TB_BS_PART_ID NO CYCLE 숫자15자리·최초기존최대다음·재설정/재사용없음. 시작월<minMonth409 CLOSED_MONTH·소진409 ID_EXHAUSTED·중복이름409
+        DUPLICATE_PART_NAME. 기본값자동보충없음·유효수동율/관리비허용. 파트/첫기준/각NEW1건원자생성·첫endMonth=NULL.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSalesPartRequest'
+      x-side-effects:
+      - 파트/기준의해당변경과NEW/UPD/STOP/RESUME를단건원자commit·정산/마감/권한/알림/사용자범위복제변경0건.
+      x-state-transitions:
+      - from: 일반파트미등록
+        event: 유효필수값등록commit
+        to: USE_YN=Y/HQ_YN=N·새PART-ID·첫기준끝NULL·NEW각1건
+      x-required-tests:
+      - 'happy: USE·활성SALES_LDR사용자·minMonth이상·율0/100·관리비상한으로POST -> 201·파트/첫기준GET일치'
+      - 'auth: 인증헤더 없이 createSalesPart 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: 필수율생략/100.01/소수3자리/음수관리비/처리자주입 -> 400·파트/기준0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 중지포함동명이름 ->409 DUPLICATE_PART_NAME;최소월이전 ->409 CLOSED_MONTH'
+      - 'side-effect: 첫기준또는NEW저장실패fixture -> 파트/첫기준/각NEW전체롤백;정상은각1행·endMonthNULL'
+  /api/sales-parts/defaults:
+    get:
+      operationId: getSalesPartDefaults
+      summary: 영업 파트 기본값 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-169
+      - REQ-171
+      - REQ-305
+      - REQ-307
+      - REQ-309
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: effectiveMonth
+        in: query
+        required: false
+        description: effectiveMonth
+        schema:
+          $ref: '#/components/schemas/YearMonth'
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSalesPartDefaultsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed:
+        - effectiveMonth
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - 비페이지·단일월기본값. 월생략max(서버현재월,minMonth). PART_DSTRB_RT/PART_SALES_EXPS 시작월≤선택월최신. 누락/범위/정밀도오류해당값NULL+defaultErrors원천/필드/한국어사유.
+        자동보정/반올림없음·유효수동값저장가능.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/sales-parts/{id}:
+    get:
+      operationId: getSalesPart
+      summary: 영업 파트 상세 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-201
+      - REQ-298
+      - REQ-305
+      - REQ-318
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSalesPartResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - 비페이지·대상단건/전체시간선시작월DESC. 현재/예정구분·minMonth·revision. 중지파트도조회/기준변경가능·선택월유효값은반환한전체시간선에서계산.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+    patch:
+      operationId: putSalesPart
+      summary: 영업 파트 이름 또는 상태 수정
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-201
+      - REQ-202
+      - REQ-203
+      - REQ-313
+      - REQ-314
+      - REQ-315
+      - REQ-316
+      - REQ-317
+      - REQ-319
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutSalesPartResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - DUPLICATE_PART_NAME
+          - REFERENCE_IN_USE
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - PATCH name/useYn중하나만·동시/둘다없음400. 이름중복409 DUPLICATE_PART_NAME·ID유지·실제변경UPD. 중지는소속개발자0·ING/PRE현재/미래유효파트연결0만;과거연결제외.
+        차단409 REFERENCE_IN_USE·건수. 재개Y/RESUME·같은상태changed=false.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutSalesPartRequest'
+      x-side-effects:
+      - 파트/기준의해당변경과NEW/UPD/STOP/RESUME를단건원자commit·정산/마감/권한/알림/사용자범위복제변경0건.
+      x-state-transitions:
+      - from: revision일치·이전이름
+        event: name저장
+        to: 동일ID·새이름·UPD
+      - from: revision일치·Y·개발자/현재미래프로젝트참조0
+        event: useYn=N
+        to: N·STOP
+      - from: revision일치·N
+        event: useYn=Y
+        to: Y·RESUME
+      x-required-tests:
+      - 'happy: revision일치파트name만변경 ->200 changed=true·동일ID새이름'
+      - 'auth: 인증헤더 없이 putSalesPart 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: name/useYn동시또는둘다없음/처리자주입 ->400·원파트불변·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 현재/미래ING프로젝트연결있는파트중지 ->409 REFERENCE_IN_USE·과거만연결은허용;stale ->409'
+      - 'side-effect: 중지후파트/기준/정산행비교 ->삭제0·USE_YN=N/STOP만·같은상태재요청changed=false/추가이력0'
+  /api/sales-parts/{id}/standards:
+    post:
+      operationId: createSalesPartStandard
+      summary: 영업 파트 새 기준 삽입
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-165
+      - REQ-167
+      - REQ-168
+      - REQ-169
+      - REQ-201
+      - REQ-202
+      - REQ-203
+      - REQ-305
+      - REQ-310
+      - REQ-318
+      - REQ-321
+      - REQ-322
+      - REQ-323
+      - REQ-324
+      - REQ-325
+      - REQ-326
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: string
+          maxLength: 30
+          minLength: 1
+      responses:
+        '201':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSalesPartStandardResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - CLOSED_MONTH
+          - STANDARD_MONTH_EXISTS
+          - PART_SETTLEMENT_CONFIRMED
+        '200':
+          description: 검사통과새시작월의유효기준과동일값·changed=false·지금 기준과 같습니다.·데이터/이력불변
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSalesPartStandardResponse'
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - 선택사용자→파트→기준이력순·복수ID오름차순잠금후자격/최소월/revision/정산재검사. minMonth=max(CASH_BASE_YM,마지막CLOSE_STAT_CD=CLOSE월+1);WORK행제외.
+        USE·사용중SALES_LDR사용자만파트장·복수파트허용. HQ일반관리제외·중지파트기준변경허용.
+      - ID·편집값·REG_DTTM/MOD_DTTM 원정밀도와NULL의revision. 사용자전체역할ID정렬·파트이름/사용/전체기준시간선포함; 건수/현재일/표시문자제외. 잠금후불일치409 STALE_WRITE·데이터/이력0건.
+        같은시각이라도값이다르면충돌. 일치무변경200 changed=false·바뀐 내용이 없습니다.·시각/이력불변.
+      - revision→필수/범위/자격/최소월→기존시작월중복순. 최초기준전400·이미존재시작월은값같아도409 STANDARD_MONTH_EXISTS. 새월유효세값모두같으면200 changed=false·지금
+        기준과 같습니다.·DB/이력0. 다르면201삽입·기존값덮어쓰기/미래삭제없음.
+      - 새시작M:직전끝=M-1개월·새끝=다음시작-1(없으면NULL),기간양끝포함·최초시작이후중복/공백0. 부분실패기존끝수정도롤백. 율/관리비변경은시작월이후미마감CNFM/AUTO1건이상409 PART_SETTLEMENT_CONFIRMED·차단월/파트명/최종차단다음달제공.
+        해제후AUTO도보호·파트장만변경허용. 정산금액/마감자료/권한/알림불변.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSalesPartStandardRequest'
+      x-side-effects:
+      - 파트/기준의해당변경과NEW/UPD/STOP/RESUME를단건원자commit·정산/마감/권한/알림/사용자범위복제변경0건.
+      x-state-transitions:
+      - from: revision일치·새시작월M·유효기준과3값중변경있음
+        event: 기준삽입commit
+        to: 직전끝M-1·새기준끝다음시작-1/NULL·미래행보존·NEW/끝조정UPD
+      x-required-tests:
+      - 'happy: 기존시작사이새월·다른율·정산확정없음·revision일치 ->201·직전/신규끝월연속·미래행그대로'
+      - 'auth: 인증헤더 없이 createSalesPartStandard 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은
+        접근권한으로 사용하지 않음'
+      - 'validation: 최초기준전/소수3자리율/필수leaderUserId누락/처리자주입 ->400·시간선불변·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 중복시작월동일값 ->409 STANDARD_MONTH_EXISTS;미마감AUTO/CNFM율변경 ->409 PART_SETTLEMENT_CONFIRMED·차단월·파트장만변경허용'
+      - 'side-effect: 직전끝수정후신규기준저장실패fixture ->기존끝복원·NEW0;정상후기존정산/마감행불변·새월동일값200 false·이력0'
+      x-validation-order:
+      - revision 잠금 비교
+      - 필수/범위/파트장 자격/최소월
+      - 기존 시작월 중복
+      - 유효기준 세값 동일 여부
+      - 율/관리비 변경시 CNFM/AUTO 보호
+      - 직전 종료월 조정과 신규 삽입 원자 commit
+  /api/sales-parts/options:
+    get:
+      operationId: getSalesPartOptions
+      summary: 영업 파트와 본사 선택값 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-302
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSalesPartOptionsResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 비페이지·사용중일반파트와본사HQ를hqYn으로구분·최초시작월포함. 미래시작파트도선택가능·중지제외·이름/ID순·다음열기서버최신조회.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/master-history:
+    get:
+      operationId: getMasterHistory
+      summary: 기준정보 변경 이력 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-184
+      - REQ-208
+      - REQ-209
+      - REQ-318
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      parameters:
+      - name: targetType
+        in: query
+        required: true
+        description: targetType
+        schema:
+          type: string
+          enum:
+          - USER
+          - CLIENT
+          - PART
+      - name: targetId
+        in: query
+        required: true
+        description: targetId
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 1
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMasterHistoryResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상업무자료미존재;기존대상의이력0건은200빈items
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - targetType
+        - targetId
+        - page
+        - size
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 대상USER/CLIENT/PART필수·PART는파트및파트ID:YYYYMM기준이력합침. REG_DTTM DESC/HIST_ID DESC고정·추가정렬필터없음·무기한보존·수정/삭제/자동정리없음·계좌는마스킹·이름/코드는변경당시문자열.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/excel/B7/template:
+    get:
+      operationId: getB7Template
+      summary: 거래처 등록 양식 다운로드
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-329
+      - REQ-330
+      - REQ-372
+      - REQ-376
+      - REQ-377
+      - REQ-378
+      - REQ-379
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-386
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename*=UTF-8''종류_YYYYMMDD_HHmmss.xlsx
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 동일DB스냅샷에서필터/정렬전체·페이지/선택제한없음·0건제목만. 거래처12열설정/파트고정9열·계좌마스킹·전체번호컬럼400. 텍스트셀·숫자셀구분·=,+,-,@문자도수식실행0회. 건수상한없는chunk/stream·시트당데이터1048575행·초과데이터_2.
+        마지막다운로드정보시트=처리자ID/이름·생성시각·조건·단위·총건수. 종류_YYYYMMDD_HHmmss.xlsx. 생성종료/실패/취소임시파일정리. 파일생성후DNLD접근기록1건저장완료뒤전송;기록실패500
+        INTERNAL_ERROR·파일비제공/임시정리·자동재시도없음.
+      - 비페이지·B7/UI-15빈양식. 첫시트첫행11열=구분/상호/사업자등록번호/대표자/업종/담당자/연락처/세금계산서 이메일/은행/계좌번호/예금주·데이터없음. 사업자번호/연락처/계좌번호텍스트서식·입력안내시트필수/조건/코드명안내.
+        종류=거래처_등록양식.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+      x-side-effects:
+      - 생성완료파일에대해TB_SY_ACCS_LOG DNLD1건(처리자admin/UI-15/서버시각/IP/종류·건수만)저장후전송·기록무기한보존. 생성실패/접근기록실패/연결취소시임시파일정리. 업무데이터수정0건.
+      x-state-transitions:
+      - from: 해당다운로드접근기록미등록·파일생성완료
+        event: DNLD1건저장commit
+        to: 다운로드접근기록영속·그뒤파일전송허용
+      x-required-tests:
+      - 'happy: 인증없이양식GET ->200 XLSX·11열순서·데이터빈칸·입력안내·다운로드정보마지막'
+      - 'auth: 인증헤더 없이 getB7Template 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: 허용되지않은formType/query처리자주입 ->400 UNKNOWN_FIELD·파일비제공·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 양식OOXML열타입검사 ->사업자번호/연락처/계좌번호텍스트·B7외다른양식자동생성0'
+      - 'side-effect: 접근기록INSERT실패fixture로다운로드 ->500 INTERNAL_ERROR·XLSX전송0·임시파일0;정상은DNLD1건·업무데이터불변'
+  /api/excel/B7/validate:
+    post:
+      operationId: createB7Validation
+      summary: 거래처 엑셀 검사
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-329
+      - REQ-333
+      - REQ-334
+      - REQ-335
+      - REQ-336
+      - REQ-337
+      - REQ-338
+      - REQ-339
+      - REQ-340
+      - REQ-341
+      - REQ-342
+      - REQ-343
+      - REQ-344
+      - REQ-345
+      - REQ-346
+      - REQ-347
+      - REQ-350
+      - REQ-351
+      - REQ-352
+      - REQ-355
+      - REQ-367
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-388
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateB7ValidationResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+          - INVALID_FILE_HEADER
+          - EMPTY_FILE
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '413':
+          description: 파일10485760바이트/데이터5000행초과·업무0건
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - FILE_TOO_LARGE
+          - TOO_MANY_ROWS
+        '415':
+          description: xlsx아님/실OOXML아님/암호보호파일·업무0건
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - UNSUPPORTED_FILE_TYPE
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - B7/UI-15만. xlsx대소문자무관·실ZIP/OOXML·≤10485760바이트·경로제거파일명1~200자·첫시트1~5000데이터행(제목전/완전빈행제외·숨김포함). 크기/행수초과413,다른형식/암호보호415,손상/제목/0행/파일명400.
+        파일단계실패업무/UPLD0건.
+      - 구분/상호/사업자등록번호함께있는최초행이제목. 공백/줄바꿈/끝*제거·사업자번호별칭·열순서변경허용·동일필드중복제목400. 필수제목3개외누락빈셀·알수없는열파일WARN1건씩·후속제목도데이터·다른시트미독해.
+        Excel표시문자열trim·앞0/하이픈보존·누락숫자추측0회. 식별자/계좌원숫자16자리이상정수는텍스트 형식으로 입력하세요ERR. 수식캐시만·실행/외부링크0회·캐시없음/셀오류행ERR.
+      - CLNT_TYPE/INDUTY/BANK에서활성미삭제코드명정확일치→동일그룹TB_SY_CODE_MAP.SRC_TEXT→오류. 코드ID를코드명으로간주안함·대응적용WARN·모호/중지삭제대응ERR.
+        한행필수/길이/형식/코드/조건부계좌모두검사. 정규화사업자번호파일중복관련행모두ERR·DB기존중지포함ERR·같은상호WARN. 비적용영역입력폐기WARN·해당영역검사생략. 계좌진단항상[비공개]·입력200/사유300발췌·업무값절단0건.
+      - 파일통과후UPLD CHECKED/APLY_DTTM=NULL·FORM_TYPE_CD=B7/SCRN_ID=UI-15·대상월/프로젝트/배분단계NULL·성공/경고/오류합N·파일WARN별도. 모든문제RSLT_SN1부터.
+        오류0·N≥1일때만canApply. 업무거래처등록0건. 원본/정상파싱행미보관·임시파일요청종료정리.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/B7ValidateRequest'
+      x-side-effects:
+      - UPLD/전체문제/요약원자저장·동일uploadId재검사문제만교체가능;무기한기록보존·원본/정상행미보관. 검사는업무거래처0건.
+      x-state-transitions:
+      - from: 검사기록미등록·유효파일
+        event: 파일/행검사기록commit
+        to: 새UPLD CHECKED·APLY_DTTM=NULL·전체문제/요약영속·거래처0건
+      x-required-tests:
+      - 'happy: 11열유효파일·경고만1행으로검사 ->200 uploadId/CHECKED·경고행1·canApply=true·문제첫페이지'
+      - 'auth: 인증헤더 없이 createB7Validation 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로
+        사용하지 않음'
+      - 'validation: 10MiB초과/5001행 ->413,가짜xlsx/암호보호 ->415,중복헤더/0행 ->400·업무/UPLD0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 정규화중복사업자번호2행·중지코드대응·16자리숫자계좌파일검사 ->관련행모든ERR·canApply=false·계좌진단[비공개]'
+      - 'side-effect: 문제INSERT실패fixture ->UPLD/문제전체롤백·500;정상검사후거래처0·임시파일0·원본/정상행별도보관0'
+  /api/uploads/{id}/issues:
+    get:
+      operationId: getUploadIssues
+      summary: 엑셀 검사 문제 조회
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-184
+      - REQ-353
+      - REQ-354
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-388
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: severity
+        in: query
+        required: false
+        description: 전체=생략·기본전체·파일WARN도포함
+        schema:
+          type: string
+          enum:
+          - ERR
+          - WARN
+      - name: page
+        in: query
+        required: false
+        description: page
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: size
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetUploadIssuesResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - severity
+        - page
+        - size
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 현재저장문제전체에서severity필터·기본전체. 행/열/ERR우선/일련번호순·파일WARN포함. 계좌항상[비공개]·발췌값만·원본파일미보관·무기한보존(재검사교체제외).
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+  /api/excel/B7/apply:
+    post:
+      operationId: saveB7Apply
+      summary: 거래처 엑셀 전량 반영
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-243
+      - REQ-276
+      - REQ-277
+      - REQ-329
+      - REQ-333
+      - REQ-334
+      - REQ-335
+      - REQ-350
+      - REQ-352
+      - REQ-355
+      - REQ-357
+      - REQ-358
+      - REQ-359
+      - REQ-360
+      - REQ-361
+      - REQ-362
+      - REQ-363
+      - REQ-364
+      - REQ-365
+      - REQ-367
+      - REQ-369
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-388
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveB7ApplyResponse'
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+          - INVALID_FILE_HEADER
+          - EMPTY_FILE
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 잠금후 최신 revision/업무조건 실패. 오류details에 참조건수/차단월/파트명을 반환한다. 해당단위 데이터/이력0건.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - UPLOAD_CONTEXT_MISMATCH
+          - ID_EXHAUSTED
+        '413':
+          description: 파일10485760바이트/데이터5000행초과·업무0건
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - FILE_TOO_LARGE
+          - TOO_MANY_ROWS
+        '415':
+          description: xlsx아님/실OOXML아님/암호보호파일·업무0건
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - UNSUPPORTED_FILE_TYPE
+        '422':
+          description: 현재DB재검사오류·업무0건·동일uploadId CHECKED 교체. details에uploadId/summary/canApply=false/issues첫페이지를반환한다.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B7RevalidationError'
+          x-error-codes:
+          - UPLOAD_VALIDATION_FAILED
+        '503':
+          description: 계좌암호화실패·전체반영트랜잭션롤백
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - ENCRYPTION_CONFIG_ERROR
+        '404':
+          description: uploadId대상없음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 문자열trim후길이검사·필수빈칸400·선택빈칸NULL·절단/반올림없음. 저장은DBcommit후성공. 변경이력은등록NEW1건(파트/첫기준각1건),수정실제변경컬럼별UPD·역할집합은업무 역할1항목·상태STOP/RESUME.
+        TB_SY_CHG_HIST/업로드/문제/접근기록은기한없이보존·자동정리없음(동일uploadId문제교체만예외). 비밀원문/암호문/해시/키를이력/로그에저장하지않는다.
+      - B7/UI-15만. xlsx대소문자무관·실ZIP/OOXML·≤10485760바이트·경로제거파일명1~200자·첫시트1~5000데이터행(제목전/완전빈행제외·숨김포함). 크기/행수초과413,다른형식/암호보호415,손상/제목/0행/파일명400.
+        파일단계실패업무/UPLD0건.
+      - 구분/상호/사업자등록번호함께있는최초행이제목. 공백/줄바꿈/끝*제거·사업자번호별칭·열순서변경허용·동일필드중복제목400. 필수제목3개외누락빈셀·알수없는열파일WARN1건씩·후속제목도데이터·다른시트미독해.
+        Excel표시문자열trim·앞0/하이픈보존·누락숫자추측0회. 식별자/계좌원숫자16자리이상정수는텍스트 형식으로 입력하세요ERR. 수식캐시만·실행/외부링크0회·캐시없음/셀오류행ERR.
+      - CLNT_TYPE/INDUTY/BANK에서활성미삭제코드명정확일치→동일그룹TB_SY_CODE_MAP.SRC_TEXT→오류. 코드ID를코드명으로간주안함·대응적용WARN·모호/중지삭제대응ERR.
+        한행필수/길이/형식/코드/조건부계좌모두검사. 정규화사업자번호파일중복관련행모두ERR·DB기존중지포함ERR·같은상호WARN. 비적용영역입력폐기WARN·해당영역검사생략. 계좌진단항상[비공개]·입력200/사유300발췌·업무값절단0건.
+      - AES-256-GCM·매번새IV12바이트·태그16바이트·v1.+Base64(IV+암호문+태그)·ACCT_NO_ENC200자. ACCOUNT_ENCRYPTION_KEY_BASE64 복호화32바이트.
+        키누락/길이/복호화/태그실패503 ENCRYPTION_CONFIG_ERROR·해당단건/반영전체롤백·평문대체0건. 동일계좌3값이면재암호화/계좌이력0건.
+      - 같은File/uploadId재전송·UPLD잠금후B7/UI-15·처리자·CHECKED/APPLIED·파일명/크기일치검사·불일치409 UPLOAD_CONTEXT_MISMATCH. APPLIED면저장요약만200·등록/NEW0.
+        CHECKED는현재DB코드/대응/중복/필수값으로전체재검사.
+      - 재검사ERR이면업무0·같은uploadId문제/요약CHECKED로원자교체·422 UPLOAD_VALIDATION_FAILED(details uploadId/summary/canApply=false/issues첫페이지)·기록교체실패500/이전결과유지.
+        통과시전체거래처/각NEW(CHG_RSN=B7 업로드:ID)/APPLIED/APLY_DTTM원자commit. UK경합은전체롤백후새트랜잭션재검사·중복문제CHECKED저장/422. 동일ID동시2회등록1회/NEW1세트.
+      - 반영ID발급/USE_YN=Y·기존수정없음·대상월/마감/지난해제한없음. 원본/정상파싱행보관없음·임시파일요청종료정리. 응답유실동일File/uploadId수동재확인만·자동재시도0.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/B7ApplyRequest'
+      x-side-effects:
+      - UPLD/전체문제/요약원자저장·동일uploadId재검사문제만교체가능;무기한기록보존·원본/정상행미보관. 통과시거래처전량·각NEW·APPLIED원자저장·한행실패전체롤백.
+      x-state-transitions:
+      - from: UPLD CHECKED·재검사ERR0
+        event: 전량반영commit
+        to: UPLD APPLIED/APLY_DTTM서버시각·전체거래처/NEW
+      - from: UPLD CHECKED·재검사ERR있음
+        event: 문제교체commit·422
+        to: UPLD CHECKED·새문제/요약·업무0건
+      x-required-tests:
+      - 'happy: CHECKED·오류0·같은File/uploadId반영 ->200 APPLIED·N거래처/NEW·동일ID재요청추가등록0'
+      - 'auth: 인증헤더 없이 saveB7Apply 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은 접근권한으로 사용하지
+        않음'
+      - 'validation: 필수file/uploadId누락·미정의처리자field ->400;크기초과413/비OOXML415·업무0건·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: 검사뒤DB동일번호등록fixture재반영 ->422·같은uploadId CHECKED 새중복문제;파일명/크기불일치409 UPLOAD_CONTEXT_MISMATCH'
+      - 'side-effect: 중간행암호화/NEW저장실패fixture ->전체거래처/이력/APPLIED전이롤백;동일ID동시2요청은한세트만commit·임시파일0'
+  /api/uploads/{id}/issues.xlsx:
+    get:
+      operationId: getUploadIssuesXlsx
+      summary: 엑셀 검사 문제 다운로드
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-372
+      - REQ-375
+      - REQ-376
+      - REQ-377
+      - REQ-378
+      - REQ-379
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-386
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: 대상 식별자. 중지 거래처/파트도 상세와 이력 조회 가능. HQ는 일반파트관리 제외.
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: severity
+        in: query
+        required: false
+        description: 전체=생략·기본전체·파일WARN도포함
+        schema:
+          type: string
+          enum:
+          - ERR
+          - WARN
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename*=UTF-8''종류_YYYYMMDD_HHmmss.xlsx
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '404':
+          description: 대상이 존재하지 않음
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - severity
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 동일DB스냅샷에서필터/정렬전체·페이지/선택제한없음·0건제목만. 거래처12열설정/파트고정9열·계좌마스킹·전체번호컬럼400. 텍스트셀·숫자셀구분·=,+,-,@문자도수식실행0회. 건수상한없는chunk/stream·시트당데이터1048575행·초과데이터_2.
+        마지막다운로드정보시트=처리자ID/이름·생성시각·조건·단위·총건수. 종류_YYYYMMDD_HHmmss.xlsx. 생성종료/실패/취소임시파일정리. 파일생성후DNLD접근기록1건저장완료뒤전송;기록실패500
+        INTERNAL_ERROR·파일비제공/임시정리·자동재시도없음.
+      - 비페이지·현재severity(생략전체)의모든저장문제·파일WARN포함·유형/행/열/입력값/이유열. 저장된발췌/비공개값만. 종류=거래처_업로드검사_ID.
+      x-request-body-not-applicable: GET 조회/다운로드는 명시 query/path만 사용하고 requestBody가 없다.
+      x-side-effects:
+      - 생성완료파일에대해TB_SY_ACCS_LOG DNLD1건(처리자admin/UI-15/서버시각/IP/종류·건수만)저장후전송·기록무기한보존. 생성실패/접근기록실패/연결취소시임시파일정리. 업무데이터수정0건.
+      x-state-transitions:
+      - from: 해당다운로드접근기록미등록·파일생성완료
+        event: DNLD1건저장commit
+        to: 다운로드접근기록영속·그뒤파일전송허용
+      x-required-tests:
+      - 'happy: ERR/WARN/파일경고존재uploadId·severity생략GET ->200 XLSX·모든문제·5열·계좌[비공개]'
+      - 'auth: 인증헤더 없이 getUploadIssuesXlsx 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은
+        접근권한으로 사용하지 않음'
+      - 'validation: severity=ALL/미정의처리자query ->400·파일비제공·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: severity=ERR로다운로드 ->저장ERR전체만·WARN제외·페이지크기에의한누락0'
+      - 'side-effect: 접근기록INSERT실패fixture로다운로드 ->500 INTERNAL_ERROR·XLSX전송0·임시파일0;정상은DNLD1건·업무데이터불변'
+  /api/exports/master-data:
+    post:
+      operationId: createMasterDataExport
+      summary: 기준정보 전체 결과 다운로드
+      description: '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음.
+        PM/SALES_LDR는 업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의
+        쓰기범위/파일제외는 이 신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      security: []
+      x-related-requirements:
+      - REQ-160
+      - REQ-188
+      - REQ-370
+      - REQ-371
+      - REQ-372
+      - REQ-373
+      - REQ-374
+      - REQ-376
+      - REQ-377
+      - REQ-378
+      - REQ-379
+      - REQ-381
+      - REQ-382
+      - REQ-383
+      - REQ-384
+      - REQ-386
+      - REQ-388
+      parameters: []
+      responses:
+        '200':
+          description: commit 완료 또는 실제 조회 결과
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename*=UTF-8''종류_YYYYMMDD_HHmmss.xlsx
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: ' 필수/타입/길이/enum/허용외필드오류·한국어필드사유'
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '500':
+          description: 내부 또는 필수 기록 저장 실패·SQL/스택/비밀값 미노출
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 일치하는 추적값. 비밀값 없음.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-query-validation:
+        allowed: []
+        unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
+      x-business-rules:
+      - '현재 요청의 신규28연산에만 적용: /api·camelCase·CurrentUserProvider=admin·security=[]·인증리다이렉트/401/역할403없음. PM/SALES_LDR는
+        업무자격이다. 처리자/감사/시스템필드 및 미정의 필드400 UNKNOWN_FIELD(사용자POST userId만 생성대상 예외). 로컬/제한사설환경만. 기존 공통계약의 쓰기범위/파일제외는 이
+        신규업무로만 확장하고 기존연산을 바꾸지 않는다.'
+      - 동일DB스냅샷에서필터/정렬전체·페이지/선택제한없음·0건제목만. 거래처12열설정/파트고정9열·계좌마스킹·전체번호컬럼400. 텍스트셀·숫자셀구분·=,+,-,@문자도수식실행0회. 건수상한없는chunk/stream·시트당데이터1048575행·초과데이터_2.
+        마지막다운로드정보시트=처리자ID/이름·생성시각·조건·단위·총건수. 종류_YYYYMMDD_HHmmss.xlsx. 생성종료/실패/취소임시파일정리. 파일생성후DNLD접근기록1건저장완료뒤전송;기록실패500
+        INTERNAL_ERROR·파일비제공/임시정리·자동재시도없음.
+      - CLIENTS열설정반영12열중표시열·name필수·PARTS고정9열. 필터/정렬GET목록과같음·금액AMT_UNIT=원/천원/백만원(기본천원)·원값을1/1000/1000000나눠최대소수0/3/6·뒤0제거·수치정확·숫자셀.
+        종류=거래처/영업파트.
+      requestBody:
+        required: true
+        description: 명시한 필수필드만 전송·서버소유필드400.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterDataExportRequest'
+      x-side-effects:
+      - 생성완료파일에대해TB_SY_ACCS_LOG DNLD1건(처리자admin/UI-15/서버시각/IP/종류·건수만)저장후전송·기록무기한보존. 생성실패/접근기록실패/연결취소시임시파일정리. 업무데이터수정0건.
+      x-state-transitions:
+      - from: 해당다운로드접근기록미등록·파일생성완료
+        event: DNLD1건저장commit
+        to: 다운로드접근기록영속·그뒤파일전송허용
+      x-required-tests:
+      - 'happy: CLIENTS필터/표시열·조회결과51건에서POST ->200 XLSX·페이지50제한없이51건·마스킹·다운로드정보'
+      - 'auth: 인증헤더 없이 createMasterDataExport 정상 입력 실행 -> CurrentUserProvider=admin으로 처리·인증리다이렉트/401/역할403 0건; 업무자격은
+        접근권한으로 사용하지 않음'
+      - 'validation: accountNumber전체번호열/미등록sort/처리자주입 ->400·파일비제공·한국어 필드 사유·해당 업무 데이터/변경이력0건'
+      - 'business: PARTS소수없는원값1001·천원선택POST ->정확1.001숫자셀·9열고정·0결과는제목만'
+      - 'side-effect: 접근기록INSERT실패fixture로다운로드 ->500 INTERNAL_ERROR·XLSX전송0·임시파일0;정상은DNLD1건·업무데이터불변'
 components:
+  securitySchemes: {}
   schemas:
     YesNo:
       type: string
@@ -2125,6 +5289,31 @@ components:
     ErrorDetails:
       type: object
       properties:
+        clientName:
+          type: string
+          maxLength: 50
+        rowNumber:
+          type: integer
+          minimum: 1
+        blockingMonths:
+          type: array
+          items:
+            $ref: '#/components/schemas/YearMonth'
+        nextAllowedMonth:
+          $ref: '#/components/schemas/YearMonth'
+        partName:
+          type: string
+          maxLength: 30
+        uploadId:
+          type: integer
+          format: int64
+          minimum: 1
+        summary:
+          $ref: '#/components/schemas/B7Summary'
+        canApply:
+          type: boolean
+        issues:
+          $ref: '#/components/schemas/UploadIssuesPage'
         references:
           type: array
           items:
@@ -2391,8 +5580,31 @@ components:
       - hidden
       description: order는 표 정의 전체열 순열, hidden은 선택열 부분집합.
     ColumnPreferences:
+      x-screen-validation:
+        UI-15:
+          allowedTables:
+          - clients
+          requiredColumns:
+          - name
+          maxSerializedLength: 2000
+        UI-23:
+          allowedTables:
+          - users
+          requiredColumns:
+          - userId
+          - name
+          maxSerializedLength: 2000
+      x-related-requirements:
+      - REQ-191
+      - REQ-192
+      x-scope-description: UI-15의 COLS는 {clients:{order,hidden}}, UI-23은 {users:{order,hidden}}만 허용한다. 원래 UI-27 표 정의는
+        그대로 보존. type/key별 검증은 기존 putPreference 서비스가 수행하며 새 설정 endpoint를 만들지 않는다.
       type: object
       properties:
+        clients:
+          $ref: '#/components/schemas/ClientColumnView'
+        users:
+          $ref: '#/components/schemas/BusinessUserColumnView'
         codes:
           $ref: '#/components/schemas/ColumnView'
         valueCodes:
@@ -3300,6 +6512,1922 @@ components:
       - codeVal
       - unitNm
       description: CodeQueryService/useCodes의 원문 공개필드만. 편집행 sortOrder/useYn은 공통조회 결과에 새로 추가하지 않는다.
+    MasterProfitRate:
+      type: string
+      pattern: ^(?:0*(?:100(?:\.0{1,2})?|(?:[0-9]|[1-9][0-9])(?:\.[0-9]{1,2})?))$
+      description: 십진 문자열·0~100 포함·최대 소수2자리. 부호/지수/NaN/Infinity/문자/초과 소수400; BigDecimal 무반올림.
+    MasterSalesExpenseAmount:
+      type: string
+      pattern: ^(0|[1-9][0-9]{0,14})$
+      description: 응답 정규 십진 문자열·원 단위0~999999999999999 포함·소수0자리.
+    MasterSalesExpenseInput:
+      type: string
+      description: JSON 문자열만. 공백·쉼표·끝의 원 제거 후 숫자만; 0~999999999999999원 포함. 소수/음수/지수/NaN/Infinity/다른 문자400. BigDecimal로
+        무반올림 검사한다.
+    MasterDate:
+      type: string
+      format: date
+      description: Asia/Seoul 서버 날짜 YYYY-MM-DD.
+    MasterDateTime:
+      type: string
+      pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])-[0-9]{2} [0-9]{2}:[0-9]{2}$
+      description: Asia/Seoul YYYY-MM-DD HH:mm 표시; revision은 표시 시각이 아니라 원 timestamp 정밀도/NULL을 사용한다.
+    MasterClientId:
+      type: string
+      pattern: ^C-[0-9]{3,18}$
+      description: 최소3자리·숫자18자리 시퀀스. 결번허용/재사용·재설정없음, 소진409 ID_EXHAUSTED.
+    MasterPartId:
+      type: string
+      pattern: ^PART-[0-9]{3,15}$
+      description: 일반 파트 최소3자리·숫자15자리 시퀀스. HQ 예약값은 일반관리 제외. 소진409 ID_EXHAUSTED.
+    MasterEmail:
+      type: string
+      maxLength: 100
+      pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+      description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+    MasterAccountInput:
+      type: string
+      maxLength: 20
+      minLength: 8
+      pattern: ^(?=.*[0-9])[0-9-]{8,20}$
+      writeOnly: true
+      description: trim 후 앞0·하이픈 보존. 이 요청값 이외 암호문/키/원문 로그·이력/응답 없음.
+    MasterWarning:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+      additionalProperties: false
+      required:
+      - field
+      - message
+      description: 적용하지 않는 입력 폐기 또는 동일 상호 경고. 계좌 원문은 포함하지 않는다.
+    BusinessUser:
+      type: object
+      properties:
+        userId:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          maxLength: 100
+          pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+          description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+        roles:
+          type: array
+          items:
+            type: string
+            description: TB_SY_ROLE.ROLE_NM 표시 문자열
+        businessRoleIds:
+          type: array
+          items:
+            type: string
+            enum:
+            - PM
+            - SALES_LDR
+          maxItems: 2
+          uniqueItems: true
+        status:
+          type: string
+          enum:
+          - USE
+          - LOCK
+          - STOP
+        lastLoginAt:
+          anyOf:
+          - $ref: '#/components/schemas/MasterDateTime'
+          - type: 'null'
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - userId
+      - name
+      - email
+      - roles
+      - businessRoleIds
+      - status
+      - lastLoginAt
+      - revision
+      description: 기본정보 공개 투영. PWD/MFA/암호문/해시/전화번호 없음. roles에는 보존한 비업무 역할 표시명도 포함한다.
+    BusinessUsersPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessUser'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    CreateBusinessUserRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          maxLength: 20
+          minLength: 4
+          pattern: ^[a-z0-9]{4,20}$
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+        email:
+          type: string
+          maxLength: 100
+          pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+          description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+        businessRoleIds:
+          type: array
+          items:
+            type: string
+            enum:
+            - PM
+            - SALES_LDR
+          minItems: 1
+          maxItems: 2
+          uniqueItems: true
+      additionalProperties: false
+      required:
+      - userId
+      - name
+      - email
+      - businessRoleIds
+      description: 모든 필드 필수. PM 초기 체크는 화면 책임이며 서버의 누락 자동보충은 없다. userId는 생성 대상이지 처리자가 아니다.
+    PutBusinessUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+        email:
+          type: string
+          maxLength: 100
+          pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+          description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+        businessRoleIds:
+          type: array
+          items:
+            type: string
+            enum:
+            - PM
+            - SALES_LDR
+          maxItems: 2
+          uniqueItems: true
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - name
+      - email
+      - businessRoleIds
+      - expectedRevision
+      description: 전체 역할은1개 이상. ADMIN/FIN/EXEC 등 다른 역할·상태·인증 필드 불변; 미정의 필드400.
+    BusinessUserSaveResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/BusinessUser'
+      additionalProperties: false
+      required:
+      - changed
+      - message
+      - user
+    BusinessUserOption:
+      type: object
+      properties:
+        userId:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 50
+        label:
+          type: string
+          description: 이름(아이디)
+      additionalProperties: false
+      required:
+      - userId
+      - name
+      - label
+    BusinessUserOptions:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessUserOption'
+        roleOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRoleOption'
+      additionalProperties: false
+      required:
+      - items
+      - roleOptions
+      description: USE 사용자 및 사용중 역할의 목적 자격만 이름/ID순 전체 반환. 페이지 자원 아님; 0명은 빈 배열. roleOptions는 등록/수정 체크박스용 사용중 PM/SALES_LDR
+        정의·DB 표시명이며 코드배열을 재정의하지 않는다.
+    CreateClientRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+        businessNo:
+          type: string
+          pattern: ^(?:[0-9]{10}|[0-9]{3}-[0-9]{2}-[0-9]{5})$
+        ceo:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        industryCode:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        contactName:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        phone:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        taxEmail:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        bankCode:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        accountNumber:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        depositor:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+      additionalProperties: false
+      required:
+      - type
+      - name
+      - businessNo
+      description: CUST/BOTH는 taxEmail 필수. VNDR/BOTH는 bankCode/accountNumber/depositor 필수. CUST 계좌3필드와 VNDR 이메일은 검증
+        없이 폐기·입력이 있을 때만 필드명 경고·NULL 저장. 선택 빈칸NULL; 모든 문자열trim 후 길이 검사. accountAction은 POST 금지.
+      allOf:
+      - if:
+          properties:
+            type:
+              enum:
+              - CUST
+              - BOTH
+          required:
+          - type
+        then:
+          required:
+          - taxEmail
+          properties:
+            taxEmail:
+              type: string
+              maxLength: 100
+              pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+              description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+      - if:
+          properties:
+            type:
+              enum:
+              - VNDR
+              - BOTH
+          required:
+          - type
+        then:
+          required:
+          - bankCode
+          - accountNumber
+          - depositor
+          properties:
+            bankCode:
+              type: string
+              maxLength: 10
+              minLength: 1
+            depositor:
+              type: string
+              maxLength: 30
+              minLength: 1
+            accountNumber:
+              $ref: '#/components/schemas/MasterAccountInput'
+    PutClientRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+        ceo:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        industryCode:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        contactName:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        phone:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        taxEmail:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        bankCode:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        accountNumber:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        depositor:
+          description: 해당 구분/계좌 작업에 적용될 때만 아래 조건부 스키마로 검사; 비적용 영역은 검증 없이 폐기·필드명 경고.
+        accountAction:
+          type: string
+          enum:
+          - KEEP
+          - REPLACE
+          - CLEAR
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - type
+      - name
+      - accountAction
+      - expectedRevision
+      description: id/사업자번호 입력은400. KEEP은 기존 계좌3값 모두 존재할 때만 허용·3필드는 반드시 생략. VNDR/BOTH는 KEEP/REPLACE, 협력 기능 신규추가는 REPLACE
+        필수. CUST는 CLEAR·3값NULL. 비적용 영역은 검증 없이 폐기하며 입력이 있으면 필드명 경고.
+      allOf:
+      - if:
+          properties:
+            type:
+              const: CUST
+          required:
+          - type
+        then:
+          properties:
+            accountAction:
+              const: CLEAR
+      - if:
+          properties:
+            type:
+              enum:
+              - VNDR
+              - BOTH
+          required:
+          - type
+        then:
+          properties:
+            accountAction:
+              type: string
+              enum:
+              - KEEP
+              - REPLACE
+      - if:
+          properties:
+            accountAction:
+              const: KEEP
+          required:
+          - accountAction
+        then:
+          not:
+            anyOf:
+            - required:
+              - bankCode
+            - required:
+              - accountNumber
+            - required:
+              - depositor
+      - if:
+          properties:
+            accountAction:
+              const: REPLACE
+          required:
+          - accountAction
+        then:
+          required:
+          - bankCode
+          - accountNumber
+          - depositor
+          properties:
+            bankCode:
+              type: string
+              maxLength: 10
+              minLength: 1
+            depositor:
+              type: string
+              maxLength: 30
+              minLength: 1
+            accountNumber:
+              $ref: '#/components/schemas/MasterAccountInput'
+      - if:
+          properties:
+            type:
+              enum:
+              - CUST
+              - BOTH
+          required:
+          - type
+        then:
+          required:
+          - taxEmail
+          properties:
+            taxEmail:
+              type: string
+              maxLength: 100
+              pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+              description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+    MasterClient:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+        name:
+          type: string
+          maxLength: 50
+          minLength: 1
+        businessNo:
+          type: string
+          pattern: ^[0-9]{3}-[0-9]{2}-[0-9]{5}$
+        ceo:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        industryCode:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        contactName:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        phone:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        taxEmail:
+          anyOf:
+          - type: string
+            maxLength: 100
+            pattern: ^[^@\s]+@[^@\s]+\.[^@\s]+$
+            description: trim 후 검사; 공백/줄바꿈 금지. 외부 확인 없음.
+          - type: 'null'
+        bankCode:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        depositor:
+          type:
+          - string
+          - 'null'
+          maxLength: 30
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        industry:
+          type:
+          - string
+          - 'null'
+        bankName:
+          type:
+          - string
+          - 'null'
+        industryActive:
+          type:
+          - boolean
+          - 'null'
+        bankActive:
+          type:
+          - boolean
+          - 'null'
+        account:
+          type:
+          - string
+          - 'null'
+          description: 은행명+****+숫자 끝4자리. 숫자4개 미만이면 존재하는 숫자만. 평문/암호문 없음.
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        projectCount:
+          type: integer
+          minimum: 0
+        personCount:
+          type: integer
+          minimum: 0
+        basisDate:
+          $ref: '#/components/schemas/MasterDate'
+        revision:
+          $ref: '#/components/schemas/Revision'
+        historyCount:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - type
+      - name
+      - businessNo
+      - ceo
+      - industryCode
+      - contactName
+      - phone
+      - taxEmail
+      - bankCode
+      - depositor
+      - id
+      - industry
+      - bankName
+      - industryActive
+      - bankActive
+      - account
+      - useYn
+      - projectCount
+      - personCount
+      - basisDate
+      - revision
+      - historyCount
+      description: 목록/기본상세 공개 필드. 계좌 원문은 별도 getClientAccount만 반환. 기존 중지 코드명과 활성여부를 반환하고 같은 저장 코드 유지 허용.
+    MasterClientsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterClient'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        basisDate:
+          $ref: '#/components/schemas/MasterDate'
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      - basisDate
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    ClientSelectionItem:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - id
+      - revision
+      description: 전체 선택 시점의 ID/revision 쌍. 이후 상태 요청에서 revision을 expectedRevision으로 보낸다.
+    ClientSelection:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientSelectionItem'
+        total:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - items
+      - total
+      description: 필터 전체 ID/revision 스냅샷. 페이지 제한 없음·실제 선택 대상수. 이후 잠금 시 revision 재검사.
+    ClientSaveResult:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        changed:
+          type: boolean
+        message:
+          type: string
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterWarning'
+        client:
+          $ref: '#/components/schemas/MasterClient'
+      additionalProperties: false
+      required:
+      - id
+      - changed
+      - message
+      - warnings
+      - client
+    ClientAccount:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        bankCode:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        bankName:
+          type:
+          - string
+          - 'null'
+        accountNumber:
+          type:
+          - string
+          - 'null'
+          maxLength: 20
+        depositor:
+          type:
+          - string
+          - 'null'
+          maxLength: 30
+      additionalProperties: false
+      required:
+      - id
+      - bankCode
+      - bankName
+      - accountNumber
+      - depositor
+      description: 필수 ACCT_VIEW 기록이 완료된 뒤에만 평문 반환. Cache-Control:no-store·공통/영구캐시 금지. 암호문/키 없음.
+    ClientAssignment:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+        projectId:
+          type: string
+        projectName:
+          type: string
+        managementNo:
+          type: string
+        developerName:
+          type: string
+        jobCode:
+          type: string
+        jobName:
+          type: string
+        inputBeginDate:
+          $ref: '#/components/schemas/MasterDate'
+        inputEndDate:
+          $ref: '#/components/schemas/MasterDate'
+      additionalProperties: false
+      required:
+      - assignmentId
+      - projectId
+      - projectName
+      - managementNo
+      - developerName
+      - jobCode
+      - jobName
+      - inputBeginDate
+      - inputEndDate
+      description: 오늘 ACT 투입·ING/PRE 프로젝트. 프로젝트명/관리번호/ASGN_ID순. 업무원천 조회만.
+    ClientAssignmentsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientAssignment'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        basisDate:
+          $ref: '#/components/schemas/MasterDate'
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      - basisDate
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    ClientBulkStatusRequest:
+      type: object
+      properties:
+        targetUseYn:
+          $ref: '#/components/schemas/YesNo'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientBulkStatusTarget'
+          minItems: 1
+      additionalProperties: false
+      required:
+      - targetUseYn
+      - items
+      description: 단건도 items1개로 같은 API 사용. 중복 id400. 갯수상한 발명 없음; 항목별 트랜잭션.
+    ClientBulkStatusItem:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        name:
+          type: string
+          maxLength: 50
+        result:
+          type: string
+          enum:
+          - applied
+          - noChange
+          - rejected
+        error:
+          $ref: '#/components/schemas/ApiError'
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - result
+      description: rejected만 error 필수. stale revision은 이미 목표 상태여도 rejected. noChange는 이력/시각 불변.
+      allOf:
+      - if:
+          properties:
+            result:
+              const: rejected
+          required:
+          - result
+        then:
+          required:
+          - error
+        else:
+          not:
+            required:
+            - error
+    ClientBulkStatusResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientBulkStatusItem'
+        applied:
+          type: integer
+          minimum: 0
+        noChange:
+          type: integer
+          minimum: 0
+        rejected:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - items
+      - applied
+      - noChange
+      - rejected
+      description: applied+noChange+rejected=요청 items수. 성공만 commit·실패 항목 데이터/이력0건.
+    ClientOption:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        name:
+          type: string
+          maxLength: 50
+        type:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - type
+    ClientOptions:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientOption'
+      additionalProperties: false
+      required:
+      - items
+      description: Y인 CUSTOMER=CUST/BOTH, VENDOR=VNDR/BOTH. 이름/ID순 전체 최신 조회·비페이지.
+    CreateSalesPartRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 30
+          minLength: 1
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        leaderUserId:
+          type: string
+          maxLength: 30
+          minLength: 1
+        profitRate:
+          $ref: '#/components/schemas/MasterProfitRate'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/MasterSalesExpenseInput'
+      additionalProperties: false
+      required:
+      - name
+      - effectiveMonth
+      - leaderUserId
+      - profitRate
+      - salesExpenseAmount
+      description: 전필드필수·서버 기본값 보충없음. 중지포함 이름 유일. HQ_YN=N·USE_YN=Y·첫 종료월NULL.
+    CreateSalesPartStandardRequest:
+      type: object
+      properties:
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        leaderUserId:
+          type: string
+          maxLength: 30
+          minLength: 1
+        profitRate:
+          $ref: '#/components/schemas/MasterProfitRate'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/MasterSalesExpenseInput'
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - effectiveMonth
+      - leaderUserId
+      - profitRate
+      - salesExpenseAmount
+      - expectedRevision
+      description: revision→필수/범위/자격/최소월→기존시작월중복순. 최초시작전400, 중복시작월은 동일값도409 STANDARD_MONTH_EXISTS.
+    PutSalesPartRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 30
+          minLength: 1
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - expectedRevision
+      description: PATCH의 name 또는 useYn 하나만. 동시에 전송/둘다없음400.
+      oneOf:
+      - required:
+        - name
+        not:
+          required:
+          - useYn
+      - required:
+        - useYn
+        not:
+          required:
+          - name
+    SalesPartStandard:
+      type: object
+      properties:
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        endMonth:
+          anyOf:
+          - $ref: '#/components/schemas/YearMonth'
+          - type: 'null'
+        leaderUserId:
+          type: string
+          maxLength: 30
+        leaderName:
+          type: string
+          maxLength: 50
+        profitRate:
+          $ref: '#/components/schemas/MasterProfitRate'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/MasterSalesExpenseAmount'
+        status:
+          type: string
+          enum:
+          - PAST
+          - CURRENT
+          - FUTURE
+      additionalProperties: false
+      required:
+      - effectiveMonth
+      - endMonth
+      - leaderUserId
+      - leaderName
+      - profitRate
+      - salesExpenseAmount
+      - status
+      description: 구간 양끝 포함·종료NULL무기한. status는 기준월 대비 과거/현재/미래의 조회 산출값이며 저장 플래그가 아니다.
+    SalesPart:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterPartId'
+        name:
+          type: string
+          maxLength: 30
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        currentMonth:
+          $ref: '#/components/schemas/YearMonth'
+        currentStandard:
+          anyOf:
+          - $ref: '#/components/schemas/SalesPartStandard'
+          - type: 'null'
+        scheduledChange:
+          anyOf:
+          - $ref: '#/components/schemas/SalesPartStandard'
+          - type: 'null'
+        personCount:
+          type: integer
+          minimum: 0
+        projectCount:
+          type: integer
+          minimum: 0
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - useYn
+      - currentMonth
+      - currentStandard
+      - scheduledChange
+      - personCount
+      - projectCount
+      - revision
+      description: 일반파트만. 미래만 있으면 currentStandard=null(적용전)·scheduledChange는 가장 가까운 미래. 미래값으로 현재를 채우지 않는다. 인력은 중지포함
+        PART_ID별 DISTINCT DEV_ID; 프로젝트는 ING/PRE·현재월이하 최신 TB_PJ_PROJ_PART로 집계.
+    SalesPartsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesPart'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    SalesPartDetail:
+      type: object
+      properties:
+        part:
+          $ref: '#/components/schemas/SalesPart'
+        standards:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesPartStandard'
+        minMonth:
+          $ref: '#/components/schemas/YearMonth'
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - part
+      - standards
+      - minMonth
+      - revision
+      description: 중지파트도 조회 가능. 전체 기준 시간선 시작월DESC·현재/예정 구분·minMonth=max(CASH_BASE_YM,마지막 CLOSE+1).
+    SalesPartDefaultError:
+      type: object
+      properties:
+        source:
+          type: string
+          enum:
+          - PART_DSTRB_RT
+          - PART_SALES_EXPS
+        field:
+          type: string
+          enum:
+          - profitRate
+          - salesExpenseAmount
+        message:
+          type: string
+      additionalProperties: false
+      required:
+      - source
+      - field
+      - message
+      description: 누락·범위·정밀도 오류의 원천/사유. 임의대입/반올림 없음.
+    SalesPartDefaults:
+      type: object
+      properties:
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        minMonth:
+          $ref: '#/components/schemas/YearMonth'
+        profitRate:
+          anyOf:
+          - $ref: '#/components/schemas/MasterProfitRate'
+          - type: 'null'
+        salesExpenseAmount:
+          anyOf:
+          - $ref: '#/components/schemas/MasterSalesExpenseAmount'
+          - type: 'null'
+        defaultErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesPartDefaultError'
+      additionalProperties: false
+      required:
+      - effectiveMonth
+      - minMonth
+      - profitRate
+      - salesExpenseAmount
+      - defaultErrors
+      description: 월 생략=max(서버현재월,minMonth). PART_DSTRB_RT/PART_SALES_EXPS에서 시작월≤선택월 최신값, 오류 칸NULL. WORK 최댓월 제외.
+    SalesPartSaveResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        message:
+          type: string
+        part:
+          $ref: '#/components/schemas/SalesPartDetail'
+      additionalProperties: false
+      required:
+      - changed
+      - message
+      - part
+      description: 새기준 삽입201 changed=true; 유효기준 동일200 false·지금 기준과 같습니다. 이름/상태무변경200 false·바뀐 내용이 없습니다.
+    SalesPartOption:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 일반PART-ID 또는 예약 HQ
+        name:
+          type: string
+          maxLength: 30
+        hqYn:
+          $ref: '#/components/schemas/YesNo'
+        firstEffectiveMonth:
+          anyOf:
+          - $ref: '#/components/schemas/YearMonth'
+          - type: 'null'
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - hqYn
+      - firstEffectiveMonth
+      description: HQ 구분·사용중 일반파트는 미래시작도 선택 가능. HQ 최초월 없으면NULL.
+    SalesPartOptions:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesPartOption'
+      additionalProperties: false
+      required:
+      - items
+      description: 사용중 일반파트와 본사를 구분한 전체 선택값. 비페이지·중지 신규선택 제외.
+    MasterHistory:
+      type: object
+      properties:
+        historyId:
+          type: integer
+          format: int64
+        targetTable:
+          type: string
+          maxLength: 30
+        targetKey:
+          type: string
+          maxLength: 100
+        changeType:
+          type: string
+          enum:
+          - NEW
+          - UPD
+          - STOP
+          - RESUME
+        itemName:
+          type: string
+          maxLength: 50
+        beforeValue:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        afterValue:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        reason:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        actorId:
+          type: string
+          maxLength: 30
+        actorName:
+          type: string
+          maxLength: 50
+        createdAt:
+          $ref: '#/components/schemas/MasterDateTime'
+      additionalProperties: false
+      required:
+      - historyId
+      - targetTable
+      - targetKey
+      - changeType
+      - itemName
+      - beforeValue
+      - afterValue
+      - reason
+      - actorId
+      - actorName
+      - createdAt
+      description: TB_SY_CHG_HIST 공개투영·이름/코드는 변경당시 문자열. 계좌전후는 마스킹, 원문/해시/암호문 없음. PART는 파트와 파트ID:YYYYMM 기준 이력 합친다.
+    MasterHistoryPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterHistory'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    UploadIssue:
+      type: object
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        severity:
+          type: string
+          enum:
+          - ERR
+          - WARN
+        rowNumber:
+          type: integer
+          minimum: 1
+        columnName:
+          type: string
+          maxLength: 50
+        inputValue:
+          type: string
+          maxLength: 200
+        reason:
+          type: string
+          maxLength: 300
+      additionalProperties: false
+      required:
+      - sequence
+      - severity
+      - rowNumber
+      - columnName
+      - inputValue
+      - reason
+      description: 모든 문제 보존·행/열/ERR우선/일련번호순. 계좌 입력값 항상 [비공개]. 입력 초과197자+...·사유297자+... 발췌; 파일경고 columnName=[파일]·제목행
+        번호.
+    UploadIssuesPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadIssue'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      description: total은 필터 전체 건수. 초과 페이지는 빈 items. page 기본1·size 기본50.
+    B7Summary:
+      type: object
+      properties:
+        totalRows:
+          type: integer
+          minimum: 0
+        successRows:
+          type: integer
+          minimum: 0
+        warningRows:
+          type: integer
+          minimum: 0
+        errorRows:
+          type: integer
+          minimum: 0
+        fileWarningCount:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - totalRows
+      - successRows
+      - warningRows
+      - errorRows
+      - fileWarningCount
+      description: 성공=문제없음,경고=ERR없고WARN있음,오류=ERR1개이상. 세 행수 합=totalRows; 파일경고는 행수에서 제외.
+    B7ValidationResult:
+      type: object
+      properties:
+        uploadId:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum:
+          - CHECKED
+          - APPLIED
+        summary:
+          $ref: '#/components/schemas/B7Summary'
+        canApply:
+          type: boolean
+        issues:
+          $ref: '#/components/schemas/UploadIssuesPage'
+      additionalProperties: false
+      required:
+      - uploadId
+      - status
+      - summary
+      - canApply
+      - issues
+      description: 검사 기록/문제commit뒤 반환. canApply는CHECKED·오류0·데이터≥1. 첫 문제페이지 page1,size50. 정상파싱행/원본/계좌원문 반환·보관 없음.
+    B7ApplyResult:
+      type: object
+      properties:
+        uploadId:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          const: APPLIED
+        summary:
+          $ref: '#/components/schemas/B7Summary'
+        appliedCount:
+          type: integer
+          minimum: 0
+        appliedAt:
+          $ref: '#/components/schemas/MasterDateTime'
+      additionalProperties: false
+      required:
+      - uploadId
+      - status
+      - summary
+      - appliedCount
+      - appliedAt
+      description: 동일APPLIED 요청은 저장된행수/경고요약만 반환, 거래처/NEW 추가0건. appliedCount=summary.totalRows.
+    B7ValidateRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: xlsx 실ZIP/OOXML≤10485760바이트; 파일명 경로제거후1~200자. 첫시트 데이터1~5000행. 요청종료시임시파일삭제.
+          x-max-bytes: 10485760
+      additionalProperties: false
+      required:
+      - file
+    B7ApplyRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 검사와 같은File을 다시전송. 파일명/크기 및업로드문맥 검사; 서버보관 원본없음.
+          x-max-bytes: 10485760
+        uploadId:
+          type: integer
+          format: int64
+          minimum: 1
+      additionalProperties: false
+      required:
+      - file
+      - uploadId
+    MasterExportFilters:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CUST
+          - VNDR
+          - BOTH
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        q:
+          type: string
+          maxLength: 100
+      additionalProperties: false
+      required: []
+      description: 전체=필터생략, 화면 기본 useYn=Y는 명시 전송한다. q trim·부분일치·대소문자구분. CLIENTS type CUST/VNDR는BOTH포함; PARTS type금지.
+    MasterDataExportRequest:
+      type: object
+      properties:
+        view:
+          type: string
+          enum:
+          - CLIENTS
+          - PARTS
+        filters:
+          $ref: '#/components/schemas/MasterExportFilters'
+        sort:
+          type: string
+        direction:
+          type: string
+          enum:
+          - ASC
+          - DESC
+        columns:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        amountUnit:
+          type: string
+          enum:
+          - 원
+          - 천원
+          - 백만원
+          default: 천원
+      additionalProperties: false
+      required:
+      - view
+      - filters
+      - columns
+      description: CLIENTS columns는12개 허용열의 표시순서·상호필수·계좌는마스킹. PARTS는고정9열순서만. 전체번호/accountNumber400. sort생략name·direction생략ASC·amountUnit생략천원.
+        page/size/선택행 필드 금지.
+      allOf:
+      - if:
+          properties:
+            view:
+              const: CLIENTS
+          required:
+          - view
+        then:
+          properties:
+            columns:
+              type: array
+              items:
+                type: string
+                enum:
+                - type
+                - name
+                - businessNo
+                - ceo
+                - industry
+                - contactName
+                - phone
+                - taxEmail
+                - account
+                - projectCount
+                - personCount
+                - useYn
+              minItems: 1
+              uniqueItems: true
+              contains:
+                const: name
+            sort:
+              type: string
+              enum:
+              - type
+              - name
+              - businessNo
+              - ceo
+              - industry
+              - contactName
+              - phone
+              - taxEmail
+              - projectCount
+              - personCount
+              - useYn
+      - if:
+          properties:
+            view:
+              const: PARTS
+          required:
+          - view
+        then:
+          properties:
+            filters:
+              not:
+                required:
+                - type
+            columns:
+              const:
+              - name
+              - leaderName
+              - profitRate
+              - salesExpenseAmount
+              - effectiveMonth
+              - scheduledChange
+              - personCount
+              - projectCount
+              - useYn
+            sort:
+              type: string
+              enum:
+              - name
+              - leaderName
+              - profitRate
+              - salesExpenseAmount
+              - effectiveMonth
+              - personCount
+              - projectCount
+              - useYn
+    ClientColumnView:
+      type: object
+      properties:
+        order:
+          type: array
+          items:
+            type: string
+            enum:
+            - type
+            - name
+            - businessNo
+            - ceo
+            - industry
+            - contactName
+            - phone
+            - taxEmail
+            - account
+            - projectCount
+            - personCount
+            - useYn
+          minItems: 12
+          maxItems: 12
+          uniqueItems: true
+        hidden:
+          type: array
+          items:
+            type: string
+            enum:
+            - type
+            - businessNo
+            - ceo
+            - industry
+            - contactName
+            - phone
+            - taxEmail
+            - account
+            - projectCount
+            - personCount
+            - useYn
+          uniqueItems: true
+      additionalProperties: false
+      required:
+      - order
+      - hidden
+      description: order전체순열·hidden선택열부분집합. 미등록열/중복/필수열숨김400. 선택/작업버튼 제외.
+    BusinessUserColumnView:
+      type: object
+      properties:
+        order:
+          type: array
+          items:
+            type: string
+            enum:
+            - userId
+            - name
+            - email
+            - roles
+            - status
+            - lastLoginAt
+          minItems: 6
+          maxItems: 6
+          uniqueItems: true
+        hidden:
+          type: array
+          items:
+            type: string
+            enum:
+            - email
+            - roles
+            - status
+            - lastLoginAt
+          uniqueItems: true
+      additionalProperties: false
+      required:
+      - order
+      - hidden
+      description: order전체순열·hidden선택열부분집합. 미등록열/중복/필수열숨김400. 선택/작업버튼 제외.
+    GetBusinessUsersResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/BusinessUsersPage'
+        required:
+        - data
+      description: GetBusinessUsersResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    CreateBusinessUserResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/BusinessUserSaveResult'
+        required:
+        - data
+      description: CreateBusinessUserResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetBusinessUserResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/BusinessUser'
+        required:
+        - data
+      description: GetBusinessUserResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    PutBusinessUserResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/BusinessUserSaveResult'
+        required:
+        - data
+      description: PutBusinessUserResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetBusinessUserOptionsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/BusinessUserOptions'
+        required:
+        - data
+      description: GetBusinessUserOptionsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/MasterClientsPage'
+        required:
+        - data
+      description: GetClientsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientSelectionResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientSelection'
+        required:
+        - data
+      description: GetClientSelectionResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    CreateClientResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientSaveResult'
+        required:
+        - data
+      description: CreateClientResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/MasterClient'
+        required:
+        - data
+      description: GetClientResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    PutClientResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientSaveResult'
+        required:
+        - data
+      description: PutClientResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientAccountResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientAccount'
+        required:
+        - data
+      description: GetClientAccountResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientAssignmentsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientAssignmentsPage'
+        required:
+        - data
+      description: GetClientAssignmentsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    SaveClientBulkStatusResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientBulkStatusResult'
+        required:
+        - data
+      description: SaveClientBulkStatusResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetClientOptionsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ClientOptions'
+        required:
+        - data
+      description: GetClientOptionsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetSalesPartsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartsPage'
+        required:
+        - data
+      description: GetSalesPartsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetSalesPartDefaultsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartDefaults'
+        required:
+        - data
+      description: GetSalesPartDefaultsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    CreateSalesPartResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartSaveResult'
+        required:
+        - data
+      description: CreateSalesPartResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetSalesPartResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartDetail'
+        required:
+        - data
+      description: GetSalesPartResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    PutSalesPartResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartSaveResult'
+        required:
+        - data
+      description: PutSalesPartResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    CreateSalesPartStandardResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartSaveResult'
+        required:
+        - data
+      description: CreateSalesPartStandardResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetSalesPartOptionsResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/SalesPartOptions'
+        required:
+        - data
+      description: GetSalesPartOptionsResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetMasterHistoryResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/MasterHistoryPage'
+        required:
+        - data
+      description: GetMasterHistoryResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    CreateB7ValidationResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/B7ValidationResult'
+        required:
+        - data
+      description: CreateB7ValidationResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    GetUploadIssuesResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/UploadIssuesPage'
+        required:
+        - data
+      description: GetUploadIssuesResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    SaveB7ApplyResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/B7ApplyResult'
+        required:
+        - data
+      description: SaveB7ApplyResponse 성공 봉투·data 필수·기존 success=true/meta 필수 유지.
+    BusinessRoleOption:
+      type: object
+      properties:
+        roleId:
+          type: string
+          enum:
+          - PM
+          - SALES_LDR
+        name:
+          type: string
+          maxLength: 50
+      additionalProperties: false
+      required:
+      - roleId
+      - name
+      description: TB_SY_ROLE의 사용중 업무역할ID/ROLE_NM. 실제 접근권한이 아니다.
+    B7RevalidationError:
+      allOf:
+      - $ref: '#/components/schemas/ApiError'
+      - type: object
+        required:
+        - details
+        properties:
+          details:
+            type: object
+            required:
+            - uploadId
+            - summary
+            - canApply
+            - issues
+            properties:
+              uploadId:
+                type: integer
+                format: int64
+                minimum: 1
+              summary:
+                $ref: '#/components/schemas/B7Summary'
+              canApply:
+                type: boolean
+                const: false
+              issues:
+                $ref: '#/components/schemas/UploadIssuesPage'
+      description: 422 재검사 오류. 기존 ApiError success=false/meta/code/message/requestId와 루트 오류 필드 보존·같은 uploadId의 새 요약/문제첫페이지
+        반환.
+    ClientBulkStatusTarget:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/MasterClientId'
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - id
+      - expectedRevision
   responses:
     BadRequest:
       description: 원문 필수·타입·길이·연월·허용외 필드 오류. 연산별 실제 적용 조건을 확인한다.
@@ -3532,6 +8660,433 @@ x-uncovered-requirements:
   status: out-of-scope
   evidence: 'REQ-155 · SPEC-REQUEST.md:282 · 이력 변경·삭제 제외: 변경 이력은 조회만 제공하고 수정·삭제 API는 생성하지 않는다. 독립 확인 기준: 이력 GET만 존재하며 기존/오래된
     이력 삭제·수정 경로0개다.'
+- canonical_id: REQ-157
+  status: data-constraint
+  evidence: 'REQ-157 · SPEC-REQUEST.md:17 · 기존 테이블·기준 데이터 재사용: 기존 마이그레이션이 생성·적재한 테이블과 기준 데이터를 조회·재사용한다. 저장소 출처는
+    https://github.com/MinHeeJ/si_cost로 보존한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL
+    검증으로 책임을 확인한다.'
+- canonical_id: REQ-158
+  status: non-functional
+  evidence: 'REQ-158 · SPEC-REQUEST.md:18 · 시안과 동작 근거 분리: UI-15 거래처·영업 파트와 UI-23 사용자의 구조·스타일·표·폼·패널은 지정 시안을 참고하고
+    동작은 요청 본문을 따른다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-159
+  status: screen-only
+  evidence: 'REQ-159 · SPEC-REQUEST.md:19 · 기존 메뉴·라우트 기능 연결: 기존 메뉴/라우트에 UI-15 거래처·영업 파트, UI-23 사용자 등록/조회/수정·PM/파트장
+    자격 및 B7 공통 엑셀을 연결한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-161
+  status: non-functional
+  evidence: 'REQ-161 · SPEC-REQUEST.md:20 · 사설 개발·검증 실행 제한: 로컬 또는 접근 제한된 사설 개발·검증 환경에서만 실행하고 공개 배포하지 않는다. 기반 재사용/구현
+    또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-162
+  status: out-of-scope
+  evidence: 'REQ-162 · SPEC-REQUEST.md:21 · 제외 업무 실행 차단: 사용자 상태 변경, 프로젝트 배정, 실제 권한, 메뉴·주소 관리, 급여/원가/정산/마감 실행과 다른
+    양식은 이번 범위에서 제외한다. 참조·마감/정산확정은 저장 검증용 조회만 허용한다. 명시적 제외이므로 대응 실행 endpoint를 추가하지 않는다.'
+- canonical_id: REQ-163
+  status: non-functional
+  evidence: 'REQ-163 · SPEC-REQUEST.md:22 · 기존 기반 기능·적용 마이그레이션 보존: 공통코드/운영기준 관리·기반 기능은 재구현하지 않는다. 기존 조회·설정·오류 추적·health를
+    재사용하고 적용된 마이그레이션을 보존하며 변경은 다음 Flyway 버전에 추가한다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-164
+  status: non-functional
+  evidence: 'REQ-164 · SPEC-REQUEST.md:24 · 구현 순서·기술 호환 유지: 공통 부품 → 사용자 → 공통 엑셀 → 거래처 → 파트·기준 순서로 구현하며 React·TypeScript,
+    Spring MVC·JPA·Flyway 및 기존 API를 유지한다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-170
+  status: screen-only
+  evidence: 'REQ-170 · SPEC-REQUEST.md:37 · 서울 시각·날짜·NULL 표시: 서버 Asia/Seoul 기준으로 날짜 YYYY-MM-DD, 시각 YYYY-MM-DD HH:mm을
+    표시하며 마지막 접속NULL은 –로 표시한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-172
+  status: screen-only
+  evidence: 'REQ-172 · SPEC-REQUEST.md:39 · 배분율 표시 정밀도: 비율은 최대 소수2자리로 표시하고 불필요한 뒤0을 제거한다. 화면의 표시/상호작용/상태 소유 요구이므로
+    별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-173
+  status: screen-only
+  evidence: 'REQ-173 · SPEC-REQUEST.md:40 · 관리비 단위별 정확 표시: AMT_UNIT은 원/천원/백만원이며 기본천원이다. 원값을1/1000/1000000으로 나누어
+    소수0/3/6자리까지 정확히 표시하고 뒤0 제거·제목 단위를 제공한다. 입력/저장은 원 단위다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유
+    조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-174
+  status: non-functional
+  evidence: 'REQ-174 · SPEC-REQUEST.md:42 · BigDecimal 무손실 검사·저장: Java BigDecimal로 검사·저장하고 경계를 포함하며 초과는400이다. 자동
+    반올림·버림·범위 보정을 수행하지 않는다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-175
+  status: non-functional
+  evidence: 'REQ-175 · SPEC-REQUEST.md:46 · 공통 부품 확장 계약·사용처 기록: 표·검색·입력·패널·이력·엑셀 결과는 공통 컴포넌트로 재사용하고 화면이 컬럼/렌더러/작업/필드를
+    전달한다. 후속 재사용용 경로·Props·이벤트·사용처를 기록한다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-176
+  status: screen-only
+  evidence: 'REQ-176 · SPEC-REQUEST.md:50 · DataTable<T> 계약: DataTable<T>는 rows/columns/rowKey/loading/page/size/total/sort/selection과
+    변경/행 이벤트를 제공한다. 사용자/거래처/파트/이력/검사에서 재사용하며 선택/정렬/열 설정은 옵션이다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의
+    고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-177
+  status: screen-only
+  evidence: 'REQ-177 · SPEC-REQUEST.md:51 · FilterBar 계약: FilterBar는 필드 정의·입력값·적용값·조회/초기화 이벤트, Enter 조회·조건 수·모바일
+    펼침을 제공한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-178
+  status: screen-only
+  evidence: 'REQ-178 · SPEC-REQUEST.md:52 · DetailDrawer·FormPage 계약: DetailDrawer·FormPage는 열림/닫기·제목·탭·작업·dirty를
+    받고 거래처 등록/상세/수정 및 사용자·파트 상세에 재사용한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-179
+  status: screen-only
+  evidence: 'REQ-179 · SPEC-REQUEST.md:53 · 공통 필드·코드·금액 입력 계약: 공통 필드·코드 선택·금액 입력은 value/onChange/required/maxLength/error/disabled를
+    제공하며 표시값과 저장값을 분리하고 기존 공통코드 조회를 재사용한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-180
+  status: screen-only
+  evidence: 'REQ-180 · SPEC-REQUEST.md:54 · 확인·일괄 결과 대화상자 계약: ConfirmDialog·BulkResultDialog는 대상·설명·pending·확인/취소·항목별
+    결과를 받고 계좌·중지/재개·일괄 처리에 재사용한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-181
+  status: screen-only
+  evidence: 'REQ-181 · SPEC-REQUEST.md:55 · ChangeHistoryTable 계약: ChangeHistoryTable은 대상·이력 목록·페이지·로딩/오류를 받아 대상별
+    상세에서 재사용한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-182
+  status: screen-only
+  evidence: 'REQ-182 · SPEC-REQUEST.md:56 · 엑셀 업로드 공통 부품 계약: ExcelUploadDialog·UploadResult는 양식ID·File·단계·요약·문제와
+    검사/반영/닫기 이벤트를 제공하고 B7에 연결하되 다음 양식에도 재사용 가능한 계약을 제공한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유
+    조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-183
+  status: non-functional
+  evidence: 'REQ-183 · SPEC-REQUEST.md:58 · 클라이언트·서비스 책임 분리: API 호출은 hook/client, 검증·참조 조회·저장은 서버 서비스에 둔다. 공통 부품에
+    개별 업무 분기 또는 가짜 API 결과를 넣지 않는다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-187
+  status: screen-only
+  evidence: 'REQ-187 · SPEC-REQUEST.md:63 · 목록 조건 변경과 상세 복귀 상태: 필터/정렬/size 변경은 page1·선택 해제, 상세 닫기는 조건/페이지/스크롤을 유지하며
+    정렬은 표시값·숫자는 원값을 기준으로 한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-189
+  status: screen-only
+  evidence: 'REQ-189 · SPEC-REQUEST.md:65 · 페이지 내비게이션·빈값·로딩·오류 표시: 페이지 번호10개·이전/다음·범위/총건수를 표시하고0건은 빈 안내/조건 초기화,
+    로딩·오류는 별도로 표시한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-190
+  status: screen-only
+  evidence: 'REQ-190 · SPEC-REQUEST.md:66 · 계정 공통 밀도·페이지·열 설정 제공: PAGE_SIZE 기본50·DENSE 기본넓게는 계정 공통이다. 사용자/거래처는 열
+    설정·기본값 복원, 파트/검사는 고정 열이며 사용자 아이디/이름·거래처 상호는 필수열이다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을
+    실제 브라우저에서 검증한다.'
+- canonical_id: REQ-191
+  status: existing-contract
+  evidence: 'REQ-191 · SPEC-REQUEST.md:66 · COLS 설정 구조·검증: COLS는 UI-15의 clients와 UI-23의 users에 order 전체 열 순열·hidden
+    선택 열 부분집합으로 저장한다. 중복/미등록/필수열 숨김은400이며 기존 설정 API·2,000자·동시 수정 검사를 재사용한다. 기존 getPreferences/putPreference/deletePreference를
+    재사용하며 새 endpoint는 없다. ColumnPreferences에 UI-15 clients/UI-23 users 정의만 가산한다; 기존 2000자/revision/기본값 규약을 유지하고
+    key별 정확한 표 정의를 검사한다.'
+- canonical_id: REQ-192
+  status: screen-only
+  evidence: 'REQ-192 · SPEC-REQUEST.md:67 · 기본 columnId 순서 고정: users 기본 순서는 userId,name,email,roles,status,lastLoginAt이고
+    clients는 type,name,businessNo,ceo,industry,contactName,phone,taxEmail,account,projectCount,personCount,useYn이다.
+    선택·작업 버튼은 열설정에서 제외한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-193
+  status: screen-only
+  evidence: 'REQ-193 · SPEC-REQUEST.md:68 · 설정 서버 저장·실패 복원: 미저장 설정은 기본 열/순서·넓게·50을 적용한다. 변경은 서버 저장 성공 후 적용하고 실패
+    시 이전값/오류를 유지하며 새로고침은 서버값을 복원한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-194
+  status: screen-only
+  evidence: 'REQ-194 · SPEC-REQUEST.md:69 · UI-15 모바일 카드·기능 제한: 폭768px 미만 UI-15는 카드20건씩 더 보기·화면폭 내 폼/파트 창으로 제공한다.
+    조회/등록/수정/단건 상태만 허용하며 일괄/업로드/다운로드는 숨기고 업로드 직접URL도 PC 안내를 제공한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위
+    문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-195
+  status: screen-only
+  evidence: 'REQ-195 · SPEC-REQUEST.md:69 · UI-23 PC 전용: UI-23 사용자는 PC 전용 화면으로 제공한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도
+    HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-196
+  status: screen-only
+  evidence: 'REQ-196 · SPEC-REQUEST.md:70 · dirty 이탈 확인·상태 보존: dirty 폼 닫기/취소/하위 탭 변경 시 저장하지 않은 내용이 있습니다.와 계속 작성/나가기를
+    제공한다. 취소와 단순 화면 탭 전환은 상태를 보존한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-197
+  status: screen-only
+  evidence: 'REQ-197 · SPEC-REQUEST.md:70 · 중복 클릭·자동 재시도 금지: 중복 클릭을 차단하고 자동 저장·자동 재시도는0회이며 통신 오류에는 다시 시도를 제공한다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-198
+  status: screen-only
+  evidence: 'REQ-198 · SPEC-REQUEST.md:71 · commit 후2초 내 관련 상태 갱신: 저장 성공은 DB commit 후 반영하고 성공 응답 후2초 내 저장 브라우저의
+    관련 목록/상세·캐시·열린 선택 목록·설정을 갱신한다. 옵션은 다음 열기에도 서버 최신값을 조회한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의
+    고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-199
+  status: screen-only
+  evidence: 'REQ-199 · SPEC-REQUEST.md:71 · 저장 성공·후속 조회 실패 분리: 저장 후 조회만 실패하면 저장됐지만 다시 불러오지 못했습니다와 재조회 버튼을 제공하며 같은
+    저장을 반복하지 않는다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-200
+  status: data-constraint
+  evidence: 'REQ-200 · SPEC-REQUEST.md:75 · 서버 처리자·시스템 필드 결정: 처리자는 CurrentUserProvider의 admin이다. 요청 userId는 사용자
+    생성 대상 필드로만 사용하고 처리자·REG/MOD·시스템 플래그는 서버가 결정한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제
+    PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-204
+  status: data-constraint
+  evidence: 'REQ-204 · SPEC-REQUEST.md:78 · 사용자·파트·기준 잠금 순서: 사용자 수정은 사용자 행, 파트장 지정은 선택 사용자→파트→기준 이력 순으로 잠그며 복수 키는ID
+    오름차순이다. 역할 제거와 파트장 지정 경합 시 재검사한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로
+    책임을 확인한다.'
+- canonical_id: REQ-205
+  status: data-constraint
+  evidence: 'REQ-205 · SPEC-REQUEST.md:79 · 업무·이력 원자 트랜잭션: 단건 등록/수정·파트 생성/기준 삽입·엑셀 반영은 데이터와 변경 이력을 함께 commit하고 한
+    항목 실패 시 해당 전체 트랜잭션을 롤백한다. 거래처 일괄 상태만 항목별 트랜잭션이다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제
+    PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-206
+  status: data-constraint
+  evidence: 'REQ-206 · SPEC-REQUEST.md:80 · 변경 이력 매핑·등록 기록: TB_SY_CHG_HIST는 기본 HIST_ID 시퀀스를 쓰고 대상/PK문자열/유형/컬럼/전후/사유/처리자/시각을
+    지정 컬럼에 매핑한다. 신규는 등록 항목·이전NULL·이후ID/이름의 NEW1건이며 파트와 첫 기준은 각각1건이다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다;
+    data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-207
+  status: data-constraint
+  evidence: 'REQ-207 · SPEC-REQUEST.md:80 · 수정·상태·역할 이력 표현: 수정은 바뀐 컬럼별UPD·상태는STOP/RESUME, 역할 집합은 업무 역할1항목에 정렬한 역할ID
+    문자열로 기록한다. 기준 키는 파트ID:YYYYMM, 다른 대상은 각ID이며 길이는 대상30/키100/항목50/전후·사유500자 이내다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를
+    만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-210
+  status: data-constraint
+  evidence: 'REQ-210 · SPEC-REQUEST.md:81 · 이력·로그 비밀값 차단: 원문 계좌·암호문·비밀번호·해시를 이력/로그에 저장하지 않는다. 계좌 이력은 마스킹한 전후 값만
+    기록한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-211
+  status: data-constraint
+  evidence: 'REQ-211 · SPEC-REQUEST.md:81 · 변경 이력 무기한·불변 보존: 변경 이력은 기한 없이 보존하고 수정·삭제 UI/API·자동 정리를 만들지 않는다. 기존 물리구조/저장
+    무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-212
+  status: out-of-scope
+  evidence: 'REQ-212 · SPEC-REQUEST.md:87 · 사용자 삭제·상태·잠금 해제 제외: 사용자는 삭제·중지/재개·잠금 해제 기능 없이 기본정보와 업무 역할만 수정한다. 명시적
+    제외이므로 대응 실행 endpoint를 추가하지 않는다.'
+- canonical_id: REQ-213
+  status: out-of-scope
+  evidence: 'REQ-213 · SPEC-REQUEST.md:88 · 거래처·일반 파트 논리 중지 경계: 거래처·일반 파트 삭제 UI/API 및 DEL_YN 추가를 금지하고 USE_YN=N/Y
+    중지/재개만 제공하며 참조·기준·이력을 보존한다. 명시적 제외이므로 대응 실행 endpoint를 추가하지 않는다.'
+- canonical_id: REQ-214
+  status: out-of-scope
+  evidence: 'REQ-214 · SPEC-REQUEST.md:89 · 파트 기준 삭제 금지: 파트 기준은 삭제하지 않고5.3의 이력 삽입/종료월 조정만 허용한다. 명시적 제외이므로 대응 실행
+    endpoint를 추가하지 않는다.'
+- canonical_id: REQ-215
+  status: data-constraint
+  evidence: 'REQ-215 · SPEC-REQUEST.md:90 · 업무 역할 해제의 연결 행 한정: PM/SALES_LDR 해제는 해당 TB_SY_USER_ROLE 행만 제거하고 사용자·다른
+    역할을 유지한다. 별도 삭제 UI/API는 추가하지 않는다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로
+    책임을 확인한다.'
+- canonical_id: REQ-216
+  status: data-constraint
+  evidence: 'REQ-216 · SPEC-REQUEST.md:91 · 재검사 문제 교체의 한정: 같은 uploadId 재검사는 TB_SY_UPLD_ERR를 새 결과로 교체할 수 있지만 TB_SY_UPLD
+    행과 업무 변경 이력은 삭제하지 않는다. 별도 삭제 UI/API를 추가하지 않는다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제
+    PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-217
+  status: data-constraint
+  evidence: 'REQ-217 · SPEC-REQUEST.md:93 · 계좌 CLEAR 필드 비우기 경계: 계좌 CLEAR는 거래처를 유지한 채 계좌 관련 필드만NULL로 바꾸는 처리이며 거래처
+    삭제나 별도 삭제 UI/API가 아니다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-218
+  status: data-constraint
+  evidence: 'REQ-218 · SPEC-REQUEST.md:99 · 기존 타입·제약·기본값 보존: 기존 테이블 타입/제약/기본값을 유지하고 API·열ID와 DB 컬럼명을 구분한다. 표의PK는
+    해당 칸 전체 컬럼으로 취급한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-219
+  status: data-constraint
+  evidence: 'REQ-219 · SPEC-REQUEST.md:103 · TB_SY_USER 단일 테이블 계약: TB_SY_USER의 PK는 USER_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    userId→USER_ID VARCHAR(30), name→USER_NM, email→EMAIL_ADDR, status→USER_STAT_CD, lastLoginAt→LAST_LOGIN_DTTM.
+    세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로
+    책임을 확인한다.'
+- canonical_id: REQ-220
+  status: data-constraint
+  evidence: 'REQ-220 · SPEC-REQUEST.md:104 · TB_SY_USER_ROLE 단일 테이블 계약: TB_SY_USER_ROLE의 PK는 USER_ID,ROLE_ID이며 기존
+    저장/조회 매핑은 다음과 같다: businessRoleIds는 사용자별 ROLE_ID 연결 집합. 사용자/역할 FK 유지. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장
+    무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-221
+  status: data-constraint
+  evidence: 'REQ-221 · SPEC-REQUEST.md:105 · TB_SY_ROLE 단일 테이블 계약: TB_SY_ROLE의 PK는 ROLE_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    ROLE_NM/USE_YN 조회만. ROLE_NM UK, 역할 정의 수정 없음. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개
+    API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-222
+  status: data-constraint
+  evidence: 'REQ-222 · SPEC-REQUEST.md:106 · TB_BS_CLNT 단일 테이블 계약: TB_BS_CLNT의 PK는 CLNT_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    id→CLNT_ID, 4.2의 필드 매핑. BIZ_REG_NO UK. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지
+    않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-223
+  status: data-constraint
+  evidence: 'REQ-223 · SPEC-REQUEST.md:107 · TB_BS_PART 단일 테이블 계약: TB_BS_PART의 PK는 PART_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    id→PART_ID, name→PART_NM, useYn→USE_YN, PART_NM UK. 일반 신규 HQ_YN=N. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장
+    무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-224
+  status: data-constraint
+  evidence: 'REQ-224 · SPEC-REQUEST.md:108 · TB_BS_PART_STD 단일 테이블 계약: TB_BS_PART_STD의 PK는 PART_ID,APLY_BGN_YM이며
+    기존 저장/조회 매핑은 다음과 같다: effectiveMonth→APLY_BGN_YM, endMonth→APLY_END_YM, leaderUserId→PART_LDR_USER_ID, profitRate→PRFT_DSTRB_RT
+    NUMERIC(5,2), salesExpenseAmount→SALES_EXPS_AMT NUMERIC(15). 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성
+    소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-225
+  status: data-constraint
+  evidence: 'REQ-225 · SPEC-REQUEST.md:109 · TB_SY_UPLD 단일 테이블 계약: TB_SY_UPLD의 PK는 UPLD_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    기본 시퀀스 발급, 6.4 매핑. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. FORM_TYPE_CD=B7, SCRN_ID=UI-15, FILE_NM/FILE_SIZE는 실제 파일,
+    TRGT_YM/TRGT_PROJ_ID/TRGT_DSTRB_STEP_CD=NULL, TOT_ROW_CNT=N, SUCC_CNT/WARN_CNT/ERR_CNT는 상호배타 성공/경고/오류 행수다. 기존
+    물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-226
+  status: data-constraint
+  evidence: 'REQ-226 · SPEC-REQUEST.md:110 · TB_SY_UPLD_ERR 단일 테이블 계약: TB_SY_UPLD_ERR의 PK는 UPLD_ID,RSLT_SN이며 기존
+    저장/조회 매핑은 다음과 같다: 부모 UPLD_ID FK, RSLT_SN은 부모별1부터. 6.4 매핑. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. RSLT_SN은 부모별1부터,
+    RSLT_TYPE_CD=ERR/WARN, ROW_NO는원래행, COL_NM은정규제목50자, INPUT_VAL/RSN_CN은6.2 발췌/비공개값이며처리자/시각을저장한다. 기존 물리구조/저장 무결성
+    소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-227
+  status: data-constraint
+  evidence: 'REQ-227 · SPEC-REQUEST.md:111 · TB_SY_CHG_HIST 단일 테이블 계약: TB_SY_CHG_HIST의 PK는 HIST_ID이며 기존 저장/조회 매핑은
+    다음과 같다: 2.4 매핑·기본 시퀀스 발급. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와
+    실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-228
+  status: data-constraint
+  evidence: 'REQ-228 · SPEC-REQUEST.md:112 · TB_SY_ACCS_LOG 단일 테이블 계약: TB_SY_ACCS_LOG의 PK는 LOG_ID이며 기존 저장/조회 매핑은
+    다음과 같다: 7의 ACT_TYPE_CD 등 기록·기본 시퀀스 발급. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지
+    않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-229
+  status: data-constraint
+  evidence: 'REQ-229 · SPEC-REQUEST.md:113 · TB_SY_USER_PREF 단일 테이블 계약: TB_SY_USER_PREF의 PK는 USER_ID,PREF_TYPE_CD,PREF_KEY이며
+    기존 저장/조회 매핑은 다음과 같다: 기존 설정 API로만 PREF_VAL JSON 저장. admin·COLS/UI-15 또는 UI-23, PAGE_SIZE/DENSE/AMT_UNIT의 키는 *.
+    세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로
+    책임을 확인한다.'
+- canonical_id: REQ-230
+  status: data-constraint
+  evidence: 'REQ-230 · SPEC-REQUEST.md:114 · TB_SY_CODE_GRP 단일 테이블 계약: TB_SY_CODE_GRP의 PK는 CODE_GRP_ID이며 기존 저장/조회
+    매핑은 다음과 같다: 기존 코드 서비스의 그룹 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와
+    실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-231
+  status: data-constraint
+  evidence: 'REQ-231 · SPEC-REQUEST.md:115 · TB_SY_CODE 단일 테이블 계약: TB_SY_CODE의 PK는 CODE_GRP_ID,CODE이며 기존 저장/조회 매핑은
+    다음과 같다: CODE_NM/USE_YN/DEL_YN·선택값 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지
+    않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-232
+  status: data-constraint
+  evidence: 'REQ-232 · SPEC-REQUEST.md:116 · TB_SY_CODE_MAP 단일 테이블 계약: TB_SY_CODE_MAP의 PK는 MAP_ID이며 기존 저장/조회 매핑은
+    다음과 같다: SRC_TEXT/CODE_GRP_ID/CODE 조회, UK(SRC_TEXT,CODE_GRP_ID). 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장
+    무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-233
+  status: data-constraint
+  evidence: 'REQ-233 · SPEC-REQUEST.md:117 · TB_SY_OPER_STD 단일 테이블 계약: TB_SY_OPER_STD의 PK는 STD_CD,APLY_BGN_YM이며
+    기존 저장/조회 매핑은 다음과 같다: STD_VAL/UNIT_NM의 유효월 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개
+    API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-234
+  status: data-constraint
+  evidence: 'REQ-234 · SPEC-REQUEST.md:118 · TB_HR_DEV 단일 테이블 계약: TB_HR_DEV의 PK는 DEV_ID이며 기존 저장/조회 매핑은 다음과 같다: MNG_NO/DEV_NM/BLNG_CLNT_ID/PART_ID
+    조회·참조 집계. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL
+    검증으로 책임을 확인한다.'
+- canonical_id: REQ-235
+  status: data-constraint
+  evidence: 'REQ-235 · SPEC-REQUEST.md:119 · TB_PJ_PROJ 단일 테이블 계약: TB_PJ_PROJ의 PK는 PROJ_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    PROJ_NM/CUST_CLNT_ID/PROJ_STAT_CD 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지
+    않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-236
+  status: data-constraint
+  evidence: 'REQ-236 · SPEC-REQUEST.md:120 · TB_PJ_ASGN 단일 테이블 계약: TB_PJ_ASGN의 PK는 ASGN_ID이며 기존 저장/조회 매핑은 다음과 같다:
+    PROJ_ID/DEV_ID/JOB_CD/INPUT_BGN_DT/INPUT_END_DT/ASGN_STAT_CD 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장
+    무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-237
+  status: data-constraint
+  evidence: 'REQ-237 · SPEC-REQUEST.md:121 · TB_PJ_PROJ_PART 단일 테이블 계약: TB_PJ_PROJ_PART의 PK는 PROJ_ID,APLY_BGN_YM이며
+    기존 저장/조회 매핑은 다음과 같다: PART_ID의 프로젝트 소속파트 이력 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개
+    API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-238
+  status: data-constraint
+  evidence: 'REQ-238 · SPEC-REQUEST.md:122 · TB_CL_CLOSE 단일 테이블 계약: TB_CL_CLOSE의 PK는 CLOSE_YM이며 기존 저장/조회 매핑은 다음과
+    같다: CLOSE_STAT_CD 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와
+    실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-239
+  status: data-constraint
+  evidence: 'REQ-239 · SPEC-REQUEST.md:123 · TB_CO_PART_SETL 단일 테이블 계약: TB_CO_PART_SETL의 PK는 PART_ID,SETL_YM이며 기존
+    저장/조회 매핑은 다음과 같다: SETL_STAT_CD 조회. 세부 매핑 근거는 추가 인용과 함께 동일 계약으로 유지한다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다;
+    data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-240
+  status: data-constraint
+  evidence: 'REQ-240 · SPEC-REQUEST.md:125 · 등록·수정 메타데이터·원천 불변: 서버가 REG_USER_ID/REG_DTTM·MOD_USER_ID/MOD_DTTM을 기록하고
+    기존 등록 필드를 보존한다. 이력/접근기록에는MOD 컬럼이 없으며 조회용 역할/코드/업무 원천을 수정하지 않는다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와
+    실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-241
+  status: data-constraint
+  evidence: 'REQ-241 · SPEC-REQUEST.md:127 · 표시 조인·파생값 비영속: roles는ROLE_NM 목록, leaderName은USER_NM, 업종/은행은해당그룹 CODE_NM,
+    account는은행명+마스킹으로 조회한다. projectCount/personCount·예정 변경은산출값이며 동명DB 컬럼을 추가하지 않는다. 기존 물리구조/저장 무결성 소유 요구이며 독립 공개
+    API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-242
+  status: data-constraint
+  evidence: 'REQ-242 · SPEC-REQUEST.md:129 · 거래처·파트 ID 순차 발급: 거래처는C-001·일반파트는PART-001부터 최소3자리ID를 발급한다. 다음 Flyway
+    버전에 NO CYCLE SQ_TB_BS_CLNT_ID(숫자18자리)/SQ_TB_BS_PART_ID(15자리)를 추가하고 기존 동일형식ID 최대값 다음으로 최초 설정한다. HQ는 예약값이다. 기존
+    물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-246
+  status: out-of-scope
+  evidence: 'REQ-246 · SPEC-REQUEST.md:133 · 사용자 선택·일괄·다운로드 제외: UI-23은선택/일괄/사용자다운로드를제공하지않는다. 명시적 제외이므로 대응 실행 endpoint를
+    추가하지 않는다.'
+- canonical_id: REQ-251
+  status: screen-only
+  evidence: 'REQ-251 · SPEC-REQUEST.md:135 · 사용자 업무 역할 신규 기본 선택: 신규 사용자 등록의 업무 역할은 PM을 기본 체크한다. PM/SALES_LDR 두 체크
+    항목의 표시명은 DB 사용 중 역할에서 읽는다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-254
+  status: non-functional
+  evidence: 'REQ-254 · SPEC-REQUEST.md:137 · 임의 비밀번호 비노출·외부 행위 금지: 생성임의값을응답/로그/이력에남기지않고로그인/메일을생성하지않는다. 응답에서PWD/MFA
+    비밀필드를제외한다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-257
+  status: screen-only
+  evidence: 'REQ-257 · SPEC-REQUEST.md:139 · 자격 사용자0명 등록 이동: 목적별 자격 사용자 옵션이0명이면 사용자 등록으로 이동할 수 있게 한다. 화면의 표시/상호작용/상태
+    소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-260
+  status: screen-only
+  evidence: 'REQ-260 · SPEC-REQUEST.md:147 · 거래처 표·작업 진입: 거래처 목록은 clients의12열 순서·ID rowKey이며 등록/양식 내려받기/엑셀 업로드/목록
+    다운로드 작업을 제공한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-275
+  status: screen-only
+  evidence: 'REQ-275 · SPEC-REQUEST.md:171 · 등록 후 조건 유지·행 확인: 등록 후 조건/정렬 유지 재조회하고 현재페이지에등록행이있으면1회강조한다. 없으면등록 거래처
+    보기로상세를열며강조때문에정렬/페이지를바꾸지않는다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-281
+  status: screen-only
+  evidence: 'REQ-281 · SPEC-REQUEST.md:177 · 전체 계좌 숨김·이동·닫기 시 제거: 전체번호를 본 뒤 닫기/거래처 이동/숨기기 시 해당 전체번호를 화면 상태에서 제거한다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-283
+  status: screen-only
+  evidence: 'REQ-283 · SPEC-REQUEST.md:178 · 계좌 편집 기본 상태: 기존 거래처 편집은 등록 계좌 유지를 기본 선택하고 계좌번호 input은 비워서 표시한다. 화면의
+    표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-285
+  status: screen-only
+  evidence: 'REQ-285 · SPEC-REQUEST.md:180 · 계좌 교체·CLEAR 확인 취소 계약: 기존계좌실제교체는다음 지급부터 새 계좌로 보냅니다와새은행/끝4자리를확인하고CLEAR는고객사로
+    변경하면 지급 계좌 정보가 지워집니다를확인한다. 취소저장0회·확인1회·신규확인없음이다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제
+    브라우저에서 검증한다.'
+- canonical_id: REQ-290
+  status: screen-only
+  evidence: 'REQ-290 · SPEC-REQUEST.md:185 · 거래처 선택 유지·해제·제외 상태: 체크/페이지 전체/조회된N건 모두 선택·개별 제외를 제공하고 실제 선택 수를 표시한다.
+    페이지 이동은 선택 유지, 필터/정렬/size 변경은 해제한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-295
+  status: screen-only
+  evidence: 'REQ-295 · SPEC-REQUEST.md:188 · 상태 성공 후 목록·상세 갱신: 상태변경 성공후목록/상세를재조회한다. 이름변경은ID참조의현재표시명에반영하고과거이력문자열은보존한다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-301
+  status: out-of-scope
+  evidence: 'REQ-301 · SPEC-REQUEST.md:198 · HQ 일반 관리 제외: HQ는본사예약값으로유지하고일반파트목록/수정/기준관리에서제외한다. 일반파트는HQ_YN=N이다. 명시적
+    제외이므로 대응 실행 endpoint를 추가하지 않는다.'
+- canonical_id: REQ-304
+  status: screen-only
+  evidence: 'REQ-304 · SPEC-REQUEST.md:202 · 파트 추가 초기 파트장·월: 파트 추가창의 처음 파트장 선택은 빈칸이며 시작월 기본은 max(현재월,minMonth)다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-308
+  status: screen-only
+  evidence: 'REQ-308 · SPEC-REQUEST.md:204 · 월 변경시 미편집 기본값만 갱신: 적용월을바꾸면아직수정하지않은율/관리비만새기본값으로갱신하고사용자입력칸은유지한다. 화면의
+    표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-320
+  status: screen-only
+  evidence: 'REQ-320 · SPEC-REQUEST.md:213 · 기준 변경 선택월 유효값 조회: 기준 변경창은 선택한 effectiveMonth에 유효한 leaderUserId/profitRate/salesExpenseAmount를
+    채우고 편집 revision을 사용한다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-327
+  status: out-of-scope
+  evidence: 'REQ-327 · SPEC-REQUEST.md:218 · 파트장 단일 원천·권한 부작용 제외: 파트장원천은TB_BS_PART_STD이며TB_SY_USER_SCOPE복제·권한/알림실행없이담당자/기준만조회한다.
+    명시적 제외이므로 대응 실행 endpoint를 추가하지 않는다.'
+- canonical_id: REQ-328
+  status: non-functional
+  evidence: 'REQ-328 · SPEC-REQUEST.md:224 · 엑셀 서비스·정의 확장 계약: ExcelImportService/ExcelExportService와공통엑셀부품을재사용한다.
+    ImportDefinition은formType/screenId/columns/headerAliases/normalize/validateRow/validateBatch/apply이며공통은파일/행번호/결과/기록/원자성,
+    B7은거래처검증/저장을담당한다. 후속은정의등록으로확장한다. 기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-331
+  status: data-constraint
+  evidence: 'REQ-331 · SPEC-REQUEST.md:230 · B7 11열 의미·거래처 필드 매핑: B7의11열은구분CLNT_TYPE코드명→type,상호→name,사업자등록번호→businessNo,대표자→ceo,업종INDUTY코드명→industryCode,담당자→contactName,연락처→phone,세금계산서이메일→taxEmail,은행BANK코드명→bankCode,계좌번호→accountNumber후암호화,예금주→depositor로매핑하고각길이/조건부필수/4.2형식을적용한다.
+    기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-332
+  status: data-constraint
+  evidence: 'REQ-332 · SPEC-REQUEST.md:242 · B7 신규 전용·기본 상태: B7은신규등록전용이고ID는반영시에발급하며USE_YN=Y다. 대상월/프로젝트입력과월마감/지난해제한은없다.
+    기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-348
+  status: non-functional
+  evidence: 'REQ-348 · SPEC-REQUEST.md:253 · 진단 계좌 비공개·발췌 한도: 계좌진단값은항상[비공개]다. 다른입력진단은최대200자·초과시앞197자+...,사유는최대300자·앞297자+...로발췌를표시하고업무값을잘라등록하지않는다.
+    기반 재사용/구현 또는 실행환경 소유 요구로 독립 업무 HTTP 연산을 추가하지 않는다.'
+- canonical_id: REQ-349
+  status: screen-only
+  evidence: 'REQ-349 · SPEC-REQUEST.md:257 · File 메모리 유지·교체 새 검사: PC에서File선택→검사하며같은File을창메모리에유지한다. 파일교체는결과/uploadId를해제해새검사로진행한다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-356
+  status: screen-only
+  evidence: 'REQ-356 · SPEC-REQUEST.md:260 · 검사창 닫기 CHECKED·메모리 폐기: 닫기는업무0건·CHECKED유지이며File/결과를폐기한다. 다시열면파일을재선택한다.
+    CANCEL로바꾸지않는다. 화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-366
+  status: screen-only
+  evidence: 'REQ-366 · SPEC-REQUEST.md:265 · 반영 성공·실패 화면 반영: commit후거래처 업로드 완료—반영 N건(경고 W행)을표시하고목록을갱신한다. 실패는입력유지/오류안내·성공토스트0회다.
+    화면의 표시/상호작용/상태 소유 요구이므로 별도 HTTP 연산을 만들지 않는다; 위 문장의 고유 조건을 실제 브라우저에서 검증한다.'
+- canonical_id: REQ-368
+  status: data-constraint
+  evidence: 'REQ-368 · SPEC-REQUEST.md:274 · 파일 경고 저장·집계 분리: 파일경고는COL_NM=[파일],ROW_NO=제목행,INPUT_VAL=알수없는제목발췌로저장하고행수카드에서는제외하되문제목록/다운로드에는포함한다.
+    기존 물리구조/저장 무결성 소유 요구이며 독립 공개 API를 만들지 않는다; data-model.md와 실제 PostgreSQL 검증으로 책임을 확인한다.'
+- canonical_id: REQ-380
+  status: out-of-scope
+  evidence: 'REQ-380 · SPEC-REQUEST.md:285 · 접근기록 조회 화면 제외: 접근기록의새조회화면을만들지않는다. 명시적 제외이므로 대응 실행 endpoint를 추가하지 않는다.'
 x-requirement-accounting:
   registry_total: 156
   mapped_unique: 106

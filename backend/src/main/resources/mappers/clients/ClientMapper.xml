@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.clients.ClientMapper">
+  <sql id="columns">
+    c.clnt_id AS "id",c.clnt_type_cd AS "type",c.clnt_nm AS "name",c.biz_reg_no AS "businessNo",
+    c.ceo_nm AS "ceo",c.induty_cd AS "industryCode",c.chrg_nm AS "contactName",c.telno AS "phone",
+    c.tax_email_addr AS "taxEmail",c.bank_cd AS "bankCode",c.acct_no_enc AS "encryptedAccount",
+    c.dpstr_nm AS "depositor",c.use_yn AS "useYn",c.reg_user_id AS "regUserId",c.reg_dttm AS "regDttm",
+    c.mod_user_id AS "modUserId",c.mod_dttm AS "modDttm"
+  </sql>
+  <sql id="filters">
+    <where>
+      <if test="filters.type != null">
+        <choose><when test="filters.type == 'BOTH'">AND c.clnt_type_cd='BOTH'</when>
+          <otherwise>AND c.clnt_type_cd IN (#{filters.type},'BOTH')</otherwise></choose>
+      </if>
+      <if test="filters.useYn != null">AND c.use_yn=#{filters.useYn}</if>
+      <if test="filters.q != null">AND (strpos(c.clnt_nm,#{filters.q})&gt;0 OR strpos(replace(c.biz_reg_no,'-',''),replace(#{filters.q},'-',''))&gt;0)</if>
+    </where>
+  </sql>
+  <sql id="assignmentPredicate">
+    a.asgn_stat_cd='ACT' AND a.input_bgn_dt&lt;=#{basisDate} AND a.input_end_dt&gt;=#{basisDate}
+    AND p.proj_stat_cd IN ('ING','PRE')
+    AND ((c.clnt_type_cd IN ('CUST','BOTH') AND p.cust_clnt_id=c.clnt_id)
+      OR (c.clnt_type_cd IN ('VNDR','BOTH') AND d.blng_clnt_id=c.clnt_id))
+  </sql>
+  <select id="list" resultType="com.sicost.clients.ClientDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bs_clnt c
+    LEFT JOIN tb_sy_code i ON i.code_grp_id='INDUTY' AND i.code=c.induty_cd
+    LEFT JOIN LATERAL (SELECT count(DISTINCT p.proj_id) AS projects,count(DISTINCT d.dev_id) AS people
+      FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+      WHERE <include refid="assignmentPredicate"/>) totals ON true
+    <include refid="filters"/>
+    ORDER BY
+    <choose>
+      <when test="filters.sort == 'type'">(SELECT code_nm FROM tb_sy_code WHERE code_grp_id='CLNT_TYPE' AND code=c.clnt_type_cd)</when>
+      <when test="filters.sort == 'businessNo'">c.biz_reg_no</when>
+      <when test="filters.sort == 'ceo'">c.ceo_nm</when>
+      <when test="filters.sort == 'industry'">i.code_nm</when>
+      <when test="filters.sort == 'contactName'">c.chrg_nm</when>
+      <when test="filters.sort == 'phone'">c.telno</when>
+      <when test="filters.sort == 'taxEmail'">c.tax_email_addr</when>
+      <when test="filters.sort == 'projectCount'">totals.projects</when>
+      <when test="filters.sort == 'personCount'">totals.people</when>
+      <when test="filters.sort == 'useYn'">c.use_yn</when>
+      <otherwise>c.clnt_nm</otherwise>
+    </choose>
+    <choose><when test="filters.direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose>
+    NULLS LAST,c.clnt_id ASC LIMIT #{filters.size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_bs_clnt c <include refid="filters"/></select>
+  <select id="find" resultType="com.sicost.clients.ClientDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.clnt_id=#{id}<if test="lock"> FOR UPDATE</if>
+  </select>
+  <select id="byBusinessNo" resultType="com.sicost.clients.ClientDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.biz_reg_no=#{businessNo}
+  </select>
+  <select id="sameName" resultType="com.sicost.clients.ClientDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.clnt_nm=#{name}
+    <if test="excludedId != null">AND c.clnt_id&lt;&gt;#{excludedId}</if> ORDER BY c.clnt_id
+  </select>
+  <select id="labels" resultType="com.sicost.clients.ClientDtos$Labels">
+    SELECT i.code_nm AS "industry",CASE WHEN i.code IS NULL THEN NULL ELSE i.use_yn='Y' AND i.del_yn='N' END AS "industryActive",
+      b.code_nm AS "bankName",CASE WHEN b.code IS NULL THEN NULL ELSE b.use_yn='Y' AND b.del_yn='N' END AS "bankActive"
+    FROM tb_bs_clnt c LEFT JOIN tb_sy_code i ON i.code_grp_id='INDUTY' AND i.code=c.induty_cd
+    LEFT JOIN tb_sy_code b ON b.code_grp_id='BANK' AND b.code=c.bank_cd WHERE c.clnt_id=#{id}
+  </select>
+  <select id="counts" resultType="com.sicost.clients.ClientDtos$Counts">
+    SELECT count(DISTINCT p.proj_id) AS "projectCount",count(DISTINCT d.dev_id) AS "personCount"
+    FROM tb_bs_clnt c JOIN tb_pj_asgn a ON true JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+    WHERE c.clnt_id=#{id} AND <include refid="assignmentPredicate"/>
+  </select>
+  <select id="historyCount" resultType="long">SELECT count(*) FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_BS_CLNT' AND trgt_key=#{id}</select>
+  <select id="code" resultType="com.sicost.clients.ClientDtos$Code">
+    SELECT code AS "code",code_nm AS "name",use_yn AS "useYn",del_yn AS "delYn" FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code} FOR SHARE
+  </select>
+  <select id="projectReferences" resultType="long">SELECT count(*) FROM tb_pj_proj WHERE cust_clnt_id=#{id} AND proj_stat_cd IN ('ING','PRE')</select>
+  <select id="developerReferences" resultType="long">SELECT count(*) FROM tb_hr_dev WHERE blng_clnt_id=#{id}</select>
+  <insert id="insert">
+    INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,ceo_nm,induty_cd,chrg_nm,telno,tax_email_addr,bank_cd,acct_no_enc,dpstr_nm,use_yn,reg_user_id,reg_dttm)
+    VALUES(#{row.id},#{row.type},#{row.name},#{row.businessNo},#{row.ceo},#{row.industryCode},#{row.contactName},#{row.phone},#{row.taxEmail},#{row.bankCode},#{row.encryptedAccount},#{row.depositor},#{row.useYn},#{row.regUserId},#{row.regDttm})
+  </insert>
+  <update id="update">
+    UPDATE tb_bs_clnt SET clnt_type_cd=#{row.type},clnt_nm=#{row.name},ceo_nm=#{row.ceo},induty_cd=#{row.industryCode},chrg_nm=#{row.contactName},telno=#{row.phone},tax_email_addr=#{row.taxEmail},bank_cd=#{row.bankCode},acct_no_enc=#{row.encryptedAccount},dpstr_nm=#{row.depositor},mod_user_id=#{row.modUserId},mod_dttm=#{row.modDttm} WHERE clnt_id=#{row.id}
+  </update>
+</mapper>

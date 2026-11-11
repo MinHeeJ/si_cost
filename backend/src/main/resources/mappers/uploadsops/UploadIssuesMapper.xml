@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.uploadsops.UploadIssuesMapper">
+  <sql id="filter">
+    upld_id=#{uploadId}
+    <if test="severity != null">AND rslt_type_cd=#{severity}</if>
+  </sql>
+  <select id="exists" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_upld WHERE upld_id=#{uploadId})
+  </select>
+  <select id="count" resultType="long">
+    SELECT count(*) FROM tb_sy_upld_err WHERE <include refid="filter"/>
+  </select>
+  <select id="issues" resultType="com.sicost.uploadsops.UploadIssuesDtos$Issue">
+    SELECT rslt_sn::integer AS sequence, rslt_type_cd AS severity, row_no::integer AS "rowNumber",
+      coalesce(col_nm,'') AS "columnName",
+      CASE WHEN col_nm IN ('계좌번호','은행','예금주') THEN '[비공개]' ELSE coalesce(input_val,'') END AS "inputValue",
+      rsn_cn AS reason
+    FROM tb_sy_upld_err WHERE <include refid="filter"/>
+    <!-- B7 assigns RSLT_SN after original row / physical column / ERR-first ordering.
+         Preserve that persisted order: localized column labels cannot recover worksheet positions. -->
+    ORDER BY row_no,rslt_sn LIMIT #{limit} OFFSET #{offset}
+  </select>
+</mapper>

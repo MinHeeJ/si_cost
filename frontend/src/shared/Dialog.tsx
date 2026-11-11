@@ -9,6 +9,7 @@ export type DialogProps = {
   onConfirm(): void | Promise<void>;
   onCancel(): void;
   confirmLabel?: string;
+  confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
 };
@@ -22,6 +23,7 @@ export function Dialog({
   onConfirm,
   onCancel,
   confirmLabel = "확인",
+  confirmDisabled = false,
   cancelLabel = "취소",
   wide,
 }: DialogProps) {
@@ -47,7 +49,7 @@ export function Dialog({
   });
   if (!open) return null;
   const confirm = async () => {
-    if (pending || inFlight.current) return;
+    if (pending || confirmDisabled || inFlight.current) return;
     inFlight.current = true;
     setSubmitError(null);
     try {
@@ -127,7 +129,7 @@ export function Dialog({
             type="submit"
             data-confirm
             className="sicost-primary"
-            disabled={pending}
+            disabled={pending || confirmDisabled}
           >
             {pending ? "처리 중…" : confirmLabel}
           </button>

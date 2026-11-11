@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.salespartsops.PartStandardMapper">
+  <select id="options" resultType="com.sicost.salespartsops.PartStandardDtos$Option">
+    SELECT p.part_id AS "id",p.part_nm AS "name",p.hq_yn AS "hqYn",
+      (SELECT to_char(to_date(min(s.aply_bgn_ym),'YYYYMM'),'YYYY-MM') FROM tb_bs_part_std s WHERE s.part_id=p.part_id) AS "firstEffectiveMonth"
+    FROM tb_bs_part p WHERE p.use_yn='Y' ORDER BY p.part_nm,p.part_id
+  </select>
+  <select id="operatingValue" resultType="java.math.BigDecimal">
+    SELECT std_val FROM tb_sy_oper_std WHERE std_cd=#{key} AND aply_bgn_ym &lt;=#{month} ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="lastClose" resultType="string">SELECT max(close_ym) FROM tb_cl_close WHERE close_stat_cd='CLOSE'</select>
+  <select id="lockUser" resultType="string">SELECT user_id FROM tb_sy_user WHERE user_id=#{userId} FOR UPDATE</select>
+  <select id="eligible" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_user u JOIN tb_sy_user_role ur ON ur.user_id=u.user_id
+      JOIN tb_sy_role r ON r.role_id=ur.role_id WHERE u.user_id=#{userId} AND u.user_stat_cd='USE' AND r.role_id='SALES_LDR' AND r.use_yn='Y')
+  </select>
+  <select id="header" resultType="com.sicost.salespartsops.PartStandardDtos$Header">
+    SELECT part_id AS "id",part_nm AS "name",hq_yn AS "hqYn",use_yn AS "useYn",reg_user_id AS "regUserId",
+      reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm" FROM tb_bs_part WHERE part_id=#{id}
+    <if test="lock">FOR UPDATE</if>
+  </select>
+  <select id="timeline" resultType="com.sicost.salespartsops.PartStandardDtos$Stored">
+    SELECT part_id AS "partId",aply_bgn_ym AS "month",aply_end_ym AS "endMonth",part_ldr_user_id AS "leaderUserId",
+      prft_dstrb_rt AS "profitRate",sales_exps_amt AS "salesExpenseAmount",reg_user_id AS "regUserId",
+      reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_bs_part_std WHERE part_id=#{id} ORDER BY aply_bgn_ym <if test="lock">FOR UPDATE</if>
+  </select>
+  <select id="blockedMonths" resultType="string">
+    SELECT s.setl_ym FROM tb_co_part_setl s WHERE s.part_id=#{id} AND s.setl_ym &gt;=#{month}
+      AND s.setl_stat_cd IN ('CNFM','AUTO') AND NOT EXISTS(SELECT 1 FROM tb_cl_close c WHERE c.close_ym=s.setl_ym AND c.close_stat_cd='CLOSE') ORDER BY s.setl_ym
+  </select>
+  <select id="leaderName" resultType="string">SELECT user_nm FROM tb_sy_user WHERE user_id=#{userId}</select>
+  <select id="personCount" resultType="long">SELECT count(*) FROM tb_hr_dev WHERE part_id=#{id}</select>
+  <select id="projectCount" resultType="long">
+    SELECT count(*) FROM tb_pj_proj p WHERE p.proj_stat_cd IN ('ING','PRE') AND EXISTS(
+      SELECT 1 FROM tb_pj_proj_part pp WHERE pp.proj_id=p.proj_id AND pp.part_id=#{id} AND pp.aply_bgn_ym=(
+        SELECT max(x.aply_bgn_ym) FROM tb_pj_proj_part x WHERE x.proj_id=p.proj_id AND x.aply_bgn_ym &lt;=#{month}))
+  </select>
+  <update id="endPrevious">
+    UPDATE tb_bs_part_std SET aply_end_ym=#{endMonth,jdbcType=CHAR},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE part_id=#{partId} AND aply_bgn_ym=#{month}
+  </update>
+  <insert id="insert">
+    INSERT INTO tb_bs_part_std(part_id,aply_bgn_ym,aply_end_ym,part_ldr_user_id,prft_dstrb_rt,sales_exps_amt,reg_user_id,reg_dttm)
+    VALUES(#{partId},#{month},#{endMonth,jdbcType=CHAR},#{input.leaderUserId},#{input.profitRate},#{input.salesExpenseAmount},#{actor},#{now})
+  </insert>
+</mapper>

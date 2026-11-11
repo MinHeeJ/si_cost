@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.businessusersops.BusinessUserOptionsMapper">
+  <select id="eligible" resultType="com.sicost.businessusersops.BusinessUserOptionsDtos$UserOption">
+    SELECT u.user_id AS "userId", u.user_nm AS "name",
+           u.user_nm || '(' || u.user_id || ')' AS "label"
+    FROM tb_sy_user u
+    JOIN tb_sy_user_role ur ON ur.user_id = u.user_id
+    JOIN tb_sy_role r ON r.role_id = ur.role_id
+    WHERE u.user_stat_cd = 'USE' AND r.use_yn = 'Y' AND r.role_id = #{roleId}
+    ORDER BY u.user_nm ASC, u.user_id ASC
+  </select>
+  <select id="activeRoles" resultType="com.sicost.businessusersops.BusinessUserOptionsDtos$RoleOption">
+    SELECT role_id AS "roleId", role_nm AS "name"
+    FROM tb_sy_role
+    WHERE role_id IN ('PM', 'SALES_LDR') AND use_yn = 'Y'
+    ORDER BY sort_ord, role_id
+  </select>
+</mapper>

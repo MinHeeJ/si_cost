@@ -1,6 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner } from "../shared/Feedback";
-import { BrowserRouter, useRoutes, type RouteObject } from "react-router-dom";
+import {
+  BrowserRouter,
+  useLocation,
+  useNavigate,
+  useRoutes,
+  type RouteObject,
+} from "react-router-dom";
+import { BusinessPartnersScreen } from "../pages/shared/BusinessPartnersScreen";
+import { UsersScreen } from "../pages/shared/UsersScreen";
+import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWorkspace";
+import { ClientsScreen } from "../pages/clients/ClientsScreen";
+import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
+import { SalesPartStandardDialog } from "../pages/salespartsops/SalesPartStandardDialog";
+import { ExcelUploadDialog } from "../pages/b7/ExcelUploadDialog";
+import { getB7Template, saveDownload } from "../pages/b7/b7Api";
+import { notifyClientsCommitted } from "../pages/clientsops/clientActionsApi";
+import {
+  clientExportColumns,
+  createMasterDataExport,
+  saveMasterDataDownload,
+} from "../pages/exportsops/masterDataExportApi";
+import type { ClientFilters } from "../pages/clients/clientsApi";
+import type { ScreenColumnPreferences } from "../pages/me/preferencesApi";
 import {
   SharedApplication,
   type SharedPreferenceAdapter,
@@ -189,10 +211,222 @@ function CommonCodeWorkspace({
   );
 }
 
+function BusinessPartnersWorkspace({
+  onDirtyChange,
+}: {
+  onDirtyChange(dirty: boolean): void;
+}) {
+  const preferences = usePreferences(),
+    location = useLocation();
+  const [columnsOpen, setColumnsOpen] = useState(false),
+    [upload, setUpload] = useState(false);
+  const [standardPart, setStandardPart] = useState<string>();
+  const [error, setError] = useState<unknown>(),
+    [pending, setPending] = useState(false);
+  const [dirty, setDirty] = useState({
+    clients: false,
+    parts: false,
+    upload: false,
+    standard: false,
+  });
+  const clientsDirty = useCallback(
+    (value: boolean) => setDirty((old) => ({ ...old, clients: value })),
+    [],
+  );
+  const partsDirty = useCallback(
+    (value: boolean) => setDirty((old) => ({ ...old, parts: value })),
+    [],
+  );
+  const uploadDirty = useCallback(
+    (value: boolean) => setDirty((old) => ({ ...old, upload: value })),
+    [],
+  );
+  const standardDirty = useCallback(
+    (value: boolean) => setDirty((old) => ({ ...old, standard: value })),
+    [],
+  );
+  useEffect(() => {
+    onDirtyChange(Object.values(dirty).some(Boolean));
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
+  const view = (
+    preferences.get("COLS", "UI-15")?.value as
+      | ScreenColumnPreferences
+      | undefined
+  )?.clients;
+  const size = preferences.get("PAGE_SIZE")?.value;
+  const pageSize = size === 20 || size === 100 ? size : 50;
+  const unit = preferences.get("AMT_UNIT")?.value;
+  const amountUnit = unit === "원" || unit === "백만원" ? unit : "천원";
+  const dense = preferences.get("DENSE")?.value === "좁게";
+  async function download(filters?: ClientFilters) {
+    if (pending) return;
+    setPending(true);
+    setError(undefined);
+    try {
+      if (!filters) saveDownload(await getB7Template());
+      else
+        saveMasterDataDownload(
+          await createMasterDataExport({
+            view: "CLIENTS",
+            filters,
+            sort: filters.sort,
+            direction: filters.direction,
+            amountUnit,
+            columns: clientExportColumns
+              .filter((id) => id === "name" || !view?.hidden.includes(id))
+              .sort((a, b) =>
+                view ? view.order.indexOf(a) - view.order.indexOf(b) : 0,
+              ),
+          }),
+        );
+    } catch (e) {
+      setError(e);
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <>
+      {error != null && (
+        <ErrorBanner
+          message={
+            error instanceof Error ? error.message : "요청하지 못했습니다."
+          }
+        />
+      )}
+      {pending && <p role="status">파일을 준비하고 있습니다.</p>}
+      <ClientsScreen
+        active={location.pathname === "/UI-15"}
+        dense={dense}
+        pageSize={pageSize}
+        columnView={view}
+        onDirtyChange={clientsDirty}
+        panelDirty={dirty.parts || dirty.upload || dirty.standard}
+        onColumnsChange={() => setColumnsOpen(true)}
+        onDensityChange={() => {
+          void preferences
+            .put("DENSE", "*", dense ? "넓게" : "좁게")
+            .catch(setError);
+        }}
+        onTemplate={() => void download()}
+        onUpload={() => setUpload(true)}
+        onExport={(filters) => void download(filters)}
+        renderParts={
+          <SalesPartsScreen
+            dense={dense}
+            pageSize={pageSize}
+            amountUnit={amountUnit}
+            onDirtyChange={partsDirty}
+            onStandardChange={(detail) => setStandardPart(detail.part.id)}
+          />
+        }
+      />
+      {columnsOpen && (
+        <ColumnPreferencesDialog
+          open
+          screenId="UI-15"
+          viewId="clients"
+          columns={clientExportColumns.map((id) => ({
+            id,
+            label: {
+              type: "구분",
+              name: "상호",
+              businessNo: "사업자번호",
+              ceo: "대표자",
+              industry: "업종",
+              contactName: "담당자",
+              phone: "연락처",
+              taxEmail: "세금계산서 이메일",
+              account: "지급 계좌",
+              projectCount: "진행 프로젝트",
+              personCount: "투입 인력",
+              useYn: "사용 여부",
+            }[id],
+            required: id === "name",
+          }))}
+          onClose={() => setColumnsOpen(false)}
+        />
+      )}
+      {upload && (
+        <ExcelUploadDialog
+          onClose={() => setUpload(false)}
+          onApplied={notifyClientsCommitted}
+          onDirtyChange={uploadDirty}
+        />
+      )}
+      {standardPart && (
+        <SalesPartStandardDialog
+          partId={standardPart}
+          onClose={() => setStandardPart(undefined)}
+          onSaved={() => setStandardPart(undefined)}
+          onDirtyChange={standardDirty}
+        />
+      )}
+    </>
+  );
+}
+
+function RegisteredUsersWorkspace({
+  onDirtyChange,
+}: {
+  onDirtyChange(dirty: boolean): void;
+}) {
+  const location = useLocation(),
+    navigate = useNavigate();
+  const [consumed, setConsumed] = useState<string>();
+  const state = location.state as {
+    businessUserRegistration?: unknown;
+    qualificationPurpose?: unknown;
+    returnTo?: unknown;
+  } | null;
+  const request =
+    location.pathname === "/UI-23" &&
+    state?.businessUserRegistration === true &&
+    consumed !== location.key;
+  return (
+    <BusinessUsersWorkspace
+      onDirtyChange={onDirtyChange}
+      registration={
+        request
+          ? {
+              key: location.key,
+              role:
+                state?.qualificationPurpose === "PART_LEADER"
+                  ? "SALES_LDR"
+                  : "PM",
+              onClose: () => {
+                setConsumed(location.key);
+                const target = state?.returnTo;
+                if (
+                  typeof target === "string" &&
+                  target !== "/UI-23" &&
+                  Object.keys(screenRegistry).some((id) => target === `/${id}`)
+                )
+                  navigate(target);
+                else navigate("/UI-23", { replace: true, state: null });
+              },
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 function RegisteredApplication() {
   const preferences = usePreferences();
   const [codesDirty, setCodesDirty] = useState(false),
     [standardsDirty, setStandardsDirty] = useState(false);
+  const [partnersDirty, setPartnersDirty] = useState(false),
+    [usersDirty, setUsersDirty] = useState(false);
+  const onPartnersDirty = useCallback(
+    (dirty: boolean) => setPartnersDirty(dirty),
+    [],
+  );
+  const onUsersDirty = useCallback(
+    (dirty: boolean) => setUsersDirty(dirty),
+    [],
+  );
   const onCodesDirty = useCallback(
     (dirty: boolean) => setCodesDirty(dirty),
     [],
@@ -216,7 +450,25 @@ function RegisteredApplication() {
   return (
     <SharedApplication
       preferences={adapter}
-      isDirty={(id) => id === "UI-27" && (codesDirty || standardsDirty)}
+      isDirty={(id) =>
+        id === "UI-27"
+          ? codesDirty || standardsDirty
+          : id === "UI-15"
+            ? partnersDirty
+            : id === "UI-23" && usersDirty
+      }
+      screens={{
+        "UI-15": (
+          <BusinessPartnersScreen>
+            <BusinessPartnersWorkspace onDirtyChange={onPartnersDirty} />
+          </BusinessPartnersScreen>
+        ),
+        "UI-23": (
+          <UsersScreen>
+            <RegisteredUsersWorkspace onDirtyChange={onUsersDirty} />
+          </UsersScreen>
+        ),
+      }}
       renderSettings={(open, onClose) => (
         <PreferenceSettings open={open} onClose={onClose} />
       )}

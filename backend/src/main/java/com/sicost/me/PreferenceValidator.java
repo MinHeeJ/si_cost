@@ -18,10 +18,13 @@ public class PreferenceValidator {
             "valueCodes",List.of("code","name","codeVal","unitNm"),
             "mappings",List.of("sourceText","groupId","code"),
             "standards",List.of("key","name","value","unitNm","effectiveMonth","description"),
-            "history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor"));
+            "history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor"),
+            "users",List.of("userId","name","email","roles","status","lastLoginAt"),
+            "clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn"));
     private static final Map<String,List<String>> REQUIRED = Map.of(
             "codes",List.of("code","name"),"valueCodes",List.of("code","name"),
-            "mappings",List.of("sourceText","groupId","code"),"standards",List.of("key","name","value"),"history",List.of("occurredAt","target"));
+            "mappings",List.of("sourceText","groupId","code"),"standards",List.of("key","name","value"),"history",List.of("occurredAt","target"),
+            "users",List.of("userId","name"),"clients",List.of("name"));
     private final PreferenceMapper mapper;
     private final ObjectMapper json;
     private final Clock clock;
@@ -30,7 +33,7 @@ public class PreferenceValidator {
         if (GLOBAL.contains(type)) {if (!"*".equals(key)) throw InputValidator.invalid("key");}
         else if (Set.of("COLS","PERIOD").contains(type)) {
             if (!mapper.screens().contains(key)) throw InputValidator.invalid("key");
-            if (type.equals("COLS") && !key.equals("UI-27")) throw InputValidator.invalid("key");
+            if (type.equals("COLS") && !Set.of("UI-15","UI-23","UI-27").contains(key)) throw InputValidator.invalid("key");
             if (type.equals("PERIOD") && periodType(key).equals("NONE")) throw InputValidator.invalid("type");
         } else throw InputValidator.invalid("type");
     }
@@ -49,7 +52,7 @@ public class PreferenceValidator {
                 List<String> ids=strings(value,"value");
                 if(ids.size()>(type.equals("FAV")?10:5)||!mapper.screens().containsAll(ids)) throw InputValidator.invalid("value");
             }
-            case "COLS" -> columns(value);
+            case "COLS" -> columns(key,value);
             case "PERIOD" -> period(key,value);
             default -> throw InputValidator.invalid("type");
         }
@@ -65,8 +68,16 @@ public class PreferenceValidator {
         for(JsonNode n:array) {if(!n.isTextual()||result.contains(n.textValue()))throw InputValidator.invalid(field);result.add(n.textValue());}
         return result;
     }
-    private void columns(JsonNode value) {
-        fields(value,COLUMNS.keySet());
+    private Set<String> columnViews(String key) {
+        return switch(key) {
+            case "UI-15" -> Set.of("clients");
+            case "UI-23" -> Set.of("users");
+            case "UI-27" -> Set.of("codes","valueCodes","mappings","standards","history");
+            default -> throw InputValidator.invalid("key");
+        };
+    }
+    private void columns(String key,JsonNode value) {
+        fields(value,columnViews(key));
         value.fields().forEachRemaining(entry->{
             var view=entry.getValue();fields(view,Set.of("order","hidden"));
             var order=strings(view.get("order"),"value.order");var hidden=strings(view.get("hidden"),"value.hidden");
@@ -111,7 +122,7 @@ public class PreferenceValidator {
             case "PAGE_SIZE" -> IntNode.valueOf(50);
             case "DENSE" -> TextNode.valueOf("넓게");
             case "AMT_UNIT" -> TextNode.valueOf("천원");
-            case "COLS" -> {var o=json.createObjectNode();COLUMNS.forEach((k,v)->{var c=o.putObject(k);c.set("order",json.valueToTree(v));c.putArray("hidden");});yield o;}
+            case "COLS" -> {var o=json.createObjectNode();COLUMNS.forEach((k,v)->{if(columnViews(key).contains(k)){var c=o.putObject(k);c.set("order",json.valueToTree(v));c.putArray("hidden");}});yield o;}
             case "PERIOD" -> {
                 String kind=periodType(key);var o=json.createObjectNode().put("type",kind);var now=now();var base=base();
                 if(kind.equals("YEAR"))o.put("value",String.format("%04d",Math.max(base.getYear(),now.getYear())));

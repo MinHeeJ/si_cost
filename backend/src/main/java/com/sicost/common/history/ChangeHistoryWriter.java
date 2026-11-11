@@ -14,7 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class ChangeHistoryWriter {
-    private static final Set<String> TABLES = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD");
+    private static final Set<String> TABLES = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD",
+            "TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD");
     private static final Set<String> TYPES = Set.of("NEW", "UPD", "STOP", "RESUME", "DEL");
     private final ChangeHistoryMapper mapper;
     private final CurrentUserProvider users;
@@ -30,6 +31,15 @@ public class ChangeHistoryWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Change change) {
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
+        if (Set.of("TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD").contains(change.tableName())
+                && change.type().equals("DEL")) throw InputValidator.invalid("history");
+        if (change.item() != null && change.item().toUpperCase(java.util.Locale.ROOT)
+                .matches(".*(PWD|PASSWORD|HASH|MFA|CIPHER|ACCT_NO_ENC).*")) throw InputValidator.invalid("history");
+        if (change.item() != null && Set.of("ACCOUNT", "ACCOUNTNUMBER", "ACCT_NO", "계좌").contains(change.item().toUpperCase(java.util.Locale.ROOT))) {
+            for (String value : new String[]{change.before(), change.after()}) {
+                if (value != null && !value.matches("\\*{4}[0-9]{1,4}")) throw InputValidator.invalid("history");
+            }
+        }
         if (Objects.equals(change.before(), change.after())) return;
         InputValidator.text(change.targetKey(), 100, "targetKey");
         check(change.item(), 50); check(change.before(), 500); check(change.after(), 500); check(change.reason(), 500);

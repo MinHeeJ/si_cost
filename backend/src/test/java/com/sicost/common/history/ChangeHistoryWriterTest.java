@@ -33,6 +33,27 @@ class ChangeHistoryWriterTest {
         assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_SY_CODE","A:B","UPD","CODE_NM","이전","가".repeat(501),null))).isInstanceOf(ApiException.class);
         verifyNoInteractions(mapper);
     }
+    @Test void newBusinessTargetsUseExistingHistoryMappingAndServerActor() {
+        when(users.userId()).thenReturn("admin");
+        for (String table : new String[]{"TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"PART-001:202601","NEW","등록",null,"ID 이름",null));
+        }
+        verify(mapper,times(4)).insert(argThat(entry -> entry.userId().equals("admin") && entry.before()==null && entry.type().equals("NEW")));
+    }
+    @Test void businessHistoryCannotDeleteOrRecordSecrets() {
+        for (String item : new String[]{"PWD_HASH", "accountNumber", "ACCT_NO_ENC", "password"}) {
+            assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_BS_CLNT","C-001","UPD",item,null,"not-masked",null)))
+                .isInstanceOf(ApiException.class);
+        }
+        assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_BS_PART_STD","PART-001:202601","DEL","등록","기존",null,null)))
+                .isInstanceOf(ApiException.class);
+        verifyNoInteractions(mapper);
+    }
+    @Test void accountHistoryAcceptsOnlyMaskedValues() {
+        when(users.userId()).thenReturn("admin");
+        writer.append(new ChangeHistoryWriter.Change("TB_BS_CLNT","C-001","UPD","account","****1234","****5678",null));
+        verify(mapper).insert(argThat(entry -> entry.before().equals("****1234") && entry.after().equals("****5678")));
+    }
     @Test void sameValueDoesNotAppendHistory() {
         writer.append(new ChangeHistoryWriter.Change("TB_SY_CODE","A:B","UPD","CODE_NM","같음","같음",null));
         verifyNoInteractions(mapper,users);

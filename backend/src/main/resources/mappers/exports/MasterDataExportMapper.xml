@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.exportsops.MasterDataExportMapper">
+  <sql id="order">
+    ORDER BY
+    <choose>
+      <when test="sort == 'type'">"type"</when>
+      <when test="sort == 'businessNo'">"businessNo"</when>
+      <when test="sort == 'ceo'">"ceo"</when>
+      <when test="sort == 'industry'">"industry"</when>
+      <when test="sort == 'contactName'">"contactName"</when>
+      <when test="sort == 'phone'">"phone"</when>
+      <when test="sort == 'taxEmail'">"taxEmail"</when>
+      <when test="sort == 'projectCount'">"projectCount"</when>
+      <when test="sort == 'personCount'">"personCount"</when>
+      <when test="sort == 'useYn'">"useYn"</when>
+      <when test="sort == 'leaderName'">"leaderName"</when>
+      <when test="sort == 'profitRate'">"profitRate"</when>
+      <when test="sort == 'salesExpenseAmount'">"salesExpenseAmount"</when>
+      <when test="sort == 'effectiveMonth'">"effectiveMonth"</when>
+      <otherwise>"name"</otherwise>
+    </choose>
+    <choose><when test="direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose>
+    NULLS LAST, "id" ASC
+  </sql>
+  <select id="clients" resultType="map" fetchSize="500" resultSetType="FORWARD_ONLY" useCache="false">
+    SELECT c.clnt_id AS "id", t.code_nm AS "type", c.clnt_nm AS "name", c.biz_reg_no AS "businessNo",
+      c.ceo_nm AS "ceo", i.code_nm AS "industry", c.chrg_nm AS "contactName", c.telno AS "phone",
+      c.tax_email_addr AS "taxEmail", c.acct_no_enc AS "encryptedAccount", b.code_nm AS "bankName",
+      counts.projects AS "projectCount", counts.people AS "personCount", c.use_yn AS "useYn"
+    FROM tb_bs_clnt c
+    LEFT JOIN tb_sy_code t ON t.code_grp_id='CLNT_TYPE' AND t.code=c.clnt_type_cd
+    LEFT JOIN tb_sy_code i ON i.code_grp_id='INDUTY' AND i.code=c.induty_cd
+    LEFT JOIN tb_sy_code b ON b.code_grp_id='BANK' AND b.code=c.bank_cd
+    CROSS JOIN LATERAL (
+      SELECT count(DISTINCT a.proj_id) AS projects, count(DISTINCT a.dev_id) AS people
+      FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+      WHERE a.asgn_stat_cd='ACT' AND a.input_bgn_dt &lt;= #{basisDate} AND a.input_end_dt &gt;= #{basisDate}
+        AND p.proj_stat_cd IN ('ING','PRE')
+        AND ((c.clnt_type_cd IN ('CUST','BOTH') AND p.cust_clnt_id=c.clnt_id)
+          OR (c.clnt_type_cd IN ('VNDR','BOTH') AND d.blng_clnt_id=c.clnt_id))
+    ) counts
+    <where>
+      <if test="filters.type != null">
+        <choose>
+          <when test="filters.type == 'BOTH'">AND c.clnt_type_cd='BOTH'</when>
+          <otherwise>AND c.clnt_type_cd IN (#{filters.type},'BOTH')</otherwise>
+        </choose>
+      </if>
+      <if test="filters.useYn != null">AND c.use_yn=#{filters.useYn}</if>
+      <if test="filters.q != null">AND (strpos(c.clnt_nm,#{filters.q}) &gt; 0 OR strpos(replace(c.biz_reg_no,'-',''),replace(#{filters.q},'-','')) &gt; 0)</if>
+    </where>
+    <include refid="order"/>
+  </select>
+  <select id="parts" resultType="map" fetchSize="500" resultSetType="FORWARD_ONLY" useCache="false">
+    SELECT p.part_id AS "id", p.part_nm AS "name", u.user_nm AS "leaderName",
+      s.prft_dstrb_rt AS "profitRate", s.sales_exps_amt AS "salesExpenseAmount",
+      substr(s.aply_bgn_ym,1,4)||'-'||substr(s.aply_bgn_ym,5,2) AS "effectiveMonth",
+      substr(f.aply_bgn_ym,1,4)||'-'||substr(f.aply_bgn_ym,5,2) AS "futureMonth", fu.user_nm AS "futureLeader",
+      f.prft_dstrb_rt AS "futureRate", f.sales_exps_amt AS "futureAmount",
+      (SELECT count(DISTINCT d.dev_id) FROM tb_hr_dev d WHERE d.part_id=p.part_id) AS "personCount",
+      (SELECT count(DISTINCT r.proj_id) FROM tb_pj_proj r JOIN tb_pj_proj_part pp ON pp.proj_id=r.proj_id
+        WHERE r.proj_stat_cd IN ('ING','PRE') AND pp.part_id=p.part_id
+        AND pp.aply_bgn_ym=(SELECT max(pp2.aply_bgn_ym) FROM tb_pj_proj_part pp2 WHERE pp2.proj_id=r.proj_id AND pp2.aply_bgn_ym &lt;= #{month})) AS "projectCount",
+      p.use_yn AS "useYn"
+    FROM tb_bs_part p
+    LEFT JOIN LATERAL (SELECT st.* FROM tb_bs_part_std st WHERE st.part_id=p.part_id
+      AND st.aply_bgn_ym &lt;= #{month} AND (st.aply_end_ym IS NULL OR st.aply_end_ym &gt;= #{month}) ORDER BY st.aply_bgn_ym DESC LIMIT 1) s ON true
+    LEFT JOIN tb_sy_user u ON u.user_id=s.part_ldr_user_id
+    LEFT JOIN LATERAL (SELECT st.* FROM tb_bs_part_std st WHERE st.part_id=p.part_id AND st.aply_bgn_ym &gt; #{month} ORDER BY st.aply_bgn_ym LIMIT 1) f ON true
+    LEFT JOIN tb_sy_user fu ON fu.user_id=f.part_ldr_user_id
+    WHERE p.hq_yn='N'
+    <if test="filters.useYn != null">AND p.use_yn=#{filters.useYn}</if>
+    <if test="filters.q != null">AND strpos(p.part_nm,#{filters.q}) &gt; 0</if>
+    <include refid="order"/>
+  </select>
+</mapper>

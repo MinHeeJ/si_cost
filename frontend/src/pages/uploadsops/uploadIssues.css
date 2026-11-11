@@ -1,0 +1,52 @@
+.upload-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.upload-issues-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.upload-issues-toolbar select {
+  margin-left: 8px;
+  min-height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+.upload-issues-info {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--info-bg);
+  color: var(--info);
+  font-size: 13px;
+}
+.upload-issue-error,
+.upload-issue-warning {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.upload-issue-error {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+.upload-issue-warning {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.upload-issues .sicost-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .upload-issues {
+    display: none;
+  }
+}

@@ -1,0 +1,32 @@
+import type { Client, ClientsPage } from "./clientsApi";
+export const clientFixture: Client = {
+  id: "C-901",
+  type: "VNDR",
+  name: "시험거래처",
+  businessNo: "123-45-67890",
+  ceo: null,
+  industryCode: null,
+  industry: null,
+  industryActive: null,
+  contactName: "담당자",
+  phone: "01000112233",
+  taxEmail: null,
+  bankCode: "001",
+  bankName: "시험은행",
+  bankActive: true,
+  depositor: "예금주",
+  account: "시험은행 ****5678",
+  useYn: "Y",
+  projectCount: 1,
+  personCount: 2,
+  basisDate: "2026-06-15",
+  revision: "current",
+  historyCount: 1,
+};
+export const pageFixture: ClientsPage = {
+  items: [clientFixture],
+  total: 1,
+  page: 1,
+  size: 50,
+  basisDate: clientFixture.basisDate,
+};
