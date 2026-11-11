@@ -16,6 +16,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> uploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException e, HttpServletRequest request) {
+        if (request.getRequestURI().equals("/api/excel/B7/validate") || request.getRequestURI().equals("/api/excel/B7/apply"))
+            return error(413, "FILE_TOO_LARGE", "파일은 10MiB 이하로 선택해 주세요.", "file", null, request);
+        return unexpected(e, request);
+    }
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> application(ApiException e, HttpServletRequest request) {
         return error(e.status(), e.code(), e.getMessage(), e.field(), e.details(), request);

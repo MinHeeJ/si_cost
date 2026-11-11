@@ -30,7 +30,7 @@ public class PreferenceService {
         var items=new LinkedHashMap<String,Preference>();
         for(String type:PreferenceValidator.GLOBAL)items.put(type+"/*",missing(type,"*"));
         for(String screen:mapper.screens()) {
-            if(screen.equals("UI-27"))items.put("COLS/"+screen,missing("COLS",screen));
+            if(Set.of("UI-15","UI-23","UI-27").contains(screen))items.put("COLS/"+screen,missing("COLS",screen));
             if(!validator.periodType(screen).equals("NONE"))items.put("PERIOD/"+screen,missing("PERIOD",screen));
         }
         for(var row:mapper.list(actor))items.put(row.type()+"/"+row.key(),project(row));

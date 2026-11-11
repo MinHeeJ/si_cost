@@ -1,0 +1,29 @@
+.master-data-export {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.master-data-export > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.master-data-export > [role="status"] {
+  color: var(--text-sub);
+}
+.master-data-export > .sicost-banner {
+  flex-basis: 100%;
+}
+@media (max-width: 767px) {
+  .master-data-export {
+    display: none;
+  }
+}

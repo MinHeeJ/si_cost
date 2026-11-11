@@ -1,5 +1,28 @@
 package com.sicost.common.api;
 
+import com.sicost.apiops.MasterHistoryController;
+import com.sicost.apiops.MasterHistoryService;
+import com.sicost.b7.B7Controller;
+import com.sicost.b7.B7Service;
+import com.sicost.businessusers.BusinessUserController;
+import com.sicost.businessusers.BusinessUserService;
+import com.sicost.businessusersops.BusinessUserOptionsController;
+import com.sicost.businessusersops.BusinessUserOptionsService;
+import com.sicost.clients.ClientController;
+import com.sicost.clients.ClientService;
+import com.sicost.clientsops.ClientActionsController;
+import com.sicost.clientsops.ClientActionsService;
+import com.sicost.clientsops.ClientAccountService;
+import com.sicost.clientsops.ClientBulkStatusService;
+import com.sicost.common.excel.ExcelExportService;
+import com.sicost.exportsops.MasterDataExportController;
+import com.sicost.exportsops.MasterDataExportService;
+import com.sicost.salesparts.SalesPartController;
+import com.sicost.salesparts.SalesPartService;
+import com.sicost.salespartsops.PartStandardController;
+import com.sicost.salespartsops.PartStandardService;
+import com.sicost.uploadsops.UploadIssuesController;
+import com.sicost.uploadsops.UploadIssuesService;
 import com.sicost.codegroups.CodeGroupController;
 import com.sicost.codegroups.CodeGroupService;
 import com.sicost.codemappings.CodeMappingsController;
@@ -28,9 +51,15 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import static org.assertj.core.api.Assertions.assertThat;
 
 @WebMvcTest({HealthController.class, SharedQueriesController.class, CodeGroupController.class,
-        CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class})
+        CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
+        BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
+        ClientActionsController.class, SalesPartController.class, PartStandardController.class,
+        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
-        CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class})
+        CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
+        BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
+        ClientActionsController.class, SalesPartController.class, PartStandardController.class,
+        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class})
 class OpenApiControllerRegistrationContractTest {
     @Autowired RequestMappingHandlerMapping handlerMapping;
     @MockBean HealthService health;
@@ -41,6 +70,19 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean CodeMappingsService mappings;
     @MockBean PreferenceService preferences;
     @MockBean OperatingStandardsService standards;
+    @MockBean BusinessUserService businessUsers;
+    @MockBean BusinessUserOptionsService businessUserOptions;
+    @MockBean ClientService clients;
+    @MockBean ClientActionsService clientActions;
+    @MockBean ClientAccountService clientAccounts;
+    @MockBean ClientBulkStatusService clientStatuses;
+    @MockBean SalesPartService salesParts;
+    @MockBean PartStandardService partStandards;
+    @MockBean MasterHistoryService masterHistory;
+    @MockBean B7Service b7;
+    @MockBean ExcelExportService excel;
+    @MockBean UploadIssuesService uploadIssues;
+    @MockBean MasterDataExportService exports;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {
         var yaml=new YamlMapFactoryBean();

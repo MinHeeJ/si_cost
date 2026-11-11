@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.clientsops.ClientActionsMapper">
+  <sql id="snapshot">c.clnt_id AS "id",c.clnt_type_cd AS "type",c.clnt_nm AS "name",c.biz_reg_no AS "businessNo",
+    c.ceo_nm AS "ceo",c.induty_cd AS "industryCode",c.chrg_nm AS "contactName",c.telno AS "phone",
+    c.tax_email_addr AS "taxEmail",c.bank_cd AS "bankCode",c.acct_no_enc AS "encryptedAccount",c.dpstr_nm AS "depositor",
+    c.use_yn AS "useYn",c.reg_user_id AS "regUserId",c.reg_dttm AS "regDttm",c.mod_user_id AS "modUserId",c.mod_dttm AS "modDttm"</sql>
+  <select id="client" resultType="com.sicost.common.concurrent.ClientSnapshot">
+    SELECT <include refid="snapshot"/> FROM tb_bs_clnt c WHERE c.clnt_id=#{id}
+    <if test="lock">FOR UPDATE OF c</if>
+  </select>
+  <select id="bankName" resultType="string">
+    SELECT code_nm FROM tb_sy_code WHERE code_grp_id='BANK' AND code=#{code}
+  </select>
+  <select id="options" resultType="com.sicost.clientsops.ClientActionsDtos$Option">
+    SELECT clnt_id AS "id",clnt_nm AS "name",clnt_type_cd AS "type" FROM tb_bs_clnt
+    WHERE use_yn='Y' AND clnt_type_cd IN ('BOTH',
+    <choose><when test="purpose == 'CUSTOMER'">'CUST'</when><otherwise>'VNDR'</otherwise></choose>)
+    <if test="q != null">AND strpos(clnt_nm,#{q}) &gt; 0</if>
+    ORDER BY clnt_nm ASC,clnt_id ASC
+  </select>
+  <sql id="activeAssignments">
+    a.asgn_stat_cd='ACT' AND a.input_bgn_dt &lt;= #{basisDate} AND a.input_end_dt &gt;= #{basisDate}
+    AND p.proj_stat_cd IN ('ING','PRE')
+    AND ((c.clnt_type_cd IN ('CUST','BOTH') AND p.cust_clnt_id=c.clnt_id)
+      OR (c.clnt_type_cd IN ('VNDR','BOTH') AND d.blng_clnt_id=c.clnt_id))
+  </sql>
+  <select id="selection" resultType="com.sicost.common.concurrent.ClientSnapshot">
+    SELECT <include refid="snapshot"/> FROM tb_bs_clnt c
+    LEFT JOIN tb_sy_code industry ON industry.code_grp_id='INDUTY' AND industry.code=c.induty_cd
+    LEFT JOIN LATERAL (
+      SELECT count(DISTINCT p.proj_id) AS project_count,count(DISTINCT d.dev_id) AS person_count
+      FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+      WHERE <include refid="activeAssignments"/>
+    ) counts ON TRUE
+    <where>
+      <if test="type != null">AND c.clnt_type_cd IN (#{type}<if test="type != 'BOTH'">,'BOTH'</if>)</if>
+      <if test="useYn != null">AND c.use_yn=#{useYn}</if>
+      <if test="q != null">AND (strpos(c.clnt_nm,#{q}) &gt; 0
+        OR strpos(replace(c.biz_reg_no,'-',''),replace(#{q},'-','')) &gt; 0)</if>
+    </where>
+    ORDER BY
+    <choose>
+      <when test="sort == 'type'">(SELECT code_nm FROM tb_sy_code WHERE code_grp_id='CLNT_TYPE' AND code=c.clnt_type_cd)</when>
+      <when test="sort == 'businessNo'">c.biz_reg_no</when>
+      <when test="sort == 'ceo'">c.ceo_nm</when>
+      <when test="sort == 'industry'">industry.code_nm</when>
+      <when test="sort == 'contactName'">c.chrg_nm</when>
+      <when test="sort == 'phone'">c.telno</when>
+      <when test="sort == 'taxEmail'">c.tax_email_addr</when>
+      <when test="sort == 'projectCount'">counts.project_count</when>
+      <when test="sort == 'personCount'">counts.person_count</when>
+      <when test="sort == 'useYn'">c.use_yn</when>
+      <otherwise>c.clnt_nm</otherwise>
+    </choose>
+    <choose><when test="direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose>
+    NULLS LAST,c.clnt_id ASC
+  </select>
+  <sql id="assignmentSource">
+    FROM tb_bs_clnt c JOIN tb_pj_asgn a ON TRUE JOIN tb_pj_proj p ON p.proj_id=a.proj_id
+    JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+    WHERE c.clnt_id=#{id} AND <include refid="activeAssignments"/>
+  </sql>
+  <select id="assignmentCount" resultType="long">
+    SELECT count(*) <include refid="assignmentSource"/>
+  </select>
+  <select id="assignments" resultType="com.sicost.clientsops.ClientActionsDtos$Assignment">
+    SELECT a.asgn_id AS "assignmentId",p.proj_id AS "projectId",p.proj_nm AS "projectName",d.mng_no AS "managementNo",
+      d.dev_nm AS "developerName",a.job_cd AS "jobCode",
+      coalesce((SELECT code_nm FROM tb_sy_code WHERE code_grp_id='JOB' AND code=a.job_cd),a.job_cd) AS "jobName",
+      a.input_bgn_dt AS "inputBeginDate",a.input_end_dt AS "inputEndDate"
+    <include refid="assignmentSource"/>
+    ORDER BY p.proj_nm ASC,d.mng_no ASC,a.asgn_id ASC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="references" resultType="com.sicost.clientsops.ClientActionsDtos$Reference">
+    SELECT 'PROJECT' AS "type",count(*) AS "count" FROM tb_pj_proj
+      WHERE cust_clnt_id=#{id} AND proj_stat_cd IN ('ING','PRE')
+      AND #{type} IN ('CUST','BOTH')
+    UNION ALL
+    SELECT 'DEVELOPER' AS "type",count(*) AS "count" FROM tb_hr_dev
+      WHERE blng_clnt_id=#{id} AND #{type} IN ('VNDR','BOTH')
+  </select>
+  <update id="status">
+    UPDATE tb_bs_clnt SET use_yn=#{useYn},mod_user_id=#{actor},mod_dttm=#{now} WHERE clnt_id=#{id}
+  </update>
+</mapper>

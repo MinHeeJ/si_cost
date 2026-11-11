@@ -16,6 +16,28 @@ import * as prefs from "../pages/me/preferencesApi";
 import * as codes from "../pages/codegroups/codeGroupsApi";
 import * as mappings from "../pages/codemappings/codeMappingsApi";
 import * as standards from "../pages/operatingstandards/operatingStandardsApi";
+import * as clients from "../pages/clients/clientsApi";
+import * as users from "../pages/businessusers/businessUsersApi";
+import * as parts from "../pages/salesparts/salesPartsApi";
+import * as partStandards from "../pages/salespartsops/partStandardsApi";
+import * as b7 from "../pages/b7/b7Api";
+import * as exports from "../pages/exportsops/masterDataExportApi";
+import * as actions from "../pages/clientsops/clientActionsApi";
+import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
+
+vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/businessusers/businessUsersApi");
+vi.mock("../pages/salesparts/salesPartsApi");
+vi.mock("../pages/salespartsops/partStandardsApi");
+vi.mock("../pages/b7/b7Api");
+vi.mock("../pages/clientsops/clientActionsApi");
+vi.mock("../pages/exportsops/masterDataExportApi", async (original) => ({
+  ...(await original<
+    typeof import("../pages/exportsops/masterDataExportApi")
+  >()),
+  createMasterDataExport: vi.fn(),
+  saveMasterDataDownload: vi.fn(),
+}));
 
 vi.mock("../pages/shared/sharedApi");
 vi.mock("../pages/me/preferencesApi", async (original) => ({
@@ -213,6 +235,43 @@ beforeEach(() => {
   vi.mocked(standards.getOperatingStandards).mockResolvedValue({ items: [] });
   vi.mocked(standards.getStandardsPeriodContext).mockResolvedValue(context);
   vi.mocked(standards.getStandardsMonthClose).mockResolvedValue({ items: [] });
+  vi.mocked(clients.getClients).mockResolvedValue(pageFixture);
+  vi.mocked(clients.getClient).mockResolvedValue(clientFixture);
+  vi.mocked(clients.getClientCodes).mockResolvedValue({ items: [] });
+  vi.mocked(users.getBusinessUsers).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
+  vi.mocked(users.getBusinessRoleOptions).mockResolvedValue({
+    items: [],
+    roleOptions: [
+      { roleId: "PM", name: "프로젝트 담당" },
+      { roleId: "SALES_LDR", name: "영업 파트장" },
+    ],
+  });
+  vi.mocked(parts.getSalesParts).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
+  vi.mocked(parts.getSalesPartDefaults).mockResolvedValue({
+    effectiveMonth: "2026-11",
+    minMonth: "2026-01",
+    profitRate: "40",
+    salesExpenseAmount: "1000",
+    defaultErrors: [],
+  });
+  vi.mocked(b7.getB7Template).mockResolvedValue({
+    blob: new Blob(["xlsx"]),
+    filename: "template.xlsx",
+  });
+  vi.mocked(exports.createMasterDataExport).mockResolvedValue({
+    blob: new Blob(["xlsx"]),
+    filename: "거래처_20261111_120000.xlsx",
+  });
 });
 describe("공식 진입점 합성", () => {
   it.each(Object.keys(screenRegistry))(
@@ -231,6 +290,14 @@ describe("공식 진입점 합성", () => {
         expect(
           screen.queryByText("화면 구성 요소가 아직 연결되지 않았습니다."),
         ).not.toBeInTheDocument();
+      } else if (id === "UI-15") {
+        expect(await screen.findByTestId("clients-screen")).toBeInTheDocument();
+        expect(clients.getClients).toHaveBeenCalled();
+      } else if (id === "UI-23") {
+        expect(
+          await screen.findByTestId("business-users-screen"),
+        ).toBeInTheDocument();
+        expect(users.getBusinessUsers).toHaveBeenCalled();
       } else
         expect(
           screen
@@ -395,6 +462,202 @@ describe("공식 진입점 합성", () => {
     await waitFor(() =>
       expect(shared.getPeriodContext).toHaveBeenCalledTimes(reads + 1),
     );
+  });
+  it("거래처의 B7 업로드와 양식 다운로드를 기존 화면에 연결한다", async () => {
+    open("/UI-15");
+    await screen.findByText(clientFixture.name);
+    await userEvent.click(screen.getByTestId("clients-template"));
+    await waitFor(() => expect(b7.saveDownload).toHaveBeenCalled());
+    await userEvent.click(screen.getByTestId("clients-upload"));
+    expect(await screen.findByTestId("b7-upload-dialog")).toBeInTheDocument();
+    expect(
+      applicationRoutes.some((route) => route.path?.includes("upload")),
+    ).toBe(false);
+    expect(
+      screen.queryByText("이 화면은 다음 단계에서 만듭니다."),
+    ).not.toBeVisible();
+  });
+  it("거래처 다운로드는 현재 필터와 저장된 열 순서·숨김을 연결한다", async () => {
+    preferences.push({
+      type: "COLS",
+      key: "UI-15",
+      value: {
+        clients: {
+          order: [...exports.clientExportColumns].reverse(),
+          hidden: ["phone"],
+        },
+      },
+      revision: null,
+      stored: false,
+    });
+    open("/UI-15");
+    await screen.findByText(clientFixture.name);
+    await userEvent.click(screen.getByTestId("clients-export"));
+    await waitFor(() =>
+      expect(exports.createMasterDataExport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          view: "CLIENTS",
+          filters: expect.objectContaining({ useYn: "Y" }),
+          columns: [...exports.clientExportColumns]
+            .reverse()
+            .filter((id) => id !== "phone"),
+          amountUnit: "천원",
+        }),
+      ),
+    );
+    expect(exports.saveMasterDataDownload).toHaveBeenCalled();
+  });
+  it("선택한 거래처 revision을 일괄 상태 작업에 넘긴다", async () => {
+    vi.mocked(actions.saveClientBulkStatus).mockResolvedValue({
+      items: [
+        { id: clientFixture.id, name: clientFixture.name, result: "noChange" },
+      ],
+      applied: 0,
+      noChange: 1,
+      rejected: 0,
+    });
+    open("/UI-15");
+    await screen.findByText(clientFixture.name);
+    await userEvent.click(
+      screen.getByTestId(`client-select-${clientFixture.id}`),
+    );
+    await userEvent.click(screen.getByTestId("client-status-n"));
+    await userEvent.click(
+      within(
+        screen.getByRole("dialog", { name: "거래처 사용 중지" }),
+      ).getByRole("button", { name: "확인" }),
+    );
+    await waitFor(() =>
+      expect(actions.saveClientBulkStatus).toHaveBeenCalledWith("N", [
+        { id: clientFixture.id, expectedRevision: clientFixture.revision },
+      ]),
+    );
+  });
+  it("사용자 편집은 화면 전환과 탭 닫기 취소에서 보존된다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/UI-23");
+    await screen.findByText("조회된 사용자가 없습니다.");
+    await userEvent.click(screen.getByTestId("business-user-register"));
+    fireEvent.change(screen.getByTestId("business-user-name"), {
+      target: { value: "보존 사용자" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-23$/ }));
+    expect(screen.getByTestId("business-user-name")).toHaveValue("보존 사용자");
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-23 탭 닫기" }),
+    );
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByTestId("business-user-name")).toHaveValue("보존 사용자");
+    confirm.mockRestore();
+  });
+  it("파트장 선택의 사용자 등록 컨텍스트는 SALES_LDR 기본값과 복귀 경로를 보존한다", async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/UI-23",
+            state: {
+              businessUserRegistration: true,
+              qualificationPurpose: "PART_LEADER",
+              returnTo: "/UI-15",
+            },
+          },
+        ]}
+      >
+        <ApplicationRoutes />
+      </MemoryRouter>,
+    );
+    const dialog = await screen.findByRole("dialog", { name: "사용자 등록" });
+    expect(await within(dialog).findByLabelText("영업 파트장")).toBeChecked();
+    expect(within(dialog).getByLabelText("프로젝트 담당")).not.toBeChecked();
+    await userEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    await screen.findByRole("heading", { name: "DB UI-15" });
+    expect(
+      screen.queryByRole("dialog", { name: "사용자 등록" }),
+    ).not.toBeInTheDocument();
+  });
+  it("영업 파트 상세의 기준 변경을 병합된 편집기에 연결한다", async () => {
+    const standard = {
+      effectiveMonth: "2026-01",
+      endMonth: null,
+      leaderUserId: "admin",
+      leaderName: "담당자",
+      profitRate: "40",
+      salesExpenseAmount: "1000",
+      status: "CURRENT" as const,
+    };
+    const part = {
+      id: "PART-123",
+      name: "영업 테스트",
+      useYn: "Y" as const,
+      currentMonth: "2026-11",
+      currentStandard: standard,
+      scheduledChange: null,
+      personCount: 0,
+      projectCount: 0,
+      revision: "revision",
+    };
+    const detail = {
+      part,
+      standards: [standard],
+      minMonth: "2026-01",
+      revision: "revision",
+    };
+    vi.mocked(parts.getSalesParts).mockResolvedValue({
+      items: [part],
+      total: 1,
+      page: 1,
+      size: 50,
+    });
+    vi.mocked(parts.getSalesPart).mockResolvedValue(detail);
+    vi.mocked(partStandards.getPartStandardDetail).mockResolvedValue(detail);
+    vi.mocked(partStandards.getSalesPartDefaults).mockResolvedValue({
+      effectiveMonth: "2026-11",
+      minMonth: "2026-01",
+      profitRate: "40",
+      salesExpenseAmount: "1000",
+      defaultErrors: [],
+    });
+    open("/UI-15");
+    await screen.findByText(clientFixture.name);
+    await userEvent.click(screen.getByTestId("parts-workspace-tab"));
+    await userEvent.click(
+      await screen.findByTestId("sales-part-open-part-123"),
+    );
+    await userEvent.click(
+      await screen.findByTestId("sales-part-standard-change"),
+    );
+    expect(
+      await screen.findByTestId("part-standard-editor"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(partStandards.getPartStandardDetail).toHaveBeenCalledWith(part.id),
+    );
+    expect(screen.getByLabelText(/적용 시작월/)).toHaveValue("2026-11");
+  });
+  it("거래처 계좌 원문은 다른 업무 화면으로 이동하면 버린다", async () => {
+    vi.mocked(clients.getClientAccount).mockResolvedValue({
+      accountNumber: "001-2345678",
+    });
+    open("/UI-15");
+    await screen.findByText(clientFixture.name);
+    await userEvent.click(
+      screen.getByTestId(`client-${clientFixture.id}-open`),
+    );
+    await userEvent.click(await screen.findByTestId("client-account-show"));
+    expect(
+      await screen.findByTestId("client-account-number"),
+    ).toHaveTextContent("001-2345678");
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    expect(screen.queryByTestId("client-drawer")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-15$/ }));
+    expect(
+      await screen.findByTestId("client-account-show"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("client-account-number"),
+    ).not.toBeInTheDocument();
   });
   it("메뉴 오류는 업무 본문 없이 재시도를 제공한다", async () => {
     vi.mocked(shared.getMenus).mockRejectedValueOnce(

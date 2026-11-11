@@ -1,0 +1,174 @@
+.clients-screen {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.clients-toolbar,
+.clients-actions,
+.clients-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.clients-toolbar {
+  justify-content: space-between;
+  margin: 16px 0;
+}
+.clients-tabs {
+  border-bottom: 1px solid var(--divider);
+  gap: 0;
+}
+.clients-tabs button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-sub);
+  padding: 0 20px;
+  height: 44px;
+}
+.clients-tabs button[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  font-weight: 600;
+}
+.clients-filter {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.clients-filter select {
+  min-width: 96px;
+}
+.clients-search {
+  flex: 1;
+  min-width: 180px;
+}
+.clients-toolbar select {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  margin-left: 6px;
+}
+.clients-link {
+  padding: 0;
+  border: 0;
+  color: var(--primary);
+  background: transparent;
+  height: auto;
+  min-height: 28px;
+}
+.clients-row-highlight {
+  background: var(--primary-bg);
+  outline: 2px solid var(--primary);
+}
+.clients-form-page {
+  padding: 0 0 24px;
+}
+.clients-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 24px 0;
+  min-width: 0;
+}
+.clients-form-fields legend {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0 8px;
+}
+.clients-form-fields p {
+  align-self: center;
+  color: var(--text-sub);
+  overflow-wrap: anywhere;
+}
+.clients-form-page footer {
+  justify-content: flex-end;
+}
+.clients-drawer {
+  position: fixed;
+  inset: 56px 0 0 auto;
+  width: min(680px, 100vw);
+  z-index: 40;
+  overflow-y: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--divider);
+  box-shadow: var(--shadow-lg);
+  padding: 16px 24px;
+}
+.clients-drawer .clients-form-fields {
+  grid-template-columns: 1fr;
+  padding: 16px;
+}
+.clients-drawer [role="tabpanel"] {
+  padding: 16px 0;
+}
+.clients-details {
+  margin: 16px 0;
+}
+.clients-details > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divider);
+  gap: 12px;
+}
+.clients-details dt {
+  color: var(--text-sub);
+}
+.clients-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.clients-cards {
+  display: grid;
+  gap: 12px;
+}
+.clients-cards article {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+.clients-cards article p {
+  margin-top: 8px;
+  color: var(--text-sub);
+}
+.clients-cards article button {
+  border: 0;
+  color: var(--primary);
+  padding: 0;
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .clients-filter {
+    gap: 8px;
+    padding: 12px;
+  }
+  .clients-filter .clients-search {
+    flex-basis: 100%;
+  }
+  .clients-form-fields {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .clients-drawer {
+    inset: 0;
+    width: 100%;
+    padding: 16px;
+  }
+  .clients-toolbar {
+    align-items: flex-start;
+  }
+}

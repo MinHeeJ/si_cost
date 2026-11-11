@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Dialog, ConfirmDialog } from "../../shared/Dialog";
 import { usePreferences } from "./usePreferences";
-import type { ColumnPreferences, ColumnView } from "./preferencesApi";
+import type { ScreenColumnPreferences, ColumnView } from "./preferencesApi";
 import "./preferences.css";
 
 export type PreferenceColumn = {
@@ -20,12 +20,12 @@ export function ColumnPreferencesDialog({
   open: boolean;
   onClose(): void;
   screenId: string;
-  viewId: keyof ColumnPreferences;
+  viewId: keyof ScreenColumnPreferences;
   columns: PreferenceColumn[];
 }) {
   const p = usePreferences();
   const pref = p.get("COLS", screenId);
-  const source = (pref?.value ?? {}) as ColumnPreferences;
+  const source = (pref?.value ?? {}) as ScreenColumnPreferences;
   const [draft, setDraft] = useState<ColumnView | null>(null);
   const [reset, setReset] = useState(false);
   const applied = source[viewId];
@@ -131,11 +131,13 @@ export function ColumnPreferencesDialog({
 }
 export function useTablePreferences(
   screenId: string,
-  viewId: keyof ColumnPreferences,
+  viewId: keyof ScreenColumnPreferences,
   columns: PreferenceColumn[],
 ) {
   const p = usePreferences();
-  const cols = p.get("COLS", screenId)?.value as ColumnPreferences | undefined;
+  const cols = p.get("COLS", screenId)?.value as
+    | ScreenColumnPreferences
+    | undefined;
   const view = cols?.[viewId];
   return {
     columns: view

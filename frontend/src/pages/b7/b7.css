@@ -1,0 +1,81 @@
+.b7-clients,
+.b7-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.b7-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.b7-filters {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+.b7-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.b7-ok,
+.b7-warn,
+.b7-bad,
+.b7-info,
+.b7-neutral {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.b7-ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+.b7-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.b7-bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+.b7-info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.b7-neutral {
+  color: var(--text-sub);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+.b7-upload .sicost-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.b7-client-card {
+  background: var(--surface);
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+@media (max-width: 767px) {
+  .b7-filters > .sicost-field {
+    flex: 1 1 160px;
+  }
+  .b7-actions {
+    justify-content: flex-start;
+  }
+}

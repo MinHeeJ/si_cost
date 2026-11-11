@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.persistence.MasterIdMapper">
+  <select id="nextClient" resultType="java.math.BigInteger">SELECT nextval('SQ_TB_BS_CLNT_ID')</select>
+  <select id="nextPart" resultType="java.math.BigInteger">SELECT nextval('SQ_TB_BS_PART_ID')</select>
+</mapper>

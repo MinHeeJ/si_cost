@@ -16,6 +16,8 @@ export type ColumnPreferences = Partial<
     ColumnView
   >
 >;
+export type ScreenColumnPreferences = ColumnPreferences &
+  Partial<Record<"users" | "clients", ColumnView>>;
 export type PeriodPreference =
   | { type: "YEAR" | "YEAR_MONTH"; value: string }
   | { type: "YEAR_CUM"; year: string; month: string };
@@ -24,7 +26,7 @@ export type PreferenceValue =
   | boolean
   | number
   | string
-  | ColumnPreferences
+  | ScreenColumnPreferences
   | PeriodPreference
   | null;
 export type Preference = {

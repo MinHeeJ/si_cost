@@ -5,6 +5,10 @@ server:
     include-stacktrace: never
     include-binding-errors: never
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   application:
     name: sicost
   datasource:

@@ -438,3 +438,74 @@ button[aria-pressed="true"] {
   padding-bottom: 8px;
   color: var(--text-sub);
 }
+
+/* DetailDrawer: 오른쪽에서 나오는 상세 패널(요구서 2.2). 확인 창(.sicost-scrim, z-index 60)보다 아래에 둔다. */
+.sicost-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(17, 24, 39, 0.4);
+}
+.sicost-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 50;
+  width: min(560px, 100vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border-left: 1px solid var(--divider);
+  box-shadow: var(--shadow-lg);
+}
+.sicost-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--divider);
+  flex-shrink: 0;
+}
+.sicost-drawer-heading {
+  min-width: 0;
+}
+.sicost-drawer-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.sicost-drawer-subtitle {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #6b7280);
+  font-size: 13px;
+}
+.sicost-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sicost-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 24px;
+}
+@media (max-width: 767px) {
+  .sicost-drawer {
+    width: 100vw;
+    border-left: 0;
+  }
+  .sicost-drawer-header {
+    padding: 16px;
+  }
+  .sicost-drawer-body {
+    padding: 12px 16px 16px;
+  }
+}

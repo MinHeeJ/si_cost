@@ -29,6 +29,7 @@ export type SharedPreferenceAdapter = {
   reset(type: string, key: string): Promise<void>;
 };
 export type SharedApplicationProps = {
+  screens?: Partial<Record<string, ReactNode>>;
   codes?: ReactNode;
   mappings?: ReactNode;
   standards?: ReactNode;
@@ -47,6 +48,7 @@ export function SharedRoutes() {
   );
 }
 export function SharedApplication({
+  screens,
   codes,
   mappings,
   standards,
@@ -597,7 +599,7 @@ export function SharedApplication({
                     hidden={id !== active}
                     className="sicost-screen-host"
                   >
-                    <Component />
+                    {screens?.[id] ?? <Component />}
                   </div>
                 );
               })}

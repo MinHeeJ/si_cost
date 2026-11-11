@@ -1,0 +1,17 @@
+.business-user-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.business-user-select > button {
+  text-align: left;
+}
+.business-user-select-panel {
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+  min-width: 0;
+}

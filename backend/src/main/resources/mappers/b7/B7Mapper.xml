@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b7.B7Mapper">
+  <select id="codes" resultType="com.sicost.b7.B7Dtos$Code">
+    SELECT c.code_grp_id AS "groupId", c.code, c.code_nm AS "name",
+      (c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y') AS active, m.src_text AS source
+    FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    LEFT JOIN tb_sy_code_map m ON m.code_grp_id=c.code_grp_id AND m.code=c.code
+    WHERE c.code_grp_id IN ('CLNT_TYPE','INDUTY','BANK') ORDER BY c.code_grp_id,c.code,m.map_id
+  </select>
+  <select id="clients" resultType="com.sicost.b7.B7Dtos$Existing">
+    SELECT biz_reg_no AS "businessNo",clnt_nm AS name FROM tb_bs_clnt
+  </select>
+  <select id="nextUploadId" resultType="long">SELECT nextval('sq_tb_sy_upld')</select>
+  <select id="lockUpload" resultType="com.sicost.b7.B7Dtos$Upload">
+    SELECT upld_id AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS filename,file_size AS size,
+      reg_user_id AS actor,upld_stat_cd AS status,tot_row_cnt AS "totalRows",succ_cnt AS "successRows",
+      warn_cnt AS "warningRows",err_cnt AS "errorRows",aply_dttm AS "appliedAt"
+    FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE
+  </select>
+  <insert id="insertUpload">
+    INSERT INTO tb_sy_upld(upld_id,form_type_cd,scrn_id,file_nm,file_size,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES(#{uploadId},'B7','UI-15',#{filename},#{size},#{summary.totalRows},#{summary.successRows},#{summary.warningRows},#{summary.errorRows},'CHECKED',#{actor},#{now})
+  </insert>
+  <update id="replaceSummary">
+    UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},
+      err_cnt=#{summary.errorRows},upld_stat_cd='CHECKED',aply_dttm=NULL,mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}
+  </update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">
+    INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm)
+    VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})
+  </insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">
+    SELECT rslt_sn AS sequence,rslt_type_cd AS severity,row_no AS "rowNumber",coalesce(col_nm,'') AS "columnName",
+      coalesce(input_val,'') AS "inputValue",rsn_cn AS reason FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn
+  </select>
+  <insert id="insertClient">
+    INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,ceo_nm,induty_cd,chrg_nm,telno,tax_email_addr,bank_cd,acct_no_enc,dpstr_nm,use_yn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{client.type},#{client.name},#{client.businessNo},#{client.ceo},#{client.industryCode},#{client.contactName},#{client.phone},
+      #{client.taxEmail},#{client.bankCode},#{encryptedAccount},#{client.depositor},'Y',#{actor},#{now})
+  </insert>
+  <update id="markApplied">
+    UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}
+  </update>
+</mapper>
