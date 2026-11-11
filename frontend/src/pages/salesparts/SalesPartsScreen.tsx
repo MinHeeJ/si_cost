@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
+import { DetailDrawer } from "../../shared/DetailDrawer";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -446,12 +447,12 @@ export function SalesPartsScreen({
             onStandardChange={onStandardChange}
           />
         ) : (
-          <Dialog
-            open
+          <DetailDrawer
+            label="영업 파트 상세"
             title="영업 파트 상세"
-            confirmLabel="닫기"
-            onConfirm={closeDetail}
-            onCancel={closeDetail}
+            testId="sales-part-drawer"
+            closeTestId="sales-part-drawer-close"
+            onClose={closeDetail}
           >
             {detailLoading ? (
               <p role="status">불러오는 중입니다.</p>
@@ -465,7 +466,7 @@ export function SalesPartsScreen({
                 onRetry={() => void open(selected)}
               />
             )}
-          </Dialog>
+          </DetailDrawer>
         ))}
     </section>
   );
@@ -578,26 +579,39 @@ function SalesPartDetailDialog({
   ];
   return (
     <>
-      <Dialog
-        open
-        wide
-        title={`${detail.part.name} · 영업 파트 상세`}
-        confirmLabel="닫기"
-        cancelLabel="취소"
-        onConfirm={() => guard(onClose)}
-        onCancel={() => guard(onClose)}
+      <DetailDrawer
+        label="영업 파트 상세"
+        title={detail.part.name}
+        subtitle={
+          <>
+            <span>{detail.part.id}</span>
+            <StatusBadge tone={detail.part.useYn === "Y" ? "ok" : "lock"}>
+              {detail.part.useYn === "Y" ? "사용" : "중지"}
+            </StatusBadge>
+          </>
+        }
+        testId="sales-part-drawer"
+        closeTestId="sales-part-drawer-close"
         pending={pending}
+        onClose={() => guard(onClose)}
+        actions={
+          onStandardChange ? (
+            <button
+              className="sicost-primary"
+              data-testid="sales-part-standard-change"
+              type="button"
+              disabled={pending}
+              onClick={() => guard(() => onStandardChange(detail))}
+            >
+              기준 변경
+            </button>
+          ) : null
+        }
       >
         <div
           data-testid="sales-part-detail-dialog"
           className="sales-part-detail"
         >
-          <div className="sales-part-toolbar">
-            <span>{detail.part.id}</span>
-            <StatusBadge tone={detail.part.useYn === "Y" ? "ok" : "lock"}>
-              {detail.part.useYn === "Y" ? "사용" : "중지"}
-            </StatusBadge>
-          </div>
           {error != null && (
             <ErrorBanner
               message={
@@ -705,20 +719,11 @@ function SalesPartDetailDialog({
                   empty="등록된 기준이 없습니다."
                 />
                 <p>최소 적용월: {detail.minMonth}</p>
-                {onStandardChange && (
-                  <button
-                    data-testid="sales-part-standard-change"
-                    type="button"
-                    onClick={() => guard(() => onStandardChange(detail))}
-                  >
-                    기준 변경
-                  </button>
-                )}
               </>
             )}
           </div>
         </div>
-      </Dialog>
+      </DetailDrawer>
       <Dialog
         open={confirmStatus}
         title={detail.part.useYn === "Y" ? "영업 파트 중지" : "영업 파트 재개"}

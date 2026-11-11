@@ -268,6 +268,21 @@ it("중지된 파트도 전체 기준 이력과 이름 수정·재개를 제공�
   expect(screen.getByText("적용 중")).toHaveClass("sicost-tone-ok");
   expect(screen.getByRole("button", { name: "이름 수정" })).toBeEnabled();
 });
+it("영업 파트 상세는 오른쪽 패널로 열리고 파트명·ID·사용 배지를 머리에 둔다", async () => {
+  show();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "영업파트" }),
+  );
+  const drawer = await screen.findByRole("dialog", { name: "영업 파트 상세" });
+  expect(drawer.tagName).toBe("ASIDE");
+  expect(drawer).toHaveClass("sicost-drawer");
+  const header = drawer.querySelector("header") as HTMLElement;
+  expect(within(header).getByRole("heading", { name: "영업파트" })).toBeInTheDocument();
+  expect(within(header).getByText(part.id)).toBeInTheDocument();
+  expect(within(header).getByText("사용")).toHaveClass("sicost-tone-ok");
+  await userEvent.click(within(header).getByRole("button", { name: "닫기" }));
+  expect(screen.queryByRole("dialog", { name: "영업 파트 상세" })).not.toBeInTheDocument();
+});
 it("미저장 이름의 하위 탭 전환은 계속 작성 또는 나가기를 확인한다", async () => {
   show();
   await userEvent.click(

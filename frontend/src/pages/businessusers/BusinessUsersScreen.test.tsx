@@ -192,6 +192,19 @@ it("행 상세는 기본정보와 USER 변경이력을 조회하고 상태와 �
   expect(within(form).queryByLabelText("상태")).not.toBeInTheDocument();
   expect(within(form).queryByLabelText("비밀번호")).not.toBeInTheDocument();
 });
+it("사용자 상세는 가운데 모달이 아니라 오른쪽 패널로 열리고 제목·아이디·수정·닫기를 머리 줄에 둔다", async () => {
+  render(<BusinessUsersScreen />);
+  await userEvent.click(await screen.findByRole("button", { name: "ab12" }));
+  const drawer = screen.getByRole("dialog", { name: "사용자 상세" });
+  expect(drawer.tagName).toBe("ASIDE");
+  expect(drawer).toHaveClass("sicost-drawer");
+  const header = drawer.querySelector("header") as HTMLElement;
+  expect(await within(header).findByText("ab12")).toBeInTheDocument();
+  const buttons = within(header).getAllByRole("button").map((b) => b.textContent);
+  expect(buttons).toEqual(["수정", "닫기"]);
+  await userEvent.click(within(header).getByRole("button", { name: "닫기" }));
+  expect(screen.queryByRole("dialog", { name: "사용자 상세" })).not.toBeInTheDocument();
+});
 it("신규는 DB 표시명과 PM만 기본 체크하고 등록 후 목록·상세를 갱신한다", async () => {
   render(<BusinessUsersScreen />);
   const dialog = await openCreate();

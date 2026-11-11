@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog } from "../../shared/Dialog";
+import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import * as api from "./businessUsersApi";
@@ -102,17 +102,33 @@ export function BusinessUserDetail({
     };
   }, [id, refresh]);
   return (
-    <Dialog
-      open
-      wide
-      title="사용자 상세"
-      confirmLabel={user ? "수정" : "다시 조회"}
-      cancelLabel="닫기"
-      onCancel={onClose}
-      onConfirm={() => {
-        if (user) onEdit(user);
-        else setRefresh((v) => v + 1);
-      }}
+    <DetailDrawer
+      label="사용자 상세"
+      title={user?.name ?? "사용자 상세"}
+      subtitle={user?.userId}
+      testId="business-user-drawer"
+      closeTestId="business-user-drawer-close"
+      onClose={onClose}
+      actions={
+        user ? (
+          <button
+            type="button"
+            className="sicost-primary"
+            data-testid="business-user-edit"
+            onClick={() => onEdit(user)}
+          >
+            수정
+          </button>
+        ) : error != null ? (
+          <button
+            type="button"
+            data-testid="business-user-retry"
+            onClick={() => setRefresh((v) => v + 1)}
+          >
+            다시 조회
+          </button>
+        ) : null
+      }
     >
       <div className="businessusers-detail" data-testid="business-user-detail">
         <div
@@ -190,6 +206,6 @@ export function BusinessUserDetail({
         )}
         {user && tab === "history" && <BusinessUserHistory id={user.userId} />}
       </div>
-    </Dialog>
+    </DetailDrawer>
   );
 }
