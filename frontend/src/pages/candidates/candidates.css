@@ -1,0 +1,145 @@
+.candidates-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.candidates-screen[hidden] {
+  display: none;
+}
+.candidate-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.candidate-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.candidate-actions select {
+  height: 30px;
+  margin-left: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.candidate-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.candidate-filters select {
+  min-width: 120px;
+}
+.candidate-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px 24px;
+}
+.candidate-form-wide {
+  grid-column: 1 / -1;
+}
+.candidate-form textarea {
+  min-height: 96px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  resize: vertical;
+}
+.candidate-name {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  height: auto;
+  padding: 0;
+  text-align: left;
+}
+.candidate-new {
+  background: var(--primary-bg);
+  font-weight: 700;
+  outline: 2px solid var(--primary-bg);
+}
+.candidate-sub {
+  display: block;
+  color: var(--text-sub);
+}
+.candidate-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 240px;
+}
+.candidate-chip {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--head-bg);
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 20px;
+}
+.candidate-overdue {
+  display: block;
+  color: var(--warn);
+}
+.candidate-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.candidate-tabs button[aria-pressed="true"] {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+.candidate-detail-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.candidate-detail-fields dt {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.candidate-detail-fields dd {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.candidate-cards {
+  display: grid;
+  gap: 12px;
+}
+.candidate-cards article {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .candidate-form,
+  .candidate-detail-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .candidate-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .candidate-filters select {
+    min-width: 0;
+    width: 100%;
+  }
+  .candidate-tabs {
+    flex-wrap: wrap;
+  }
+}

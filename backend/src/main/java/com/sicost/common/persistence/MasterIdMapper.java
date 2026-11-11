@@ -7,4 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 public interface MasterIdMapper {
     BigInteger nextClient();
     BigInteger nextPart();
+    BigInteger nextDeveloper();
+    BigInteger nextCandidate();
+    BigInteger nextManagementNo();
+    boolean managementNoExists(String managementNo);
 }

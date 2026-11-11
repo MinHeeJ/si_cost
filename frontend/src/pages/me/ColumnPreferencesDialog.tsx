@@ -63,10 +63,15 @@ export function ColumnPreferencesDialog({
               const column = columns.find((c) => c.id === id);
               if (!column) return null;
               return (
-                <div className="me-column-row" key={id}>
+                <div
+                  data-testid={`column-preferences-row-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+                  className="me-column-row"
+                  key={id}
+                >
                   <span>{column.label}</span>
                   <button
                     type="button"
+                    data-testid={`column-preferences-up-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
                     aria-label={`${column.label} 위로`}
                     disabled={p.pending || index === 0}
                     onClick={() => move(index, -1)}
@@ -75,6 +80,7 @@ export function ColumnPreferencesDialog({
                   </button>
                   <button
                     type="button"
+                    data-testid={`column-preferences-down-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
                     aria-label={`${column.label} 아래로`}
                     disabled={p.pending || index === value.order.length - 1}
                     onClick={() => move(index, 1)}
@@ -83,6 +89,7 @@ export function ColumnPreferencesDialog({
                   </button>
                   <label>
                     <input
+                      data-testid={`column-preferences-hidden-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
                       type="checkbox"
                       aria-label={`${column.label} 숨김`}
                       checked={value.hidden.includes(id)}
@@ -105,6 +112,7 @@ export function ColumnPreferencesDialog({
           <p className="me-help">필수열 숨김 불가·전체순열·체크/작업열 제외</p>
           <button
             type="button"
+            data-testid="column-preferences-reset-button"
             disabled={!pref?.stored || p.pending}
             onClick={() => setReset(true)}
           >

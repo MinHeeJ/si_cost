@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.candidates.CandidateMapper">
+  <sql id="columns">
+    c.cand_id AS "id", c.cand_nm AS "name", c.emp_type_cd AS "employeeType", c.blng_clnt_id AS "companyId",
+    c.telno AS "phone", c.email_addr AS "email", (c.prvc_agre_yn='Y') AS "consent", c.prvc_agre_dt AS "consentDate",
+    c.prvc_agre_user_id AS "consentUserId", c.job_cd AS "jobCode", c.sub_job_cd AS "subJobCode", c.grade_cd AS "gradeCode",
+    c.home_area_cd AS "homeAreaCode", c.home_addr AS "homeAddress", c.hope_uprc AS "desiredRate", c.input_psbl_dt AS "availableDate",
+    c.cntc_stat_cd AS "contactStatus", c.last_cntc_dt AS "lastContactDate", c.cand_src_cd AS "sourceCode", c.memo_cn AS "memo",
+    c.reg_user_id AS "regUserId", c.reg_dttm AS "regDttm", c.mod_user_id AS "modUserId", c.mod_dttm AS "modDttm"
+  </sql>
+  <sql id="filters">
+    <where>
+      <if test="query.filters.jobCode != null">AND c.job_cd=#{query.filters.jobCode}</if>
+      <if test="query.filters.gradeCode != null">AND c.grade_cd=#{query.filters.gradeCode}</if>
+      <if test="query.filters.employeeType != null">AND c.emp_type_cd=#{query.filters.employeeType}</if>
+      <if test="query.filters.contactStatus != null">AND c.cntc_stat_cd=#{query.filters.contactStatus}</if>
+      <if test="through != null">AND c.input_psbl_dt&lt;=#{through}</if>
+    </where>
+  </sql>
+  <select id="list" resultType="map">
+    SELECT <include refid="columns"/> FROM tb_hr_cand c
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=c.job_cd
+    LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=c.grade_cd
+    LEFT JOIN tb_sy_code s ON s.code_grp_id='CAND_SRC' AND s.code=c.cand_src_cd
+    <include refid="filters"/>
+    ORDER BY
+    <choose>
+      <when test="query.sort == null">CASE WHEN c.cntc_stat_cd IN ('HOLD','CTRT') THEN 1 ELSE 0 END ASC,c.input_psbl_dt ASC NULLS LAST,</when>
+      <otherwise>
+        <choose>
+          <when test="query.sort == 'name'">c.cand_nm</when>
+          <when test="query.sort == 'employeeType'">(SELECT code_nm FROM tb_sy_code WHERE code_grp_id='EMP_TYPE' AND code=c.emp_type_cd)</when>
+          <when test="query.sort == 'job'">j.code_nm</when>
+          <when test="query.sort == 'grade'">g.code_nm</when>
+          <when test="query.sort == 'desiredRate'">c.hope_uprc</when>
+          <when test="query.sort == 'availableDate'">c.input_psbl_dt</when>
+          <when test="query.sort == 'contactStatus'">(SELECT code_nm FROM tb_sy_code WHERE code_grp_id='CNTC_STAT' AND code=c.cntc_stat_cd)</when>
+          <when test="query.sort == 'lastContactDate'">c.last_cntc_dt</when>
+          <when test="query.sort == 'source'">s.code_nm</when>
+        </choose>
+        <choose><when test="query.direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose> NULLS LAST,
+      </otherwise>
+    </choose>
+    c.cand_id ASC LIMIT #{query.size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_hr_cand c <include refid="filters"/></select>
+  <select id="find" resultType="map">SELECT <include refid="columns"/> FROM tb_hr_cand c WHERE c.cand_id=#{id}</select>
+  <select id="skills" resultType="string">SELECT skill_nm FROM tb_hr_cand_skill WHERE cand_id=#{id} ORDER BY sort_ord,skill_nm</select>
+  <select id="labels" resultType="map">
+    SELECT c.cand_id AS "id",b.clnt_nm AS "companyName",j.code_nm AS "job",g.code_nm AS "grade",s.code_nm AS "source",u.user_nm AS "consentUserName"
+    FROM tb_hr_cand c LEFT JOIN tb_bs_clnt b ON b.clnt_id=c.blng_clnt_id
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=c.job_cd
+    LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=c.grade_cd
+    LEFT JOIN tb_sy_code s ON s.code_grp_id='CAND_SRC' AND s.code=c.cand_src_cd
+    LEFT JOIN tb_sy_user u ON u.user_id=c.prvc_agre_user_id WHERE c.cand_id=#{id}
+  </select>
+  <select id="code" resultType="com.sicost.common.validation.PeopleInputPolicy$CodeSelection">SELECT code AS "code",use_yn AS "useYn",del_yn AS "delYn" FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code}</select>
+  <select id="company" resultType="map">SELECT clnt_id AS "id",clnt_type_cd AS "type",use_yn AS "useYn" FROM tb_bs_clnt WHERE clnt_id=#{id} FOR SHARE</select>
+  <insert id="insert">
+    INSERT INTO tb_hr_cand(cand_id,cand_nm,emp_type_cd,blng_clnt_id,telno,email_addr,prvc_agre_yn,prvc_agre_dt,prvc_agre_user_id,job_cd,sub_job_cd,grade_cd,home_area_cd,home_addr,hope_uprc,input_psbl_dt,cntc_stat_cd,last_cntc_dt,cand_src_cd,memo_cn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{name},#{employeeType},#{companyId},#{phone},#{email},#{consentYn},#{consentDate},#{consentUserId},#{jobCode},#{subJobCode},#{gradeCode},#{homeAreaCode},#{homeAddress},#{desiredRate},#{availableDate},'BEFORE',#{today},#{sourceCode},#{memo},#{actor},#{now})
+  </insert>
+  <update id="update">
+    UPDATE tb_hr_cand SET cand_nm=#{name},emp_type_cd=#{employeeType},blng_clnt_id=#{companyId},telno=#{phone},email_addr=#{email},prvc_agre_yn=#{consentYn},prvc_agre_dt=#{consentDate},prvc_agre_user_id=#{consentUserId},job_cd=#{jobCode},sub_job_cd=#{subJobCode},grade_cd=#{gradeCode},home_area_cd=#{homeAreaCode},home_addr=#{homeAddress},hope_uprc=#{desiredRate},input_psbl_dt=#{availableDate},cand_src_cd=#{sourceCode},memo_cn=#{memo},mod_user_id=#{actor},mod_dttm=#{now} WHERE cand_id=#{id}
+  </update>
+  <delete id="deleteSkills">DELETE FROM tb_hr_cand_skill WHERE cand_id=#{id}</delete>
+  <insert id="insertSkill">INSERT INTO tb_hr_cand_skill(cand_id,skill_nm,sort_ord,reg_user_id,reg_dttm) VALUES(#{id},#{name},#{order},#{actor},#{now})</insert>
+  <select id="greatestSerial" resultType="int">SELECT COALESCE(max(cntc_sn),0) FROM tb_hr_cand_cntc WHERE cand_id=#{id}</select>
+  <insert id="insertContact">INSERT INTO tb_hr_cand_cntc(cand_id,cntc_sn,cntc_stat_cd,cntc_memo,cntc_dt,reg_user_id,reg_dttm) VALUES(#{id},#{sn},#{status},#{memo},#{today},#{actor},#{now})</insert>
+</mapper>

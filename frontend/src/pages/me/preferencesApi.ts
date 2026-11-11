@@ -17,7 +17,9 @@ export type ColumnPreferences = Partial<
   >
 >;
 export type ScreenColumnPreferences = ColumnPreferences &
-  Partial<Record<"users" | "clients", ColumnView>>;
+  Partial<
+    Record<"users" | "clients" | "developers" | "candidates", ColumnView>
+  >;
 export type PeriodPreference =
   | { type: "YEAR" | "YEAR_MONTH"; value: string }
   | { type: "YEAR_CUM"; year: string; month: string };

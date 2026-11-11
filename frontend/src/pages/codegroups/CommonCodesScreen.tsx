@@ -684,10 +684,19 @@ export function CommonCodesScreen({
                   </p>
                   <div className="codegroups-table-actions">
                     {onColumnsChange && (
-                      <button onClick={onColumnsChange}>열 설정</button>
+                      <button
+                        data-testid="common-codes-columns-button"
+                        onClick={onColumnsChange}
+                      >
+                        열 설정
+                      </button>
                     )}
                     {onDensityChange && (
-                      <button onClick={onDensityChange} aria-pressed={dense}>
+                      <button
+                        data-testid="common-codes-density-button"
+                        onClick={onDensityChange}
+                        aria-pressed={dense}
+                      >
                         목록 밀도
                       </button>
                     )}

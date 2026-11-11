@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.developers.DeveloperMapper">
+  <sql id="columns">d.dev_id AS "id",d.mng_no AS "managementNo",d.dev_nm AS "name",d.emp_type_cd AS "employeeType",d.blng_clnt_id AS "companyId",d.grade_cd AS "gradeCode",d.job_cd AS "jobCode",d.sub_job_cd AS "subJobCode",d.jbps_cd AS "positionCode",d.drct_cls_cd AS "directClass",d.part_id AS "partId",d.jncmp_dt AS "hireDate",d.retire_dt AS "retireDate",d.work_stat_cd AS "status",d.home_area_cd AS "homeAreaCode",d.home_addr AS "homeAddress",d.telno AS "phone",d.use_yn AS "useYn",d.reg_user_id AS "regUserId",d.reg_dttm AS "regDttm",d.mod_user_id AS "modUserId",d.mod_dttm AS "modDttm"</sql>
+  <sql id="filters"><where>
+    <if test="query.filters.employeeType != null">AND d.emp_type_cd=#{query.filters.employeeType}</if>
+    <if test="query.filters.jobCode != null">AND d.job_cd=#{query.filters.jobCode}</if>
+    <if test="query.filters.directClass != null">AND d.drct_cls_cd=#{query.filters.directClass}</if>
+    <if test="query.filters.workStatus != null">AND d.work_stat_cd=#{query.filters.workStatus}</if>
+    <if test="query.filters.includeStopped != 'true' and query.filters.workStatus != 'RETIRE'">AND d.use_yn='Y'</if>
+    <if test="query.filters.q != null">AND (strpos(d.dev_nm,#{query.filters.q})&gt;0 OR strpos(d.mng_no,#{query.filters.q})&gt;0)</if>
+  </where></sql>
+  <select id="list" resultType="map">
+    SELECT <include refid="columns"/> FROM tb_hr_dev d
+    LEFT JOIN tb_bs_clnt c ON c.clnt_id=d.blng_clnt_id
+    LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=d.grade_cd
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=d.job_cd
+    LEFT JOIN tb_sy_code e ON e.code_grp_id='EMP_TYPE' AND e.code=d.emp_type_cd
+    LEFT JOIN tb_sy_code s ON s.code_grp_id='WORK_STAT' AND s.code=d.work_stat_cd
+    LEFT JOIN LATERAL(SELECT max(a.input_end_dt) AS withdrawal FROM tb_pj_asgn a WHERE a.dev_id=d.dev_id AND a.asgn_stat_cd='ACT' AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today}) a ON true
+    LEFT JOIN LATERAL(SELECT p.mon_uprc FROM tb_hr_dev_prc p WHERE p.dev_id=d.dev_id AND p.aply_bgn_ym&lt;=#{month} AND (p.aply_end_ym IS NULL OR p.aply_end_ym&gt;=#{month}) ORDER BY p.aply_bgn_ym DESC LIMIT 1) p ON true
+    <include refid="filters"/>
+    ORDER BY <choose>
+      <when test="query.sort == 'companyName'">c.clnt_nm</when><when test="query.sort == 'employeeType'">e.code_nm</when>
+      <when test="query.sort == 'grade'">g.code_nm</when><when test="query.sort == 'job'">j.code_nm</when>
+      <when test="query.sort == 'status'">s.code_nm</when><when test="query.sort == 'withdrawalDate'">a.withdrawal</when>
+      <when test="query.sort == 'monthlyRate'">p.mon_uprc</when><otherwise>d.dev_nm</otherwise>
+    </choose><choose><when test="query.direction == 'DESC'"> DESC</when><otherwise> ASC</otherwise></choose> NULLS LAST,
+    <if test="query.sort == null">d.mng_no ASC,</if>d.dev_id ASC LIMIT #{query.size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_hr_dev d <include refid="filters"/></select>
+  <select id="find" resultType="map">SELECT <include refid="columns"/> FROM tb_hr_dev d WHERE d.dev_id=#{id}<if test="lock"> FOR UPDATE</if></select>
+  <select id="prices" resultType="map">SELECT * FROM tb_hr_dev_prc WHERE dev_id=#{id} ORDER BY aply_bgn_ym<if test="lock"> FOR UPDATE</if></select>
+  <select id="skills" resultType="map">SELECT * FROM tb_hr_dev_skill WHERE dev_id=#{id} ORDER BY skill_nm<if test="lock"> FOR UPDATE</if></select>
+  <select id="states" resultType="map">SELECT * FROM tb_hr_dev_stat WHERE dev_id=#{id} ORDER BY stat_sn<if test="lock"> FOR UPDATE</if></select>
+  <select id="ids" resultType="string">SELECT dev_id FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="assignments" resultType="map">SELECT a.asgn_id AS "id",p.proj_id AS "projectId",p.proj_nm AS "projectName",a.input_end_dt AS "endDate",coalesce(m.mon_mm,0) AS "mm" FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id LEFT JOIN tb_pj_asgn_mon m ON m.asgn_id=a.asgn_id AND m.input_ym=#{month} WHERE a.dev_id=#{id} AND a.asgn_stat_cd='ACT' AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today} ORDER BY p.proj_nm,p.proj_id,a.asgn_id</select>
+  <select id="labels" resultType="map">SELECT d.dev_id AS "id",c.clnt_nm AS "companyName",g.code_nm AS "grade",j.code_nm AS "job" FROM tb_hr_dev d LEFT JOIN tb_bs_clnt c ON c.clnt_id=d.blng_clnt_id LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=d.grade_cd LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=d.job_cd WHERE d.dev_id=#{id}</select>
+  <select id="code" resultType="map">SELECT code,use_yn AS "useYn",del_yn AS "delYn" FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code} FOR SHARE</select>
+  <select id="company" resultType="map">SELECT clnt_id AS "id",clnt_type_cd AS "type",use_yn AS "useYn" FROM tb_bs_clnt WHERE clnt_id=#{id} FOR SHARE</select>
+  <select id="part" resultType="map">SELECT part_id AS "id",use_yn AS "useYn" FROM tb_bs_part WHERE part_id=#{id} FOR SHARE</select>
+  <select id="mmOver" resultType="string">SELECT std_val::text FROM tb_sy_oper_std WHERE std_cd='MM_OVER' AND aply_bgn_ym&lt;=#{month} ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="managementExists" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_hr_dev WHERE mng_no=#{managementNo})</select>
+  <select id="samePerson" resultType="string">SELECT mng_no FROM tb_hr_dev WHERE dev_nm=#{name} AND jncmp_dt=#{hireDate} ORDER BY mng_no</select>
+  <insert id="insert">INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,blng_clnt_id,grade_cd,job_cd,sub_job_cd,jbps_cd,drct_cls_cd,part_id,jncmp_dt,home_area_cd,home_addr,telno,work_stat_cd,use_yn,reg_user_id,reg_dttm) VALUES(#{id},#{managementNo},#{name},#{employeeType},#{companyId},#{gradeCode},#{jobCode},#{subJobCode},#{positionCode},#{directClass},#{partId},#{hireDate},#{homeAreaCode},#{homeAddress},NULL,'IDLE','Y',#{regUserId},#{regDttm})</insert>
+  <update id="update">UPDATE tb_hr_dev SET dev_nm=#{name},emp_type_cd=#{employeeType},blng_clnt_id=#{companyId},grade_cd=#{gradeCode},job_cd=#{jobCode},sub_job_cd=#{subJobCode},jbps_cd=#{positionCode},drct_cls_cd=#{directClass},part_id=#{partId},jncmp_dt=#{hireDate},home_area_cd=#{homeAreaCode},home_addr=#{homeAddress},mod_user_id=#{modUserId},mod_dttm=#{modDttm} WHERE dev_id=#{id}</update>
+  <update id="updateStatus">UPDATE tb_hr_dev SET work_stat_cd=#{status},use_yn=#{useYn},mod_user_id=#{modUserId},mod_dttm=#{modDttm} WHERE dev_id=#{id}</update>
+  <insert id="insertPrice">INSERT INTO tb_hr_dev_prc(dev_id,aply_bgn_ym,aply_end_ym,mon_uprc,mon_pay_amt,reg_user_id,reg_dttm) VALUES(#{id},#{month},#{end},#{rate},#{pay},#{actor},#{now})</insert>
+  <update id="updatePrice">UPDATE tb_hr_dev_prc SET mon_uprc=#{rate},mon_pay_amt=#{pay},mod_user_id=#{actor},mod_dttm=#{now} WHERE dev_id=#{id} AND aply_bgn_ym=#{month}</update>
+  <update id="closePrice">UPDATE tb_hr_dev_prc SET aply_end_ym=#{end},mod_user_id=#{actor},mod_dttm=#{now} WHERE dev_id=#{id} AND aply_bgn_ym=#{month}</update>
+  <delete id="deleteSkills">DELETE FROM tb_hr_dev_skill WHERE dev_id=#{id}</delete>
+  <insert id="insertSkill">INSERT INTO tb_hr_dev_skill(dev_id,skill_nm,sort_ord,reg_user_id,reg_dttm) VALUES(#{id},#{name},#{order},#{actor},#{now})</insert>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <select id="closed" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_cl_close WHERE close_ym=#{month} AND close_stat_cd='CLOSE')</select>
+</mapper>

@@ -2,6 +2,28 @@ package com.sicost.common.api;
 
 import com.sicost.apiops.MasterHistoryController;
 import com.sicost.apiops.MasterHistoryService;
+import com.sicost.apiops.PeopleHistoryController;
+import com.sicost.apiops.PeopleHistoryService;
+import com.sicost.areasops.AddressController;
+import com.sicost.areasops.AddressService;
+import com.sicost.b8.B8Controller;
+import com.sicost.b8.B8Service;
+import com.sicost.candidates.CandidateController;
+import com.sicost.candidates.CandidateQueryService;
+import com.sicost.candidates.CandidateService;
+import com.sicost.candidatesops.CandidateSummaryController;
+import com.sicost.candidatesops.CandidateSummaryService;
+import com.sicost.contacts.CandidateContactController;
+import com.sicost.contacts.CandidateContactService;
+import com.sicost.developers.DeveloperController;
+import com.sicost.developers.DeveloperQueryService;
+import com.sicost.developers.DeveloperService;
+import com.sicost.developersops.DeveloperActionsController;
+import com.sicost.developersops.DeveloperActionsQueryService;
+import com.sicost.developersops.DeveloperBulkStatusService;
+import com.sicost.developersops.DeveloperStatusRecalculationService;
+import com.sicost.states.DeveloperStateController;
+import com.sicost.states.DeveloperStateService;
 import com.sicost.b7.B7Controller;
 import com.sicost.b7.B7Service;
 import com.sicost.businessusers.BusinessUserController;
@@ -37,6 +59,7 @@ import com.sicost.operatingstandards.OperatingStandardsService;
 import com.sicost.shared.MenuService;
 import com.sicost.shared.SharedQueriesController;
 import com.sicost.shared.SharedQueriesService;
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -54,12 +77,18 @@ import static org.assertj.core.api.Assertions.assertThat;
         CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
         BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
         ClientActionsController.class, SalesPartController.class, PartStandardController.class,
-        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class})
+        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class,
+        AddressController.class, CandidateController.class, CandidateSummaryController.class, CandidateContactController.class,
+        DeveloperController.class, DeveloperActionsController.class, DeveloperStateController.class,
+        PeopleHistoryController.class, B8Controller.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
         CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
         BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
         ClientActionsController.class, SalesPartController.class, PartStandardController.class,
-        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class})
+        MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class,
+        AddressController.class, CandidateController.class, CandidateSummaryController.class, CandidateContactController.class,
+        DeveloperController.class, DeveloperActionsController.class, DeveloperStateController.class,
+        PeopleHistoryController.class, B8Controller.class})
 class OpenApiControllerRegistrationContractTest {
     @Autowired RequestMappingHandlerMapping handlerMapping;
     @MockBean HealthService health;
@@ -83,6 +112,20 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean ExcelExportService excel;
     @MockBean UploadIssuesService uploadIssues;
     @MockBean MasterDataExportService exports;
+    @MockBean AddressService addresses;
+    @MockBean CandidateService candidates;
+    @MockBean CandidateQueryService candidateQueries;
+    @MockBean CandidateSummaryService candidateSummary;
+    @MockBean CandidateContactService candidateContacts;
+    @MockBean DeveloperService developers;
+    @MockBean DeveloperQueryService developerQueries;
+    @MockBean DeveloperActionsQueryService developerActions;
+    @MockBean DeveloperBulkStatusService developerStatuses;
+    @MockBean DeveloperStatusRecalculationService developerRecalculation;
+    @MockBean DeveloperStateService developerStates;
+    @MockBean PeopleHistoryService peopleHistory;
+    @MockBean B8Service b8;
+    @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {
         var yaml=new YamlMapFactoryBean();

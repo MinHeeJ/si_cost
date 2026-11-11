@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b8.B8Mapper">
+  <select id="codes" resultType="com.sicost.b7.B7Dtos$Code">
+    SELECT c.code_grp_id AS "groupId",c.code,c.code_nm AS name,
+      (c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y' AND length(c.code)&lt;=10) AS active,m.src_text AS source
+    FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    LEFT JOIN tb_sy_code_map m ON m.code_grp_id=c.code_grp_id AND m.code=c.code
+    WHERE c.code_grp_id IN ('EMP_TYPE','GRADE','JOB','JBPS','DRCT_CLS') ORDER BY c.code_grp_id,c.code,m.map_id
+  </select>
+  <select id="developers" resultType="com.sicost.b8.B8Dtos$Existing">
+    SELECT mng_no AS "managementNo",dev_nm AS name,jncmp_dt AS "hireDate" FROM tb_hr_dev
+  </select>
+  <select id="companies" resultType="com.sicost.b8.B8Dtos$Company">
+    SELECT clnt_id AS id,clnt_nm AS name,biz_reg_no AS "businessNo" FROM tb_bs_clnt WHERE use_yn='Y' AND clnt_type_cd IN ('VNDR','BOTH')
+  </select>
+  <select id="parts" resultType="com.sicost.b8.B8Dtos$Part">
+    SELECT part_id AS id,part_nm AS name,(hq_yn='Y') AS headquarters FROM tb_bs_part WHERE use_yn='Y'
+  </select>
+  <select id="areas" resultType="com.sicost.b8.B8Dtos$Area">
+    SELECT area_cd AS code,area_lvl_cd AS level,upper_area_cd AS "parentCode",sido_nm AS sido,sido_full_nm AS "fullName",sgg_nm AS sgg,emd_nm AS emd
+    FROM tb_sy_adm_area WHERE use_yn='Y' ORDER BY area_cd
+  </select>
+  <select id="hdongs" resultType="com.sicost.b8.B8Dtos$Hdong">
+    SELECT DISTINCT h.hdong_nm AS name,h.area_cd AS "areaCode" FROM tb_sy_adm_hdong h JOIN tb_sy_adm_area a ON a.area_cd=h.area_cd WHERE a.use_yn='Y'
+  </select>
+  <select id="managementPreview" resultType="java.math.BigInteger">
+    SELECT CASE WHEN is_called THEN last_value+1 ELSE last_value END FROM sq_tb_hr_dev_mng_no
+  </select>
+  <select id="lockUpload" resultType="com.sicost.b7.B7Dtos$Upload">
+    SELECT upld_id AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS filename,file_size AS size,
+      reg_user_id AS actor,upld_stat_cd AS status,tot_row_cnt AS "totalRows",succ_cnt AS "successRows",warn_cnt AS "warningRows",err_cnt AS "errorRows",aply_dttm AS "appliedAt"
+    FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE
+  </select>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,trgt_ym,trgt_proj_id,trgt_dstrb_step_cd,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B8','UI-02',#{write.filename},#{write.size},NULL,NULL,NULL,#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">
+    UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},
+      upld_stat_cd='CHECKED',aply_dttm=NULL,mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}
+  </update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">
+    INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm)
+    VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})
+  </insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">
+    SELECT rslt_sn AS sequence,rslt_type_cd AS severity,row_no AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS reason
+    FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY row_no,rslt_sn
+  </select>
+  <insert id="insertDeveloper">
+    INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,blng_clnt_id,grade_cd,job_cd,sub_job_cd,jbps_cd,drct_cls_cd,part_id,jncmp_dt,work_stat_cd,home_area_cd,home_addr,use_yn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{managementNo},#{developer.name},#{developer.employeeType},#{developer.companyId},#{developer.gradeCode},#{developer.jobCode},#{developer.subJobCode},#{developer.positionCode},#{developer.directClass},#{developer.partId},#{developer.hireDate},'IDLE',#{developer.address.code},#{developer.address.text},'Y',#{actor},#{now})
+  </insert>
+  <insert id="insertPrice">
+    INSERT INTO tb_hr_dev_prc(dev_id,aply_bgn_ym,aply_end_ym,mon_uprc,mon_pay_amt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{effectiveMonth},NULL,#{developer.monthlyRate},#{developer.monthlyPay},#{actor},#{now})
+  </insert>
+  <insert id="insertSkill">
+    INSERT INTO tb_hr_dev_skill(dev_id,skill_nm,sort_ord,reg_user_id,reg_dttm) VALUES(#{id},#{skill},#{order},#{actor},#{now})
+  </insert>
+  <update id="markApplied">
+    UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}
+  </update>
+  <select id="recovered" resultType="com.sicost.b8.B8Dtos$Recovered">
+    SELECT d.dev_id AS id,d.mng_no AS "managementNo" FROM tb_sy_chg_hist h JOIN tb_hr_dev d ON d.dev_id=h.trgt_key
+    WHERE h.trgt_tbl_nm='TB_HR_DEV' AND h.chg_type_cd='NEW' AND h.chg_rsn=#{reason} ORDER BY h.hist_id
+  </select>
+</mapper>

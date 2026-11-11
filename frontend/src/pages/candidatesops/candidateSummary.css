@@ -1,0 +1,54 @@
+.candidate-summary {
+  min-width: 0;
+}
+.candidate-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.candidate-summary-metric {
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.candidate-summary-metric dt {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 20px;
+}
+.candidate-summary-metric dd {
+  margin: 8px 0 0;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.candidate-summary-metric dd small {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.candidate-summary-overdue {
+  color: var(--bad);
+}
+.candidate-summary-interview {
+  color: var(--warn);
+}
+.candidate-summary-help,
+.candidate-summary-empty {
+  margin-top: 12px;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+@media (max-width: 767px) {
+  .candidate-summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .candidate-summary-metric:last-child {
+    grid-column: 1 / -1;
+  }
+}

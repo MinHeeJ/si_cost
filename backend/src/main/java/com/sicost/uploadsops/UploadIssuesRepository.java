@@ -13,5 +13,6 @@ public class UploadIssuesRepository {
         if (!mapper.exists(id)) throw new ApiException(404, "NOT_FOUND", "업로드 검사 기록을 찾을 수 없습니다.");
     }
     public long count(Query query) { return mapper.count(query); }
+    public String formType(long id) { requireUpload(id); return mapper.formType(id); }
     public List<Issue> issues(Query query) { return mapper.issues(query); }
 }

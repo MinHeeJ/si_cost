@@ -23,9 +23,17 @@ import * as partStandards from "../pages/salespartsops/partStandardsApi";
 import * as b7 from "../pages/b7/b7Api";
 import * as exports from "../pages/exportsops/masterDataExportApi";
 import * as actions from "../pages/clientsops/clientActionsApi";
+import * as developers from "../pages/developers/peopleClient";
+import * as candidates from "../pages/candidates/peopleClient";
+import * as summary from "../pages/candidatesops/candidateSummaryApi";
+import * as areas from "../shared/areaClient";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/developers/peopleClient");
+vi.mock("../pages/candidates/peopleClient");
+vi.mock("../pages/candidatesops/candidateSummaryApi");
+vi.mock("../shared/areaClient");
 vi.mock("../pages/businessusers/businessUsersApi");
 vi.mock("../pages/salesparts/salesPartsApi");
 vi.mock("../pages/salespartsops/partStandardsApi");
@@ -161,6 +169,41 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }),
+  });
+  vi.mocked(developers.getDevelopers).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
+  vi.mocked(developers.getPeopleCodes).mockResolvedValue({ items: [] });
+  vi.mocked(candidates.getCandidates).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
+  vi.mocked(candidates.getCandidateCodes).mockResolvedValue({ items: [] });
+  vi.mocked(candidates.getCandidateDate).mockResolvedValue({
+    currentDate: context.currentDate,
+  });
+  vi.mocked(summary.getCandidateSummary).mockResolvedValue({
+    total: 0,
+    inProgress: 0,
+    interviewScheduled: 0,
+    availableByNextMonthStart: 0,
+    overdueContact: 0,
+  });
+  vi.mocked(areas.getAreaSidos).mockResolvedValue({ items: [] });
+  vi.mocked(actions.getClientOptions).mockResolvedValue({ items: [] });
+  vi.mocked(partStandards.getSalesPartOptions).mockResolvedValue({ items: [] });
   preferences = Object.entries({
     FAV: [],
     RECENT: [],
@@ -298,6 +341,15 @@ describe("공식 진입점 합성", () => {
           await screen.findByTestId("business-users-screen"),
         ).toBeInTheDocument();
         expect(users.getBusinessUsers).toHaveBeenCalled();
+      } else if (id === "UI-02" || id === "UI-33") {
+        expect(
+          await screen.findByTestId(
+            id === "UI-02" ? "developers-screen" : "candidates-screen",
+          ),
+        ).toBeVisible();
+        expect(
+          id === "UI-02" ? developers.getDevelopers : candidates.getCandidates,
+        ).toHaveBeenCalled();
       } else
         expect(
           screen
@@ -669,4 +721,126 @@ describe("공식 진입점 합성", () => {
     await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
     await screen.findByLabelText("A 이름");
   });
+  it.each(["UI-02", "UI-33"] as const)(
+    "%s 편집은 화면 전환과 닫기 취소에서 보존된다",
+    async (id) => {
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      open(`/${id}`);
+      await userEvent.click(
+        await screen.findByTestId(
+          id === "UI-02" ? "developer-create-button" : "candidate-create",
+        ),
+      );
+      const name = screen.getByLabelText(/^이름/);
+      fireEvent.change(name, { target: { value: "보존 인력" } });
+      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      if (id === "UI-33")
+        expect(
+          screen.queryByRole("dialog", { name: "외부 인력 후보 등록" }),
+        ).not.toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("button", { name: new RegExp(`DB ${id}$`) }),
+      );
+      expect(name).toHaveValue("보존 인력");
+      await userEvent.click(
+        screen.getByRole("button", { name: `DB ${id} 탭 닫기` }),
+      );
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(name).toHaveValue("보존 인력");
+      confirm.mockRestore();
+    },
+  );
+  it.each(["UI-02", "UI-33"] as const)(
+    "%s 열·밀도·페이지 설정을 업무 화면에 연결한다",
+    async (id) => {
+      const isDeveloper = id === "UI-02";
+      const order = isDeveloper
+        ? [
+            "name",
+            "companyName",
+            "employeeType",
+            "grade",
+            "job",
+            "status",
+            "currentProjects",
+            "withdrawalDate",
+            "monthlyRate",
+          ]
+        : [
+            "name",
+            "employeeType",
+            "job",
+            "grade",
+            "skills",
+            "homeAddress",
+            "desiredRate",
+            "availableDate",
+            "contactStatus",
+            "lastContactDate",
+            "source",
+          ];
+      preferences.push({
+        type: "COLS",
+        key: id,
+        value: {
+          [isDeveloper ? "developers" : "candidates"]: { order, hidden: [] },
+        },
+        revision: null,
+        stored: false,
+      });
+      preferences.find((p) => p.type === "PAGE_SIZE")!.value = 20;
+      open(`/${id}`);
+      await screen.findByTestId(
+        isDeveloper ? "developers-screen" : "candidates-screen",
+      );
+      await waitFor(() =>
+        expect(
+          isDeveloper ? developers.getDevelopers : candidates.getCandidates,
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({ size: 20 }),
+          ...(isDeveloper ? [] : [expect.any(AbortSignal)]),
+        ),
+      );
+      await userEvent.click(
+        screen.getByTestId(
+          isDeveloper ? "developer-columns-button" : "candidate-columns",
+        ),
+      );
+      const dialog = screen.getByRole("dialog", { name: "현재 표 열 설정" });
+      expect(within(dialog).getByLabelText("이름 숨김")).toBeDisabled();
+      fireEvent.click(within(dialog).getByLabelText("등급 숨김"));
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "적용" }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("columnheader", { name: "등급" }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(prefs.putPreference).toHaveBeenCalledWith(
+        "COLS",
+        id,
+        {
+          [isDeveloper ? "developers" : "candidates"]: {
+            order,
+            hidden: ["grade"],
+          },
+        },
+        null,
+      );
+      await userEvent.click(
+        screen.getByTestId(
+          isDeveloper ? "developer-density-button" : "candidate-density",
+        ),
+      );
+      await waitFor(() =>
+        expect(prefs.putPreference).toHaveBeenCalledWith(
+          "DENSE",
+          "*",
+          "좁게",
+          null,
+        ),
+      );
+    },
+  );
 });

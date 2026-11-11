@@ -9,11 +9,21 @@ import {
   type MasterHistoryTarget,
 } from "./masterHistoryApi";
 
-type Props = {
-  targetType: MasterHistoryTarget;
+export type HistoryLoader<Target extends string> = (
+  targetType: Target,
+  targetId: string,
+  page: number,
+  size: 20 | 50 | 100,
+  signal?: AbortSignal,
+) => Promise<MasterHistoryPage>;
+type Props<Target extends string> = {
+  targetType: Target;
   targetId: string;
   refreshKey?: string | number;
   dense?: boolean;
+  loader?: HistoryLoader<Target>;
+  rowAdapter?: (row: MasterHistoryEntry) => MasterHistoryEntry;
+  showTargetTable?: boolean;
 };
 const types: Record<
   MasterHistoryEntry["changeType"],
@@ -68,7 +78,21 @@ const columns: Column<MasterHistoryEntry>[] = [
   },
 ];
 
-export function ChangeHistoryTable(props: Props) {
+function loadDefaultHistory(
+  targetType: string,
+  targetId: string,
+  page: number,
+  size: 20 | 50 | 100,
+  signal?: AbortSignal,
+) {
+  if (targetType === "USER" || targetType === "CLIENT" || targetType === "PART")
+    return getMasterHistory(targetType, targetId, page, size, signal);
+  return Promise.reject(new Error("대상에 맞는 이력 조회가 필요합니다."));
+}
+
+export function ChangeHistoryTable<Target extends string = MasterHistoryTarget>(
+  props: Props<Target>,
+) {
   return (
     <MasterHistoryContent
       key={`${props.targetType}:${props.targetId}`}
@@ -76,12 +100,15 @@ export function ChangeHistoryTable(props: Props) {
     />
   );
 }
-function MasterHistoryContent({
+function MasterHistoryContent<Target extends string>({
   targetType,
   targetId,
   refreshKey,
   dense,
-}: Props) {
+  loader,
+  rowAdapter,
+  showTargetTable,
+}: Props<Target>) {
   const [page, setPage] = useState(1);
   const [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<MasterHistoryPage>();
@@ -92,9 +119,15 @@ function MasterHistoryContent({
     const controller = new AbortController();
     setLoading(true);
     setError(undefined);
-    void getMasterHistory(targetType, targetId, page, size, controller.signal)
+    const load = loader ?? loadDefaultHistory;
+    void load(targetType, targetId, page, size, controller.signal)
       .then((result) => {
-        if (!controller.signal.aborted) setData(result);
+        if (!controller.signal.aborted)
+          setData(
+            rowAdapter
+              ? { ...result, items: result.items.map(rowAdapter) }
+              : result,
+          );
       })
       .catch((failure: unknown) => {
         if (!controller.signal.aborted) setError(failure);
@@ -103,7 +136,7 @@ function MasterHistoryContent({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [targetType, targetId, page, size, refreshKey, retry]);
+  }, [targetType, targetId, page, size, refreshKey, retry, loader, rowAdapter]);
   return (
     <section
       aria-label="변경 이력"
@@ -128,7 +161,19 @@ function MasterHistoryContent({
       ) : (
         <DataTable
           rows={data?.items ?? []}
-          columns={columns}
+          columns={
+            showTargetTable
+              ? columns.map((column) =>
+                  column.id === "targetKey"
+                    ? {
+                        ...column,
+                        render: (row: MasterHistoryEntry) =>
+                          `${row.targetTable} / ${row.targetKey}`,
+                      }
+                    : column,
+                )
+              : columns
+          }
           rowKey={(row) => row.historyId}
           loading={loading}
           empty="조회된 변경 이력이 없습니다."

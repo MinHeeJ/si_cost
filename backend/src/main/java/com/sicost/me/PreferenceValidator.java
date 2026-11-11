@@ -20,11 +20,13 @@ public class PreferenceValidator {
             "standards",List.of("key","name","value","unitNm","effectiveMonth","description"),
             "history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor"),
             "users",List.of("userId","name","email","roles","status","lastLoginAt"),
-            "clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn"));
+            "clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn"),
+            "developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate"),
+            "candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source"));
     private static final Map<String,List<String>> REQUIRED = Map.of(
             "codes",List.of("code","name"),"valueCodes",List.of("code","name"),
             "mappings",List.of("sourceText","groupId","code"),"standards",List.of("key","name","value"),"history",List.of("occurredAt","target"),
-            "users",List.of("userId","name"),"clients",List.of("name"));
+            "users",List.of("userId","name"),"clients",List.of("name"),"developers",List.of("name"),"candidates",List.of("name"));
     private final PreferenceMapper mapper;
     private final ObjectMapper json;
     private final Clock clock;
@@ -33,7 +35,7 @@ public class PreferenceValidator {
         if (GLOBAL.contains(type)) {if (!"*".equals(key)) throw InputValidator.invalid("key");}
         else if (Set.of("COLS","PERIOD").contains(type)) {
             if (!mapper.screens().contains(key)) throw InputValidator.invalid("key");
-            if (type.equals("COLS") && !Set.of("UI-15","UI-23","UI-27").contains(key)) throw InputValidator.invalid("key");
+            if (type.equals("COLS") && !Set.of("UI-02","UI-15","UI-23","UI-27","UI-33").contains(key)) throw InputValidator.invalid("key");
             if (type.equals("PERIOD") && periodType(key).equals("NONE")) throw InputValidator.invalid("type");
         } else throw InputValidator.invalid("type");
     }
@@ -70,9 +72,11 @@ public class PreferenceValidator {
     }
     private Set<String> columnViews(String key) {
         return switch(key) {
+            case "UI-02" -> Set.of("developers");
             case "UI-15" -> Set.of("clients");
             case "UI-23" -> Set.of("users");
             case "UI-27" -> Set.of("codes","valueCodes","mappings","standards","history");
+            case "UI-33" -> Set.of("candidates");
             default -> throw InputValidator.invalid("key");
         };
     }

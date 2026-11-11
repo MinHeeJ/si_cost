@@ -23,6 +23,18 @@ class JsonTypesContractTest {
         @PostMapping("/validation-input") ApiResponse<Input> validate(@Valid @RequestBody Input input) { return ApiResponse.ok(input); }
     }
     @Autowired MockMvc mvc;
+    @Test void b7AndB8MultipartLimitsUseTheSameSafeErrorEnvelopeAndRequestId() {
+        for (String path : new String[]{"/api/excel/B7/validate","/api/excel/B7/apply","/api/excel/B8/validate","/api/excel/B8/apply"}) {
+            var request = new org.springframework.mock.web.MockHttpServletRequest("POST",path);
+            request.setAttribute(RequestIdFilter.ATTRIBUTE,"upload-request");
+            var response = new ApiExceptionHandler().uploadSize(new org.springframework.web.multipart.MaxUploadSizeExceededException(10485760),request);
+            org.assertj.core.api.Assertions.assertThat(response.getStatusCode().value()).isEqualTo(413);
+            org.assertj.core.api.Assertions.assertThat(response.getHeaders().getFirst("X-Request-Id")).isEqualTo("upload-request");
+            org.assertj.core.api.Assertions.assertThat(response.getBody().code()).isEqualTo("FILE_TOO_LARGE");
+            org.assertj.core.api.Assertions.assertThat(response.getBody().field()).isEqualTo("file");
+            org.assertj.core.api.Assertions.assertThat(response.getBody().requestId()).isEqualTo("upload-request");
+        }
+    }
     @Test void decimalStringAndBooleanAreAcceptedWithoutConversion() throws Exception {
         mvc.perform(post("/validation-input").contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"1.2300\",\"enabled\":true}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.value").value("1.2300"));

@@ -8,6 +8,7 @@ import static com.sicost.uploadsops.UploadIssuesDtos.*;
 @Mapper
 public interface UploadIssuesMapper {
     boolean exists(@Param("uploadId") long uploadId);
+    String formType(@Param("uploadId") long uploadId);
     long count(Query query);
     List<Issue> issues(Query query);
 }

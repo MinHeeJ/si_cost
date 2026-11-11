@@ -158,6 +158,22 @@ class PreferencesContractTest {
     @Test void menuFoldRejectsStringBoolean() throws Exception { invalid("MENU_FOLD","*","\"true\""); }
     @Test void serializedLengthLimit() throws Exception { invalid("FAV","*",json.writeValueAsString(List.of("x".repeat(1999)))); }
     @Test void columnsCannotHideRequired() throws Exception { invalid("COLS","UI-27","{\"codes\":{\"order\":[\"code\",\"name\",\"addVal1\",\"addVal2\",\"sortOrder\",\"useYn\"],\"hidden\":[\"code\"]}}"); }
+    @ParameterizedTest @ValueSource(strings={"UI-02","UI-33"})
+    void peopleColumnDefaultsCanBeSavedAndResetWithoutHidingName(String screen) throws Exception {
+        var response=mvc.perform(get("/api/me/preferences")).andExpect(status().isOk()).andReturn();
+        var items=json.readTree(response.getResponse().getContentAsString()).at("/data/items");
+        String view=screen.equals("UI-02")?"developers":"candidates";
+        var preference=java.util.stream.StreamSupport.stream(items.spliterator(),false)
+            .filter(n->n.path("type").asText().equals("COLS") && n.path("key").asText().equals(screen)).findFirst().orElseThrow();
+        var value=preference.path("value").deepCopy();
+        assertThat(value.path(view).path("order").get(0).asText()).isEqualTo("name");
+        String revision=save("COLS",screen,value.toString(),null);
+        ((com.fasterxml.jackson.databind.node.ArrayNode)value.path(view).path("hidden")).add("name");
+        mvc.perform(put("/api/me/preferences/COLS/{key}",screen).contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision",revision))))
+            .andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/me/preferences/COLS/{key}",screen).param("expectedRevision",revision)).andExpect(status().isNoContent());
+    }
     @Test void columnsCannotDuplicateOrder() throws Exception { invalid("COLS","UI-27","{\"mappings\":{\"order\":[\"code\",\"code\",\"sourceText\"],\"hidden\":[]}}"); }
     @Test void columnsCannotContainUnknown() throws Exception { invalid("COLS","UI-27","{\"mappings\":{\"order\":[\"sourceText\",\"groupId\",\"code\"],\"hidden\":[\"actions\"]}}"); }
     @Test void noPeriodForNoneScreen() throws Exception { invalid("PERIOD","UI-27","{\"type\":\"YEAR\",\"value\":\"2026\"}"); }

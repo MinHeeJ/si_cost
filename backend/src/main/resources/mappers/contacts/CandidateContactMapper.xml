@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.contacts.CandidateContactMapper">
+  <sql id="columns">
+    t.cntc_sn AS "sn",t.cntc_stat_cd AS "status",t.cntc_memo AS "memo",t.cntc_dt AS "contactDate",
+    t.reg_user_id AS "actorId",COALESCE(u.user_nm,t.reg_user_id) AS "actorName"
+  </sql>
+  <select id="candidate" resultType="com.sicost.contacts.CandidateContactDtos$Candidate">
+    SELECT cand_id AS "id",cntc_stat_cd AS "status",last_cntc_dt AS "lastContactDate" FROM tb_hr_cand WHERE cand_id=#{id}
+  </select>
+  <select id="list" resultType="com.sicost.contacts.CandidateContactDtos$Contact">
+    SELECT <include refid="columns"/> FROM tb_hr_cand_cntc t LEFT JOIN tb_sy_user u ON u.user_id=t.reg_user_id
+    WHERE t.cand_id=#{id} ORDER BY t.cntc_dt DESC,t.cntc_sn DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_hr_cand_cntc WHERE cand_id=#{id}</select>
+  <select id="greatestSerial" resultType="int">SELECT COALESCE(max(cntc_sn),0) FROM tb_hr_cand_cntc WHERE cand_id=#{id}</select>
+  <select id="contact" resultType="com.sicost.contacts.CandidateContactDtos$Contact">
+    SELECT <include refid="columns"/> FROM tb_hr_cand_cntc t LEFT JOIN tb_sy_user u ON u.user_id=t.reg_user_id
+    WHERE t.cand_id=#{id} AND t.cntc_sn=#{sn}
+  </select>
+  <insert id="insert">
+    INSERT INTO tb_hr_cand_cntc(cand_id,cntc_sn,cntc_stat_cd,cntc_memo,cntc_dt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{sn},#{status},#{memo},#{contactDate},#{actor},#{now})
+  </insert>
+  <update id="updateCandidate">
+    UPDATE tb_hr_cand SET cntc_stat_cd=#{status},last_cntc_dt=#{contactDate},mod_user_id=#{actor},mod_dttm=#{now} WHERE cand_id=#{id}
+  </update>
+</mapper>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.candidatesops.CandidateSummaryMapper">
+  <select id="summary" resultType="com.sicost.candidatesops.CandidateSummaryDtos$Summary">
+    SELECT count(*) AS "total",
+      count(*) FILTER (WHERE cntc_stat_cd NOT IN ('HOLD','CTRT')) AS "inProgress",
+      count(*) FILTER (WHERE cntc_stat_cd='ITVW') AS "interviewScheduled",
+      count(*) FILTER (WHERE cntc_stat_cd NOT IN ('HOLD','CTRT')
+        AND input_psbl_dt&lt;=#{nextMonthStart}) AS "availableByNextMonthStart",
+      count(*) FILTER (WHERE cntc_stat_cd NOT IN ('HOLD','CTRT')
+        AND coalesce(last_cntc_dt,reg_dttm::date)&lt;#{overdueBefore}) AS "overdueContact"
+    FROM tb_hr_cand
+  </select>
+</mapper>

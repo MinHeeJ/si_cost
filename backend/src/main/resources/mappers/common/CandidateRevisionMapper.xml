@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.concurrent.CandidateRevisionMapper">
+  <select id="lockCandidate" resultType="string">
+    SELECT cand_id FROM tb_hr_cand WHERE cand_id=#{id} FOR UPDATE
+  </select>
+  <select id="lockSkills" resultType="string">
+    SELECT skill_nm FROM tb_hr_cand_skill WHERE cand_id=#{id} ORDER BY skill_nm FOR UPDATE
+  </select>
+  <select id="lockContacts" resultType="int">
+    SELECT cntc_sn FROM tb_hr_cand_cntc WHERE cand_id=#{id} ORDER BY cntc_sn FOR UPDATE
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT jsonb_build_object('candidate',to_jsonb(c),
+      'skills',COALESCE((SELECT jsonb_agg(to_jsonb(s) ORDER BY s.skill_nm) FROM tb_hr_cand_skill s WHERE s.cand_id=c.cand_id),'[]'::jsonb),
+      'contacts',COALESCE((SELECT jsonb_agg(to_jsonb(t) ORDER BY t.cntc_sn) FROM tb_hr_cand_cntc t WHERE t.cand_id=c.cand_id),'[]'::jsonb))::text
+    FROM tb_hr_cand c WHERE c.cand_id=#{id}
+  </select>
+</mapper>

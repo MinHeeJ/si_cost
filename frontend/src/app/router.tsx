@@ -11,6 +11,9 @@ import { BusinessPartnersScreen } from "../pages/shared/BusinessPartnersScreen";
 import { UsersScreen } from "../pages/shared/UsersScreen";
 import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWorkspace";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
+import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
+import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
+import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
 import { SalesPartStandardDialog } from "../pages/salespartsops/SalesPartStandardDialog";
 import { ExcelUploadDialog } from "../pages/b7/ExcelUploadDialog";
@@ -413,12 +416,113 @@ function RegisteredUsersWorkspace({
   );
 }
 
+const peopleColumns: Record<"developers" | "candidates", PreferenceColumn[]> = {
+  developers: [
+    { id: "name", label: "이름", required: true },
+    { id: "companyName", label: "소속" },
+    { id: "employeeType", label: "직원구분" },
+    { id: "grade", label: "등급" },
+    { id: "job", label: "주 직무" },
+    { id: "status", label: "상태" },
+    { id: "currentProjects", label: "현재 프로젝트" },
+    { id: "withdrawalDate", label: "철수 예정일" },
+    { id: "monthlyRate", label: "월 단가" },
+  ],
+  candidates: [
+    { id: "name", label: "이름", required: true },
+    { id: "employeeType", label: "구분" },
+    { id: "job", label: "직무" },
+    { id: "grade", label: "등급" },
+    { id: "skills", label: "기술" },
+    { id: "homeAddress", label: "거주지" },
+    { id: "desiredRate", label: "희망 단가" },
+    { id: "availableDate", label: "투입 가능일" },
+    { id: "contactStatus", label: "연락 상태" },
+    { id: "lastContactDate", label: "최근 연락" },
+    { id: "source", label: "출처" },
+  ],
+};
+
+function PeopleWorkspace({
+  screenId,
+  onDirtyChange,
+}: {
+  screenId: "UI-02" | "UI-33";
+  onDirtyChange(dirty: boolean): void;
+}) {
+  const preferences = usePreferences(),
+    location = useLocation();
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const viewId = screenId === "UI-02" ? "developers" : "candidates";
+  const columns = preferences.get("COLS", screenId)?.value as
+    | ScreenColumnPreferences
+    | undefined;
+  const size = preferences.get("PAGE_SIZE")?.value;
+  const unit = preferences.get("AMT_UNIT")?.value;
+  const dense = preferences.get("DENSE")?.value === "좁게";
+  const pageSize: 20 | 50 | 100 = size === 20 || size === 100 ? size : 50;
+  const props = {
+    active: location.pathname === `/${screenId}`,
+    pageSize,
+    dense,
+    columnView: columns?.[viewId],
+    onDirtyChange,
+    onColumnsChange: () => setColumnsOpen(true),
+    onDensityChange: () => {
+      void preferences
+        .put("DENSE", "*", dense ? "넓게" : "좁게")
+        .catch(setError);
+    },
+  };
+  return (
+    <SharedScreenFrame screenId={screenId}>
+      {error != null && (
+        <ErrorBanner
+          message={
+            error instanceof Error
+              ? error.message
+              : "설정을 저장하지 못했습니다."
+          }
+        />
+      )}
+      {screenId === "UI-02" ? (
+        <DeveloperPoolScreen {...props} />
+      ) : (
+        <CandidatesScreen
+          {...props}
+          amountUnit={unit === "원" || unit === "백만원" ? unit : "천원"}
+        />
+      )}
+      {columnsOpen && (
+        <ColumnPreferencesDialog
+          open
+          screenId={screenId}
+          viewId={viewId}
+          columns={peopleColumns[viewId]}
+          onClose={() => setColumnsOpen(false)}
+        />
+      )}
+    </SharedScreenFrame>
+  );
+}
+
 function RegisteredApplication() {
   const preferences = usePreferences();
   const [codesDirty, setCodesDirty] = useState(false),
     [standardsDirty, setStandardsDirty] = useState(false);
   const [partnersDirty, setPartnersDirty] = useState(false),
     [usersDirty, setUsersDirty] = useState(false);
+  const [developersDirty, setDevelopersDirty] = useState(false),
+    [candidatesDirty, setCandidatesDirty] = useState(false);
+  const onDevelopersDirty = useCallback(
+    (dirty: boolean) => setDevelopersDirty(dirty),
+    [],
+  );
+  const onCandidatesDirty = useCallback(
+    (dirty: boolean) => setCandidatesDirty(dirty),
+    [],
+  );
   const onPartnersDirty = useCallback(
     (dirty: boolean) => setPartnersDirty(dirty),
     [],
@@ -455,9 +559,19 @@ function RegisteredApplication() {
           ? codesDirty || standardsDirty
           : id === "UI-15"
             ? partnersDirty
-            : id === "UI-23" && usersDirty
+            : id === "UI-02"
+              ? developersDirty
+              : id === "UI-33"
+                ? candidatesDirty
+                : id === "UI-23" && usersDirty
       }
       screens={{
+        "UI-02": (
+          <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
+        ),
+        "UI-33": (
+          <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
+        ),
         "UI-15": (
           <BusinessPartnersScreen>
             <BusinessPartnersWorkspace onDirtyChange={onPartnersDirty} />

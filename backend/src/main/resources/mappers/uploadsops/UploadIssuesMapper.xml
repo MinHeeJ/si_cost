@@ -8,6 +8,7 @@
   <select id="exists" resultType="boolean">
     SELECT EXISTS(SELECT 1 FROM tb_sy_upld WHERE upld_id=#{uploadId})
   </select>
+  <select id="formType" resultType="string">SELECT form_type_cd FROM tb_sy_upld WHERE upld_id=#{uploadId}</select>
   <select id="count" resultType="long">
     SELECT count(*) FROM tb_sy_upld_err WHERE <include refid="filter"/>
   </select>

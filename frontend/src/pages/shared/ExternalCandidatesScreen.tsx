@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { CandidatesScreen } from "../candidates/CandidatesScreen";
 export function ExternalCandidatesScreen() {
-  return <FollowUpScreen screenId="UI-33" />;
+  return (
+    <SharedScreenFrame screenId="UI-33">
+      <CandidatesScreen />
+    </SharedScreenFrame>
+  );
 }
