@@ -1,0 +1,3564 @@
+openapi: 3.1.0
+info:
+  title: 원가관리시스템 Batch1 공통 HTTP 계약
+  version: 0.1.0
+  description: 승인된 156개 원장 행과 SPEC-REQUEST.md 전체476행·spec.md·plan.md·tasks.md의 설계 투영이다. 22연산만 제공한다. 한국어 동작·camelCase JSON·/api
+    경로를 보존한다. 계약 작성은 구현/DB/API/UI 시험 통과가 아니다. OQ-001/OQ-003/OQ-007 및 미결설계 승인 전 build-ready가 아니며 상류파일/ID를 변경하지 않는다.
+servers:
+- url: /
+  description: 로컬 또는 접근 제한 사설 개발·검증 환경의 동일 origin. paths에 /api가 이미 포함되므로 중복하지 않는다.
+security: []
+x-contract-status:
+  status: clarification-required
+  build_ready: false
+  implementation_tests: 미실행
+  blocking_open_questions:
+  - OQ-001
+  - OQ-003
+  - OQ-007
+  scope: 이 파일만 신규 작성. 상류 원장156행 재사용·재생성/수정 없음.
+x-source-documents:
+- path: SPEC-REQUEST.md
+  sha256: eb98e6ec853ca79263e57111bd0819eef1327859f794bfedbe69dd9f574438e9
+  read_scope: 전체
+- path: .specify/specs/001-feature/spec.md
+  sha256: 05db89e17b13bba2289b26ac1c9cc78fc26fd27943245881f7f5a49d97ba9b5e
+  read_scope: 전체
+- path: .specify/specs/001-feature/plan.md
+  sha256: ddcf5cbbbbc0fefdb6048e3bb49d059b2b4f65bf340ac0e7e544f0c1d625392d
+  read_scope: 전체
+- path: .specify/specs/001-feature/tasks.md
+  sha256: 3ec365d62280668ec6551e88f9103b6a6fa5614c3cb7b751fafb20e67eea1e96
+  read_scope: 전체
+- path: .specify/specs/001-feature/requirement-registry.json
+  sha256: 17956df73b49b7472aeb11d6bc8062327a1145ff063c054759e41d0de5b56e70
+  read_scope: 전체
+- path: .specify/specs/001-feature/requirement-registry.md
+  sha256: 5e893b273de5ec04438aa7ebf791953281274b66403e2901f25c74f609141455
+  read_scope: 전체
+x-open-questions:
+- id: OQ-001
+  status: 승인 대기·착수 차단
+  question: 본문 Java21/Spring Boot3.5.x와 고정 Java17/3.3.x 충돌. 고정 BOM을 바꾸지 않으며 승인 전 build-ready 아님.
+  related_requirements:
+  - REQ-132
+  - REQ-138
+  - REQ-139
+- id: OQ-002
+  status: DDL 원천 확인·초기값/DB실측 대기
+  question: data-model.md에서 revision d1e18c27afb077bfa5b1d92b982af194676ebd91의 전체 DDL을 확인하여 68테이블·836컬럼과 사용자/행정구역 물리명을 확보했다.
+    초기값 파일 전체 대조·DB 실측은 미완료다. HTTP DTO는 원문이 약속한 공개필드만 제공하며 비밀 저장열을 복사하지 않는다.
+  related_requirements:
+  - REQ-001
+  - REQ-003
+  - REQ-009
+- id: OQ-003
+  status: 설계 제안·승인 대기
+  question: ApiError에 required success=false/meta를 두고 원문 code/message/field?/details?/requestId를 루트에 놓는 제안이다. meta={} 및 details.references/violations도
+    내부 명명 제안이며 승인된 계약으로 주장하지 않는다. 완전한 ApiError를 성공 봉투 error 아래 중첩하지 않는다.
+  affected_schemas:
+  - ApiResponse
+  - ApiError
+  - ResponseMeta
+  - ErrorDetails
+- id: OQ-004
+  status: 설계 제안·승인 대기
+  question: 원문 미지정 결과는 추가하지 않는다. 그룹/대응 생성201은 본문 없음, 코드/대응/설정 삭제는204 본문 없음으로 제안. DELETE expectedRevision의 query 전송 위치·없는 설정
+    초기화 정책·저장 후 재조회 items 범위(그룹 전체/현재43키)는 미승인 설계 결정이다. 승인 전 client/server 직렬화 완료로 판정하지 않는다.
+  affected_operations:
+  - createCodeGroup
+  - createCodeMapping
+  - deletePreference
+  - deleteGroupCode
+  - deleteCodeMappings
+  - saveGroupCodes
+  - saveOperatingStandards
+- id: OQ-005
+  status: 명명 연결 작성·승인 아님
+  question: 원문17경로/22연산과기존operationId를보존하고공유UI-27/물리테이블에가짜화면/테이블없음. DTO명칭은해당응답바인딩의설계명이다.
+- id: OQ-006
+  status: 입력 대기
+  question: 실제 current request_key 미제공. BASIC-129로 대체하지 않으며 data-model.json 입력 확인은 부모 작업 범위다.
+- id: OQ-007
+  status: 상류 충돌·착수 차단
+  question: REQ-144/승인spec.md는resolved/imperative/jpa/blocking이나plan.md의보존exact block은resolved/imperative/mybatis/blocking/explicit/conflicts=[].
+    REQ-135 JPA validate도상충. 원장/상류불변,권한있는정합화승인전영속성구현/인계완료아님.
+  related_requirements:
+  - REQ-135
+  - REQ-144
+x-common-rules:
+- 인증/실제권한유예·임시관리자admin·DataScope=ALL. 인증redirect/401/역할403/가림0건. 시스템/중복/참조/마감409는권한과별도다. securitySchemes={}·security=[]는공개배포승인이아니다.
+- 모든문자trim후필수/길이검사·조용한절단0건. 허용외필드400 UNKNOWN_FIELD·JSON타입/필수/길이400 VALIDATION_ERROR·연월400 INVALID_PERIOD. 알려진모드금지필드는409로구분한다.
+- JSON camelCase·codeVal/value 숫자문자열·BigDecimal. 목록page는코드편집/대응/변경이력만1부터20/50/100기본50. 그룹/43기준/공통코드/적용월이력등전체조회에는페이지를발명하지않는다.
+- 설치이후변경은TB_SY_CODE_GRP/TB_SY_CODE/TB_SY_CODE_MAP/TB_SY_OPER_STD/TB_SY_USER_PREF/TB_SY_CHG_HIST만. 사용자/역할/메뉴/마감/프로젝트는조회용. 처리자·시각서버소유·이력은DDL등록필드만.
+  DB연월YYYYMM/APIYYYY-MM(CASH_BASE_YM value는YYYYMM예외).
+- 원자변경·키오름차순잠금·불투명revision·잠금후비교. 그룹전체코드/기준키전체적용월·식별자/저장값/REG_DTTM/MOD_DTTM으로계산·시각양NULL도값다르면revision다름·version컬럼추가0개. 충돌409·후행데이터/이력변경0건.
+- 무변경revision일치시200 changed=false·바뀐 내용이 없습니다.·MOD_DTTM/이력0건. 실제변경commit후changed=true·재조회·캐시무효화·성공응답2초내현재브라우저갱신. 통신오류를성공으로표시/자동재저장0회.
+- 이력TRGT_TBL_NM실제테이블명·TRGT_KEY 그룹=groupId/코드=groupId:code/대응=groupId:mapId/기준=key:YYYYMM. UPD변경컬럼별·CODE_NM고정·STOP/RESUME USE_YN·DEL
+  DEL_YN N→Y. NEW등록이전NULL. 대응NEW/DEL은JSON을이후/이전에각저장·반대NULL.500자초과절단0건·무기한보존·이력수정삭제0개.
+- 오류한국어message/field/참조유형건수/requestId·X-Request-Id. SQL/스택/초기관리자비밀번호/메일/접속비밀을화면/로그/응답에노출하지않는다. commit후조회실패는별도안내, 자동저장/재시도0회·입력보존.
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: 실제 DB health 조회
+      description: 실제DB SELECT·200/실패503 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-129
+      - REQ-130
+      - REQ-156
+      parameters: []
+      responses:
+        '200':
+          description: 실제 DB SELECT 성공·200. 프로세스 생존만으로 DB 정상 판정을 하지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '503':
+          description: 실제 DB SELECT/연결 실패503. 프로세스 생존으로200을 대신 반환하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DB_UNAVAILABLE
+        '400':
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      x-infrastructure-only: true
+      x-no-client-error-reason: 호출자가 고칠 필수 입력·인증·업무 상태가 없는 health 전용이므로4xx를 추가하지 않는다. 다른 GET에 이 예외를 확장하지 않는다.
+      x-aiops-query-role:
+        role: 인프라 점검
+        entities: []
+        description: 자원 목록/상세 조회가 아닌 실제 DB SELECT. 업무 result_path 없음.
+      x-required-tests:
+      - 'happy: PostgreSQL 연결 정상에서 GET /api/health -> 실제 SELECT 후200 success=true/meta 반환'
+      - 'error: PostgreSQL 연결을 끊고 GET /api/health -> 503 DB_UNAVAILABLE와 한국어 message/requestId·X-Request-Id 반환, 비밀값 노출0건'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-infrastructure-operation-reason: REQ-156·SPEC-REQUEST.md:299/470의 인프라 DB 연결 점검 전용. 실제 SELECT 성공200·실패503만 약속한다.
+  /api/current-user:
+    get:
+      operationId: getCurrentUser
+      summary: 임시 사용자 컨텍스트
+      description: admin/name/roleIds/developmentMode 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-025
+      - REQ-027
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '200':
+          description: 임시 사용자 컨텍스트 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetCurrentUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_USER
+        - TB_SY_USER_ROLE
+        - TB_SY_ROLE
+        result_path:
+        - data
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - CurrentUserProvider는 DB admin, roleIds=[ADMIN], 표시명 임시 관리자, developmentMode=true를 한곳에서 공급한다. 현재 권한은 허용·DataScope=ALL;
+        비밀번호/메일 반환0건.
+      x-required-tests:
+      - 'happy: 초기 admin/ADMIN 연결이 있는 DB에서 인증헤더 없이 GET /api/current-user -> 200 admin=admin/name=임시 관리자/roleIds=[ADMIN]/developmentMode=true,
+        비밀번호·메일 필드없음'
+      - 'validation: GET /api/current-user?userId=other -> 400 UNKNOWN_FIELD·field=userId, 사용자 컨텍스트 불변'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+  /api/menus:
+    get:
+      operationId: getMenus
+      summary: DB 메뉴 구성·정렬
+      description: DB 메뉴·상위ID·이름·screenId·순서·icon·pcOnly·children·진단 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-035
+      - REQ-037
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '200':
+          description: DB 메뉴 구성·정렬 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetMenusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_MENU
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - USE_YN=Y 정상 부모/자식만 반환, 형제 SORT_ORD/MENU_ID순. 이름/icon/pcOnly는 DB 원천이다.
+      - 없는/중지 부모·자기참조·순환·MENU_LVL 깊이 불일치·미등록 screenId 노드와 자손 제외·진단. 중복 screenId는 정상 계층→SORT_ORD→MENU_ID 대표1개, 탈락 트리 제외. 다른
+        부모 이동/DB DML 수정0건. 초기 진단이 남으면 인수 불합격.
+      x-required-tests:
+      - 'happy: 초기40메뉴 DB에서 GET /api/menus -> 이름/icon/pcOnly와 children이 DB와 일치, 10묶음30화면 및 SORT_ORD/MENU_ID순'
+      - 'business: 자기참조/순환/중지부모/깊이불일치·중복SCRN_ID fixture에서 getMenus 호출 -> 비정상노드와자손/탈락트리 제외 및 diagnostics 표시, TB_SY_MENU 수정0건'
+      - 'validation: GET /api/menus?userId=other -> 400 UNKNOWN_FIELD·field=userId'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/period-context:
+    get:
+      operationId: getPeriodContext
+      summary: 화면 기간 선택·기억
+      description: 현재일/연월·timezone·CASH_BASE_YM·마감상태 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-063
+      - REQ-064
+      - REQ-065
+      - REQ-129
+      - REQ-130
+      - REQ-134
+      parameters: []
+      responses:
+        '200':
+          description: 화면 기간 선택·기억 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetPeriodContextResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_OPER_STD
+        - TB_CL_CLOSE
+        result_path:
+        - data
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - Asia/Seoul 서버 현재일/현재월과 실제 CASH_BASE_YM, 현재월 마감상태를 읽는다. 가상 날짜/마감0건.
+      - 'YEAR UI-01/03/05/11/12/13/17/21/28: 시작연도~현재연도+1. YEAR_MONTH UI-04/10/14/16/19: 시작월~현재월. YEAR_CUM UI-07/08/09/18:
+        시작연도~현재연도(07/08/09만 시작연도-1); 선택연도1~12월·현재연도 현재월까지. 나머지 NONE/UI-27 포함.'
+      - 기본기간은 현재일을 허용범위로 제한. 누계 연도 변경은 기존 월을 새범위에 제한·연도와 월 일치. 범위 역전은 운영 시작 전·선택 비활성·PERIOD 저장0회. 연도 배지는 날짜 비교 올해/지난 해·읽기
+        전용/내년·계획. 계산/재계산0회.
+      x-required-tests:
+      - 'happy: 서버/DB Asia/Seoul 및 CASH_BASE_YM=202601에서 GET /api/period-context -> currentDate/currentMonth/timezone/cashBaseMonth와
+        실제월상태 반환'
+      - 'business: CASH_BASE_YM이현재월이후인 DB에서 context조회 후 기간표시 -> 운영시작전·선택비활성·PERIOD 저장요청0건'
+      - 'validation: 허용되지않은 query키로 getPeriodContext 호출 -> 400 UNKNOWN_FIELD와 해당 field'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/month-close:
+    get:
+      operationId: getMonthClose
+      summary: 실제 월 마감 조회
+      description: YYYY-MM 범위·from≤to·이관/마감/작업중 조회 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-021
+      - REQ-066
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/YearMonth'
+        description: 실제 연월. from≤to를 검사한다.
+      - name: to
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/YearMonth'
+        description: 실제 연월. from≤to를 검사한다.
+      responses:
+        '200':
+          description: 실제 월 마감 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetMonthCloseResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed:
+        - from
+        - to
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_CL_CLOSE
+        - TB_SY_OPER_STD
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - from/to 필수 실제 연월·from≤to, 형식/역전400 INVALID_PERIOD. CASH_BASE_YM 이전=이관·결산완료, 이후 TB_CL_CLOSE.CLOSE_STAT_CD=CLOSE는 마감,
+        WORK/행없음은 작업중. 마감 쓰기/가상 기록0건.
+      x-required-tests:
+      - 'happy: 범위에 시작월이전/CLOSE/WORK/행없음을 섞어 GET /api/month-close?from=2026-01&to=2026-11 -> 각 이관·결산완료/마감/작업중 상태·마감행 신규0건'
+      - 'validation: from=2026-13 또는 from>to로 월마감조회 -> 400 INVALID_PERIOD와 from/to 오류위치'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/me/preferences:
+    get:
+      operationId: getPreferences
+      summary: 설정 조회와 기본값
+      description: 설정 value/revision/stored·기본값 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-047
+      - REQ-049
+      - REQ-051
+      - REQ-052
+      - REQ-053
+      - REQ-054
+      - REQ-055
+      - REQ-056
+      - REQ-057
+      - REQ-058
+      - REQ-059
+      - REQ-060
+      - REQ-061
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '200':
+          description: 설정 조회와 기본값 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetPreferencesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_USER_PREF
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - admin 설정 value/revision/stored. 행없음은 stored=false·revision=null·기본값, MENU_FOLD만 value=null. 손상 JSON은 항목 error/revision을
+        반환, 다른항목 유지·자동 삭제0건.
+      - FAV/RECENT 기본[], PAGE_SIZE 기본50, DENSE 기본넓게, AMT_UNIT 기본천원, COLS 기본 전체열/순서, PERIOD 기본은 서버 현재일/범위. 미저장 MENU_FOLD의 PC=false·태블릿=true는
+        화면 책임; 모바일 슬라이드는 임시.
+      - 저장기간 범위 밖은 안내·기본기간 임시표시하되 DB 조용한 수정0건. PC 전용 항목은 표시만 숨기고 저장 배열 보존.
+      x-required-tests:
+      - 'happy: TB_SY_USER_PREF 0행에서 getPreferences 호출 -> stored=false·기본PAGE_SIZE 정수50·MENU_FOLD value=null, DB INSERT0건'
+      - 'business: 한설정 PREF_VAL이손상된DB에서 getPreferences 호출 -> 해당항목 error/revision·다른항목 정상반환, 손상행자동삭제0건'
+      - 'validation: GET /api/me/preferences?userId=other -> 400 UNKNOWN_FIELD·field=userId'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/me/preferences/{type}/{key}:
+    put:
+      operationId: putPreference
+      summary: 설정 명시 저장
+      description: value/expectedRevision → 검증·upsert 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-013
+      - REQ-021
+      - REQ-022
+      - REQ-026
+      - REQ-027
+      - REQ-029
+      - REQ-030
+      - REQ-031
+      - REQ-032
+      - REQ-048
+      - REQ-049
+      - REQ-051
+      - REQ-052
+      - REQ-053
+      - REQ-054
+      - REQ-055
+      - REQ-056
+      - REQ-057
+      - REQ-058
+      - REQ-059
+      - REQ-060
+      - REQ-061
+      - REQ-063
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: type
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/PreferenceType'
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          description: 전역 * 또는 등록 screenId
+          minLength: 1
+          maxLength: 30
+      responses:
+        '200':
+          description: 정상 조회 또는 저장. 변경 요청은 실제 변경없음200 changed=false·수정시각/이력0건을 구분한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/PutPreferenceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutPreferenceRequest'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - USER_ID는 서버 admin. 전역 FAV/RECENT/MENU_FOLD/PAGE_SIZE/DENSE/AMT_UNIT의 key는 *, COLS/PERIOD는 등록 screenId. JSON 직렬화 전체
+        최대2000자. 허용외 필드·다른 처리자400 UNKNOWN_FIELD.
+      - 최초 expectedRevision=null·기본값과 같아도 INSERT. 기존행은 조회 토큰 필수·잠금 후 비교. 동시 최초 PK충돌409 STALE_WRITE; 임의 overwrite/재시도0회. 같은값은200
+        changed=false·바뀐 내용이 없습니다.·수정시각0건.
+      - FAV 등록화면ID 배열 최대10·중복금지·순서 보존/11번째400. RECENT 등록화면ID 최대5·동일화면 맨앞·중복제거·초과 뒤제거는 활성화 부모가 계산하고 서버는 결과 타입/개수 검증. PC_ONLY
+        숨김 때문에 배열을 지우지 않는다.
+      - MENU_FOLD JSON true/false만; 문자열 boolean400. PAGE_SIZE JSON 정수20/50/100만·문자열50은400. DENSE 넓게/좁게·AMT_UNIT 원/천원/백만원만.
+        실제 업무금액 변환0건.
+      - COLS는 UI-27 codes/valueCodes/mappings/standards/history만. order=각 표 전체열 순열, hidden=선택열 부분집합·중복/미등록열/필수숨김400. 체크·작업열
+        제외. 다른화면은 표 정의 생성 후만 허용.
+      - 기본열 codes=code,name,addVal1,addVal2,sortOrder,useYn; valueCodes=code,name,codeVal,unitNm; mappings=sourceText,groupId,code;
+        standards=key,name,value,unitNm,effectiveMonth,description; history=occurredAt,target,groupId,entityKey,type,item,before,after,actor.
+        codes는 전체순서 저장 후 현재 모드/그룹 적용열만 표시.
+      - 필수열 codes/valueCodes=code,name; mappings=sourceText,groupId,code; standards=key,name,value; history=occurredAt,target.
+        선택열만 hidden 허용.
+      - PERIOD YEAR={type:YEAR,value:YYYY}, YEAR_MONTH={type:YEAR_MONTH,value:YYYY-MM}, YEAR_CUM={type:YEAR_CUM,year:YYYY,month:YYYY-MM}.
+        화면 등록 유형·실제 연월·연도일치·getPeriodContext 범위 검증, NONE 쓰기400. 범위 역전 PERIOD 저장0회. 저장기간 범위 밖 행은 자동 UPDATE/DELETE하지 않는다.
+      - 손상 JSON은 해당 항목 오류와 revision으로 격리하며 명시 저장 또는 초기화 전에 자동삭제하지 않는다. PAGE_SIZE/DENSE는 서버성공 후 열린목록·사용자메뉴 동기화, 실패 시 이전 적용값/미저장
+        편집 보존.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - TB_SY_USER_PREF의admin/type/key 한행만INSERT/UPDATE·실제변경시서버등록/수정필드기록. 최초기본값저장도행생성.
+      - 다른설정행·UI-27 TB_SY_CHG_HIST·업무테이블변경0건. 서버성공후PAGE_SIZE/DENSE/열/기간관련열린목록동기화.
+      x-state-transitions:
+      - from: 미저장
+        event: 명시저장
+        to: stored=true, INSERT
+      - from: 기존동일값
+        event: 일치revision저장
+        to: changed=false·감사시각그대로
+      - from: 기존다른값
+        event: 일치revision저장
+        to: changed=true·UPDATE
+      - from: 최신과불일치
+        event: 저장
+        to: 409 STALE_WRITE·이전행보존
+      x-required-tests:
+      - 'happy: TB_SY_USER_PREF에PAGE_SIZE/*행이없고value=50/expectedRevision=null로putPreference -> 200 changed=true·admin/PAGE_SIZE/*행INSERT,
+        getPreferences는stored=true/value JSON정수50'
+      - 'auth: 인증헤더없이admin컨텍스트로DENSE저장후userId=other를추가한요청 -> 정상요청401/역할403/인증redirect0건·처리자admin, 주입요청400·다른사용자행0건'
+      - 'validation: PAGE_SIZE에문자열50·FAV11개·JSON직렬화2001자·COLS필수열숨김·NONE화면PERIOD 각각PUT -> 각400·field=value 또는 value.hidden/type별위치,
+        기존설정·타설정불변'
+      - 'business: 같은키최초null revision저장두개와기존값동일토큰저장 -> 최초선행INSERT/후행409 STALE_WRITE; 동일값200 changed=false·수정시각0건'
+      - 'side-effect: DENSE좁게저장전후DB/열린목록비교 -> 대상설정한행만변경·UI-27이력0건·다른키불변·성공응답2초내열린목록동기화'
+      x-open-questions:
+      - OQ-003
+    delete:
+      operationId: deletePreference
+      summary: 개별 설정 초기화
+      description: expectedRevision → 해당 설정만 초기화 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-026
+      - REQ-027
+      - REQ-029
+      - REQ-030
+      - REQ-032
+      - REQ-050
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: type
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/PreferenceType'
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          description: 전역 * 또는 등록 screenId
+          minLength: 1
+          maxLength: 30
+      - name: expectedRevision
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Revision'
+        description: DELETE의 토큰 전송 위치는 원문 미정. query 사용은 OQ-004 설계 제안으로 승인 대기; 토큰을 URL 로그에 남기지 않도록 구현 검토가 필요하다.
+      responses:
+        '204':
+          description: 변경 commit 완료, 본문 없음. 원문 결과 미지정으로204를 제안하며 OQ-004 승인 대기. 필요 결과는 해당 GET으로 재조회한다.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+      x-open-questions:
+      - OQ-004
+      - OQ-004
+      x-query-validation:
+        allowed:
+        - expectedRevision
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - 현재admin/type/key행만물리DELETE해기본값복원·다른설정유지. expectedRevision은조회토큰·잠금최신비교불일치409 STALE_WRITE. 손상행도조회revision으로명시초기화, 자동삭제0건.
+      - 처리자요청주입400. 설정변경은등록/수정필드만대상이며UI-27이력0건. 초기화후getPreferences에서stored=false·기본값(MENU_FOLD만null). 삭제대상없는행의멱등응답정책은원문미정·OQ-004승인대기.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - 해당admin/type/key행만물리삭제. 다른설정과UI-27이력불변.
+      - getPreferences에서stored=false/기본값복원·MENU_FOLD만null. 미지정삭제성공본문/없는행정책은OQ-004.
+      x-state-transitions:
+      - from: stored=true
+        event: 일치revision초기화
+        to: 행없음·stored=false·기본값
+      - from: 최신과불일치
+        event: 초기화
+        to: 409·다른설정포함불변
+      x-required-tests:
+      - 'happy: 기존PAGE_SIZE/*를조회토큰으로초기화 -> 204제안·GET stored=false/value50로복원'
+      - 'auth: 인증없이admin의DENSE키초기화 -> 401/역할403/인증redirect0건·대상USER_ID=admin만삭제'
+      - 'validation: expectedRevision누락또는query userId=other -> 400·지정설정/다른설정모두불변'
+      - 'business: 손상설정revision을조회한뒤다른클라이언트가고친후기존토큰으로초기화 -> 409 STALE_WRITE·최신설정행유지·자동삭제0건'
+      - 'side-effect: PAGE_SIZE와DENSE가있고PAGE_SIZE만초기화 -> PAGE_SIZE행만없음·DENSE동일·TB_SY_CHG_HIST증가0건'
+  /api/code-groups:
+    get:
+      operationId: getCodeGroups
+      summary: 그룹 목록과 선택
+      description: 그룹·SYS/VAL·sortOrder·미삭제 코드 수 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-069
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '200':
+          description: 그룹 목록과 선택 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetCodeGroupsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_CODE_GRP
+        - TB_SY_CODE
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - DB 전체 그룹 SORT_ORD/CODE_GRP_ID순, 미삭제 코드 수·SYS/VAL 플래그 포함. 원문 전체64그룹(시스템44)은 초기값 검증 수이며 고정 배열 원천이 아니다. 페이지 분할 없음.
+      x-required-tests:
+      - 'happy: 초기64그룹/시스템44 DB에서 getCodeGroups 호출 -> SORT_ORD/CODE_GRP_ID순·SYS/VAL·sortOrder·미삭제 codeCount 반환'
+      - 'validation: GET /api/code-groups?userId=other -> 400 UNKNOWN_FIELD·field=userId, 그룹행불변'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+    post:
+      operationId: createCodeGroup
+      summary: 업무 그룹 생성
+      description: groupId/name →201·일반 업무 그룹 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-013
+      - REQ-014
+      - REQ-016
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-032
+      - REQ-075
+      - REQ-076
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '201':
+          description: 생성 commit 완료. 원문201은 보존하되 미지정 응답 본문을 발명하지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DUPLICATE_GROUP
+          - DUPLICATE_GROUP_NAME
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCodeGroupRequest'
+      x-open-questions:
+      - OQ-004
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - trim/대문자groupId ^[A-Z][A-Z0-9_]{0,29}$·1~30자, name trim1~50자·필수공백/초과400·조용한절단0건.
+      - 그룹테이블직렬화잠금으로ID/trim동명/채번경합방지. 중복ID409 DUPLICATE_GROUP·동명409 DUPLICATE_GROUP_NAME. SYS=N/VAL=N/USE=Y/SORT=max+1·NEW이력과단일commit.
+      - 미저장코드는브라우저에서먼저저장/취소후요청. 그룹수정/삭제/임의추가값정의API는제공하지않는다. 처리자/SYS/VAL/DEL/감사시각주입400.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - TB_SY_CODE_GRP에SYS=N/VAL=N/USE=Y/SORT=max+1 한행과TB_SY_CHG_HIST NEW 함께commit.
+      - 기존그룹·기존코드/업무자료변경0건·commit후getCodeGroups재조회및새그룹선택.
+      x-state-transitions:
+      - from: 미등록
+        event: 중복없는추가
+        to: SYS=N·VAL=N·USE=Y·NEW
+      - from: ID/trim명중복
+        event: 추가
+        to: 409·신규그룹/이력0건
+      x-required-tests:
+      - 'happy: 미등록유효groupId/name으로createCodeGroup -> 201·TB_SY_CODE_GRP에대문자ID/SYS=N/VAL=N/USE=Y/SORT=max+1, getCodeGroups에서동일행조회'
+      - 'auth: 인증없이정상그룹추가후regUserId=other필드를추가전송 -> 인증차단401/403/redirect0건·등록자admin; 주입400·위조등록0건'
+      - 'validation: 숫자시작/31자groupId 또는51자/trim빈name으로createCodeGroup -> 각400·field=groupId/name, TB_SY_CODE_GRP와NEW이력0건'
+      - 'business: 동일ID또는trim동명이름을두클라이언트동시추가 -> 후행409 DUPLICATE_GROUP또는DUPLICATE_GROUP_NAME·중복0건·채번경합방지'
+      - 'side-effect: 정상추가전후그룹/이력/기존코드비교 -> 그룹1행/NEW1건같은commit·기존코드/업무자료불변'
+  /api/code-groups/{group}/codes:
+    get:
+      operationId: getGroupCodes
+      summary: 일반 코드 조회
+      description: page/size → 미삭제 코드(중지 포함)·추가값/값/단위·groupRevision 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-029
+      - REQ-068
+      - REQ-070
+      - REQ-088
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: group
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: 일반 코드 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetGroupCodesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 요청한 등록 그룹/코드/기준키가 없다. 기존 값을 임의 생성하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - page
+        - size
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_CODE
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - DEL_YN=N 중지 코드 포함 SORT_ORD/CODE순. page≥1·size20/50/100 기본50. total은 전체 건수. groupRevision은 그룹과 소속 전체 코드의 식별자·값·감사시각을
+        포함하며 현재 페이지만으로 만들지 않는다.
+      - SYS 규칙 우선. SYS=N/VAL=Y의 값코드는 code/name/codeVal/unitNm4열·기존 값만 편집. 표시가 잠금 해제를 뜻하지 않는다.
+      x-required-tests:
+      - 'happy: 일반그룹에 active/중지/삭제행이있는DB에서 getGroupCodes page=1,size=50 호출 -> DEL_YN=N의 active/중지행만 SORT_ORD/CODE순, 정확한추가값/값/단위·groupRevision
+        반환'
+      - 'validation: getGroupCodes page=0 또는 size=30 -> 400 VALIDATION_ERROR·field=page 또는 size'
+      - 'revision: REG_DTTM/MOD_DTTM 양NULL인 기존코드의 저장값을변경한뒤 재조회 -> 시각이같아도 groupRevision 달라짐'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+    put:
+      operationId: saveGroupCodes
+      summary: 일반 코드 일괄 변경 저장
+      description: expectedRevision/changes:[{code,isNew,...변경필드}] → 그룹 단위 저장. 일반 name/useYn/addVal1/2, 시스템 name, 기존 값코드 codeVal만
+        원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-013
+      - REQ-015
+      - REQ-016
+      - REQ-017
+      - REQ-018
+      - REQ-019
+      - REQ-020
+      - REQ-022
+      - REQ-023
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-029
+      - REQ-030
+      - REQ-031
+      - REQ-032
+      - REQ-071
+      - REQ-073
+      - REQ-074
+      - REQ-078
+      - REQ-079
+      - REQ-080
+      - REQ-081
+      - REQ-082
+      - REQ-083
+      - REQ-084
+      - REQ-085
+      - REQ-086
+      - REQ-087
+      - REQ-089
+      - REQ-090
+      - REQ-091
+      - REQ-092
+      - REQ-093
+      - REQ-123
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: group
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      responses:
+        '200':
+          description: 정상 조회 또는 저장. 변경 요청은 실제 변경없음200 changed=false·수정시각/이력0건을 구분한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SaveGroupCodesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 요청한 등록 그룹/코드/기준키가 없다. 기존 값을 임의 생성하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - DUPLICATE_CODE
+          - SYSTEM_CODE_LOCKED
+          - VALUE_CODE_FIELD_LOCKED
+          - ORDER_LIMIT
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveGroupCodesRequest'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - 잠금은 키 오름차순, 그룹/전체 소속코드 최신값과 expectedRevision 비교 후 모드·참조·차이 검사. 시각 양NULL이라도 값이 다르면 다른 revision. STALE_WRITE409 후행 데이터/이력0건.
+      - SYS_CODE_YN=Y를 VAL_CODE_YN보다 먼저 적용한다. 시스템+값 그룹도 기존 name만 허용·codeVal 금지. 시스템 신규·삭제·순서·사용·추가값·값/단위변경409 SYSTEM_CODE_LOCKED,
+        혼합 이름 변경도 롤백.
+      - SYS=N·VAL=Y 기존은 codeVal만, 다른 기존필드/삭제409 VALUE_CODE_FIELD_LOCKED. 신규값은 code/name 필수·codeVal 기본/빈0·unitNm 원/% 기본원. 일반
+        신규 code/name/해당 추가값 필수. 신규행은 USE_YN=Y·DEL_YN=N·SORT_ORD=max+1, 같은요청 전달순서 채번. NUMERIC(5) 초과409 ORDER_LIMIT 전체롤백.
+      - 일반 기존 변경 name/useYn/해당 addVal1/2만. 저장된 PK·정렬은 불변. 미전송/다른페이지 행 삭제0건. 동일code 중복400, 삭제행도 PK중복409 DUPLICATE_CODE. 코드명
+        중복은 허용. 창의 추가/취소는 브라우저 편집행만이며 하단 저장 전 DB0건.
+      - 문자 trim/대문자 후 code ^[A-Z0-9_]{1,20}$·name1~100. 숫자는 공백/쉼표/끝 원/% 제거 후0~99999999999.9999·최대11정수/4소수·BigDecimal 문자열.
+        음수/지수/NaN/Infinity/다른문자/12정수/5소수400. 자동반올림/버림0회·%단위만으로100상한 추가0건.
+      - 추가값 정규화 후 각각1~100자. JOB addVal1=JOB CSV·addVal2=0~999999999999999원 정수 문자열(공백/쉼표/끝 원 정리·음수/소수/초과400). SKILL addVal1=JOB
+        CSV. PROJ_STEP addVal1=0~100포함 정수·addVal2=CTRT_TYPE CSV. BANK addVal1=정확한숫자3자리·앞0보존. RSM_LABEL addVal1=NAME/TEL/MAIL/ADDR/SKILL/WANT/FROM/VNDR
+        대문자 중1개. RSM_JOB_KW addVal1=JOB CSV.
+      - CSV 쉼표분리→trim/대문자→빈항목400→첫등장순 중복제거→쉼표결합. 최소1개·실재/미삭제·새참조 USE_YN=Y. 같은요청 신규 JOB 최종상태 참조·JOB자기포함은 허용/필수아님. 기존 중지참조 그대로
+        유지 허용. 다른그룹의 알려진 추가값필드400; 비적용 ADD_VAL은NULL·ADD_VAL3 미사용.
+      - 일반 USE_YN=N/Y는 STOP/RESUME. name 변경 이력 CHG_ITEM_NM=CODE_NM, 기타 UPD는 변경컬럼별 전후. NEW는 등록·이전NULL·이후식별자/이름/값. 모든 이력값500자
+        초과 조용한절단0회·실패시전체롤백.
+      - revision 일치 후 실제변경0은200 changed=false·바뀐 내용이 없습니다.·MOD_DTTM/이력0건. 실제변경 commit후 changed=true·재조회/서버캐시무효화. 수당변경은 공통조회
+        값/단위만 바꾸고 프로젝트 팀비/경비/정산 변경0건.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - TB_SY_CODE의전송변경분과TB_SY_CHG_HIST NEW/UPD/STOP/RESUME만동일트랜잭션저장. 미전송/다른페이지코드보존.
+      - name이력CHG_ITEM_NM=CODE_NM·STOP/RESUME는USE_YN·NEW등록의이전NULL. 이력값500자이내무절단.
+      - no-op MOD_DTTM/이력0건; 실제변경후getCodes/열린선택목록갱신. 프로젝트팀비/경비/정산변경0건.
+      x-state-transitions:
+      - from: 신규편집행
+        event: 하단그룹저장
+        to: DB신규·USE=Y·DEL=N·NEW
+      - from: USE=Y
+        event: useYn=N저장
+        to: USE=N·STOP
+      - from: USE=N
+        event: useYn=Y저장
+        to: USE=Y·RESUME
+      - from: 일치revision·값동일
+        event: 저장
+        to: 200 changed=false·시각/이력0건
+      - from: SYS=Y·VAL임의
+        event: name만저장
+        to: UPD CODE_NM
+      - from: SYS=Y·VAL=Y
+        event: codeVal변경
+        to: 409 SYSTEM_CODE_LOCKED·전체불변
+      x-required-tests:
+      - 'happy: 일반그룹기존두행name/useYn과신규행을같은revision으로saveGroupCodes -> 200 changed=true·TB_SY_CODE변경값 getGroupCodes재조회·신규순서max+1·미전송다른페이지보존'
+      - 'auth: 인증없이저장후modUserId=other·sysCodeYn·delYn주입을각전송 -> 정상저장인증차단401/403/redirect0건·처리자admin; 주입400·모드잠금과별개'
+      - 'validation: JOB월단가소수/15자리초과·BANK2자리·PROJ_STEP100.1·CSV빈항목·codeVal5소수 각각전송 -> 각400·field=changes의addVal2/addVal1/codeVal위치·TB_SY_CODE/이력0건,
+        BANK앞0/4소수원값은허용'
+      - 'business: SYS=Y·VAL=Y에name만저장후name+codeVal혼합; 같은revision두저장; 동일값저장 -> 이름만성공·혼합409 SYSTEM_CODE_LOCKED/전체불변; 선행1/후행409
+        STALE_WRITE; 동일값200 changed=false·시각/이력0건'
+      - 'side-effect: 일반STOP/RESUME와수당값변경전후조회·DB비교 -> STOP/RESUME·CODE_NM이력정확·중지기본옵션제외/includeInactive포함·프로젝트팀비/경비/정산불변·2초내캐시갱신'
+      - 'business: CTRT_TYPE TK에name만저장후 name+useYn 혼합저장 -> 첫저장후이름재조회성공·혼합409 SYSTEM_CODE_LOCKED/이름·USE_YN·이력불변'
+      - 'business: 일반VAL=Y코드의unitNm변경/삭제 요청 -> 409 VALUE_CODE_FIELD_LOCKED·값/단위/이력불변; SYS=Y/VAL=Y의기존name만변경은허용·codeVal변경409
+        SYSTEM_CODE_LOCKED'
+      - 'revision: 같은groupRevision으로두저장요청및양NULL시각값변경후기존토큰저장 -> 선행1건성공/후행409 STALE_WRITE·후행DB/이력0건, NULL시각만으로동일판정안함'
+      - 'validation: 신규code중복2개또는동일그룹삭제PK재추가 또는SORT_ORD한계초과 -> 각400/409 DUPLICATE_CODE/409 ORDER_LIMIT·그룹전체/이력롤백'
+      - 'validation: 같은요청신규JOB참조·기존중지CSV유지·자기JOB참조로저장 -> 정규화첫등장순중복제거후저장; 미존재/삭제/신규중지참조는400·필드위치및전체불변'
+      - 'no-change: 최신revision·기존값과동일한changes 저장 -> 200 changed=false·바뀐내용이없습니다·TB_SY_CODE.MOD_DTTM/이력불변'
+      x-open-questions:
+      - OQ-003
+      - OQ-004
+  /api/code-groups/{group}/codes/{code}:
+    delete:
+      operationId: deleteGroupCode
+      summary: 일반 코드 논리 삭제
+      description: expectedRevision → 참조 검사·논리 삭제 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-029
+      - REQ-030
+      - REQ-032
+      - REQ-074
+      - REQ-079
+      - REQ-089
+      - REQ-094
+      - REQ-095
+      - REQ-096
+      - REQ-097
+      - REQ-098
+      - REQ-123
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: group
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      - name: code
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/CodeId'
+      - name: expectedRevision
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Revision'
+        description: DELETE의 토큰 전송 위치는 원문 미정. query 사용은 OQ-004 설계 제안으로 승인 대기; 토큰을 URL 로그에 남기지 않도록 구현 검토가 필요하다.
+      responses:
+        '204':
+          description: 변경 commit 완료, 본문 없음. 원문 결과 미지정으로204를 제안하며 OQ-004 승인 대기. 필요 결과는 해당 GET으로 재조회한다.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 요청한 등록 그룹/코드/기준키가 없다. 기존 값을 임의 생성하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - SYSTEM_CODE_LOCKED
+          - VALUE_CODE_FIELD_LOCKED
+          - CODE_IN_USE
+      x-open-questions:
+      - OQ-004
+      - OQ-004
+      x-query-validation:
+        allowed:
+        - expectedRevision
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - 현재일반업무코드만. SYS가VAL보다우선·시스템409 SYSTEM_CODE_LOCKED·일반값409 VALUE_CODE_FIELD_LOCKED. 삭제전미저장편집저장/취소와확인은화면책임.
+      - 그룹/대상행잠금→전체그룹최신expectedRevision비교→고정참조재검사. 취소/중지/마감참조도계수·자기NEW이력은사용아님. 참조1건이상409 CODE_IN_USE·유형/건수·사용된 코드라 삭제할 수 없습니다.
+        사용을 끄세요.
+      - 참조없으면DEL_YN N→Y논리삭제·물리행/PK보존·DEL이력. 동일PK재추가409 DUPLICATE_CODE. 요청테이블명SQL조립0회. 삭제/이력한트랜잭션·실패전체0건.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-reference-guard:
+        source: SPEC-REQUEST.md:224-239
+        common: 모든 그룹의 TB_SY_CODE_MAP group/code 참조 검사. 요청 테이블명으로 SQL 생성금지.
+        mappings:
+        - '|JOB|TB_HR_DEV·TB_HR_CAND의 JOB_CD/SUB_JOB_CD, TB_PJ_MNPW_PLAN·TB_PJ_ASGN·TB_SL_OPP_NEED·TB_SL_RCMD_LOG의 JOB_CD.
+          다른 미삭제 JOB/SKILL/RSM_JOB_KW 행의 JOB CSV 참조|'
+        - '|GRADE|TB_HR_DEV·TB_HR_CAND·TB_SL_OPP_NEED의 GRADE_CD, TB_SL_RCMD_LOG.REQ_GRADE_CD|'
+        - '|JBPS / EXT_PSBL|TB_HR_DEV.JBPS_CD / TB_PJ_ASGN.EXT_PSBL_CD. EXT_PSBL은 ASGN_CHG_TYPE_CD=EXTP인 TB_PJ_ASGN_HIST.BFR_VAL/AFT_VAL의
+          코드/이름도 검사|'
+        - '|SGA_ITEM / DRCT_EXPS_ITEM|TB_FI_ITEM.SGA_ITEM_CD / TB_PJ_DRCT_EXPS.DRCT_EXPS_ITEM_CD|'
+        - '|CHG_ITEM / IMPR / PROJ_STEP|TB_PJ_PROJ_CHG.CHG_ITEM_CD / TB_PJ_ISSUE.IMPR_CD / TB_PJ_STEP.PROJ_STEP_CD|'
+        - '|CNTC_STAT / CAND_SRC|TB_HR_CAND·TB_HR_CAND_CNTC의 CNTC_STAT_CD / TB_HR_CAND.CAND_SRC_CD|'
+        - '|ASGN_CHG_RSN / LOSE_RSN|TB_PJ_ASGN_HIST.ASGN_CHG_RSN_CD / TB_PJ_PROJ·TB_SL_OPP의 LOSE_RSN_CD|'
+        - '|RCMD_EXCL / BANK / INDUTY|TB_SL_RCMD_LOG.RCMD_EXCL_CD / TB_BS_CLNT.BANK_CD / TB_BS_CLNT.INDUTY_CD|'
+        - '|SKILL|TB_HR_DEV_SKILL·TB_HR_CAND_SKILL의 SKILL_NM. 현재 이름과 해당 코드명 변경 이력의 과거 이름을 함께 검사|'
+        - '|RSM_LABEL / RSM_JOB_KW / 신규 업무 그룹|공통 표기 대응 참조. 별도 업무 컬럼 참조는 없음|'
+        special: EXT_PSBL은 ASGN_CHG_TYPE_CD=EXTP인 TB_PJ_ASGN_HIST.BFR_VAL/AFT_VAL 코드/이름도검사. SKILL은현재명+CODE_NM과거이름이력모두검사. JOB은다른미삭제JOB/SKILL/RSM_JOB_KW의CSV도검사.
+          ALWNC는값코드라삭제대상아님.
+      x-side-effects:
+      - TB_SY_CODE DEL_YN=Y논리갱신·DEL이력의DEL_YN N→Y함께commit. 물리행/PK보존.
+      - 공통조회/편집목록에서삭제행제외. 모든참조업무행불변·동일PK재사용거부. 충돌/참조실패시DEL_YN/시각/이력0건변경.
+      x-state-transitions:
+      - from: 일반·미삭제·미참조
+        event: 일치revision삭제
+        to: DEL=N→Y·DEL·물리행보존
+      - from: 참조1건이상
+        event: 삭제
+        to: 409 CODE_IN_USE·전체불변
+      - from: 시스템/값코드
+        event: 삭제
+        to: 모드별409·전체불변
+      x-required-tests:
+      - 'happy: 미참조일반코드를최신groupRevision으로deleteGroupCode -> 204제안·TB_SY_CODE.DEL_YN=Y/물리행·PK존속·getGroupCodes에서제외'
+      - 'auth: 인증없이일반미참조코드삭제 -> 401/역할403/redirect0건·삭제처리자/DEL등록자admin'
+      - 'validation: expectedRevision누락또는query userId=other로deleteGroupCode -> 400·field=expectedRevision/userId, DEL_YN·시각·이력불변'
+      - 'business: 고정참조각1건·SKILL과거이름·EXT_PSBL EXTP이력·표기대응참조·자기NEW만각fixture -> 앞의참조는409 CODE_IN_USE와유형/건수·자기NEW만이면삭제허용. SYS/VAL모드는정해진409,
+        stale도409전체불변'
+      - 'side-effect: 미참조삭제후이력조회·같은PK재추가 -> DEL의DEL_YN N→Y·실제행존속·재추가409 DUPLICATE_CODE·참조업무행불변'
+  /api/codes/{group}:
+    get:
+      operationId: getCodes
+      summary: 공통 active 코드 조회
+      description: includeInactive=false 기본·조회용 정확한 값/단위 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-032
+      - REQ-091
+      - REQ-092
+      - REQ-126
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: group
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      - name: includeInactive
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: false는 USE_YN=Y·DEL_YN=N, true는 기존 중지 label 조회 포함. 삭제코드는 제외.
+      responses:
+        '200':
+          description: 공통 active 코드 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetCodesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 요청한 등록 그룹/코드/기준키가 없다. 기존 값을 임의 생성하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed:
+        - includeInactive
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_CODE
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - 기본 USE_YN=Y·DEL_YN=N, SORT_ORD/CODE순. includeInactive=true에서만 미삭제 중지 label을 함께 조회한다. 신규 선택에는 중지를 끼워넣지 않는다. code/name/addVal1~3/codeVal/unitNm
+        정확 반환·계산0회.
+      x-required-tests:
+      - 'happy: ALWNC SQL6값을가진DB에서 getCodes 호출 -> code/name/addVal1~3/codeVal/unitNm만 반환, INS_RATE codeVal=9.4 문자열·단위%'
+      - 'business: 일반코드 USE_YN=N 상태에서 includeInactive=false/true로 각각조회 -> 기본신규목록제외·true기존label조회포함, DB변경0건'
+      - 'validation: includeInactive=문자열타입오류로 GET /api/codes/{group} -> 400 field=includeInactive'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/code-mappings:
+    get:
+      operationId: getCodeMappings
+      summary: 표기 대응 목록·검색
+      description: sourceText/groupId/page/size → 목록·행revision 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-029
+      - REQ-068
+      - REQ-115
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sourceText
+        in: query
+        required: false
+        schema:
+          type: string
+          description: 부분일치
+          maxLength: 100
+      - name: groupId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      responses:
+        '200':
+          description: 표기 대응 목록·검색 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetCodeMappingsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed:
+        - page
+        - size
+        - sourceText
+        - groupId
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_CODE_MAP
+        - TB_SY_CODE
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - sourceText 부분일치/groupId 필터, SRC_TEXT/CODE_GRP_ID/MAP_ID순. page≥1·size20/50/100 기본50. 각 행 revision, 빈목록 items=[]/total=0.
+      x-required-tests:
+      - 'happy: 같은 sourceText를다른그룹에둔 DB에서 sourceText부분일치/groupId로 getCodeMappings 호출 -> 해당필터만 SRC_TEXT/CODE_GRP_ID/MAP_ID순·행revision·total/page/size
+        반환'
+      - 'empty: 초기0행DB에서 getCodeMappings page=1,size=50 -> items=[]/total=0/page=1/size=50'
+      - 'validation: 대응목록page=0 또는 size=30 -> 400 field=page 또는 size·저장0건'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+    post:
+      operationId: createCodeMapping
+      summary: 대응 즉시 등록
+      description: sourceText/groupId/code →201 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-013
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-032
+      - REQ-116
+      - REQ-117
+      - REQ-118
+      - REQ-121
+      - REQ-123
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '201':
+          description: 생성 commit 완료. 원문201은 보존하되 미지정 응답 본문을 발명하지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - DUPLICATE_MAPPING
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCodeMappingRequest'
+      x-open-questions:
+      - OQ-004
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - sourceText trim1~100자·groupId/code필수·실재그룹과active미삭제코드만. UK(sourceText,groupId)중복은다른code라도409 DUPLICATE_MAPPING, 다른그룹같은표기허용.
+      - 즉시DB INSERT·NEW의이후sourceText/groupId/code/codeName JSON·이전NULL. 이력500자초과절단0회·데이터/이력한트랜잭션. 수정은삭제후재등록·주보조/메모/사용/적용일필드400.
+        기존업무값/행수변경0건.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - TB_SY_CODE_MAP 즉시INSERT와NEW이후JSON(sourceText/groupId/code/codeName), 이전NULL을함께commit.
+      - 기존업무자료수정0건; getCodeMappings와getCommonCodeHistory재조회. 수정API/파일파서없음.
+      x-state-transitions:
+      - from: UK미등록·대상active
+        event: 추가
+        to: 즉시DB행·NEW
+      - from: UK기등록
+        event: 다른code로추가
+        to: 409 DUPLICATE_MAPPING·기존행불변
+      x-required-tests:
+      - 'happy: trim필요sourceText·실재groupId·active code로createCodeMapping -> 201·TB_SY_CODE_MAP즉시INSERT, getCodeMappings에서trim값/groupId/code
+        재조회'
+      - 'auth: 인증없이추가후regUserId=other주입요청 -> 정상추가401/역할403/redirect0건·등록자admin; 주입400'
+      - 'validation: 공백/101자sourceText·중지/삭제/미존재code·허용외memo로createCodeMapping -> 각400·field=sourceText/code/memo, TB_SY_CODE_MAP/NEW이력0건'
+      - 'business: 동일sourceText+groupId에서다른code등록과다른groupId등록 -> 전자는409 DUPLICATE_MAPPING·후자는201허용'
+      - 'side-effect: 정상추가전후대응/이력/업무테이블비교 -> 대응1행·NEW이후JSON sourceText/groupId/code/codeName·이전NULL·기존업무불변'
+  /api/code-mappings/delete:
+    post:
+      operationId: deleteCodeMappings
+      summary: 대응 다중 물리 삭제
+      description: items:[{mapId,expectedRevision}] → 원자적 실제삭제 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-029
+      - REQ-030
+      - REQ-032
+      - REQ-118
+      - REQ-119
+      - REQ-120
+      - REQ-121
+      - REQ-123
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '204':
+          description: 변경 commit 완료, 본문 없음. 원문 결과 미지정으로204를 제안하며 OQ-004 승인 대기. 필요 결과는 해당 GET으로 재조회한다.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteCodeMappingsRequest'
+      x-open-questions:
+      - OQ-004
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - items mapId/expectedRevision검사·키오름차순잠금·하나누락/변경409 STALE_WRITE전체DELETE0건/DEL이력0건.
+      - 유효선택행모두물리DELETE·각DEL의이전sourceText/groupId/code/codeName JSON·이후NULL. TRGT_KEY=groupId:mapId로삭제후에도정확한그룹접두필터가능.500자초과조용한절단0회.
+        기존업무자료수정0건.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - 선택TB_SY_CODE_MAP행실제DELETE와DEL이전JSON·이후NULL을한트랜잭션commit.
+      - 삭제후TRGT_KEY=groupId:mapId로이력식별가능. 다른대응/기존업무행불변. 한행충돌시모든선택행/이력불변.
+      x-state-transitions:
+      - from: 모든선택행최신
+        event: 선택삭제
+        to: 전행물리삭제·각DEL
+      - from: 선택중1행누락/변경
+        event: 선택삭제
+        to: 409·전행존속·DEL0건
+      x-required-tests:
+      - 'happy: 서로다른두mapId와최신expectedRevision으로deleteCodeMappings -> 204제안·TB_SY_CODE_MAP두행물리삭제·getCodeMappings에둘다없음'
+      - 'auth: 인증없이두행삭제 -> 401/역할403/redirect0건·각DEL등록자admin'
+      - 'validation: items.mapId/expectedRevision누락또는actor주입으로deleteCodeMappings -> 400·field=items해당필드/actor, 선택행과DEL이력변경0건'
+      - 'business: 두행중한행누락또는revision변경후기존선택목록삭제 -> 409 STALE_WRITE·두행삭제0건·DEL0건'
+      - 'side-effect: 정상삭제후groupId로이력조회및업무테이블대조 -> 각DEL이전JSON식별가능·이후NULL·정확한groupId접두키·기존업무불변'
+  /api/operating-standards:
+    get:
+      operationId: getOperatingStandards
+      summary: 운영 기준 전체 조회
+      description: 생략현재월·43키의 유효값/단위/설명/적용월·keyRevision 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-029
+      - REQ-068
+      - REQ-099
+      - REQ-100
+      - REQ-101
+      - REQ-104
+      - REQ-109
+      - REQ-111
+      - REQ-113
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/YearMonth'
+        description: 생략 시 Asia/Seoul 서버 현재월.
+      responses:
+        '200':
+          description: 운영 기준 전체 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetOperatingStandardsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed:
+        - month
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_OPER_STD
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - SQL43키 전체 STD_CD순 비페이지. page/size를 받아 페이지를 나누지 않는다. 키/이름/단위/설명 읽기전용.
+      - month 생략 현재월, 해당월 이하 최신 적용행만 값으로 선택. 유효행없음은 value/effectiveMonth=null·기준값 없음이며0대체0회. 미래값 현재 오용0회. keyRevision은 모든
+        적용월 이력 범위.
+      - 일반 최소월=max(CASH_BASE_YM,마지막 CLOSE월+1), CLOSE없으면 시작월; 기본월=max(현재월,최소월). CASH 두키는 기존 시작월 CLOSE이면 모두 읽기전용.
+      x-required-tests:
+      - 'happy: 43키와현재/미래행이있는DB에서 month생략 getOperatingStandards 호출 -> STD_CD순43키 비페이지·현재월이하최신값/단위/설명/적용월/keyRevision, 미래값오용0건'
+      - 'business: 조회월이전 유효행이없는키조회 -> 해당키 기준값없음 투영·임의0기본값생성0건'
+      - 'validation: month=2026-00으로 기준목록조회 -> 400 INVALID_PERIOD·field=month'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+    put:
+      operationId: saveOperatingStandards
+      summary: 기준 월별 추가·덮어쓰기
+      description: effectiveMonth?/changes:[{key,value,expectedRevision}] → 검증·이력·저장.6.3 두키는effectiveMonth없이 별도요청 원문 접두사 /api와
+        camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-010
+      - REQ-011
+      - REQ-013
+      - REQ-017
+      - REQ-018
+      - REQ-019
+      - REQ-021
+      - REQ-023
+      - REQ-026
+      - REQ-027
+      - REQ-028
+      - REQ-029
+      - REQ-030
+      - REQ-031
+      - REQ-032
+      - REQ-101
+      - REQ-102
+      - REQ-103
+      - REQ-104
+      - REQ-105
+      - REQ-106
+      - REQ-107
+      - REQ-108
+      - REQ-109
+      - REQ-110
+      - REQ-111
+      - REQ-112
+      - REQ-113
+      - REQ-114
+      - REQ-123
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      parameters: []
+      responses:
+        '200':
+          description: 정상 조회 또는 저장. 변경 요청은 실제 변경없음200 changed=false·수정시각/이력0건을 구분한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SaveOperatingStandardsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '409':
+          description: 최신값 잠금/업무 보호 검사 실패. 한 요청의 데이터와 이력은 모두0건 변경. 구체 조건은 x-business-rules와 테스트에 명시한다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - CLOSED_MONTH
+      requestBody:
+        required: true
+        description: 허용 필드만 전송. 처리자·SYS/VAL/DEL·감사시각 주입400; 알려진 모드 금지 필드는409.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveOperatingStandardsRequest'
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-business-rules:
+      - changes key중복400·미변경칸재저장0건. 일반 effectiveMonth/value필수·기존키만, 메타/신규키/삭제없음. 요청월=max이 아니라 실제 선택월을 저장, 최소월=max(CASH_BASE_YM,마지막CLOSE+1),
+        CLOSE없음은시작월. 최소월전409 CLOSED_MONTH·기본월=max(현재월,최소월).
+      - 키오름차순잠금·각키 전체적용월revision 비교·불일치409 STALE_WRITE. 같은적용월UPDATE(덮어쓸월/전후확인), 없으면INSERT·다른월보존. 한키실패는한요청데이터/이력전체0건. 시각양NULL도값변경이면다른revision.
+      - 일반값 정리후0~99999999999.9999·정수11/소수4·BigDecimal·무반올림. 빈값/음수/지수/NaN/Infinity/금지문자/12정수/5소수400. 단위/기준명으로 추가상한을 추정하지 않는다.
+      - 'DUN_D1/2/3: D1≥1·D1<D2<D3(일반소수4허용). EXT_PRBL_H/M/L/NULL 및 STEP_PRBL_1/2/3/4 각0~100포함. AI_SCORE_JOB/SKILL/CUST/GRADE/PERF/COST/AVAIL/LOC
+        각0~100·합정확히100(BigDecimal). WTHDR_NOTI_D 1~99999999999정수·소수거부.'
+      - 묶음 DUN, EXT_PRBL, STEP_PRBL, BILL_MISS_RT/MIN, AI_SCORE는 미변경키까지같은트랜잭션잠금. 적용월 유효값+변경값으로 해당구간과 이후예정기준 경계월 전부합/순서/범위검사,
+        한경계위반400전체롤백. BILL_MISS는 원문 없는추가업무상한없음. 화면최대4입력/줄·AI8은2줄이되각STD_CD행저장.
+      - CASH_BASE_YM/AMT는 키당1행·일반이력키와혼합400·effectiveMonth를보내도400. 두행함께잠금후 기존 CASH_BASE_YM의TB_CL_CLOSE=CLOSE재검사; 새시작월로우회불가·두키모두409
+        CLOSED_MONTH.
+      - CASH_BASE_YM value는실제YYYYMM6자리·소수없음·화면YYYY-MM/DB정수/읽기6자리복원. CASH_BASE_AMT는일반정밀도. 기존시작월미마감일때만동일행즉시UPDATE·원래APLY_BGN_YM보존·키당1행유지·변경컬럼UPD전후이력.
+      - revision일치·실제변경0은200 changed=false·바뀐 내용이 없습니다.·수정시각/이력0건. 변경commit후changed=true·재조회. CASH저장후period-context/기준조회만갱신·자금수지계산/마감자료/프로젝트팀비/경비/정산변경0건.
+      - 등록/수정 처리자는 CurrentUserProvider의 admin, 요청으로 다른 처리자 지정불가. 성공 commit 뒤 서버캐시무효화·성공응답후2초내 저장브라우저 관련캐시/열린선택목록/설정최신화·다른브라우저는다음조회최신.
+        실패입력보존·자동재저장/자동재시도0회; commit후재조회만실패하면 저장됐지만 다시 불러오지 못했습니다.로구분한다.
+      x-side-effects:
+      - 일반TB_SY_OPER_STD는해당STD_CD/적용월만UPDATE/INSERT·변경컬럼이력. 다른월/미변경키감사시각보존.
+      - CASH는기존행만UPDATE·키당1행/원래APLY_BGN_YM보존·UPD이력. 두행잠금후기존시작월CLOSE보호.
+      - 성공후getOperatingStandards/getParameter, CASH변경은getPeriodContext갱신. 자금수지계산/마감자료/프로젝트팀비/경비/정산변경0건. no-op이력/수정시각0건.
+      x-state-transitions:
+      - from: 일반해당월행없음
+        event: 최소월이후유효값저장
+        to: 신규적용월INSERT·다른월보존
+      - from: 일반해당월행있음
+        event: 일치revision덮어쓰기
+        to: 해당월UPDATE
+      - from: 일치revision·값동일
+        event: 저장
+        to: 200 changed=false·시각/이력0건
+      - from: 기존CASH시작월CLOSE
+        event: 새시작월/잔액저장
+        to: 409 CLOSED_MONTH·두키불변
+      - from: 기존CASH시작월미마감
+        event: 별도요청저장
+        to: 기존행UPDATE·APLY_BGN_YM보존·UPD
+      x-required-tests:
+      - 'happy: 일반키최소월에값변경후새적용월에saveOperatingStandards -> 200 changed=true·TB_SY_OPER_STD기존월UPDATE/새월INSERT를getOperatingStandardHistory로확인·다른월보존'
+      - 'auth: 인증없이기준저장후regUserId=other주입 -> 정상저장401/역할403/redirect0건·처리자admin; 주입400·위조이력0건'
+      - 'validation: AI합99/101·DUN역전·확률101·WTHDR0/소수·중복key·일반/CASH혼합·CASH effectiveMonth각PUT -> 각400·field=changes.value/key/effectiveMonth의해당위치,
+        TB_SY_OPER_STD/이력전체0건'
+      - 'business: 현재경계합100/미래경계합99fixture, 기존CASH시작월CLOSE에서새시작월시도, 동일revision두저장/동일값 -> 미래위반400전체롤백·CASH409 CLOSED_MONTH두키불변·후행409
+        STALE_WRITE·동일값200 changed=false'
+      - 'side-effect: 기존시작월미마감CASH두키별도저장후DB/이력/기간조회비교 -> 각키1행·원래APLY_BGN_YM보존·UPD전후정확·period-context최신·자금계산/마감/프로젝트자료불변'
+      - 'business: 최소월이전effectiveMonth로일반기준저장 -> 409 CLOSED_MONTH·해당키모든적용월과이력불변'
+      - 'business: 변경월AI합100이나이후예정경계합99/101인fixture저장 -> 400·미변경키포함전체잠금검사·TB_SY_OPER_STD/이력전부불변'
+      - 'business: 기존CASH_BASE_YM=CLOSE인DB에서새시작월/잔액PUT -> 409 CLOSED_MONTH·두기준행값/APLY_BGN_YM불변·마감잠금우회0회'
+      - 'business: 기존CASH시작월미마감에서두키별도요청 -> TB_SY_OPER_STD각1행UPDATE·원래APLY_BGN_YM보존·getPeriodContext와기준조회최신'
+      - 'no-change: 최신keyRevision과동일기준값PUT -> 200 changed=false·TB_SY_OPER_STD.MOD_DTTM/UPD이력0건'
+      x-open-questions:
+      - OQ-003
+      - OQ-004
+  /api/operating-standards/{key}/history:
+    get:
+      operationId: getOperatingStandardHistory
+      summary: 기준 현재·과거·미래 이력
+      description: 모든 적용월·현재/예정·revision 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-029
+      - REQ-100
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          description: 등록 기준키
+          minLength: 1
+          maxLength: 30
+      responses:
+        '200':
+          description: 기준 현재·과거·미래 이력 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetOperatingStandardHistoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 요청한 등록 그룹/코드/기준키가 없다. 기존 값을 임의 생성하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+      x-query-validation:
+        allowed: []
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_OPER_STD
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - 모든 적용월 DESC, 현재월 이하 최신=현재·이후=예정·이전=지난. 전체 적용이력 조회이며 페이지 나눔 없음. 키 전체 이력 revision과 각 반환행 revision을 구분한다.
+      x-required-tests:
+      - 'happy: 동일키에 과거/현재/미래행을둔DB에서 getOperatingStandardHistory 호출 -> 모든적용월 DESC·현재/예정/지난과revision 반환, DB변경0건'
+      - 'validation: 길이31자 key로 기준이력조회 -> 400 VALIDATION_ERROR·field=key'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/params/{key}:
+    get:
+      operationId: getParameter
+      summary: 월별 단일 기준 조회
+      description: 생략현재월·단일 유효값 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-021
+      - REQ-127
+      - REQ-128
+      - REQ-129
+      - REQ-130
+      parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+          description: 등록 기준키
+          minLength: 1
+          maxLength: 30
+      - name: month
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/YearMonth'
+        description: 생략 시 Asia/Seoul 서버 현재월.
+      responses:
+        '200':
+          description: 월별 단일 기준 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetParameterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '404':
+          description: 키 또는 요청월 이하 유효 기준행이 없다.0/하드코딩 값으로 대체하지 않는다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STANDARD_NOT_FOUND
+      x-query-validation:
+        allowed:
+        - month
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_OPER_STD
+        result_path:
+        - data
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - month 생략 현재월. 요청월 이하 최신행의 정확한 value/unitNm/effectiveMonth 반환. 키없음 또는 유효행없음404 STANDARD_NOT_FOUND.0/하드코딩 대체0건·계산엔진실행0회.
+      x-required-tests:
+      - 'happy: CASH_BASE_AMT 초기행이있는DB에서 GET /api/params/CASH_BASE_AMT?month=2026-01 -> value=1150000000 문자열·unitNm/effectiveMonth
+        반환, 계산실행0회'
+      - 'business: 미등록key 또는 요청월이전유효행없음에서 getParameter 호출 -> 각404 STANDARD_NOT_FOUND·0대체없음'
+      - 'validation: month=2026-13으로 getParameter 호출 -> 400 INVALID_PERIOD·field=month'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+  /api/common-code-history:
+    get:
+      operationId: getCommonCodeHistory
+      summary: 변경 이력 조회
+      description: targetType/groupId/page/size → 허용 대상 이력 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
+      security: []
+      x-related-requirements:
+      - REQ-068
+      - REQ-118
+      - REQ-122
+      - REQ-123
+      - REQ-124
+      - REQ-125
+      - REQ-129
+      - REQ-130
+      - REQ-131
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - GROUP
+          - CODE
+          - VALUE_CODE
+          - OPER_STD
+          - CODE_MAP
+      - name: groupId
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/GroupId'
+      responses:
+        '200':
+          description: 변경 이력 조회 조회 성공. 공개 결과와 원문 조건은 해당 연산의 응답 DTO 및 x-business-rules를 따른다.
+          headers:
+            X-Request-Id:
+              description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/GetCommonCodeHistoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      x-query-validation:
+        allowed:
+        - page
+        - size
+        - targetType
+        - groupId
+        unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
+      x-aiops-query-role:
+        role: 조회
+        entities:
+        - TB_SY_CHG_HIST
+        result_path:
+        - data
+        - items
+        description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
+      x-business-rules:
+      - GROUP/CODE/VALUE_CODE/OPER_STD/CODE_MAP만 조회. targetType 생략전체·다른값400. CODE/VALUE_CODE는 VAL_CODE_YN으로 구분. groupId 지정은
+        해당 그룹/코드/대응만·운영기준 제외.
+      - REG_DTTM DESC/HIST_ID DESC, page≥1·size20/50/100 기본50. SYSTEM 표시 시스템/admin 표시 임시 관리자. 긴 전후값500자 이내 그대로 제공. 무기한 보존·수정/삭제
+        API0개.
+      x-required-tests:
+      - 'happy: 대상5종·동일시각다른HIST_ID를둔DB에서 getCommonCodeHistory 호출 -> REG_DTTM DESC/HIST_ID DESC·일시/대상/키/유형/항목/전후/처리자 반환'
+      - 'business: groupId지정후이력조회 -> 해당그룹/코드/대응이력만·OPER_STD 제외, 삭제대응도이전JSON식별가능'
+      - 'validation: targetType=UNKNOWN 또는 page=0으로 이력조회 -> 400 field=targetType 또는 page·이력수정0건'
+      - 'retention: 오래된이력을포함한DB에서 기간경과후getCommonCodeHistory 호출 -> 과거이력계속조회·기간삭제0건'
+      x-side-effects:
+      - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
+      x-open-questions:
+      - OQ-003
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    YesNo:
+      type: string
+      enum:
+      - Y
+      - N
+      description: 원문 Y/N 값. boolean으로 대체하지 않는다.
+    ChangeType:
+      type: string
+      enum:
+      - NEW
+      - UPD
+      - STOP
+      - RESUME
+      - DEL
+      description: 등록·값변경·중지·재개·삭제 이력 유형.
+    PreferenceType:
+      type: string
+      enum:
+      - FAV
+      - RECENT
+      - MENU_FOLD
+      - PAGE_SIZE
+      - DENSE
+      - COLS
+      - AMT_UNIT
+      - PERIOD
+      description: 원문 PREF_TYPE_CD 값.
+    Revision:
+      type: string
+      description: 식별자·저장값·REG_DTTM/MOD_DTTM에 근거한 불투명 토큰. 시각 양NULL도 값 변경이면 달라진다. 물리 version 컬럼은 추가하지 않는다.
+      minLength: 1
+    YearMonth:
+      type: string
+      description: 0001-01~9999-12 실제 연월. 날짜 라이브러리로 월 가감한다.
+      pattern: ^(?!0000)[0-9]{4}-(0[1-9]|1[0-2])$
+    GroupId:
+      type: string
+      description: trim·대문자 정규화 후 검사. 등록 식별자는 불변.
+      minLength: 1
+      maxLength: 30
+      pattern: ^[A-Z][A-Z0-9_]{0,29}$
+    CodeId:
+      type: string
+      description: trim·대문자 정규화 후 검사. 등록 PK는 불변.
+      minLength: 1
+      maxLength: 20
+      pattern: ^[A-Z0-9_]{1,20}$
+    DecimalValue:
+      type: string
+      description: 정규화된 응답 십진 문자열. 0~99999999999.9999, 정수부 최대11·소수 최대4. BigDecimal, 반올림·버림·float/double 변환0회. 별도 제한 없는 %에는100
+        상한을 추가하지 않는다.
+      pattern: ^[0-9]{1,11}(\.[0-9]{1,4})?$
+    DecimalInput:
+      type: string
+      description: 원문 숫자 입력 문자열. 공백·쉼표·끝 원/% 제거 후 DecimalValue 범위로 검사한다. 음수·지수·NaN·Infinity·다른 문자·정수12자리·소수5자리400. JSON number
+        거부. 기준 빈값400; 신규/비운 수당은0. 패턴은 정리 전 입력을 막지 않으며 서비스에서 정규화·검사한다.
+    ResponseMeta:
+      type: object
+      properties: {}
+      additionalProperties: false
+      required: []
+      description: 봉투의 meta는 필수이나 내부 필드는 원문 미정이다. 비어 있는 meta를 허용하는 제안이며 승인 전 OQ-003이다. 업무 data 대체물이 아니다.
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: true
+      required:
+      - success
+      - meta
+      description: 공통 성공 봉투. 약속된 data는 연산별 응답의 allOf로 구체화한다.
+    ErrorDetails:
+      type: object
+      properties:
+        references:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: 참조 유형
+              count:
+                type: integer
+                minimum: 0
+            additionalProperties: false
+            required:
+            - type
+            - count
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+                description: 한국어 필드 사유
+            additionalProperties: false
+            required:
+            - field
+            - message
+      additionalProperties: false
+      required: []
+      description: 참조 유형/건수·필드별 오류의 구조화 제안. 내부 명명은 OQ-003 승인 대기. SQL·스택·비밀값은 없다.
+    ApiError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+        code:
+          type: string
+          description: 원문 상태별 오류코드. 연산 responses의 x-error-codes로 제한.
+        message:
+          type: string
+          description: 한국어 사유
+        field:
+          type: string
+          description: 오류 입력의 camelCase 경로
+        details:
+          $ref: '#/components/schemas/ErrorDetails'
+        requestId:
+          type: string
+          description: X-Request-Id와 일치하는 문의 추적값
+      additionalProperties: false
+      required:
+      - success
+      - meta
+      - code
+      - message
+      - requestId
+      description: 루트 code/message/field?/details?/requestId 배치는 OQ-003 미승인 제안이다. 원문 오류필드를 삭제하거나 ApiError 전체를 성공 error 아래
+        중첩하지 않는다.
+      x-open-questions:
+      - OQ-003
+    CurrentUser:
+      type: object
+      properties:
+        userId:
+          type: string
+          const: admin
+        name:
+          type: string
+          const: 임시 관리자
+        roleIds:
+          type: array
+          items:
+            type: string
+            const: ADMIN
+          minItems: 1
+          maxItems: 1
+        developmentMode:
+          type: boolean
+          const: true
+      additionalProperties: false
+      required:
+      - userId
+      - name
+      - roleIds
+      - developmentMode
+      description: DB admin을 한 공급자에서 제공한다. 요청 처리자 지정 불가. 비밀번호·메일은 반환하지 않는다. userId는 원문 admin 식별자의 camelCase DTO 명명이다.
+    MenuNode:
+      type: object
+      properties:
+        menuId:
+          type: string
+        parentId:
+          type:
+          - string
+          - 'null'
+        name:
+          type: string
+        screenId:
+          type:
+          - string
+          - 'null'
+        sortOrder:
+          type: integer
+        icon:
+          type:
+          - string
+          - 'null'
+        pcOnly:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuNode'
+      additionalProperties: false
+      required:
+      - menuId
+      - parentId
+      - name
+      - screenId
+      - sortOrder
+      - icon
+      - pcOnly
+      - children
+      description: DB 메뉴 조회 투영 DTO. 물리 컬럼 추가 정의가 아니다.
+    MenuDiagnostic:
+      type: object
+      properties:
+        menuId:
+          type: string
+        message:
+          type: string
+          description: 제외 노드와 자손·이유를 한국어로 식별
+      additionalProperties: false
+      required:
+      - menuId
+      - message
+    MenusData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuNode'
+        diagnostics:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuDiagnostic'
+      additionalProperties: false
+      required:
+      - items
+      - diagnostics
+      description: USE_YN=Y 정상 트리 전체. SORT_ORD/MENU_ID순. 페이지 자원이 아니다.
+    MonthClose:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/YearMonth'
+        status:
+          type: string
+          description: 시작월 이전=이관·결산완료; CLOSE=마감; WORK/행없음=작업중. 응답은 이 세 한국어 상태를 사용한다.
+      additionalProperties: false
+      required:
+      - month
+      - status
+    MonthCloseData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthClose'
+      additionalProperties: false
+      required:
+      - items
+      description: from~to 전체 월 상태. 원문 페이지 기능이 없는 범위 조회다.
+    PeriodContext:
+      type: object
+      properties:
+        currentDate:
+          type: string
+          description: Asia/Seoul 기준 현재일
+          format: date
+        currentMonth:
+          $ref: '#/components/schemas/YearMonth'
+        timezone:
+          type: string
+          const: Asia/Seoul
+        cashBaseMonth:
+          $ref: '#/components/schemas/YearMonth'
+        monthClose:
+          $ref: '#/components/schemas/MonthClose'
+      additionalProperties: false
+      required:
+      - currentDate
+      - currentMonth
+      - timezone
+      - cashBaseMonth
+      - monthClose
+      description: 서버 현재일·시작월·현재월 마감 상태의 조회 투영. 화면별 범위는 원문 계산 규칙으로 부모가 산정한다. cashBaseMonth/monthClose는 원문 CASH_BASE_YM/마감상태의
+        DTO 명명이다.
+    YearPeriod:
+      type: object
+      properties:
+        type:
+          type: string
+          const: YEAR
+        value:
+          type: string
+          pattern: ^(?!0000)[0-9]{4}$
+      additionalProperties: false
+      required:
+      - type
+      - value
+    MonthPeriod:
+      type: object
+      properties:
+        type:
+          type: string
+          const: YEAR_MONTH
+        value:
+          $ref: '#/components/schemas/YearMonth'
+      additionalProperties: false
+      required:
+      - type
+      - value
+    CumulativePeriod:
+      type: object
+      properties:
+        type:
+          type: string
+          const: YEAR_CUM
+        year:
+          type: string
+          pattern: ^(?!0000)[0-9]{4}$
+        month:
+          $ref: '#/components/schemas/YearMonth'
+      additionalProperties: false
+      required:
+      - type
+      - year
+      - month
+      description: year와 month 연도 일치·화면별 허용범위를 검사한다.
+    ColumnView:
+      type: object
+      properties:
+        order:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        hidden:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+      additionalProperties: false
+      required:
+      - order
+      - hidden
+      description: order는 표 정의 전체열 순열, hidden은 선택열 부분집합.
+    ColumnPreferences:
+      type: object
+      properties:
+        codes:
+          $ref: '#/components/schemas/ColumnView'
+        valueCodes:
+          $ref: '#/components/schemas/ColumnView'
+        mappings:
+          $ref: '#/components/schemas/ColumnView'
+        standards:
+          $ref: '#/components/schemas/ColumnView'
+        history:
+          $ref: '#/components/schemas/ColumnView'
+      additionalProperties: false
+      required: []
+      description: UI-27의 표별 설정. 체크·작업버튼 제외. 다른 화면은 표 정의가 생긴 뒤만 허용한다.
+    PreferenceValue:
+      description: type/key에 따라 정확히 하나의 형식과 의미로 검증한다. 직렬화 JSON 전체 최대2000자. oneOf가 아니라 anyOf인 이유는 FAV/RECENT의 빈 배열 등 JSON 형식이
+        겹치기 때문이다. PUT의 null은 허용하지 않으며 조회 MENU_FOLD 미저장은 별도로 null을 반환한다.
+      anyOf:
+      - type: array
+        items:
+          type: string
+          description: 등록 screenId
+        maxItems: 10
+        uniqueItems: true
+      - type: boolean
+      - type: integer
+        enum:
+        - 20
+        - 50
+        - 100
+      - type: string
+        enum:
+        - 넓게
+        - 좁게
+      - type: string
+        enum:
+        - 원
+        - 천원
+        - 백만원
+      - $ref: '#/components/schemas/ColumnPreferences'
+      - $ref: '#/components/schemas/YearPeriod'
+      - $ref: '#/components/schemas/MonthPeriod'
+      - $ref: '#/components/schemas/CumulativePeriod'
+    PreferenceIssue:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+          description: 손상 JSON 항목 사유
+      additionalProperties: false
+      required:
+      - code
+      - message
+    Preference:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/PreferenceType'
+        key:
+          type: string
+          description: 전역 * 또는 COLS/PERIOD의 등록 screenId
+        value:
+          anyOf:
+          - $ref: '#/components/schemas/PreferenceValue'
+          - type: 'null'
+        revision:
+          anyOf:
+          - $ref: '#/components/schemas/Revision'
+          - type: 'null'
+        stored:
+          type: boolean
+        error:
+          $ref: '#/components/schemas/PreferenceIssue'
+      additionalProperties: false
+      required:
+      - type
+      - key
+      - value
+      - revision
+      - stored
+      description: 행없음은 stored=false·revision=null·기본값. MENU_FOLD만 미저장 value=null. 손상 JSON은 error와 원행 revision을 제공하며 자동 삭제하지
+        않는다.
+    PreferencesData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Preference'
+      additionalProperties: false
+      required:
+      - items
+      description: 개별 설정 목록 전체이며 페이지 자원이 아니다. 행없는 전역 설정과 등록화면 설정의 기본값도 반환한다.
+    PutPreferenceRequest:
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/PreferenceValue'
+        expectedRevision:
+          anyOf:
+          - $ref: '#/components/schemas/Revision'
+          - type: 'null'
+      additionalProperties: false
+      required:
+      - value
+      - expectedRevision
+      description: 최초 명시 저장 null, 기존 토큰 필수. 기본값과 같아도 최초 INSERT.
+      x-path-value-validation:
+        FAV/*: 등록screenId 배열·0~10·중복없음·기본[]
+        RECENT/*: 등록screenId 배열·0~5·중복없음·최근활성화순·기본[]
+        MENU_FOLD/*: JSON boolean만·조회미저장만null
+        PAGE_SIZE/*: JSON integer20/50/100만·기본50
+        DENSE/*: 문자열넓게/좁게·기본넓게
+        AMT_UNIT/*: 문자열원/천원/백만원·기본천원
+        COLS/{screenId}: UI-27의원문5표정의·다른화면은표정의생성후·전체순열/선택열부분집합
+        PERIOD/{screenId}: 화면등록유형YEAR/YEAR_MONTH/YEAR_CUM·연도/월일치·getPeriodContext허용범위·NONE400
+    PreferenceSaveResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        message:
+          type: string
+          description: 변경없음이면 바뀐 내용이 없습니다.
+        preference:
+          $ref: '#/components/schemas/Preference'
+      additionalProperties: false
+      required:
+      - changed
+      - preference
+      description: 설정 저장 후 재조회 투영. 최초 명시 INSERT는 changed=true.
+    CodeGroup:
+      type: object
+      properties:
+        groupId:
+          $ref: '#/components/schemas/GroupId'
+        name:
+          type: string
+          maxLength: 50
+        sysCodeYn:
+          $ref: '#/components/schemas/YesNo'
+        valCodeYn:
+          $ref: '#/components/schemas/YesNo'
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        sortOrder:
+          type: integer
+        codeCount:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - groupId
+      - name
+      - sysCodeYn
+      - valCodeYn
+      - useYn
+      - sortOrder
+      - codeCount
+      description: 미삭제 코드 수 포함. DTO 필드이며 새로운 물리 컬럼을 의미하지 않는다.
+    CodeGroupsData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeGroup'
+      additionalProperties: false
+      required:
+      - items
+      description: 전체 그룹 SORT_ORD/CODE_GRP_ID순. 원문 전체 목록이므로 page/size/total을 붙이지 않는다.
+    CreateCodeGroupRequest:
+      type: object
+      properties:
+        groupId:
+          type: string
+          description: 소문자는 대문자로 정규화 후 GroupId 검사
+          minLength: 1
+          maxLength: 30
+        name:
+          type: string
+          description: trim 후1~50자
+          minLength: 1
+          maxLength: 50
+      additionalProperties: false
+      required:
+      - groupId
+      - name
+    Code:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeId'
+        name:
+          type: string
+          maxLength: 100
+        sortOrder:
+          type: integer
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        addVal1:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        addVal2:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        addVal3:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        codeVal:
+          anyOf:
+          - $ref: '#/components/schemas/DecimalValue'
+          - type: 'null'
+        unitNm:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+      additionalProperties: false
+      required:
+      - code
+      - name
+      - sortOrder
+      - useYn
+      - addVal1
+      - addVal2
+      - addVal3
+      - codeVal
+      - unitNm
+      description: 미삭제 행만 조회. 미사용 추가값은NULL, ADD_VAL3 이번 미사용. 일반표·값코드표는 모드에 맞춰 표현한다.
+    GroupCodesPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+        total:
+          type: integer
+          minimum: 0
+          description: 조건에 맞는 전체 건수. 현재 페이지 크기가 아니다.
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        groupRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+      - groupRevision
+    CodesData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeLookup'
+      additionalProperties: false
+      required:
+      - items
+      description: 공통 선택/label 조회 전체. 페이지 계약은 편집목록과 구분한다.
+    CodeChange:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 정규화 후 CodeId 검사. 기존 PK 불변
+          minLength: 1
+          maxLength: 20
+        isNew:
+          type: boolean
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        useYn:
+          $ref: '#/components/schemas/YesNo'
+        addVal1:
+          type: string
+          maxLength: 100
+        addVal2:
+          type: string
+          maxLength: 100
+        codeVal:
+          $ref: '#/components/schemas/DecimalInput'
+          description: 신규 값코드에서 생략/빈값은0. 일반/시스템 모드 허용 여부는 그룹 원천을 먼저 검사한다.
+        unitNm:
+          type: string
+          enum:
+          - 원
+          - '%'
+          default: 원
+        sortOrder:
+          type: integer
+          description: 정상 저장 입력이 아니다. 시스템 모드에서 변경 시409 SYSTEM_CODE_LOCKED·일반/값 모드도 읽기전용. 서버는 이를 채번 입력으로 사용하지 않는다.
+      additionalProperties: false
+      required:
+      - code
+      - isNew
+      description: 변경 필드만 전송. 신규 일반 code/name/해당 추가값, 신규 값 code/name/값·단위(기본0/원). 기존 SYS는 name만, SYS=N·VAL=Y는 codeVal만, 일반은
+        name/useYn/해당 추가값. 정렬·DEL·SYS/VAL·처리자·감사시각은 요청 필드가 아니다.
+      x-validation-order:
+      - 구조상 미정의/서버소유 필드 주입은400 UNKNOWN_FIELD
+      - isNew/code와 알려진 코드 필드를 식별한 뒤 SYS>VAL 우선 모드 검사
+      - name/useYn/addVal1/2/codeVal/unitNm의 모드상 금지는409; 모드에 맞는 필수/정밀도/그룹추가값은400
+      - sortOrder는 원문 알려진 읽기전용 필드로서 SYS 모드 변경 시409 SYSTEM_CODE_LOCKED; JSON schema allowlist만으로 먼저400으로 바꾸지 않는다.
+      allOf:
+      - if:
+          properties:
+            isNew:
+              const: true
+          required:
+          - isNew
+        then:
+          required:
+          - name
+    SaveGroupCodesRequest:
+      type: object
+      properties:
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeChange'
+          minItems: 1
+      additionalProperties: false
+      required:
+      - expectedRevision
+      - changes
+      description: 동일 code 중복400. 현재 페이지에 없는 행 삭제0건.
+    GroupCodesSaveResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        message:
+          type: string
+          description: 무변경이면 바뀐 내용이 없습니다.
+        groupRevision:
+          $ref: '#/components/schemas/Revision'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+      additionalProperties: false
+      required:
+      - changed
+      - groupRevision
+      - items
+      description: commit 후 미삭제 그룹코드 재조회 투영. 페이지를 새로 발명하지 않고 전체 items를 반환하는 DTO 제안이다. 재조회 배열 범위는 OQ-004 승인 대기.
+    CodeMapping:
+      type: object
+      properties:
+        mapId:
+          type: integer
+          format: int64
+        sourceText:
+          type: string
+          maxLength: 100
+        groupId:
+          $ref: '#/components/schemas/GroupId'
+        code:
+          $ref: '#/components/schemas/CodeId'
+        codeName:
+          type: string
+          maxLength: 100
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - mapId
+      - sourceText
+      - groupId
+      - code
+      - codeName
+      - revision
+    CodeMappingsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeMapping'
+        total:
+          type: integer
+          minimum: 0
+          description: 조건에 맞는 전체 건수. 현재 페이지 크기가 아니다.
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+    CreateCodeMappingRequest:
+      type: object
+      properties:
+        sourceText:
+          type: string
+          description: trim 후1~100자
+          minLength: 1
+          maxLength: 100
+        groupId:
+          type: string
+          minLength: 1
+          maxLength: 30
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+      additionalProperties: false
+      required:
+      - sourceText
+      - groupId
+      - code
+      description: 실재 그룹·미삭제 active 코드만 허용. 추가 메모/주보조/사용/적용일은 없음.
+    MappingDeleteItem:
+      type: object
+      properties:
+        mapId:
+          type: integer
+          format: int64
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - mapId
+      - expectedRevision
+    DeleteCodeMappingsRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappingDeleteItem'
+          minItems: 1
+      additionalProperties: false
+      required:
+      - items
+      description: 확인한 대상 목록. 하나 누락/변경이면409 전체 삭제0건.
+    OperatingStandard:
+      type: object
+      properties:
+        key:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        value:
+          type:
+          - string
+          - 'null'
+          description: 유효행 없으면NULL. 일반 십진문자열; CASH_BASE_YM만 YYYYMM6자리. 0으로 대체하지 않는다.
+        unitNm:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+        effectiveMonth:
+          anyOf:
+          - $ref: '#/components/schemas/YearMonth'
+          - type: 'null'
+        description:
+          type:
+          - string
+          - 'null'
+          maxLength: 300
+        keyRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - key
+      - name
+      - value
+      - unitNm
+      - effectiveMonth
+      - description
+      - keyRevision
+      description: 43키의 요청월 유효값과 키 전체 적용월 revision. 메타데이터 읽기 전용.
+    OperatingStandardsData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperatingStandard'
+      additionalProperties: false
+      required:
+      - items
+      description: SQL43키 전체 STD_CD순 비페이지. 값없음은NULL/기준값 없음으로 표시한다. 추가 키를 만들지 않는다.
+    OperatingStandardVersion:
+      type: object
+      properties:
+        key:
+          type: string
+          maxLength: 30
+        value:
+          type: string
+          description: 정확한 십진문자열; CASH_BASE_YM은6자리
+        unitNm:
+          type:
+          - string
+          - 'null'
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        status:
+          type: string
+          description: 현재/예정/지난. 현재는 현재월 이하 최신행이며 미래는 예정.
+        revision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - key
+      - value
+      - unitNm
+      - effectiveMonth
+      - status
+      - revision
+    OperatingStandardHistoryData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperatingStandardVersion'
+        keyRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - items
+      - keyRevision
+      description: 모든 적용월 DESC. 페이지 분리 없이 전체 적용 이력 반환.
+    StandardChange:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 30
+        value:
+          $ref: '#/components/schemas/DecimalInput'
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      additionalProperties: false
+      required:
+      - key
+      - value
+      - expectedRevision
+      description: CASH_BASE_YM value는 실제 YYYYMM6자리 문자열, DB 정수/조회6자리 복원.
+    SaveOperatingStandardsRequest:
+      type: object
+      properties:
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/StandardChange'
+          minItems: 1
+      additionalProperties: false
+      required:
+      - changes
+      description: 일반키는 effectiveMonth 필수. CASH 두키는 effectiveMonth 없이 별도요청. 혼합/중복키400. 미변경 칸은 보내지 않는다.
+    OperatingStandardsSaveResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        message:
+          type: string
+          description: 무변경이면 바뀐 내용이 없습니다.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperatingStandard'
+      additionalProperties: false
+      required:
+      - changed
+      - items
+      description: commit 후 기준 재조회 투영. 현재월43키 반환 범위는 OQ-004 승인 대기 DTO 제안이며 물리 필드 추가가 아니다.
+    ParameterData:
+      type: object
+      properties:
+        key:
+          type: string
+          maxLength: 30
+        value:
+          type: string
+          description: DB의 정확한 십진문자열. CASH_BASE_YM은 YYYYMM6자리
+        unitNm:
+          type:
+          - string
+          - 'null'
+        effectiveMonth:
+          $ref: '#/components/schemas/YearMonth'
+      additionalProperties: false
+      required:
+      - key
+      - value
+      - unitNm
+      - effectiveMonth
+      description: 요청월 이하 최신 유효행. 부재404 STANDARD_NOT_FOUND이며 계산엔진0회.
+    CommonCodeHistory:
+      type: object
+      properties:
+        histId:
+          type: integer
+          format: int64
+        occurredAt:
+          type: string
+          description: Asia/Seoul 등록시각
+          format: date-time
+        target:
+          type: string
+          description: GROUP/CODE/VALUE_CODE/OPER_STD/CODE_MAP
+        groupId:
+          type:
+          - string
+          - 'null'
+        entityKey:
+          type: string
+          maxLength: 100
+        type:
+          $ref: '#/components/schemas/ChangeType'
+        item:
+          type: string
+          maxLength: 50
+        before:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        after:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        actor:
+          type: string
+          description: SYSTEM 또는 admin. 표시명은 각각 시스템/임시 관리자
+      additionalProperties: false
+      required:
+      - histId
+      - occurredAt
+      - target
+      - groupId
+      - entityKey
+      - type
+      - item
+      - before
+      - after
+      - actor
+      description: 실제 테이블명/복합 대상키를 보존한 조회 DTO. 값은 무손실500자 이내. 이력 수정·삭제 없음.
+    CommonCodeHistoryPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommonCodeHistory'
+        total:
+          type: integer
+          minimum: 0
+          description: 조건에 맞는 전체 건수. 현재 페이지 크기가 아니다.
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+      additionalProperties: false
+      required:
+      - items
+      - total
+      - page
+      - size
+    GetCurrentUserResponse:
+      description: getCurrentUser의 성공 봉투. data는 CurrentUser 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/CurrentUser'
+    GetMenusResponse:
+      description: getMenus의 성공 봉투. data는 MenusData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/MenusData'
+    GetPeriodContextResponse:
+      description: getPeriodContext의 성공 봉투. data는 PeriodContext 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/PeriodContext'
+    GetMonthCloseResponse:
+      description: getMonthClose의 성공 봉투. data는 MonthCloseData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/MonthCloseData'
+    GetPreferencesResponse:
+      description: getPreferences의 성공 봉투. data는 PreferencesData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/PreferencesData'
+    PutPreferenceResponse:
+      description: putPreference의 성공 봉투. data는 PreferenceSaveResult 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/PreferenceSaveResult'
+    GetCodeGroupsResponse:
+      description: getCodeGroups의 성공 봉투. data는 CodeGroupsData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/CodeGroupsData'
+    GetGroupCodesResponse:
+      description: getGroupCodes의 성공 봉투. data는 GroupCodesPage 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/GroupCodesPage'
+    SaveGroupCodesResponse:
+      description: saveGroupCodes의 성공 봉투. data는 GroupCodesSaveResult 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/GroupCodesSaveResult'
+    GetCodesResponse:
+      description: getCodes의 성공 봉투. data는 CodesData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/CodesData'
+    GetCodeMappingsResponse:
+      description: getCodeMappings의 성공 봉투. data는 CodeMappingsPage 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/CodeMappingsPage'
+    GetOperatingStandardsResponse:
+      description: getOperatingStandards의 성공 봉투. data는 OperatingStandardsData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/OperatingStandardsData'
+    GetOperatingStandardHistoryResponse:
+      description: getOperatingStandardHistory의 성공 봉투. data는 OperatingStandardHistoryData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/OperatingStandardHistoryData'
+    SaveOperatingStandardsResponse:
+      description: saveOperatingStandards의 성공 봉투. data는 OperatingStandardsSaveResult 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/OperatingStandardsSaveResult'
+    GetParameterResponse:
+      description: getParameter의 성공 봉투. data는 ParameterData 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/ParameterData'
+    GetCommonCodeHistoryResponse:
+      description: getCommonCodeHistory의 성공 봉투. data는 CommonCodeHistoryPage 조회/결과 DTO다.
+      allOf:
+      - $ref: '#/components/schemas/ApiResponse'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/CommonCodeHistoryPage'
+    CodeLookup:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/CodeId'
+        name:
+          type: string
+          maxLength: 100
+        addVal1:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        addVal2:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        addVal3:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        codeVal:
+          anyOf:
+          - $ref: '#/components/schemas/DecimalValue'
+          - type: 'null'
+        unitNm:
+          type:
+          - string
+          - 'null'
+          maxLength: 10
+      additionalProperties: false
+      required:
+      - code
+      - name
+      - addVal1
+      - addVal2
+      - addVal3
+      - codeVal
+      - unitNm
+      description: CodeQueryService/useCodes의 원문 공개필드만. 편집행 sortOrder/useYn은 공통조회 결과에 새로 추가하지 않는다.
+  responses:
+    BadRequest:
+      description: 원문 필수·타입·길이·연월·허용외 필드 오류. 연산별 실제 적용 조건을 확인한다.
+      headers:
+        X-Request-Id:
+          description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+      x-error-codes:
+      - VALIDATION_ERROR
+      - INVALID_PERIOD
+      - UNKNOWN_FIELD
+    InternalError:
+      description: 서버 내부 실패. 한국어 사유와 requestId만 공개하고 SQL·스택·비밀값은 숨긴다.
+      headers:
+        X-Request-Id:
+          description: 오류 본문의 requestId와 같은 문의 추적값. SQL·비밀정보를 담지 않는다.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+      x-error-codes:
+      - INTERNAL_ERROR
+x-uncovered-requirements:
+- canonical_id: REQ-001
+  status: data-constraint
+  evidence: 'REQ-001 · SPEC-REQUEST.md:17 · 전체 SQL 원천 보존: example/project_ddl.sql과 example/project_data.sql 전체를 DB와 초기값의 원천으로
+    사용한다. 독립 확인 기준: HQ 예약 파트를 포함한 DDL 전체 및 data 전체가 실행본과 대조된다. OQ-002 전체 원본 DDL/revision 미확보로 물리명/타입을 추정하지 않는다.'
+- canonical_id: REQ-002
+  status: data-constraint
+  evidence: 'REQ-002 · SPEC-REQUEST.md:22 · 행정구역 빈 테이블: 행정구역은 DDL 테이블과 제약만 생성하고 데이터는 0행으로 유지한다. 독립 확인 기준: 설치 후 행정구역 테이블 데이터
+    건수 0행이다.'
+- canonical_id: REQ-003
+  status: data-constraint
+  evidence: 'REQ-003 · SPEC-REQUEST.md:42 · 전체 DB 구조 보존: 빈 개발 DB에 원문 수량과 모든 컬럼·제약·인덱스·시퀀스·코멘트를 보존한다. 독립 확인 기준: 68테이블/836컬럼/73
+    FK/78 명시 인덱스/13시퀀스/46 CHECK/5 UK 및 TB_SY_CALC_RULE 11컬럼이 일치한다. OQ-002 전체 원본 DDL/revision 미확보로 물리명/타입을 추정하지 않는다.'
+- canonical_id: REQ-004
+  status: data-constraint
+  evidence: 'REQ-004 · SPEC-REQUEST.md:43 · 기본 초기값 적재: 원문 초기값 수량과 HQ 적재 주체를 보존하고 대응·이력·설정은 빈 상태로 시작한다. 독립 확인 기준: 그룹64·시스템44·코드391·운영기준43·역할5·메뉴40·역할메뉴150·관리자/연결
+    각1·계산규칙94·HQ1행이며 세 빈 테이블은 0행이다.'
+- canonical_id: REQ-005
+  status: data-constraint
+  evidence: 'REQ-005 · SPEC-REQUEST.md:44 · 초기 자금 기준과 계산규칙: 계산규칙과 초기 CASH_BASE_YM/CASH_BASE_AMT를 그대로 적재한다. 독립 확인 기준: CASH_BASE_YM=202601,
+    CASH_BASE_AMT=1150000000이며 임의 월 마감 기록 0행이다.'
+- canonical_id: REQ-006
+  status: data-constraint
+  evidence: 'REQ-006 · SPEC-REQUEST.md:45 · Flyway 실행본 래퍼 정리: data의 최상위 BEGIN 2개와 COMMIT 1개만 실행용 사본에서 제거하고 TEXT 내부 문자열을 보존한다.
+    독립 확인 기준: 실행본 diff에는 최상위 래퍼 제거만 있으며 revision/해시가 기록된다.'
+- canonical_id: REQ-007
+  status: data-constraint
+  evidence: 'REQ-007 · SPEC-REQUEST.md:46 · 마이그레이션 불변·멱등성: 적용된 마이그레이션을 수정하거나 재실행하지 않고 재시작 중복 적재를 방지한다. 독립 확인 기준: 재시작 후 초기값
+    중복 0건, 미적용 파일은 원본 대조 결과를 갖는다.'
+- canonical_id: REQ-008
+  status: data-constraint
+  evidence: 'REQ-008 · SPEC-REQUEST.md:46 · 설치 실패와 구조 은폐 금지: 설치 실패는 트랜잭션 롤백하며 임의 DROP/TRUNCATE·자동 baseline으로 불일치를 숨기지 않는다.
+    독립 확인 기준: 실패 fixture는 해당 트랜잭션을 롤백하며 사용자 보유 DB 초기화 0건이다.'
+- canonical_id: REQ-009
+  status: data-constraint
+  evidence: 'REQ-009 · SPEC-REQUEST.md:47 · 구조 차이 보고: 이미 존재하는 DB 구조가 다르면 추정 변경 없이 차이와 실패 항목을 보고한다. 독립 확인 기준: 이름/타입 불일치 fixture에서
+    임의 스키마 수정 없이 불일치 목록이 보고된다. OQ-002 전체 원본 DDL/revision 미확보로 물리명/타입을 추정하지 않는다.'
+- canonical_id: REQ-012
+  status: screen-only
+  evidence: 'REQ-012 · SPEC-REQUEST.md:68 · 공통 컴포넌트 실제 재사용: 공통 부품을 UI-27에 실제 적용하고 Props·이벤트·사용처를 기록하며 개별 업무 분기를 넣지 않는다. 독립
+    확인 기준: 코드/대응/기준/이력이 DataTable<T>를 공유하고 화면이 columns/renderer/row action을 전달한다.'
+- canonical_id: REQ-024
+  status: screen-only
+  evidence: 'REQ-024 · SPEC-REQUEST.md:97 · 공통 표시 함수: 금액·음수·0·NULL·일자·일시 및 숫자/문자/상태 정렬은 원문 표시 계약을 따른다. 독립 확인 기준: 0은 ‘0’, NULL은
+    ‘–’, 음수 기호는 ‘−’; 표시 전후 저장값은 같다.'
+- canonical_id: REQ-033
+  status: screen-only
+  evidence: 'REQ-033 · SPEC-REQUEST.md:108 · 한국어 오류와 재조회 실패 구분: 필드 오류·첫 포커스·오류 띠·다시 시도·requestId와 commit 후 재조회 실패를 구분한다. 독립
+    확인 기준: 500/연결 실패는 오류 띠·재시도; commit 후 조회 실패는 ‘저장됐지만 다시 불러오지 못했습니다.’다.'
+- canonical_id: REQ-034
+  status: screen-only
+  evidence: 'REQ-034 · SPEC-REQUEST.md:108 · 중복 클릭·자동 재저장 금지: 처리 중 중복 클릭을 막고 입력을 보존하며 자동 저장/재시도는 하지 않는다. 독립 확인 기준: 처리 중 반복
+    클릭의 추가 요청0건; 실패 후 입력 유지·자동 재저장0회다.'
+- canonical_id: REQ-036
+  status: screen-only
+  evidence: 'REQ-036 · SPEC-REQUEST.md:129 · 메뉴 펼침·접힘 탐색: 현재 묶음 하나를 기본 펼치며 대시보드 직접 이동·부모 이름 이동/아이콘 토글·접힌 hover/focus 목록을 제공한다.
+    독립 확인 기준: 부모 이름은 화면 이동, 펼침 아이콘은 토글; 접힌 메뉴 키보드 focus에서 하위 목록이 보인다.'
+- canonical_id: REQ-038
+  status: screen-only
+  evidence: 'REQ-038 · SPEC-REQUEST.md:131 · 공식 라우트와 복구: /{screenId}·/→/UI-16·hash replace를 지원하고 유효 화면 부재 시 원문 순서로 복구한다. 독립
+    확인 기준: /UI-27 새로고침 및 #UI-27 replace 성공; 정상 화면0개는 메뉴 오류이며 리다이렉트 반복0회다.'
+- canonical_id: REQ-039
+  status: screen-only
+  evidence: 'REQ-039 · SPEC-REQUEST.md:132 · PC 전용 화면 보호: 폭768px 미만에서 PC 전용 메뉴/즐겨찾기/최근을 숨기고 직접 접근은 PC 안내를 표시한다. 독립 확인 기준:
+    767px UI-27 본문 대신 안내·이동 수단; 폭 확대 시 미저장 편집이 복원된다.'
+- canonical_id: REQ-040
+  status: screen-only
+  evidence: 'REQ-040 · SPEC-REQUEST.md:136 · 반응형 공통 레이아웃: AppLayout·Header·Sidebar·ScreenTabs·TitleBar를 원문 치수와 breakpoint에
+    맞춰 배치한다. 독립 확인 기준: 1280px 메뉴240/64px·여백24px; 1024px 기본접힘·16px, 360px 전체 가로넘침0이다.'
+- canonical_id: REQ-041
+  status: screen-only
+  evidence: 'REQ-041 · SPEC-REQUEST.md:137 · 헤더의 실제 제공 항목: 메뉴 토글·대시보드 이동·임시 관리자/화면 설정을 제공하며 AI/알림은 준비 중 안내만 한다. 독립 확인 기준:
+    AI/알림 클릭은 준비 중이고 가짜 배지/대화0개; 사용자 메뉴에 비밀번호/로그아웃/타이머가 없다.'
+- canonical_id: REQ-042
+  status: screen-only
+  evidence: 'REQ-042 · SPEC-REQUEST.md:138 · 화면 제목·기간 배치: 묶음›화면명·즐겨찾기·UI-ID·작업을 표시하고 업무 기간은 제목 아래에 둔다. 독립 확인 기준: UI-27에는 업무
+    기간 줄이 없고 자체 적용월 입력만 있으며 빈 업무 화면은 지정 기간 줄만 보인다.'
+- canonical_id: REQ-043
+  status: screen-only
+  evidence: 'REQ-043 · SPEC-REQUEST.md:139 · 화면 탭과 LRU: 화면을 재활성화 또는 새 탭으로 열고 대시보드 포함 최대8개·9번째는 닫을 수 있는 LRU 확인을 거친다. 독립 확인
+    기준: 대시보드 닫기 불가; 9번째 취소 시 새 탭0개·기존8개 유지다.'
+- canonical_id: REQ-044
+  status: screen-only
+  evidence: 'REQ-044 · SPEC-REQUEST.md:140 · 편집 보존과 이동 경고: 단순 탭 전환은 상태를 보존하고 그룹/하위탭 변경·닫기·상태 폐기 이동은 미저장 확인을 거친다. 독립 확인 기준:
+    계속 작성 시 입력/필터/기간/스크롤 유지; 새로고침/닫기는 beforeunload·dirty 탭은 ●다.'
+- canonical_id: REQ-045
+  status: screen-only
+  evidence: 'REQ-045 · SPEC-REQUEST.md:140 · 접근 가능한 모달·입력: 모달 focus trap·닫기 후 포커스 복원과 입력 label/Tab/첫 오류 포커스를 제공한다. 독립 확인 기준:
+    모달 내 Tab 순환·닫기 후 원래 포커스; 잘못된 입력 제출 시 첫 오류 필드로 이동한다.'
+- canonical_id: REQ-046
+  status: screen-only
+  evidence: 'REQ-046 · SPEC-REQUEST.md:141 · 새로고침 탭 초기화: 새로고침은 URL 화면과 고정 대시보드로 시작하며 열린 탭 목록은 서버 복원하지 않는다. 독립 확인 기준: 여러 탭을
+    열고 새로고침하면 URL 화면+대시보드만 남고 탭 목록 복원 요청은 없다.'
+- canonical_id: REQ-062
+  status: screen-only
+  evidence: 'REQ-062 · SPEC-REQUEST.md:166 · controlled 기간 부품: PeriodSelector는 부모의 type/value/min/max/disabled를 쓰고 DB 조회나
+    설정 저장을 내부에서 하지 않는다. 독립 확인 기준: YEAR/YEAR_MONTH 두 부모에서 유효선택 이벤트1회; 범위 밖/disabled 이벤트0회·내부 DB호출0회다.'
+- canonical_id: REQ-067
+  status: screen-only
+  evidence: 'REQ-067 · SPEC-REQUEST.md:185 · UI-27 네 탭과 조회 상태: 코드/엑셀 표기 대응/운영 기준값/변경 이력 4탭과 loading/empty/error를 구분한다. 독립
+    확인 기준: 4탭이 보이고 로딩·빈 결과·API 오류는 서로 다른 상태로 관찰된다.'
+- canonical_id: REQ-072
+  status: screen-only
+  evidence: 'REQ-072 · SPEC-REQUEST.md:188 · 편집 취소 복원: 취소는 미저장 신규/편집을 폐기하고 마지막 조회값을 복원한다. 독립 확인 기준: 신규·기존 편집 후 취소하면 신규 행 제거·기존값
+    복원·DB 변경0건이다.'
+- canonical_id: REQ-077
+  status: screen-only
+  evidence: 'REQ-077 · SPEC-REQUEST.md:194 · 그룹 추가 전 편집 처리: 미저장 코드가 있으면 저장/취소 후 그룹을 추가하며 임의 추가값 컬럼 정의는 제공하지 않는다. 독립 확인 기준:
+    계속 작성이면 그룹 추가0건·편집 유지; 저장/취소 처리 후에만 그룹 추가가 진행된다.'
+- canonical_id: REQ-132
+  status: non-functional
+  evidence: 'REQ-132 · SPEC-REQUEST.md:30 · 원문 구현 기술 요구: React·TypeScript·Vite·React Router·Java21·Spring Boot3.5.x·Gradle·Spring
+    MVC/JPA/Flyway·PostgreSQL16 요구를 추적한다. 독립 확인 기준: 고정 계약 Java17/3.3.x와 충돌한 두 버전은 OQ-001로 남고 임의 확정하지 않는다. Java21/3.5.x와 고정Java17/3.3.x는
+    OQ-001 차단.'
+- canonical_id: REQ-133
+  status: non-functional
+  evidence: 'REQ-133 · SPEC-REQUEST.md:31 · 3서비스 실행과 SPA: 프론트/nginx·백엔드·DB 3서비스 compose·/api 프록시·SPA fallback·환경설정·.env.example을
+    제공한다. 독립 확인 기준: /UI-27 직접 새로고침 성공; compose3서비스 healthy·.env.example은 자리표시자/실행 안내만 포함한다.'
+- canonical_id: REQ-135
+  status: non-functional
+  evidence: 'REQ-135 · SPEC-REQUEST.md:33 · Flyway 전용 스키마·정밀도: JPA ddl-auto=validate·Flyway만 생성·따옴표 없는 업무 SQL 식별자·BigDecimal을
+    사용한다. 독립 확인 기준: JPA validate 통과·Hibernate DDL 생성0회·float/double 금액변환0회다. JPA validate 의무는 OQ-007 정합화 승인 전 충족 미확정. API
+    DTO가 이를 해결하지 않는다.'
+- canonical_id: REQ-136
+  status: non-functional
+  evidence: 'REQ-136 · SPEC-REQUEST.md:39 · 마이그레이션 파일 경로: V1__full_schema.sql과 V2__base_data.sql을 지정 Flyway 경로와 순서로 제공한다.
+    독립 확인 기준: backend/src/main/resources/db/migration/에서 V1 전체DDL 다음 V2 전체data가 적용된다.'
+- canonical_id: REQ-137
+  status: non-functional
+  evidence: 'REQ-137 · SPEC-REQUEST.md:80 · 프론트 구조와 계층 책임: 지정 src 경로·hook/client 호출·서버 검증/조회/저장 책임을 지키고 iframe/DOM 문자열 복제를
+    금지한다. 독립 확인 기준: UI-27 실제 공통부품 사용·hook/client 통신·서버 검증이 있으며 HTML 전체 iframe0개다.'
+- canonical_id: REQ-138
+  status: non-functional
+  evidence: 'REQ-138 · SPEC-REQUEST.md:371 · 고정 technology_stack: 신규생성 실행 계약의 Frontend/Backend/Database/Infrastructure 값을
+    보존한다. 독립 확인 기준: React+TypeScript+Vite, Java17+Spring Boot, PostgreSQL, docker·healthcheck_required=true가 유지된다.'
+- canonical_id: REQ-139
+  status: non-functional
+  evidence: 'REQ-139 · SPEC-REQUEST.md:398 · 고정 Version BOM: spring_boot3.3.x·node20.x·vite5.x·react18.x·postgres16.x를 원문
+    그대로 보존한다. 독립 확인 기준: BOM 표가 원문5개 값과 동일하며 충돌하는 Spring Boot3.5.x를 몰래 대입하지 않는다.'
+- canonical_id: REQ-140
+  status: non-functional
+  evidence: 'REQ-140 · SPEC-REQUEST.md:405 · 고정 required_outputs: backend_dir·frontend_dir·compose_file·health_endpoint 경로를
+    고정 계약대로 제공한다. 독립 확인 기준: backend·frontend·infra/docker-compose.yml·/api/health 이름이 바뀌지 않는다.'
+- canonical_id: REQ-141
+  status: non-functional
+  evidence: 'REQ-141 · SPEC-REQUEST.md:412 · 레퍼런스 시각 계약: 공통 레이아웃/UI-27의 구조·색·간격·글꼴·아이콘·표·폼·모달 방향을 제품에 적용한다. 독립 확인 기준: sidebar/header/table/form
+    밀도·spacing/color/responsive 비교 증거가 있고 기능은 본문을 따른다.'
+- canonical_id: REQ-142
+  status: non-functional
+  evidence: 'REQ-142 · SPEC-REQUEST.md:426 · Docker 빌드 컨텍스트 제외: 각 compose build context에 .dockerignore를 두고 지정 개발 산출물을 제외한다.
+    독립 확인 기준: 각 context의 .dockerignore가 node_modules/.git/dist/build/.next/coverage를 제외한다.'
+- canonical_id: REQ-143
+  status: non-functional
+  evidence: 'REQ-143 · SPEC-REQUEST.md:466 · 격리 환경만 배포: 임시 관리자 단계는 로컬/접근 제한 사설 개발·검증 환경에 한정하고 공개 배포하지 않는다. 독립 확인 기준: 인터넷 공개
+    배포 경로가 없고 실제 인증/권한 검증 전 공개 배포는 차단된다.'
+- canonical_id: REQ-144
+  status: non-functional
+  evidence: 'REQ-144 · SPEC-REQUEST.md:419 · 실행·영속성 결정 보존: 후속 plan.md가 exact marker+JSON의 semantic SSOT이며 구현은 imperative·jpa·blocking
+    결정을 따른다. 독립 확인 기준: resolved/imperative/jpa/blocking/explicit 및 blocking_priority/conflicts가 변경 없이 후속 plan.md로 복사된다. 차단
+    OQ-007: 원장/spec.md의 jpa와 plan.md exact block의 mybatis 충돌. 이 계약은 상류를 고치거나 최종 영속성 결정을 주장하지 않는다.'
+- canonical_id: REQ-145
+  status: non-functional
+  evidence: 'REQ-145 · SPEC-REQUEST.md:422 · 실제 백엔드 산출물: 신규생성 구현은 backend 변경과 실제 DB/migration을 포함해야 한다. 독립 확인 기준: backend/
+    변경과 실제 migration 증거 없이 UI만 있으면 완료 불가다.'
+- canonical_id: REQ-146
+  status: non-functional
+  evidence: 'REQ-146 · SPEC-REQUEST.md:425 · 프론트·API 함께 검증: preview/quickstart에서 backend API와 frontend 화면을 함께 검증한다. 독립 확인
+    기준: 실제 API 저장 후 브라우저 재조회 결과와 DB 값이 일치하며 미실행은 미검증이다.'
+- canonical_id: REQ-147
+  status: out-of-scope
+  evidence: 'REQ-147 · SPEC-REQUEST.md:21 · 후속 업무 화면 경계: UI-27 외 업무 화면은 제목·해당 기간 줄·다음 단계 안내만 제공한다. 독립 확인 기준: 다른 업무 화면의 가짜
+    수치·무동작 저장버튼0개, 계산/저장/업로드0개다.'
+- canonical_id: REQ-148
+  status: out-of-scope
+  evidence: 'REQ-148 · SPEC-REQUEST.md:21 · 월 마감 쓰기 제외: 월 마감/해제/스냅샷 생성은 구현하지 않는다. 독립 확인 기준: 마감 상태 읽기는 존재하되 마감 변경 API/생성 동작0개다.'
+- canonical_id: REQ-149
+  status: out-of-scope
+  evidence: 'REQ-149 · SPEC-REQUEST.md:21 · 외부·출력·외형 확장 제외: 알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 생성하지 않는다. 독립 확인 기준: 헤더 준비 중 안내 외 AI/알림
+    업무0개·엑셀 파서/업로드/다운로드0개다.'
+- canonical_id: REQ-150
+  status: out-of-scope
+  evidence: 'REQ-150 · SPEC-REQUEST.md:21 · UI-20·단가·근태 제외: UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다. 독립 확인 기준: 메뉴/UI등록표/API에 UI-20이
+    없고 일/시간 단가 및 근태 업로드 동작0개다.'
+- canonical_id: REQ-151
+  status: out-of-scope
+  evidence: 'REQ-151 · SPEC-REQUEST.md:22 · 행정구역 파일 작업 제외: 주소 입력·행정구역 파일 확보/복사/적재는 이번 완료 조건에서 제외한다. 독립 확인 기준: 주소입력 기능/행정구역
+    적재작업 없이 DDL 제약과0행 상태로 검증한다.'
+- canonical_id: REQ-152
+  status: out-of-scope
+  evidence: 'REQ-152 · SPEC-REQUEST.md:44 · 계산 엔진과 규칙 편집 제외: 계산규칙 테이블/데이터는 적재하되 편집 화면과 계산 실행 엔진은 생성하지 않는다. 독립 확인 기준: 94행 규칙
+    데이터가 있어도 규칙 편집 UI/계산 실행 API0개다.'
+- canonical_id: REQ-153
+  status: out-of-scope
+  evidence: 'REQ-153 · SPEC-REQUEST.md:186 · 그룹 변경·삭제 제외: 그룹명/사용여부 변경과 그룹 삭제 기능은 제공하지 않는다. 독립 확인 기준: 그룹 추가/조회만 있고 그룹 수정/삭제
+    UI·API0개다.'
+- canonical_id: REQ-154
+  status: out-of-scope
+  evidence: 'REQ-154 · SPEC-REQUEST.md:245 · 기준 키 CRUD 확장 제외: 운영 기준의 키·이름·단위·설명은 읽기 전용이며 신규 키/삭제는 제공하지 않는다. 독립 확인 기준: 값 변경
+    외 메타 수정/키 추가/키 삭제 API0개다.'
+- canonical_id: REQ-155
+  status: out-of-scope
+  evidence: 'REQ-155 · SPEC-REQUEST.md:282 · 이력 변경·삭제 제외: 변경 이력은 조회만 제공하고 수정·삭제 API는 생성하지 않는다. 독립 확인 기준: 이력 GET만 존재하며 기존/오래된
+    이력 삭제·수정 경로0개다.'
+x-requirement-accounting:
+  registry_total: 156
+  mapped_unique: 106
+  uncovered_unique: 50
+  meaning: 연산연결은해당요구의HTTP책임투영이며구현/시험통과가아니다. 순수화면/설치/환경/제외요구만uncovered에남긴다. 동일요구가여러연산에연결될수있으나uncovered와는교집합없음.
+  source: 기존requirement-registry.json의canonical_id를그대로보존
+x-shared-contract-reference:
+  technology_stack:
+    Frontend: React + TypeScript + Vite
+    Backend: Java 17 + Spring Boot
+    Database: PostgreSQL
+    Infrastructure:
+      runtime: docker
+      healthcheck_required: true
+  version_bom:
+    spring_boot: 3.3.x
+    node: 20.x
+    vite: 5.x
+    react: 18.x
+    postgres: 16.x
+  required_outputs:
+    backend_dir: backend
+    frontend_dir: frontend
+    compose_file: infra/docker-compose.yml
+    health_endpoint: /api/health

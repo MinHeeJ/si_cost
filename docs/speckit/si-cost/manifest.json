@@ -1,0 +1,23 @@
+{
+  "schema_version": "speckit_git_bundle.v2",
+
+  "target_scope_id": "si-cost",
+
+  "documents": {
+    "architecture.md": "b76b48c12aa76834055508fbe1e0462207d05244aee588c7e6d6b657222a6a2d",
+
+    "contracts/openapi.yaml": "c208606cb67a517c765fa81d438f023ece46202a5c5b054957b432064ce3e935",
+
+    "data-model.md": "d78cf55fb1e5fdb1e4c70dbb8b89a652dfd0619add92dfb631101a00ff117677",
+
+    "quickstart.md": "4ed03c2a06187ef3cfd969535dd1ea3c1ab76fd675af8cd3b1fe837ce2e2f67d",
+
+    "requirement-registry.json": "4166cebb1cf2fcaaa3c89016a185956da1b36378444fe05b1bf1ae3525e9b388",
+
+    "research.md": "d489f14691c0bfd792ba152a91b5b73d3f0cf3a11fecc03ddda7df49842cc3d1",
+
+    "spec.md": "13536a3412bdf07e08bfd6a08b07bc4e16ebadfd1d71e28199f7f6e2f9ff4e63",
+
+    "ui-design.md": "fdab4f795ab079322f2d641d199f85cf794d54484d9d133e6b97a96784dd2fc6"
+  }
+}
