@@ -51,3 +51,5 @@ DB 통합 테스트는 명시한 SICOST_TEST_DB_URL, SICOST_TEST_DB_USER, SICOST
 URL에는 반드시 버려도 되는 독립 시험용 DB를 지정한다. 테스트마다 자체 UUID 스키마를 만들며 다른 스키마/DB를 초기화하거나 삭제하지 않는다.
 환경변수가 없으면 통합 테스트를 건너뛴다. 기본 테스트는 서비스 없이 HTTP 계약·비밀 비노출·입력 경계·revision·트랜잭션 호출·컴포넌트를 검증한다.
 frontend/package-lock.json이 포함되어 있으며 package.json의 의존성·engines 선언과 일치한다. 설치 시 해당 lockfile을 사용하는 `npm ci`를 적용하고 손으로 lockfile을 수정하지 않는다.
+
+<!-- 병합 흐름 점검용 줄 (2026-11-11). 기능과 무관하며 지워도 된다. -->
