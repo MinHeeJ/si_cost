@@ -39,6 +39,17 @@ export function DeveloperDrawer({
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [parts, setParts] = useState<PartOption[]>([]);
+  const [positions, setPositions] = useState<{ code: string; name: string }[]>([]);
+  useEffect(() => {
+    let current = true;
+    void Promise.resolve()
+      .then(() => api.getPeopleCodes("JBPS"))
+      .then((r) => current && setPositions(r.items))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, []);
   useEffect(() => {
     let current = true;
     getSalesPartOptions()
@@ -131,7 +142,9 @@ export function DeveloperDrawer({
                     소속: data.companyName ?? "자사",
                     "주 직무": data.job,
                     등급: data.grade,
-                    직위: data.positionCode ? label("JBPS", data.positionCode) : null,
+                    직위: data.positionCode
+                      ? (positions.find((c) => c.code === data.positionCode)?.name ?? label("JBPS", data.positionCode))
+                      : null,
                     "직접/간접": label("DRCT_CLS", data.directClass),
                     "영업 파트": parts.find((p) => p.id === data.partId)?.name ?? data.partId,
                     입사일: data.hireDate,
