@@ -1,3 +1,4 @@
+import { downloadFilename } from "../shared/downloadFilename";
 import { request } from "../../shared/api";
 import { ApiError } from "../../shared/api";
 import type { PeopleAreaPath } from "../../shared/areaClient";
@@ -119,7 +120,7 @@ export async function downloadCandidates(
     anchor = document.createElement("a");
   try {
     anchor.href = url;
-    anchor.download = "외부인력후보.xlsx";
+    anchor.download = downloadFilename(response, "외부인력후보.xlsx");
     anchor.click();
   } finally {
     URL.revokeObjectURL(url);

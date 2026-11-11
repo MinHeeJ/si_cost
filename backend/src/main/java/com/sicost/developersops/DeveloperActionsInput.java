@@ -55,8 +55,9 @@ public final class DeveloperActionsInput {
         if(items==null || !items.isArray()) throw InputValidator.invalid("items");
         Set<String> ids=new HashSet<>(),revisions=new HashSet<>(); List<SelectionItem> result=new ArrayList<>();
         for(JsonNode item:items) {
-            allow(item,Set.of("id","revision"));
-            String id=id(text(item,"id")),revision=text(item,"revision");
+            allow(item,Set.of("id","revision","expectedRevision"));
+            if(item.has("revision")&&item.has("expectedRevision")) throw InputValidator.invalid("items");
+            String id=id(text(item,"id")),revision=text(item,item.has("expectedRevision")?"expectedRevision":"revision");
             if(!ids.add(id)||!revisions.add(revision)) throw InputValidator.invalid("items");
             result.add(new SelectionItem(id,revision));
         }

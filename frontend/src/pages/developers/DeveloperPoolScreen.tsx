@@ -12,6 +12,7 @@ import { B8UploadActions } from "../b8/B8UploadDialog";
 import { DeveloperForm } from "./DeveloperForm";
 import { DeveloperDrawer } from "./DeveloperDrawer";
 import * as api from "./peopleClient";
+import { downloadFilename } from "../shared/downloadFilename";
 import "./developers.css";
 
 export type DeveloperPoolProps = {
@@ -240,7 +241,7 @@ export function DeveloperPoolScreen({
         anchor = document.createElement("a");
       try {
         anchor.href = url;
-        anchor.download = "개발자목록.xlsx";
+        anchor.download = downloadFilename(response, "개발자목록.xlsx");
         anchor.click();
       } finally {
         URL.revokeObjectURL(url);
@@ -363,12 +364,8 @@ export function DeveloperPoolScreen({
       ) : (
         <>
           <header className="developer-toolbar">
-            <div>
-              <small>기준정보 › 개발자 풀</small>
-              <h1>
-                개발자 풀 <small>UI-02</small>
-              </h1>
-            </div>
+            {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
+            <div />
             <div className="developer-actions">
               {!mobile && (
                 <B8UploadActions
@@ -649,6 +646,7 @@ export function DeveloperPoolScreen({
       {id && !form && (
         <DeveloperDrawer
           id={id}
+          label={label}
           refreshKey={refreshKey}
           onChanged={async () => {
             await load();

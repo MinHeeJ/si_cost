@@ -9,10 +9,15 @@ import { DeveloperStatesPanel } from "../states/DeveloperStatesPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { priceHelp } from "./DeveloperForm";
 import * as api from "./peopleClient";
+import { getSalesPartOptions, type PartOption } from "../salespartsops/partStandardsApi";
+
+const won = (value: string | null | undefined) =>
+  value == null ? value : value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 export function DeveloperDrawer({
   id,
   refreshKey = 0,
+  label = (_group: string, value: string) => value,
   onClose,
   onEdit,
   onChanged,
@@ -20,6 +25,8 @@ export function DeveloperDrawer({
 }: {
   id: string;
   refreshKey?: number;
+  /** 공통코드 표시명 찾기(목록과 같은 코드 응답을 쓴다). */
+  label?(group: string, value: string): string;
   onClose(): void;
   onEdit(developer: api.DeveloperDetail): void;
   onChanged?(): void | Promise<void>;
@@ -31,6 +38,16 @@ export function DeveloperDrawer({
   const [tab, setTab] = useState("기본 정보"),
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [parts, setParts] = useState<PartOption[]>([]);
+  useEffect(() => {
+    let current = true;
+    getSalesPartOptions()
+      .then((r) => current && setParts(r.items))
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, []);
   const [leave, setLeave] = useState<() => void>();
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -110,21 +127,21 @@ export function DeveloperDrawer({
                 <dl className="developer-facts">
                   {Object.entries({
                     관리번호: data.managementNo,
-                    직원구분: data.employeeType,
+                    직원구분: label("EMP_TYPE", data.employeeType),
                     소속: data.companyName ?? "자사",
                     "주 직무": data.job,
                     등급: data.grade,
-                    직위: data.positionCode,
-                    "직접/간접": data.directClass,
-                    "영업 파트": data.partId,
+                    직위: data.positionCode ? label("JBPS", data.positionCode) : null,
+                    "직접/간접": label("DRCT_CLS", data.directClass),
+                    "영업 파트": parts.find((p) => p.id === data.partId)?.name ?? data.partId,
                     입사일: data.hireDate,
-                    "근무 상태": data.status,
-                    "사용 여부": data.useYn,
+                    "근무 상태": label("WORK_STAT", data.status),
+                    "사용 여부": data.useYn === "Y" ? "사용" : "중지",
                     "현재 프로젝트": data.currentProjectLabel,
                     "철수 예정일": data.withdrawalDate,
                     "이번 달 MM": data.monthlyMm,
-                    "월 단가": data.monthlyRate,
-                    "월 급여·지급액": data.monthlyPay,
+                    "월 단가": won(data.monthlyRate),
+                    "월 급여·지급액": won(data.monthlyPay),
                     "보유 스킬": data.skills.join(", "),
                     거주지: data.homeAddress,
                   }).map(([key, value]) => (
@@ -168,12 +185,12 @@ export function DeveloperDrawer({
                       {
                         id: "rate",
                         label: "월 단가",
-                        render: (p) => p.monthlyRate ?? "–",
+                        render: (p) => won(p.monthlyRate) ?? "–",
                       },
                       {
                         id: "pay",
                         label: "월 급여·지급액",
-                        render: (p) => p.monthlyPay ?? "–",
+                        render: (p) => won(p.monthlyPay) ?? "–",
                       },
                     ]}
                   />
