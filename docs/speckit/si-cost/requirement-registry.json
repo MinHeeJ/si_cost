@@ -1,0 +1,3073 @@
+{
+  "requirements": [
+    {
+      "canonical_id": "REQ-001",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 17,
+        "quote": "- 작업 저장소: `https://github.com/MinHeeJ/si_cost`. 저장소 루트 `example/project_ddl.sql` 전체가 생성할 DB 정의, `example/project_data.sql` 전체가 기본 초기값이다. example 경로여도 전체를 사용한다."
+      },
+      "type": "data",
+      "title": "전체 SQL 원천 보존",
+      "statement": "example/project_ddl.sql과 example/project_data.sql 전체를 DB와 초기값의 원천으로 사용한다.",
+      "acceptance_hint": "HQ 예약 파트를 포함한 DDL 전체 및 data 전체가 실행본과 대조된다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-002",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 22,
+        "quote": "- 행정구역은 DDL의 테이블·제약만 생성하고 데이터는0행으로 둔다. 주소 입력·행정구역 파일 확보/복사/적재는 이번 완료 조건이 아니다."
+      },
+      "type": "data",
+      "title": "행정구역 빈 테이블",
+      "statement": "행정구역은 DDL 테이블과 제약만 생성하고 데이터는 0행으로 유지한다.",
+      "acceptance_hint": "설치 후 행정구역 테이블 데이터 건수 0행이다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-003",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 42,
+        "quote": "- 빈 개발 DB에서 **68테이블·836컬럼·73 FK·78 명시 인덱스·13 시퀀스·46 CHECK·5 UK**를 생성한다. TB_SY_CALC_RULE 11컬럼도 포함하며 컬럼·타입·NULL·DEFAULT·PK·UK·CHECK·FK·인덱스·시퀀스·코멘트를 보존한다."
+      },
+      "type": "data",
+      "title": "전체 DB 구조 보존",
+      "statement": "빈 개발 DB에 원문 수량과 모든 컬럼·제약·인덱스·시퀀스·코멘트를 보존한다.",
+      "acceptance_hint": "68테이블/836컬럼/73 FK/78 명시 인덱스/13시퀀스/46 CHECK/5 UK 및 TB_SY_CALC_RULE 11컬럼이 일치한다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-004",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 43,
+        "quote": "- 초기값은 그룹64(시스템44), 코드391, 운영기준43, 역할5, 메뉴40(10묶음+30화면), 역할메뉴150, 관리자/역할 연결 각1행, 계산규칙94행이다. HQ1행은 DDL에서만 적재한다. TB_SY_CODE_MAP·변경 이력·사용자 설정은 빈 상태로 시작한다."
+      },
+      "type": "data",
+      "title": "기본 초기값 적재",
+      "statement": "원문 초기값 수량과 HQ 적재 주체를 보존하고 대응·이력·설정은 빈 상태로 시작한다.",
+      "acceptance_hint": "그룹64·시스템44·코드391·운영기준43·역할5·메뉴40·역할메뉴150·관리자/연결 각1·계산규칙94·HQ1행이며 세 빈 테이블은 0행이다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "seed-data"
+    },
+    {
+      "canonical_id": "REQ-005",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 44,
+        "quote": "- 계산규칙 테이블·데이터는 그대로 적재하고 편집 화면·계산 실행 엔진은 생성하지 않는다. 초기 CASH_BASE_YM=202601, CASH_BASE_AMT=1150000000이며 월 마감 기록을 임의로 만들지 않는다."
+      },
+      "type": "data",
+      "title": "초기 자금 기준과 계산규칙",
+      "statement": "계산규칙과 초기 CASH_BASE_YM/CASH_BASE_AMT를 그대로 적재한다.",
+      "acceptance_hint": "CASH_BASE_YM=202601, CASH_BASE_AMT=1150000000이며 임의 월 마감 기록 0행이다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "data-model.md",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "계산규칙과 초기 현금 기준연월·기준금액은 원문과 불일치하는 항목이 0개인 것을 합격 기준으로 제안합니다. 초기 현금 기준연월과 기준금액은 각각 202601, 1150000000원입니다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:48:02Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-006",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 45,
+        "quote": "- data의 최상위 BEGIN2개/COMMIT1개는 Flyway 트랜잭션 래퍼와 중복되지 않게 실행용 사본에서만 제거한다. 계산규칙 TEXT 안의 문자열은 치환하지 않는다. 원본/실행본 차이·사용한 revision/해시를 기록한다."
+      },
+      "type": "data",
+      "title": "Flyway 실행본 래퍼 정리",
+      "statement": "data의 최상위 BEGIN 2개와 COMMIT 1개만 실행용 사본에서 제거하고 TEXT 내부 문자열을 보존한다.",
+      "acceptance_hint": "실행본 diff에는 최상위 래퍼 제거만 있으며 revision/해시가 기록된다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "research.md"
+    },
+    {
+      "canonical_id": "REQ-007",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 46,
+        "quote": "- 적용된 마이그레이션은 수정·재실행하지 않는다. 재시작 시 중복 적재0건이어야 한다. 미적용 파일은 원본과 대조해 완성한다. 설치 실패는 해당 트랜잭션을 롤백하고 지정 개발 DB에서 수정·검증하며 임의 DROP/TRUNCATE·자동 baseline으로 구조 불일치를 숨기지 않는다."
+      },
+      "type": "data",
+      "title": "마이그레이션 불변·멱등성",
+      "statement": "적용된 마이그레이션을 수정하거나 재실행하지 않고 재시작 중복 적재를 방지한다.",
+      "acceptance_hint": "재시작 후 초기값 중복 0건, 미적용 파일은 원본 대조 결과를 갖는다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-008",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 46,
+        "quote": "- 적용된 마이그레이션은 수정·재실행하지 않는다. 재시작 시 중복 적재0건이어야 한다. 미적용 파일은 원본과 대조해 완성한다. 설치 실패는 해당 트랜잭션을 롤백하고 지정 개발 DB에서 수정·검증하며 임의 DROP/TRUNCATE·자동 baseline으로 구조 불일치를 숨기지 않는다."
+      },
+      "type": "data",
+      "title": "설치 실패와 구조 은폐 금지",
+      "statement": "설치 실패는 트랜잭션 롤백하며 임의 DROP/TRUNCATE·자동 baseline으로 불일치를 숨기지 않는다.",
+      "acceptance_hint": "실패 fixture는 해당 트랜잭션을 롤백하며 사용자 보유 DB 초기화 0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-009",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 47,
+        "quote": "- 초기 구조와 이미 존재하는 구조가 다르면 이름·타입을 추정해 바꾸지 않고 차이와 실패 항목을 보고한다. 초기 관리자 비밀번호·메일 주소를 프론트에 노출하지 않는다."
+      },
+      "type": "data",
+      "title": "구조 차이 보고",
+      "statement": "이미 존재하는 DB 구조가 다르면 추정 변경 없이 차이와 실패 항목을 보고한다.",
+      "acceptance_hint": "이름/타입 불일치 fixture에서 임의 스키마 수정 없이 불일치 목록이 보고된다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-010",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 51,
+        "quote": "설치 이후 업무 쓰기는 아래6테이블만 사용한다. 사용자·역할·메뉴·마감·프로젝트 등은 조회용이다. 수당/기준값 변경으로 프로젝트 팀비·경비나 정산금액을 변경한 건수는0건이다."
+      },
+      "type": "data",
+      "title": "설치 후 쓰기 경계",
+      "statement": "업무 쓰기는 명시한 6테이블에 한정하고 나머지 업무 테이블은 조회용이다.",
+      "acceptance_hint": "수당/기준 변경 후 프로젝트 팀비·경비·정산금액 변경 0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-011",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 62,
+        "quote": "REG_USER_ID는 VARCHAR(30) NOT NULL, REG_DTTM은 기본 CURRENT_TIMESTAMP, MOD_USER_ID/MOD_DTTM은 nullable이며 서버가 기록한다. 이력 테이블에는 DDL의 등록 필드만 쓴다. 화면/API 연월은 YYYY-MM, DB는 YYYYMM이다."
+      },
+      "type": "data",
+      "title": "서버 감사 필드와 연월 저장",
+      "statement": "등록·수정 필드는 서버가 기록하며 이력은 등록 필드만 쓰고 DB 연월은 YYYYMM으로 저장한다.",
+      "acceptance_hint": "REG_USER_ID=admin, REG_DTTM 기록; 화면/API YYYY-MM이 DB YYYYMM으로 저장된다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-012",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 68,
+        "quote": "레이아웃·표·검색·페이지·입력·모달·배지·이력을 재사용 가능한 React·TypeScript 컴포넌트로 구성한다. 현재 UI-27에서 실제 사용하고, 후속 화면도 동일 경로/인터페이스를 재사용하도록 Props·이벤트·사용처를 기록한다. 컬럼·렌더러·행 작업·필드 정의를 화면에서 전달하고 공통 부품 안에 개별 업무 분기를 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "공통 컴포넌트 실제 재사용",
+      "statement": "공통 부품을 UI-27에 실제 적용하고 Props·이벤트·사용처를 기록하며 개별 업무 분기를 넣지 않는다.",
+      "acceptance_hint": "코드/대응/기준/이력이 DataTable<T>를 공유하고 화면이 columns/renderer/row action을 전달한다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "integrity check",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-013",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 86,
+        "quote": "|문자열|trim 후 길이 검사, 필수 빈칸400. 초과값을 잘라 저장하지 않음|"
+      },
+      "type": "functional",
+      "title": "문자열 입력 검증",
+      "statement": "trim 후 필수/길이를 검사하고 초과값을 잘라 저장하지 않는다.",
+      "acceptance_hint": "필수 공백은 400; 최대 길이 초과는 원문 입력을 보존한 채 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-014",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 87,
+        "quote": "|그룹ID|소문자→대문자 후 `^[A-Z][A-Z0-9_]{0,29}$`,1~30자|"
+      },
+      "type": "functional",
+      "title": "그룹ID 정규화",
+      "statement": "그룹ID를 대문자로 정규화하고 원문 패턴과 길이를 검사한다.",
+      "acceptance_hint": "소문자 그룹ID는 대문자로 저장; 31자 또는 숫자 시작 ID는 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-015",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 88,
+        "quote": "|코드|소문자→대문자 후 `^[A-Z0-9_]{1,20}$`,1~20자|"
+      },
+      "type": "functional",
+      "title": "코드 정규화",
+      "statement": "코드를 대문자로 정규화하고 원문 패턴과 길이를 검사한다.",
+      "acceptance_hint": "20자 영숫자/_ 코드는 허용; 21자 또는 허용 외 문자는 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-016",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 89,
+        "quote": "|그룹명/코드명|각1~50/1~100자. 등록된 ID/코드는 불변|"
+      },
+      "type": "functional",
+      "title": "명칭 경계와 식별자 불변",
+      "statement": "그룹명 1~50자·코드명 1~100자를 검증하고 등록된 ID/코드는 변경하지 못한다.",
+      "acceptance_hint": "그룹명50·코드명100자는 허용; 51·101자 및 등록 PK 변경은 거부된다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-017",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 90,
+        "quote": "|CODE_VAL·STD_VAL|0~99,999,999,999.9999 포함, 정수부 최대11·소수 최대4자리. 숫자 문자열로 주고받고 BigDecimal로 검사/저장|"
+      },
+      "type": "functional",
+      "title": "정밀 십진값 범위",
+      "statement": "CODE_VAL·STD_VAL을 숫자 문자열과 BigDecimal로 검사·저장한다.",
+      "acceptance_hint": "0과 99,999,999,999.9999 허용; 정수12자리 또는 소수5자리는 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-018",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 91,
+        "quote": "|숫자 입력 처리|공백·쉼표·끝의 원/% 표시는 제거 후 검사. 음수·지수표기·NaN·Infinity·그 밖의 문자는400. 소수5자리 또는 정수12자리 입력도400|"
+      },
+      "type": "functional",
+      "title": "숫자 입력 정리와 금지값",
+      "statement": "공백·쉼표·끝 원/%만 정리하고 음수·지수·NaN·Infinity·다른 문자를 거부한다.",
+      "acceptance_hint": "쉼표/원 기호를 제거한 값은 저장; 음수 또는 지수표기는 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-019",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 92,
+        "quote": "|반올림|CODE_VAL/STD_VAL은 입력 원값 보존, 자동 반올림/버림0회. 허용 소수 이내는 정확히 저장하며 화면 뒤0만 생략|"
+      },
+      "type": "functional",
+      "title": "소수 원값 보존",
+      "statement": "자동 반올림·버림 없이 허용 정밀도를 저장하고 화면 뒤 0만 생략한다.",
+      "acceptance_hint": "소수4자리 입력이 DB에서 정확히 재조회; 자동 반올림/버림 0회다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "integrity check",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-020",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 93,
+        "quote": "|JOB.ADD_VAL2 월단가|0~999,999,999,999,999원 포함·소수0자리. 쉼표/공백/끝의 ‘원’ 정리 후 정수 문자열로 ADD_VAL2 저장. 음수/소수/상한 초과400|"
+      },
+      "type": "functional",
+      "title": "JOB 월단가 정수",
+      "statement": "JOB.ADD_VAL2는 정리 후 0~999,999,999,999,999원 정수 문자열로 저장한다.",
+      "acceptance_hint": "0과 999,999,999,999,999 허용; 음수·소수·상한 초과는 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "공백·쉼표·끝의 ‘원’을 제거한 뒤 정수 문자열로 검증한다. 음수·소수·최댓값 초과·그 밖의 문자는 400 입력 오류로 거부하고 저장하지 않는다. 자동 반올림·버림·범위 보정은 하지 않는다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:49:41Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-021",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 94,
+        "quote": "|연월|0001-01~9999-12의 실제 연월. 월00/13·형식 오류400, 월 가감은 날짜 라이브러리 사용|"
+      },
+      "type": "functional",
+      "title": "실제 연월 검증",
+      "statement": "연월을 0001-01~9999-12의 실제 YYYY-MM으로 검사한다.",
+      "acceptance_hint": "0001-01·9999-12 허용; 월00/13·잘못된 형식은 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-022",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 95,
+        "quote": "|Y/N·JSON|Y/N만, boolean은 JSON true/false만. PREF_VAL JSON 전체 최대2000자. 타입 오류400|"
+      },
+      "type": "functional",
+      "title": "Y/N·JSON 타입",
+      "statement": "Y/N·JSON boolean·PREF_VAL 최대 2000자를 엄격히 검사한다.",
+      "acceptance_hint": "true/false와 2000자 이내 JSON 허용; 문자열 boolean/2001자 JSON은 400이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-023",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 97,
+        "quote": "기준값 빈칸은400, 수당 CODE_VAL의 신규 기본0·비운 값0은 허용한다. 단위가 %라는 이유만으로 임의100 상한을 추가하지 않으며 별도 제한은6.2의 표만 적용한다. 금액 원 단위 콤마, 음수 표시 함수는 ‘−’,0은‘0’,NULL은‘–’, 일자YYYY-MM-DD·일시YYYY-MM-DD HH:mm, 숫자 오른쪽/tabular-nums·문자 왼쪽·상태 가운데다. 표시 함수는 저장값을 바꾸지 않는다."
+      },
+      "type": "functional",
+      "title": "빈 수당·기준값 구분",
+      "statement": "신규 수당 기본/빈 CODE_VAL은 0을 허용하고 기준값 빈칸은 거부하며 % 임의100 상한을 추가하지 않는다.",
+      "acceptance_hint": "수당 빈값은 0으로 재조회; 기준값 빈칸은 400이며 별도 제한 없는 %에 임의 상한이 없다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "input-service"
+    },
+    {
+      "canonical_id": "REQ-024",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 97,
+        "quote": "기준값 빈칸은400, 수당 CODE_VAL의 신규 기본0·비운 값0은 허용한다. 단위가 %라는 이유만으로 임의100 상한을 추가하지 않으며 별도 제한은6.2의 표만 적용한다. 금액 원 단위 콤마, 음수 표시 함수는 ‘−’,0은‘0’,NULL은‘–’, 일자YYYY-MM-DD·일시YYYY-MM-DD HH:mm, 숫자 오른쪽/tabular-nums·문자 왼쪽·상태 가운데다. 표시 함수는 저장값을 바꾸지 않는다."
+      },
+      "type": "functional",
+      "title": "공통 표시 함수",
+      "statement": "금액·음수·0·NULL·일자·일시 및 숫자/문자/상태 정렬은 원문 표시 계약을 따른다.",
+      "acceptance_hint": "0은 ‘0’, NULL은 ‘–’, 음수 기호는 ‘−’; 표시 전후 저장값은 같다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "- 금액 1234567 → 1,234,567 - 음수 -1234567 → −1,234,567 - 0 → 0 - NULL → – - 일자 → 2026-11-10 - 일시 → 2026-11-10 14:05 - 숫자 → 오른쪽 정렬, tabular-nums - 문자 → 왼쪽 정렬 - 상태 → 가운데 정렬 여기서 정렬은 셀 안의 가로 배치다. 목록 행의 정렬 순서는 각 화면에 명시된 기준을 따른다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:50:30Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-025",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 101,
+        "quote": "- CurrentUserProvider는 DB의 admin·roleIds=[ADMIN]·표시명‘임시 관리자’·developmentMode=true를 제공한다. 헤더에 개발용임을 표시한다. 등록자·수정자·설정 USER_ID는 admin이며 요청으로 다른 처리자를 지정하지 못한다."
+      },
+      "type": "functional",
+      "title": "임시 사용자 컨텍스트",
+      "statement": "CurrentUserProvider가 DB admin·roleIds=[ADMIN]·표시명 임시 관리자·developmentMode=true를 공급한다.",
+      "acceptance_hint": "GET /api/current-user에 admin과 ADMIN·developmentMode=true가 있고 헤더에 개발용 표시가 보인다.; api_endpoint:GET /api/current-user",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "current-user",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/current-user",
+          "operationId": "getCurrentUser"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 300,
+          "quote": "|GET /current-user|admin/name/roleIds/developmentMode|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-026",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 101,
+        "quote": "- CurrentUserProvider는 DB의 admin·roleIds=[ADMIN]·표시명‘임시 관리자’·developmentMode=true를 제공한다. 헤더에 개발용임을 표시한다. 등록자·수정자·설정 USER_ID는 admin이며 요청으로 다른 처리자를 지정하지 못한다."
+      },
+      "type": "functional",
+      "title": "처리자 주입 거부",
+      "statement": "등록자·수정자·설정 USER_ID는 admin으로 고정하고 요청의 다른 처리자 지정을 거부한다.",
+      "acceptance_hint": "다른 USER_ID 주입은 저장되지 않고 실제 등록/수정 처리자는 admin이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "current-user"
+    },
+    {
+      "canonical_id": "REQ-027",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 102,
+        "quote": "- 인증 리다이렉트/401·역할별403·민감칸 가림은0건이다. 권한 서비스의 현재 결과는 허용·DataScope=ALL이며 공급자는 한곳에서 교체 가능하게 둔다. 관리자 ID를 각 업무 로직에 복제하지 않는다."
+      },
+      "type": "functional",
+      "title": "인증·권한 유예",
+      "statement": "현재 권한 서비스는 허용·DataScope=ALL이며 한 공급자로 교체 가능하고 인증 차단은 만들지 않는다.",
+      "acceptance_hint": "/UI-27 직접 조회/저장 시 인증 리다이렉트·401·역할별403은 0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "authorization",
+      "owner": "current-user"
+    },
+    {
+      "canonical_id": "REQ-028",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 103,
+        "quote": "- 코드 한 그룹 저장, 운영기준 한 요청, 대응 추가/다중 삭제는 각각 단일 트랜잭션이다. 한 항목 실패 시 데이터와 이력 모두0건 변경이다. 잠금은 키 오름차순이다."
+      },
+      "type": "functional",
+      "title": "원자적 업무 변경",
+      "statement": "코드 한 그룹·기준 한 요청·대응 추가/다중 삭제는 단일 트랜잭션이며 키 오름차순 잠금한다.",
+      "acceptance_hint": "하나 실패하면 데이터/이력 모두 0건 변경; 성공하면 대상과 이력이 함께 commit된다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "transaction-service"
+    },
+    {
+      "canonical_id": "REQ-029",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 104,
+        "quote": "- 조회는 불투명 revision, 변경은 expectedRevision을 사용한다. 비교값은 기존 식별자·저장값·REG_DTTM/MOD_DTTM으로 계산한다. 그룹은 그룹과 소속 전체 코드 행, 기준키는 전체 적용월 이력을 포함한다. 시각 양쪽NULL은 시각만 같고 한쪽NULL은 다르다. 양쪽NULL이어도 값이 바뀌면 다른 revision이다."
+      },
+      "type": "functional",
+      "title": "불투명 revision",
+      "statement": "조회 revision은 식별자·저장값·등록/수정 시각으로 계산하며 그룹 전체 코드·기준키 전체 이력을 포함한다.",
+      "acceptance_hint": "양쪽 시각 NULL이어도 값 변경 시 revision이 달라지고 한쪽 NULL은 동일 시각으로 판정하지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "revision-service",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "비교 대상 전체를 정규화 JSON으로 만들고, UTF-8 기준 SHA-256을 계산해 소문자 64자리 문자열로 반환한다. 필드명은 이름순, 행은 PK순으로 정렬한다. NULL·숫자·시각의 직렬화 방식을 고정하고 DB 시각 정밀도를 보존한다.  동일 스냅샷은 동일한 식별값이어야 한다. 식별자·저장값·등록/수정 시각 또는 비교 대상 행의 추가·변경·삭제가 있으면 다른 식별값이어야 한다. 수정 시각이 양쪽 NULL이어도 저장값이 다르면 불일치다.  저장 시 대상 잠금 후 최신 DB 값으로 재계산해 expectedRevision과 비교한다. 불일치는 409 STALE_WRITE, 해당 요청의 데이터·변경 이력 변경은 0건이다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:51:15Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-030",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 105,
+        "quote": "- 대상 그룹/기준키 잠금 후 최신값과 비교하고 불일치면409 STALE_WRITE다. 두 클라이언트가 같은 revision으로 다른 값을 저장하면 선행1건 성공·후행1건409, 후행 DB/이력 변경0건이다. 스키마에 version 컬럼은 추가하지 않는다."
+      },
+      "type": "functional",
+      "title": "잠금 후 동시 수정 검출",
+      "statement": "대상 잠금 후 expectedRevision을 최신값과 비교하고 불일치면 409 STALE_WRITE다.",
+      "acceptance_hint": "같은 revision의 두 저장 중 선행 1건 성공; 후행 1건409이며 후행 데이터/이력 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "revision-service"
+    },
+    {
+      "canonical_id": "REQ-031",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 106,
+        "quote": "- revision 일치 후 실제 변경0이면200 changed=false·“바뀐 내용이 없습니다.”, 수정시각/이력 갱신0건이다. 변경이 있으면 commit 후 changed=true와 재조회 결과를 반영한다."
+      },
+      "type": "functional",
+      "title": "실제 변경 없는 저장",
+      "statement": "revision 일치 후 변경이 없으면 200 changed=false와 안내를 반환하고 수정시각·이력을 갱신하지 않는다.",
+      "acceptance_hint": "동일값 저장은 changed=false·이력0건; 실제 변경 commit 후 changed=true와 재조회 결과다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "transaction persistence",
+      "owner": "transaction-service"
+    },
+    {
+      "canonical_id": "REQ-032",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 107,
+        "quote": "- 저장 성공 응답 수신 후2초 이내에 저장 브라우저의 관련 캐시·열린 선택 목록·설정을 최신값으로 갱신한다. 서버 캐시는 commit 이후 무효화한다. 다른 브라우저는 다음 조회에서 최신값을 받는다. 통신 오류는 재시도 안내이며 오래된 값을 성공 결과로 표시하지 않는다."
+      },
+      "type": "functional",
+      "title": "commit 후 캐시 최신화",
+      "statement": "성공 응답 후 2초 이내 현재 브라우저 관련 캐시·선택목록·설정을 갱신하고 서버 캐시는 commit 후 무효화한다.",
+      "acceptance_hint": "저장 브라우저 2초 내 최신값; 다른 브라우저 다음 조회는 최신 DB 값이며 통신 오류를 성공으로 표시하지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "cache-service"
+    },
+    {
+      "canonical_id": "REQ-033",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 108,
+        "quote": "- 오류는 `{code,message,field?,details?,requestId}`·X-Request-Id다. 필드 오류·첫 오류 포커스, 연결/500의 오류 띠·[다시 시도]를 제공한다. commit 후 재조회만 실패하면 “저장됐지만 다시 불러오지 못했습니다.”로 구분한다. 자동 저장/재시도0회·처리 중 중복 클릭 차단·입력 보존이다."
+      },
+      "type": "functional",
+      "title": "한국어 오류와 재조회 실패 구분",
+      "statement": "필드 오류·첫 포커스·오류 띠·다시 시도·requestId와 commit 후 재조회 실패를 구분한다.",
+      "acceptance_hint": "500/연결 실패는 오류 띠·재시도; commit 후 조회 실패는 ‘저장됐지만 다시 불러오지 못했습니다.’다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-034",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 108,
+        "quote": "- 오류는 `{code,message,field?,details?,requestId}`·X-Request-Id다. 필드 오류·첫 오류 포커스, 연결/500의 오류 띠·[다시 시도]를 제공한다. commit 후 재조회만 실패하면 “저장됐지만 다시 불러오지 못했습니다.”로 구분한다. 자동 저장/재시도0회·처리 중 중복 클릭 차단·입력 보존이다."
+      },
+      "type": "functional",
+      "title": "중복 클릭·자동 재저장 금지",
+      "statement": "처리 중 중복 클릭을 막고 입력을 보존하며 자동 저장/재시도는 하지 않는다.",
+      "acceptance_hint": "처리 중 반복 클릭의 추가 요청0건; 실패 후 입력 유지·자동 재저장0회다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "validation/rejection",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-035",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 114,
+        "quote": "TB_SY_MENU를 API로 읽어 USE_YN=Y의 정상 부모/자식 관계를 구성한다. 형제는 SORT_ORD/MENU_ID순, 이름·아이콘·PC 전용 여부는 DB 원천이다. 아래는 초기값 검증 목록이며 프론트 하드코딩 메뉴 원천으로 사용하지 않는다."
+      },
+      "type": "functional",
+      "title": "DB 메뉴 구성·정렬",
+      "statement": "USE_YN=Y의 정상 DB 부모/자식과 이름·아이콘·PC 전용 여부를 읽고 형제를 SORT_ORD/MENU_ID순 표시한다.",
+      "acceptance_hint": "초기 10묶음30화면이 DB와 일치하고 프론트 고정 배열이 메뉴 원천이 아니다.; api_endpoint:GET /api/menus",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US1",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/menus",
+          "operationId": "getMenus"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 301,
+          "quote": "|GET /menus|DB 메뉴·상위ID·이름·screenId·순서·icon·pcOnly·children·진단|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-036",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 129,
+        "quote": "- 현재 묶음을 자동 펼치고 기본은 한 묶음만 펼친다. 대시보드는 그룹+자식 데이터여도 한 항목으로 바로 이동한다. 화면ID가 있는 부모의 이름은 이동·펼침 아이콘은 토글이다. 접힌 메뉴는 hover/focus 하위 목록을 제공한다."
+      },
+      "type": "functional",
+      "title": "메뉴 펼침·접힘 탐색",
+      "statement": "현재 묶음 하나를 기본 펼치며 대시보드 직접 이동·부모 이름 이동/아이콘 토글·접힌 hover/focus 목록을 제공한다.",
+      "acceptance_hint": "부모 이름은 화면 이동, 펼침 아이콘은 토글; 접힌 메뉴 키보드 focus에서 하위 목록이 보인다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US1"
+    },
+    {
+      "canonical_id": "REQ-037",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 130,
+        "quote": "- 없는/중지 부모·자기참조·순환·MENU_LVL 깊이 불일치·미등록 화면ID는 해당 노드와 자손을 제외하고 진단을 남긴다. 중복 SCRN_ID는 정상 계층→SORT_ORD→MENU_ID순 대표1개, 탈락 트리도 제외한다. 다른 부모로 자동 이동하거나 DML을 수정하지 않는다. 정상 부분은 표시하되 초기 메뉴 오류가 남으면 합격하지 않는다."
+      },
+      "type": "functional",
+      "title": "잘못된 메뉴 트리 진단",
+      "statement": "비정상 노드와 자손·중복 screen 탈락 트리를 제외하고 진단을 남기며 정상 부분만 표시한다.",
+      "acceptance_hint": "자기참조/순환/깊이 오류 fixture는 하위 트리까지 제외; DB DML 자동 수정0건이며 초기 오류 잔존 시 불합격이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US1"
+    },
+    {
+      "canonical_id": "REQ-038",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 131,
+        "quote": "- React 등록표는 screenId/컴포넌트/기간 유형만 관리한다. 공식 경로는 `/{screenId}`, `/`는 `/UI-16`, `#UI-xx`는 공식 경로로 replace한다. 유효 메뉴가 없는 주소는 대시보드, 대시보드도 없으면 정상 첫 화면, 정상 화면0개면 메뉴 오류다. 리다이렉트 반복은0회다."
+      },
+      "type": "functional",
+      "title": "공식 라우트와 복구",
+      "statement": "/{screenId}·/→/UI-16·hash replace를 지원하고 유효 화면 부재 시 원문 순서로 복구한다.",
+      "acceptance_hint": "/UI-27 새로고침 및 #UI-27 replace 성공; 정상 화면0개는 메뉴 오류이며 리다이렉트 반복0회다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US1"
+    },
+    {
+      "canonical_id": "REQ-039",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 132,
+        "quote": "- PC_ONLY_YN=Y 초기 화면은 UI-10·14·23·24·25·27이다. 폭768px 미만에서 메뉴·즐겨찾기·최근에서 숨긴다. 직접 접근/창 축소는 본문 대신 PC 사용 안내·이전/대시보드 이동을 보여 준다. 미저장 상태는 유지하고 폭을 넓히면 복원한다."
+      },
+      "type": "functional",
+      "title": "PC 전용 화면 보호",
+      "statement": "폭768px 미만에서 PC 전용 메뉴/즐겨찾기/최근을 숨기고 직접 접근은 PC 안내를 표시한다.",
+      "acceptance_hint": "767px UI-27 본문 대신 안내·이동 수단; 폭 확대 시 미저장 편집이 복원된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "authorization",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-040",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 136,
+        "quote": "- AppLayout이 Header/Sidebar/ScreenTabs/TitleBar/본문을 조합한다. 헤더56px, PC≥1280 메뉴 펼침240/접힘64px·여백24px, 태블릿768~1279 기본접힘·여백16px, 모바일≤767 메뉴 슬라이드·화면탭 없음이다. 최소360px에서 본문 전체 가로 넘침0, 넓은 표만 내부 스크롤한다."
+      },
+      "type": "functional",
+      "title": "반응형 공통 레이아웃",
+      "statement": "AppLayout·Header·Sidebar·ScreenTabs·TitleBar를 원문 치수와 breakpoint에 맞춰 배치한다.",
+      "acceptance_hint": "1280px 메뉴240/64px·여백24px; 1024px 기본접힘·16px, 360px 전체 가로넘침0이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-041",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 137,
+        "quote": "- 헤더는 메뉴 토글·로고/시스템명(대시보드 이동)·AI/알림·임시 관리자 메뉴다. AI/알림 클릭은 “준비 중” 안내, 가짜 배지/대화는0개다. 사용자 메뉴는 화면 설정만 제공한다. 비밀번호·로그아웃·타이머는 없다."
+      },
+      "type": "functional",
+      "title": "헤더의 실제 제공 항목",
+      "statement": "메뉴 토글·대시보드 이동·임시 관리자/화면 설정을 제공하며 AI/알림은 준비 중 안내만 한다.",
+      "acceptance_hint": "AI/알림 클릭은 준비 중이고 가짜 배지/대화0개; 사용자 메뉴에 비밀번호/로그아웃/타이머가 없다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-042",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 138,
+        "quote": "- 제목은 묶음›화면명·즐겨찾기·UI-ID·해당 화면 작업이다. 업무 기간은 헤더가 아닌 제목 아래 본문 줄이다. UI-27은 업무 기간 줄이 없고 자체 적용월 입력을 사용한다."
+      },
+      "type": "functional",
+      "title": "화면 제목·기간 배치",
+      "statement": "묶음›화면명·즐겨찾기·UI-ID·작업을 표시하고 업무 기간은 제목 아래에 둔다.",
+      "acceptance_hint": "UI-27에는 업무 기간 줄이 없고 자체 적용월 입력만 있으며 빈 업무 화면은 지정 기간 줄만 보인다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-043",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 139,
+        "quote": "- 메뉴 클릭은 탭 생성, 열린 화면이면 재활성화다. 최대8개(대시보드 포함), 대시보드는 맨 앞·닫기 불가다.9번째는 가장 오래 안 본 닫을 수 있는 탭을 제시해 확인한다. 취소하면 새 탭0개·기존 탭 유지다."
+      },
+      "type": "functional",
+      "title": "화면 탭과 LRU",
+      "statement": "화면을 재활성화 또는 새 탭으로 열고 대시보드 포함 최대8개·9번째는 닫을 수 있는 LRU 확인을 거친다.",
+      "acceptance_hint": "대시보드 닫기 불가; 9번째 취소 시 새 탭0개·기존8개 유지다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "state transition",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-044",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 140,
+        "quote": "- 일반 탭 전환은 편집·필터·기간·스크롤 보존이다. UI-27의 그룹/하위 탭 변경·탭 닫기·상태를 버리는 이동은 “저장하지 않은 내용이 있습니다.”와 [계속 작성]/[나가기], 취소 시 상태를 유지한다. dirty 탭은 ●, 새로고침/창 닫기는 beforeunload다. 모달은 focus trap·닫기 후 포커스 복원, 입력은 label·Tab·오류 포커스를 제공한다."
+      },
+      "type": "functional",
+      "title": "편집 보존과 이동 경고",
+      "statement": "단순 탭 전환은 상태를 보존하고 그룹/하위탭 변경·닫기·상태 폐기 이동은 미저장 확인을 거친다.",
+      "acceptance_hint": "계속 작성 시 입력/필터/기간/스크롤 유지; 새로고침/닫기는 beforeunload·dirty 탭은 ●다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "state transition",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-045",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 140,
+        "quote": "- 일반 탭 전환은 편집·필터·기간·스크롤 보존이다. UI-27의 그룹/하위 탭 변경·탭 닫기·상태를 버리는 이동은 “저장하지 않은 내용이 있습니다.”와 [계속 작성]/[나가기], 취소 시 상태를 유지한다. dirty 탭은 ●, 새로고침/창 닫기는 beforeunload다. 모달은 focus trap·닫기 후 포커스 복원, 입력은 label·Tab·오류 포커스를 제공한다."
+      },
+      "type": "functional",
+      "title": "접근 가능한 모달·입력",
+      "statement": "모달 focus trap·닫기 후 포커스 복원과 입력 label/Tab/첫 오류 포커스를 제공한다.",
+      "acceptance_hint": "모달 내 Tab 순환·닫기 후 원래 포커스; 잘못된 입력 제출 시 첫 오류 필드로 이동한다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-046",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 141,
+        "quote": "- 새로고침은 URL 화면+고정 대시보드로 시작한다. 열린 탭 목록 자체를 서버 복원하지 않는다."
+      },
+      "type": "functional",
+      "title": "새로고침 탭 초기화",
+      "statement": "새로고침은 URL 화면과 고정 대시보드로 시작하며 열린 탭 목록은 서버 복원하지 않는다.",
+      "acceptance_hint": "여러 탭을 열고 새로고침하면 URL 화면+대시보드만 남고 탭 목록 복원 요청은 없다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "state transition",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-047",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 145,
+        "quote": "TB_SY_USER_PREF의 USER_ID는 admin이다. GET은 value/revision/stored를 반환하고 행 없음은 stored=false·기본값이다. MENU_FOLD만 미저장 value=null로 주고 화면폭별 기본값을 적용한다. 최초 PUT은 expectedRevision=null, 기존 행은 조회한 토큰을 보낸다. 최초 명시 저장은 기본값과 같아도 INSERT한다. 동시 최초 등록의 PK 충돌은409 STALE_WRITE다. 잘못된 JSON은 해당 항목의 오류/revision을 반환하고 화면은 기본값으로 임시 표시한다. [이 설정 초기화]로 해당 행만 삭제하며 자동 삭제하지 않는다. 다른 설정 조회·값은 유지한다. 설정 변경은 설정 행의 등록/수정 필드만 기록하고 UI-27 변경 이력에는 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "설정 조회와 기본값",
+      "statement": "admin 설정 GET은 value/revision/stored를 반환하며 행 없음은 기본값·MENU_FOLD만 null이다.",
+      "acceptance_hint": "없는 설정은 stored=false; MENU_FOLD 미저장은 null로 조회되어 화면폭별 기본 접힘을 적용한다.; api_endpoint:GET /api/me/preferences",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US2",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/me/preferences",
+          "operationId": "getPreferences"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 304,
+          "quote": "|GET /me/preferences|설정 value/revision/stored·기본값|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-048",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 145,
+        "quote": "TB_SY_USER_PREF의 USER_ID는 admin이다. GET은 value/revision/stored를 반환하고 행 없음은 stored=false·기본값이다. MENU_FOLD만 미저장 value=null로 주고 화면폭별 기본값을 적용한다. 최초 PUT은 expectedRevision=null, 기존 행은 조회한 토큰을 보낸다. 최초 명시 저장은 기본값과 같아도 INSERT한다. 동시 최초 등록의 PK 충돌은409 STALE_WRITE다. 잘못된 JSON은 해당 항목의 오류/revision을 반환하고 화면은 기본값으로 임시 표시한다. [이 설정 초기화]로 해당 행만 삭제하며 자동 삭제하지 않는다. 다른 설정 조회·값은 유지한다. 설정 변경은 설정 행의 등록/수정 필드만 기록하고 UI-27 변경 이력에는 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "설정 명시 저장",
+      "statement": "최초 PUT은 expectedRevision=null·기존은 토큰이며 기본값과 같아도 최초 명시 저장은 INSERT한다.",
+      "acceptance_hint": "기본값 최초 PUT 후 stored=true; 동시 최초 등록 후행은409 STALE_WRITE다.; api_endpoint:PUT /api/me/preferences/{type}/{key}",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US2",
+      "api_operations": [
+        {
+          "method": "PUT",
+          "path": "/api/me/preferences/{type}/{key}",
+          "operationId": "putPreference"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 305,
+          "quote": "|PUT /me/preferences/{type}/{key}|value/expectedRevision → 검증·upsert|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-049",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 145,
+        "quote": "TB_SY_USER_PREF의 USER_ID는 admin이다. GET은 value/revision/stored를 반환하고 행 없음은 stored=false·기본값이다. MENU_FOLD만 미저장 value=null로 주고 화면폭별 기본값을 적용한다. 최초 PUT은 expectedRevision=null, 기존 행은 조회한 토큰을 보낸다. 최초 명시 저장은 기본값과 같아도 INSERT한다. 동시 최초 등록의 PK 충돌은409 STALE_WRITE다. 잘못된 JSON은 해당 항목의 오류/revision을 반환하고 화면은 기본값으로 임시 표시한다. [이 설정 초기화]로 해당 행만 삭제하며 자동 삭제하지 않는다. 다른 설정 조회·값은 유지한다. 설정 변경은 설정 행의 등록/수정 필드만 기록하고 UI-27 변경 이력에는 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "손상 설정 격리",
+      "statement": "잘못된 JSON은 항목 오류/revision과 기본값 임시 표시로 격리하고 자동 삭제하지 않는다.",
+      "acceptance_hint": "손상 항목 조회는 오류와 revision; 다른 설정값 유지·문제 행 자동 DELETE0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-050",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 145,
+        "quote": "TB_SY_USER_PREF의 USER_ID는 admin이다. GET은 value/revision/stored를 반환하고 행 없음은 stored=false·기본값이다. MENU_FOLD만 미저장 value=null로 주고 화면폭별 기본값을 적용한다. 최초 PUT은 expectedRevision=null, 기존 행은 조회한 토큰을 보낸다. 최초 명시 저장은 기본값과 같아도 INSERT한다. 동시 최초 등록의 PK 충돌은409 STALE_WRITE다. 잘못된 JSON은 해당 항목의 오류/revision을 반환하고 화면은 기본값으로 임시 표시한다. [이 설정 초기화]로 해당 행만 삭제하며 자동 삭제하지 않는다. 다른 설정 조회·값은 유지한다. 설정 변경은 설정 행의 등록/수정 필드만 기록하고 UI-27 변경 이력에는 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "개별 설정 초기화",
+      "statement": "이 설정 초기화는 해당 admin·type·key 행만 물리 삭제하며 UI-27 이력을 남기지 않는다.",
+      "acceptance_hint": "초기화 후 해당 GET은 stored=false·기본값; 다른 설정 행 및 UI-27 이력은 그대로다.; api_endpoint:DELETE /api/me/preferences/{type}/{key}",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US2",
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 451,
+          "quote": "- **Q**: 삭제 기능 요구가 상충됩니다. 이번 범위에서 삭제 정책을 선택해 주세요.\n  **A**: 일반 업무 코드(SYS_CODE_YN=N, VAL_CODE_YN=N): 참조가 없으면 DEL_YN=Y로 논리 삭제한다. 물리 행과 변경 이력은 보존하고, 삭제한 코드의 PK는 재사용하지 않는다. 참조가 있으면 409 CODE_IN_USE로 거부하며 사용 중지만 허용한다.\n시스템 코드·수당 값 코드·코드 그룹·운영 기준값·변경 이력: 삭제 UI와 삭제 처리를 제공하지 않는다.\n엑셀 표기 대응: 확인 후 물리 삭제하며, 삭제 전 내용을 변경 이력에 보존한다. 다중 삭제는 전체 성공 또는 전체 롤백한다.\n사용자 설정 초기화: 해당 사용자·설정 키의 행만 물리 삭제해 기본값으로 복원한다. 다른 설정은 유지한다.\nDELETE라는 HTTP 메서드가 물리 삭제를 뜻하지는 않는다. 실제 삭제 방식은 위 대상별 정책을 따른다."
+        },
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 306,
+          "quote": "|DELETE /me/preferences/{type}/{key}|expectedRevision → 해당 설정만 초기화|"
+        }
+      ],
+      "api_operations": [
+        {
+          "method": "DELETE",
+          "path": "/api/me/preferences/{type}/{key}",
+          "operationId": "deletePreference"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-051",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 149,
+        "quote": "|FAV / *|화면ID 배열·기본[]·최대10개·중복 불가. 별 추가/해제, 목록 편집▲▼로 순서 변경.11번째는 거부|"
+      },
+      "type": "functional",
+      "title": "즐겨찾기 편집",
+      "statement": "화면 별 추가/해제·▲▼ 순서를 FAV에 저장하고 중복 없이 최대10개를 허용한다.",
+      "acceptance_hint": "10개 저장 후 재조회 순서 일치; 11번째 추가는 거부되어 기존10개가 유지된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US3"
+    },
+    {
+      "canonical_id": "REQ-052",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 150,
+        "quote": "|RECENT / *|최근 활성화순 화면ID 배열·기본[]·최대5개. 같은 화면 재방문은 맨 앞으로 이동·중복 제거·초과 뒤에서 제거|"
+      },
+      "type": "functional",
+      "title": "최근 화면 자동 갱신",
+      "statement": "활성화순 RECENT를 중복 없이 최대5개로 저장하고 재방문을 맨 앞으로 옮긴다.",
+      "acceptance_hint": "같은 화면 재방문 후 선두1개만 남고 6번째 화면 활성화는 마지막 항목을 제거한다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "command",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-053",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 151,
+        "quote": "|MENU_FOLD / *|boolean. 저장값 없으면 PC=false·태블릿=true. 모바일 슬라이드 열림은 임시 상태이며 이 값을 변경하지 않음|"
+      },
+      "type": "functional",
+      "title": "메뉴 접힘 기억",
+      "statement": "MENU_FOLD boolean을 저장하고 미저장 PC=false·태블릿=true, 모바일 슬라이드는 임시 상태다.",
+      "acceptance_hint": "PC 접힘 저장 후 재조회 true; 모바일 열고 닫아도 MENU_FOLD 행이 변경되지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-054",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 152,
+        "quote": "|PAGE_SIZE / *|JSON 정수20/50/100·기본50. 문자열‘50’ 거부|"
+      },
+      "type": "functional",
+      "title": "목록 크기 설정",
+      "statement": "PAGE_SIZE는 JSON 정수20/50/100만 저장하며 기본50이다.",
+      "acceptance_hint": "정수100 허용; 문자열 ‘50’은400이고 미저장 목록은50행 기준이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-055",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 153,
+        "quote": "|DENSE / *|‘넓게’/‘좁게’·기본넓게. 모든 열린 목록과 사용자 메뉴에 같은값 적용|"
+      },
+      "type": "functional",
+      "title": "밀도 설정 동기화",
+      "statement": "DENSE 넓게/좁게를 기본 넓게로 서버 저장하고 열린 목록과 사용자 메뉴에 동일 적용한다.",
+      "acceptance_hint": "좁게 저장 후 열린 목록 모두 좁게; 새로고침 재조회도 좁게다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-056",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 154,
+        "quote": "|COLS / screenId|표별 `{viewId:{order:[columnId],hidden:[columnId]}}`·기본 전체열/기본순서. 필수열 숨김·중복·미등록열 거부|"
+      },
+      "type": "functional",
+      "title": "표 열 설정 저장",
+      "statement": "COLS는 표별 전체 순서와 선택 숨김을 저장하고 필수열 숨김·중복·미등록열을 거부한다.",
+      "acceptance_hint": "유효 order/hidden은 재조회 일치; 필수열 숨김 또는 중복 열은400·기존 설정 보존이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-057",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 155,
+        "quote": "|AMT_UNIT / *|‘원’/‘천원’/‘백만원’·기본천원. 선택/저장/복원만, 실제 업무 금액 변환은 이번 범위에서 제외|"
+      },
+      "type": "functional",
+      "title": "금액 단위 선택 기억",
+      "statement": "AMT_UNIT 원/천원/백만원을 기본 천원으로 저장/복원하되 업무 금액 변환은 하지 않는다.",
+      "acceptance_hint": "백만원 선택 후 재조회 백만원; 업무 테이블 숫자 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US2",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "금액 단위는 원·천원·백만원을 저장·복원하고 미지정 시 천원을 기본값으로 쓰며, 단위 변경에 따른 업무 금액 변경 건수가 0건인 것을 합격 기준으로 제안합니다.",
+          "confirmation": "confirmed_as_recommended",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:51:46Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-058",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 158,
+        "quote": "- 즐겨찾기/최근 항목은 등록된 화면ID만 허용한다. 숨겨진 PC 전용 항목은 배열에서 삭제하지 않고 표시만 숨긴다. 메뉴 접힘 상태에서는 두 목록을 숨긴다. 빈 안내는 각각 “화면 제목 옆 ☆를 누르면 추가됩니다”·“아직 없습니다”다."
+      },
+      "type": "functional",
+      "title": "설정 화면ID·표시 보호",
+      "statement": "즐겨찾기/최근은 등록 screenId만 허용하고 PC 숨김은 배열 삭제가 아닌 표시만 숨긴다.",
+      "acceptance_hint": "미등록 screenId 저장 거부; 모바일 숨김 후 PC에서 기존 즐겨찾기 복원된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US3"
+    },
+    {
+      "canonical_id": "REQ-059",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 159,
+        "quote": "- UI-27의 viewId는 codes/valueCodes/mappings/standards/history다. order는 해당 표 정의의 전체 열 순열, hidden은 선택 열 부분집합이다. 코드/값코드의 code/name, 대응의 sourceText/groupId/code, 기준의 key/name/value, 이력의 occurredAt/target는 필수열이다. 선택 체크·작업 버튼은 열 설정에서 제외한다. 다른 화면의 COLS는 해당 화면에 표 정의가 생긴 뒤 허용한다."
+      },
+      "type": "functional",
+      "title": "UI-27 열 정의 제한",
+      "statement": "UI-27 viewId와 필수열을 고정하고 체크/작업열·아직 표 없는 다른 화면의 COLS를 받지 않는다.",
+      "acceptance_hint": "codes의 code/name 숨김400; 미정의 viewId/화면 COLS400이며 작업버튼은 설정 목록에 없다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-060",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 161,
+        "quote": "- PAGE_SIZE·DENSE는 목록과 사용자 메뉴 어디서 바꿔도 서버 저장 후 열린 목록에 반영한다. 필터/페이지/열 설정·밀도는 미저장 편집값을 삭제하지 않는다. 설정 저장 실패는 이전 적용값으로 유지·오류 안내다. localStorage만으로 합격하지 않는다."
+      },
+      "type": "functional",
+      "title": "설정 적용과 실패 보존",
+      "statement": "PAGE_SIZE·DENSE는 서버 성공 후 열린 목록에 반영하고 실패 시 이전값/편집값을 유지한다.",
+      "acceptance_hint": "설정 실패 시 이전 밀도 유지·오류 안내; 성공한 페이지 크기 변경에도 미저장 코드 편집이 유지된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US2"
+    },
+    {
+      "canonical_id": "REQ-061",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 162,
+        "quote": "- PERIOD는 등록표 유형·연도와 월 일치·4.4의 범위를 검사한다. NONE 화면의 PERIOD 쓰기는400이다. 저장된 기간이 새 허용범위 밖이면 DB를 조용히 바꾸지 않고 안내와 기본기간 표시, 사용자가 다시 고를 때 저장한다."
+      },
+      "type": "functional",
+      "title": "기간 설정 타입·범위 검사",
+      "statement": "PERIOD는 화면 유형·연월 일치·허용범위를 검사하고 NONE 쓰기를 거부하며 범위 밖 저장값을 조용히 바꾸지 않는다.",
+      "acceptance_hint": "NONE PERIOD PUT은400; 저장기간이 범위 밖이면 안내/기본기간 표시·DB 수정0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US4"
+    },
+    {
+      "canonical_id": "REQ-062",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 166,
+        "quote": "PeriodSelector는 React·TypeScript **controlled** 부품이다. Props는 `type:'YEAR'|'YEAR_MONTH', value:string, onChange(nextValue), disabled?, min?, max?, ariaLabel?`다. YEAR는 YYYY, YEAR_MONTH는 YYYY-MM만 전달한다. 값/범위/disabled는 부모 소유, 내부 DB 조회·설정 저장0회다. 범위 밖 화살표·disabled 입력은 비활성이고 변경 이벤트0회, 유효 선택1회는 이벤트1회다."
+      },
+      "type": "functional",
+      "title": "controlled 기간 부품",
+      "statement": "PeriodSelector는 부모의 type/value/min/max/disabled를 쓰고 DB 조회나 설정 저장을 내부에서 하지 않는다.",
+      "acceptance_hint": "YEAR/YEAR_MONTH 두 부모에서 유효선택 이벤트1회; 범위 밖/disabled 이벤트0회·내부 DB호출0회다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-063",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 168,
+        "quote": "ScreenPeriodBar가 서버 현재일·설정과 연결한다. 누계형은 연도+기준월·‘1~n월 누계’를 조합하며 연도 변경 시 기존 월을 새 범위로 제한한다. 기본기간은 현재 연월을 범위 안으로 제한한 값이다. 화면별 유형은 아래와 같다."
+      },
+      "type": "functional",
+      "title": "화면 기간 선택·기억",
+      "statement": "ScreenPeriodBar는 서버 현재일/설정과 연결하고 누계 연도·기준월을 범위로 제한하여 기간을 저장한다.",
+      "acceptance_hint": "누계 연도 변경 후 월이 새 범위 내로 제한되고 재조회 PERIOD의 year/month가 일치한다.; api_endpoint:GET /api/period-context",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US4",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/period-context",
+          "operationId": "getPeriodContext"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 302,
+          "quote": "|GET /period-context|현재일/연월·timezone·CASH_BASE_YM·마감상태|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-064",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 177,
+        "quote": "- 현재 빈 업무화면의 YEAR 범위는 CASH_BASE_YM의 연도~현재연도+1, YEAR_MONTH는 CASH_BASE_YM~현재월이다. 누계형은 시작연도~현재연도, UI-07/08/09만 시작연도-1부터 허용한다. 누계 기준월은 선택연도의1월~12월, 현재연도는 현재월까지만이다. 범위 역전은 ‘운영 시작 전’·선택 비활성·PERIOD 저장0회다."
+      },
+      "type": "functional",
+      "title": "기간 범위와 운영 전 상태",
+      "statement": "CASH_BASE_YM와 현재일로 유형별 범위를 산정하고 범위 역전은 운영 시작 전·비활성·저장 금지다.",
+      "acceptance_hint": "YEAR는 시작연도~현재연도+1; 범위 역전이면 PERIOD 쓰기0회, UI-07/08/09는 시작연도-1 허용이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US4"
+    },
+    {
+      "canonical_id": "REQ-065",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 178,
+        "quote": "- 연도 배지는 올해/지난 해·읽기 전용/내년·계획을 날짜 비교로 표시한다. 월 배지는 아래 상태 조회를 사용한다. 이번에는 기간 선택·표시·기억까지만 구현하고 업무 데이터의 계산/쓰기/재계산은 없다."
+      },
+      "type": "functional",
+      "title": "연도 배지",
+      "statement": "날짜 비교로 올해/지난 해·읽기 전용/내년·계획 배지를 표시하고 업무 계산/재계산은 하지 않는다.",
+      "acceptance_hint": "지난 해 선택은 읽기 전용 배지, 내년 선택은 계획 배지이며 업무 데이터 쓰기0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US4",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "비교 기준일은 서버의 Asia/Seoul 현재일이다. 선택 연도가 현재 연도와 같으면 ‘올해’, 이전이면 ‘지난 해·읽기 전용’, 다음 연도이면 ‘내년·계획’을 표시한다. - 기준일 2026-12-31: 2026년은 ‘올해’, 2027년은 ‘내년·계획’ - 기준일 2027-01-01: 2026년은 ‘지난 해·읽기 전용’, 2027년은 ‘올해’ 이번에는 배지만 표시하며 업무 계산·재계산 실행은 0회다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:52:29Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-066",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 179,
+        "quote": "- isClosed(ym)는 CASH_BASE_YM 이전이면 이관·결산완료, 이후 TB_CL_CLOSE.CLOSE_STAT_CD=CLOSE면 마감, WORK/행 없음이면 작업중이다. 서버 현재일과 DB로 판단하고9개월 마감 같은 가상 기록은0건이다. 마감 쓰기 API는0개다."
+      },
+      "type": "functional",
+      "title": "실제 월 마감 조회",
+      "statement": "isClosed는 시작월 이전 이관·결산완료, CLOSE는 마감, WORK/행 없음은 작업중으로 판단한다.",
+      "acceptance_hint": "CLOSE fixture는 마감; 행 없는 월은 작업중이며 가상 마감 기록/마감 쓰기 API0개다.; api_endpoint:GET /api/month-close",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US4",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/month-close",
+          "operationId": "getMonthClose"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 303,
+          "quote": "|GET /month-close?from=&to=|YYYY-MM 범위·from≤to·이관/마감/작업중 조회|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-067",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 185,
+        "quote": "- [코드] [엑셀 표기 대응] [운영 기준값] [변경 이력]4탭이다. 로딩·빈 결과·API 오류를 구분한다. 코드/대응/변경 이력은 페이지20/50/100·기본50, page≥1, 잘못된 size/page는400이다. 운영 기준값은43키를 묶음 줄로 모두 표시하고 페이지를 나누지 않는다. 공통 표의 페이지 기능은 선택 옵션이다. 기본 정렬은 각 절에 고정하며 페이지 이동도 편집값을 유지한다."
+      },
+      "type": "functional",
+      "title": "UI-27 네 탭과 조회 상태",
+      "statement": "코드/엑셀 표기 대응/운영 기준값/변경 이력 4탭과 loading/empty/error를 구분한다.",
+      "acceptance_hint": "4탭이 보이고 로딩·빈 결과·API 오류는 서로 다른 상태로 관찰된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-supporting",
+      "behavior_class": "query",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-068",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 185,
+        "quote": "- [코드] [엑셀 표기 대응] [운영 기준값] [변경 이력]4탭이다. 로딩·빈 결과·API 오류를 구분한다. 코드/대응/변경 이력은 페이지20/50/100·기본50, page≥1, 잘못된 size/page는400이다. 운영 기준값은43키를 묶음 줄로 모두 표시하고 페이지를 나누지 않는다. 공통 표의 페이지 기능은 선택 옵션이다. 기본 정렬은 각 절에 고정하며 페이지 이동도 편집값을 유지한다."
+      },
+      "type": "functional",
+      "title": "표 페이지 계약",
+      "statement": "코드/대응/이력은 page≥1·size20/50/100·기본50, 기준값은 전체43키 비페이지 목록이다.",
+      "acceptance_hint": "page0 또는 size30은400; 기준값43키는 페이지 분리 없이 모두 보인다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "pagination-service"
+    },
+    {
+      "canonical_id": "REQ-069",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 186,
+        "quote": "- 그룹은 DB 전체를 SORT_ORD/CODE_GRP_ID순으로 표시한다. 초기64개(시스템44), 첫 그룹 자동 선택·선택 강조·업무코드 수·시스템 자물쇠다. 목록 높이 안 별도 스크롤·선택 후 위치 유지. 그룹 이름/사용 여부 변경·그룹 삭제 기능은0개다."
+      },
+      "type": "functional",
+      "title": "그룹 목록과 선택",
+      "statement": "전체 그룹을 SORT_ORD/CODE_GRP_ID순으로 표시하고 첫 선택·코드 수·시스템 잠금·스크롤 위치를 제공한다.",
+      "acceptance_hint": "초기64그룹/시스템44개 및 미삭제 코드 수가 보이고 선택 후 스크롤 위치를 유지한다.; api_endpoint:GET /api/code-groups",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US5",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/code-groups",
+          "operationId": "getCodeGroups"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 307,
+          "quote": "|GET /code-groups|그룹·SYS/VAL·sortOrder·미삭제 코드 수|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-070",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 187,
+        "quote": "- 일반 코드 표는 code/name/addVal1~2(적용 그룹만)/sortOrder/useYn/deleteAction, 이름·사용·허용 추가값만 편집한다. 순서는 저장된 SORT_ORD·CODE순·읽기 전용이다. DEL_YN=N의 중지 코드도 흐리게 표시한다. 코드 표의 선택 체크/일괄 중지 버튼은0개, 여러 행을 수정 후 [저장]1회로 반영한다."
+      },
+      "type": "functional",
+      "title": "일반 코드 조회",
+      "statement": "일반 표는 지정 열과 저장된 SORT_ORD/CODE순이며 미삭제 중지 코드도 흐리게 표시한다.",
+      "acceptance_hint": "GET 그룹 코드에 DEL_YN=N인 중지 코드가 있고 UI에 흐리게 표시되며 순서는 읽기 전용이다.; api_endpoint:GET /api/code-groups/{group}/codes",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US5",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/code-groups/{group}/codes",
+          "operationId": "getGroupCodes"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 309,
+          "quote": "|GET /code-groups/{group}/codes|page/size → 미삭제 코드(중지 포함)·추가값/값/단위·groupRevision|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-071",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 187,
+        "quote": "- 일반 코드 표는 code/name/addVal1~2(적용 그룹만)/sortOrder/useYn/deleteAction, 이름·사용·허용 추가값만 편집한다. 순서는 저장된 SORT_ORD·CODE순·읽기 전용이다. DEL_YN=N의 중지 코드도 흐리게 표시한다. 코드 표의 선택 체크/일괄 중지 버튼은0개, 여러 행을 수정 후 [저장]1회로 반영한다."
+      },
+      "type": "functional",
+      "title": "일반 코드 일괄 변경 저장",
+      "statement": "이름·사용·허용 추가값을 여러 행 편집하여 그룹 단위 저장1회로 반영한다.",
+      "acceptance_hint": "여러 행 저장 후 재조회에 각 변경값이 있고 선택체크/일괄중지 버튼은 없다.; api_endpoint:PUT /api/code-groups/{group}/codes",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US5",
+      "api_operations": [
+        {
+          "method": "PUT",
+          "path": "/api/code-groups/{group}/codes",
+          "operationId": "saveGroupCodes"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 310,
+          "quote": "|PUT /code-groups/{group}/codes|expectedRevision/changes:[{code,isNew,...변경필드}] → 그룹 단위 저장. 일반 name/useYn/addVal1/2, 시스템 name, 기존 값코드 codeVal만|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-072",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 188,
+        "quote": "- [취소]는 미저장 신규/편집을 폐기하고 마지막 조회값을 복원한다. [저장]은 변경분만 전송하고 현재 페이지에 없는 행을 삭제하지 않는다. 동일 code를 한 요청에2회 보내면400이다."
+      },
+      "type": "functional",
+      "title": "편집 취소 복원",
+      "statement": "취소는 미저장 신규/편집을 폐기하고 마지막 조회값을 복원한다.",
+      "acceptance_hint": "신규·기존 편집 후 취소하면 신규 행 제거·기존값 복원·DB 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "state transition",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-073",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 188,
+        "quote": "- [취소]는 미저장 신규/편집을 폐기하고 마지막 조회값을 복원한다. [저장]은 변경분만 전송하고 현재 페이지에 없는 행을 삭제하지 않는다. 동일 code를 한 요청에2회 보내면400이다."
+      },
+      "type": "functional",
+      "title": "부분 변경·중복 코드 검사",
+      "statement": "저장은 변경분만 받고 다른 페이지 행은 삭제하지 않으며 동일 code 요청2회는 거부한다.",
+      "acceptance_hint": "변경 한 행 저장 후 다른 페이지 보존; 동일 code 두 건 요청은400·전체변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-074",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 189,
+        "quote": "- SYS_CODE_YN=Y는 이름만 변경한다. 신규·삭제·순서·사용·추가값·값/단위 변경은409 SYSTEM_CODE_LOCKED이고 같은 요청의 이름 변경도 롤백한다. “이름만 바꿀 수 있습니다.”를 표시한다."
+      },
+      "type": "functional",
+      "title": "시스템 코드 변경 제한",
+      "statement": "SYS_CODE_YN=Y는 이름만 변경하고 다른 변경이 섞이면 전체409 SYSTEM_CODE_LOCKED다.",
+      "acceptance_hint": "CTRT_TYPE TK 이름만 변경 성공; 이름+useYn 요청은409·이름과 이력도 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5",
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 457,
+          "quote": "- **Q**: 시스템 코드이면서 값 코드인 그룹이 존재할 경우, 기존 코드의 이름과 값 중 무엇을 변경할 수 있도록 할까요?\n  **A**: 시스템 코드 규칙을 우선 적용\n- **Q**: 시스템 코드 규칙에 따라 기존 코드의 이름과 값은 각각 변경할 수 있나요?\n  **A**: 기존 코드의 이름은 변경할 수 있고, 값은 변경할 수 없습니다.\n\n시스템 코드이면서 값 코드인 경우에도 동일하게 적용합니다."
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-075",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 193,
+        "quote": "- [그룹 추가]: groupId/name 필수·3.2 규칙, ID 중복409 DUPLICATE_GROUP, 이름도 trim 후 같은 문자열이면409 DUPLICATE_GROUP_NAME이다. 그룹 추가 중 그룹 테이블을 직렬화 잠금해 이름 중복과 SORT_ORD 채번 경합을 막는다."
+      },
+      "type": "functional",
+      "title": "그룹 중복과 채번 경합",
+      "statement": "groupId/name 필수·중복ID/trim후 동일명 거부하며 그룹 테이블 직렬화 잠금으로 중복/채번 경합을 막는다.",
+      "acceptance_hint": "동일ID는409 DUPLICATE_GROUP; 동명이면409 DUPLICATE_GROUP_NAME이며 동시 등록도 중복0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US6"
+    },
+    {
+      "canonical_id": "REQ-076",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 194,
+        "quote": "- 새 그룹은 SYS_CODE_YN=N·VAL_CODE_YN=N·USE_YN=Y·SORT_ORD=max+1이다. DB 저장과 NEW 이력 후 선택·재조회한다. 미저장 코드가 있으면 먼저 저장/취소한다. 임의 추가값 컬럼 정의는 제공하지 않는다."
+      },
+      "type": "functional",
+      "title": "업무 그룹 생성",
+      "statement": "새 그룹은 SYS=N·VAL=N·USE=Y·SORT=max+1로 저장하고 NEW 이력 후 선택/재조회한다.",
+      "acceptance_hint": "POST 후201·DB에 일반 업무 그룹·NEW 이력1개; UI에서 새 그룹이 선택된다.; api_endpoint:POST /api/code-groups",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US6",
+      "api_operations": [
+        {
+          "method": "POST",
+          "path": "/api/code-groups",
+          "operationId": "createCodeGroup"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 308,
+          "quote": "|POST /code-groups|groupId/name →201·일반 업무 그룹|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-077",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 194,
+        "quote": "- 새 그룹은 SYS_CODE_YN=N·VAL_CODE_YN=N·USE_YN=Y·SORT_ORD=max+1이다. DB 저장과 NEW 이력 후 선택·재조회한다. 미저장 코드가 있으면 먼저 저장/취소한다. 임의 추가값 컬럼 정의는 제공하지 않는다."
+      },
+      "type": "functional",
+      "title": "그룹 추가 전 편집 처리",
+      "statement": "미저장 코드가 있으면 저장/취소 후 그룹을 추가하며 임의 추가값 컬럼 정의는 제공하지 않는다.",
+      "acceptance_hint": "계속 작성이면 그룹 추가0건·편집 유지; 저장/취소 처리 후에만 그룹 추가가 진행된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US6"
+    },
+    {
+      "canonical_id": "REQ-078",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 195,
+        "quote": "- 일반 [코드 추가] 창은 code/name·해당 추가값 필수다. 소문자는 대문자 정규화, 같은 그룹 중복은 DEL_YN=Y도409 DUPLICATE_CODE다. 창 [추가]는 편집 목록의 신규 행으로만 넣고 하단 [저장] 때 DB에 저장한다. 신규 취소는 DB 변경0건이다."
+      },
+      "type": "functional",
+      "title": "일반 신규 코드 편집 행",
+      "statement": "코드 추가창은 code/name/해당 추가값을 검증하고 DB가 아닌 신규 편집 행에만 추가한다.",
+      "acceptance_hint": "창 추가 뒤 DB0건; 하단 저장 후 신규 코드가 재조회되며 신규 취소는 DB 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-079",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 195,
+        "quote": "- 일반 [코드 추가] 창은 code/name·해당 추가값 필수다. 소문자는 대문자 정규화, 같은 그룹 중복은 DEL_YN=Y도409 DUPLICATE_CODE다. 창 [추가]는 편집 목록의 신규 행으로만 넣고 하단 [저장] 때 DB에 저장한다. 신규 취소는 DB 변경0건이다."
+      },
+      "type": "functional",
+      "title": "그룹 내 코드 PK 재사용 금지",
+      "statement": "같은 그룹 code는 삭제된 행을 포함하여 중복409 DUPLICATE_CODE다.",
+      "acceptance_hint": "DEL_YN=Y 기존 PK 재등록은409; 다른 신규 code는 그룹 저장 시 생성된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-080",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 196,
+        "quote": "- 새 코드는 USE_YN=Y·DEL_YN=N, SORT_ORD는 그룹 내 max+1이며 같은 요청의 신규는 전달 순서다. SORT_ORD가 NUMERIC(5)를 넘으면409 ORDER_LIMIT로 전체 롤백한다. 저장된 PK는 변경하지 않는다."
+      },
+      "type": "functional",
+      "title": "신규 코드 기본값·정렬 채번",
+      "statement": "새 코드는 USE=Y·DEL=N·그룹 max+1이고 같은 요청 신규는 전달 순서로 채번한다.",
+      "acceptance_hint": "복수 신규 저장 후 SORT_ORD가 전달 순서로 증가하고 PK는 불변이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-081",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 196,
+        "quote": "- 새 코드는 USE_YN=Y·DEL_YN=N, SORT_ORD는 그룹 내 max+1이며 같은 요청의 신규는 전달 순서다. SORT_ORD가 NUMERIC(5)를 넘으면409 ORDER_LIMIT로 전체 롤백한다. 저장된 PK는 변경하지 않는다."
+      },
+      "type": "functional",
+      "title": "정렬 순번 한계",
+      "statement": "SORT_ORD가 NUMERIC(5)를 넘으면409 ORDER_LIMIT로 그룹 전체 저장을 롤백한다.",
+      "acceptance_hint": "max+1이 범위를 넘는 fixture는409·신규/기존 변경 및 이력0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-082",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 197,
+        "quote": "- 코드명 중복은 허용하며 그룹ID/코드로 구분한다."
+      },
+      "type": "functional",
+      "title": "코드명 중복 허용",
+      "statement": "동일 코드명은 허용하고 그룹ID/코드로 식별한다.",
+      "acceptance_hint": "다른 code에 같은 name 저장 성공; 조회에서 각각의 code로 구별된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-083",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 201,
+        "quote": "추가·수정 시 아래 필드는 빈칸 불가, 정규화 후 각각100자 이하다. 다른 그룹의 ADD_VAL은 NULL, ADD_VAL3은 이번에 사용하지 않는다. 알려진 다른 그룹 필드를 보내면400이다."
+      },
+      "type": "functional",
+      "title": "그룹별 추가값 필수·길이",
+      "statement": "적용 그룹 추가값은 빈칸 불가·정규화 후100자 이하이고 다른 그룹 ADD_VAL은 NULL·ADD_VAL3은 미사용이다.",
+      "acceptance_hint": "필수 추가값 공백/101자는400; 다른 그룹 필드 주입은400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-084",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 207,
+        "quote": "|PROJ_STEP|0~100 포함 정수·소수 거부|CTRT_TYPE 코드 CSV|"
+      },
+      "type": "functional",
+      "title": "PROJ_STEP 진척 정수",
+      "statement": "PROJ_STEP.ADD_VAL1은 0~100 포함 정수이고 ADD_VAL2는 CTRT_TYPE CSV다.",
+      "acceptance_hint": "0과100은 허용; 소수 또는101은400이며 전체 요청이 롤백된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-085",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 208,
+        "quote": "|BANK|정확한 숫자3자리·앞0 보존|없음|"
+      },
+      "type": "functional",
+      "title": "BANK 코드와 RSM 라벨",
+      "statement": "BANK.ADD_VAL1은 정확한3자리 숫자로 앞0을 보존한다.",
+      "acceptance_hint": "3자리 앞0 값은 그대로 재조회; 2자리 또는 비숫자는400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-086",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 209,
+        "quote": "|RSM_LABEL|NAME/TEL/MAIL/ADDR/SKILL/WANT/FROM/VNDR 중1개·대문자 정규화|없음|"
+      },
+      "type": "functional",
+      "title": "RSM_LABEL 허용값",
+      "statement": "RSM_LABEL.ADD_VAL1은 명시8개 값 중 하나를 대문자 정규화해 저장한다.",
+      "acceptance_hint": "name 입력은 NAME으로 저장; 목록 외 문자열은400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-087",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 212,
+        "quote": "CSV는 쉼표 분리→항목trim/대문자→빈 항목 거부→첫 등장 순서로 중복 제거→쉼표 결합이다. 최소1개, 실제 코드 존재·미삭제·신규 참조는 USE_YN=Y를 검사한다. JOB 자기 자신 포함은 허용하며 필수는 아니다. 같은 저장 요청에서 새로 추가되는 JOB 참조도 최종 상태로 검사한다. 기존 중지 참조를 그대로 유지하는 것은 허용한다."
+      },
+      "type": "functional",
+      "title": "CSV 정규화·참조",
+      "statement": "CSV trim/대문자/빈항목 거부/첫 순서 중복제거 후 실제 미삭제·신규 active 참조를 최종 상태로 검사한다.",
+      "acceptance_hint": "중복 CSV는 첫 등장 순서만 남음; 미존재/삭제/신규 중지참조는400, 기존 중지참조 유지와 JOB 자기참조는 허용이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-088",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 216,
+        "quote": "- VAL_CODE_YN=Y 그룹은 **코드/이름/값/단위**4열이다. 기존은 값만 편집, 코드·이름·단위는 읽기 전용이다. 사용/삭제/순서 작업은 없다. API의 기존 값 이외 필드 변경·삭제는409 VALUE_CODE_FIELD_LOCKED다."
+      },
+      "type": "functional",
+      "title": "수당 코드 조회·편집 형태",
+      "statement": "값 코드 그룹은 코드/이름/값/단위4열이며 기존 값만 편집한다.",
+      "acceptance_hint": "일반 값 그룹에서 code/name/unitNm은 읽기 전용이고 값만 입력 가능하다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US7"
+    },
+    {
+      "canonical_id": "REQ-089",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 216,
+        "quote": "- VAL_CODE_YN=Y 그룹은 **코드/이름/값/단위**4열이다. 기존은 값만 편집, 코드·이름·단위는 읽기 전용이다. 사용/삭제/순서 작업은 없다. API의 기존 값 이외 필드 변경·삭제는409 VALUE_CODE_FIELD_LOCKED다."
+      },
+      "type": "functional",
+      "title": "값 코드 잠금",
+      "statement": "기존 값 이외 변경/삭제는409 VALUE_CODE_FIELD_LOCKED이며 시스템 값 그룹은 시스템 규칙이 우선이다.",
+      "acceptance_hint": "일반 값 코드 단위 변경은409; 시스템+값 그룹 이름은 허용·codeVal 변경은409 SYSTEM_CODE_LOCKED다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US7",
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 457,
+          "quote": "- **Q**: 시스템 코드이면서 값 코드인 그룹이 존재할 경우, 기존 코드의 이름과 값 중 무엇을 변경할 수 있도록 할까요?\n  **A**: 시스템 코드 규칙을 우선 적용\n- **Q**: 시스템 코드 규칙에 따라 기존 코드의 이름과 값은 각각 변경할 수 있나요?\n  **A**: 기존 코드의 이름은 변경할 수 있고, 값은 변경할 수 없습니다.\n\n시스템 코드이면서 값 코드인 경우에도 동일하게 적용합니다."
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-090",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 217,
+        "quote": "- [수당코드 추가]는 코드·이름 필수, 값 기본0·비우면0, 단위는 원/% 중 선택·기본원이다. 3.2의 CODE_VAL 정밀도·코드 규칙을 적용한다. 추가 창은 신규 편집 행, 하단 저장은 그룹 단위 트랜잭션이다."
+      },
+      "type": "functional",
+      "title": "수당 신규 코드 저장",
+      "statement": "수당코드 추가는 code/name 필수·값 기본/빈0·unitNm 원/% 기본원이며 그룹 저장 때 반영한다.",
+      "acceptance_hint": "추가창 완료만으로 DB0건; 하단 저장 후 기본 codeVal=0·unitNm=원 재조회된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US7"
+    },
+    {
+      "canonical_id": "REQ-091",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 218,
+        "quote": "- 초기 ALWNC6개는 ALLOW_TEAM=200000원, ALLOW_GROUP=400000원, INS_RATE=9.4%, SEV_RATE=8.33%, TEAM_FEE/PEXP_FEE=50000원이며 실제 값은 SQL에서 읽는다. 저장 후 공통 조회의 값/단위가 바뀌고 업무 테이블 값은 그대로다. 급여·보험·원가 계산 엔진은 생성하지 않는다."
+      },
+      "type": "functional",
+      "title": "수당 값 변경과 업무 불변",
+      "statement": "초기 수당은 SQL 값을 읽고 변경 후 공통 조회 값/단위만 갱신하며 업무 테이블은 바꾸지 않는다.",
+      "acceptance_hint": "ALLOW_TEAM=200000·INS_RATE=9.4·SEV_RATE=8.33 등 SQL값 일치; 값 변경 후 프로젝트 팀비/경비 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "command",
+      "owner": "US7"
+    },
+    {
+      "canonical_id": "REQ-092",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 222,
+        "quote": "- 일반 업무 코드의 USE_YN 체크를 N/Y로 바꿔 저장하면 STOP/RESUME 이력이다. 중지 코드는 신규 옵션에서 제외하고 기존 이름 조회는 가능하다. 다른 테이블의 저장 코드를 수정한 건수는0건이다."
+      },
+      "type": "functional",
+      "title": "일반 코드 중지·재개",
+      "statement": "USE_YN N/Y 저장은 STOP/RESUME이며 active 선택 제외와 기존 label 조회를 구분한다.",
+      "acceptance_hint": "중지 후 신규 옵션에서 제외·includeInactive label 조회 가능; 재개 후 active 반환·다른 업무 저장코드 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "state transition",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-093",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 222,
+        "quote": "- 일반 업무 코드의 USE_YN 체크를 N/Y로 바꿔 저장하면 STOP/RESUME 이력이다. 중지 코드는 신규 옵션에서 제외하고 기존 이름 조회는 가능하다. 다른 테이블의 저장 코드를 수정한 건수는0건이다."
+      },
+      "type": "functional",
+      "title": "사용 상태 변경 이력",
+      "statement": "일반 업무 코드 중지·재개 시 STOP/RESUME 이력을 기록한다.",
+      "acceptance_hint": "USE_YN N 저장 후 STOP·Y 복원 후 RESUME가 이력 GET에서 조회된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "audit/history",
+      "owner": "US5"
+    },
+    {
+      "canonical_id": "REQ-094",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 223,
+        "quote": "- 일반 업무 코드 [삭제]는 미저장 변경을 먼저 저장/취소하고 확인 후 별도 요청한다. 아래 참조가1건이라도 있으면409 CODE_IN_USE·참조 유형/건수·“사용된 코드라 삭제할 수 없습니다. 사용을 끄세요.”다. 없으면 DEL_YN=Y·DEL 이력·물리 행 보존, 같은 PK 재사용은0회다."
+      },
+      "type": "functional",
+      "title": "삭제 참조 차단",
+      "statement": "삭제 전 편집 처리·확인 후 참조가1건이라도 있으면409 CODE_IN_USE와 유형/건수/안내로 거부한다.",
+      "acceptance_hint": "참조1건 fixture 삭제는409·물리행/DEL_YN/이력 유지; 화면은 사용을 끄세요 안내를 보여준다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US8"
+    },
+    {
+      "canonical_id": "REQ-095",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 223,
+        "quote": "- 일반 업무 코드 [삭제]는 미저장 변경을 먼저 저장/취소하고 확인 후 별도 요청한다. 아래 참조가1건이라도 있으면409 CODE_IN_USE·참조 유형/건수·“사용된 코드라 삭제할 수 없습니다. 사용을 끄세요.”다. 없으면 DEL_YN=Y·DEL 이력·물리 행 보존, 같은 PK 재사용은0회다."
+      },
+      "type": "functional",
+      "title": "일반 코드 논리 삭제",
+      "statement": "미참조 일반 업무 코드는 DEL_YN=Y로 논리 삭제하고 물리행/PK를 보존한다.",
+      "acceptance_hint": "미참조 삭제 후 DEL_YN=Y·물리행 존속; 같은 PK 추가는409 DUPLICATE_CODE다.; api_endpoint:DELETE /api/code-groups/{group}/codes/{code}",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "state transition",
+      "owner": "US8",
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 451,
+          "quote": "- **Q**: 삭제 기능 요구가 상충됩니다. 이번 범위에서 삭제 정책을 선택해 주세요.\n  **A**: 일반 업무 코드(SYS_CODE_YN=N, VAL_CODE_YN=N): 참조가 없으면 DEL_YN=Y로 논리 삭제한다. 물리 행과 변경 이력은 보존하고, 삭제한 코드의 PK는 재사용하지 않는다. 참조가 있으면 409 CODE_IN_USE로 거부하며 사용 중지만 허용한다.\n시스템 코드·수당 값 코드·코드 그룹·운영 기준값·변경 이력: 삭제 UI와 삭제 처리를 제공하지 않는다.\n엑셀 표기 대응: 확인 후 물리 삭제하며, 삭제 전 내용을 변경 이력에 보존한다. 다중 삭제는 전체 성공 또는 전체 롤백한다.\n사용자 설정 초기화: 해당 사용자·설정 키의 행만 물리 삭제해 기본값으로 복원한다. 다른 설정은 유지한다.\nDELETE라는 HTTP 메서드가 물리 삭제를 뜻하지는 않는다. 실제 삭제 방식은 위 대상별 정책을 따른다."
+        },
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 311,
+          "quote": "|DELETE /code-groups/{group}/codes/{code}|expectedRevision → 참조 검사·논리 삭제|"
+        }
+      ],
+      "api_operations": [
+        {
+          "method": "DELETE",
+          "path": "/api/code-groups/{group}/codes/{code}",
+          "operationId": "deleteGroupCode"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-096",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 223,
+        "quote": "- 일반 업무 코드 [삭제]는 미저장 변경을 먼저 저장/취소하고 확인 후 별도 요청한다. 아래 참조가1건이라도 있으면409 CODE_IN_USE·참조 유형/건수·“사용된 코드라 삭제할 수 없습니다. 사용을 끄세요.”다. 없으면 DEL_YN=Y·DEL 이력·물리 행 보존, 같은 PK 재사용은0회다."
+      },
+      "type": "functional",
+      "title": "코드 삭제 이력",
+      "statement": "일반 코드 논리 삭제 시 DEL 이력을 남긴다.",
+      "acceptance_hint": "미참조 삭제 후 이력에 DEL_YN의 N→Y가 조회되고 실제 코드 행은 보존된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "audit/history",
+      "owner": "US8"
+    },
+    {
+      "canonical_id": "REQ-097",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 224,
+        "quote": "- CodeReferenceGuard는 다음 고정 매핑을 사용한다. 취소·중지·마감 자료도 검사하며 코드 자신의 NEW 이력은 사용으로 세지 않는다. 모든 그룹은 추가로 TB_SY_CODE_MAP의 group/code 참조를 검사한다. 요청의 테이블명으로 SQL을 만들지 않는다."
+      },
+      "type": "functional",
+      "title": "고정 참조 가드",
+      "statement": "CodeReferenceGuard는 고정 매핑과 공통 대응을 검사하며 취소·중지·마감 참조도 세고 자기 NEW 이력은 제외한다.",
+      "acceptance_hint": "각 매핑 fixture의 참조1건은 삭제 차단; 코드 자체 NEW 이력만 있으면 삭제 허용이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "integrity check",
+      "owner": "US8"
+    },
+    {
+      "canonical_id": "REQ-098",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 239,
+        "quote": "ALWNC는5.4의 값 코드라 삭제 대상이 아니다. 참조 목록은 서버 코드에 명시하고 실제 사용을 fixture로 확인한다. 삭제 직전 대상 그룹/행을 잠그고 재검사한다."
+      },
+      "type": "functional",
+      "title": "삭제 직전 재검사",
+      "statement": "삭제 직전 대상 그룹/행을 잠그고 실제 참조를 재검사하며 ALWNC는 삭제 대상에서 제외한다.",
+      "acceptance_hint": "잠금 후 생긴 참조 fixture는409로 보호; ALWNC 삭제 요청은 값 코드 잠금 규칙으로 거부된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US8"
+    },
+    {
+      "canonical_id": "REQ-099",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 245,
+        "quote": "- [운영 기준값]은 SQL의43키 전체를 읽어 이름·값·단위·적용 시작월·STD_DESC·[값 변경]/[이력]을 표시한다. 키·이름·단위·설명은 읽기 전용이고 신규 키/삭제 기능은 없다. 목록은 STD_CD순이다."
+      },
+      "type": "functional",
+      "title": "운영 기준 전체 조회",
+      "statement": "SQL43키를 STD_CD순으로 읽어 이름/값/단위/적용월/설명/값변경/이력을 표시한다.",
+      "acceptance_hint": "43키가 페이지 분리 없이 나오고 키/이름/단위/설명은 읽기 전용이다.; api_endpoint:GET /api/operating-standards",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US9",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/operating-standards",
+          "operationId": "getOperatingStandards"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 316,
+          "quote": "|GET /operating-standards?month=|생략현재월·43키의 유효값/단위/설명/적용월·keyRevision|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-100",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 246,
+        "quote": "- 현재값은 APLY_BGN_YM≤현재월 중 가장 최근 행, 이력은 모든 적용월 DESC·현재/예정/지난 상태다. 미래 값은 현재값으로 사용하지 않는다. 해당월 기준이 없으면 ‘기준값 없음’으로 표시하며 임의 기본값 대입은0회다."
+      },
+      "type": "functional",
+      "title": "기준 현재·과거·미래 이력",
+      "statement": "현재값은 현재월 이하 최신행이고 이력은 적용월 DESC·현재/예정/지난 상태로 보여준다.",
+      "acceptance_hint": "미래행이 있어도 현재값으로 선택되지 않고 해당월 이전 행이 없으면 기준값 없음이다.; api_endpoint:GET /api/operating-standards/{key}/history",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US10",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/operating-standards/{key}/history",
+          "operationId": "getOperatingStandardHistory"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 317,
+          "quote": "|GET /operating-standards/{key}/history|모든 적용월·현재/예정·revision|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-101",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 247,
+        "quote": "- 일반 값 변경은 value/effectiveMonth 필수다. 최소월은 max(CASH_BASE_YM, 마지막 CLOSE월+1), CLOSE가 없으면 CASH_BASE_YM이다. 기본월은 max(현재월,최소월)이다. 최소월 전은409 CLOSED_MONTH다."
+      },
+      "type": "functional",
+      "title": "일반 기준 적용 최소월",
+      "statement": "value/effectiveMonth를 필수로 받아 최소월=max(시작월,마지막 CLOSE+1) 전은409 CLOSED_MONTH다.",
+      "acceptance_hint": "최소월 저장은 허용; 최소월 이전 저장은409이며 기본월=max(현재월,최소월)이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-102",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 248,
+        "quote": "- 같은 적용월 행이 있으면 덮어쓸 월/전후를 확인한 뒤 expectedRevision으로 UPDATE, 없으면 INSERT한다. 다른 적용월 행은 유지한다. 한 요청의 변경 키는 중복 불가이며 미변경 칸을 재저장하지 않는다. 키별 전체 이력 revision을 잠금 후 비교한다."
+      },
+      "type": "functional",
+      "title": "기준 월별 추가·덮어쓰기",
+      "statement": "같은 적용월은 전후 확인 후 UPDATE·없으면 INSERT하며 다른월은 보존하고 키 전체 이력 revision을 비교한다.",
+      "acceptance_hint": "덮어쓰기 후 해당월 값만 변경; 신규월 저장은 새행이며 다른 적용월 행은 동일하다.; api_endpoint:PUT /api/operating-standards",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US9",
+      "api_operations": [
+        {
+          "method": "PUT",
+          "path": "/api/operating-standards",
+          "operationId": "saveOperatingStandards"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 318,
+          "quote": "|PUT /operating-standards|effectiveMonth?/changes:[{key,value,expectedRevision}] → 검증·이력·저장.6.3 두키는effectiveMonth없이 별도요청|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-103",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 248,
+        "quote": "- 같은 적용월 행이 있으면 덮어쓸 월/전후를 확인한 뒤 expectedRevision으로 UPDATE, 없으면 INSERT한다. 다른 적용월 행은 유지한다. 한 요청의 변경 키는 중복 불가이며 미변경 칸을 재저장하지 않는다. 키별 전체 이력 revision을 잠금 후 비교한다."
+      },
+      "type": "functional",
+      "title": "기준 변경 키 중복 거부",
+      "statement": "한 요청 키 중복을 거부하고 미변경 칸은 재저장하지 않는다.",
+      "acceptance_hint": "같은 key 중복 요청은400·전체 변경0건; 미변경 키의 시각/이력도 변하지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-104",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 249,
+        "quote": "- 묶음 줄은 DUN_D1/2/3, EXT_PRBL_H/M/L/NULL, STEP_PRBL_1/2/3/4, BILL_MISS_RT/MIN, AI_SCORE_JOB/SKILL/CUST/GRADE/PERF/COST/AVAIL/LOC다. 최대4입력/줄·AI8개는2줄이며 저장은 각 STD_CD 행이다. 변경 칸만 같은 적용월로 한 요청에 보낸다."
+      },
+      "type": "functional",
+      "title": "묶음 기준 표시",
+      "statement": "DUN/EXT_PRBL/STEP_PRBL/BILL_MISS/AI_SCORE를 지정 묶음·최대4입력/줄로 표시한다.",
+      "acceptance_hint": "AI8개는2줄이며 변경 칸만 같은 적용월 요청에 들어가고 DB는 각 STD_CD행이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-105",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 256,
+        "quote": "|DUN_D1/2/3|D1≥1, D1<D2<D3. 일반 최대4소수 범위 적용|"
+      },
+      "type": "functional",
+      "title": "DUN 순서 검증",
+      "statement": "DUN_D1≥1 및 D1<D2<D3를 BigDecimal 일반 정밀도 안에서 검사한다.",
+      "acceptance_hint": "D1이1 미만이면400; D1≥D2 또는 D2≥D3이면400·전체 롤백이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-106",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 257,
+        "quote": "|EXT_PRBL·STEP_PRBL|각0~100 포함|"
+      },
+      "type": "functional",
+      "title": "확률 범위 검증",
+      "statement": "EXT_PRBL·STEP_PRBL은 각각0~100 포함만 허용한다.",
+      "acceptance_hint": "0/100 허용; 100 초과는400이며 키 묶음 전체가 변경되지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-107",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 258,
+        "quote": "|AI_SCORE8개|각0~100·합계정확히100. BigDecimal 합으로 비교|"
+      },
+      "type": "functional",
+      "title": "AI 점수 합계 검증",
+      "statement": "AI_SCORE8개는 각0~100·합계 정확히100을 BigDecimal로 비교한다.",
+      "acceptance_hint": "합99/101은400·전체롤백; 합100은 저장되고 재조회 합100이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-108",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 259,
+        "quote": "|WTHDR_NOTI_D|1 이상 정수·최대99,999,999,999|"
+      },
+      "type": "functional",
+      "title": "철수 통보일 정수",
+      "statement": "WTHDR_NOTI_D는1 이상·최대99,999,999,999 정수다.",
+      "acceptance_hint": "1과99,999,999,999 허용; 0 또는 소수는400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-109",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 260,
+        "quote": "|CASH_BASE_YM|화면 YYYY-MM, API value는 YYYYMM6자리 문자열. 실제 연월·소수 없음. DB는 정수, 읽을 때6자리로 복원|"
+      },
+      "type": "functional",
+      "title": "자금 시작 연월 표현",
+      "statement": "CASH_BASE_YM 화면은 YYYY-MM·API value는 YYYYMM6자리·DB는 정수로 보존한다.",
+      "acceptance_hint": "2026-01 화면은 API 202601·DB 정수로 저장; 월00/13 또는 소수는400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US11"
+    },
+    {
+      "canonical_id": "REQ-110",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 263,
+        "quote": "묶음은 미변경 키까지 같은 트랜잭션에서 잠그고 변경값과 해당 적용월의 다른 유효값을 합쳐 검사한다. 새 이력으로 영향받는 구간과 이후 예정 기준의 경계월에서도 합100/순서/범위를 검사하고 한 경계라도 위반하면400·전체 롤백이다. 단위나 기준명으로 추가 업무 상한을 추정하지 않는다."
+      },
+      "type": "functional",
+      "title": "기준 전체 영향구간 검사",
+      "statement": "묶음 미변경키도 잠그고 해당월·영향구간·이후 예정 경계에서 합/순서/범위를 검사한다.",
+      "acceptance_hint": "현재월 합100이어도 미래 경계 합99/101이면400·전체롤백; 전 경계 유효이면 commit된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US9"
+    },
+    {
+      "canonical_id": "REQ-111",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 267,
+        "quote": "- 두 키는 키마다1행을 유지한다. 적용 시작월 입력 없이 별도 저장 요청으로 즉시 UPDATE, 원래 APLY_BGN_YM은 보존하고 UPD 이력을 남긴다. 일반 이력 요청과 섞으면400이다."
+      },
+      "type": "functional",
+      "title": "자금 두 키 즉시 갱신",
+      "statement": "CASH_BASE_YM/AMT는 키당1행·별도요청·effectiveMonth 없이 즉시 UPDATE하고 원래 적용월을 유지한다.",
+      "acceptance_hint": "미마감 저장 후 두 키는 각1행·APLY_BGN_YM 동일; 일반 이력 요청과 혼합은400이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US11"
+    },
+    {
+      "canonical_id": "REQ-112",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 267,
+        "quote": "- 두 키는 키마다1행을 유지한다. 적용 시작월 입력 없이 별도 저장 요청으로 즉시 UPDATE, 원래 APLY_BGN_YM은 보존하고 UPD 이력을 남긴다. 일반 이력 요청과 섞으면400이다."
+      },
+      "type": "functional",
+      "title": "자금 기준 변경 이력",
+      "statement": "자금 두 키 변경은 UPD 이력을 기록한다.",
+      "acceptance_hint": "성공한 실제 값 변경은 UPD 전후값으로 조회; 미변경값은 이력0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "audit/history",
+      "owner": "US11"
+    },
+    {
+      "canonical_id": "REQ-113",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 268,
+        "quote": "- 저장 전 **기존 CASH_BASE_YM**이 TB_CL_CLOSE에서 CLOSE인지 검사한다. 마감됐으면 두 키 모두 읽기 전용·설명·API409 CLOSED_MONTH다. 시작월을 먼저 바꿔 잠금을 우회하지 못한다."
+      },
+      "type": "functional",
+      "title": "기존 시작월 마감 잠금",
+      "statement": "기존 CASH_BASE_YM이 CLOSE이면 두 키 모두 읽기 전용·409 CLOSED_MONTH로 변경을 막는다.",
+      "acceptance_hint": "기존 시작월 CLOSE 시 새 시작월을 보내도409·두 키 불변; 기존 미마감이면 저장 허용이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US11"
+    },
+    {
+      "canonical_id": "REQ-114",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 269,
+        "quote": "- 두 행을 함께 잠그고 기존 시작월로 재검사한다. 미마감일 때만 새 연월/잔액을 저장한다. 저장 후 period-context·기준 조회를 갱신하며 자금수지 계산·마감 자료 변경은0건이다."
+      },
+      "type": "functional",
+      "title": "자금 동시 잠금·후속 갱신",
+      "statement": "두행 동시 잠금 후 기존 시작월 재검사하고 저장 후 period-context/기준조회만 갱신한다.",
+      "acceptance_hint": "정상 저장 후 기간 범위와 기준 재조회가 최신; 자금수지 계산·마감 자료 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "integrity check",
+      "owner": "US11"
+    },
+    {
+      "canonical_id": "REQ-115",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 275,
+        "quote": "- 표 열은 선택·엑셀 표기·그룹·바꿀 코드(코드/이름), 정렬SRC_TEXT/CODE_GRP_ID/MAP_ID순, 기본50·필터sourceText부분일치/groupId다. 빈 상태는 “등록된 표기가 없습니다.”다."
+      },
+      "type": "functional",
+      "title": "표기 대응 목록·검색",
+      "statement": "대응을 sourceText 부분일치/groupId로 필터하고 원문 순서·페이지로 조회한다.",
+      "acceptance_hint": "SRC_TEXT/CODE_GRP_ID/MAP_ID순 결과에 코드/이름이 있고 빈결과는 등록된 표기가 없습니다 안내다.; api_endpoint:GET /api/code-mappings",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US12",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/code-mappings",
+          "operationId": "getCodeMappings"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 313,
+          "quote": "|GET /code-mappings|sourceText/groupId/page/size → 목록·행revision|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-116",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 276,
+        "quote": "- [추가]의 sourceText는trim 후1~100자, groupId/code 필수·실재 그룹과 active 코드만 허용한다. UK(sourceText,groupId) 중복은409 DUPLICATE_MAPPING이고 다른 코드여도 중복이다. 다른 그룹의 같은 표기는 허용한다. 주/보조·메모·사용 여부·적용일 컬럼은 추가하지 않는다."
+      },
+      "type": "functional",
+      "title": "대응 입력·중복 검사",
+      "statement": "trim 1~100자 sourceText·실재 groupId/active code를 검사하고 UK(sourceText,groupId)를 보호한다.",
+      "acceptance_hint": "동일표기+동일그룹은409 DUPLICATE_MAPPING; 같은표기+다른그룹은 허용된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US13"
+    },
+    {
+      "canonical_id": "REQ-117",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 277,
+        "quote": "- 추가는 즉시 DB/NEW 이력 저장이다. 수정은 삭제 후 재등록한다. 선택 삭제는 확인 후 실제 DELETE·DEL 이력이며 여러 행을 한 트랜잭션으로 처리한다. 누락/변경된 행이 있으면409·전체 삭제0건이다. 삭제된 대응은 이력의 이전 문자열로 식별 가능해야 한다."
+      },
+      "type": "functional",
+      "title": "대응 즉시 등록",
+      "statement": "대응 추가는 즉시 DB에 저장하고 수정 대신 삭제 후 재등록한다.",
+      "acceptance_hint": "POST201 후 대응 목록에서 입력 sourceText/groupId/code가 재조회된다.; api_endpoint:POST /api/code-mappings",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US13",
+      "api_operations": [
+        {
+          "method": "POST",
+          "path": "/api/code-mappings",
+          "operationId": "createCodeMapping"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 314,
+          "quote": "|POST /code-mappings|sourceText/groupId/code →201|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-118",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 277,
+        "quote": "- 추가는 즉시 DB/NEW 이력 저장이다. 수정은 삭제 후 재등록한다. 선택 삭제는 확인 후 실제 DELETE·DEL 이력이며 여러 행을 한 트랜잭션으로 처리한다. 누락/변경된 행이 있으면409·전체 삭제0건이다. 삭제된 대응은 이력의 이전 문자열로 식별 가능해야 한다."
+      },
+      "type": "functional",
+      "title": "대응 등록·삭제 이력",
+      "statement": "대응 NEW/DEL은 삭제 전후 식별내용을 이력에 남겨 물리삭제 후에도 식별한다.",
+      "acceptance_hint": "NEW의 이후·DEL의 이전에 sourceText/groupId/code/codeName JSON이 조회된다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "audit/history",
+      "owner": "US13"
+    },
+    {
+      "canonical_id": "REQ-119",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 277,
+        "quote": "- 추가는 즉시 DB/NEW 이력 저장이다. 수정은 삭제 후 재등록한다. 선택 삭제는 확인 후 실제 DELETE·DEL 이력이며 여러 행을 한 트랜잭션으로 처리한다. 누락/변경된 행이 있으면409·전체 삭제0건이다. 삭제된 대응은 이력의 이전 문자열로 식별 가능해야 한다."
+      },
+      "type": "functional",
+      "title": "대응 다중 물리 삭제",
+      "statement": "선택 확인 후 여러 대응을 한 트랜잭션으로 DELETE한다.",
+      "acceptance_hint": "유효 revision들 삭제 후 모든 선택 행이 목록에 없고 각 DEL 이력이 남는다.; api_endpoint:POST /api/code-mappings/delete",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "transaction persistence",
+      "owner": "US14",
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 451,
+          "quote": "- **Q**: 삭제 기능 요구가 상충됩니다. 이번 범위에서 삭제 정책을 선택해 주세요.\n  **A**: 일반 업무 코드(SYS_CODE_YN=N, VAL_CODE_YN=N): 참조가 없으면 DEL_YN=Y로 논리 삭제한다. 물리 행과 변경 이력은 보존하고, 삭제한 코드의 PK는 재사용하지 않는다. 참조가 있으면 409 CODE_IN_USE로 거부하며 사용 중지만 허용한다.\n시스템 코드·수당 값 코드·코드 그룹·운영 기준값·변경 이력: 삭제 UI와 삭제 처리를 제공하지 않는다.\n엑셀 표기 대응: 확인 후 물리 삭제하며, 삭제 전 내용을 변경 이력에 보존한다. 다중 삭제는 전체 성공 또는 전체 롤백한다.\n사용자 설정 초기화: 해당 사용자·설정 키의 행만 물리 삭제해 기본값으로 복원한다. 다른 설정은 유지한다.\nDELETE라는 HTTP 메서드가 물리 삭제를 뜻하지는 않는다. 실제 삭제 방식은 위 대상별 정책을 따른다."
+        },
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 315,
+          "quote": "|POST /code-mappings/delete|items:[{mapId,expectedRevision}] → 원자적 실제삭제|"
+        }
+      ],
+      "api_operations": [
+        {
+          "method": "POST",
+          "path": "/api/code-mappings/delete",
+          "operationId": "deleteCodeMappings"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-120",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 277,
+        "quote": "- 추가는 즉시 DB/NEW 이력 저장이다. 수정은 삭제 후 재등록한다. 선택 삭제는 확인 후 실제 DELETE·DEL 이력이며 여러 행을 한 트랜잭션으로 처리한다. 누락/변경된 행이 있으면409·전체 삭제0건이다. 삭제된 대응은 이력의 이전 문자열로 식별 가능해야 한다."
+      },
+      "type": "functional",
+      "title": "대응 삭제 충돌",
+      "statement": "삭제 목록에 누락/변경 행이 하나라도 있으면409로 전체 삭제를 롤백한다.",
+      "acceptance_hint": "두 대상 중 하나 revision 충돌 시409·두행 모두 유지·DEL 이력0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US14"
+    },
+    {
+      "canonical_id": "REQ-121",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 278,
+        "quote": "- 대응 변경으로 기존 업무 자료를 고친 건수는0건이다. 이번에는 엑셀 파서·파일 업로드/다운로드를 구현하지 않는다."
+      },
+      "type": "functional",
+      "title": "대응 변경의 업무 불변",
+      "statement": "대응 변경으로 기존 업무 자료는 수정하지 않는다.",
+      "acceptance_hint": "대응 추가/삭제 전후 기존 업무 테이블 값과 행수가 같다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "integrity check",
+      "owner": "US13"
+    },
+    {
+      "canonical_id": "REQ-122",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 282,
+        "quote": "[변경 이력]은 코드 그룹·코드·값코드·기준값·표기 대응만 조회한다. 필터targetType/groupId·기본전체, 정렬REG_DTTM DESC/HIST_ID DESC, 페이지20/50/100·기본50이다. 열은 일시·대상·그룹/코드/키·유형·항목·이전·이후·처리자이며 긴 값은 펼쳐 읽는다. 신규/값변경/중지/재개/삭제는 NEW/UPD/STOP/RESUME/DEL로 기록한다. codeName 이력의 CHG_ITEM_NM은 CODE_NM으로 고정해 과거 이름을 추적한다. SYSTEM은‘시스템’, admin은‘임시 관리자’로 표시한다. 이력 수정·삭제 API는0개다."
+      },
+      "type": "functional",
+      "title": "변경 이력 조회",
+      "statement": "허용5종 대상만 원문 열·필터·정렬·페이지로 조회하고 긴 값 펼침/처리자 표시를 제공한다.",
+      "acceptance_hint": "REG_DTTM DESC/HIST_ID DESC로 일시/대상/키/유형/항목/이전/이후/처리자가 보이고 admin은 임시 관리자다.; api_endpoint:GET /api/common-code-history",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "query",
+      "owner": "US15",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/common-code-history",
+          "operationId": "getCommonCodeHistory"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 320,
+          "quote": "|GET /common-code-history|targetType/groupId/page/size → 허용 대상 이력|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-123",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 282,
+        "quote": "[변경 이력]은 코드 그룹·코드·값코드·기준값·표기 대응만 조회한다. 필터targetType/groupId·기본전체, 정렬REG_DTTM DESC/HIST_ID DESC, 페이지20/50/100·기본50이다. 열은 일시·대상·그룹/코드/키·유형·항목·이전·이후·처리자이며 긴 값은 펼쳐 읽는다. 신규/값변경/중지/재개/삭제는 NEW/UPD/STOP/RESUME/DEL로 기록한다. codeName 이력의 CHG_ITEM_NM은 CODE_NM으로 고정해 과거 이름을 추적한다. SYSTEM은‘시스템’, admin은‘임시 관리자’로 표시한다. 이력 수정·삭제 API는0개다."
+      },
+      "type": "functional",
+      "title": "변경 유형과 과거 이름 추적",
+      "statement": "NEW/UPD/STOP/RESUME/DEL을 기록하고 codeName의 CHG_ITEM_NM은 CODE_NM으로 고정한다.",
+      "acceptance_hint": "코드명 변경 후 CODE_NM 전후 이력이 조회되어 SKILL 과거 이름 참조검사에 사용된다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "audit/history",
+      "owner": "history-service"
+    },
+    {
+      "canonical_id": "REQ-124",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 284,
+        "quote": "targetType은 GROUP/CODE/VALUE_CODE/OPER_STD/CODE_MAP이며 생략하면 전체, 잘못된 값은400이다. CODE/VALUE_CODE는 그룹의 VAL_CODE_YN으로 구분한다. groupId가 있으면 그 그룹의 그룹/코드/대응 이력만 조회하고 운영 기준값은 제외한다."
+      },
+      "type": "functional",
+      "title": "이력 필터 도메인",
+      "statement": "targetType은 명시5값·생략전체이며 groupId는 해당 그룹/코드/대응 이력만 반환한다.",
+      "acceptance_hint": "잘못된 targetType은400; groupId 지정 결과에 운영기준 이력이 없다.",
+      "related_domain": "si-cost",
+      "disposition": "ui-primary",
+      "behavior_class": "validation/rejection",
+      "owner": "US15"
+    },
+    {
+      "canonical_id": "REQ-125",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 286,
+        "quote": "TRGT_TBL_NM은 실제 테이블명, TRGT_KEY는 그룹=`groupId`, 코드=`groupId:code`, 대응=`groupId:mapId`, 기준=`key:YYYYMM`이다. UPD는 변경 컬럼별 전후 값, STOP/RESUME는 USE_YN, 코드 DEL은 DEL_YN의 N→Y다. NEW는 항목‘등록’·이전NULL·이후 식별자/이름/값을 남긴다. 대응 NEW/DEL은 sourceText/groupId/code/codeName의 JSON을 이후/이전 값에 각각 남기고 반대쪽은NULL이다. 삭제 후에도 groupId 필터가 동작하도록 키의 정확한 접두 구분자를 사용한다. 이력 값은500자 이내며 조용히 잘라 저장하지 않는다."
+      },
+      "type": "functional",
+      "title": "이력 키·전후값 무손실",
+      "statement": "실제 테이블명과 대상별 TRGT_KEY·컬럼별 전후값·NEW/DEL JSON을500자 이내로 저장하고 잘라내지 않는다.",
+      "acceptance_hint": "대응 물리삭제 후에도 groupId 접두 구분자 필터로 조회; 500자 초과는 조용한 절단 없이 거부된다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "audit/history",
+      "owner": "history-service"
+    },
+    {
+      "canonical_id": "REQ-126",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 290,
+        "quote": "- CodeQueryService/useCodes(groupId)는 USE_YN=Y·DEL_YN=N 코드를 SORT_ORD/CODE순으로 반환한다. code/name/addVal1~3/codeVal/unitNm을 제공한다. 저장된 중지 코드 label 조회는 includeInactive로 구분하고 신규 선택에 끼워 넣지 않는다."
+      },
+      "type": "functional",
+      "title": "공통 active 코드 조회",
+      "statement": "CodeQueryService/useCodes는 active 미삭제 코드를 정렬하여 원문 공개필드를 반환하고 includeInactive label을 구분한다.",
+      "acceptance_hint": "GET /api/codes/{group}은 code/name/addVal1~3/codeVal/unitNm; 중지코드는 기본 제외·includeInactive에서 조회된다.; api_endpoint:GET /api/codes/{group}",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "code-query-service",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/codes/{group}",
+          "operationId": "getCodes"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 312,
+          "quote": "|GET /codes/{group}|includeInactive=false 기본·조회용 정확한 값/단위|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-127",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 291,
+        "quote": "- OperatingStandardService.get(key,month)는 요청월 이하 최신 적용월의 정확한 값·단위·적용월을 반환한다. 키/해당월 값 없음은404 STANDARD_NOT_FOUND,0이나 하드코딩 값으로 대체하지 않는다. 조회는 DB 값을 읽는 기능이며 계산 엔진을 실행하지 않는다."
+      },
+      "type": "functional",
+      "title": "월별 단일 기준 조회",
+      "statement": "OperatingStandardService.get은 요청월 이하 최신 값/단위/적용월을 DB에서 반환한다.",
+      "acceptance_hint": "GET /api/params/{key}?month=의 유효값은 정확하며 계산엔진 실행0회다.; api_endpoint:GET /api/params/{key}",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "standard-query-service",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/params/{key}",
+          "operationId": "getParameter"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 319,
+          "quote": "|GET /params/{key}?month=|생략현재월·단일 유효값|"
+        }
+      ]
+    },
+    {
+      "canonical_id": "REQ-128",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 291,
+        "quote": "- OperatingStandardService.get(key,month)는 요청월 이하 최신 적용월의 정확한 값·단위·적용월을 반환한다. 키/해당월 값 없음은404 STANDARD_NOT_FOUND,0이나 하드코딩 값으로 대체하지 않는다. 조회는 DB 값을 읽는 기능이며 계산 엔진을 실행하지 않는다."
+      },
+      "type": "functional",
+      "title": "기준 미존재 거부",
+      "statement": "키 또는 해당월 값이 없으면404 STANDARD_NOT_FOUND이며0/하드코딩 값으로 대체하지 않는다.",
+      "acceptance_hint": "미등록 key 및 유효행 없는 month 둘 다404 STANDARD_NOT_FOUND다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "standard-query-service"
+    },
+    {
+      "canonical_id": "REQ-129",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 295,
+        "quote": "공통 접두사는 `/api`, JSON camelCase다. 목록은 `{items,total,page,size}`·page1부터, 전체 건수는현재 페이지 크기와 구분한다. codeVal/value는 십진 문자열, 기존 값 변경은 expectedRevision 필수다. 허용되지 않은 필드400, 모드상 금지 필드409다. 처리자·SYS/VAL/DEL·등록시각 주입을 거부한다."
+      },
+      "type": "functional",
+      "title": "API 필드와 서버 필드 보호",
+      "statement": "camelCase·십진문자열·목록 봉투·expectedRevision을 따르고 허용외/주입 필드는400·모드 금지 필드는409다.",
+      "acceptance_hint": "SYS/VAL/DEL/처리자/등록시각 주입400; 시스템 잠금 필드409이며 DB 변경0건이다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "validation/rejection",
+      "owner": "api-common"
+    },
+    {
+      "canonical_id": "REQ-130",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 324,
+        "quote": "오류는400 VALIDATION_ERROR/INVALID_PERIOD/UNKNOWN_FIELD,404 NOT_FOUND/STANDARD_NOT_FOUND,409 STALE_WRITE/DUPLICATE_GROUP/DUPLICATE_GROUP_NAME/DUPLICATE_CODE/DUPLICATE_MAPPING/SYSTEM_CODE_LOCKED/VALUE_CODE_FIELD_LOCKED/CODE_IN_USE/CLOSED_MONTH/ORDER_LIMIT,500 INTERNAL_ERROR,503 DB_UNAVAILABLE다. 한국어 사유·필드·참조건수를 제공하고 SQL/스택/비밀값은 노출하지 않는다."
+      },
+      "type": "functional",
+      "title": "공통 오류 반환과 비밀 보호",
+      "statement": "원문 상태별 오류코드·한국어 사유·필드·참조건수를 반환하고 SQL/스택/비밀값을 노출하지 않는다.",
+      "acceptance_hint": "참조삭제409는 CODE_IN_USE·참조건수; DB단절 health503은 DB_UNAVAILABLE이며 비밀정보가 없다.",
+      "related_domain": "si-cost",
+      "disposition": "api-contract",
+      "behavior_class": "query",
+      "owner": "api-common"
+    },
+    {
+      "canonical_id": "REQ-131",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 476,
+        "quote": "  **A**: 보존 기한 없이 유지하고, 기간에 따른 삭제는 하지 않는다"
+      },
+      "type": "data",
+      "title": "변경 이력 무기한 보존",
+      "statement": "변경 이력은 보존 기한 없이 유지하고 기간 경과로 삭제하지 않는다.",
+      "acceptance_hint": "과거 이력도 계속 조회되며 기간 기준 삭제 작업/이력 삭제 API가 없다.",
+      "related_domain": "si-cost",
+      "disposition": "data-contract",
+      "behavior_class": "integrity check",
+      "owner": "data-model.md"
+    },
+    {
+      "canonical_id": "REQ-132",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 30,
+        "quote": "- React·TypeScript·Vite·React Router, Java21·Spring Boot3.5.x·Gradle·Spring MVC/JPA/Flyway, PostgreSQL16을 사용한다. 기본 경로는 `frontend/`, `backend/`, `infra/docker-compose.yml`이다."
+      },
+      "type": "non-functional",
+      "title": "원문 구현 기술 요구",
+      "statement": "React·TypeScript·Vite·React Router·Java21·Spring Boot3.5.x·Gradle·Spring MVC/JPA/Flyway·PostgreSQL16 요구를 추적한다.",
+      "acceptance_hint": "고정 계약 Java17/3.3.x와 충돌한 두 버전은 OQ-001로 남고 임의 확정하지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-133",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 31,
+        "quote": "- 프론트/nginx·백엔드·DB의3서비스를 compose로 실행한다. nginx는 `/api`를 프록시하고 화면 직접 접근/새로고침을 SPA fallback으로 처리한다. DB 접속값은 환경설정, `.env.example`은 자리표시자와 실행 안내로 제공한다."
+      },
+      "type": "non-functional",
+      "title": "3서비스 실행과 SPA",
+      "statement": "프론트/nginx·백엔드·DB 3서비스 compose·/api 프록시·SPA fallback·환경설정·.env.example을 제공한다.",
+      "acceptance_hint": "/UI-27 직접 새로고침 성공; compose3서비스 healthy·.env.example은 자리표시자/실행 안내만 포함한다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-134",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 32,
+        "quote": "- 서버·DB 세션 시간대는 Asia/Seoul로 통일한다. 현재일·연월·등록/수정시각과 화면 일시를 이 기준으로 처리한다."
+      },
+      "type": "non-functional",
+      "title": "서울 시간대 일관성",
+      "statement": "서버·DB 세션·현재일·연월·화면 일시는 Asia/Seoul로 통일한다.",
+      "acceptance_hint": "현재일 API와 DB 세션 및 화면 일시가 Asia/Seoul 기준으로 일치한다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-135",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 33,
+        "quote": "- JPA `ddl-auto=validate`, 테이블 생성은 Flyway만 수행한다. 업무 SQL 식별자는 따옴표 없이 사용한다. 이번 숫자 입력·검증은 Java BigDecimal을 사용하며 float/double 변환을 하지 않는다. 실제 급여·원가 계산은 만들지 않는다."
+      },
+      "type": "non-functional",
+      "title": "Flyway 전용 스키마·정밀도",
+      "statement": "JPA ddl-auto=validate·Flyway만 생성·따옴표 없는 업무 SQL 식별자·BigDecimal을 사용한다.",
+      "acceptance_hint": "JPA validate 통과·Hibernate DDL 생성0회·float/double 금액변환0회다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-136",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 39,
+        "quote": "|1|`backend/src/main/resources/db/migration/V1__full_schema.sql`|project_ddl 전체·마지막 HQ 예약 파트 포함|\n|2|같은 경로 `V2__base_data.sql`|project_data 전체|"
+      },
+      "type": "non-functional",
+      "title": "마이그레이션 파일 경로",
+      "statement": "V1__full_schema.sql과 V2__base_data.sql을 지정 Flyway 경로와 순서로 제공한다.",
+      "acceptance_hint": "backend/src/main/resources/db/migration/에서 V1 전체DDL 다음 V2 전체data가 적용된다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-137",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 80,
+        "quote": "프론트 기본 경로는 `src/components/{layout,common}/`, `src/screens/common-codes/`, `src/hooks/`, `src/lib/format.ts`다. API 호출은 hook/client, 검증·조회·저장은 서버 서비스가 담당한다. HTML 전체 iframe·DOM 문자열 복제로 구현하지 않는다."
+      },
+      "type": "non-functional",
+      "title": "프론트 구조와 계층 책임",
+      "statement": "지정 src 경로·hook/client 호출·서버 검증/조회/저장 책임을 지키고 iframe/DOM 문자열 복제를 금지한다.",
+      "acceptance_hint": "UI-27 실제 공통부품 사용·hook/client 통신·서버 검증이 있으며 HTML 전체 iframe0개다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-138",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 371,
+        "quote": "- Frontend: React + TypeScript + Vite\n- Backend: Java 17 + Spring Boot\n- Database: PostgreSQL\n- Infrastructure: {'runtime': 'docker', 'healthcheck_required': True}"
+      },
+      "type": "non-functional",
+      "title": "고정 technology_stack",
+      "statement": "신규생성 실행 계약의 Frontend/Backend/Database/Infrastructure 값을 보존한다.",
+      "acceptance_hint": "React+TypeScript+Vite, Java17+Spring Boot, PostgreSQL, docker·healthcheck_required=true가 유지된다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-139",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 398,
+        "quote": "- spring_boot: 3.3.x\n- node: 20.x\n- vite: 5.x\n- react: 18.x\n- postgres: 16.x"
+      },
+      "type": "non-functional",
+      "title": "고정 Version BOM",
+      "statement": "spring_boot3.3.x·node20.x·vite5.x·react18.x·postgres16.x를 원문 그대로 보존한다.",
+      "acceptance_hint": "BOM 표가 원문5개 값과 동일하며 충돌하는 Spring Boot3.5.x를 몰래 대입하지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-140",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 405,
+        "quote": "- backend_dir: backend\n- frontend_dir: frontend\n- compose_file: infra/docker-compose.yml\n- health_endpoint: /api/health"
+      },
+      "type": "non-functional",
+      "title": "고정 required_outputs",
+      "statement": "backend_dir·frontend_dir·compose_file·health_endpoint 경로를 고정 계약대로 제공한다.",
+      "acceptance_hint": "backend·frontend·infra/docker-compose.yml·/api/health 이름이 바뀌지 않는다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-141",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 412,
+        "quote": "- 적용 방식: 레퍼런스는 복제 대상이 아니라 UI/UX 구현 계약이다. sidebar, header, dashboard card, table/form density, spacing, color token, responsive behavior를 대상 도메인에 맞게 적용해야 한다."
+      },
+      "type": "non-functional",
+      "title": "레퍼런스 시각 계약",
+      "statement": "공통 레이아웃/UI-27의 구조·색·간격·글꼴·아이콘·표·폼·모달 방향을 제품에 적용한다.",
+      "acceptance_hint": "sidebar/header/table/form 밀도·spacing/color/responsive 비교 증거가 있고 기능은 본문을 따른다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "global-ui"
+    },
+    {
+      "canonical_id": "REQ-142",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 426,
+        "quote": "- compose 의 각 build context 디렉터리(예: context: .. 는 저장소 루트)에 .dockerignore 를 두고 node_modules, .git, dist, build, .next, coverage 를 제외한다."
+      },
+      "type": "non-functional",
+      "title": "Docker 빌드 컨텍스트 제외",
+      "statement": "각 compose build context에 .dockerignore를 두고 지정 개발 산출물을 제외한다.",
+      "acceptance_hint": "각 context의 .dockerignore가 node_modules/.git/dist/build/.next/coverage를 제외한다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-143",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 466,
+        "quote": "  **A**: 이번 단계는 로컬 또는 접근 대상이 제한된 사설 개발·검증 환경에서만 실행한다. 임시 관리자 컨텍스트로 모든 기능을 사용할 수 있으므로 인터넷에 누구나 접근할 수 있는 형태로 배포하지 않는다. 공개 배포는 로그인·실제 권한 적용과 검증을 완료한 이후에 진행한다."
+      },
+      "type": "non-functional",
+      "title": "격리 환경만 배포",
+      "statement": "임시 관리자 단계는 로컬/접근 제한 사설 개발·검증 환경에 한정하고 공개 배포하지 않는다.",
+      "acceptance_hint": "인터넷 공개 배포 경로가 없고 실제 인증/권한 검증 전 공개 배포는 차단된다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-144",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 419,
+        "quote": "- plan.md는 실행·영속성 계약의 exact marker+JSON block을 보존하고, 생성된 9개 문서의 semantic SSOT(의미상 정본)로 확정한다."
+      },
+      "type": "non-functional",
+      "title": "실행·영속성 결정 보존",
+      "statement": "후속 plan.md가 exact marker+JSON의 semantic SSOT이며 구현은 imperative·jpa·blocking 결정을 따른다.",
+      "acceptance_hint": "resolved/imperative/jpa/blocking/explicit 및 blocking_priority/conflicts가 변경 없이 후속 plan.md로 복사된다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "runtime constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-145",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 422,
+        "quote": "- backend/ 변경이 없으면 신규생성 구현은 불완전한 것으로 간주한다."
+      },
+      "type": "non-functional",
+      "title": "실제 백엔드 산출물",
+      "statement": "신규생성 구현은 backend 변경과 실제 DB/migration을 포함해야 한다.",
+      "acceptance_hint": "backend/ 변경과 실제 migration 증거 없이 UI만 있으면 완료 불가다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "delivery constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-146",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 425,
+        "quote": "- preview 또는 quickstart 검증에서 backend API와 frontend 화면을 함께 확인한다."
+      },
+      "type": "non-functional",
+      "title": "프론트·API 함께 검증",
+      "statement": "preview/quickstart에서 backend API와 frontend 화면을 함께 검증한다.",
+      "acceptance_hint": "실제 API 저장 후 브라우저 재조회 결과와 DB 값이 일치하며 미실행은 미검증이다.",
+      "related_domain": "si-cost",
+      "disposition": "non-functional",
+      "behavior_class": "delivery constraint",
+      "owner": "Technology Stack Contract"
+    },
+    {
+      "canonical_id": "REQ-147",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 21,
+        "quote": "- 다른 업무 화면은 제목·해당 기간 줄·“이 화면은 다음 단계에서 만듭니다.”만 표시한다. 해당 화면의 계산·저장·업로드, 월 마감/해제/스냅샷 생성, 알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 제외한다. UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다. 가짜 업무 수치·무동작 저장 버튼은0개다."
+      },
+      "type": "out-of-scope",
+      "title": "후속 업무 화면 경계",
+      "statement": "UI-27 외 업무 화면은 제목·해당 기간 줄·다음 단계 안내만 제공한다.",
+      "acceptance_hint": "다른 업무 화면의 가짜 수치·무동작 저장버튼0개, 계산/저장/업로드0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-148",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 21,
+        "quote": "- 다른 업무 화면은 제목·해당 기간 줄·“이 화면은 다음 단계에서 만듭니다.”만 표시한다. 해당 화면의 계산·저장·업로드, 월 마감/해제/스냅샷 생성, 알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 제외한다. UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다. 가짜 업무 수치·무동작 저장 버튼은0개다."
+      },
+      "type": "out-of-scope",
+      "title": "월 마감 쓰기 제외",
+      "statement": "월 마감/해제/스냅샷 생성은 구현하지 않는다.",
+      "acceptance_hint": "마감 상태 읽기는 존재하되 마감 변경 API/생성 동작0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-149",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 21,
+        "quote": "- 다른 업무 화면은 제목·해당 기간 줄·“이 화면은 다음 단계에서 만듭니다.”만 표시한다. 해당 화면의 계산·저장·업로드, 월 마감/해제/스냅샷 생성, 알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 제외한다. UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다. 가짜 업무 수치·무동작 저장 버튼은0개다."
+      },
+      "type": "out-of-scope",
+      "title": "외부·출력·외형 확장 제외",
+      "statement": "알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 생성하지 않는다.",
+      "acceptance_hint": "헤더 준비 중 안내 외 AI/알림 업무0개·엑셀 파서/업로드/다운로드0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계",
+      "decision_answers": {
+        "chk:7e7878c113bd": {
+          "text": "외부·출력·외형 확장 제외 처리 중 하나라도 실패하면 처리한 내역 전체를 되돌린다.",
+          "confirmation": "confirmed_with_edit",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:54:04Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-150",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 21,
+        "quote": "- 다른 업무 화면은 제목·해당 기간 줄·“이 화면은 다음 단계에서 만듭니다.”만 표시한다. 해당 화면의 계산·저장·업로드, 월 마감/해제/스냅샷 생성, 알림/메일·AI·엑셀 입출력·인쇄·다크 모드는 제외한다. UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다. 가짜 업무 수치·무동작 저장 버튼은0개다."
+      },
+      "type": "out-of-scope",
+      "title": "UI-20·단가·근태 제외",
+      "statement": "UI-20 지급관리·일/시간 단가·근태 업로드는 생성하지 않는다.",
+      "acceptance_hint": "메뉴/UI등록표/API에 UI-20이 없고 일/시간 단가 및 근태 업로드 동작0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "UI-20 지급관리 화면, 일/시간 단가 기능, 근태 업로드 기능의 생성 수가 각각 0개인 것을 합격 기준으로 제안합니다.",
+          "confirmation": "confirmed_as_recommended",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:52:58Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-151",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 22,
+        "quote": "- 행정구역은 DDL의 테이블·제약만 생성하고 데이터는0행으로 둔다. 주소 입력·행정구역 파일 확보/복사/적재는 이번 완료 조건이 아니다."
+      },
+      "type": "out-of-scope",
+      "title": "행정구역 파일 작업 제외",
+      "statement": "주소 입력·행정구역 파일 확보/복사/적재는 이번 완료 조건에서 제외한다.",
+      "acceptance_hint": "주소입력 기능/행정구역 적재작업 없이 DDL 제약과0행 상태로 검증한다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-152",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 44,
+        "quote": "- 계산규칙 테이블·데이터는 그대로 적재하고 편집 화면·계산 실행 엔진은 생성하지 않는다. 초기 CASH_BASE_YM=202601, CASH_BASE_AMT=1150000000이며 월 마감 기록을 임의로 만들지 않는다."
+      },
+      "type": "out-of-scope",
+      "title": "계산 엔진과 규칙 편집 제외",
+      "statement": "계산규칙 테이블/데이터는 적재하되 편집 화면과 계산 실행 엔진은 생성하지 않는다.",
+      "acceptance_hint": "94행 규칙 데이터가 있어도 규칙 편집 UI/계산 실행 API0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계",
+      "decision_answers": {
+        "chk:4be6641fd719": {
+          "text": "계산규칙 테이블과 데이터는 원문 대비 누락·불일치가 각각 0개이고, 계산규칙 편집 화면과 계산 실행 엔진의 생성 수는 각각 0개인 것을 합격 기준으로 제안합니다.",
+          "confirmation": "confirmed_as_recommended",
+          "answered_by": "mjung",
+          "answered_at": "2026-11-10T09:53:20Z"
+        }
+      }
+    },
+    {
+      "canonical_id": "REQ-153",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 186,
+        "quote": "- 그룹은 DB 전체를 SORT_ORD/CODE_GRP_ID순으로 표시한다. 초기64개(시스템44), 첫 그룹 자동 선택·선택 강조·업무코드 수·시스템 자물쇠다. 목록 높이 안 별도 스크롤·선택 후 위치 유지. 그룹 이름/사용 여부 변경·그룹 삭제 기능은0개다."
+      },
+      "type": "out-of-scope",
+      "title": "그룹 변경·삭제 제외",
+      "statement": "그룹명/사용여부 변경과 그룹 삭제 기능은 제공하지 않는다.",
+      "acceptance_hint": "그룹 추가/조회만 있고 그룹 수정/삭제 UI·API0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-154",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 245,
+        "quote": "- [운영 기준값]은 SQL의43키 전체를 읽어 이름·값·단위·적용 시작월·STD_DESC·[값 변경]/[이력]을 표시한다. 키·이름·단위·설명은 읽기 전용이고 신규 키/삭제 기능은 없다. 목록은 STD_CD순이다."
+      },
+      "type": "out-of-scope",
+      "title": "기준 키 CRUD 확장 제외",
+      "statement": "운영 기준의 키·이름·단위·설명은 읽기 전용이며 신규 키/삭제는 제공하지 않는다.",
+      "acceptance_hint": "값 변경 외 메타 수정/키 추가/키 삭제 API0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-155",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 282,
+        "quote": "[변경 이력]은 코드 그룹·코드·값코드·기준값·표기 대응만 조회한다. 필터targetType/groupId·기본전체, 정렬REG_DTTM DESC/HIST_ID DESC, 페이지20/50/100·기본50이다. 열은 일시·대상·그룹/코드/키·유형·항목·이전·이후·처리자이며 긴 값은 펼쳐 읽는다. 신규/값변경/중지/재개/삭제는 NEW/UPD/STOP/RESUME/DEL로 기록한다. codeName 이력의 CHG_ITEM_NM은 CODE_NM으로 고정해 과거 이름을 추적한다. SYSTEM은‘시스템’, admin은‘임시 관리자’로 표시한다. 이력 수정·삭제 API는0개다."
+      },
+      "type": "out-of-scope",
+      "title": "이력 변경·삭제 제외",
+      "statement": "변경 이력은 조회만 제공하고 수정·삭제 API는 생성하지 않는다.",
+      "acceptance_hint": "이력 GET만 존재하며 기존/오래된 이력 삭제·수정 경로0개다.",
+      "related_domain": "si-cost",
+      "disposition": "out-of-scope",
+      "behavior_class": "exclusion",
+      "owner": "범위 경계"
+    },
+    {
+      "canonical_id": "REQ-156",
+      "source_id": null,
+      "source_locator": {
+        "document": "SPEC-REQUEST.md",
+        "line": 470,
+        "quote": "/api/health는 실제 DB 연결을 검사하고 정상 200, 연결 실패 503을 반환한다."
+      },
+      "type": "functional",
+      "title": "실제 DB health 조회",
+      "statement": "/api/health가 실제 DB 연결 SELECT를 검사하고 정상200·실패503을 반환한다.",
+      "acceptance_hint": "정상 DB에서200; DB 중단 시503 DB_UNAVAILABLE이며 단순 프로세스 생존만으로200을 반환하지 않는다.; api_endpoint:GET /api/health",
+      "related_domain": "si-cost",
+      "disposition": "architecture-runtime",
+      "behavior_class": "query",
+      "owner": "health-service",
+      "api_operations": [
+        {
+          "method": "GET",
+          "path": "/api/health",
+          "operationId": "getHealth"
+        }
+      ],
+      "supplementary_source_locators": [
+        {
+          "document": "SPEC-REQUEST.md",
+          "line": 299,
+          "quote": "|GET /health|실제DB SELECT·200/실패503|"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "source": "SPEC-REQUEST.md",
+    "source_lines": 476,
+    "feature": "001-feature",
+    "language": "ko",
+    "canonical_id_policy": "선언 순서의 독립 의미 키; source_id 숫자에서 계산하지 않음",
+    "stage": "spec-only"
+  }
+}

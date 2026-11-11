@@ -1,0 +1,9 @@
+{
+  "schema_version": "speckit_change_baseline.v2",
+  "target_scope_id": "si-cost",
+  "candidate_request_key": "baseline-import",
+  "base_branch": "main",
+  "base_commit_sha": "ad69d3d23b3b89ee24f2538309fe4edc6577e70e",
+  "base_request_key": "baseline-import",
+  "base_bundle_sha256": "941eebc6ec08174999590378547148b908aaceade55ecac2501a6693659d5e3a"
+}
