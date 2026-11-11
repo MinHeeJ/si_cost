@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.history.ChangeHistoryMapper">
+  <insert id="insert">
+    INSERT INTO tb_sy_chg_hist (trgt_tbl_nm, trgt_key, chg_type_cd, chg_item_nm,
+      bfr_val, aft_val, chg_rsn, reg_user_id, reg_dttm)
+    VALUES (#{tableName}, #{targetKey}, #{type}, #{item}, #{before}, #{after},
+      #{reason}, #{userId}, #{occurredAt})
+  </insert>
+</mapper>

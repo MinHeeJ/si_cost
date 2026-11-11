@@ -1,0 +1,110 @@
+.operatingstandards-screen {
+  min-width: 0;
+}
+.operatingstandards-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px 24px;
+}
+.operatingstandards-toolbar,
+.operatingstandards-actions,
+.operatingstandards-cash-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.operatingstandards-toolbar {
+  justify-content: space-between;
+}
+.operatingstandards-toolbar > div {
+  display: flex;
+  gap: 8px;
+}
+.operatingstandards-actions button {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+}
+.operatingstandards-cash {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.operatingstandards-cash-fields {
+  align-items: flex-end;
+  gap: 20px;
+}
+.operatingstandards-cash-fields .sicost-field {
+  width: 220px;
+}
+.operatingstandards-cash > p,
+.operatingstandards-meta {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.operatingstandards-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.operatingstandards-group {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 12px;
+}
+.operatingstandards-group > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.operatingstandards-meta {
+  overflow-wrap: anywhere;
+}
+.operatingstandards-group input {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.operatingstandards-mobile {
+  display: none;
+}
+.operatingstandards-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .operatingstandards-desktop {
+    display: none;
+  }
+  .operatingstandards-mobile {
+    display: block;
+    padding: 48px 16px;
+    text-align: center;
+    color: var(--text-sub);
+  }
+  .operatingstandards-screen
+    ~ .sicost-scrim:has([data-screen-id="SCR-UI-27-M7"]) {
+    display: none;
+  }
+}
+.operatingstandards-screen .sicost-table td:last-child {
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .sicost-scrim:has([data-screen-id="SCR-UI-27-M7"]),
+  .sicost-scrim:has([data-screen-id="SCR-UI-27-M8"]),
+  .sicost-scrim:has(.operatingstandards-cash-confirm) {
+    display: none;
+  }
+}

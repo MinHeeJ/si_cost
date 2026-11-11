@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.shared.SharedQueriesMapper">
+  <select id="codes" resultType="com.sicost.shared.SharedQueryDtos$CodeLookup">
+    SELECT CODE AS "code", CODE_NM AS "name", ADD_VAL1 AS "addVal1", ADD_VAL2 AS "addVal2",
+           ADD_VAL3 AS "addVal3", trim_scale(CODE_VAL)::text AS "codeVal", UNIT_NM AS "unitNm"
+    FROM TB_SY_CODE WHERE CODE_GRP_ID=#{group} AND DEL_YN='N'
+    <if test="!includeInactive">AND USE_YN='Y'</if>
+    ORDER BY SORT_ORD,CODE
+  </select>
+  <select id="parameter" resultType="com.sicost.shared.SharedQueryDtos$Parameter">
+    SELECT STD_CD AS "key",
+           CASE WHEN STD_CD='CASH_BASE_YM' THEN lpad(trunc(STD_VAL)::text,6,'0')
+                ELSE trim_scale(STD_VAL)::text END AS "value", UNIT_NM AS "unitNm",
+           substring(APLY_BGN_YM,1,4)||'-'||substring(APLY_BGN_YM,5,2) AS "effectiveMonth"
+    FROM TB_SY_OPER_STD WHERE STD_CD=#{key} AND APLY_BGN_YM &lt;= #{month}
+    ORDER BY APLY_BGN_YM DESC LIMIT 1
+  </select>
+  <select id="cashBaseMonth" resultType="string">
+    SELECT lpad(trunc(STD_VAL)::text,6,'0') FROM TB_SY_OPER_STD WHERE STD_CD='CASH_BASE_YM'
+    ORDER BY APLY_BGN_YM DESC LIMIT 1
+  </select>
+  <select id="monthCloses" resultType="com.sicost.shared.SharedQueryDtos$CloseRow">
+    SELECT CLOSE_YM AS "month", CLOSE_STAT_CD AS "status" FROM TB_CL_CLOSE
+    WHERE CLOSE_YM &gt;= #{from} AND CLOSE_YM &lt;= #{to} ORDER BY CLOSE_YM
+  </select>
+  <select id="menus" resultType="com.sicost.shared.SharedQueryDtos$MenuRow">
+    SELECT MENU_ID AS "menuId", UPPER_MENU_ID AS "parentId", MENU_NM AS "name", SCRN_ID AS "screenId",
+           MENU_LVL AS "level", SORT_ORD AS "sortOrder", USE_YN AS "useYn", ICON_NM AS "icon", PC_ONLY_YN='Y' AS "pcOnly"
+    FROM TB_SY_MENU ORDER BY SORT_ORD,MENU_ID
+  </select>
+  <sql id="historyProjection">
+    SELECT h.HIST_ID AS "histId", h.REG_DTTM AT TIME ZONE 'Asia/Seoul' AS "occurredAt",
+      CASE h.TRGT_TBL_NM WHEN 'TB_SY_CODE_GRP' THEN 'GROUP'
+        WHEN 'TB_SY_CODE' THEN CASE WHEN g.VAL_CODE_YN='Y' THEN 'VALUE_CODE' ELSE 'CODE' END
+        WHEN 'TB_SY_OPER_STD' THEN 'OPER_STD' WHEN 'TB_SY_CODE_MAP' THEN 'CODE_MAP' END AS "target",
+      CASE WHEN h.TRGT_TBL_NM='TB_SY_CODE_GRP' THEN h.TRGT_KEY
+           WHEN h.TRGT_TBL_NM IN ('TB_SY_CODE','TB_SY_CODE_MAP') THEN split_part(h.TRGT_KEY,':',1) END AS "groupId",
+      h.TRGT_KEY AS "entityKey", h.CHG_TYPE_CD AS "type", h.CHG_ITEM_NM AS "item",
+      h.BFR_VAL AS "before", h.AFT_VAL AS "after", h.REG_USER_ID AS "actor"
+    FROM TB_SY_CHG_HIST h LEFT JOIN TB_SY_CODE_GRP g
+      ON h.TRGT_TBL_NM='TB_SY_CODE' AND g.CODE_GRP_ID=split_part(h.TRGT_KEY,':',1)
+    WHERE h.TRGT_TBL_NM IN ('TB_SY_CODE_GRP','TB_SY_CODE','TB_SY_OPER_STD','TB_SY_CODE_MAP')
+  </sql>
+  <sql id="historyFilters">
+    <where>
+      <if test="targetType != null">AND q."target"=#{targetType}</if>
+      <if test="groupId != null">AND q."groupId"=#{groupId}</if>
+    </where>
+  </sql>
+  <select id="history" resultType="com.sicost.shared.SharedQueryDtos$History">
+    SELECT q.* FROM (<include refid="historyProjection"/>) q <include refid="historyFilters"/>
+    ORDER BY q."occurredAt" DESC,q."histId" DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="historyCount" resultType="long">
+    SELECT count(*) FROM (<include refid="historyProjection"/>) q <include refid="historyFilters"/>
+  </select>
+</mapper>

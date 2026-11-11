@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.codegroups.CodeGroupMapper">
+  <select id="groups" resultType="com.sicost.codegroups.CodeGroupDtos$Group">
+    SELECT g.code_grp_id AS "groupId", g.code_grp_nm AS name, g.sys_code_yn AS "sysCodeYn",
+      g.val_code_yn AS "valCodeYn", g.use_yn AS "useYn", g.sort_ord AS "sortOrder",
+      (SELECT count(*) FROM tb_sy_code c WHERE c.code_grp_id=g.code_grp_id AND c.del_yn='N') AS "codeCount"
+    FROM tb_sy_code_grp g ORDER BY g.sort_ord,g.code_grp_id
+  </select>
+  <select id="group" resultType="com.sicost.codegroups.CodeGroupDtos$StoredGroup">
+    SELECT code_grp_id AS "groupId",code_grp_nm AS name,sys_code_yn AS "sysCodeYn",val_code_yn AS "valCodeYn",
+      sort_ord AS "sortOrder",use_yn AS "useYn",reg_user_id AS "regUserId",reg_dttm AS "regDttm",
+      mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_sy_code_grp WHERE code_grp_id=#{group} <if test="lock">FOR UPDATE</if>
+  </select>
+  <select id="codes" resultType="com.sicost.codegroups.CodeGroupDtos$StoredCode">
+    SELECT code_grp_id AS "groupId",code,code_nm AS name,sort_ord AS "sortOrder",use_yn AS "useYn",del_yn AS "delYn",
+      code_val AS "codeVal",unit_nm AS "unitNm",add_val1 AS "addVal1",add_val2 AS "addVal2",add_val3 AS "addVal3",
+      reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_sy_code WHERE code_grp_id=#{group} ORDER BY code <if test="lock">FOR UPDATE</if>
+  </select>
+  <update id="lockGroups">LOCK TABLE tb_sy_code_grp IN SHARE ROW EXCLUSIVE MODE</update>
+  <select id="maxGroupOrder" resultType="int">SELECT coalesce(max(sort_ord),0) FROM tb_sy_code_grp</select>
+  <select id="duplicateName" resultType="long">SELECT count(*) FROM tb_sy_code_grp WHERE btrim(code_grp_nm)=#{name}</select>
+  <insert id="insertGroup">
+    INSERT INTO tb_sy_code_grp(code_grp_id,code_grp_nm,sys_code_yn,val_code_yn,sort_ord,use_yn,reg_user_id,reg_dttm)
+    VALUES(#{group.groupId},#{group.name},'N','N',#{sortOrder},'Y',#{actor},#{now})
+  </insert>
+  <insert id="insertCode">
+    INSERT INTO tb_sy_code(code_grp_id,code,code_nm,sort_ord,use_yn,del_yn,code_val,unit_nm,add_val1,add_val2,add_val3,reg_user_id,reg_dttm)
+    VALUES(#{row.groupId},#{row.code},#{row.name},#{row.sortOrder},'Y','N',#{row.codeVal},#{row.unitNm},#{row.addVal1},#{row.addVal2},NULL,#{actor},#{now})
+  </insert>
+  <update id="updateCode">
+    UPDATE tb_sy_code SET code_nm=#{row.name},use_yn=#{row.useYn},del_yn=#{row.delYn},code_val=#{row.codeVal},
+      unit_nm=#{row.unitNm},add_val1=#{row.addVal1},add_val2=#{row.addVal2},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE code_grp_id=#{row.groupId} AND code=#{row.code}
+  </update>
+  <select id="references" resultType="com.sicost.codegroups.CodeGroupDtos$Reference">
+    SELECT type,count FROM (
+      SELECT '표기 대응' AS type,count(*) AS count FROM tb_sy_code_map WHERE code_grp_id=#{group} AND code=#{code}
+      <choose>
+        <when test="group == 'JOB'">
+          UNION ALL SELECT '개발자 직무',count(*) FROM tb_hr_dev WHERE job_cd=#{code} OR sub_job_cd=#{code}
+          UNION ALL SELECT '후보 직무',count(*) FROM tb_hr_cand WHERE job_cd=#{code} OR sub_job_cd=#{code}
+          UNION ALL SELECT '인원 계획',count(*) FROM tb_pj_mnpw_plan WHERE job_cd=#{code}
+          UNION ALL SELECT '투입 직무',count(*) FROM tb_pj_asgn WHERE job_cd=#{code}
+          UNION ALL SELECT '필요 인력',count(*) FROM tb_sl_opp_need WHERE job_cd=#{code}
+          UNION ALL SELECT '추천 직무',count(*) FROM tb_sl_rcmd_log WHERE job_cd=#{code}
+          UNION ALL SELECT '관련 JOB CSV',count(*) FROM tb_sy_code c WHERE c.del_yn='N'
+            AND c.code_grp_id IN ('JOB','SKILL','RSM_JOB_KW') AND NOT(c.code_grp_id=#{group} AND c.code=#{code})
+            AND EXISTS(SELECT 1 FROM unnest(string_to_array(c.add_val1,',')) v WHERE upper(btrim(v))=#{code})
+        </when>
+        <when test="group == 'GRADE'">
+          UNION ALL SELECT '개발자 등급',count(*) FROM tb_hr_dev WHERE grade_cd=#{code}
+          UNION ALL SELECT '후보 등급',count(*) FROM tb_hr_cand WHERE grade_cd=#{code}
+          UNION ALL SELECT '필요 등급',count(*) FROM tb_sl_opp_need WHERE grade_cd=#{code}
+          UNION ALL SELECT '추천 등급',count(*) FROM tb_sl_rcmd_log WHERE req_grade_cd=#{code}
+        </when>
+        <when test="group == 'JBPS'">UNION ALL SELECT '개발자 직위',count(*) FROM tb_hr_dev WHERE jbps_cd=#{code}</when>
+        <when test="group == 'EXT_PSBL'">
+          UNION ALL SELECT '투입 연장',count(*) FROM tb_pj_asgn WHERE ext_psbl_cd=#{code}
+          UNION ALL SELECT '연장 변경 이력',count(*) FROM tb_pj_asgn_hist h WHERE h.asgn_chg_type_cd='EXTP' AND
+            (h.bfr_val=#{code} OR h.aft_val=#{code} OR EXISTS(SELECT 1 FROM tb_sy_code c WHERE c.code_grp_id=#{group} AND c.code=#{code} AND (h.bfr_val=c.code_nm OR h.aft_val=c.code_nm)))
+        </when>
+        <when test="group == 'SGA_ITEM'">UNION ALL SELECT '재무 항목',count(*) FROM tb_fi_item WHERE sga_item_cd=#{code}</when>
+        <when test="group == 'DRCT_EXPS_ITEM'">UNION ALL SELECT '직접 경비',count(*) FROM tb_pj_drct_exps WHERE drct_exps_item_cd=#{code}</when>
+        <when test="group == 'CHG_ITEM'">UNION ALL SELECT '계약 변경',count(*) FROM tb_pj_proj_chg WHERE chg_item_cd=#{code}</when>
+        <when test="group == 'IMPR'">UNION ALL SELECT '이슈',count(*) FROM tb_pj_issue WHERE impr_cd=#{code}</when>
+        <when test="group == 'PROJ_STEP'">UNION ALL SELECT '프로젝트 단계',count(*) FROM tb_pj_step WHERE proj_step_cd=#{code}</when>
+        <when test="group == 'CNTC_STAT'">
+          UNION ALL SELECT '후보 연락 상태',count(*) FROM tb_hr_cand WHERE cntc_stat_cd=#{code}
+          UNION ALL SELECT '후보 연락 기록',count(*) FROM tb_hr_cand_cntc WHERE cntc_stat_cd=#{code}
+        </when>
+        <when test="group == 'CAND_SRC'">UNION ALL SELECT '후보 유입',count(*) FROM tb_hr_cand WHERE cand_src_cd=#{code}</when>
+        <when test="group == 'ASGN_CHG_RSN'">UNION ALL SELECT '투입 변경 사유',count(*) FROM tb_pj_asgn_hist WHERE asgn_chg_rsn_cd=#{code}</when>
+        <when test="group == 'LOSE_RSN'">
+          UNION ALL SELECT '프로젝트 실주 사유',count(*) FROM tb_pj_proj WHERE lose_rsn_cd=#{code}
+          UNION ALL SELECT '영업 실주 사유',count(*) FROM tb_sl_opp WHERE lose_rsn_cd=#{code}
+        </when>
+        <when test="group == 'RCMD_EXCL'">UNION ALL SELECT '추천 제외',count(*) FROM tb_sl_rcmd_log WHERE rcmd_excl_cd=#{code}</when>
+        <when test="group == 'BANK'">UNION ALL SELECT '거래처 은행',count(*) FROM tb_bs_clnt WHERE bank_cd=#{code}</when>
+        <when test="group == 'INDUTY'">UNION ALL SELECT '거래처 업종',count(*) FROM tb_bs_clnt WHERE induty_cd=#{code}</when>
+        <when test="group == 'SKILL'">
+          UNION ALL SELECT '개발자 스킬',count(*) FROM tb_hr_dev_skill s WHERE s.skill_nm IN (
+            SELECT code_nm FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code}
+            UNION SELECT bfr_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_CODE' AND trgt_key=#{group}||':'||#{code} AND chg_item_nm='CODE_NM'
+            UNION SELECT aft_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_CODE' AND trgt_key=#{group}||':'||#{code} AND chg_item_nm='CODE_NM')
+          UNION ALL SELECT '후보 스킬',count(*) FROM tb_hr_cand_skill s WHERE s.skill_nm IN (
+            SELECT code_nm FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code}
+            UNION SELECT bfr_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_CODE' AND trgt_key=#{group}||':'||#{code} AND chg_item_nm='CODE_NM'
+            UNION SELECT aft_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_CODE' AND trgt_key=#{group}||':'||#{code} AND chg_item_nm='CODE_NM')
+        </when>
+      </choose>
+    ) refs WHERE count &gt; 0
+  </select>
+</mapper>

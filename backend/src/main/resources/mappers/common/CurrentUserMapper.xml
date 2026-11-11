@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.context.CurrentUserMapper">
+  <select id="findAdministrator" resultType="string">
+    SELECT user_id FROM tb_sy_user WHERE user_id = 'admin'
+  </select>
+  <select id="findAdministratorRoles" resultType="string">
+    SELECT r.role_id FROM tb_sy_role r
+    JOIN tb_sy_user_role ur ON ur.role_id = r.role_id
+    WHERE ur.user_id = 'admin' AND r.role_id = 'ADMIN' ORDER BY r.role_id
+  </select>
+</mapper>

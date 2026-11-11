@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.operatingstandards.OperatingStandardsMapper">
+  <sql id="columns">std_cd AS "key", aply_bgn_ym AS "month", std_nm AS "name", std_val AS "value",
+    unit_nm AS "unitNm", std_desc AS "description", reg_user_id AS "regUserId", reg_dttm AS "regDttm",
+    mod_user_id AS "modUserId", mod_dttm AS "modDttm"</sql>
+  <select id="all" resultType="com.sicost.operatingstandards.OperatingStandardsDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_sy_oper_std ORDER BY std_cd,aply_bgn_ym DESC
+  </select>
+  <select id="rows" resultType="com.sicost.operatingstandards.OperatingStandardsDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_sy_oper_std WHERE std_cd=#{key} ORDER BY aply_bgn_ym DESC
+    <if test="lock">FOR UPDATE</if>
+  </select>
+
+  <select id="closedMonths" resultType="string">SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE' ORDER BY close_ym FOR SHARE</select>
+  <update id="update">
+    UPDATE tb_sy_oper_std SET std_val=#{value}, mod_user_id=#{actor}, mod_dttm=#{now}
+    WHERE std_cd=#{original.key} AND aply_bgn_ym=#{month}
+  </update>
+  <insert id="insert">
+    INSERT INTO tb_sy_oper_std(std_cd,aply_bgn_ym,std_nm,std_val,unit_nm,std_desc,reg_user_id,reg_dttm)
+    VALUES(#{original.key},#{month},#{original.name},#{value},#{original.unitNm},#{original.description},#{actor},#{now})
+  </insert>
+</mapper>

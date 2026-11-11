@@ -1,0 +1,440 @@
+:root {
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --primary-bg: #eff6ff;
+  --text: #111827;
+  --text-sub: #4b5563;
+  --text-dis: #9ca3af;
+  --border: #d1d5db;
+  --divider: #e5e7eb;
+  --bg: #f9fafb;
+  --surface: #fff;
+  --head-bg: #f3f4f6;
+  --ok: #15803d;
+  --ok-bg: #f0fdf4;
+  --warn: #b45309;
+  --warn-bg: #fffbeb;
+  --bad: #b91c1c;
+  --bad-bg: #fef2f2;
+  --info: #0369a1;
+  --info-bg: #f0f9ff;
+  --lock: #4b5563;
+  --lock-bg: #f3f4f6;
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+  font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic",
+    "Apple SD Gothic Neo", system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 20px;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  min-width: 360px;
+}
+h1,
+h2,
+p {
+  margin: 0;
+}
+h1 {
+  font-size: 20px;
+  line-height: 28px;
+}
+h2 {
+  font-size: 16px;
+  line-height: 24px;
+}
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+button {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+button:hover {
+  background: var(--head-bg);
+}
+button:disabled {
+  color: var(--text-dis);
+  cursor: not-allowed;
+}
+.sicost-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.sicost-primary:hover {
+  background: var(--primary-hover);
+}
+.sicost-primary:disabled {
+  background: var(--head-bg);
+  border-color: var(--border);
+  color: var(--text-dis);
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.sicost-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sicost-field label {
+  font-size: 13px;
+  font-weight: 500;
+}
+.sicost-field input,
+.sicost-field select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  max-width: 100%;
+  min-width: 0;
+}
+.sicost-field input:focus,
+.sicost-field select:focus {
+  outline: 0;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.sicost-field input[aria-invalid="true"],
+.sicost-field select[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.sicost-field input:disabled,
+.sicost-field input:read-only,
+.sicost-field select:disabled {
+  background: var(--head-bg);
+  color: var(--text-sub);
+}
+.sicost-field-error {
+  font-size: 12px;
+  color: var(--bad);
+}
+.sicost-decimal {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.sicost-table-viewport {
+  overflow: auto;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  max-width: 100%;
+  background: var(--surface);
+}
+.sicost-table {
+  width: 100%;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.sicost-table th,
+.sicost-table td {
+  height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+  white-space: nowrap;
+}
+.sicost-table th {
+  font-weight: 600;
+  background: var(--head-bg);
+}
+.sicost-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.sicost-table tr:hover td {
+  background: var(--head-bg);
+}
+.sicost-table input:not([type="checkbox"]) {
+  height: 28px;
+  padding: 0 6px;
+}
+.sicost-dense td,
+.sicost-dense th {
+  height: 32px;
+}
+.sicost-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-sub);
+}
+.sicost-pagination {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.sicost-pagination button {
+  height: 32px;
+  min-width: 32px;
+  border: 0;
+  padding: 0 6px;
+  font-size: 13px;
+}
+.sicost-pagination [aria-current] {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: #fff;
+}
+.sicost-pagination select {
+  justify-self: end;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.sicost-tone-ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+.sicost-tone-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.sicost-tone-bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+.sicost-tone-info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.sicost-tone-lock {
+  color: var(--lock);
+  background: var(--lock-bg);
+}
+.sicost-tone-neutral {
+  color: var(--text-sub);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.sicost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sicost-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.sicost-banner > span {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.sicost-banner button {
+  margin-left: auto;
+}
+.sicost-toast {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--divider);
+  box-shadow: var(--shadow-lg);
+  max-width: min(380px, calc(100vw - 32px));
+  animation: sicost-toast-in 180ms ease-out;
+}
+.sicost-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(17, 24, 39, 0.4);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.sicost-dialog {
+  width: min(400px, 100%);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+.sicost-dialog-wide {
+  width: min(720px, 100%);
+}
+.sicost-dialog header {
+  padding: 16px 16px 8px 24px;
+  flex-shrink: 0;
+}
+.sicost-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  min-height: 0;
+  padding: 4px 24px 16px;
+  color: var(--text-sub);
+}
+.sicost-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px 20px;
+  flex-shrink: 0;
+}
+@keyframes sicost-toast-in {
+  from {
+    transform: translateY(-6px);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    font-size: 15px;
+  }
+  button,
+  .sicost-field input,
+  .sicost-field select {
+    height: 44px;
+  }
+  .sicost-table input:not([type="checkbox"]) {
+    height: 36px;
+  }
+  .sicost-field input {
+    font-size: 16px;
+  }
+  .sicost-pagination {
+    gap: 4px;
+    grid-template-columns: 1fr;
+  }
+  .sicost-pagination select {
+    justify-self: start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:root {
+  -webkit-font-smoothing: antialiased;
+}
+.sicost-grid {
+  min-width: 0;
+}
+.sicost-table-viewport {
+  max-height: min(64vh, 680px);
+}
+.sicost-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.sicost-columns-action {
+  display: block;
+  margin: 0 0 12px auto;
+  height: 28px;
+  font-size: 13px;
+}
+.sicost-empty-state,
+.sicost-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  white-space: normal;
+}
+.sicost-empty-state > svg {
+  color: var(--text-dis);
+}
+.sicost-loading-lines {
+  display: grid;
+  gap: 10px;
+  width: min(320px, 80%);
+}
+.sicost-loading-lines i {
+  display: block;
+  height: 10px;
+  background: var(--divider);
+  border-radius: 4px;
+}
+.sicost-loading-lines i:nth-child(2) {
+  width: 80%;
+}
+.sicost-loading-lines i:nth-child(3) {
+  width: 60%;
+}
+input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+button > svg {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+button[aria-pressed="true"] {
+  background: var(--primary-bg);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.sicost-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.sicost-table tr[aria-selected="true"] td {
+  background: var(--primary-bg);
+}
+.sicost-star[aria-pressed="true"] {
+  background: transparent;
+  color: #f59e0b;
+}
+.sicost-table td[data-column="description"] {
+  min-width: 220px;
+  max-width: 340px;
+  white-space: normal;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  color: var(--text-sub);
+}
