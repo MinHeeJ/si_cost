@@ -167,7 +167,15 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {
-        var yaml=new YamlMapFactoryBean();
+        // 계약 파일은 앵커·별칭을 많이 쓴다: SnakeYAML 기본 한도(별칭 50개)를 넘으면 시험이 계약을 읽지도 못한다
+        var yaml=new YamlMapFactoryBean() {
+            @Override protected org.yaml.snakeyaml.Yaml createYaml() {
+                var options=new org.yaml.snakeyaml.LoaderOptions();
+                options.setMaxAliasesForCollections(1000);
+                options.setAllowDuplicateKeys(false);
+                return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.Constructor(options));
+            }
+        };
         yaml.setResources(new ClassPathResource("contracts/openapi.yaml"));
         Map<String,Object> contract=yaml.getObject();
         assertThat(contract).isNotNull();
