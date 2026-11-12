@@ -1,3 +1,5 @@
+import { FilterBar } from "../../shared/FilterBar";
+import { BillingReviewDownloadButton } from "../apiops/BillingReviewDownloadButton";
 import {
   useCallback,
   useEffect,
@@ -637,13 +639,24 @@ function BillsContent({
         role="tabpanel"
         hidden={!renderTabs && tab !== "list"}
       >
-        <form
+        <FilterBar
           className="bill-filters"
-          onSubmit={(e) => {
-            e.preventDefault();
+          searchTestId="bill-search"
+          resetTestId="bill-reset"
+          onSubmit={() => {
             setSelected([]);
             if (query.page !== 1) conditions({});
             else void load().catch(() => {});
+          }}
+          onReset={() => {
+            setProjectSearch("");
+            setSelected([]);
+            setQuery({
+              year,
+              includeCarryover: year === currentYear,
+              page: 1,
+              size: initialSize,
+            });
           }}
         >
           <label htmlFor="bill-status-filter">상태</label>
@@ -716,37 +729,7 @@ function BillsContent({
               이월 미수 포함
             </label>
           )}
-          <button data-testid="bill-search" type="submit">
-            조회
-          </button>
-          <button
-            type="button"
-            data-testid="bill-reset"
-            onClick={() => {
-              setProjectSearch("");
-              setSelected([]);
-              setQuery({
-                year,
-                includeCarryover: year === currentYear,
-                page: 1,
-                size: initialSize,
-              });
-            }}
-          >
-            초기화
-          </button>
-          <button
-            type="button"
-            data-testid="bill-refresh"
-            onClick={() => {
-              void refresh()
-                .then(() => setMessage(""))
-                .catch(() => {});
-            }}
-          >
-            재조회
-          </button>
-        </form>
+        </FilterBar>
         <BillError
           error={projectError}
           retry={() => {
@@ -762,9 +745,47 @@ function BillsContent({
         <BillError error={actionError} />
         {message && <p role="status">{message}</p>}
         <div className="bill-list-actions">
-          <span>
-            청구 목록 · 전체 {data?.total ?? "–"}건 · 선택 {selected.length}건
-          </span>
+          {selected.length ? (
+            <span className="bill-selection-bar" data-testid="bill-selection-bar">
+              <strong>선택 {selected.length}건</strong>
+              <button
+                type="button"
+                data-testid="bill-selection-clear"
+                onClick={() => setSelected([])}
+              >
+                선택 해제
+              </button>
+            </span>
+          ) : (
+            <span>청구 목록 · 전체 {data?.total ?? "–"}건</span>
+          )}
+          <span className="bill-list-tools">
+            <button
+              type="button"
+              data-testid="bill-refresh"
+              onClick={() => {
+                void refresh()
+                  .then(() => setMessage(""))
+                  .catch(() => {});
+              }}
+            >
+              재조회
+            </button>
+            <BillingReviewDownloadButton
+              view="BILLS"
+              amountUnit={unit}
+              bills={{
+                filters: {
+                  year,
+                  status: query.status,
+                  month: query.month,
+                  projectId: query.projectId,
+                  includeCarryover: query.includeCarryover,
+                },
+                sort: query.sort,
+                direction: query.direction,
+              }}
+            />
           {renderActions ? (
             renderActions(actionContext)
           ) : (
@@ -788,10 +809,12 @@ function BillsContent({
               projectNames={Object.fromEntries(
                 (data?.items ?? []).map((b) => [b.id, b.projectName]),
               )}
+              selected={selected.length > 0}
               mobile={mobile}
               onRefresh={refresh}
             />
           )}
+          </span>
         </div>
         <div className="bill-desktop">
           <DataTable

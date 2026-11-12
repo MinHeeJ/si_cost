@@ -17,6 +17,8 @@ type Props = Pick<
 > & {
   filters: ReceiptBatchFilters;
   pageIds: string[];
+  /** 목록에서 행을 골라 둔 상태면 그 행들이 입금 대상이다(아니면 현재 페이지). */
+  selected?: boolean;
   mobile?: boolean;
 };
 export function ReceiptBatchAction(props: Props) {
@@ -30,6 +32,7 @@ function ReceiptBatchActionContent({
   minimumDate,
   projectNames,
   onRefresh,
+  selected,
   mobile,
 }: Props) {
   const [selection, setSelection] = useState<ReceiptBatchSelection>(),
@@ -77,7 +80,7 @@ function ReceiptBatchActionContent({
         disabled={readOnly || loading || pageIds.length === 0}
         onClick={() => void prepare(false)}
       >
-        페이지 선택 · 여러 청구에 한 번에 입금
+        {selected ? "선택한 청구 일괄 입금" : "이 페이지 청구 일괄 입금"}
       </button>
       <button
         type="button"

@@ -247,6 +247,73 @@ it("조건 변경은 page1·선택해제이며 카드에는 목록조건을 보�
     ),
   );
 });
+it("선택 바는 행을 고른 때만 나타나고 선택 0건을 보이지 않는다", async () => {
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  expect(screen.queryByText(/선택 0건/)).not.toBeInTheDocument();
+  expect(screen.queryByTestId("bill-selection-bar")).not.toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole("checkbox")[1]);
+  expect(screen.getByTestId("bill-selection-bar")).toHaveTextContent("선택 1건");
+  expect(
+    screen.getByRole("button", { name: "선택한 청구 일괄 입금" }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("bill-selection-clear"));
+  expect(screen.queryByTestId("bill-selection-bar")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "이 페이지 청구 일괄 입금" }),
+  ).toBeInTheDocument();
+});
+it("조회 버튼은 필터 오른쪽 끝의 [초기화][조회]로 공통 필터 바를 쓴다", async () => {
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  const actions = screen
+    .getByTestId("bill-search")
+    .closest(".sicost-filterbar-actions");
+  expect(actions).not.toBeNull();
+  expect(
+    Array.from(actions!.querySelectorAll("button")).map((b) => b.textContent),
+  ).toEqual(["초기화", "조회"]);
+});
+it("청구 목록 다운로드는 현재 조건·정렬 전체를 view=BILLS로 요청한다", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(new Blob(["x"]), {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition":
+          "attachment; filename*=UTF-8''%EC%B2%AD%EA%B5%AC_20261112_220000.xlsx",
+      },
+    }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  URL.createObjectURL = vi.fn(() => "blob:x");
+  URL.revokeObjectURL = vi.fn();
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  fireEvent.change(screen.getByLabelText("상태"), {
+    target: { value: "UNPAID" },
+  });
+  await waitFor(() =>
+    expect(api.getBills).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "UNPAID" }),
+    ),
+  );
+  await userEvent.click(screen.getByTestId("billing-review-download-bills"));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  const [url, init] = fetchMock.mock.calls[0];
+  const body = JSON.parse(init.body as string);
+  expect(url).toBe("/api/exports/master-data");
+  expect(body.view).toBe("BILLS");
+  expect(body.filters).toMatchObject({
+    year: 2026,
+    status: "UNPAID",
+    includeCarryover: true,
+  });
+  expect(body.columns).toHaveLength(12);
+  expect(body).not.toHaveProperty("page");
+  vi.unstubAllGlobals();
+});
 it("목록 로딩·빈 결과·조회 실패는 쓰기 없이 GET 재조회한다", async () => {
   vi.mocked(api.getBills)
     .mockRejectedValueOnce(new Error("청구 조회 실패"))

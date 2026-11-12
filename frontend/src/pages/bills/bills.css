@@ -179,3 +179,24 @@
     display: none;
   }
 }
+.bill-desktop {
+  min-width: 0;
+  overflow-x: auto;
+}
+.bill-list-actions .bill-list-tools {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bill-list-actions .bill-selection-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.bills-screen {
+  grid-template-columns: minmax(0, 1fr);
+}
+.bills-screen > * {
+  min-width: 0;
+}
