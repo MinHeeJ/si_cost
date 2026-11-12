@@ -421,20 +421,6 @@ export function DeveloperPoolScreen({
             {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
             <div />
             <div className="developer-actions">
-              <label className="developer-include-stopped">
-                <input
-                  data-testid="developer-include-stopped"
-                  type="checkbox"
-                  checked={draft.includeStopped}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      includeStopped: e.target.checked,
-                    }))
-                  }
-                />
-                사용 중지 포함
-              </label>
               {!mobile && (
                 <B8UploadActions
                   onApplied={async () => {
@@ -508,6 +494,20 @@ export function DeveloperPoolScreen({
                 maxLength={100}
                 onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
               />
+            </label>
+            <label className="developer-include-stopped">
+              <input
+                data-testid="developer-include-stopped"
+                type="checkbox"
+                checked={draft.includeStopped}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    includeStopped: e.target.checked,
+                  }))
+                }
+              />
+              사용 중지 포함
             </label>
             <div className="developer-filter-actions">
               <button
