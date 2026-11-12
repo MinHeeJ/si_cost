@@ -31,11 +31,19 @@ public class BillService {
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public BillsPage getBills(Query query) {
+        List<Bill> all=matching(query);
+        return new BillsPage(all.stream().skip((long)(query.page()-1)*query.size()).limit(query.size()).toList(),all.size(),query.page(),query.size(),totals(all));
+    }
+    /** Every row the list shows for these conditions and order, without paging (used by the excel download; same rows as the list and its totals). */
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public List<Bill> listAll(Query query) {return matching(query);}
+    private List<Bill> matching(Query query) {
         users.currentUser();ProjectInputPolicy.year(query.year(),repository.cashBase(),clock);
-        List<Bill> all=repository.list(new Filter(query,today().getYear(),today())).stream().map(b->view(repository.snapshot(b.id()),query.year())).sorted(ordering(query)).toList();
+        return repository.list(new Filter(query,today().getYear(),today())).stream().map(b->view(repository.snapshot(b.id()),query.year())).sorted(ordering(query)).toList();
+    }
+    private Totals totals(List<Bill> all) {
         List<Bill> effective=all.stream().filter(b->!b.cancelled()).toList();
-        Totals totals=new Totals(sum(effective,Bill::supplyAmount),sum(effective,Bill::vatAmount),sum(effective,Bill::totalAmount),sum(effective,Bill::receiptAmount),sum(effective,Bill::unpaidAmount));
-        return new BillsPage(all.stream().skip((long)(query.page()-1)*query.size()).limit(query.size()).toList(),all.size(),query.page(),query.size(),totals);
+        return new Totals(sum(effective,Bill::supplyAmount),sum(effective,Bill::vatAmount),sum(effective,Bill::totalAmount),sum(effective,Bill::receiptAmount),sum(effective,Bill::unpaidAmount));
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public BillDetail getBill(String id,int year) {

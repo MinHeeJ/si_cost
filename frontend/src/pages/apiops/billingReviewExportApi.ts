@@ -11,6 +11,27 @@ export const billingCheckColumns = [
   "differenceAmount",
   "explanation",
 ] as const;
+export const billColumns = [
+  "id",
+  "projectName",
+  "order",
+  "billingDate",
+  "supplyAmount",
+  "vatAmount",
+  "totalAmount",
+  "receiptAmount",
+  "unpaidAmount",
+  "dueDate",
+  "status",
+  "dunning",
+] as const;
+export type BillExportFilters = {
+  year: number;
+  status?: string;
+  month?: string;
+  projectId?: string;
+  includeCarryover?: boolean;
+};
 export const receivableColumns = [
   "projectName",
   "billId",
@@ -22,9 +43,10 @@ export const receivableColumns = [
   "nextNotification",
 ] as const;
 export async function downloadBillingReview(input: {
-  view: "BILLING_CHECKS" | "RECEIVABLES";
+  view: "BILLS" | "BILLING_CHECKS" | "RECEIVABLES";
   month?: string;
   amountUnit: ReviewAmountUnit;
+  bills?: { filters: BillExportFilters; sort?: string; direction?: string };
 }) {
   const type =
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -37,11 +59,25 @@ export async function downloadBillingReview(input: {
     },
     body: JSON.stringify({
       view: input.view,
-      filters: input.view === "BILLING_CHECKS" ? { month: input.month } : {},
+      filters:
+        input.view === "BILLS"
+          ? Object.fromEntries(
+              Object.entries(input.bills?.filters ?? {}).filter(
+                ([, value]) => value !== undefined && value !== "",
+              ),
+            )
+          : input.view === "BILLING_CHECKS"
+            ? { month: input.month }
+            : {},
       columns:
-        input.view === "BILLING_CHECKS"
-          ? billingCheckColumns
-          : receivableColumns,
+        input.view === "BILLS"
+          ? billColumns
+          : input.view === "BILLING_CHECKS"
+            ? billingCheckColumns
+            : receivableColumns,
+      ...(input.view === "BILLS" && input.bills?.sort
+        ? { sort: input.bills.sort, direction: input.bills.direction ?? "DESC" }
+        : {}),
       amountUnit: input.amountUnit,
     }),
   });
@@ -68,7 +104,7 @@ export async function downloadBillingReview(input: {
   } catch {
     throw new Error("다운로드 파일명을 확인할 수 없습니다.");
   }
-  if (!/^(청구누락점검|미수알림)_[0-9]{8}_[0-9]{6}\.xlsx$/.test(filename))
+  if (!/^(청구누락점검|미수알림|청구)_[0-9]{8}_[0-9]{6}\.xlsx$/.test(filename))
     throw new Error("다운로드 파일명을 확인할 수 없습니다.");
   const blob = await response.blob();
   if (!blob.size) throw new Error("다운로드 파일이 비어 있습니다.");

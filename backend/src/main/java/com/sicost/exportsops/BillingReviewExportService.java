@@ -3,6 +3,9 @@ package com.sicost.exportsops;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sicost.apiops.BillingCheckService;
 import com.sicost.apiops.ReceivableService;
+import com.sicost.bills.BillDtos;
+import com.sicost.bills.BillInput;
+import com.sicost.bills.BillService;
 import com.sicost.apiops.BillingReviewDtos.*;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.excel.ExcelExportService;
@@ -16,14 +19,18 @@ import static com.sicost.common.excel.ExcelExportService.*;
 @Service
 public class BillingReviewExportService {
     public static final List<String> CHECK_COLUMNS=List.of("verdict","projectName","contractType","personCount","mm","estimatedAmount","billedAmount","differenceAmount","explanation");
+    public static final List<String> BILL_COLUMNS=List.of("id","projectName","order","billingDate","supplyAmount","vatAmount","totalAmount","receiptAmount","unpaidAmount","dueDate","status","dunning");
+    private static final Map<String,String> BILL_STATUS=Map.of("PAID","입금 완료","UNPAID","미수","LATE","연체","CNCL","취소됨");
     public static final List<String> RECEIVABLE_COLUMNS=List.of("projectName","billId","unpaidAmount","dueDate","elapsedDays","step","sentHistory","nextNotification");
     private final BillingCheckService checks;
     private final ReceivableService receivables;
     private final ExcelExportService excel;
-    public BillingReviewExportService(BillingCheckService checks,ReceivableService receivables,ExcelExportService excel) {this.checks=checks;this.receivables=receivables;this.excel=excel;}
-    public static boolean handles(JsonNode body) {return body!=null&&body.path("view").isTextual()&&Set.of("BILLING_CHECKS","RECEIVABLES").contains(body.path("view").textValue());}
+    private final BillService bills;
+    public BillingReviewExportService(BillingCheckService checks,ReceivableService receivables,ExcelExportService excel,BillService bills) {this.checks=checks;this.receivables=receivables;this.excel=excel;this.bills=bills;}
+    public static boolean handles(JsonNode body) {return body!=null&&body.path("view").isTextual()&&Set.of("BILLS","BILLING_CHECKS","RECEIVABLES").contains(body.path("view").textValue());}
     public Download create(JsonNode body,HttpServletRequest request) {
         allow(body,Set.of("view","filters","sort","direction","columns","amountUnit"));
+        if("BILLS".equals(text(body,"view")))return createBills(body,request);
         boolean checking="BILLING_CHECKS".equals(text(body,"view"));
         List<String> ids=checking?CHECK_COLUMNS:RECEIVABLE_COLUMNS;
         if(!body.has("columns")||!body.get("columns").isArray()||body.get("columns").size()!=ids.size())throw invalid("columns");
@@ -58,6 +65,32 @@ public class BillingReviewExportService {
                     row.sentHistory().isEmpty()?"발송 이력 없음":String.join("\n",row.sentHistory().stream().map(h->h.sendDate()+" #"+h.sn()+" "+h.receiverDescription()+" "+h.sendMethodCode()+(h.resend()?" (다시)":"")).toList()),
                     row.dunning().finalStep()?"최종 단계":row.dunning().nextStep()+"단계 "+row.dunning().nextDate()));
             }
+        },request);
+    }
+    /** UI-13 청구 목록 다운로드: 목록 API와 같은 검증·필터·정렬을 쓰고, 페이지 제한 없이 조건에 맞는 전체를 쓴다. */
+    private Download createBills(JsonNode body,HttpServletRequest request) {
+        if(!body.has("columns")||!body.get("columns").isArray()||body.get("columns").size()!=BILL_COLUMNS.size())throw invalid("columns");
+        for(int i=0;i<BILL_COLUMNS.size();i++)if(!body.get("columns").get(i).isTextual()||!BILL_COLUMNS.get(i).equals(body.get("columns").get(i).textValue()))throw invalid("columns");
+        JsonNode filters=body.get("filters");allow(filters,Set.of("year","status","month","projectId","includeCarryover"));
+        Map<String,String> query=new LinkedHashMap<>();
+        filters.fieldNames().forEachRemaining(key->{JsonNode v=filters.get(key);if(v.isNull()||(v.isTextual()&&v.textValue().isBlank()))return;
+            if(!v.isTextual()&&!v.isBoolean()&&!v.isInt())throw invalid(key);query.put(key,v.asText());});
+        if(body.has("sort"))query.put("sort",text(body,"sort"));
+        if(body.has("direction"))query.put("direction",text(body,"direction"));
+        BillDtos.Query list=BillInput.list(query);
+        String unit=body.has("amountUnit")?text(body,"amountUnit"):"천원";
+        if(!Set.of("원","천원","백만원").contains(unit))throw invalid("amountUnit");
+        List<BillDtos.Bill> rows=bills.listAll(list);
+        List<String> titles=List.of("청구번호","프로젝트","차수","청구일","공급가","부가세","합계","입금액","미수금","입금 예정일","상태","미수 알림");
+        Set<String> money=Set.of("supplyAmount","vatAmount","totalAmount","receiptAmount","unpaidAmount");
+        List<Column> columns=new ArrayList<>();
+        for(int i=0;i<BILL_COLUMNS.size();i++){String id=BILL_COLUMNS.get(i);columns.add(new Column(id,titles.get(i)+(money.contains(id)?" ("+unit+")":""),money.contains(id)||"order".equals(id)?CellType.NUMBER:CellType.TEXT));}
+        String conditions="year="+list.year()+"; status="+Objects.toString(list.status(),"전체")+"; month="+Objects.toString(list.month(),"")+"; projectId="+Objects.toString(list.projectId(),"")
+            +"; includeCarryover="+list.includeCarryover()+"; sort="+Objects.toString(list.sort(),"기본")+" "+list.direction();
+        return excel.generate(new Specification("청구",null,columns,conditions,unit,"UI-13"),sink->{
+            for(BillDtos.Bill row:rows)sink.accept(List.of(row.id(),row.projectName(),row.order(),row.billingDate(),amount(row.supplyAmount(),unit),amount(row.vatAmount(),unit),amount(row.totalAmount(),unit),
+                amount(row.receiptAmount(),unit),amount(row.unpaidAmount(),unit),row.dueDate(),BILL_STATUS.getOrDefault(row.status(),row.status()),
+                row.dunning()==null?"":row.dunning().step()==0?(row.dunning().elapsedDays()>0?"알림 전 ("+row.dunning().elapsedDays()+"일)":"알림 전"):row.dunning().step()+"단계 ("+row.dunning().elapsedDays()+"일)"));
         },request);
     }
     private static BigDecimal amount(String value,String unit) {return MasterDataValidator.amountInUnit(new BigDecimal(value),unit);}

@@ -2,18 +2,20 @@ import { useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
-import { downloadBillingReview } from "./billingReviewExportApi";
+import { downloadBillingReview, type BillExportFilters } from "./billingReviewExportApi";
 import type { ReviewAmountUnit } from "./billingReviewApi";
 export function BillingReviewDownloadButton({
   view,
   month,
   amountUnit,
   disabled,
+  bills,
 }: {
-  view: "BILLING_CHECKS" | "RECEIVABLES";
+  view: "BILLS" | "BILLING_CHECKS" | "RECEIVABLES";
   month?: string;
   amountUnit: ReviewAmountUnit;
   disabled?: boolean;
+  bills?: { filters: BillExportFilters; sort?: string; direction?: string };
 }) {
   const [pending, setPending] = useState(false),
     [error, setError] = useState<string>();
@@ -30,7 +32,7 @@ export function BillingReviewDownloadButton({
     setError(undefined);
     try {
       saveMasterDataDownload(
-        await downloadBillingReview({ view, month, amountUnit }),
+        await downloadBillingReview({ view, month, amountUnit, bills }),
       );
     } catch (e) {
       setError(
