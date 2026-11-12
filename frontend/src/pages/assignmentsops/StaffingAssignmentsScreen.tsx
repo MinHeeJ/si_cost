@@ -355,19 +355,6 @@ export function AssignmentsContent({
   columns.forEach((column) => {
     column.sortable = column.id !== "warnings";
   });
-  if (creating)
-    return (
-      <AssignmentCreateForm
-        year={year}
-        today={context.currentDate}
-        onClose={() => setCreating(false)}
-        onDirtyChange={dirtyChanged}
-        onSaved={async (row) => {
-          setDetail(row.id);
-          await refreshed();
-        }}
-      />
-    );
   function resetFilters() {
     setDraft({
       projectId: "",
@@ -655,6 +642,18 @@ export function AssignmentsContent({
           year={year}
           onClose={() => setBulk(false)}
           onChanged={refreshed}
+        />
+      )}
+      {creating && (
+        <AssignmentCreateForm
+          year={year}
+          today={context.currentDate}
+          onClose={() => setCreating(false)}
+          onDirtyChange={dirtyChanged}
+          onSaved={async (row) => {
+            setDetail(row.id);
+            await refreshed();
+          }}
         />
       )}
       <Dialog
