@@ -14,16 +14,6 @@
 .project-toolbar {
   justify-content: space-between;
 }
-.project-filters {
-  display: flex;
-  align-items: end;
-  gap: 12px;
-  padding: 20px 24px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-  background: var(--surface);
-  flex-wrap: wrap;
-}
 .project-search {
   flex: 1;
   min-width: 180px;
@@ -37,8 +27,7 @@
 .project-unassigned span {
   flex: 1;
 }
-.project-link,
-.project-sort {
+.project-link {
   border: 0;
   height: auto;
   padding: 0;
@@ -47,9 +36,6 @@
 }
 .project-link {
   color: var(--primary);
-}
-.project-sort {
-  font-weight: 600;
 }
 .project-form-grid {
   display: grid;
@@ -130,17 +116,13 @@
   .project-wide {
     grid-column: auto;
   }
-  .project-filters {
-    padding: 16px;
-    gap: 12px;
-  }
-  .project-filters > label {
-    flex: 1 1 40%;
-  }
   .project-info {
     grid-template-columns: 100px 1fr;
   }
   .project-tabs {
     align-items: stretch;
   }
+}
+.project-search input {
+  min-width: 220px;
 }

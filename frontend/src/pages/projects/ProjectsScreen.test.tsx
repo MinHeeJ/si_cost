@@ -320,7 +320,7 @@ it("query Enter and reset share real filters while sort and size reset page1", a
     ),
   );
   await userEvent.click(screen.getByRole("button", { name: "다음 페이지" }));
-  await userEvent.click(screen.getByTestId("project-sort-name"));
+  await userEvent.click(screen.getByTestId("sort-name"));
   await waitFor(() =>
     expect(api.getProjects).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "name", page: 1 }),

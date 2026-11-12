@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -284,35 +285,9 @@ export function ProjectsScreen({
     }
   }
   const cols: Column<api.ProjectListItem>[] = projectColumns.map((c) => {
-    const sort = c.id === "contractPeriod" ? "startDate" : c.id;
     return {
       ...c,
-      label:
-        c.id === "distribution" ? (
-          c.label
-        ) : (
-          <button
-            type="button"
-            className="project-sort"
-            data-testid={`project-sort-${c.id.toLowerCase()}`}
-            onClick={() =>
-              setFilters((f) => ({
-                ...f,
-                page: 1,
-                sort: sort as api.ProjectSort,
-                direction:
-                  f.sort === sort && f.direction === "DESC" ? "ASC" : "DESC",
-              }))
-            }
-          >
-            {c.label}
-            {filters.sort === sort
-              ? filters.direction === "ASC"
-                ? " ↑"
-                : " ↓"
-              : ""}
-          </button>
-        ),
+      sortable: c.id !== "distribution",
       align:
         c.id === "contractAmount" || c.id === "personCount"
           ? "right"
@@ -505,13 +480,12 @@ export function ProjectsScreen({
               </button>
             </div>
           )}
-          <form
-            className="project-filters"
-            data-testid="project-filter-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              apply();
-            }}
+          <FilterBar
+            testId="project-filter-form"
+            resetTestId="project-reset"
+            searchTestId="project-query"
+            onSubmit={() => apply()}
+            onReset={() => apply(true)}
           >
             {(
               [
@@ -565,21 +539,7 @@ export function ProjectsScreen({
                 onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
               />
             </label>
-            <button
-              type="button"
-              data-testid="project-reset"
-              onClick={() => apply(true)}
-            >
-              초기화
-            </button>
-            <button
-              type="submit"
-              data-testid="project-query"
-              className="sicost-primary"
-            >
-              조회
-            </button>
-          </form>
+          </FilterBar>
           {notice && (
             <p role="status" className="sicost-banner sicost-tone-info">
               {notice}
@@ -656,6 +616,32 @@ export function ProjectsScreen({
               size={filters.size}
               total={data?.total ?? 0}
               onRowAction={open}
+              sort={{
+                id:
+                  (filters.sort ?? "startDate") === "startDate"
+                    ? "contractPeriod"
+                    : filters.sort!,
+                direction: filters.direction === "ASC" ? "ASC" : "DESC",
+              }}
+              onSortChange={(id) => {
+                const sort = id === "contractPeriod" ? "startDate" : id;
+                setFilters((f) => ({
+                  ...f,
+                  page: 1,
+                  sort: sort as api.ProjectSort,
+                  direction:
+                    f.sort === sort && f.direction === "DESC" ? "ASC" : "DESC",
+                }));
+              }}
+              emptyAction={
+                <button
+                  type="button"
+                  data-testid="project-empty-reset"
+                  onClick={() => apply(true)}
+                >
+                  조건 초기화
+                </button>
+              }
               onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
               onSizeChange={(size) => {
                 setFilters((f) => ({ ...f, page: 1, size }));
