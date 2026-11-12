@@ -73,7 +73,10 @@ export function AssignmentDrawer({
     type === "EXTP" || type === "KIND" ? kindName(v) : (v ?? "–");
   return (
     <DetailDrawer
-      title={`투입 배정 ${id}`}
+      title={row ? `${row.developerName} · ${row.projectName}` : `투입 배정 ${id}`}
+      subtitle={
+        row ? `${id} · ${row.managementNo} · ${row.jobName}` : undefined
+      }
       onClose={onClose}
       testId="assignment-detail-drawer"
       actions={
@@ -93,9 +96,11 @@ export function AssignmentDrawer({
         retry={() => void load().catch(() => {})}
       />
       {message && <p role="status">{message}</p>}
-      <nav className="assignment-toolbar">
+      <nav className="assignment-tabs" role="tablist" aria-label="투입 배정 상세 영역">
         <button
           type="button"
+          role="tab"
+          aria-selected={tab === "info"}
           data-testid="assignment-info-tab"
           onClick={() => setTab("info")}
         >
@@ -103,6 +108,8 @@ export function AssignmentDrawer({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={tab === "history"}
           data-testid="assignment-history-tab"
           onClick={() => setTab("history")}
         >
@@ -111,23 +118,30 @@ export function AssignmentDrawer({
       </nav>
       {row && (
         <>
-          <p>
-            {row.projectName} / {row.projectId} · {row.developerName} (
-            {row.managementNo}) / {row.developerId}
-          </p>
-          <p>
-            실제 투입자 {row.developerId} / 계약상 인력{" "}
-            {row.contractDeveloperId ?? "–"} · {row.jobName}
-          </p>
-          <p>
-            {row.startDate} ~ {row.endDate} · {row.assignmentStatus} · 연장{" "}
-            {row.extensionCount}회 · 조기철수 {row.earlyWithdrawal}
-          </p>
-          <p>
-            계약 월MM {row.contractMm} / 단가{" "}
-            {formatDecimal(row.billingUnitPrice)} 원 · {kindName(row.inputType)}{" "}
-            · 연장가능성 {kindName(row.extensionPossibility)}
-          </p>
+          <dl className="assignment-details">
+            {(
+              [
+                ["프로젝트", `${row.projectName} (${row.projectId})`],
+                ["실제 투입자", `${row.developerName} (${row.managementNo}) · ${row.developerId}`],
+                ["계약상 인력", row.contractDeveloperId ?? "–"],
+                ["직무", row.jobName],
+                ["투입 기간", `${row.startDate} ~ ${row.endDate}`],
+                [
+                  "상태",
+                  `${row.assignmentStatus === "ACT" ? "투입 중" : "취소"} · 연장 ${row.extensionCount}회 · 조기철수 ${row.earlyWithdrawal === "Y" ? "예" : "아니오"}`,
+                ],
+                ["계약 월MM", row.contractMm],
+                ["청구 단가", `${formatDecimal(row.billingUnitPrice)} 원`],
+                ["투입 구분", kindName(row.inputType)],
+                ["연장 가능성", kindName(row.extensionPossibility)],
+              ] as const
+            ).map(([label, v]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
           <AssignmentWarnings
             warnings={row.warnings}
             protectedMonths={row.protectedMonths}
@@ -179,7 +193,7 @@ export function AssignmentDrawer({
         </section>
       ) : (
         <section data-testid="assignment-history-panel">
-          <label>
+          <label className="assignment-control assignment-history-filter">
             종류
             <select
               data-testid="assignment-history-type"

@@ -378,7 +378,6 @@ export function AssignmentsContent({
   return (
     <div data-testid="assignments-content" className="assignments-content">
       <div className="assignment-head">
-        <h1>투입 배정</h1>
         <div className="assignment-head-actions">
           <B5Actions
             year={year}
@@ -548,7 +547,7 @@ export function AssignmentsContent({
           >
             다시 조회
           </button>
-          <label>
+          <label className="assignment-control">
             단위
             <select
               data-testid="assignments-unit"
@@ -560,7 +559,7 @@ export function AssignmentsContent({
               <option>백만원</option>
             </select>
           </label>
-          <label>
+          <label className="assignment-control">
             밀도
             <select
               data-testid="assignments-density"
