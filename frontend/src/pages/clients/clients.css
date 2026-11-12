@@ -96,22 +96,11 @@
 .clients-form-page footer {
   justify-content: flex-end;
 }
-.clients-drawer {
-  position: fixed;
-  inset: 56px 0 0 auto;
-  width: min(680px, 100vw);
-  z-index: 40;
-  overflow-y: auto;
-  background: var(--surface);
-  border-left: 1px solid var(--divider);
-  box-shadow: var(--shadow-lg);
-  padding: 16px 24px;
-}
-.clients-drawer .clients-form-fields {
+.sicost-drawer .clients-form-fields {
   grid-template-columns: 1fr;
   padding: 16px;
 }
-.clients-drawer [role="tabpanel"] {
+.sicost-drawer [role="tabpanel"] {
   padding: 16px 0;
 }
 .clients-details {
@@ -163,11 +152,6 @@
     grid-template-columns: 1fr;
     padding: 16px;
   }
-  .clients-drawer {
-    inset: 0;
-    width: 100%;
-    padding: 16px;
-  }
   .clients-toolbar {
     align-items: flex-start;
   }
@@ -182,4 +166,17 @@
   height: 28px;
   padding: 0 10px;
   font-size: 12px;
+}
+.clients-status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.clients-stop-button {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+.clients-stop-button:hover:not(:disabled) {
+  background: var(--bad-bg);
 }
