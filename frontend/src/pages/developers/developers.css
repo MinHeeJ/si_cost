@@ -34,8 +34,36 @@
   flex-wrap: wrap;
   background: var(--surface);
 }
+/* 예시 화면처럼 이름표를 칸 왼쪽에 두고, 초기화·조회는 오른쪽 끝에 둔다. */
+.developer-filters {
+  align-items: center;
+}
 .developer-filters .sicost-field {
-  min-width: 95px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.developer-filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.developer-include-stopped {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.developer-sort-header {
+  border: 0;
+  padding: 0;
+  height: 32px;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
 }
 .developer-filters input:not([type="checkbox"]) {
   width: 180px;

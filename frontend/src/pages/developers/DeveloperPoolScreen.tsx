@@ -12,6 +12,9 @@ import { B8UploadActions } from "../b8/B8UploadDialog";
 import { DeveloperForm } from "./DeveloperForm";
 import { DeveloperDrawer } from "./DeveloperDrawer";
 import * as api from "./peopleClient";
+import { DeveloperStatusToolbar } from "../developersops/DeveloperStatusToolbar";
+import { useDeveloperSelection } from "../developersops/useDeveloperSelection";
+import type { DeveloperFilters as SelectionFilters } from "../developersops/peopleClient";
 import { downloadFilename } from "../shared/downloadFilename";
 import "./developers.css";
 
@@ -71,6 +74,12 @@ export function DeveloperPoolScreen({
       page: 1,
       size: mobile ? 20 : pageSize,
     });
+  // 선택 대상(전체)은 페이지와 무관하다. 서버의 선택 API는 page·size를 받지 않으므로 조건만 넘긴다.
+  const { page: _page, size: _size, ...selectionConditions } = filters;
+  const selection = useDeveloperSelection(
+    selectionConditions as SelectionFilters,
+    filters.size,
+  );
   const [data, setData] = useState<api.DevelopersPage>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
@@ -152,6 +161,16 @@ export function DeveloperPoolScreen({
   };
   function label(group: string, value: string) {
     return codes[group]?.find((c) => c.code === value)?.name ?? value;
+  }
+  /** 열 이름을 누르면 그 열 기준 오름차순, 같은 열을 다시 누르면 내림차순으로 바뀐다. */
+  function sort(id: string) {
+    setFilters((f) => ({
+      ...f,
+      page: 1,
+      sort: id,
+      direction:
+        (f.sort ?? "name") === id && f.direction !== "DESC" ? "DESC" : "ASC",
+    }));
   }
   function apply(reset = false) {
     const next = reset ? defaults : draft;
@@ -341,9 +360,44 @@ export function DeveloperPoolScreen({
           : r.monthlyRate.replace(/\B(?=(\d{3})+(?!\d))/g, ","),
     },
   ];
+  // 현재 프로젝트를 뺀 나머지 열은 열 이름을 눌러 정렬한다. 아무것도 고르지 않았으면 이름 오름차순이다.
+  const sortable = new Set([
+    "name",
+    "companyName",
+    "employeeType",
+    "grade",
+    "job",
+    "status",
+    "withdrawalDate",
+    "monthlyRate",
+  ]);
+  const activeSort = filters.sort ?? "name";
+  const sortableCols = cols.map((c) =>
+    sortable.has(c.id)
+      ? {
+          ...c,
+          label: (
+            <button
+              type="button"
+              className="developer-sort-header"
+              data-testid={`developer-sort-${c.id.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`}
+              aria-label={`${String(c.label)} 정렬`}
+              onClick={() => sort(c.id)}
+            >
+              {c.label}
+              {activeSort === c.id
+                ? filters.direction === "DESC"
+                  ? " ↓"
+                  : " ↑"
+                : ""}
+            </button>
+          ),
+        }
+      : c,
+  );
   const visible = (columnView?.order ?? columnsOrder)
     .filter((k) => k === "name" || !columnView?.hidden.includes(k))
-    .map((k) => cols.find((c) => c.id === k))
+    .map((k) => sortableCols.find((c) => c.id === k))
     .filter((c): c is Column<api.DeveloperItem> => Boolean(c));
   return (
     <section
@@ -367,6 +421,20 @@ export function DeveloperPoolScreen({
             {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
             <div />
             <div className="developer-actions">
+              <label className="developer-include-stopped">
+                <input
+                  data-testid="developer-include-stopped"
+                  type="checkbox"
+                  checked={draft.includeStopped}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      includeStopped: e.target.checked,
+                    }))
+                  }
+                />
+                사용 중지 포함
+              </label>
               {!mobile && (
                 <B8UploadActions
                   onApplied={async () => {
@@ -441,31 +509,22 @@ export function DeveloperPoolScreen({
                 onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
               />
             </label>
-            <label>
-              <input
-                data-testid="developer-include-stopped"
-                type="checkbox"
-                checked={draft.includeStopped}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, includeStopped: e.target.checked }))
-                }
-              />
-              사용 중지 포함
-            </label>
-            <button
-              type="button"
-              data-testid="developer-reset-button"
-              onClick={() => apply(true)}
-            >
-              초기화
-            </button>
-            <button
-              type="submit"
-              className="sicost-primary"
-              data-testid="developer-search-button"
-            >
-              조회
-            </button>
+            <div className="developer-filter-actions">
+              <button
+                type="button"
+                data-testid="developer-reset-button"
+                onClick={() => apply(true)}
+              >
+                초기화
+              </button>
+              <button
+                type="submit"
+                className="sicost-primary"
+                data-testid="developer-search-button"
+              >
+                조회
+              </button>
+            </div>
           </form>
           {notice && (
             <p role="status" className="sicost-banner sicost-tone-info">
@@ -529,46 +588,6 @@ export function DeveloperPoolScreen({
               {renderActions}
             </div>
           </div>
-          <label className="sicost-field developer-sort">
-            정렬
-            <select
-              data-testid="developer-sort-select"
-              value={filters.sort ?? ""}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  page: 1,
-                  sort: e.target.value || undefined,
-                }))
-              }
-            >
-              <option value="">이름·관리번호 기본순</option>
-              {cols
-                .filter((c) => c.id !== "currentProjects")
-                .map((c) => (
-                  <option
-                    data-testid={`developer-sort-option-${c.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-                    key={c.id}
-                    value={c.id}
-                  >
-                    {c.label}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            data-testid="developer-sort-direction"
-            onClick={() =>
-              setFilters((f) => ({
-                ...f,
-                page: 1,
-                direction: f.direction === "DESC" ? "ASC" : "DESC",
-              }))
-            }
-          >
-            {filters.direction === "DESC" ? "내림차순" : "오름차순"}
-          </button>
           {error != null && (
             <ErrorBanner
               message={
@@ -580,6 +599,26 @@ export function DeveloperPoolScreen({
                 error instanceof ApiError ? error.body.requestId : undefined
               }
               onRetry={() => void load().catch(() => {})}
+            />
+          )}
+          {!mobile && (
+            <DeveloperStatusToolbar
+              selection={selection}
+              rows={(data?.items ?? []).map((r) => ({
+                id: r.id,
+                revision: r.revision,
+                name: r.name,
+                useYn: r.useYn,
+              }))}
+              total={data?.total ?? 0}
+              onCommitted={async () => {
+                await load();
+                setRefreshKey((v) => v + 1);
+              }}
+              onRefresh={async () => {
+                await load();
+                setRefreshKey((v) => v + 1);
+              }}
             />
           )}
           {!mobile ? (
@@ -596,6 +635,17 @@ export function DeveloperPoolScreen({
               onSizeChange={(size) =>
                 setFilters((f) => ({ ...f, size, page: 1 }))
               }
+              selectedKeys={[...selection.items.keys()]}
+              onSelectionChange={(keys) => {
+                const after = new Set(keys.map(String));
+                (data?.items ?? []).forEach((r) => {
+                  if (after.has(r.id) !== selection.items.has(r.id))
+                    selection.toggle(
+                      { id: r.id, revision: r.revision },
+                      after.has(r.id),
+                    );
+                });
+              }}
               onRowAction={(r) => open(r.id)}
             />
           ) : (
