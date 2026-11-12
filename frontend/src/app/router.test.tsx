@@ -781,7 +781,7 @@ describe("공식 진입점 합성", () => {
     open("/UI-15");
     await screen.findByText(clientFixture.name);
     await userEvent.click(
-      screen.getByTestId(`client-select-${clientFixture.id}`),
+      screen.getByRole("checkbox", { name: `${clientFixture.id} 선택` }),
     );
     await userEvent.click(screen.getByTestId("client-status-n"));
     await userEvent.click(

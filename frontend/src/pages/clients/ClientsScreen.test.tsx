@@ -233,18 +233,17 @@ it("선택 열설정을 반영하지만 필수상호는 숨기지 않는다", as
   );
   await screen.findByText(clientFixture.name);
   expect(
-    screen.getByRole("columnheader", { name: "상호" }),
+    screen.getByRole("columnheader", { name: /^상호/ }),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("columnheader", { name: "연락처" }),
+    screen.queryByRole("columnheader", { name: /^연락처/ }),
   ).not.toBeInTheDocument();
 });
 it("정렬변경은1페이지·같은 workspace내 파트탭은 목록상태를 보존한다", async () => {
   render(<ClientsScreen renderParts={<p>파트관리</p>} />);
   await screen.findByText(clientFixture.name);
-  fireEvent.change(screen.getByTestId("clients-sort"), {
-    target: { value: "personCount" },
-  });
+  expect(screen.queryByTestId("clients-sort")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("sort-personCount"));
   await waitFor(() =>
     expect(api.getClients).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "personCount", page: 1 }),
@@ -254,5 +253,7 @@ it("정렬변경은1페이지·같은 workspace내 파트탭은 목록상태를 
   await userEvent.click(screen.getByTestId("parts-workspace-tab"));
   expect(screen.getByText("파트관리")).toBeVisible();
   await userEvent.click(screen.getByTestId("clients-workspace-tab"));
-  expect(screen.getByTestId("clients-sort")).toHaveValue("personCount");
+  expect(
+    screen.getByRole("columnheader", { name: /투입 인력/ }),
+  ).toHaveAttribute("aria-sort", "ascending");
 });
