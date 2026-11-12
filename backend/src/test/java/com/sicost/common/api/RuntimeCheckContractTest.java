@@ -22,12 +22,26 @@ class RuntimeCheckContractTest {
         }
     }
 
+    @Test void durableOpenApiFitsRuntimeReaderBudget() throws IOException {
+        try (var stream = new ClassPathResource("contracts/openapi.yaml").getInputStream()) {
+            assertThat(stream.readAllBytes().length).isLessThanOrEqualTo(1024 * 1024);
+        }
+    }
+
     @Test void unauthenticatedRuntimeContractMatchesDurableOpenApi() throws IOException {
-        var yaml = new YamlMapFactoryBean();
+        var yaml = new YamlMapFactoryBean() {
+            @Override protected org.yaml.snakeyaml.Yaml createYaml() {
+                var options = new org.yaml.snakeyaml.LoaderOptions();
+                options.setMaxAliasesForCollections(10000);
+                options.setAllowDuplicateKeys(false);
+                return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(options));
+            }
+        };
         yaml.setResources(new ClassPathResource("contracts/openapi.yaml"));
         Map<String, Object> openApi = yaml.getObject();
         assertThat(openApi).isNotNull();
-        assertThat((Map<?, ?>) ((Map<?, ?>) openApi.get("components")).get("securitySchemes")).isEmpty();
+        Object schemes = ((Map<?, ?>) openApi.get("components")).get("securitySchemes");
+        assertThat(schemes == null || schemes instanceof Map<?, ?> map && map.isEmpty()).isTrue();
         assertThat((Iterable<?>) openApi.get("security")).isEmpty();
 
         JsonNode runtime = resource("aiops.runtime-check.json", 65536);

@@ -206,3 +206,32 @@ export {
   downloadAssignments,
   assignmentColumns,
 } from "../pages/assignments/assignmentDownloadsApi";
+export {
+  getBills,
+  getBill,
+  createBill,
+  putBill,
+} from "../pages/bills/billsApi";
+export {
+  getBillEstimate,
+  getBillsSummary,
+  getBillSelection,
+  getBillCopyDraft,
+  saveBillCancellation,
+  createNextMonthBill,
+  createCopiedBill,
+} from "../pages/billsops/billOperationsApi";
+export {
+  getBillReceipts,
+  createBillReceipt,
+  saveBillReceiptCancellation,
+} from "../pages/receipts/receiptsApi";
+export {
+  loadReceiptBatchSelection,
+  createBatchReceipts,
+} from "../pages/receiptsops/receiptBatchApi";
+export {
+  getBillingChecks,
+  getReceivables,
+} from "../pages/apiops/billingReviewApi";
+export { downloadBillingReview } from "../pages/apiops/billingReviewExportApi";

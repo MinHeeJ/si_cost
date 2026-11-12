@@ -112,5 +112,5 @@ it("preserves dirty callback and upstream actions extension instead of replacing
   await userEvent.click(screen.getByTestId("assignment-new"));
   await screen.findByTestId("assignment-create-form");
   expect(dirty).toHaveBeenCalledWith(true);
-  expect(screen.queryByTestId("assignment-download")).not.toBeInTheDocument();
+  expect(screen.getByTestId("assignment-download")).toBeInTheDocument();
 });

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.receipts.ReceiptMapper">
+  <select id="operatingValue" resultType="java.math.BigDecimal">
+    SELECT std_val FROM tb_sy_oper_std WHERE std_cd=#{code} AND aply_bgn_ym &lt;= #{month} ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="quickSource" resultType="com.sicost.receipts.ReceiptDtos$QuickSource">
+    SELECT p.proj_stat_cd AS "status",p.ctrt_end_dt AS "endDate",
+      b.bill_id=(SELECT x.bill_id FROM tb_bl_bill x WHERE x.proj_id=b.proj_id AND x.cncl_yn='N' ORDER BY x.bill_ym DESC,x.bill_id DESC LIMIT 1) AS "latest",
+      EXISTS(SELECT 1 FROM tb_bl_bill x WHERE x.proj_id=b.proj_id AND x.cncl_yn='N'
+        AND x.bill_ym=to_char(to_date(b.bill_ym,'YYYYMM')+interval '1 month','YYYYMM')) AS "targetExists"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id WHERE b.bill_id=#{id}
+  </select>
+  <select id="cache" resultType="com.sicost.receipts.ReceiptDtos$Cache">
+    SELECT rcpt_sum_amt AS "receiptAmount",unpaid_amt AS "unpaidAmount" FROM tb_bl_bill WHERE bill_id=#{id}
+  </select>
+  <select id="bill" resultType="com.sicost.receipts.ReceiptDtos$StoredBill">
+    SELECT b.bill_id AS "id",b.proj_id AS "projectId",p.proj_nm AS "projectName",COALESCE(c.clnt_nm,'–') AS "customerName",
+      p.ctrt_type_cd AS "contractType",b.bill_ord::int AS "order",b.bill_ym AS "month",b.bill_dt AS "billingDate",
+      b.sply_amt AS "supplyAmount",b.vat_rt AS "vatRate",b.vat_amt AS "vatAmount",b.tot_amt AS "totalAmount",
+      b.pay_due_dt AS "dueDate",b.tax_invc_no AS "taxInvoiceNo",b.cncl_yn AS "cancelled",b.cncl_rsn AS "cancelReason",
+      b.cncl_user_id AS "cancelUserId",b.cncl_dttm AS "cancelledAt"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id
+    WHERE b.bill_id=#{id}
+  </select>
+  <select id="snapshot" resultType="string">
+    <include refid="com.sicost.apiops.BillingReviewMapper.billSnapshotSql"/>
+  </select>
+  <select id="receipts" resultType="com.sicost.receipts.ReceiptDtos$StoredReceipt">
+    SELECT rcpt_id::bigint AS "id",bill_id AS "billId",rcpt_dt AS "date",rcpt_amt AS "amount",cncl_yn AS "cancelled",
+      cncl_rsn AS "cancelReason",cncl_user_id AS "cancelUserId",cncl_dttm AS "cancelledAt"
+    FROM tb_bl_rcpt WHERE bill_id=#{id} ORDER BY rcpt_dt DESC,rcpt_id DESC
+  </select>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="rcpt_id">
+    INSERT INTO tb_bl_rcpt(bill_id,rcpt_dt,rcpt_amt,cncl_yn,cncl_rsn,cncl_user_id,cncl_dttm,reg_user_id,reg_dttm)
+    VALUES(#{billId},#{date},#{amount},'N',NULL,NULL,NULL,#{actor},#{now})
+  </insert>
+  <update id="cancel">
+    UPDATE tb_bl_rcpt SET cncl_yn='Y',cncl_rsn=#{reason},cncl_user_id=#{actor},cncl_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE bill_id=#{billId} AND rcpt_id=#{receiptId} AND cncl_yn='N'
+  </update>
+  <update id="updateCache">
+    UPDATE tb_bl_bill SET rcpt_sum_amt=#{receiptAmount},unpaid_amt=#{unpaidAmount},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE bill_id=#{billId}
+  </update>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+</mapper>

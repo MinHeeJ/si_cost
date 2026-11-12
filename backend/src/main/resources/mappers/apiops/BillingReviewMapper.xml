@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.BillingReviewMapper">
+  <sql id="projectColumns">proj_id AS "id",proj_nm AS "name",ctrt_type_cd AS "contractType",proj_stat_cd AS "status"</sql>
+  <select id="checkProjects" resultType="com.sicost.apiops.BillingReviewDtos$Project">
+    SELECT <include refid="projectColumns"/> FROM tb_pj_proj
+    WHERE ctrt_type_cd IN ('MO','DP') AND proj_stat_cd NOT IN ('PRE','LOSE') ORDER BY proj_nm,proj_id
+  </select>
+  <select id="project" resultType="com.sicost.apiops.BillingReviewDtos$Project">
+    SELECT <include refid="projectColumns"/> FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="assignments" resultType="com.sicost.apiops.BillingReviewDtos$AssignmentReference">
+    SELECT a.asgn_id AS "id",d.dev_nm AS "developerName",d.mng_no AS "managementNo"
+    FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id WHERE a.proj_id=#{id} ORDER BY a.asgn_id
+  </select>
+  <select id="checkBills" resultType="com.sicost.apiops.BillingReviewDtos$CheckBill">
+    SELECT b.bill_id AS "id",b.bill_dt AS "billingDate",b.sply_amt AS "supplyAmount",b.vat_rt AS "vatRate",
+      COALESCE(r.amount,0) AS "receiptAmount"
+    FROM tb_bl_bill b LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+    WHERE b.proj_id=#{projectId} AND b.bill_ym=#{month} AND b.cncl_yn='N' ORDER BY b.bill_dt DESC,b.bill_id DESC
+  </select>
+  <sql id="checkSnapshotSql">
+    SELECT jsonb_build_object(
+      'project',(SELECT to_jsonb(p)-'proj_nm' FROM tb_pj_proj p WHERE p.proj_id=#{projectId}),
+      'assignments',(SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.asgn_id),'[]'::jsonb) FROM tb_pj_asgn a WHERE a.proj_id=#{projectId}),
+      'months',(SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.asgn_id,m.input_ym),'[]'::jsonb) FROM tb_pj_asgn_mon m WHERE m.proj_id=#{projectId}),
+      'histories',(SELECT COALESCE(jsonb_agg(to_jsonb(h) ORDER BY h.asgn_id,h.hist_sn),'[]'::jsonb) FROM tb_pj_asgn_hist h JOIN tb_pj_asgn a ON a.asgn_id=h.asgn_id WHERE a.proj_id=#{projectId}),
+      'bills',(SELECT COALESCE(jsonb_agg(to_jsonb(b) ORDER BY b.bill_id),'[]'::jsonb) FROM tb_bl_bill b WHERE b.proj_id=#{projectId} AND b.bill_ym=#{month}),
+      'receipts',(SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.rcpt_id),'[]'::jsonb) FROM tb_bl_rcpt r JOIN tb_bl_bill b ON b.bill_id=r.bill_id WHERE b.proj_id=#{projectId} AND b.bill_ym=#{month})
+    )::text
+  </sql>
+  <select id="checkSnapshot" resultType="string"><include refid="checkSnapshotSql"/></select>
+  <sql id="billSnapshotSql">
+    SELECT jsonb_build_object('bill',to_jsonb(b),'receipts',(SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.rcpt_id),'[]'::jsonb) FROM tb_bl_rcpt r WHERE r.bill_id=b.bill_id))::text
+    FROM tb_bl_bill b WHERE b.bill_id=#{id}
+  </sql>
+  <select id="billSnapshot" resultType="string"><include refid="billSnapshotSql"/></select>
+  <select id="overdue" resultType="com.sicost.apiops.BillingReviewDtos$OverdueBill">
+    SELECT b.bill_id AS "billId",b.proj_id AS "projectId",p.proj_nm AS "projectName",
+      b.tot_amt-COALESCE(r.amount,0) AS "unpaidAmount",b.pay_due_dt AS "dueDate"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id
+    LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+    WHERE b.cncl_yn='N' AND b.tot_amt-COALESCE(r.amount,0)>0 AND b.pay_due_dt &lt; #{today}
+    ORDER BY (#{today}::date-b.pay_due_dt) DESC,b.pay_due_dt,b.bill_id
+  </select>
+  <select id="sentHistory" resultType="com.sicost.apiops.BillingReviewDtos$DunningHistory">
+    SELECT bill_id AS "billId",dun_sn::int AS "sn",dun_step::int AS "step",send_dt AS "sendDate",
+      rcvr_desc AS "receiverDescription",send_mthd_cd AS "sendMethodCode",resend_yn='Y' AS "resend"
+    FROM tb_bl_dun_hist WHERE bill_id=#{id} ORDER BY send_dt,dun_sn
+  </select>
+  <select id="eligibleRoles" resultType="com.sicost.apiops.BillingReviewDtos$RecipientRole">
+    SELECT u.user_id AS "userId",u.user_nm AS "name",r.role_id AS "role"
+    FROM tb_sy_user u JOIN tb_sy_user_role ur ON ur.user_id=u.user_id JOIN tb_sy_role r ON r.role_id=ur.role_id
+    WHERE u.user_stat_cd='USE' AND r.use_yn='Y' AND r.role_id IN ('PM','SALES_LDR','EXEC','FIN') ORDER BY u.user_id,r.role_id
+  </select>
+  <select id="recipientScopes" resultType="com.sicost.apiops.BillingReviewDtos$RecipientScope">
+    SELECT s.user_id AS "userId",s.scope_type_cd AS "type",s.part_id AS "partId",s.proj_id AS "projectId"
+    FROM tb_sy_user_scope s JOIN tb_sy_user u ON u.user_id=s.user_id WHERE u.user_stat_cd='USE' ORDER BY s.user_id,s.scope_sn
+  </select>
+  <select id="projectPart" resultType="com.sicost.apiops.BillingReviewDtos$ProjectPart">
+    SELECT pp.part_id AS "partId",COALESCE(p.hq_yn='Y',false) AS "headquarters",s.part_ldr_user_id AS "leaderId"
+    FROM tb_pj_proj_part pp LEFT JOIN tb_bs_part p ON p.part_id=pp.part_id
+    LEFT JOIN LATERAL (SELECT part_ldr_user_id FROM tb_bs_part_std WHERE part_id=pp.part_id AND aply_bgn_ym &lt;= #{month}
+      AND (aply_end_ym IS NULL OR aply_end_ym &gt;= #{month}) ORDER BY aply_bgn_ym DESC LIMIT 1) s ON true
+    WHERE pp.proj_id=#{id} AND pp.aply_bgn_ym &lt;= #{month} ORDER BY pp.aply_bgn_ym DESC LIMIT 1
+  </select>
+</mapper>

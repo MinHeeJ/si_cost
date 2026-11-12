@@ -20,6 +20,7 @@ import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
+import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
@@ -658,6 +659,11 @@ function RegisteredApplication() {
     [candidatesDirty, setCandidatesDirty] = useState(false);
   const [projectsDirty, setProjectsDirty] = useState(false);
   const [assignmentsDirty, setAssignmentsDirty] = useState(false);
+  const [billingDirty, setBillingDirty] = useState(false);
+  const onBillingDirty = useCallback(
+    (dirty: boolean) => setBillingDirty(dirty),
+    [],
+  );
   const onAssignmentsDirty = useCallback(
     (dirty: boolean) => setAssignmentsDirty(dirty),
     [],
@@ -721,7 +727,9 @@ function RegisteredApplication() {
                   ? projectsDirty
                   : id === "UI-12"
                     ? assignmentsDirty
-                    : id === "UI-23" && usersDirty
+                    : id === "UI-13"
+                      ? billingDirty
+                      : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-01": (
@@ -740,6 +748,7 @@ function RegisteredApplication() {
             <StaffingAssignmentsScreen onDirtyChange={onAssignmentsDirty} />
           </SharedScreenFrame>
         ),
+        "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),

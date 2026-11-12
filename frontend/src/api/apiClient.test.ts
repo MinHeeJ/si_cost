@@ -981,7 +981,180 @@ const assignmentCases: typeof cases = [
     call: () => api.getB5Result(123),
   },
 ];
-cases.push(...projectCases, ...assignmentCases);
+const billDraft = {
+  year: 2026,
+  projectId: "selected-project",
+  billingMonth: "2026-11",
+  supplyAmount: "99999999999999",
+  vatRate: "0.25",
+  billingDate: "2026-11-10",
+  dueDate: "2026-12-25",
+  taxInvoiceNo: null,
+};
+const billEdit = {
+  year: 2026,
+  expectedRevision: "bill-revision",
+  supplyAmount: "99999999999999",
+  vatRate: "0.25",
+  billingDate: "2026-11-10",
+  dueDate: "2026-12-25",
+  taxInvoiceNo: null,
+};
+const billCancel = {
+  year: 2026,
+  expectedRevision: "bill-revision",
+  reason: "취소 사유",
+};
+const receiptDraft = {
+  year: 2026,
+  expectedRevision: "bill-revision",
+  date: "2026-11-10",
+  amount: "1000",
+};
+const batchDraft = {
+  year: 2026,
+  date: "2026-11-10",
+  items: [
+    {
+      billId: "selected/bill",
+      amount: "1000",
+      expectedRevision: "bill-revision",
+    },
+  ],
+};
+const copiedDraft = {
+  ...billDraft,
+  copyContext: {
+    sourceBillId: "selected/bill",
+    expectedRevision: "bill-revision",
+  },
+};
+const billingCases: typeof cases = [
+  {
+    name: "getBills",
+    path: "/api/bills?year=2026&includeCarryover=true&page=1&size=20",
+    method: "GET",
+    call: () =>
+      api.getBills({ year: 2026, includeCarryover: true, page: 1, size: 20 }),
+  },
+  {
+    name: "getBill",
+    path: "/api/bills/selected%2Fbill?year=2026",
+    method: "GET",
+    call: () => api.getBill("selected/bill", 2026),
+  },
+  {
+    name: "createBill",
+    path: "/api/bills",
+    method: "POST",
+    call: () => api.createBill(billDraft),
+    body: billDraft,
+  },
+  {
+    name: "putBill",
+    path: "/api/bills/selected%2Fbill",
+    method: "PUT",
+    call: () => api.putBill("selected/bill", billEdit),
+    body: billEdit,
+  },
+  {
+    name: "getBillEstimate",
+    path: "/api/bills/estimate?projectId=selected-project&month=2026-11",
+    method: "GET",
+    call: () => api.getBillEstimate("selected-project", "2026-11"),
+  },
+  {
+    name: "getBillsSummary",
+    path: "/api/bills/summary?year=2026&includeCarryover=false",
+    method: "GET",
+    call: () => api.getBillsSummary(2026, false),
+  },
+  {
+    name: "getBillSelection",
+    path: "/api/bills/selection?year=2026&ids=selected%2Fbill",
+    method: "GET",
+    call: () => api.getBillSelection({ year: 2026, ids: ["selected/bill"] }),
+  },
+  {
+    name: "getBillCopyDraft",
+    path: "/api/bills/selected%2Fbill/copy-draft?year=2026",
+    method: "GET",
+    call: () => api.getBillCopyDraft("selected/bill", 2026),
+  },
+  {
+    name: "saveBillCancellation",
+    path: "/api/bills/selected%2Fbill/cancel",
+    method: "POST",
+    call: () => api.saveBillCancellation("selected/bill", billCancel),
+    body: billCancel,
+  },
+  {
+    name: "createNextMonthBill",
+    path: "/api/bills/selected%2Fbill/next-month",
+    method: "POST",
+    call: () =>
+      api.createNextMonthBill("selected/bill", {
+        year: 2026,
+        expectedRevision: "bill-revision",
+      }),
+    body: { year: 2026, expectedRevision: "bill-revision" },
+  },
+  {
+    name: "createCopiedBill",
+    path: "/api/bills",
+    method: "POST",
+    call: () => api.createCopiedBill(copiedDraft),
+    body: copiedDraft,
+  },
+  {
+    name: "getBillReceipts",
+    path: "/api/bills/selected%2Fbill/receipts?year=2026",
+    method: "GET",
+    call: () => api.getBillReceipts("selected/bill", 2026),
+  },
+  {
+    name: "createBillReceipt",
+    path: "/api/bills/selected%2Fbill/receipts",
+    method: "POST",
+    call: () => api.createBillReceipt("selected/bill", receiptDraft),
+    body: receiptDraft,
+  },
+  {
+    name: "saveBillReceiptCancellation",
+    path: "/api/bills/selected%2Fbill/receipts/42/cancel",
+    method: "POST",
+    call: () =>
+      api.saveBillReceiptCancellation("selected/bill", 42, billCancel),
+    body: billCancel,
+  },
+  {
+    name: "loadReceiptBatchSelection",
+    path: "/api/bills/selection?year=2026&ids=selected%2Fbill",
+    method: "GET",
+    call: () =>
+      api.loadReceiptBatchSelection({ year: 2026 }, ["selected/bill"]),
+  },
+  {
+    name: "createBatchReceipts",
+    path: "/api/receipts/batch",
+    method: "POST",
+    call: () => api.createBatchReceipts(batchDraft),
+    body: batchDraft,
+  },
+  {
+    name: "getBillingChecks",
+    path: "/api/billing-checks?page=1&size=20&month=2026-11",
+    method: "GET",
+    call: () => api.getBillingChecks({ month: "2026-11", page: 1, size: 20 }),
+  },
+  {
+    name: "getReceivables",
+    path: "/api/receivables?page=1&size=20",
+    method: "GET",
+    call: () => api.getReceivables({ page: 1, size: 20 }),
+  },
+];
+cases.push(...projectCases, ...assignmentCases, ...billingCases);
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
   it.each(["B1", "B5"] as const)(
@@ -1073,7 +1246,7 @@ describe("승인 API 등록", () => {
     await expect(call()).rejects.toMatchObject({ status: 422, body });
     expect(fetcher).toHaveBeenCalledOnce();
   });
-  it.each([...projectCases, ...assignmentCases])(
+  it.each([...projectCases, ...assignmentCases, ...billingCases])(
     "$name은 평면 오류를 보존하고 재시도하지 않는다",
     async (test) => {
       const body = {
@@ -1203,6 +1376,22 @@ describe("승인 API 등록", () => {
       filename: "payroll.xlsx",
     },
     {
+      path: "/api/exports/master-data",
+      call: () =>
+        api.downloadBillingReview({
+          view: "BILLING_CHECKS",
+          month: "2026-11",
+          amountUnit: "천원",
+        }),
+      filename: "청구누락점검_20261111_120000.xlsx",
+    },
+    {
+      path: "/api/exports/master-data",
+      call: () =>
+        api.downloadBillingReview({ view: "RECEIVABLES", amountUnit: "원" }),
+      filename: "미수알림_20261111_120000.xlsx",
+    },
+    {
       path: "/api/excel/B5/template",
       call: () => api.getB5Template(),
       filename: "assignments.xlsx",
@@ -1280,6 +1469,8 @@ describe("승인 API 등록", () => {
   });
   it.each([
     () => api.getB7Template(),
+    () =>
+      api.downloadBillingReview({ view: "RECEIVABLES", amountUnit: "천원" }),
     () => api.getUploadIssuesXlsx(123, ""),
     () => api.createB7Validation(new File(["workbook"], "clients.xlsx")),
     () => api.saveB7Apply(new File(["workbook"], "clients.xlsx"), 123),

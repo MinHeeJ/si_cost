@@ -31,6 +31,33 @@ export function AssignmentError({
     />
   ) : null;
 }
+const warningLabel: Record<string, string> = {
+  MM_OVER: "MM 초과",
+  UNCONTRACTED: "미계약",
+};
+/** 연속한 월을 `2026-03 ~ 2026-12`처럼 줄인다. 월이 하나면 그대로. */
+function monthRanges(months: string[]): string {
+  const sorted = [...new Set(months)].sort();
+  const next = (m: string) => {
+    const [y, mo] = m.split("-").map(Number);
+    const d = new Date(y, mo, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+  const parts: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (const m of sorted.slice(1)) {
+    if (m === next(prev)) {
+      prev = m;
+      continue;
+    }
+    parts.push(start === prev ? start : `${start} ~ ${prev}`);
+    start = m;
+    prev = m;
+  }
+  if (start) parts.push(start === prev ? start : `${start} ~ ${prev}`);
+  return parts.join(", ");
+}
 export function AssignmentWarnings({
   warnings,
   protectedMonths,
@@ -38,15 +65,28 @@ export function AssignmentWarnings({
   warnings: api.Warning[];
   protectedMonths: string[];
 }) {
+  // 월마다 같은 문장이 반복되므로 (종류, 월을 뺀 문장)이 같은 경고를 한 줄로 묶는다
+  const groups = new Map<string, { code: string; text: string; months: string[] }>();
+  for (const w of warnings) {
+    let text = w.message;
+    for (const m of w.months) text = text.replace(m, "").replace(/\s+/g, " ");
+    text = text.trim();
+    const key = `${w.code}|${text}`;
+    const group = groups.get(key) ?? { code: w.code, text, months: [] };
+    group.months.push(...w.months);
+    groups.set(key, group);
+  }
   return (
-    <div data-testid="assignment-warnings">
-      {warnings.map((w, i) => (
+    <div data-testid="assignment-warnings" className="assignment-warnings">
+      {[...groups.values()].map((g, i) => (
         <p
-          data-testid={`assignment-warning-${w.code.toLowerCase().replace(/_/g, "-")}-${i}`}
-          key={`${w.code}-${i}`}
+          data-testid={`assignment-warning-${g.code.toLowerCase().replace(/_/g, "-")}-${i}`}
+          key={`${g.code}-${i}`}
           className="sicost-banner sicost-tone-warn"
         >
-          {w.message} {w.months.join(", ")}
+          <strong>{warningLabel[g.code] ?? g.code}</strong>
+          {g.months.length > 0 && <> · {monthRanges(g.months)}</>}
+          {g.text && <> · {g.text}</>}
         </p>
       ))}
       {protectedMonths.length > 0 && (

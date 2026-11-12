@@ -24,7 +24,7 @@ import {
   AssignmentError,
 } from "./AssignmentDialogs";
 import { AssignmentCreateForm } from "./AssignmentCreateForm";
-import { AssignmentDrawer, kindName } from "./AssignmentDrawer";
+import { AssignmentDrawer, kindName, unitPriceNote } from "./AssignmentDrawer";
 import * as api from "./assignmentActionsApi";
 import "./assignments.css";
 import { B5Actions } from "../b5/B5UploadDialog";
@@ -326,7 +326,12 @@ export function AssignmentsContent({
     {
       id: "billingUnitPrice",
       label: `단가 (${unit})`,
-      render: (r) => amount(r.billingUnitPrice),
+      render: (r) =>
+        unitPriceNote(
+          r.inputType,
+          r.billingUnitPrice,
+          projects.find((p) => p.id === r.projectId)?.contractType,
+        ) ?? amount(r.billingUnitPrice),
       align: "right",
     },
     {
@@ -350,19 +355,6 @@ export function AssignmentsContent({
   columns.forEach((column) => {
     column.sortable = column.id !== "warnings";
   });
-  if (creating)
-    return (
-      <AssignmentCreateForm
-        year={year}
-        today={context.currentDate}
-        onClose={() => setCreating(false)}
-        onDirtyChange={dirtyChanged}
-        onSaved={async (row) => {
-          setDetail(row.id);
-          await refreshed();
-        }}
-      />
-    );
   function resetFilters() {
     setDraft({
       projectId: "",
@@ -378,7 +370,6 @@ export function AssignmentsContent({
   return (
     <div data-testid="assignments-content" className="assignments-content">
       <div className="assignment-head">
-        <h1>투입 배정</h1>
         <div className="assignment-head-actions">
           <B5Actions
             year={year}
@@ -548,7 +539,7 @@ export function AssignmentsContent({
           >
             다시 조회
           </button>
-          <label>
+          <label className="assignment-control">
             단위
             <select
               data-testid="assignments-unit"
@@ -560,7 +551,7 @@ export function AssignmentsContent({
               <option>백만원</option>
             </select>
           </label>
-          <label>
+          <label className="assignment-control">
             밀도
             <select
               data-testid="assignments-density"
@@ -626,6 +617,11 @@ export function AssignmentsContent({
           id={detail}
           year={year}
           readonly={readonly}
+          contractType={
+            projects.find(
+              (p) => p.id === data?.items.find((r) => r.id === detail)?.projectId,
+            )?.contractType
+          }
           onClose={() => setDetail(undefined)}
           onChange={(r) => setChanging(r)}
         />
@@ -646,6 +642,18 @@ export function AssignmentsContent({
           year={year}
           onClose={() => setBulk(false)}
           onChanged={refreshed}
+        />
+      )}
+      {creating && (
+        <AssignmentCreateForm
+          year={year}
+          today={context.currentDate}
+          onClose={() => setCreating(false)}
+          onDirtyChange={dirtyChanged}
+          onSaved={async (row) => {
+            setDetail(row.id);
+            await refreshed();
+          }}
         />
       )}
       <Dialog

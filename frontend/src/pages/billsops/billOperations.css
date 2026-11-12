@@ -1,0 +1,69 @@
+.bill-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 16px 24px;
+}
+.bill-summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bill-summary-card > span,
+.bill-summary-card small {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.bill-summary-card strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.bill-actions,
+.bill-copy-form,
+.bill-selection-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.bill-actions-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bill-copy-form input,
+.bill-actions textarea {
+  width: 100%;
+}
+.bill-actions textarea {
+  min-height: 88px;
+  padding: 8px 10px;
+  resize: vertical;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.bill-actions textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+@media (max-width: 767px) {
+  .bill-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .bill-summary-card {
+    padding: 12px;
+  }
+  .bill-summary-card strong {
+    font-size: 20px;
+  }
+  .bill-selection-panel {
+    display: none;
+  }
+}

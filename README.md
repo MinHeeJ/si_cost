@@ -19,6 +19,8 @@ DB를 호스트에 공개하지 않으며 앱 포트도 loopback에만 바인딩
 
 Java 17 / Spring Boot 3.3.13 / Maven / MyBatis 3.0.4 / Flyway / PostgreSQL 16을 사용한다.
 프론트는 Node 20 / React 18.3.1 / Vite 5.4.21 / TypeScript / React Router, npm을 사용한다.
+영구 OpenAPI 시험 자원은 `backend/src/test/resources/contracts/openapi.yaml`이다. 앱 사용 확인기의 1 MiB 읽기 한도에 맞춰 동일한 YAML 값을 앵커로 공유하며, 연산·스키마·설명·추적 정보를 생략하지 않는다. 갱신 후 `python3 scripts/compact_openapi_fixture.py`로 의미 동일성과 크기를 확인한다(PyYAML 필요).
+백엔드 단독 컨텍스트에서도 계약 시험을 실행하도록 같은 contracts 폴더에 무인증 runtime/첫 사용 안내 fixture를 보존한다. 루트 계약 변경 시 함께 갱신한다. 저장소 전체 Maven 실행에서는 루트 파일을 우선 복사한다.
 부모 POM과 MyBatis POM 및 npm 정확 버전 메타데이터의 실제 HTTP 200을 확인했다.
 요청의 D1~D6/D9/D13 결정을 적용한다. 역사적 상류 문서는 수정하지 않았으며 JPA validate를 실행했다고 주장하지 않는다.
 SQL 원본·승인 OpenAPI fixture는 수정하지 않는다. 원본·투영본 해시와 기계적 차이는 infra/sql-projection.json을 참조한다.
@@ -45,7 +47,8 @@ useCommitRefresh는 저장 성공 후 재조회 실패를 별도로 알린다. f
 
 ## 검증
 
-루트에서 `python3 /app/infra/hermes/runner/code_agent_detail/node/self_check.py .`만 실행한다.
+루트에서 `python3 /app/infra/hermes/runner/code_agent_detail/node/self_check.py .`를 실행한다.
+계약 자원의 읽기 한도·루트/백엔드 fixture 일치·무인증 연산 대조 회귀 검증은 `python3 -m unittest discover -s scripts -p 'test_*.py'`로 실행한다(PyYAML 필요).
 이 명령이 Maven/Vitest 시험 및 별도 PostgreSQL migration 검증을 소유한다. Dockerfile 안에서는 테스트를 실행하지 않는다.
 DB 통합 테스트는 명시한 SICOST_TEST_DB_URL, SICOST_TEST_DB_USER, SICOST_TEST_DB_PASSWORD가 제공될 때만 실행한다.
 URL에는 반드시 버려도 되는 독립 시험용 DB를 지정한다. 테스트마다 자체 UUID 스키마를 만들며 다른 스키마/DB를 초기화하거나 삭제하지 않는다.

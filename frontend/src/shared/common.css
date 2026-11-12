@@ -460,6 +460,7 @@ button[aria-pressed="true"] {
 }
 .sicost-drawer-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -469,6 +470,7 @@ button[aria-pressed="true"] {
 }
 .sicost-drawer-heading {
   min-width: 0;
+  flex: 1 1 220px;
 }
 .sicost-drawer-heading h2 {
   margin: 0;
@@ -490,6 +492,7 @@ button[aria-pressed="true"] {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  max-width: 100%;
 }
 .sicost-drawer-body {
   flex: 1;

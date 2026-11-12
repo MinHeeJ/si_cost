@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.receiptsops.ReceiptBatchMapper">
+  <sql id="receipts">LEFT JOIN (SELECT bill_id,sum(rcpt_amt) amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id</sql>
+  <select id="state" resultType="com.sicost.receiptsops.ReceiptBatchDtos$BillState">
+    SELECT b.bill_id AS "id",b.proj_id AS "projectId",b.bill_ym AS "month",b.tot_amt AS "total",
+      COALESCE(r.amount,0) AS "receiptAmount",b.cncl_yn AS "cancelled"
+    FROM tb_bl_bill b <include refid="receipts"/> WHERE b.bill_id=#{id}
+  </select>
+  <select id="bill" resultType="map">
+    SELECT b.bill_id AS "id",b.proj_id AS "projectId",p.proj_nm AS "projectName",COALESCE(c.clnt_nm,'–') AS "customerName",
+      p.ctrt_type_cd AS "contractType",b.bill_ord::int AS "order",
+      substring(b.bill_ym,1,4)||'-'||substring(b.bill_ym,5,2) AS "billingMonth",b.bill_dt::text AS "billingDate",
+      b.sply_amt::text AS "supplyAmount",b.vat_rt::text AS "vatRate",b.vat_amt::text AS "vatAmount",b.tot_amt::text AS "totalAmount",
+      (CASE WHEN b.cncl_yn='Y' THEN 0 ELSE COALESCE(r.amount,0) END)::text AS "receiptAmount",
+      (CASE WHEN b.cncl_yn='Y' THEN 0 ELSE b.tot_amt-COALESCE(r.amount,0) END)::text AS "unpaidAmount",
+      b.pay_due_dt::text AS "dueDate",b.tax_invc_no AS "taxInvoiceNo",b.cncl_yn='Y' AS "cancelled",
+      b.cncl_rsn AS "cancelReason",b.cncl_user_id AS "cancelUserId",b.cncl_dttm::text AS "cancelledAt",
+      p.proj_stat_cd AS "projectStatus",p.ctrt_end_dt::text AS "contractEnd",
+      NOT EXISTS(SELECT 1 FROM tb_bl_bill n WHERE n.proj_id=b.proj_id AND n.cncl_yn='N'
+        AND (n.bill_ym,n.bill_id) &gt; (b.bill_ym,b.bill_id)) AS "latest"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id
+    LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id <include refid="receipts"/> WHERE b.bill_id=#{id}
+  </select>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="rcpt_id">
+    INSERT INTO tb_bl_rcpt(bill_id,rcpt_dt,rcpt_amt,cncl_yn,cncl_rsn,cncl_user_id,cncl_dttm,reg_user_id,reg_dttm)
+    VALUES(#{billId},#{date},#{amount},'N',NULL,NULL,NULL,#{actor},#{now})
+  </insert>
+  <update id="cache">
+    UPDATE tb_bl_bill SET rcpt_sum_amt=#{receiptAmount},unpaid_amt=#{unpaidAmount},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE bill_id=#{billId}
+  </update>
+</mapper>

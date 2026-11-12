@@ -448,7 +448,7 @@ it("신규폼 SUB 계약상 인력은 실제 변경시 지우며 숨긴 단가�
   expect(
     screen.queryByTestId("assignment-create-billing-unit-price"),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByTestId("assignment-create-save"));
+  await userEvent.click(within(screen.getByRole("dialog",{name:"신규 배정"})).getByRole("button",{name:"저장"}));
   await waitFor(() => expect(api.preview).toHaveBeenCalled());
   expect(api.preview).toHaveBeenCalledWith(
     expect.not.objectContaining({ billingUnitPrice: expect.anything() }),

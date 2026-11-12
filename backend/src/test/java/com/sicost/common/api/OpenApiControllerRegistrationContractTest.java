@@ -89,7 +89,10 @@ import static org.assertj.core.api.Assertions.assertThat;
         com.sicost.budget.ProjectBudgetController.class, com.sicost.parts.ProjectPartController.class,
         com.sicost.plans.ProjectPlanController.class, com.sicost.expenses.ProjectExpenseController.class,
         com.sicost.pm.ProjectPmController.class, com.sicost.distribution.ProjectDistributionController.class,
-        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class})
+        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class,
+        com.sicost.bills.BillController.class, com.sicost.billsops.BillOperationsController.class,
+        com.sicost.receipts.ReceiptController.class, com.sicost.receiptsops.ReceiptBatchController.class,
+        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
         com.sicost.assignments.AssignmentController.class, com.sicost.assignmentsops.AssignmentActionsController.class,
         com.sicost.history.AssignmentHistoryController.class, com.sicost.apiops.PayrollController.class,
@@ -106,7 +109,10 @@ import static org.assertj.core.api.Assertions.assertThat;
         com.sicost.budget.ProjectBudgetController.class, com.sicost.parts.ProjectPartController.class,
         com.sicost.plans.ProjectPlanController.class, com.sicost.expenses.ProjectExpenseController.class,
         com.sicost.pm.ProjectPmController.class, com.sicost.distribution.ProjectDistributionController.class,
-        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class})
+        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class,
+        com.sicost.bills.BillController.class, com.sicost.billsops.BillOperationsController.class,
+        com.sicost.receipts.ReceiptController.class, com.sicost.receiptsops.ReceiptBatchController.class,
+        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class})
 class OpenApiControllerRegistrationContractTest {
     @Autowired RequestMappingHandlerMapping handlerMapping;
     @MockBean HealthService health;
@@ -131,6 +137,7 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean UploadIssuesService uploadIssues;
     @MockBean MasterDataExportService exports;
     @MockBean com.sicost.exportsops.PeopleExportService peopleExports;
+    @MockBean com.sicost.exportsops.AssignmentExportService assignmentExports;
     @MockBean AddressService addresses;
     @MockBean CandidateService candidates;
     @MockBean CandidateQueryService candidateQueries;
@@ -164,6 +171,12 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean com.sicost.payrollops.PayrollUploadService payrollUploads;
     @MockBean com.sicost.b1.B1Service b1;
     @MockBean com.sicost.b5.B5Service b5;
+    @MockBean com.sicost.bills.BillService bills;
+    @MockBean com.sicost.billsops.BillOperationsService billOperations;
+    @MockBean com.sicost.receipts.ReceiptService receipts;
+    @MockBean com.sicost.receiptsops.ReceiptBatchService receiptBatches;
+    @MockBean com.sicost.apiops.BillingCheckService billingChecks;
+    @MockBean com.sicost.apiops.ReceivableService receivables;
     @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {
@@ -171,9 +184,9 @@ class OpenApiControllerRegistrationContractTest {
         var yaml=new YamlMapFactoryBean() {
             @Override protected org.yaml.snakeyaml.Yaml createYaml() {
                 var options=new org.yaml.snakeyaml.LoaderOptions();
-                options.setMaxAliasesForCollections(1000);
+                options.setMaxAliasesForCollections(10000);
                 options.setAllowDuplicateKeys(false);
-                return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.Constructor(options));
+                return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(options));
             }
         };
         yaml.setResources(new ClassPathResource("contracts/openapi.yaml"));

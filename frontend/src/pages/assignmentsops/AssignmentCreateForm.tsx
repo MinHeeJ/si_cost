@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -231,31 +230,39 @@ export function AssignmentCreateForm({
   );
   return (
     <>
-      <FormPage
+      <Dialog
+        open
+        wide
         title="신규 배정"
-        actions={
-          <button
-            type="button"
-            data-testid="assignment-create-close"
-            disabled={pending}
-            onClick={() => setLeaving(true)}
-          >
-            닫기
-          </button>
-        }
+        pending={pending}
+        confirmLabel="저장"
+        onConfirm={inspect}
+        onCancel={() => setLeaving(true)}
       >
-        <div data-testid="assignment-create-form" className="assignment-form">
-          <p>
-            YEAR {year} · 신규 등록만 가능합니다. 프로젝트·인력·직무·투입일은
+        <div data-testid="assignment-create-form" className="assignment-create-grid">
+          <p className="assignment-create-wide">
+            {year}년 · 신규 등록만 가능합니다. 프로젝트·인력·직무·투입일은
             저장 후 직접 수정하지 않습니다.
           </p>
-          <AssignmentError error={error} />
-          {message && <p role="status">{message}</p>}
+          <div className="assignment-create-wide">
+            <AssignmentError error={error} />
+          </div>
+          {message && (
+            <p role="status" className="assignment-create-wide">
+              {message}
+            </p>
+          )}
           <div className="assignment-search">
             <label className="sicost-field">
               프로젝트 검색
               <input
                 data-testid="assignment-project-search"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    document.querySelector<HTMLButtonElement>('[data-testid="assignment-project-query"]')?.click();
+                  }
+                }}
                 value={projectSearch}
                 onChange={(e) => setProjectSearch(e.target.value)}
               />
@@ -307,6 +314,12 @@ export function AssignmentCreateForm({
               인력 검색
               <input
                 data-testid="assignment-developer-search"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    document.querySelector<HTMLButtonElement>('[data-testid="assignment-developer-query"]')?.click();
+                  }
+                }}
                 value={developerSearch}
                 onChange={(e) => setDeveloperSearch(e.target.value)}
               />
@@ -384,14 +397,14 @@ export function AssignmentCreateForm({
           {paid && (
             <>
               {field("청구 단가 (원) *", "billingUnitPrice")}
-              <p>
+              <p className="assignment-create-wide">
                 시작월 유효 단가가 없으면 직접 입력하세요. SUB는 계약상 인력의
                 마지막 종료월 단가를 사용합니다.
               </p>
             </>
           )}
           {form.inputType === "SUB" && (
-            <label className="sicost-field">
+            <label className="sicost-field assignment-create-wide">
               계약상 인력 *
               <select
                 data-testid="assignment-contract-developer"
@@ -421,31 +434,12 @@ export function AssignmentCreateForm({
               </select>
             </label>
           )}
-          <p className="sicost-banner sicost-tone-info">
+          <p className="sicost-banner sicost-tone-info assignment-create-wide">
             프로젝트 매출과 사람 소속파트 정산은 별개입니다. 소속파트는 자동
             변경하지 않습니다.
           </p>
-          <div className="assignment-toolbar">
-            <button
-              type="button"
-              data-testid="assignment-create-cancel"
-              disabled={pending}
-              onClick={() => setLeaving(true)}
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              data-testid="assignment-create-save"
-              className="sicost-primary"
-              disabled={pending}
-              onClick={() => void inspect()}
-            >
-              저장
-            </button>
-          </div>
         </div>
-      </FormPage>
+      </Dialog>
       <Dialog
         open={Boolean(preview) && !sub}
         title="저장전 경고 확인"
