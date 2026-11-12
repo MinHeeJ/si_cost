@@ -257,7 +257,7 @@ export function PayrollDialog({
     <>
       <Dialog
         open
-        title="급여 (B1) / UI-02"
+        title="월별 급여"
         wide
         onConfirm={onClose}
         onCancel={onClose}
@@ -579,7 +579,7 @@ export function PayrollActions({
         data-testid="payroll-open"
         onClick={() => setOpen(true)}
       >
-        급여 (B1)
+        월별 급여
       </button>
       {error && <span role="alert">{error}</span>}
       {open && (

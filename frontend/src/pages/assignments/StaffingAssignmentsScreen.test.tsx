@@ -79,7 +79,9 @@ it("historical read-only year still permits download but forbids registration an
   render(<StaffingAssignmentsScreen />);
   await screen.findByText(/지난 해·읽기 전용/);
   expect(screen.getByTestId("assignment-new")).toBeDisabled();
-  expect(screen.getByTestId("assignments-all-selection")).toBeDisabled();
+  expect(
+    screen.queryByTestId("assignments-all-selection"),
+  ).not.toBeInTheDocument();
   expect(screen.getByTestId("assignment-download")).not.toBeDisabled();
 });
 it("download failure retains list and retry never saves the business record", async () => {

@@ -349,7 +349,7 @@ it("기존 개발자/B8 버튼 보존·급여 닫기 후 필터와 호출 포커
   await userEvent.click(screen.getByTestId("developer-search-button"));
   await userEvent.click(screen.getByTestId("payroll-open"));
   await screen.findByText(row.developerName);
-  const dialog = screen.getByRole("dialog", { name: "급여 (B1) / UI-02" });
+  const dialog = screen.getByRole("dialog", { name: "월별 급여" });
   await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
   expect(screen.getByTestId("developer-search-input")).toHaveValue(
     "개발자조건",

@@ -5,7 +5,6 @@
   gap: 16px;
   min-width: 0;
 }
-.assignment-filters,
 .assignment-toolbar,
 .assignment-search {
   display: flex;
@@ -13,14 +12,41 @@
   align-items: end;
   gap: 8px;
 }
-.assignment-filters {
-  padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-  background: var(--surface);
+.assignment-filters .sicost-field select {
+  min-width: 120px;
 }
-.assignment-filters .sicost-field {
-  flex: 1 1 140px;
+.assignment-filters input:not([type="checkbox"]) {
+  width: 160px;
+}
+.assignment-cancelled {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.assignment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.assignment-head h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.assignment-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assignment-bar {
+  justify-content: space-between;
+  align-items: center;
+}
+.assignment-bar-actions {
+  margin-left: auto;
 }
 .assignment-form {
   max-width: 880px;

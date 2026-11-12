@@ -6,6 +6,7 @@ import {
   type Key,
   type ReactNode,
 } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -362,19 +363,51 @@ export function AssignmentsContent({
         }}
       />
     );
+  function resetFilters() {
+    setDraft({
+      projectId: "",
+      jobCode: "",
+      warning: "",
+      q: "",
+      includeCancelled: false,
+    });
+    setFilters({ year });
+    setPage(1);
+    clearSelection();
+  }
   return (
     <div data-testid="assignments-content" className="assignments-content">
-      <h1>투입 배정</h1>
+      <div className="assignment-head">
+        <h1>투입 배정</h1>
+        <div className="assignment-head-actions">
+          <B5Actions
+            year={year}
+            readOnly={readonly}
+            onApplied={refreshed}
+            onDirtyChange={dirtyChanged}
+          />
+          <button
+            type="button"
+            data-testid="assignment-new"
+            disabled={readonly || loading || Boolean(error)}
+            onClick={() => setCreating(true)}
+            className="sicost-primary"
+          >
+            신규 배정
+          </button>
+        </div>
+      </div>
       {readonly && (
         <p className="sicost-banner sicost-tone-lock">
           지난 해·읽기 전용: 조회와 다운로드만 가능합니다.
         </p>
       )}
-      <form
-        data-testid="assignments-filter-form"
+      <FilterBar
+        testId="assignments-filter-form"
         className="assignment-filters"
-        onSubmit={(e) => {
-          e.preventDefault();
+        resetTestId="assignments-reset"
+        searchTestId="assignments-query"
+        onSubmit={() => {
           if (draft.q.trim().length > 100) {
             setError(new Error("검색어는 100자 이내로 입력해 주세요."));
             return;
@@ -390,6 +423,7 @@ export function AssignmentsContent({
             includeCancelled: draft.includeCancelled,
           });
         }}
+        onReset={resetFilters}
       >
         <label className="sicost-field">
           프로젝트
@@ -455,7 +489,7 @@ export function AssignmentsContent({
             onChange={(e) => setDraft((v) => ({ ...v, q: e.target.value }))}
           />
         </label>
-        <label>
+        <label className="assignment-cancelled">
           <input
             data-testid="assignments-cancelled"
             type="checkbox"
@@ -466,113 +500,86 @@ export function AssignmentsContent({
           />
           취소포함
         </label>
-        <button data-testid="assignments-query" type="submit">
-          조회
-        </button>
-        <button
-          data-testid="assignments-reset"
-          type="button"
-          onClick={() => {
-            setDraft({
-              projectId: "",
-              jobCode: "",
-              warning: "",
-              q: "",
-              includeCancelled: false,
-            });
-            setFilters({ year });
-            setPage(1);
-            clearSelection();
-          }}
-        >
-          초기화
-        </button>
-      </form>
-      <div className="assignment-toolbar">
-        <button
-          type="button"
-          data-testid="assignment-new"
-          disabled={readonly || loading || Boolean(error)}
-          onClick={() => setCreating(true)}
-          className="sicost-primary"
-        >
-          신규 배정
-        </button>
-        <button
-          type="button"
-          data-testid="assignments-refresh"
-          onClick={() => void load().catch(() => {})}
-        >
-          다시 조회
-        </button>
-        <label>
-          단위
-          <select
-            data-testid="assignments-unit"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-          >
-            <option>원</option>
-            <option>천원</option>
-            <option>백만원</option>
-          </select>
-        </label>
-        <label>
-          밀도
-          <select
-            data-testid="assignments-density"
-            value={dense ? "좁게" : "넓게"}
-            onChange={(e) => setDense(e.target.value === "좁게")}
-          >
-            <option>넓게</option>
-            <option>좁게</option>
-          </select>
-        </label>
-      </div>
-      {renderActions?.({
-        year,
-        filters,
-        sort,
-        amountUnit: unit,
-        readonly,
-        refresh: refreshed,
-      })}
-      <B5Actions
-        year={year}
-        readOnly={readonly}
-        onApplied={refreshed}
-        onDirtyChange={dirtyChanged}
-      />
+      </FilterBar>
       <AssignmentError
         error={error}
         retry={() => void load().catch(() => {})}
       />
-      <div className="assignment-toolbar assignment-desktop">
-        <button
-          type="button"
-          data-testid="assignments-page-selection"
-          disabled={readonly || loading || selecting}
-          onClick={() => void select(data?.items.map((r) => r.id) ?? [])}
-        >
-          페이지 전체
-        </button>
-        <button
-          type="button"
-          data-testid="assignments-all-selection"
-          disabled={readonly || loading || selecting}
-          onClick={() => void select([], true)}
-        >
-          조회전체 선택
-        </button>
-        <span>실제 선택 {selection.items.length}건</span>
-        <button
-          type="button"
-          data-testid="assignment-bulk-open"
-          disabled={readonly || selecting || !selection.items.length}
-          onClick={() => setBulk(true)}
-        >
-          연장 가능성 변경 / 배정 취소
-        </button>
+      <div className="assignment-toolbar assignment-bar">
+        {!readonly && selection.items.length > 0 ? (
+          <div className="assignment-toolbar assignment-desktop assignment-selection">
+            <button
+              type="button"
+              data-testid="assignments-page-selection"
+              disabled={readonly || loading || selecting}
+              onClick={() => void select(data?.items.map((r) => r.id) ?? [])}
+            >
+              페이지 전체
+            </button>
+            <button
+              type="button"
+              data-testid="assignments-all-selection"
+              disabled={readonly || loading || selecting}
+              onClick={() => void select([], true)}
+            >
+              조회전체 선택
+            </button>
+            <span>실제 선택 {selection.items.length}건</span>
+            <button
+              type="button"
+              data-testid="assignment-bulk-open"
+              disabled={readonly || selecting || !selection.items.length}
+              onClick={() => setBulk(true)}
+            >
+              연장 가능성 변경 / 배정 취소
+            </button>
+            <button type="button" onClick={clearSelection}>
+              선택 해제
+            </button>
+          </div>
+        ) : (
+          <strong>총 {data?.total ?? 0}건</strong>
+        )}
+        <div className="assignment-toolbar assignment-bar-actions">
+          <button
+            type="button"
+            data-testid="assignments-refresh"
+            onClick={() => void load().catch(() => {})}
+          >
+            다시 조회
+          </button>
+          <label>
+            단위
+            <select
+              data-testid="assignments-unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+          <label>
+            밀도
+            <select
+              data-testid="assignments-density"
+              value={dense ? "좁게" : "넓게"}
+              onChange={(e) => setDense(e.target.value === "좁게")}
+            >
+              <option>넓게</option>
+              <option>좁게</option>
+            </select>
+          </label>
+          {renderActions?.({
+            year,
+            filters,
+            sort,
+            amountUnit: unit,
+            readonly,
+            refresh: refreshed,
+          })}
+        </div>
       </div>
       <DataTable
         rows={data?.items ?? []}
@@ -580,6 +587,15 @@ export function AssignmentsContent({
         rowKey={(r) => r.id}
         loading={loading}
         empty="조회된 투입 배정이 없습니다."
+        emptyAction={
+          <button
+            type="button"
+            data-testid="assignments-empty-reset"
+            onClick={resetFilters}
+          >
+            조건 초기화
+          </button>
+        }
         page={page}
         size={size}
         total={data?.total ?? 0}

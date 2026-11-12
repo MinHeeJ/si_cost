@@ -194,7 +194,9 @@ it("지난해는 신규·선택·일괄 금지다", async () => {
   draw(2025);
   await screen.findByText(/지난 해·읽기 전용/);
   expect(screen.getByTestId("assignment-new")).toBeDisabled();
-  expect(screen.getByTestId("assignments-all-selection")).toBeDisabled();
+  expect(
+    screen.queryByTestId("assignments-all-selection"),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("checkbox", { name: "이 페이지 전체 선택" }),
   ).not.toBeInTheDocument();
@@ -221,6 +223,11 @@ it("조회전체는 서버 snapshot을 고정하고 개별 제외는 bulk 대상
   });
   draw();
   await ready();
+  // 선택 도구줄은 행을 선택했을 때만 나타난다
+  expect(
+    screen.queryByTestId("assignments-all-selection"),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole("checkbox")[1]);
   await userEvent.click(screen.getByTestId("assignments-all-selection"));
   await screen.findByText("실제 선택 2건");
   await userEvent.click(screen.getByTestId("assignment-bulk-open"));
