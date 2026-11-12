@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class PreferenceValidator {
     public static final List<String> GLOBAL = List.of("FAV","RECENT","MENU_FOLD","PAGE_SIZE","DENSE","AMT_UNIT");
     private static final Map<String,List<String>> COLUMNS = Map.of(
+            "projects",List.of("id","name","customerName","contractType","contractPeriod","contractAmount","personCount","partName","status","distribution"),
             "codes",List.of("code","name","addVal1","addVal2","sortOrder","useYn"),
             "valueCodes",List.of("code","name","codeVal","unitNm"),
             "mappings",List.of("sourceText","groupId","code"),
@@ -24,6 +25,7 @@ public class PreferenceValidator {
             "developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate"),
             "candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source"));
     private static final Map<String,List<String>> REQUIRED = Map.of(
+            "projects",List.of("id","name"),
             "codes",List.of("code","name"),"valueCodes",List.of("code","name"),
             "mappings",List.of("sourceText","groupId","code"),"standards",List.of("key","name","value"),"history",List.of("occurredAt","target"),
             "users",List.of("userId","name"),"clients",List.of("name"),"developers",List.of("name"),"candidates",List.of("name"));
@@ -35,7 +37,7 @@ public class PreferenceValidator {
         if (GLOBAL.contains(type)) {if (!"*".equals(key)) throw InputValidator.invalid("key");}
         else if (Set.of("COLS","PERIOD").contains(type)) {
             if (!mapper.screens().contains(key)) throw InputValidator.invalid("key");
-            if (type.equals("COLS") && !Set.of("UI-02","UI-15","UI-23","UI-27","UI-33").contains(key)) throw InputValidator.invalid("key");
+            if (type.equals("COLS") && !Set.of("UI-01","UI-02","UI-15","UI-23","UI-27","UI-33").contains(key)) throw InputValidator.invalid("key");
             if (type.equals("PERIOD") && periodType(key).equals("NONE")) throw InputValidator.invalid("type");
         } else throw InputValidator.invalid("type");
     }
@@ -72,6 +74,7 @@ public class PreferenceValidator {
     }
     private Set<String> columnViews(String key) {
         return switch(key) {
+            case "UI-01" -> Set.of("projects");
             case "UI-02" -> Set.of("developers");
             case "UI-15" -> Set.of("clients");
             case "UI-23" -> Set.of("users");

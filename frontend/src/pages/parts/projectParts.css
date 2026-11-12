@@ -1,0 +1,39 @@
+.project-parts-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.project-parts-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.project-parts-content h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.project-parts-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.project-parts-targets {
+  margin: 0;
+  padding: 12px 16px 12px 32px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--head-bg);
+  max-height: 200px;
+  overflow: auto;
+}
+.project-parts-content .sicost-banner {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .project-parts-fields {
+    grid-template-columns: 1fr;
+  }
+}

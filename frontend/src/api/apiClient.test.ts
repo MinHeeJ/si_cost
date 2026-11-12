@@ -549,8 +549,339 @@ const cases: {
       }),
   },
 ];
+const projectCases: typeof cases = [
+  {
+    name: "getProjects",
+    path: "/api/projects?year=2026&page=1&size=50",
+    method: "GET",
+    call: () => api.getProjects({ year: 2026, page: 1, size: 50 }),
+  },
+  {
+    name: "getProject",
+    path: "/api/projects/P%2Fselected?includeCancelled=false",
+    method: "GET",
+    call: () => api.getProject("P/selected"),
+  },
+  {
+    name: "createProject",
+    path: "/api/projects",
+    method: "POST",
+    call: () =>
+      api.createProject({
+        year: 2026,
+        name: "내부 프로젝트",
+        contractType: "IN",
+        initialStatus: "ING",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+      }),
+    body: {
+      year: 2026,
+      name: "내부 프로젝트",
+      contractType: "IN",
+      initialStatus: "ING",
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+    },
+  },
+  {
+    name: "putProject",
+    path: "/api/projects/P%2Fselected",
+    method: "PUT",
+    call: () =>
+      api.putProject("P/selected", {
+        year: 2026,
+        name: "수정 프로젝트",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+        expectedRevision: "rev",
+      }),
+    body: {
+      year: 2026,
+      name: "수정 프로젝트",
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+      expectedRevision: "rev",
+    },
+  },
+  {
+    name: "getProjectDefaults",
+    path: "/api/projects/defaults?contractAmount=999999999999999&contractType=TK",
+    method: "GET",
+    call: () => api.getProjectDefaults("999999999999999", "TK"),
+  },
+  {
+    name: "getProjectOptions",
+    path: "/api/projects/options?purpose=ASSIGNMENT&q=",
+    method: "GET",
+    call: () => api.getProjectOptions("ASSIGNMENT"),
+  },
+  {
+    name: "getProjectBudget",
+    path: "/api/projects/P%2Fselected/budget",
+    method: "GET",
+    call: () => api.getProjectBudget("P/selected"),
+  },
+  {
+    name: "saveProjectBudget",
+    path: "/api/projects/P%2Fselected/budget",
+    method: "PUT",
+    call: () =>
+      api.saveProjectBudget("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+        budgetAmount: "0",
+      }),
+    body: { year: 2026, expectedRevision: "rev", budgetAmount: "0" },
+  },
+  {
+    name: "getProjectParts",
+    path: "/api/projects/P%2Fselected/parts",
+    method: "GET",
+    call: () => api.getProjectParts("P/selected"),
+  },
+  {
+    name: "saveProjectPart",
+    path: "/api/projects/P%2Fselected/parts",
+    method: "PUT",
+    call: () =>
+      api.saveProjectPart("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+        partId: "selected-part",
+        effectiveMonth: "2026-12",
+        reason: null,
+      }),
+    body: {
+      year: 2026,
+      expectedRevision: "rev",
+      partId: "selected-part",
+      effectiveMonth: "2026-12",
+      reason: null,
+    },
+  },
+  {
+    name: "getProjectPlans",
+    path: "/api/projects/P%2Fselected/plans",
+    method: "GET",
+    call: () => api.getProjectPlans("P/selected"),
+  },
+  {
+    name: "saveProjectPlans",
+    path: "/api/projects/P%2Fselected/plans",
+    method: "PUT",
+    call: () =>
+      api.saveProjectPlans("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+        items: [],
+      }),
+    body: { year: 2026, expectedRevision: "rev", items: [] },
+  },
+  {
+    name: "getProjectExpenses",
+    path: "/api/projects/P%2Fselected/expenses",
+    method: "GET",
+    call: () => api.getProjectExpenses("P/selected"),
+  },
+  {
+    name: "createProjectExpense",
+    path: "/api/projects/P%2Fselected/expenses",
+    method: "POST",
+    call: () =>
+      api.createProjectExpense("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+        expenseMonth: "2026-11",
+        itemCode: "selected-code",
+        amount: "1",
+        memo: null,
+      }),
+    body: {
+      year: 2026,
+      expectedRevision: "rev",
+      expenseMonth: "2026-11",
+      itemCode: "selected-code",
+      amount: "1",
+      memo: null,
+    },
+  },
+  {
+    name: "deleteProjectExpense",
+    path: "/api/projects/P%2Fselected/expenses/2026-11/7",
+    method: "DELETE",
+    call: () =>
+      api.deleteProjectExpense(
+        "P/selected",
+        { expenseMonth: "2026-11", expenseSn: 7 },
+        { year: 2026, expectedRevision: "rev" },
+      ),
+    body: { year: 2026, expectedRevision: "rev" },
+  },
+  {
+    name: "getBusinessUserProjects",
+    path: "/api/business-users/selected%2Fuser/projects",
+    method: "GET",
+    call: () => api.getBusinessUserProjects("selected/user"),
+  },
+  {
+    name: "getProjectPm",
+    path: "/api/projects/P%2Fselected/pm",
+    method: "GET",
+    call: () => api.getProjectPm("P/selected"),
+  },
+  {
+    name: "saveProjectPm",
+    path: "/api/projects/P%2Fselected/pm",
+    method: "PUT",
+    call: () => api.saveProjectPm("P/selected", "selected-user", "rev", true),
+    body: {
+      userId: "selected-user",
+      expectedRevision: "rev",
+      replaceConfirmed: true,
+    },
+  },
+  {
+    name: "deleteProjectPm",
+    path: "/api/projects/P%2Fselected/pm",
+    method: "DELETE",
+    call: () => api.deleteProjectPm("P/selected", "selected-user", "rev"),
+    body: { userId: "selected-user", expectedRevision: "rev" },
+  },
+  {
+    name: "getProjectLossPreview",
+    path: "/api/projects/P%2Fselected/loss-preview",
+    method: "GET",
+    call: () => api.getProjectLossPreview("P/selected"),
+  },
+  {
+    name: "saveProjectProgress",
+    path: "/api/projects/P%2Fselected/progress",
+    method: "PUT",
+    call: () =>
+      api.saveProjectProgress("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+      }),
+    body: { year: 2026, expectedRevision: "rev" },
+  },
+  {
+    name: "saveProjectLoss",
+    path: "/api/projects/P%2Fselected/loss",
+    method: "PUT",
+    call: () =>
+      api.saveProjectLoss("P/selected", {
+        year: 2026,
+        expectedRevision: "rev",
+        lossReason: "selected-reason",
+        lossMemo: null,
+        previewToken: "preview",
+      }),
+    body: {
+      year: 2026,
+      expectedRevision: "rev",
+      lossReason: "selected-reason",
+      lossMemo: null,
+      previewToken: "preview",
+    },
+  },
+  {
+    name: "getProjectDistribution",
+    path: "/api/projects/P%2Fselected/distribution?step=PLAN",
+    method: "GET",
+    call: () => api.getProjectDistribution("P/selected", "PLAN"),
+  },
+  {
+    name: "getProjectDistributionComparison",
+    path: "/api/projects/P%2Fselected/distribution/comparison",
+    method: "GET",
+    call: () => api.getProjectDistributionComparison("P/selected"),
+  },
+  {
+    name: "getProjectDistributionUploads",
+    path: "/api/projects/P%2Fselected/distribution/uploads",
+    method: "GET",
+    call: () => api.getProjectDistributionUploads("P/selected"),
+  },
+  {
+    name: "getUploadResult",
+    path: "/api/uploads/123/result",
+    method: "GET",
+    call: () => api.getUploadResult(123),
+  },
+];
+cases.push(...projectCases);
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
+  it.each(projectCases)(
+    "$name은 평면 오류를 보존하고 재시도하지 않는다",
+    async (test) => {
+      const body = {
+        success: false,
+        meta: {},
+        code: "STALE_WRITE",
+        message: "다시 조회해 주세요.",
+        requestId: "project-request",
+      };
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
+      vi.stubGlobal("fetch", fetcher);
+      await expect(test.call()).rejects.toMatchObject({ status: 409, body });
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
+  it.each(["B9", "B6"] as const)(
+    "%s multipart 등록은 year와 업로드 문맥을 유지한다",
+    async (form) => {
+      const fetcher = vi.fn().mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              meta: {},
+              data: { uploadId: 123 },
+            }),
+          ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "projects.xlsx");
+      if (form === "B9") {
+        await api.createB9Validation(file, 2026);
+        await api.saveB9Apply(file, 123, 2026);
+      } else {
+        await api.createB6Validation(file, {
+          year: 2026,
+          projectId: "P/selected",
+          step: "PLAN",
+        });
+        await api.saveB6Apply(
+          file,
+          123,
+          { year: 2026, projectId: "P/selected", step: "PLAN" },
+          "revision",
+        );
+      }
+      for (const [index, operation] of ["validate", "apply"].entries()) {
+        const [path, options] = fetcher.mock.calls[index] as [
+          string,
+          RequestInit,
+        ];
+        expect(path).toBe(`/api/excel/${form}/${operation}`);
+        expect(options.method).toBe("POST");
+        expect(new Headers(options.headers).has("Content-Type")).toBe(false);
+        const body = options.body as FormData;
+        expect(body.get("file")).toBe(file);
+        expect(body.get("year")).toBe("2026");
+        expect(body.get("uploadId")).toBe(index ? "123" : null);
+        expect(body.get("projectId")).toBe(form === "B6" ? "P/selected" : null);
+        expect(body.get("step")).toBe(form === "B6" ? "PLAN" : null);
+        expect(body.get("expectedRevision")).toBe(
+          form === "B6" && index ? "revision" : null,
+        );
+      }
+    },
+  );
   it.each(["validate", "apply"] as const)(
     "B8 %s 등록은 feature 전송 계층을 그대로 사용한다",
     async (operation) => {
@@ -606,6 +937,16 @@ describe("승인 API 등록", () => {
     },
   );
   it.each([
+    {
+      path: "/api/excel/B9/template",
+      call: () => api.getB9Template(),
+      filename: "projects.xlsx",
+    },
+    {
+      path: "/api/excel/B6/template?projectId=P%2Fselected",
+      call: () => api.getB6Template("P/selected"),
+      filename: "distribution.xlsx",
+    },
     {
       path: "/api/excel/B8/template",
       call: () => api.getB8Template(),

@@ -185,7 +185,36 @@ export function UploadIssuesPanel({
             label: "입력값",
             render: (issue) => issue.inputValue,
           },
-          { id: "reason", label: "이유", render: (issue) => issue.reason },
+          {
+            id: "reason",
+            label: "이유",
+            render: (issue) => (
+              <>
+                {issue.reason}
+                {Boolean(issue.candidates?.length) && (
+                  <details
+                    data-testid={`upload-issue-candidates-${issue.sequence}`}
+                  >
+                    <summary>후보 상세 펼침/접기</summary>
+                    <ul>
+                      {issue.candidates?.map((candidate) => (
+                        <li
+                          key={candidate.id}
+                          data-testid={`upload-issue-candidate-${issue.sequence}-${candidate.id}`}
+                        >
+                          {candidate.id} · {candidate.name}
+                          {candidate.businessNo
+                            ? ` · ${candidate.businessNo}`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <p>고객사가 여러 건이면 사업자번호를 입력해 주세요.</p>
+                  </details>
+                )}
+              </>
+            ),
+          },
         ]}
         empty="검사 문제가 없습니다."
       />

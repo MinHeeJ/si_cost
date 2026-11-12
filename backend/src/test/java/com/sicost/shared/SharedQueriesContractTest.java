@@ -177,6 +177,26 @@ class SharedQueriesContractTest {
             .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("jdbc:"))));
         verify(mapper,never()).historyCount(any());
     }
+    @ParameterizedTest @ValueSource(strings={"/api/period-context","/api/month-close","/api/codes/JOB","/api/params/TGT_MRGN_RT"})
+    void projectLookupsRemainPublicAndPreserveResponseAndRequestId(String path) throws Exception {
+        when(mapper.codes("JOB",false)).thenReturn(List.of());
+        when(mapper.parameter("TGT_MRGN_RT","202611"))
+            .thenReturn(new SharedQueryDtos.Parameter("TGT_MRGN_RT","15","%","2026-01"));
+        var request=get(path).header("X-Request-Id","project-lookup");
+        if(path.equals("/api/month-close")) request.param("from","2026-11").param("to","2026-11");
+        mvc.perform(request).andExpect(status().isOk())
+            .andExpect(header().string("X-Request-Id","project-lookup"))
+            .andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap())
+            .andExpect(jsonPath("$.data").isMap());
+        verifyNoInteractions(users);
+    }
+    @ParameterizedTest @ValueSource(strings={"/api/period-context","/api/month-close","/api/codes/JOB","/api/params/TGT_MRGN_RT"})
+    void projectLookupsRejectUnknownOrRepeatedQueryValuesBeforeReadingSources(String path) throws Exception {
+        String field=path.equals("/api/month-close")?"from":path.startsWith("/api/codes/")?"includeInactive":"month";
+        mvc.perform(get(path).param(field,"2026-01","2026-02"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field));
+        verifyNoInteractions(mapper,users);
+    }
     @Test void sharedOperationsUseThePackagedAuthoritativeContract() throws Exception {
         String contract=new org.springframework.core.io.ClassPathResource("contracts/openapi.yaml")
             .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.expenses.ProjectExpenseMapper">
+  <select id="project" resultType="com.sicost.expenses.ProjectExpenseDtos$ProjectState">
+    SELECT ctrt_type_cd AS "contractType",proj_stat_cd AS "status" FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <sql id="columns">
+    e.exps_ym AS "month",e.exps_sn AS "sn",e.drct_exps_item_cd AS "itemCode",
+    COALESCE(c.code_nm,e.drct_exps_item_cd) AS "itemName",e.exps_amt AS "amount",e.rmrk AS "memo",e.reg_dttm AS "registeredAt"
+  </sql>
+  <sql id="source">
+    FROM tb_pj_drct_exps e LEFT JOIN tb_sy_code c ON c.code_grp_id='DRCT_EXPS_ITEM' AND c.code=e.drct_exps_item_cd
+  </sql>
+  <select id="list" resultType="com.sicost.expenses.ProjectExpenseDtos$Stored">
+    SELECT <include refid="columns"/> <include refid="source"/> WHERE e.proj_id=#{id}
+    ORDER BY e.reg_dttm DESC,e.exps_ym DESC,e.exps_sn DESC
+  </select>
+  <select id="find" resultType="com.sicost.expenses.ProjectExpenseDtos$Stored">
+    SELECT <include refid="columns"/> <include refid="source"/>
+    WHERE e.proj_id=#{id} AND e.exps_ym=#{month} AND e.exps_sn=#{sn}
+  </select>
+  <select id="activeItem" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_code WHERE code_grp_id='DRCT_EXPS_ITEM' AND code=#{code} AND use_yn='Y' AND del_yn='N')
+  </select>
+  <select id="greatestSerial" resultType="int">
+    SELECT GREATEST(
+      COALESCE((SELECT max(exps_sn) FROM tb_pj_drct_exps WHERE proj_id=#{id} AND exps_ym=#{month}),0),
+      COALESCE((SELECT max(substring(trgt_key FROM length(#{id}||':'||#{month}||':')+1)::integer) FROM tb_sy_chg_hist
+        WHERE trgt_tbl_nm='TB_PJ_DRCT_EXPS'
+          AND left(trgt_key,length(#{id}||':'||#{month}||':'))=#{id}||':'||#{month}||':'
+          AND substring(trgt_key FROM length(#{id}||':'||#{month}||':')+1) ~ '^[0-9]{1,5}$'),0))
+  </select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <insert id="insert">
+    INSERT INTO tb_pj_drct_exps(proj_id,exps_ym,exps_sn,drct_exps_item_cd,exps_amt,rmrk,reg_user_id,reg_dttm)
+    VALUES(#{key.id},#{key.month},#{key.sn},#{itemCode},#{amount},#{memo},#{actor},#{now})
+  </insert>
+  <delete id="delete">
+    DELETE FROM tb_pj_drct_exps WHERE proj_id=#{id} AND exps_ym=#{month} AND exps_sn=#{sn}
+  </delete>
+</mapper>

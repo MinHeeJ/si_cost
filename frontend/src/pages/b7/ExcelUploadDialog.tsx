@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { UploadIssuesPanel } from "../uploadsops/UploadIssuesPanel";
@@ -9,14 +9,31 @@ export type ImportNumberRow = {
   managementNo: string;
   id?: string;
 };
+export type UploadValidation = Omit<api.B7Validation, "status"> & {
+  status?: "CHECKED" | "APPLIED";
+  expectedNumbers?: ImportNumberRow[];
+  revision?: string | null;
+  prospectiveComparison?: unknown;
+  uploadedTableTotal?: string | null;
+};
+export type UploadApplied = {
+  summary: api.B7Summary & { tableWarningCount?: number };
+  uploadId?: number;
+  status?: "CHECKED" | "APPLIED";
+  appliedCount?: number;
+  appliedAt?: string;
+  finalNumbers?: ImportNumberRow[];
+  results?: { rowNumber: number; id: string; name: string }[];
+  revision?: string | null;
+};
 export type UploadWorkflow = {
-  validate(
-    file: File,
-  ): Promise<api.B7Validation & { expectedNumbers?: ImportNumberRow[] }>;
+  validate(file: File): Promise<UploadValidation>;
   apply(
     file: File,
     uploadId: number,
-  ): Promise<api.B7Applied & { finalNumbers?: ImportNumberRow[] }>;
+    revision?: string | null,
+  ): Promise<UploadApplied>;
+  result?(uploadId: number): Promise<UploadApplied>;
 };
 
 // SCR-UI-15: B7 dialog lives in the retained clients tab, never in another route.
@@ -29,6 +46,12 @@ export type ExcelUploadDialogProps = {
   description?: string;
   screenId?: string;
   onTemplate?(): Promise<void>;
+  readOnly?: boolean;
+  readOnlyMessage?: string;
+  emptyRegistrationMessage?: string;
+  renderContext?(pending: boolean, applied: boolean): ReactNode;
+  renderValidation?(result: UploadValidation): ReactNode;
+  renderApplied?(result: UploadApplied): ReactNode;
 };
 export function ExcelUploadDialog({
   onClose,
@@ -39,14 +62,16 @@ export function ExcelUploadDialog({
   description = "B7 거래처 등록 · XLSX 10MiB 이하 · 첫 시트 최대 5,000행. 검사 후 같은 파일로 전량 반영합니다.",
   screenId = "UI-15",
   onTemplate,
+  readOnly = false,
+  readOnlyMessage = "지난 연도는 조회만 할 수 있습니다.",
+  emptyRegistrationMessage = "등록된 거래처는 없습니다.",
+  renderContext,
+  renderValidation,
+  renderApplied,
 }: ExcelUploadDialogProps) {
   const [file, setFile] = useState<File>();
-  const [result, setResult] = useState<
-    api.B7Validation & { expectedNumbers?: ImportNumberRow[] }
-  >();
-  const [applied, setApplied] = useState<
-    api.B7Applied & { finalNumbers?: ImportNumberRow[] }
-  >();
+  const [result, setResult] = useState<UploadValidation>();
+  const [applied, setApplied] = useState<UploadApplied>();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false),
     [confirmClose, setConfirmClose] = useState(false);
@@ -77,21 +102,30 @@ export function ExcelUploadDialog({
     }
   }
   async function check() {
-    if (!file) return;
+    if (!file || readOnly) return;
     await run(async () => {
       setResult(await (workflow?.validate ?? api.createB7Validation)(file));
       setApplied(undefined);
     });
   }
   async function apply() {
-    if (!file || !result?.canApply || applied) return;
+    if (
+      !file ||
+      !result?.canApply ||
+      applied ||
+      readOnly ||
+      result.summary.errorRows > 0 ||
+      result.summary.totalRows < 1
+    )
+      return;
     await run(async () => {
-      let saved: api.B7Applied & { finalNumbers?: ImportNumberRow[] };
+      let saved: UploadApplied;
       try {
-        saved = await (workflow?.apply ?? api.saveB7Apply)(
-          file,
-          result.uploadId,
-        );
+        saved = workflow
+          ? result.revision == null
+            ? await workflow.apply(file, result.uploadId)
+            : await workflow.apply(file, result.uploadId, result.revision)
+          : await api.saveB7Apply(file, result.uploadId);
       } catch (e) {
         if (e instanceof ApiError && e.status === 422) {
           const details = e.body.details as unknown as Omit<
@@ -134,7 +168,15 @@ export function ExcelUploadDialog({
         confirmLabel={applied ? "닫기" : result ? "전량 반영" : "검사"}
         cancelLabel="취소"
         confirmDisabled={
-          !applied && (!file || Boolean(result && !result.canApply))
+          !applied &&
+          (readOnly ||
+            !file ||
+            Boolean(
+              result &&
+                (!result.canApply ||
+                  result.summary.errorRows > 0 ||
+                  result.summary.totalRows < 1),
+            ))
         }
       >
         <section
@@ -143,6 +185,8 @@ export function ExcelUploadDialog({
           data-testid="b7-upload-dialog"
         >
           <p className="b7-info">{description}</p>
+          {renderContext?.(pending, Boolean(applied))}
+          {readOnly && <p className="b7-neutral">{readOnlyMessage}</p>}
           {onTemplate && (
             <button
               type="button"
@@ -160,7 +204,7 @@ export function ExcelUploadDialog({
               type="file"
               accept=".xlsx"
               aria-invalid={Boolean(error && !result)}
-              disabled={pending || Boolean(applied)}
+              disabled={readOnly || pending || Boolean(applied)}
               onChange={(event) => {
                 const selected = event.target.files?.[0];
                 setFile(selected);
@@ -191,6 +235,9 @@ export function ExcelUploadDialog({
               <span className="b7-warn">경고 {summary.warningRows}건</span>
               <span className="b7-bad">오류 {summary.errorRows}건</span>
               <span>파일 경고 {summary.fileWarningCount}건</span>
+              {"tableWarningCount" in summary && (
+                <span>표 경고 {String(summary.tableWarningCount)}건</span>
+              )}
             </div>
           )}
           {error && (
@@ -200,18 +247,19 @@ export function ExcelUploadDialog({
           )}
           {result && !applied && (
             <>
+              {renderValidation?.(result)}
               <p className={result.canApply ? "b7-info" : "b7-bad"}>
                 {result.canApply
                   ? "오류가 없어 반영할 수 있습니다. 경고 내용을 확인해 주세요."
                   : screenId === "UI-02"
                     ? "오류를 수정한 파일을 다시 검사해 주세요. 등록된 개발자는 없습니다."
-                    : "오류를 수정한 파일을 다시 검사해 주세요. 등록된 거래처는 없습니다."}
+                    : `오류를 수정한 파일을 다시 검사해 주세요. ${emptyRegistrationMessage}`}
               </p>
               <div className="b7-actions">
                 <button
                   data-testid="b7-recheck-button"
                   type="button"
-                  disabled={pending}
+                  disabled={pending || readOnly}
                   onClick={() => void check()}
                 >
                   다시 검사
@@ -228,9 +276,13 @@ export function ExcelUploadDialog({
           )}
           {applied && (
             <p role="status" className="b7-ok">
-              {applied.appliedCount}건 반영 완료 · {applied.appliedAt}
+              {applied.appliedCount ??
+                applied.results?.length ??
+                applied.summary.totalRows}
+              건 반영 완료{applied.appliedAt ? ` · ${applied.appliedAt}` : ""}
             </p>
           )}
+          {applied && renderApplied?.(applied)}
           {(applied?.finalNumbers ?? result?.expectedNumbers) && (
             <section
               data-testid="import-numbers-panel"
@@ -265,6 +317,60 @@ export function ExcelUploadDialog({
                 </tbody>
               </table>
             </section>
+          )}
+          {Boolean(applied?.results?.length) && (
+            <section
+              data-testid="import-project-results"
+              aria-label="반영된 프로젝트"
+            >
+              <p>APPLIED 반영 완료 · 최초 반영 결과</p>
+              <table className="sicost-table">
+                <thead>
+                  <tr>
+                    <th>원래 행</th>
+                    <th>최종 프로젝트ID</th>
+                    <th>이름</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applied?.results?.map((row) => (
+                    <tr
+                      key={row.rowNumber}
+                      data-testid={`import-project-row-${row.rowNumber}`}
+                    >
+                      <td>{row.rowNumber}</td>
+                      <td>{row.id}</td>
+                      <td>{row.name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+          {result && workflow?.result && (
+            <button
+              type="button"
+              data-testid="import-result-button"
+              disabled={pending}
+              onClick={() =>
+                void run(async () => {
+                  const saved = await workflow.result!(result.uploadId);
+                  if (saved.status === "APPLIED") {
+                    setApplied(saved);
+                    try {
+                      await onApplied();
+                    } catch {
+                      setRefreshFailed(true);
+                    }
+                  } else
+                    setError(
+                      "검사 완료(CHECKED) 상태입니다. 같은 파일과 업로드 번호로 반영 여부를 확인해 주세요.",
+                    );
+                })
+              }
+            >
+              결과 재조회
+            </button>
           )}
           {refreshFailed && (
             <div role="alert">

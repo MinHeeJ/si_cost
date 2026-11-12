@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.projectsops.ProjectStatusMapper">
+  <select id="project" resultType="com.sicost.projectsops.ProjectStatusDtos$Project">
+    SELECT proj_id AS "id",proj_nm AS "name",cust_clnt_id AS "customerId",ctrt_type_cd AS "contractType",proj_stat_cd AS "status",
+      ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate",work_plc_addr AS "workplace",feature_cn AS "feature",
+      est_amt::text AS "estimateAmount",orgnl_ctrt_amt::text AS "originalContractAmount",ctrt_amt::text AS "contractAmount",
+      bdgt_amt::text AS "budgetAmount",team_exps_amt::text AS "teamExpenseAmount",proj_exps_amt::text AS "projectExpenseAmount",
+      bdgt_manual_yn AS "budgetManual",lose_dt AS "lossDate",lose_rsn_cd AS "lossReason",lose_memo AS "lossMemo",opp_id AS "opportunityId"
+    FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="options" resultType="com.sicost.projectsops.ProjectStatusDtos$Option">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",p.ctrt_type_cd AS "contractType",p.ctrt_bgn_dt AS "startDate",p.ctrt_end_dt AS "endDate",
+      p.ctrt_amt::text AS "contractAmount",p.proj_stat_cd AS "status",c.clnt_nm AS "customerName",
+      (SELECT count(DISTINCT a.dev_id) FROM tb_pj_asgn a WHERE a.proj_id=p.proj_id AND a.asgn_stat_cd='ACT'
+        AND a.input_bgn_dt &lt;= #{today} AND a.input_end_dt &gt;= #{today}) AS "personCount",
+      (SELECT b.part_nm FROM tb_pj_proj_part r LEFT JOIN tb_bs_part b ON b.part_id=r.part_id
+        WHERE r.proj_id=p.proj_id AND r.aply_bgn_ym &lt;= #{month} ORDER BY r.aply_bgn_ym DESC LIMIT 1) AS "partName",NULL AS "distribution"
+    FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id
+    WHERE p.proj_stat_cd IN ('ING','PRE') AND p.ctrt_end_dt &gt;= #{today}
+    <if test="q != null">AND (strpos(p.proj_nm,#{q}) &gt; 0 OR strpos(p.proj_id,#{q}) &gt; 0 OR strpos(c.clnt_nm,#{q}) &gt; 0)</if>
+    ORDER BY p.proj_nm,p.proj_id
+  </select>
+  <select id="allowance" resultType="java.math.BigDecimal">SELECT code_val FROM tb_sy_code WHERE code_grp_id='ALWNC' AND code=#{code} AND use_yn='Y' AND del_yn='N'</select>
+  <select id="reason" resultType="string">SELECT code_nm FROM tb_sy_code WHERE code_grp_id='LOSE_RSN' AND code=#{code} AND use_yn='Y' AND del_yn='N'</select>
+  <select id="assignments" resultType="com.sicost.projectsops.ProjectStatusDtos$Assignment">
+    SELECT a.asgn_id AS "assignmentId",a.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS "name",a.job_cd AS "jobCode",
+      COALESCE(c.code_nm,a.job_cd) AS "jobName",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate",
+      a.ctrt_mm::text AS "contractMm",COALESCE((SELECT sum(m.mon_mm) FROM tb_pj_asgn_mon m WHERE m.asgn_id=a.asgn_id),0)::numeric(12,2)::text AS "monthlyMmTotal",
+      a.asgn_stat_cd AS "status" FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+      LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=a.job_cd WHERE a.proj_id=#{id} ORDER BY a.asgn_id
+  </select>
+  <select id="assignmentRows" resultType="com.sicost.projectsops.ProjectStatusDtos$AssignmentRow">
+    SELECT asgn_id AS "id",dev_id AS "developerId",input_bgn_dt AS "startDate",input_end_dt AS "endDate",ctrt_mm AS "contractMm",bill_uprc AS "price",asgn_stat_cd AS "status"
+    FROM tb_pj_asgn WHERE proj_id=#{id} ORDER BY asgn_id
+  </select>
+  <select id="assignmentSnapshot" resultType="string">
+    SELECT json_build_object(
+      'assignments',COALESCE((SELECT json_agg(row_to_json(a) ORDER BY a.asgn_id) FROM tb_pj_asgn a WHERE a.proj_id=#{id}),'[]'::json),
+      'months',COALESCE((SELECT json_agg(row_to_json(m) ORDER BY m.asgn_id,m.input_ym) FROM tb_pj_asgn_mon m JOIN tb_pj_asgn a ON a.asgn_id=m.asgn_id WHERE a.proj_id=#{id}),'[]'::json),
+      'history',COALESCE((SELECT json_agg(row_to_json(h) ORDER BY h.asgn_id,h.hist_sn) FROM tb_pj_asgn_hist h JOIN tb_pj_asgn a ON a.asgn_id=h.asgn_id WHERE a.proj_id=#{id}),'[]'::json))::text
+  </select>
+  <select id="valueHistory" resultType="com.sicost.projectsops.ProjectStatusDtos$ValueHistory">
+    SELECT hist_sn AS "serial",asgn_chg_type_cd AS "type",aply_dt AS "date",new_ctrt_mm AS "mm",new_uprc AS "price",crct_yn AS "corrected",crct_trgt_sn AS "target"
+    FROM tb_pj_asgn_hist WHERE asgn_id=#{id} ORDER BY aply_dt,hist_sn
+  </select>
+  <select id="months" resultType="com.sicost.projectsops.ProjectStatusDtos$MonthRow">SELECT input_ym AS "month",fix_yn AS "fixed" FROM tb_pj_asgn_mon WHERE asgn_id=#{id} ORDER BY input_ym</select>
+  <select id="assignmentSerial" resultType="int">SELECT COALESCE(max(hist_sn),0) FROM tb_pj_asgn_hist WHERE asgn_id=#{id}</select>
+  <select id="costMonths" resultType="string">SELECT DISTINCT cost_ym FROM tb_co_mon_cost WHERE proj_id=#{id} AND cost_cls_cd='PRE' AND fix_yn='N' ORDER BY cost_ym</select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <update id="updateProject">
+    UPDATE tb_pj_proj SET proj_stat_cd=#{status},
+      <if test="status == 'LOSE'">lose_dt=#{date},lose_rsn_cd=#{reason},lose_memo=#{memo},</if>
+      mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{id}
+  </update>
+  <insert id="insertEvent">
+    INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{serial},'ETC','상태',#{before},#{after},#{date},#{actor},#{now})
+  </insert>
+  <update id="updateAssignment">
+    UPDATE tb_pj_asgn SET
+      <choose><when test="future">asgn_stat_cd='CNCL',</when><otherwise>input_end_dt=#{date},early_wthdr_yn='Y',</otherwise></choose>
+      mod_user_id=#{actor},mod_dttm=#{now} WHERE asgn_id=#{id} AND proj_id=#{projectId} AND asgn_stat_cd='ACT'
+  </update>
+  <insert id="insertAssignmentEvent">
+    INSERT INTO tb_pj_asgn_hist(asgn_id,hist_sn,asgn_chg_type_cd,aply_dt,bfr_val,aft_val,asgn_chg_rsn_cd,chg_memo,new_uprc,new_ctrt_mm,rtro_yn,close_cross_yn,crct_yn,crct_trgt_sn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{serial},#{type},#{date},#{before},#{after},'ETC',#{memo},NULL,NULL,'N',#{closeCross},'N',NULL,#{actor},#{now})
+  </insert>
+  <delete id="deleteMonth">DELETE FROM tb_pj_asgn_mon WHERE asgn_id=#{id} AND input_ym=#{month} AND fix_yn='N'</delete>
+  <insert id="saveMonth">
+    INSERT INTO tb_pj_asgn_mon(asgn_id,input_ym,dev_id,proj_id,input_day_cnt,mon_mm,aply_uprc,sales_amt,fix_yn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{month},#{developerId},#{projectId},#{days},#{mm},#{price},0,'N',#{actor},#{now})
+    ON CONFLICT (asgn_id,input_ym) DO UPDATE SET input_day_cnt=#{days},mon_mm=#{mm},aply_uprc=#{price},sales_amt=0,mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tb_pj_asgn_mon.fix_yn='N'
+  </insert>
+  <update id="classifyCost">UPDATE tb_co_mon_cost SET cost_cls_cd='IDLE',mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{id} AND cost_cls_cd='PRE' AND fix_yn='N' AND cost_ym=#{month}</update>
+</mapper>

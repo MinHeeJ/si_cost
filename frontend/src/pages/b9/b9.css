@@ -1,0 +1,13 @@
+.b9-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.b9-upload-actions > [role="alert"] {
+  width: 100%;
+  color: var(--bad);
+  background: var(--bad-bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+}

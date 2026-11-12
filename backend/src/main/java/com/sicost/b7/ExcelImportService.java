@@ -83,6 +83,10 @@ public class ExcelImportService {
                         }
                         if (type == CellType.ERROR) error = "셀 오류를 수정해 주세요.";
                         else value = formatter.formatCellValue(cell).strip();
+                        if (definition.exactNumbers().contains(title) && type == CellType.NUMERIC) {
+                            String raw = ((XSSFCell)cell).getRawValue();
+                            if (raw != null) value = new BigDecimal(raw).stripTrailingZeros().toPlainString();
+                        }
                         if (definition.dates().contains(title) && type == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
                             value = cell.getLocalDateTimeCellValue().toLocalDate().toString();
                         }

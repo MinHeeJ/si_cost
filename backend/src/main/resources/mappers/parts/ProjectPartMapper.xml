@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.parts.ProjectPartMapper">
+  <select id="find" resultType="com.sicost.parts.ProjectPartDtos$ProjectSource">
+    SELECT proj_id AS "id",ctrt_type_cd AS "contractType",proj_stat_cd AS "status",
+      ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate" FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="parts" resultType="com.sicost.parts.ProjectPartDtos$PartSource">
+    SELECT r.aply_bgn_ym AS "month",r.part_id AS "partId",p.part_nm AS "partName",
+      r.chg_rsn AS "reason",r.reg_user_id AS "actor"
+    FROM tb_pj_proj_part r LEFT JOIN tb_bs_part p ON p.part_id=r.part_id
+    WHERE r.proj_id=#{id} ORDER BY r.aply_bgn_ym
+  </select>
+  <select id="protectedMonths" resultType="string">
+    SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE'
+    UNION SELECT pl_ym FROM tb_co_mon_pl WHERE migr_yn='Y'
+  </select>
+  <select id="lastClose" resultType="string">SELECT max(close_ym) FROM tb_cl_close WHERE close_stat_cd='CLOSE'</select>
+  <select id="reference" resultType="com.sicost.parts.ProjectPartDtos$PartReference">
+    SELECT part_id AS "id",part_nm AS "name",use_yn AS "useYn" FROM tb_bs_part WHERE part_id=#{id} FOR SHARE
+  </select>
+  <delete id="deleteReservation">DELETE FROM tb_pj_proj_part WHERE proj_id=#{id} AND aply_bgn_ym=#{month}</delete>
+  <insert id="insert">
+    INSERT INTO tb_pj_proj_part(proj_id,aply_bgn_ym,part_id,chg_rsn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{month},#{partId},#{reason},#{actor},#{now})
+  </insert>
+  <insert id="insertHistory">
+    INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{historySn},'PART','영업 파트',#{before},#{after},CAST(#{now} AS date),#{actor},#{now})
+  </insert>
+</mapper>

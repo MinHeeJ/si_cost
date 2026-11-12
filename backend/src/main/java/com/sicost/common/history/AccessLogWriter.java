@@ -25,8 +25,9 @@ public class AccessLogWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23", "UI-02", "UI-33").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-33", "UI-01").contains(event.screenId())) throw InputValidator.invalid("accessLog");
         boolean people = Set.of("UI-02", "UI-33").contains(event.screenId());
+        if (event.screenId().equals("UI-01") && !"DNLD".equals(event.action())) throw InputValidator.invalid("accessLog");
         if (people && !"DNLD".equals(event.action())) throw InputValidator.invalid("accessLog");
         String target = event.targetId();
         if (target != null && !target.matches("(?:[a-z0-9]{4,20}|C-[0-9]{3,18}|PART-[0-9]{3,15}|[0-9]{1,12})")) {
@@ -36,9 +37,10 @@ public class AccessLogWriter {
         Set<String> kinds = switch (event.screenId()) {
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
+            case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
         };
-        if ((people && kind == null) || (kind != null && !kinds.contains(kind))) {
+        if (((people || event.screenId().equals("UI-01")) && kind == null) || (kind != null && !kinds.contains(kind))) {
             throw InputValidator.invalid("fileType");
         }
         if (event.count() != null && event.count() < 0) throw InputValidator.invalid("count");

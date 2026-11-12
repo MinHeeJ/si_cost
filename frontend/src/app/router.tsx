@@ -10,6 +10,13 @@ import {
 import { BusinessPartnersScreen } from "../pages/shared/BusinessPartnersScreen";
 import { UsersScreen } from "../pages/shared/UsersScreen";
 import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWorkspace";
+import { ProjectsWorkspace } from "../pages/projects/ProjectsWorkspace";
+import type { ProjectsRegistration } from "../pages/projects/ProjectsScreen";
+import type { ProjectDetailContext } from "../pages/projects/ProjectDetailPanel";
+import { getProject, type ProjectDetail } from "../pages/projects/projectsApi";
+import { ProjectPartDialog } from "../pages/parts/ProjectPartDialog";
+import { ProjectStatusPanel } from "../pages/projectsops/ProjectStatusPanel";
+import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
@@ -507,6 +514,139 @@ function PeopleWorkspace({
   );
 }
 
+function RegisteredProjectPart({
+  detail,
+  year,
+  currentYear,
+  readOnly,
+  onChanged,
+  onDirtyChange,
+}: ProjectDetailContext) {
+  const [open, setOpen] = useState(false);
+  const project = detail.project;
+  const locked =
+    readOnly ||
+    project.contractType === "IN" ||
+    detail.effectiveStatus === "END" ||
+    detail.effectiveStatus === "LOSE";
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="project-part-change"
+        disabled={locked}
+        onClick={() => setOpen(true)}
+      >
+        변경
+      </button>
+      {open && (
+        <ProjectPartDialog
+          key={project.id}
+          projectId={project.id}
+          projectName={project.name}
+          year={year}
+          currentYear={currentYear}
+          effectiveStatus={detail.effectiveStatus}
+          contractType={project.contractType}
+          readOnly={locked}
+          onClose={() => setOpen(false)}
+          onSaved={onChanged}
+          onDirtyChange={onDirtyChange}
+        />
+      )}
+    </>
+  );
+}
+
+type DistributionUploadContext = Parameters<
+  NonNullable<ProjectsRegistration["distributionUpload"]>
+>[0];
+function RegisteredDistributionUpload({
+  projectId,
+  year,
+  step,
+  onApplied,
+  onClose,
+  onDirtyChange,
+}: DistributionUploadContext) {
+  const [detail, setDetail] = useState<ProjectDetail>();
+  const [error, setError] = useState<unknown>();
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setDetail(undefined);
+    setError(undefined);
+    void getProject(projectId, false, controller.signal)
+      .then((value) => {
+        if (!controller.signal.aborted) setDetail(value);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e);
+      });
+    return () => controller.abort();
+  }, [projectId, retry]);
+  if (!detail)
+    return (
+      <>
+        {error != null ? (
+          <ErrorBanner
+            message={
+              error instanceof Error
+                ? error.message
+                : "프로젝트를 불러오지 못했습니다."
+            }
+            onRetry={() => setRetry((n) => n + 1)}
+          />
+        ) : (
+          <p role="status">업로드 대상 프로젝트를 불러오는 중입니다.</p>
+        )}
+        <button
+          type="button"
+          data-testid="distribution-upload-close"
+          onClick={onClose}
+        >
+          닫기
+        </button>
+      </>
+    );
+  return (
+    <B6UploadDialog
+      key={`${projectId}:${year}:${step}`}
+      projectId={projectId}
+      year={year}
+      initialStep={step}
+      startDate={detail.project.startDate}
+      endDate={detail.project.endDate}
+      readOnly={
+        detail.readOnly ||
+        detail.effectiveStatus === "END" ||
+        detail.effectiveStatus === "LOSE"
+      }
+      onApplied={onApplied}
+      onClose={onClose}
+      onDirtyChange={onDirtyChange}
+    />
+  );
+}
+
+const projectRegistration: ProjectsRegistration = {
+  partAction: (context) => <RegisteredProjectPart {...context} />,
+  statusActions: (context) => (
+    <ProjectStatusPanel
+      projectId={context.detail.project.id}
+      name={context.detail.project.name}
+      effectiveStatus={context.detail.effectiveStatus}
+      revision={context.detail.revision}
+      year={context.year}
+      onChanged={context.onChanged}
+      onDirtyChange={context.onDirtyChange}
+    />
+  ),
+  distributionUpload: (context) => (
+    <RegisteredDistributionUpload {...context} />
+  ),
+};
+
 function RegisteredApplication() {
   const preferences = usePreferences();
   const [codesDirty, setCodesDirty] = useState(false),
@@ -515,6 +655,11 @@ function RegisteredApplication() {
     [usersDirty, setUsersDirty] = useState(false);
   const [developersDirty, setDevelopersDirty] = useState(false),
     [candidatesDirty, setCandidatesDirty] = useState(false);
+  const [projectsDirty, setProjectsDirty] = useState(false);
+  const onProjectsDirty = useCallback(
+    (dirty: boolean) => setProjectsDirty(dirty),
+    [],
+  );
   const onDevelopersDirty = useCallback(
     (dirty: boolean) => setDevelopersDirty(dirty),
     [],
@@ -563,9 +708,19 @@ function RegisteredApplication() {
               ? developersDirty
               : id === "UI-33"
                 ? candidatesDirty
-                : id === "UI-23" && usersDirty
+                : id === "UI-01"
+                  ? projectsDirty
+                  : id === "UI-23" && usersDirty
       }
       screens={{
+        "UI-01": (
+          <SharedScreenFrame screenId="UI-01">
+            <ProjectsWorkspace
+              onDirtyChange={onProjectsDirty}
+              registration={projectRegistration}
+            />
+          </SharedScreenFrame>
+        ),
         "UI-02": (
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
         ),

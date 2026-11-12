@@ -49,4 +49,19 @@ class AccessLogWriterTest {
         assertThatThrownBy(()->writer.append(new AccessLogWriter.Event("ACCT_VIEW","UI-15","contains spaces and arbitrary payload",null,null),new MockHttpServletRequest())).isInstanceOf(ApiException.class);
         verifyNoInteractions(mapper);
     }
+    @Test void projectDownloadsRetainStructuredAuditAndRejectOtherActionsAndKinds() {
+        when(users.userId()).thenReturn("admin");when(mapper.insert(any())).thenReturn(1);
+        for (String kind : new String[]{"프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사"}) {
+            writer.append(new AccessLogWriter.Event("DNLD","UI-01",kind.endsWith("검사")?"123":null,kind,0L),new MockHttpServletRequest());
+        }
+        verify(mapper,times(6)).insert(argThat(entry -> entry.screenId().equals("UI-01") && entry.action().equals("DNLD")));
+        for (AccessLogWriter.Event event : new AccessLogWriter.Event[]{
+                new AccessLogWriter.Event("USER_REG","UI-01",null,"프로젝트",0L),
+                new AccessLogWriter.Event("DNLD","UI-01",null,null,0L),
+                new AccessLogWriter.Event("DNLD","UI-01",null,"개발자",0L),
+                new AccessLogWriter.Event("DNLD","UI-01","1\r\nunsafe","프로젝트_업로드검사",0L)}) {
+            assertThatThrownBy(() -> writer.append(event,new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        }
+        verify(mapper,times(6)).insert(any());
+    }
 }

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.plans.ProjectPlanMapper">
+  <select id="plans" resultType="com.sicost.plans.ProjectPlanDtos$StoredPlan">
+    WITH actual AS (
+      SELECT a.job_cd, COALESCE(sum(m.mon_mm),0) AS actual_mm
+      FROM tb_pj_asgn a
+      LEFT JOIN tb_pj_asgn_mon m ON m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id
+      WHERE a.proj_id=#{id} AND a.asgn_stat_cd='ACT'
+      GROUP BY a.job_cd
+    ), jobs AS (
+      SELECT job_cd FROM tb_pj_mnpw_plan WHERE proj_id=#{id}
+      UNION SELECT job_cd FROM actual
+    )
+    SELECT j.job_cd AS "jobCode", COALESCE(c.code_nm,j.job_cd) AS "jobName",
+      CASE WHEN c.use_yn='Y' AND c.del_yn='N' THEN 'Y' ELSE 'N' END AS "useYn",
+      p.plan_mm AS "planMm", COALESCE(a.actual_mm,0) AS "actualMm", p.src_cd AS "source"
+    FROM jobs j
+    LEFT JOIN tb_pj_mnpw_plan p ON p.proj_id=#{id} AND p.job_cd=j.job_cd
+    LEFT JOIN actual a ON a.job_cd=j.job_cd
+    LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=j.job_cd
+    ORDER BY c.sort_ord NULLS LAST,j.job_cd
+  </select>
+  <select id="activeJobs" resultType="string">
+    SELECT c.code FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    WHERE c.code_grp_id='JOB' AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y' AND length(c.code)&lt;=10
+    ORDER BY c.sort_ord,c.code
+  </select>
+  <insert id="insert">
+    INSERT INTO tb_pj_mnpw_plan(proj_id,job_cd,plan_mm,src_cd,reg_user_id,reg_dttm)
+    VALUES(#{id},#{jobCode},#{planMm},'MANUAL',#{actor},#{now})
+  </insert>
+  <update id="update">
+    UPDATE tb_pj_mnpw_plan SET plan_mm=#{planMm},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE proj_id=#{id} AND job_cd=#{jobCode}
+  </update>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b6.B6Mapper">
+  <select id="project" resultType="com.sicost.b6.B6Dtos$Project">
+    SELECT proj_id AS id,proj_nm AS name,ctrt_type_cd AS "contractType",proj_stat_cd AS status,
+      ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate",ctrt_amt AS "contractAmount" FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="developers" resultType="com.sicost.b6.B6Dtos$Developer">
+    SELECT dev_id AS id,mng_no AS "managementNo",dev_nm AS name,use_yn AS "useYn" FROM tb_hr_dev ORDER BY dev_id
+  </select>
+  <select id="cells" resultType="com.sicost.b6.B6Dtos$Cell">
+    SELECT dstrb_step_cd AS step,row_sn AS "rowSn",dstrb_ym AS month,row_type_cd AS "rowType",dev_id AS "developerId",
+      item_nm AS "itemName",dstrb_amt AS amount FROM tb_pj_tk_dstrb WHERE proj_id=#{id} ORDER BY dstrb_step_cd,row_sn,dstrb_ym
+  </select>
+  <select id="actuals" resultType="com.sicost.b6.B6Dtos$Actual">
+    SELECT a.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS name,m.input_ym AS month,sum(m.mon_mm) AS mm
+    FROM tb_pj_asgn a JOIN tb_pj_asgn_mon m
+      ON m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id
+    JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+    WHERE a.proj_id=#{id} AND a.asgn_stat_cd='ACT' GROUP BY a.dev_id,d.mng_no,d.dev_nm,m.input_ym ORDER BY a.dev_id,m.input_ym
+  </select>
+  <select id="protectedMonths" resultType="string">
+    SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE'
+    UNION SELECT input_ym FROM tb_pj_asgn_mon WHERE proj_id=#{id} AND fix_yn='Y'
+    UNION SELECT cost_ym FROM tb_co_mon_cost WHERE proj_id=#{id} AND fix_yn='Y'
+  </select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,trgt_ym,trgt_proj_id,trgt_dstrb_step_cd,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B6','UI-01',#{write.filename},#{write.size},NULL,#{write.projectId},#{write.step},#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">
+    UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},
+      upld_stat_cd='CHECKED',aply_dttm=NULL,mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}
+  </update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">
+    INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm)
+    VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})
+  </insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">
+    SELECT rslt_sn AS sequence,rslt_type_cd AS severity,row_no AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS reason
+    FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn
+  </select>
+  <select id="lockUpload" resultType="com.sicost.b9.B9Dtos$Upload">
+    SELECT upld_id AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS filename,file_size AS size,
+      reg_user_id AS actor,upld_stat_cd AS status,tot_row_cnt AS "totalRows",succ_cnt AS "successRows",warn_cnt AS "warningRows",err_cnt AS "errorRows",
+      trgt_proj_id AS "projectId",trgt_dstrb_step_cd AS step,aply_dttm AS "appliedAt"
+    FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE
+  </select>
+  <select id="context" resultType="string">
+    SELECT aft_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_UPLD' AND trgt_key=CAST(#{uploadId} AS text)
+      AND chg_type_cd='NEW' AND chg_item_nm='검증 문맥' AND chg_rsn='B6' ORDER BY hist_id LIMIT 1
+  </select>
+  <delete id="deleteStage">DELETE FROM tb_pj_tk_dstrb WHERE proj_id=#{id} AND dstrb_step_cd=#{step}</delete>
+  <insert id="insertCell">
+    INSERT INTO tb_pj_tk_dstrb(proj_id,dstrb_step_cd,row_sn,dstrb_ym,row_type_cd,dev_id,item_nm,dstrb_amt,upld_id,reg_user_id,reg_dttm)
+    VALUES(#{projectId},#{cell.step},#{cell.rowSn},#{cell.month},#{cell.rowType},#{cell.developerId},#{cell.itemName},#{cell.amount},#{uploadId},#{actor},#{now})
+  </insert>
+  <update id="markApplied">
+    UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'
+  </update>
+</mapper>

@@ -57,10 +57,15 @@ public class BusinessUserService {
     }
     @Transactional
     public Result update(String id,Edit input) {
-        String actor=users.userId();Stored row=required(id,true);List<Role> roles=repository.roles(id);
+        String actor=users.userId();InputValidator.text(id,30,"id");repository.lockUser(id);
+        Stored row=required(id,true);List<Role> roles=repository.roles(id);
         revisions.requireExpected(input.expectedRevision(),revision(row,roles));
         validateRoles(input.businessRoleIds());
         List<String> before=businessIds(roles);
+        if (before.contains("PM") && !input.businessRoleIds().contains("PM")) {
+            List<String> projects=repository.connectedProjects(id);
+            if (!projects.isEmpty()) throw new ApiException(409,"USER_IS_PROJECT_PM","담당 프로젝트를 먼저 해제한 뒤 PM 역할을 제거해 주세요.","businessRoleIds",Map.of("projectIds",projects));
+        }
         if (roles.stream().filter(role->!BusinessUserInput.BUSINESS_ROLES.contains(role.roleId())).count()+input.businessRoleIds().size()==0)
             throw new ApiException(400,"VALIDATION_ERROR","사용자는 하나 이상의 역할을 가져야 합니다.","businessRoleIds",null);
         if (before.contains("SALES_LDR") && !input.businessRoleIds().contains("SALES_LDR")) {

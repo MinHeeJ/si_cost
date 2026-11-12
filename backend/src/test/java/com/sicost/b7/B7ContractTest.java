@@ -54,6 +54,18 @@ class B7ContractTest {
         when(ids.nextClientId()).thenReturn("C-001");
         when(mapper.lockUpload(1)).thenReturn(new Upload(1,"B7","UI-15","clients.XLSX",validFile.getSize(),"admin","CHECKED",1,1,0,0,null));
     }
+    @Test void validateRejectsJsonBeforeUploadOrBusinessWrites() throws Exception {
+        mvc.perform(post("/api/excel/B7/validate").contentType("application/json").content("{}"))
+            .andExpect(status().isUnsupportedMediaType()).andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE")).andExpect(jsonPath("$.requestId").isString());
+        verifyNoInteractions(mapper,ids,history,transactions);
+    }
+    @Test void applyRejectsJsonBeforeUploadOrBusinessWrites() throws Exception {
+        mvc.perform(post("/api/excel/B7/apply").contentType("application/json").content("{}"))
+            .andExpect(status().isUnsupportedMediaType()).andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE")).andExpect(jsonPath("$.requestId").isString());
+        verifyNoInteractions(mapper,ids,history,transactions);
+    }
     @Test void publicTemplateIsActualEmptyElevenColumnXlsxWithTextStylesGuideAndLastInfo() throws Exception {
         var result=mvc.perform(get("/api/excel/B7/template")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn();
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {

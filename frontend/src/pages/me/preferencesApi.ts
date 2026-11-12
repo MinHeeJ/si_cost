@@ -18,7 +18,10 @@ export type ColumnPreferences = Partial<
 >;
 export type ScreenColumnPreferences = ColumnPreferences &
   Partial<
-    Record<"users" | "clients" | "developers" | "candidates", ColumnView>
+    Record<
+      "users" | "clients" | "developers" | "candidates" | "projects",
+      ColumnView
+    >
   >;
 export type PeriodPreference =
   | { type: "YEAR" | "YEAR_MONTH"; value: string }

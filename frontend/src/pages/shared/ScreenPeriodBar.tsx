@@ -141,6 +141,11 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
   }, [screenId, type, reload]);
   useEffect(() => {
     if (!context || !value || type === "NONE") return;
+    window.dispatchEvent(
+      new CustomEvent("sicost:screen-period-changed", {
+        detail: { screenId, value, context },
+      }),
+    );
     const read = ++closeRead.current;
     if (value.type === "YEAR") {
       setStatus("");
@@ -172,8 +177,22 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
       range.min > range.max || context.cashBaseMonth > context.currentMonth;
   const year = value.type === "YEAR_CUM" ? value.year : value.value.slice(0, 4),
     thisYear = context.currentMonth.slice(0, 4);
-  const save = async (next: PeriodValue) => {
+  const save = async (next: PeriodValue, confirmed = false) => {
     if (saving.current || unavailable || !validStored(next, context)) return;
+    if (
+      !confirmed &&
+      !window.dispatchEvent(
+        new CustomEvent("sicost:screen-period-changing", {
+          cancelable: true,
+          detail: {
+            screenId,
+            value: next,
+            proceed: () => void save(next, true),
+          },
+        }),
+      )
+    )
+      return;
     saving.current = true;
     setPending(true);
     setError("");

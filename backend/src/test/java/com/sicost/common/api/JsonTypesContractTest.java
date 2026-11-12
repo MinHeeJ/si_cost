@@ -23,8 +23,9 @@ class JsonTypesContractTest {
         @PostMapping("/validation-input") ApiResponse<Input> validate(@Valid @RequestBody Input input) { return ApiResponse.ok(input); }
     }
     @Autowired MockMvc mvc;
-    @Test void b7AndB8MultipartLimitsUseTheSameSafeErrorEnvelopeAndRequestId() {
-        for (String path : new String[]{"/api/excel/B7/validate","/api/excel/B7/apply","/api/excel/B8/validate","/api/excel/B8/apply"}) {
+    @Test void allExcelMultipartLimitsUseTheSameSafeErrorEnvelopeAndRequestId() {
+        for (String path : new String[]{"/api/excel/B7/validate","/api/excel/B7/apply","/api/excel/B8/validate","/api/excel/B8/apply",
+                "/api/excel/B9/validate","/api/excel/B9/apply","/api/excel/B6/validate","/api/excel/B6/apply"}) {
             var request = new org.springframework.mock.web.MockHttpServletRequest("POST",path);
             request.setAttribute(RequestIdFilter.ATTRIBUTE,"upload-request");
             var response = new ApiExceptionHandler().uploadSize(new org.springframework.web.multipart.MaxUploadSizeExceededException(10485760),request);

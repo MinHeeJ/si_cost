@@ -354,6 +354,7 @@ export function BusinessUsersScreen({
       {detail && !form && (
         <BusinessUserDetail
           id={detail}
+          onDirtyChange={onDirtyChange}
           onClose={() => setDetail(undefined)}
           onEdit={(user) => setForm({ user })}
         />

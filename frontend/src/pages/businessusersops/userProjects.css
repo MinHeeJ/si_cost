@@ -1,0 +1,45 @@
+.user-projects-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--divider);
+  min-width: 0;
+}
+.user-projects-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.user-projects-help {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.user-project-dialog {
+  display: grid;
+  gap: 16px;
+}
+.user-project-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.user-project-search .sicost-field {
+  flex: 1 1 120px;
+}
+.user-project-dialog .sicost-table-viewport {
+  max-height: 320px;
+  overflow: auto;
+}
+.user-project-dialog button[aria-pressed="true"] {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: var(--primary);
+}
+@media (max-width: 767px) {
+  .user-projects-panel {
+    display: none;
+  }
+}

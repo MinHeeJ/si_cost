@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.businessusersops.BusinessUserProjectsMapper">
+  <select id="userExists" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_user WHERE user_id=#{userId})
+  </select>
+  <select id="projects" resultType="com.sicost.businessusersops.BusinessUserProjectsDtos$ProjectRow">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",p.ctrt_type_cd AS "contractType",
+      p.ctrt_bgn_dt AS "startDate",p.ctrt_end_dt AS "endDate",p.ctrt_amt AS "contractAmount",
+      CASE WHEN p.proj_stat_cd='LOSE' THEN 'LOSE' WHEN p.ctrt_end_dt &lt; #{today} THEN 'END'
+        ELSE p.proj_stat_cd END AS "status",c.clnt_nm AS "customerName",
+      (SELECT count(DISTINCT a.dev_id) FROM tb_pj_asgn a WHERE a.proj_id=p.proj_id
+        AND a.asgn_stat_cd='ACT' AND a.input_bgn_dt &lt;= #{today} AND a.input_end_dt &gt;= #{today}) AS "personCount",
+      CASE WHEN p.ctrt_type_cd='IN' THEN NULL ELSE part.part_nm END AS "partName",stage.dstrb_step_cd AS "selectedStep",
+      COALESCE((SELECT sum(d.dstrb_amt) FROM tb_pj_tk_dstrb d WHERE d.proj_id=p.proj_id
+        AND d.dstrb_step_cd=stage.dstrb_step_cd),0) AS "distributionTotal",
+      (WITH distributed AS (
+        SELECT d.dev_id,d.dstrb_ym,sum(d.dstrb_amt) amount FROM tb_pj_tk_dstrb d
+        WHERE d.proj_id=p.proj_id AND d.dstrb_step_cd=stage.dstrb_step_cd AND d.row_type_cd='DEV'
+        GROUP BY d.dev_id,d.dstrb_ym
+      ), actual AS (
+        SELECT m.dev_id,m.input_ym,sum(m.mon_mm) mm FROM tb_pj_asgn a JOIN tb_pj_asgn_mon m
+          ON m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id
+        WHERE a.proj_id=p.proj_id AND a.asgn_stat_cd='ACT' GROUP BY m.dev_id,m.input_ym
+      ) SELECT count(*) FROM distributed d FULL JOIN actual a ON a.dev_id=d.dev_id AND a.input_ym=d.dstrb_ym
+        WHERE (d.amount &gt; 0 AND COALESCE(a.mm,0)=0) OR (a.mm &gt; 0 AND d.dev_id IS NULL)) AS "mismatchCount"
+    FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id
+    LEFT JOIN LATERAL (
+      SELECT b.part_nm FROM tb_pj_proj_part h LEFT JOIN tb_bs_part b ON b.part_id=h.part_id
+      WHERE h.proj_id=p.proj_id
+      ORDER BY (h.aply_bgn_ym &lt;= #{month}) DESC,
+        CASE WHEN h.aply_bgn_ym &lt;= #{month} THEN h.aply_bgn_ym END DESC,h.aply_bgn_ym ASC LIMIT 1
+    ) part ON true
+    LEFT JOIN LATERAL (
+      SELECT d.dstrb_step_cd FROM tb_pj_tk_dstrb d WHERE d.proj_id=p.proj_id
+        AND d.dstrb_step_cd IN ('PLAN','CTRT','EST')
+      ORDER BY CASE d.dstrb_step_cd WHEN 'PLAN' THEN 1 WHEN 'CTRT' THEN 2 ELSE 3 END LIMIT 1
+    ) stage ON p.ctrt_type_cd='TK'
+    WHERE EXISTS(SELECT 1 FROM tb_sy_user_scope s WHERE s.user_id=#{userId} AND s.scope_type_cd='PROJ'
+      AND s.part_id IS NULL AND s.proj_id=p.proj_id)
+    ORDER BY p.proj_id
+  </select>
+</mapper>

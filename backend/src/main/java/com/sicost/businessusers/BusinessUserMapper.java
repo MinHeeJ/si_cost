@@ -12,6 +12,8 @@ public interface BusinessUserMapper {
     Stored find(@Param("userId") String userId, @Param("lock") boolean lock);
     List<Role> roles(String userId);
     List<Role> availableRoles();
+    String lockUser(String userId);
+    List<String> connectedProjects(String userId);
     int insert(NewUser user);
     int update(Mutation mutation);
     int link(RoleLink link);
