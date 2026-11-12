@@ -24,7 +24,7 @@ import {
   AssignmentError,
 } from "./AssignmentDialogs";
 import { AssignmentCreateForm } from "./AssignmentCreateForm";
-import { AssignmentDrawer, kindName } from "./AssignmentDrawer";
+import { AssignmentDrawer, kindName, unitPriceNote } from "./AssignmentDrawer";
 import * as api from "./assignmentActionsApi";
 import "./assignments.css";
 import { B5Actions } from "../b5/B5UploadDialog";
@@ -326,7 +326,12 @@ export function AssignmentsContent({
     {
       id: "billingUnitPrice",
       label: `단가 (${unit})`,
-      render: (r) => amount(r.billingUnitPrice),
+      render: (r) =>
+        unitPriceNote(
+          r.inputType,
+          r.billingUnitPrice,
+          projects.find((p) => p.id === r.projectId)?.contractType,
+        ) ?? amount(r.billingUnitPrice),
       align: "right",
     },
     {
@@ -625,6 +630,11 @@ export function AssignmentsContent({
           id={detail}
           year={year}
           readonly={readonly}
+          contractType={
+            projects.find(
+              (p) => p.id === data?.items.find((r) => r.id === detail)?.projectId,
+            )?.contractType
+          }
           onClose={() => setDetail(undefined)}
           onChange={(r) => setChanging(r)}
         />

@@ -10,6 +10,18 @@ import {
   ReasonFields,
 } from "./AssignmentDialogs";
 import * as api from "./assignmentActionsApi";
+/** 단가가 비는 이유를 말로 보여 준다(요구서 4절): 무상지원·턴키 배분표·내부 매출 없음. 그 밖의 빈 값은 null. */
+export function unitPriceNote(
+  inputType: string,
+  billingUnitPrice: string | null,
+  contractType?: string,
+): string | null {
+  if (inputType === "FREE") return "무상지원";
+  if (billingUnitPrice !== null) return null;
+  if (contractType === "TK") return "배분표";
+  if (contractType === "IN") return "매출 없음";
+  return null;
+}
 export const kindName = (code: string | null) =>
   code === null
     ? "미정"
@@ -26,12 +38,14 @@ export function AssignmentDrawer({
   id,
   year,
   readonly,
+  contractType,
   onClose,
   onChange,
 }: {
   id: string;
   year: number;
   readonly: boolean;
+  contractType?: string;
   onClose(): void;
   onChange(row: api.Assignment): void;
 }) {
@@ -131,7 +145,11 @@ export function AssignmentDrawer({
                   `${row.assignmentStatus === "ACT" ? "투입 중" : "취소"} · 연장 ${row.extensionCount}회 · 조기철수 ${row.earlyWithdrawal === "Y" ? "예" : "아니오"}`,
                 ],
                 ["계약 월MM", row.contractMm],
-                ["청구 단가", `${formatDecimal(row.billingUnitPrice)} 원`],
+                [
+                  "청구 단가",
+                  unitPriceNote(row.inputType, row.billingUnitPrice, contractType) ??
+                    `${formatDecimal(row.billingUnitPrice)} 원`,
+                ],
                 ["투입 구분", kindName(row.inputType)],
                 ["연장 가능성", kindName(row.extensionPossibility)],
               ] as const
@@ -178,7 +196,10 @@ export function AssignmentDrawer({
               {
                 id: "price",
                 label: "단가 (원)",
-                render: (m) => formatDecimal(m.appliedUnitPrice),
+                render: (m) =>
+                  (row &&
+                    unitPriceNote(row.inputType, row.billingUnitPrice, contractType)) ||
+                  formatDecimal(m.appliedUnitPrice),
                 align: "right",
               },
               {
