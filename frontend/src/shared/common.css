@@ -509,3 +509,49 @@ button[aria-pressed="true"] {
     padding: 12px 16px 16px;
   }
 }
+
+/* 검색 조건 영역(FilterBar): 이름표는 칸 왼쪽, 초기화·조회는 오른쪽 끝 */
+.sicost-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.sicost-filterbar .sicost-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.sicost-filterbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+@media (max-width: 767px) {
+  .sicost-filterbar .sicost-field {
+    flex: 1 1 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sicost-filterbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+/* 열 이름을 눌러 정렬하는 머리글 버튼 */
+.sicost-sort-header {
+  border: 0;
+  padding: 0;
+  height: 32px;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}

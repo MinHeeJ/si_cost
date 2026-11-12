@@ -499,8 +499,11 @@ it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 
   expect(
     screen.queryByTestId("developer-sort-direction"),
   ).not.toBeInTheDocument();
-  expect(screen.getByTestId("developer-sort-name")).toHaveTextContent("이름 ↑");
-  await userEvent.click(screen.getByTestId("developer-sort-monthly-rate"));
+  expect(screen.getByTestId("sort-name")).toHaveTextContent("이름");
+  expect(
+    screen.getByRole("columnheader", { name: /이름/ }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await userEvent.click(screen.getByTestId("sort-monthlyRate"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -510,16 +513,16 @@ it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 
       }),
     ),
   );
-  expect(screen.getByTestId("developer-sort-monthly-rate")).toHaveTextContent(
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
     "월 단가 ↑",
   );
-  await userEvent.click(screen.getByTestId("developer-sort-monthly-rate"));
+  await userEvent.click(screen.getByTestId("sort-monthlyRate"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "monthlyRate", direction: "DESC" }),
     ),
   );
-  expect(screen.getByTestId("developer-sort-monthly-rate")).toHaveTextContent(
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
     "월 단가 ↓",
   );
   expect(
@@ -529,21 +532,26 @@ it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 
 it("이름 열은 기본이 오름차순이라 처음 누르면 내림차순이 된다", async () => {
   render(<DeveloperPoolScreen />);
   await screen.findByText(developer.name);
-  await userEvent.click(screen.getByTestId("developer-sort-name"));
+  await userEvent.click(screen.getByTestId("sort-name"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "name", direction: "DESC" }),
     ),
   );
-  expect(screen.getByTestId("developer-sort-name")).toHaveTextContent("이름 ↓");
+  expect(screen.getByTestId("sort-name")).toHaveTextContent("이름 ↓");
 });
 it("행 체크박스·선택 도구 줄이 있고, 조회된 N건 모두 선택은 page·size 없이 조건만 보낸다", async () => {
   render(<DeveloperPoolScreen />);
   await screen.findByText(developer.name);
-  expect(screen.getByTestId("developer-status-toolbar")).toBeInTheDocument();
+  expect(
+    screen.queryByTestId("developer-status-toolbar"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/^총 \d+건$/)).toBeInTheDocument();
   await userEvent.click(
     screen.getByRole("checkbox", { name: `${developer.id} 선택` }),
   );
+  expect(screen.getByTestId("developer-status-toolbar")).toBeInTheDocument();
+  expect(screen.queryByText(/^총 \d+건$/)).not.toBeInTheDocument();
   expect(screen.getByText("선택 1건")).toBeInTheDocument();
   await userEvent.click(screen.getByTestId("developer-select-all"));
   const fetch = vi.mocked(globalThis.fetch);

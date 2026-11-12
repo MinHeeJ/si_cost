@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -361,7 +362,7 @@ export function DeveloperPoolScreen({
     },
   ];
   // 현재 프로젝트를 뺀 나머지 열은 열 이름을 눌러 정렬한다. 아무것도 고르지 않았으면 이름 오름차순이다.
-  const sortable = new Set([
+  const sortableIds = new Set([
     "name",
     "companyName",
     "employeeType",
@@ -371,29 +372,8 @@ export function DeveloperPoolScreen({
     "withdrawalDate",
     "monthlyRate",
   ]);
-  const activeSort = filters.sort ?? "name";
   const sortableCols = cols.map((c) =>
-    sortable.has(c.id)
-      ? {
-          ...c,
-          label: (
-            <button
-              type="button"
-              className="developer-sort-header"
-              data-testid={`developer-sort-${c.id.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`}
-              aria-label={`${String(c.label)} 정렬`}
-              onClick={() => sort(c.id)}
-            >
-              {c.label}
-              {activeSort === c.id
-                ? filters.direction === "DESC"
-                  ? " ↓"
-                  : " ↑"
-                : ""}
-            </button>
-          ),
-        }
-      : c,
+    sortableIds.has(c.id) ? { ...c, sortable: true } : c,
   );
   const visible = (columnView?.order ?? columnsOrder)
     .filter((k) => k === "name" || !columnView?.hidden.includes(k))
@@ -443,13 +423,13 @@ export function DeveloperPoolScreen({
               </button>
             </div>
           </header>
-          <form
+          <FilterBar
             className="developer-filters"
-            data-testid="developer-filter-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              apply();
-            }}
+            testId="developer-filter-form"
+            resetTestId="developer-reset-button"
+            searchTestId="developer-search-button"
+            onSubmit={() => apply()}
+            onReset={() => apply(true)}
           >
             {(
               [
@@ -509,23 +489,7 @@ export function DeveloperPoolScreen({
               />
               사용 중지 포함
             </label>
-            <div className="developer-filter-actions">
-              <button
-                type="button"
-                data-testid="developer-reset-button"
-                onClick={() => apply(true)}
-              >
-                초기화
-              </button>
-              <button
-                type="submit"
-                className="sicost-primary"
-                data-testid="developer-search-button"
-              >
-                조회
-              </button>
-            </div>
-          </form>
+          </FilterBar>
           {notice && (
             <p role="status" className="sicost-banner sicost-tone-info">
               {notice}
@@ -555,7 +519,28 @@ export function DeveloperPoolScreen({
             />
           )}
           <div className="developer-toolbar">
-            <strong>총 {data?.total ?? 0}건</strong>
+            {!mobile && selection.count > 0 ? (
+              <DeveloperStatusToolbar
+                selection={selection}
+                rows={(data?.items ?? []).map((r) => ({
+                  id: r.id,
+                  revision: r.revision,
+                  name: r.name,
+                  useYn: r.useYn,
+                }))}
+                total={data?.total ?? 0}
+                onCommitted={async () => {
+                  await load();
+                  setRefreshKey((v) => v + 1);
+                }}
+                onRefresh={async () => {
+                  await load();
+                  setRefreshKey((v) => v + 1);
+                }}
+              />
+            ) : (
+              <strong>총 {data?.total ?? 0}건</strong>
+            )}
             <div className="developer-actions">
               {onColumnsChange && (
                 <button
@@ -601,26 +586,6 @@ export function DeveloperPoolScreen({
               onRetry={() => void load().catch(() => {})}
             />
           )}
-          {!mobile && (
-            <DeveloperStatusToolbar
-              selection={selection}
-              rows={(data?.items ?? []).map((r) => ({
-                id: r.id,
-                revision: r.revision,
-                name: r.name,
-                useYn: r.useYn,
-              }))}
-              total={data?.total ?? 0}
-              onCommitted={async () => {
-                await load();
-                setRefreshKey((v) => v + 1);
-              }}
-              onRefresh={async () => {
-                await load();
-                setRefreshKey((v) => v + 1);
-              }}
-            />
-          )}
           {!mobile ? (
             <DataTable
               rows={data?.items ?? []}
@@ -634,6 +599,20 @@ export function DeveloperPoolScreen({
               onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
               onSizeChange={(size) =>
                 setFilters((f) => ({ ...f, size, page: 1 }))
+              }
+              sort={{
+                id: filters.sort ?? "name",
+                direction: filters.direction === "DESC" ? "DESC" : "ASC",
+              }}
+              onSortChange={sort}
+              emptyAction={
+                <button
+                  type="button"
+                  data-testid="developer-empty-reset"
+                  onClick={() => apply(true)}
+                >
+                  조건 초기화
+                </button>
               }
               selectedKeys={[...selection.items.keys()]}
               onSelectionChange={(keys) => {

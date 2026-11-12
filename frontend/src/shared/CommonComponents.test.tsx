@@ -10,7 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { CodeSelect } from "./CodeSelect";
-import { DataTable } from "./DataTable";
+import { DataTable, type DataTableProps } from "./DataTable";
+import { FilterBar } from "./FilterBar";
 import { Decimal } from "./Decimal";
 import { Dialog } from "./Dialog";
 import { ErrorBanner, StatusBadge } from "./Feedback";
@@ -39,8 +40,12 @@ describe("공통 부품 계약", () => {
     expect(screen.getByText("독립 시험")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "다음 페이지" }));
     expect(page).toHaveBeenCalledWith(2);
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "A 선택" }));
     expect(selection).toHaveBeenCalledWith(["A"]);
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "이 페이지 전체 선택" }),
+    );
+    expect(selection).toHaveBeenLastCalledWith(["A"]);
   });
   it("불러오는 중·빈 목록·실패를 구분한다", async () => {
     const props = {
@@ -198,5 +203,63 @@ describe("공통 부품 계약", () => {
     expect(result.current.message).toBe(COMMITTED_REFRESH_FAILED);
     expect(save).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+  it("열 이름을 누르면 정렬 이벤트를 보내고 기준 열에 화살표를 그린다", async () => {
+    const sort = vi.fn();
+    type Row = { code: string; name: string };
+    const props: DataTableProps<Row> = {
+      rows: [{ code: "A", name: "가" }],
+      rowKey: (row) => row.code,
+      columns: [
+        { id: "name", label: "이름", sortable: true, render: (r) => r.name },
+        { id: "memo", label: "비고", render: () => "" },
+      ],
+      onSortChange: sort,
+    };
+    const { rerender } = render(
+      <DataTable {...props} sort={{ id: "name", direction: "ASC" }} />,
+    );
+    expect(screen.getByTestId("sort-name")).toHaveTextContent("이름 ↑");
+    expect(screen.queryByTestId("sort-memo")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("sort-name"));
+    expect(sort).toHaveBeenCalledWith("name");
+    rerender(<DataTable {...props} sort={{ id: "name", direction: "DESC" }} />);
+    expect(screen.getByTestId("sort-name")).toHaveTextContent("이름 ↓");
+    expect(screen.getByRole("columnheader", { name: /이름/ })).toHaveAttribute(
+      "aria-sort",
+      "descending",
+    );
+  });
+  it("0건이면 빈 안내 안에 동작(조건 초기화)을 놓을 수 있다", async () => {
+    const reset = vi.fn();
+    render(
+      <DataTable
+        rows={[]}
+        rowKey={() => "none"}
+        columns={[{ id: "name", label: "이름", render: () => "" }]}
+        emptyAction={<button onClick={reset}>조건 초기화</button>}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
+    expect(reset).toHaveBeenCalledOnce();
+  });
+  it("FilterBar는 조회·초기화를 오른쪽 끝에 두고 Enter와 버튼으로 조회한다", async () => {
+    const submit = vi.fn(),
+      reset = vi.fn();
+    render(
+      <FilterBar onSubmit={submit} onReset={reset} testId="bar">
+        <label className="sicost-field">
+          이름
+          <input aria-label="이름 칸" />
+        </label>
+      </FilterBar>,
+    );
+    await userEvent.type(screen.getByLabelText("이름 칸"), "x{Enter}");
+    expect(submit).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "조회" }));
+    expect(submit).toHaveBeenCalledTimes(2);
+    await userEvent.click(screen.getByRole("button", { name: "초기화" }));
+    expect(reset).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("bar")).toHaveClass("sicost-filterbar");
   });
 });
