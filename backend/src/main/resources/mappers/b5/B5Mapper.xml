@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b5.B5Mapper">
+  <select id="developers" resultType="com.sicost.b5.B5Dtos$DeveloperNumber">SELECT dev_id AS "id",mng_no AS "managementNo" FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="codes" resultType="com.sicost.b7.B7Dtos$Code">
+    SELECT c.code_grp_id AS "groupId",c.code,c.code_nm AS "name",(c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y') AS "active",m.src_text AS "source"
+    FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id LEFT JOIN tb_sy_code_map m ON m.code_grp_id=c.code_grp_id AND m.code=c.code
+    WHERE c.code_grp_id IN ('JOB','INPUT_TYPE','EXT_PSBL','ASGN_CHG_RSN') ORDER BY c.code_grp_id,c.code,m.map_id
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT json_build_object(
+      'assignments',COALESCE((SELECT json_agg(row_to_json(a) ORDER BY asgn_id) FROM tb_pj_asgn a),'[]'::json),
+      'history',COALESCE((SELECT json_agg(row_to_json(h) ORDER BY asgn_id,hist_sn) FROM tb_pj_asgn_hist h),'[]'::json),
+      'months',COALESCE((SELECT json_agg(row_to_json(m) ORDER BY asgn_id,input_ym) FROM tb_pj_asgn_mon m),'[]'::json),
+      'projects',COALESCE((SELECT json_agg(row_to_json(p) ORDER BY proj_id) FROM tb_pj_proj p),'[]'::json),
+      'developers',COALESCE((SELECT json_agg(row_to_json(d) ORDER BY dev_id) FROM tb_hr_dev d),'[]'::json),
+      'prices',COALESCE((SELECT json_agg(row_to_json(p) ORDER BY dev_id,aply_bgn_ym) FROM tb_hr_dev_prc p),'[]'::json),
+      'close',COALESCE((SELECT json_agg(row_to_json(c) ORDER BY close_ym) FROM tb_cl_close c),'[]'::json),
+      'standards',COALESCE((SELECT json_agg(row_to_json(s) ORDER BY std_cd,aply_bgn_ym) FROM tb_sy_oper_std s WHERE std_cd IN ('MM_OVER','CASH_BASE_YM')),'[]'::json),
+      'codes',COALESCE((SELECT json_agg(row_to_json(c) ORDER BY code_grp_id,code) FROM tb_sy_code c WHERE code_grp_id IN ('JOB','INPUT_TYPE','EXT_PSBL','ASGN_CHG_RSN')),'[]'::json))::text
+  </select>
+  <sql id="uploadColumns">upld_id AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS "filename",file_size AS "size",reg_user_id AS "actor",upld_stat_cd AS "status",tot_row_cnt AS "totalRows",succ_cnt AS "successRows",warn_cnt AS "warningRows",err_cnt AS "errorRows"</sql>
+  <select id="upload" resultType="com.sicost.b5.B5Dtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId}</select>
+  <select id="lockUpload" resultType="com.sicost.b5.B5Dtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE</select>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B5','UI-12',#{write.filename},#{write.size},#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},upld_stat_cd='CHECKED',mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}</update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm) VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})</insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">SELECT rslt_sn AS "sequence",rslt_type_cd AS "severity",row_no AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS "reason" FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn</select>
+  <select id="receipts" resultType="com.sicost.b5.B5Dtos$Receipt">SELECT chg_item_nm AS "item",aft_val AS "value" FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_UPLD' AND trgt_key=CAST(#{uploadId} AS text) AND chg_rsn=#{reason} ORDER BY hist_id</select>
+  <update id="markApplied">UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'</update>
+</mapper>

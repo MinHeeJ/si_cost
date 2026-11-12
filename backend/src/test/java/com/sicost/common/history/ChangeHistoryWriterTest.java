@@ -137,4 +137,36 @@ class ChangeHistoryWriterTest {
         doThrow(new IllegalStateException("history failed")).when(mapper).insert(any());
         assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ","P-1000","UPD","예산 수동","N","Y",null))).isInstanceOf(IllegalStateException.class);
     }
+    @Test void assignmentAndPayrollAuditKeepProductKeysActorAndUploadRowReason() {
+        when(users.userId()).thenReturn("admin");
+        writer.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN","A-0001","NEW","등록",null,"등록 요약","B5 업로드:123;행:2"));
+        writer.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN","A-0001:2","UPD","정정","N","Y","감사 정정"));
+        writer.append(new ChangeHistoryWriter.Change("TB_HR_MON_PAY","202601:DEV-000001","UPD","ALWNC_AMT","0","1",null));
+        writer.append(new ChangeHistoryWriter.Change("TB_HR_MON_PAY","202601:DEV-000002","DEL","월 교체","기존 급여",null,null));
+        verify(mapper).insert(argThat(e -> e.tableName().equals("TB_PJ_ASGN") && e.reason().equals("B5 업로드:123;행:2") && e.userId().equals("admin")));
+        verify(mapper).insert(argThat(e -> e.targetKey().equals("A-0001:2") && e.after().equals("Y")));
+        verify(mapper).insert(argThat(e -> e.targetKey().equals("202601:DEV-000001") && e.after().equals("1")));
+        verify(mapper).insert(argThat(e -> e.tableName().equals("TB_HR_MON_PAY") && e.type().equals("DEL") && e.after()==null));
+    }
+    @Test void assignmentDeletionAndUnapprovedAuditTargetsRemainForbidden() {
+        assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN","A-0001","DEL","삭제","값",null,null))).isInstanceOf(ApiException.class);
+        for (String table : new String[]{"TB_PJ_ASGN_HIST","TB_PJ_ASGN_MON","TB_CL_CLOSE"}) {
+            assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change(table,"A-0001","UPD","내용","전","후",null))).isInstanceOf(ApiException.class);
+        }
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void assignmentAndPayrollNoOpHaveNoActorLookupOrAudit() {
+        for (String table : new String[]{"TB_PJ_ASGN","TB_HR_MON_PAY"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"A-0001","UPD","내용","동일","동일",null));
+        }
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void assignmentAuditCannotOverflowAndMapperFailurePropagates() {
+        assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN","A-0001","NEW","등록",null,"가".repeat(501),null))).isInstanceOf(ApiException.class);
+        verifyNoInteractions(mapper,users);
+        when(users.userId()).thenReturn("admin");
+        doThrow(new IllegalStateException("audit unavailable")).when(mapper).insert(any());
+        assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_HR_MON_PAY","202601:DEV-000001","UPD","ALWNC_AMT","0","1",null)))
+            .isInstanceOf(IllegalStateException.class);
+    }
 }

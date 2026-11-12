@@ -87,7 +87,7 @@ it("행 상세는 같은 화면의 오른쪽3탭이며 건수 클릭은 투입�
   );
   expect(
     await screen.findByRole("dialog", { name: "거래처 상세" }),
-  ).toHaveClass("clients-drawer");
+  ).toHaveClass("sicost-drawer");
   expect(screen.getByTestId("client-tab-assignments")).toHaveAttribute(
     "aria-selected",
     "true",

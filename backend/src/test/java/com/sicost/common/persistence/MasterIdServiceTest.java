@@ -64,4 +64,27 @@ class MasterIdServiceTest {
         when(mapper.nextPart()).thenThrow(failure);
         assertThatThrownBy(service::nextPartId).isSameAs(failure);
     }
+    @Test void assignmentIdsPadFourDigitsAndKeepExactEighteenDigitSuffix() {
+        when(mapper.nextAssignment()).thenReturn(BigInteger.ONE,new BigInteger("10000"),new BigInteger("999999999999999999"));
+        assertThat(service.nextAssignmentId()).isEqualTo("A-0001");
+        assertThat(service.nextAssignmentId()).isEqualTo("A-10000");
+        assertThat(service.nextAssignmentId()).isEqualTo("A-999999999999999999").hasSize(20);
+        verify(mapper,times(3)).nextAssignment();verifyNoMoreInteractions(mapper);
+    }
+    @Test void assignmentAllocatorRejectsNonpositiveMissingAndOversizedValues() {
+        when(mapper.nextAssignment()).thenReturn(null,BigInteger.ZERO,BigInteger.ONE.negate(),new BigInteger("1000000000000000000"));
+        for (int i=0;i<4;i++) {
+            assertThatThrownBy(service::nextAssignmentId).isInstanceOfSatisfying(ApiException.class,e -> {
+                assertThat(e.status()).isEqualTo(409);assertThat(e.code()).isEqualTo("ID_EXHAUSTED");
+            });
+        }
+    }
+    @Test void assignmentSequenceExhaustionIsSafe409AndNeverRetried() {
+        when(mapper.nextAssignment()).thenThrow(new DataAccessResourceFailureException("database detail",new SQLException("sequence detail","2200H")));
+        assertThatThrownBy(service::nextAssignmentId).isInstanceOfSatisfying(ApiException.class,e -> {
+            assertThat(e.status()).isEqualTo(409);assertThat(e.code()).isEqualTo("ID_EXHAUSTED");
+            assertThat(e.getMessage()).doesNotContain("sequence detail");
+        });
+        verify(mapper).nextAssignment();verifyNoMoreInteractions(mapper);
+    }
 }

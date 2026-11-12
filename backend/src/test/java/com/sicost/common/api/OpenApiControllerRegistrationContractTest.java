@@ -74,6 +74,9 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import static org.assertj.core.api.Assertions.assertThat;
 
 @WebMvcTest({HealthController.class, SharedQueriesController.class, CodeGroupController.class,
+        com.sicost.assignments.AssignmentController.class, com.sicost.assignmentsops.AssignmentActionsController.class,
+        com.sicost.history.AssignmentHistoryController.class, com.sicost.apiops.PayrollController.class,
+        com.sicost.payrollops.PayrollUploadController.class, com.sicost.b1.B1Controller.class, com.sicost.b5.B5Controller.class,
         CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
         BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
         ClientActionsController.class, SalesPartController.class, PartStandardController.class,
@@ -88,6 +91,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         com.sicost.pm.ProjectPmController.class, com.sicost.distribution.ProjectDistributionController.class,
         com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
+        com.sicost.assignments.AssignmentController.class, com.sicost.assignmentsops.AssignmentActionsController.class,
+        com.sicost.history.AssignmentHistoryController.class, com.sicost.apiops.PayrollController.class,
+        com.sicost.payrollops.PayrollUploadController.class, com.sicost.b1.B1Controller.class, com.sicost.b5.B5Controller.class,
         CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
         BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
         ClientActionsController.class, SalesPartController.class, PartStandardController.class,
@@ -124,6 +130,7 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean ExcelExportService excel;
     @MockBean UploadIssuesService uploadIssues;
     @MockBean MasterDataExportService exports;
+    @MockBean com.sicost.exportsops.PeopleExportService peopleExports;
     @MockBean AddressService addresses;
     @MockBean CandidateService candidates;
     @MockBean CandidateQueryService candidateQueries;
@@ -140,6 +147,7 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean com.sicost.b6.B6Service b6;
     @MockBean com.sicost.b9.B9Service b9;
     @MockBean com.sicost.projects.ProjectService projects;
+    @MockBean com.sicost.projects.ProjectQueryService projectQueries;
     @MockBean com.sicost.projectsops.ProjectStatusService projectStatuses;
     @MockBean com.sicost.budget.ProjectBudgetService budgets;
     @MockBean com.sicost.parts.ProjectPartService projectParts;
@@ -149,10 +157,25 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean com.sicost.distribution.ProjectDistributionService distribution;
     @MockBean com.sicost.businessusersops.BusinessUserProjectsService userProjects;
     @MockBean com.sicost.uploadsops.UploadResultService uploadResults;
+    @MockBean com.sicost.assignments.AssignmentService assignments;
+    @MockBean com.sicost.assignmentsops.AssignmentActionsService assignmentActions;
+    @MockBean com.sicost.history.AssignmentHistoryService assignmentHistory;
+    @MockBean com.sicost.apiops.PayrollService payroll;
+    @MockBean com.sicost.payrollops.PayrollUploadService payrollUploads;
+    @MockBean com.sicost.b1.B1Service b1;
+    @MockBean com.sicost.b5.B5Service b5;
     @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {
-        var yaml=new YamlMapFactoryBean();
+        // 계약 파일은 앵커·별칭을 많이 쓴다: SnakeYAML 기본 한도(별칭 50개)를 넘으면 시험이 계약을 읽지도 못한다
+        var yaml=new YamlMapFactoryBean() {
+            @Override protected org.yaml.snakeyaml.Yaml createYaml() {
+                var options=new org.yaml.snakeyaml.LoaderOptions();
+                options.setMaxAliasesForCollections(1000);
+                options.setAllowDuplicateKeys(false);
+                return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.Constructor(options));
+            }
+        };
         yaml.setResources(new ClassPathResource("contracts/openapi.yaml"));
         Map<String,Object> contract=yaml.getObject();
         assertThat(contract).isNotNull();

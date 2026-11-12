@@ -22,6 +22,8 @@ public class MasterIdService {
     @Transactional(propagation = Propagation.MANDATORY)
     public String nextCandidateId() { return allocate("CAND-", 15, 6, mapper::nextCandidate); }
     @Transactional(propagation = Propagation.MANDATORY)
+    public String nextAssignmentId() { return allocate("A-", 18, 4, mapper::nextAssignment); }
+    @Transactional(propagation = Propagation.MANDATORY)
     public String nextManagementNo() {
         String value;
         do { value = allocate("K-", 18, 4, mapper::nextManagementNo); } while (mapper.managementNoExists(value));

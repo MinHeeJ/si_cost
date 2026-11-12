@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
@@ -38,6 +38,11 @@ const assignmentColumns: Column<ClientAssignment>[] = [
     render: (row) => row.inputEndDate,
   },
 ];
+const clientTypeLabel: Record<string, string> = {
+  CUST: "고객사",
+  VNDR: "협력사",
+  BOTH: "고객·협력",
+};
 export function ClientDrawer(props: Props) {
   return <ClientDrawerContent key={props.id} {...props} />;
 }
@@ -161,32 +166,45 @@ function ClientDrawerContent({
     }
   }
   if (!active) return null;
-  return createPortal(
-    <aside
-      className="clients-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="거래처 상세"
-      data-testid="client-drawer"
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          close();
-        }
-      }}
+  return (
+    <DetailDrawer
+      label="거래처 상세"
+      title={client?.name ?? "거래처 상세"}
+      subtitle={
+        client
+          ? `${client.id} · ${clientTypeLabel[client.type] ?? client.type}`
+          : undefined
+      }
+      testId="client-drawer"
+      closeTestId="client-drawer-close"
+      pending={pending}
+      onClose={close}
+      actions={
+        client && !editing ? (
+          <>
+            <button
+              type="button"
+              data-testid="client-edit"
+              onClick={() => {
+                setNumber(undefined);
+                accountGeneration.current++;
+                setEditing(true);
+              }}
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              className={client.useYn === "Y" ? "clients-stop-button" : ""}
+              data-testid="client-status"
+              onClick={() => setStatusConfirm(true)}
+            >
+              {client.useYn === "Y" ? "중지" : "재개"}
+            </button>
+          </>
+        ) : undefined
+      }
     >
-      <header className="clients-toolbar">
-        <h2>{client?.name ?? "거래처 상세"}</h2>
-        <button
-          type="button"
-          ref={closeButton}
-          data-testid="client-drawer-close"
-          disabled={pending}
-          onClick={close}
-        >
-          닫기
-        </button>
-      </header>
       {error != null && (
         <ErrorBanner
           message={
@@ -252,32 +270,11 @@ function ClientDrawerContent({
             <section role="tabpanel" data-testid={`client-panel-${tab}`}>
               {tab === "basic" && (
                 <>
-                  <div className="clients-toolbar">
+                  <p className="clients-status-line">
                     <StatusBadge tone={client.useYn === "Y" ? "ok" : "lock"}>
                       {client.useYn === "Y" ? "사용" : "중지"}
                     </StatusBadge>
-                    <button
-                      type="button"
-                      data-testid="client-edit"
-                      onClick={() => {
-                        setNumber(undefined);
-                        accountGeneration.current++;
-                        setEditing(true);
-                      }}
-                    >
-                      수정
-                    </button>
-                    <details>
-                      <summary data-testid="client-more">더보기</summary>
-                      <button
-                        type="button"
-                        data-testid="client-status"
-                        onClick={() => setStatusConfirm(true)}
-                      >
-                        {client.useYn === "Y" ? "중지" : "재개"}
-                      </button>
-                    </details>
-                  </div>
+                  </p>
                   <dl className="clients-details">
                     {[
                       ["사업자번호", client.businessNo],
@@ -300,40 +297,47 @@ function ClientDrawerContent({
                         key={label}
                       >
                         <dt>{label}</dt>
-                        <dd>{value ?? "–"}</dd>
+                        <dd>
+                          {label === "지급 계좌" && client.account ? (
+                            <span className="clients-account-row">
+                              {number === undefined ? (
+                                <span>{value}</span>
+                              ) : (
+                                <output data-testid="client-account-number">
+                                  {`${(client.account ?? "").split(" ")[0]} ${number}`}
+                                </output>
+                              )}
+                              {number === undefined ? (
+                                <button
+                                  type="button"
+                                  className="clients-account-toggle"
+                                  data-testid="client-account-show"
+                                  disabled={pending}
+                                  onClick={() => void reveal()}
+                                >
+                                  계좌 전체보기
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="clients-account-toggle"
+                                  data-testid="client-account-hide"
+                                  onClick={() => {
+                                    accountGeneration.current++;
+                                    setNumber(undefined);
+                                  }}
+                                >
+                                  숨기기
+                                </button>
+                              )}
+                            </span>
+                          ) : (
+                            (value ?? "–")
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
-                  {client.account && (
-                    <div className="clients-actions">
-                      {number === undefined ? (
-                        <button
-                          type="button"
-                          data-testid="client-account-show"
-                          disabled={pending}
-                          onClick={() => void reveal()}
-                        >
-                          계좌 전체보기
-                        </button>
-                      ) : (
-                        <>
-                          <output data-testid="client-account-number">
-                            {number}
-                          </output>
-                          <button
-                            type="button"
-                            data-testid="client-account-hide"
-                            onClick={() => {
-                              accountGeneration.current++;
-                              setNumber(undefined);
-                            }}
-                          >
-                            숨기기
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
                   <p>집계 기준일 {client.basisDate}</p>
                 </>
               )}
@@ -400,7 +404,6 @@ function ClientDrawerContent({
       >
         <p>저장하지 않은 내용이 있습니다.</p>
       </Dialog>
-    </aside>,
-    document.body,
+    </DetailDrawer>
   );
 }

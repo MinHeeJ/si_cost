@@ -810,10 +810,270 @@ const projectCases: typeof cases = [
     call: () => api.getUploadResult(123),
   },
 ];
-cases.push(...projectCases);
+const assignmentInput = {
+  year: 2026,
+  projectId: "selected-project",
+  developerId: "selected-developer",
+  jobCode: "DEV",
+  startDate: "2026-11-01",
+  endDate: "2026-12-31",
+};
+const assignmentCases: typeof cases = [
+  {
+    name: "getAssignments",
+    path: "/api/assignments?year=2026",
+    method: "GET",
+    call: () => api.getAssignments({ year: 2026 }),
+  },
+  {
+    name: "getAssignment",
+    path: "/api/assignments/selected%2Fassignment?year=2026",
+    method: "GET",
+    call: () => api.getAssignment("selected/assignment", 2026),
+  },
+  {
+    name: "getAssignmentMonths",
+    path: "/api/assignments/selected%2Fassignment/months?year=2026&page=1&size=50",
+    method: "GET",
+    call: () => api.getAssignmentMonths("selected/assignment", 2026),
+  },
+  {
+    name: "getAssignmentHistory",
+    path: "/api/assignments/selected%2Fassignment/history?year=2026&page=1&size=50",
+    method: "GET",
+    call: () =>
+      api.getAssignmentHistory("selected/assignment", {
+        year: 2026,
+        page: 1,
+        size: 50,
+      }),
+  },
+  {
+    name: "createAssignment",
+    path: "/api/assignments",
+    method: "POST",
+    call: () => api.createAssignment(assignmentInput),
+    body: assignmentInput,
+  },
+  {
+    name: "createAssignmentPreview",
+    path: "/api/assignments/preview",
+    method: "POST",
+    call: () => api.createAssignmentPreview(assignmentInput),
+    body: assignmentInput,
+  },
+  {
+    name: "createAssignmentChange",
+    path: "/api/assignments/selected%2Fassignment/changes",
+    method: "POST",
+    call: () =>
+      api.createAssignmentChange("selected/assignment", {
+        year: 2026,
+        expectedRevision: "revision",
+        type: "EXT",
+        newEndDate: "2027-01-01",
+      }),
+    body: {
+      year: 2026,
+      expectedRevision: "revision",
+      type: "EXT",
+      newEndDate: "2027-01-01",
+    },
+  },
+  {
+    name: "createAssignmentSelection",
+    path: "/api/assignments/selection",
+    method: "POST",
+    call: () =>
+      api.createAssignmentSelection({
+        year: 2026,
+        scope: "ALL",
+        filters: { year: 2026 },
+      }),
+    body: { year: 2026, scope: "ALL", filters: { year: 2026 } },
+  },
+  {
+    name: "saveAssignmentBulk",
+    path: "/api/assignments/bulk",
+    method: "POST",
+    call: () =>
+      api.saveAssignmentBulk({
+        year: 2026,
+        type: "CNCL",
+        items: [{ id: "selected/assignment", expectedRevision: "revision" }],
+      }),
+    body: {
+      year: 2026,
+      type: "CNCL",
+      items: [{ id: "selected/assignment", expectedRevision: "revision" }],
+    },
+  },
+  {
+    name: "getAssignmentSubstitutionCandidates",
+    path: "/api/assignments/substitution-candidates?projectId=selected-project&developerId=selected-developer&page=1&size=50",
+    method: "GET",
+    call: () =>
+      api.getAssignmentSubstitutionCandidates(
+        "selected-project",
+        "selected-developer",
+      ),
+  },
+  {
+    name: "createAssignmentSubstitutionPreview",
+    path: "/api/assignments/substitution-preview",
+    method: "POST",
+    call: () => api.createAssignmentSubstitutionPreview(assignmentInput),
+    body: { assignment: assignmentInput },
+  },
+  {
+    name: "createAssignmentSubstitution",
+    path: "/api/assignments/substitutions",
+    method: "POST",
+    call: () =>
+      api.createAssignmentSubstitution(assignmentInput, "ONLY", "preview", []),
+    body: {
+      assignment: assignmentInput,
+      mode: "ONLY",
+      previewToken: "preview",
+      withdrawals: [],
+    },
+  },
+  {
+    name: "createAssignmentHistoryCorrection",
+    path: "/api/assignments/selected%2Fassignment/history/2/corrections",
+    method: "POST",
+    call: () =>
+      api.createAssignmentHistoryCorrection("selected/assignment", 2, {
+        year: 2026,
+        expectedRevision: "revision",
+        correctContent: "정정",
+        reasonCode: "ETC",
+      }),
+    body: {
+      year: 2026,
+      expectedRevision: "revision",
+      correctContent: "정정",
+      reasonCode: "ETC",
+    },
+  },
+  {
+    name: "getPayroll",
+    path: "/api/payroll?month=2026-11&page=1&size=50",
+    method: "GET",
+    call: () => api.getPayroll({ month: "2026-11", page: 1, size: 50 }),
+  },
+  {
+    name: "getPayrollUploads",
+    path: "/api/payroll/uploads?month=2026-11&page=2&size=20",
+    method: "GET",
+    call: () => api.getPayrollUploads("2026-11", 2, 20),
+  },
+  {
+    name: "getPayrollResult",
+    path: "/api/uploads/123/result",
+    method: "GET",
+    call: () => api.getPayrollResult(123),
+  },
+  {
+    name: "getB5Result",
+    path: "/api/uploads/123/result",
+    method: "GET",
+    call: () => api.getB5Result(123),
+  },
+];
+cases.push(...projectCases, ...assignmentCases);
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
-  it.each(projectCases)(
+  it.each(["B1", "B5"] as const)(
+    "%s 등록은 기존 multipart 문맥을 유지한다",
+    async (form) => {
+      const fetcher = vi.fn().mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              meta: {},
+              data: { uploadId: 123 },
+            }),
+          ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "upload.xlsx");
+      if (form === "B1") {
+        await api.createB1Validation(file, "2026-11", 123);
+        await api.createB1Apply(file, {
+          month: "2026-11",
+          uploadId: 123,
+          expectedRevision: "revision",
+          confirmFullReplacement: true,
+        });
+      } else {
+        await api.createB5Validation(file, 2026, [], 123);
+        await api.createB5Apply(file, 2026, [], 123, "preview");
+      }
+      for (const [index, operation] of ["validate", "apply"].entries()) {
+        const [path, options] = fetcher.mock.calls[index] as [
+          string,
+          RequestInit,
+        ];
+        expect(path).toBe(`/api/excel/${form}/${operation}`);
+        expect(options.method).toBe("POST");
+        expect(new Headers(options.headers).has("Content-Type")).toBe(false);
+        const body = options.body as FormData;
+        expect(body.get("file")).toBe(file);
+        expect(body.get("uploadId")).toBe("123");
+        if (form === "B1") {
+          expect(body.get("month")).toBe("2026-11");
+          expect(body.get("confirmFullReplacement")).toBe(
+            index ? "true" : null,
+          );
+          expect(body.get("expectedRevision")).toBe(index ? "revision" : null);
+        } else {
+          expect(body.get("year")).toBe("2026");
+          expect(body.get("withdrawalSelections")).toBeInstanceOf(Blob);
+          expect(body.get("previewToken")).toBe(index ? "preview" : null);
+        }
+        expect(body.get("projectId")).toBeNull();
+      }
+    },
+  );
+  it.each([
+    () =>
+      api.createB1Validation(new File(["workbook"], "upload.xlsx"), "2026-11"),
+    () =>
+      api.createB1Apply(new File(["workbook"], "upload.xlsx"), {
+        month: "2026-11",
+        uploadId: 123,
+        expectedRevision: "revision",
+        confirmFullReplacement: true,
+      }),
+    () =>
+      api.createB5Validation(new File(["workbook"], "upload.xlsx"), 2026, []),
+    () =>
+      api.createB5Apply(
+        new File(["workbook"], "upload.xlsx"),
+        2026,
+        [],
+        123,
+        "preview",
+      ),
+  ])("새 업로드 등록은 422 진단과 문의번호를 유지한다", async (call) => {
+    const body = {
+      success: false,
+      meta: {},
+      code: "REVALIDATION_FAILED",
+      message: "재검사 오류",
+      requestId: "upload-request",
+      details: { issueCount: 1 },
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(body), { status: 422 }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(call()).rejects.toMatchObject({ status: 422, body });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it.each([...projectCases, ...assignmentCases])(
     "$name은 평면 오류를 보존하고 재시도하지 않는다",
     async (test) => {
       const body = {
@@ -937,6 +1197,36 @@ describe("승인 API 등록", () => {
     },
   );
   it.each([
+    {
+      path: "/api/excel/B1/template",
+      call: () => api.getPayrollTemplate(),
+      filename: "payroll.xlsx",
+    },
+    {
+      path: "/api/excel/B5/template",
+      call: () => api.getB5Template(),
+      filename: "assignments.xlsx",
+    },
+    {
+      path: "/api/exports/master-data",
+      call: () =>
+        api.downloadAssignments(
+          { year: 2026 },
+          { id: "projectName", direction: "ASC" },
+          "천원",
+        ),
+      filename: "assignments.xlsx",
+    },
+    {
+      path: "/api/exports/master-data",
+      call: () =>
+        api.exportPayroll(
+          { month: "2026-11", page: 1, size: 50 },
+          ["payAmount"],
+          "천원",
+        ),
+      filename: "payroll.xlsx",
+    },
     {
       path: "/api/excel/B9/template",
       call: () => api.getB9Template(),

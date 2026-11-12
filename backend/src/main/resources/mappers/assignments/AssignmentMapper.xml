@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.assignments.AssignmentMapper">
+  <select id="labels" resultType="com.sicost.assignments.AssignmentMapper$CodeLabel">
+    SELECT code_grp_id AS "group",code AS "code",code_nm AS "name"
+    FROM tb_sy_code WHERE code_grp_id IN ('INPUT_TYPE','EXT_PSBL')
+    ORDER BY code_grp_id,code
+  </select>
+  <select id="lockDevelopers" resultType="string">
+    SELECT dev_id FROM tb_hr_dev WHERE dev_id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY dev_id FOR UPDATE
+  </select>
+  <select id="lockProject" resultType="string">SELECT proj_id FROM tb_pj_proj WHERE proj_id=#{id} FOR UPDATE</select>
+</mapper>

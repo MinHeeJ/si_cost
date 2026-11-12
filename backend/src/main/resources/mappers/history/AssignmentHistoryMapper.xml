@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.history.AssignmentHistoryMapper">
+  <sql id="columns">
+    hist_sn::int AS "sequence",asgn_chg_type_cd AS "type",aply_dt AS "applyDate",bfr_val AS "before",aft_val AS "after",
+    asgn_chg_rsn_cd AS "reasonCode",chg_memo AS "memo",new_uprc::text AS "newUnitPrice",new_ctrt_mm::text AS "newContractMm",
+    rtro_yn AS "retroactive",close_cross_yn AS "closeCross",crct_yn AS "corrected",crct_trgt_sn::int AS "correctionTargetSequence",
+    reg_user_id AS "actor",to_char(reg_dttm,'YYYY-MM-DD"T"HH24:MI:SS.US') AS "registeredAt"
+  </sql>
+  <sql id="filter">asgn_id=#{id}<if test="type != null"> AND asgn_chg_type_cd=#{type}</if></sql>
+  <select id="list" resultType="com.sicost.history.AssignmentHistoryDtos$Entry">
+    SELECT <include refid="columns"/> FROM tb_pj_asgn_hist WHERE <include refid="filter"/>
+    ORDER BY aply_dt DESC,hist_sn DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_pj_asgn_hist WHERE <include refid="filter"/></select>
+  <select id="entry" resultType="com.sicost.history.AssignmentHistoryDtos$Entry">
+    SELECT <include refid="columns"/> FROM tb_pj_asgn_hist WHERE asgn_id=#{id} AND hist_sn=#{sn}
+  </select>
+  <update id="mark">UPDATE tb_pj_asgn_hist SET crct_yn='Y' WHERE asgn_id=#{id} AND hist_sn=#{sn} AND crct_yn='N'</update>
+  <insert id="append">
+    INSERT INTO tb_pj_asgn_hist(asgn_id,hist_sn,asgn_chg_type_cd,aply_dt,bfr_val,aft_val,asgn_chg_rsn_cd,chg_memo,new_uprc,new_ctrt_mm,rtro_yn,close_cross_yn,crct_yn,crct_trgt_sn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{sequence},'CRCT',#{date},#{before},#{content},#{reason},NULL,NULL,NULL,'N','N','N',#{target},#{actor},#{now})
+  </insert>
+</mapper>

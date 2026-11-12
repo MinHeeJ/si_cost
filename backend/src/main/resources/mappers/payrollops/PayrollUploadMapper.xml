@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.payrollops.PayrollUploadMapper">
+  <sql id="scope">u.form_type_cd='B1' AND u.scrn_id='UI-02' AND u.trgt_ym=#{month}</sql>
+  <select id="list" resultType="com.sicost.payrollops.PayrollUploadDtos$Stored">
+    SELECT u.upld_id AS "uploadId",u.trgt_ym AS "month",u.file_nm AS "fileName",u.reg_user_id AS "actor",
+      u.reg_dttm AS "registeredAt",u.upld_stat_cd AS "status",u.aply_dttm AS "appliedAt",
+      u.tot_row_cnt AS "totalRows",u.succ_cnt AS "successRows",u.warn_cnt AS "warningRows",u.err_cnt AS "errorRows",
+      (SELECT count(*)::integer FROM tb_sy_upld_err e WHERE e.upld_id=u.upld_id AND e.rslt_type_cd='WARN' AND e.col_nm='[파일]') AS "fileWarningCount",
+      (SELECT count(*)::integer FROM tb_sy_upld_err e WHERE e.upld_id=u.upld_id AND e.rslt_type_cd='WARN' AND e.col_nm='[표]') AS "tableWarningCount"
+    FROM tb_sy_upld u WHERE <include refid="scope"/>
+    ORDER BY u.reg_dttm DESC,u.upld_id DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) FROM tb_sy_upld u WHERE <include refid="scope"/></select>
+</mapper>

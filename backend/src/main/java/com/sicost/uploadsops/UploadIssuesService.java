@@ -28,11 +28,12 @@ public class UploadIssuesService {
     }
     public Download download(long id, String severity, HttpServletRequest request) {
         UploadIssuesInput.severity(severity);
-        boolean developers = "B8".equals(repository.formType(id));
-        Specification specification = new Specification(developers ? "개발자_업로드검사" : "거래처_업로드검사", Long.toString(id), List.of(
+        String form=repository.formType(id);
+        boolean developers = "B8".equals(form) || "B1".equals(form);
+        Specification specification = new Specification("B5".equals(form) ? "투입_업로드검사" : "B1".equals(form) ? "급여_업로드검사" : developers ? "개발자_업로드검사" : "거래처_업로드검사", Long.toString(id), List.of(
             new Column("severity", "유형", CellType.TEXT), new Column("rowNumber", "행", CellType.NUMBER),
             new Column("columnName", "열", CellType.TEXT), new Column("inputValue", "입력값", CellType.TEXT),
-            new Column("reason", "이유", CellType.TEXT)), "severity=" + (severity == null ? "전체" : severity), "원", developers ? "UI-02" : "UI-15");
+            new Column("reason", "이유", CellType.TEXT)), "severity=" + (severity == null ? "전체" : severity), "원", "B5".equals(form) ? "UI-12" : developers ? "UI-02" : "UI-15");
         return exports.generate(specification, sink -> {
             repository.requireUpload(id);
             long offset = 0;

@@ -30,9 +30,11 @@ import * as areas from "../shared/areaClient";
 import * as projects from "../pages/projects/projectsApi";
 import * as projectParts from "../pages/parts/projectPartsApi";
 import * as distribution from "../pages/distribution/distributionApi";
+import * as assignments from "../pages/assignmentsops/assignmentActionsApi";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/assignmentsops/assignmentActionsApi");
 vi.mock("../pages/projects/projectsApi");
 vi.mock("../pages/parts/projectPartsApi");
 vi.mock("../pages/distribution/distributionApi");
@@ -210,6 +212,19 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(assignments.getAssignments).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
+  vi.mocked(assignments.projectOptions).mockResolvedValue({ items: [] });
+  vi.mocked(assignments.developerOptions).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+  });
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn().mockReturnValue({
@@ -368,6 +383,38 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/UI-12");
+    await screen.findByText("조회된 투입 배정이 없습니다.");
+    await userEvent.click(screen.getByTestId("assignment-new"));
+    fireEvent.change(await screen.findByTestId("assignment-project-search"), {
+      target: { value: "보존할 검색" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-12$/ }));
+    expect(screen.getByTestId("assignment-project-search")).toHaveValue(
+      "보존할 검색",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-12 탭 닫기" }),
+    );
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("assignment-project-search")).toHaveValue(
+      "보존할 검색",
+    );
+    confirm.mockRestore();
+  });
+  it("배정 조회 실패는 등록된 업무 화면에서 재조회한다", async () => {
+    vi.mocked(assignments.getAssignments).mockRejectedValueOnce(
+      new Error("배정 조회 실패"),
+    );
+    open("/UI-12");
+    await screen.findByText("배정 조회 실패");
+    await userEvent.click(screen.getByTestId("assignments-refresh"));
+    await screen.findByText("조회된 투입 배정이 없습니다.");
+    expect(assignments.getAssignments).toHaveBeenCalledTimes(2);
+  });
   it("프로젝트 편집을 보존하고 셸 탭 닫기 취소에 dirty를 전달한다", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     open("/UI-01");
@@ -538,6 +585,14 @@ describe("공식 진입점 합성", () => {
           await screen.findByTestId("business-users-screen"),
         ).toBeInTheDocument();
         expect(users.getBusinessUsers).toHaveBeenCalled();
+      } else if (id === "UI-12") {
+        expect(
+          await screen.findByTestId("staffing-assignments-screen"),
+        ).toBeVisible();
+        await screen.findByText("조회된 투입 배정이 없습니다.");
+        expect(assignments.getAssignments).toHaveBeenCalledWith(
+          expect.objectContaining({ year: 2026 }),
+        );
       } else if (id === "UI-02" || id === "UI-33") {
         expect(
           await screen.findByTestId(

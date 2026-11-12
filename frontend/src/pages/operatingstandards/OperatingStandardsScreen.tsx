@@ -204,9 +204,13 @@ export function OperatingStandardsScreen({
       id: "actions",
       label: "작업",
       render: (row) => (
-        <div className="operatingstandards-actions">
+        <div
+          data-testid={`operating-standard-actions-${row.key.toLowerCase().replace(/_/g, "-")}`}
+          className="operatingstandards-actions"
+        >
           {!api.isCashStandard(row.key) && (
             <button
+              data-testid={`operating-standard-edit-${row.key.toLowerCase().replace(/_/g, "-")}`}
               disabled={pending || loading || Boolean(error)}
               onClick={() => edit(row)}
             >

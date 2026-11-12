@@ -170,3 +170,39 @@ export {
   saveB6Apply,
   getB6Template,
 } from "../pages/b6/b6Api";
+export {
+  getAssignments,
+  getAssignment,
+  getMonths as getAssignmentMonths,
+  preview as createAssignmentPreview,
+  createAssignment,
+  changeAssignment as createAssignmentChange,
+  selectAssignments as createAssignmentSelection,
+  saveBulk as saveAssignmentBulk,
+  candidates as getAssignmentSubstitutionCandidates,
+  substitutionPreview as createAssignmentSubstitutionPreview,
+  substitute as createAssignmentSubstitution,
+} from "../pages/assignmentsops/assignmentActionsApi";
+export {
+  getAssignmentHistory,
+  createAssignmentHistoryCorrection,
+} from "../pages/history/assignmentHistoryApi";
+export {
+  getPayroll,
+  getPayrollUploads,
+  getPayrollResult,
+  getPayrollTemplate,
+  createB1Validation,
+  createB1Apply,
+  exportPayroll,
+} from "../pages/apiops/payrollApi";
+export {
+  getB5Template,
+  createB5Validation,
+  createB5Apply,
+  getB5Result,
+} from "../pages/b5/b5Api";
+export {
+  downloadAssignments,
+  assignmentColumns,
+} from "../pages/assignments/assignmentDownloadsApi";
