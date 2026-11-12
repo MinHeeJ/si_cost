@@ -31,7 +31,7 @@
   white-space: nowrap;
 }
 .developer-filters input:not([type="checkbox"]) {
-  width: 180px;
+  width: 120px;
 }
 .developer-sub {
   display: block;
@@ -119,4 +119,11 @@
   .developer-filters .sicost-field {
     flex: 1 1 120px;
   }
+}
+.developer-filters {
+  column-gap: 8px;
+}
+.developer-filters .sicost-field select {
+  min-width: 0;
+  width: 96px;
 }

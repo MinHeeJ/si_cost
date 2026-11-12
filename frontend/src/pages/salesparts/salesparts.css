@@ -12,6 +12,10 @@
 .sales-parts-screen > .sales-part-toolbar {
   justify-content: space-between;
 }
+/* 거래처 탭의 .clients-toolbar와 같은 위쪽 여백 */
+.sales-parts-screen > .sales-part-toolbar:first-child {
+  margin-top: 16px;
+}
 .sales-part-filters > .sicost-field:first-child {
   flex: 1;
   min-width: 160px;
