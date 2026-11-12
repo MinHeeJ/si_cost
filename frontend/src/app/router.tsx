@@ -261,8 +261,7 @@ function BusinessPartnersWorkspace({
   }, [dirty, onDirtyChange]);
   const view = (
     preferences.get("COLS", "UI-15")?.value as
-      | ScreenColumnPreferences
-      | undefined
+      ScreenColumnPreferences | undefined
   )?.clients;
   const size = preferences.get("PAGE_SIZE")?.value;
   const pageSize = size === 20 || size === 100 ? size : 50;
@@ -463,8 +462,7 @@ function PeopleWorkspace({
   const [error, setError] = useState<unknown>();
   const viewId = screenId === "UI-02" ? "developers" : "candidates";
   const columns = preferences.get("COLS", screenId)?.value as
-    | ScreenColumnPreferences
-    | undefined;
+    ScreenColumnPreferences | undefined;
   const size = preferences.get("PAGE_SIZE")?.value;
   const unit = preferences.get("AMT_UNIT")?.value;
   const dense = preferences.get("DENSE")?.value === "좁게";
@@ -692,8 +690,11 @@ function RegisteredApplication() {
     retry: () => {
       void preferences.refresh().catch(() => {});
     },
+    // 화면을 열 때 자동으로 남기는 "최근 본 화면"은 사용자가 저장한 것이 아니므로 성공 메시지를 띄우지 않는다.
     save: (type, key, value) =>
-      preferences.put(type as PreferenceType, key, value as PreferenceValue),
+      preferences.put(type as PreferenceType, key, value as PreferenceValue, {
+        quiet: type === "RECENT",
+      }),
     reset: (type, key) => preferences.reset(type as PreferenceType, key),
   };
   return (

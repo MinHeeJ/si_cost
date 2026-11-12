@@ -51,22 +51,27 @@ function usePreferenceState(api: PreferenceApi) {
     type: PreferenceType,
     key: string,
     value: PreferenceValue,
+    options: { quiet?: boolean } = {},
   ) => {
     const previous = find(type, key);
     if (!previous) throw new Error("먼저 설정을 조회해 주세요.");
-    await commit(async () => {
-      const result = await api.putPreference(
-        type,
-        key,
-        value,
-        previous.revision,
-      );
-      current.current = current.current.map((i) =>
-        i.type === type && i.key === key ? result.preference : i,
-      );
-      setItems(current.current);
-      return result;
-    }, refresh);
+    await commit(
+      async () => {
+        const result = await api.putPreference(
+          type,
+          key,
+          value,
+          previous.revision,
+        );
+        current.current = current.current.map((i) =>
+          i.type === type && i.key === key ? result.preference : i,
+        );
+        setItems(current.current);
+        return result;
+      },
+      refresh,
+      options,
+    );
   };
   const reset = async (type: PreferenceType, key = "*") => {
     const preference = find(type, key);

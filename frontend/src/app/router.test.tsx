@@ -567,6 +567,19 @@ describe("공식 진입점 합성", () => {
       );
     },
   );
+  it("UI-27을 열면 최근 본 화면만 조용히 저장하고 '저장했습니다.'를 띄우지 않는다", async () => {
+    open();
+    await screen.findByLabelText("A 이름");
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(prefs.putPreference)
+          .mock.calls.some(([type]) => type === "RECENT"),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(prefs.getPreferences).toHaveBeenCalled());
+    expect(screen.queryByText("저장했습니다.")).not.toBeInTheDocument();
+  });
   it("UI-27 네 탭의 실제 기능 본문을 연결하고 추가 route를 만들지 않는다", async () => {
     open();
     await screen.findByLabelText("A 이름");

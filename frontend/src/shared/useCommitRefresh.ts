@@ -6,19 +6,24 @@ export function useCommitRefresh() {
   const active = useRef(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /**
+   * quiet: 사용자가 누르지 않은 자동 저장(예: 최근 본 화면 기록)이다. 성공해도 "저장했습니다."를
+   * 띄우지 않고 앞선 메시지도 지우지 않는다. 실패는 그대로 알린다.
+   */
   const commit = async (
     save: () => Promise<unknown>,
     refresh: () => Promise<unknown>,
+    options: { quiet?: boolean } = {},
   ) => {
     if (active.current) return;
     active.current = true;
     setPending(true);
-    setMessage(null);
+    if (!options.quiet) setMessage(null);
     try {
       await save();
       try {
         await refresh();
-        setMessage("저장했습니다.");
+        if (!options.quiet) setMessage("저장했습니다.");
       } catch {
         setMessage(COMMITTED_REFRESH_FAILED);
       }
