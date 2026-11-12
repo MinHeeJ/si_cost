@@ -255,8 +255,8 @@ describe("controlled 기간 선택", () => {
   });
 });
 describe("공식 화면과 공통 틀", () => {
-  // UI-02·UI-33은 실제 화면이 연결돼 자리표시가 아니다. 두 화면의 직접 진입은 router.test.tsx가 확인한다.
-  const implementedPeopleScreens = ["UI-02", "UI-33"];
+  // UI-02·UI-12·UI-33은 실제 화면이 연결돼 자리표시가 아니다. 이 화면들의 직접 진입은 router.test.tsx가 확인한다.
+  const implementedPeopleScreens = ["UI-02", "UI-12", "UI-33"];
   it.each(
     Object.keys(screenRegistry).filter(
       (id) => !implementedPeopleScreens.includes(id),
