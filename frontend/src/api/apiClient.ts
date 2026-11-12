@@ -118,3 +118,55 @@ export {
   createB8Validation,
   saveB8Apply,
 } from "../pages/b8/b8Api";
+export {
+  getProjects,
+  getProject,
+  createProject,
+  putProject,
+  getProjectDefaults,
+} from "../pages/projects/projectsApi";
+export {
+  getProjectOptions,
+  getProjectLossPreview,
+  saveProjectProgress,
+  saveProjectLoss,
+} from "../pages/projectsops/projectStatusApi";
+export {
+  getProjectBudget,
+  saveProjectBudget,
+} from "../pages/budget/projectBudgetApi";
+export {
+  getProjectParts,
+  saveProjectPart,
+} from "../pages/parts/projectPartsApi";
+export {
+  getProjectPlans,
+  saveProjectPlans,
+} from "../pages/plans/projectPlansApi";
+export {
+  getProjectExpenses,
+  createProjectExpense,
+  deleteProjectExpense,
+} from "../pages/expenses/projectExpensesApi";
+export {
+  getBusinessUserProjects,
+  getUserProjectPm as getProjectPm,
+  assignUserProject as saveProjectPm,
+  detachUserProject as deleteProjectPm,
+} from "../pages/businessusersops/userProjectsApi";
+export {
+  getProjectDistribution,
+  getProjectDistributionComparison,
+  getProjectDistributionUploads,
+} from "../pages/distribution/distributionApi";
+export {
+  createB9Validation,
+  saveB9Apply,
+  getB9Template,
+  getUploadResult,
+} from "../pages/b9/b9Api";
+export {
+  createB6Validation,
+  saveB6Apply,
+  getB6Template,
+} from "../pages/b6/b6Api";

@@ -27,9 +27,15 @@ import * as developers from "../pages/developers/peopleClient";
 import * as candidates from "../pages/candidates/peopleClient";
 import * as summary from "../pages/candidatesops/candidateSummaryApi";
 import * as areas from "../shared/areaClient";
+import * as projects from "../pages/projects/projectsApi";
+import * as projectParts from "../pages/parts/projectPartsApi";
+import * as distribution from "../pages/distribution/distributionApi";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/projects/projectsApi");
+vi.mock("../pages/parts/projectPartsApi");
+vi.mock("../pages/distribution/distributionApi");
 vi.mock("../pages/developers/peopleClient");
 vi.mock("../pages/candidates/peopleClient");
 vi.mock("../pages/candidatesops/candidateSummaryApi");
@@ -90,6 +96,41 @@ const context = {
   timezone: "Asia/Seoul",
   cashBaseMonth: "2026-01",
   monthClose: { month: "2026-11", status: "작업중" },
+};
+const project: projects.Project = {
+  id: "P-0042",
+  name: "연결 검증 프로젝트",
+  customerId: null,
+  contractType: "TK",
+  status: "PRE",
+  startDate: "2026-01-01",
+  endDate: "2027-12-31",
+  workplace: null,
+  feature: null,
+  estimateAmount: null,
+  originalContractAmount: "100",
+  contractAmount: "100",
+  budgetAmount: "80",
+  teamExpenseAmount: "0",
+  projectExpenseAmount: "0",
+  budgetManual: "N",
+  lossDate: null,
+  lossReason: null,
+  lossMemo: null,
+  opportunityId: null,
+};
+const projectDetail: projects.ProjectDetail = {
+  project,
+  revision: "project-revision",
+  effectiveStatus: "PRE",
+  readOnly: false,
+  parts: [],
+  pm: [],
+  plans: [],
+  assignments: [],
+  history: [],
+  actualMmTotal: "0.00",
+  directExpenseTotal: "0",
 };
 const menus: shared.MenuNode[] = [
   {
@@ -251,6 +292,16 @@ beforeEach(() => {
     developmentMode: true,
   });
   vi.mocked(shared.getPeriodContext).mockResolvedValue(context);
+  vi.mocked(shared.getSharedCodes).mockResolvedValue({ items: [] });
+  vi.mocked(projects.getProjects).mockImplementation(async (filters) => ({
+    items: [],
+    total: 0,
+    unassignedCount: 0,
+    page: filters.page,
+    size: filters.size,
+    year: filters.year ?? 2026,
+  }));
+  vi.mocked(projects.getProject).mockResolvedValue(projectDetail);
   vi.mocked(shared.getMonthClose).mockResolvedValue({
     items: [context.monthClose],
   });
@@ -317,6 +368,145 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("프로젝트 편집을 보존하고 셸 탭 닫기 취소에 dirty를 전달한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/UI-01");
+    await userEvent.click(await screen.findByTestId("project-create"));
+    const name = await screen.findByLabelText(/프로젝트명/);
+    fireEvent.change(name, { target: { value: "보존 프로젝트" } });
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+    expect(name).toHaveValue("보존 프로젝트");
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-01 탭 닫기" }),
+    );
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(name).toHaveValue("보존 프로젝트");
+    confirm.mockRestore();
+  });
+  it("프로젝트 목록 오류는 실제 화면의 재조회로 복구한다", async () => {
+    vi.mocked(projects.getProjects).mockRejectedValueOnce(
+      new Error("프로젝트 통신 오류"),
+    );
+    open("/UI-01");
+    await screen.findByText("프로젝트 통신 오류");
+    await userEvent.click(
+      within(screen.getByTestId("projects-screen")).getByRole("button", {
+        name: "다시 조회",
+      }),
+    );
+    await screen.findByText("조회된 자료가 없습니다.");
+    expect(projects.getProjects).toHaveBeenCalledTimes(2);
+  });
+  it("프로젝트 파트 변경과 PRE 전환을 병합된 상세 동작에 연결한다", async () => {
+    vi.mocked(projects.getProjects).mockResolvedValue({
+      items: [
+        {
+          ...project,
+          customerName: null,
+          partName: null,
+          personCount: 0,
+          distribution: null,
+        },
+      ],
+      total: 1,
+      unassignedCount: 1,
+      page: 1,
+      size: 50,
+      year: 2026,
+    });
+    vi.mocked(projectParts.getProjectParts).mockResolvedValue({
+      items: [],
+      replacementTargets: [],
+      retainedBasePart: null,
+      minimumMonth: "2026-11",
+      maximumMonth: "2027-12",
+      revision: "parts-revision",
+    });
+    open("/UI-01");
+    await userEvent.click(await screen.findByTestId("project-open-p-0042"));
+    await userEvent.click(await screen.findByTestId("project-part-change"));
+    expect(
+      await screen.findByTestId("project-part-dialog"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(projectParts.getProjectParts).toHaveBeenCalledWith(project.id),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "영업 파트 변경" })).getByRole(
+        "button",
+        { name: "취소" },
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("project-progress-button")).toBeEnabled(),
+    );
+    await userEvent.click(screen.getByTestId("project-progress-button"));
+    expect(
+      await screen.findByTestId("project-progress-dialog"),
+    ).toHaveTextContent(project.id);
+  });
+  it("B6는 기존 주소의 배분표에서 선택한 단계와 계약기간으로 연다", async () => {
+    vi.mocked(projects.getProjects).mockResolvedValue({
+      items: [
+        {
+          ...project,
+          customerName: null,
+          partName: null,
+          personCount: 0,
+          distribution: null,
+        },
+      ],
+      total: 1,
+      unassignedCount: 1,
+      page: 1,
+      size: 50,
+      year: 2026,
+    });
+    vi.mocked(distribution.getProjectDistribution).mockResolvedValue({
+      project,
+      viewedStep: "EST",
+      selectedStep: null,
+      months: [],
+      rows: [],
+      monthlyTotals: [],
+      totalAmount: "0",
+      revision: "distribution-revision",
+    });
+    vi.mocked(distribution.getProjectDistributionComparison).mockResolvedValue({
+      selectedStep: null,
+      contractAmount: "100",
+      totalAmount: "0",
+      differenceAmount: "-100",
+      mismatchCount: 0,
+      items: [],
+      warnings: [],
+    });
+    vi.mocked(distribution.getProjectDistributionUploads).mockResolvedValue({
+      items: [],
+    });
+    open("/UI-01");
+    await userEvent.click(
+      await screen.findByTestId("project-distribution-p-0042"),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("distribution-upload")).toBeEnabled(),
+    );
+    await userEvent.click(screen.getByTestId("distribution-upload"));
+    expect(await screen.findByTestId("b6-upload-context")).toHaveTextContent(
+      project.startDate,
+    );
+    expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
+      project.endDate,
+    );
+    expect(screen.getByTestId("b6-step-select")).toHaveValue("EST");
+    expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
+      "선택연도 2026",
+    );
+    expect(applicationRoutes.some((route) => route.path?.includes("B6"))).toBe(
+      false,
+    );
+  });
   it.each(Object.keys(screenRegistry))(
     "%s는 등록된 실제 화면으로 진입한다",
     async (id) => {
@@ -336,6 +526,13 @@ describe("공식 진입점 합성", () => {
       } else if (id === "UI-15") {
         expect(await screen.findByTestId("clients-screen")).toBeInTheDocument();
         expect(clients.getClients).toHaveBeenCalled();
+      } else if (id === "UI-01") {
+        expect(await screen.findByTestId("projects-screen")).toBeVisible();
+        await waitFor(() =>
+          expect(projects.getProjects).toHaveBeenCalledWith(
+            expect.objectContaining({ year: 2026 }),
+          ),
+        );
       } else if (id === "UI-23") {
         expect(
           await screen.findByTestId("business-users-screen"),
@@ -370,6 +567,19 @@ describe("공식 진입점 합성", () => {
       );
     },
   );
+  it("UI-27을 열면 최근 본 화면만 조용히 저장하고 '저장했습니다.'를 띄우지 않는다", async () => {
+    open();
+    await screen.findByLabelText("A 이름");
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(prefs.putPreference)
+          .mock.calls.some(([type]) => type === "RECENT"),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(prefs.getPreferences).toHaveBeenCalled());
+    expect(screen.queryByText("저장했습니다.")).not.toBeInTheDocument();
+  });
   it("UI-27 네 탭의 실제 기능 본문을 연결하고 추가 route를 만들지 않는다", async () => {
     open();
     await screen.findByLabelText("A 이름");
@@ -571,7 +781,7 @@ describe("공식 진입점 합성", () => {
     open("/UI-15");
     await screen.findByText(clientFixture.name);
     await userEvent.click(
-      screen.getByTestId(`client-select-${clientFixture.id}`),
+      screen.getByRole("checkbox", { name: `${clientFixture.id} 선택` }),
     );
     await userEvent.click(screen.getByTestId("client-status-n"));
     await userEvent.click(

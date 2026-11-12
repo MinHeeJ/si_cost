@@ -111,10 +111,11 @@ public class ExcelExportService {
             case "UI-15" -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
+            case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> throw InputValidator.invalid("screenId");
         };
         if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
-        if (Set.of("거래처_업로드검사", "개발자_업로드검사").contains(specification.kind())) {
+        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");
@@ -152,8 +153,10 @@ public class ExcelExportService {
                 Column column = columns.get(i);
                 if (column.type() == CellType.NUMBER) {
                     BigDecimal decimal = value instanceof BigDecimal number ? number : new BigDecimal(value.toString());
-                    if (decimal.stripTrailingZeros().precision() > 15) throw InputValidator.invalid(column.id());
-                    cell.setCellValue(decimal.doubleValue());
+                    if (decimal.stripTrailingZeros().precision() > 15 || !Double.isFinite(decimal.doubleValue())
+                            || BigDecimal.valueOf(decimal.doubleValue()).compareTo(decimal) != 0) {
+                        cell.setCellValue(decimal.toPlainString());
+                    } else cell.setCellValue(decimal.doubleValue());
                 } else {
                     String text = value.toString();
                     if (column.type() == CellType.MASKED_ACCOUNT && !text.matches("[^*\\r\\n]*\\*{4}[0-9]{1,4}")) throw InputValidator.invalid("account");

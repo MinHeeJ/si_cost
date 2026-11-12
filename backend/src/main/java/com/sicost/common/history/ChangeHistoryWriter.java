@@ -24,7 +24,8 @@ public class ChangeHistoryWriter {
     private static final Set<String> TABLES = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD",
             "TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD",
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
-            "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC");
+            "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
+            "TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_SY_UPLD");
     private static final Set<String> PEOPLE = Set.of("TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC");
     private static final Set<String> TYPES = Set.of("NEW", "UPD", "STOP", "RESUME", "DEL");
@@ -50,6 +51,8 @@ public class ChangeHistoryWriter {
     }
     private void append(Change change, Supplier<String> actor) {
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
+        if (Set.of("TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_SY_UPLD").contains(change.tableName())
+                && change.type().equals("DEL")) throw InputValidator.invalid("history");
         if ((Set.of("TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD").contains(change.tableName()) || PEOPLE.contains(change.tableName()))
                 && change.type().equals("DEL")) throw InputValidator.invalid("history");
         if (change.item() != null && change.item().toUpperCase(java.util.Locale.ROOT)

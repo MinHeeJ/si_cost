@@ -80,7 +80,13 @@ import static org.assertj.core.api.Assertions.assertThat;
         MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class,
         AddressController.class, CandidateController.class, CandidateSummaryController.class, CandidateContactController.class,
         DeveloperController.class, DeveloperActionsController.class, DeveloperStateController.class,
-        PeopleHistoryController.class, B8Controller.class})
+        PeopleHistoryController.class, B8Controller.class,
+        com.sicost.b6.B6Controller.class, com.sicost.b9.B9Controller.class,
+        com.sicost.projects.ProjectController.class, com.sicost.projectsops.ProjectStatusController.class,
+        com.sicost.budget.ProjectBudgetController.class, com.sicost.parts.ProjectPartController.class,
+        com.sicost.plans.ProjectPlanController.class, com.sicost.expenses.ProjectExpenseController.class,
+        com.sicost.pm.ProjectPmController.class, com.sicost.distribution.ProjectDistributionController.class,
+        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
         CodeMappingsController.class, PreferenceController.class, OperatingStandardsController.class,
         BusinessUserController.class, BusinessUserOptionsController.class, ClientController.class,
@@ -88,7 +94,13 @@ import static org.assertj.core.api.Assertions.assertThat;
         MasterHistoryController.class, B7Controller.class, UploadIssuesController.class, MasterDataExportController.class,
         AddressController.class, CandidateController.class, CandidateSummaryController.class, CandidateContactController.class,
         DeveloperController.class, DeveloperActionsController.class, DeveloperStateController.class,
-        PeopleHistoryController.class, B8Controller.class})
+        PeopleHistoryController.class, B8Controller.class,
+        com.sicost.b6.B6Controller.class, com.sicost.b9.B9Controller.class,
+        com.sicost.projects.ProjectController.class, com.sicost.projectsops.ProjectStatusController.class,
+        com.sicost.budget.ProjectBudgetController.class, com.sicost.parts.ProjectPartController.class,
+        com.sicost.plans.ProjectPlanController.class, com.sicost.expenses.ProjectExpenseController.class,
+        com.sicost.pm.ProjectPmController.class, com.sicost.distribution.ProjectDistributionController.class,
+        com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class})
 class OpenApiControllerRegistrationContractTest {
     @Autowired RequestMappingHandlerMapping handlerMapping;
     @MockBean HealthService health;
@@ -125,6 +137,18 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean DeveloperStateService developerStates;
     @MockBean PeopleHistoryService peopleHistory;
     @MockBean B8Service b8;
+    @MockBean com.sicost.b6.B6Service b6;
+    @MockBean com.sicost.b9.B9Service b9;
+    @MockBean com.sicost.projects.ProjectService projects;
+    @MockBean com.sicost.projectsops.ProjectStatusService projectStatuses;
+    @MockBean com.sicost.budget.ProjectBudgetService budgets;
+    @MockBean com.sicost.parts.ProjectPartService projectParts;
+    @MockBean com.sicost.plans.ProjectPlanService plans;
+    @MockBean com.sicost.expenses.ProjectExpenseService expenses;
+    @MockBean com.sicost.pm.ProjectPmService projectPm;
+    @MockBean com.sicost.distribution.ProjectDistributionService distribution;
+    @MockBean com.sicost.businessusersops.BusinessUserProjectsService userProjects;
+    @MockBean com.sicost.uploadsops.UploadResultService uploadResults;
     @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {

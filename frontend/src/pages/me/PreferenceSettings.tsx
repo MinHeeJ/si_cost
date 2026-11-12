@@ -73,10 +73,15 @@ export function PreferenceSettings({
                     : "펼침"
                   : String(pref.value);
               return (
-                <section key={setting.type} className="me-setting-row">
+                <section
+                  data-testid={`preference-setting-${setting.type.toLowerCase().replace(/_/g, "-")}`}
+                  key={setting.type}
+                  className="me-setting-row"
+                >
                   <label className="sicost-field">
                     <span>{setting.label}</span>
                     <select
+                      data-testid={`preference-select-${setting.type.toLowerCase().replace(/_/g, "-")}`}
                       aria-label={setting.label}
                       value={draft[setting.type] ?? applied}
                       disabled={
@@ -88,7 +93,12 @@ export function PreferenceSettings({
                       }
                     >
                       {setting.options.map((option) => (
-                        <option key={option}>{option}</option>
+                        <option
+                          data-testid={`preference-option-${setting.type.toLowerCase().replace(/_/g, "-")}-${(setting.options as readonly string[]).indexOf(option)}`}
+                          key={option}
+                        >
+                          {option}
+                        </option>
                       ))}
                     </select>
                   </label>

@@ -7,6 +7,8 @@ export type Column<T> = {
   label: ReactNode;
   render(row: T): ReactNode;
   align?: "left" | "right" | "center";
+  /** true면 열 이름을 눌러 정렬한다(onSortChange 필요). */
+  sortable?: boolean;
 };
 export type DataTableProps<T> = {
   rows: readonly T[];
@@ -23,6 +25,12 @@ export type DataTableProps<T> = {
   onSizeChange?(size: 20 | 50 | 100): void;
   selectedKeys?: readonly Key[];
   onSelectionChange?(keys: Key[]): void;
+  /** 지금 정렬 기준. 없으면 화살표를 그리지 않는다. */
+  sort?: { id: string; direction: "ASC" | "DESC" };
+  /** 열 이름을 눌렀을 때. 같은 열을 다시 누르면 방향을 바꾸는 일은 화면이 한다. */
+  onSortChange?(id: string): void;
+  /** 0건일 때 빈 안내 아래에 놓을 동작(예: [조건 초기화]). */
+  emptyAction?: ReactNode;
   onRowAction?(row: T): void;
   onColumnsChange?(): void;
   dense?: boolean;
@@ -42,6 +50,9 @@ export function DataTable<T>({
   onSizeChange,
   selectedKeys,
   onSelectionChange,
+  sort,
+  onSortChange,
+  emptyAction,
   onRowAction,
   onColumnsChange,
   dense,
@@ -63,14 +74,63 @@ export function DataTable<T>({
         <table className={dense ? "sicost-table sicost-dense" : "sicost-table"}>
           <thead>
             <tr>
-              {onSelectionChange && <th scope="col">선택</th>}
+              {onSelectionChange && (
+                <th scope="col">
+                  <input
+                    type="checkbox"
+                    aria-label="이 페이지 전체 선택"
+                    checked={
+                      rows.length > 0 &&
+                      rows.every((row) => selectedKeys?.includes(rowKey(row)))
+                    }
+                    disabled={!rows.length}
+                    onChange={(event) =>
+                      onSelectionChange(
+                        event.target.checked
+                          ? [
+                              ...new Set([
+                                ...(selectedKeys ?? []),
+                                ...rows.map(rowKey),
+                              ]),
+                            ]
+                          : (selectedKeys ?? []).filter(
+                              (key) => !rows.some((row) => rowKey(row) === key),
+                            ),
+                      )
+                    }
+                  />
+                </th>
+              )}
               {columns.map((column) => (
                 <th
                   scope="col"
                   key={column.id}
                   style={{ textAlign: column.align }}
+                  aria-sort={
+                    sort?.id === column.id
+                      ? sort.direction === "ASC"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
                 >
-                  {column.label}
+                  {column.sortable && onSortChange ? (
+                    <button
+                      type="button"
+                      className="sicost-sort-header"
+                      data-testid={`sort-${column.id}`}
+                      onClick={() => onSortChange(column.id)}
+                    >
+                      {column.label}
+                      {sort?.id === column.id
+                        ? sort.direction === "ASC"
+                          ? " ↑"
+                          : " ↓"
+                        : ""}
+                    </button>
+                  ) : (
+                    column.label
+                  )}
                 </th>
               ))}
             </tr>
@@ -98,6 +158,7 @@ export function DataTable<T>({
                   <div className="sicost-empty sicost-empty-state">
                     <Icon name="search" size={26} />
                     <span>{empty}</span>
+                    {emptyAction}
                   </div>
                 </td>
               </tr>

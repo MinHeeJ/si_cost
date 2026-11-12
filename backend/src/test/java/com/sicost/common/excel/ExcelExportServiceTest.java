@@ -145,4 +145,42 @@ class ExcelExportServiceTest {
             assertThat(writer.total).isEqualTo(1_048_576);
         } finally {workbook.dispose();}
     }
+    @Test void projectExportsPreserveLargeTotalsAsDecimalTextAndRepresentableValuesAsNumbers() throws Exception {
+        var columns = List.of(new Column("amount","금액(백만원)",CellType.NUMBER));
+        var spec = new Specification("프로젝트",null,columns,"전체","백만원","UI-01");
+        var output = new ByteArrayOutputStream();
+        try (var download = service.generate(spec,sink -> {
+            sink.accept(List.of(new BigDecimal("1999999999999998.123456")));
+            sink.accept(List.of(new BigDecimal("999999999999999")));
+            sink.accept(List.of(new BigDecimal("0.123456")));
+        },request)) { download.transferTo(output); }
+        try (var book = new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
+            var sheet = book.getSheetAt(0);
+            assertThat(sheet.getRow(0).getCell(0).getStringCellValue()).isEqualTo("금액(백만원)");
+            assertThat(sheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("1999999999999998.123456");
+            assertThat(sheet.getRow(2).getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.NUMERIC);
+            assertThat(sheet.getRow(3).getCell(0).getNumericCellValue()).isEqualTo(0.123456);
+        }
+        verify(logs).append(argThat(e -> e.screenId().equals("UI-01") && e.fileType().equals("프로젝트") && e.count()==3),same(request));
+        verify(transactions,times(2)).commit(any());
+    }
+    @Test void projectTemplatesAndIssueDownloadsUseTheSameAuditBeforeTransfer() throws Exception {
+        var columns = List.of(new Column("id","ID",CellType.TEXT));
+        for (String kind : List.of("프로젝트_등록양식","턴키배분표_등록양식")) {
+            try (var download = service.generateTemplate(new Specification(kind,null,columns,"빈 양식","원","UI-01"),List.of("입력 안내"),request)) {
+                var output = new ByteArrayOutputStream();download.transferTo(output);
+                try (var book = new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
+                    assertThat(book.getSheetAt(0).getLastRowNum()).isZero();
+                    assertThat(book.getSheet("입력안내")).isNotNull();
+                }
+            }
+        }
+        for (String kind : List.of("프로젝트_업로드검사","턴키배분표_업로드검사")) {
+            try (var download = service.generate(new Specification(kind,"123",columns,"검사","원","UI-01"),sink -> sink.accept(List.of("=untrusted")),request)) {
+                assertThat(download.size()).isPositive();
+            }
+            assertThatThrownBy(() -> service.generate(new Specification(kind,null,columns,"검사","원","UI-01"),sink -> {},request)).isInstanceOf(ApiException.class);
+        }
+        verify(logs,times(4)).append(argThat(e -> e.action().equals("DNLD") && e.screenId().equals("UI-01")),same(request));
+    }
 }

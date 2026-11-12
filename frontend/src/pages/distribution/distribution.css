@@ -1,0 +1,99 @@
+.distribution-panel {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  padding: 24px;
+}
+.distribution-toolbar,
+.distribution-actions,
+.distribution-project,
+.distribution-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.distribution-toolbar {
+  justify-content: space-between;
+}
+.distribution-project {
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.distribution-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 8px;
+}
+.distribution-tabs [aria-selected="true"] {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: var(--primary);
+}
+.distribution-matrix {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.distribution-matrix .sicost-table {
+  min-width: max-content;
+  width: 100%;
+}
+.distribution-matrix th,
+.distribution-matrix td {
+  min-width: 100px;
+  white-space: nowrap;
+}
+.distribution-matrix th:nth-child(3),
+.distribution-matrix td:nth-child(3) {
+  min-width: 160px;
+}
+.distribution-matrix th:first-child,
+.distribution-matrix td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.distribution-matrix thead th,
+.distribution-matrix tfoot th,
+.distribution-matrix tfoot td {
+  background: var(--head-bg);
+  font-weight: 600;
+}
+.distribution-matrix tfoot th {
+  text-align: left;
+}
+.distribution-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.distribution-caption {
+  text-align: left;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--text-sub);
+}
+.distribution-help {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.distribution-panel select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+}
+@media (max-width: 767px) {
+  .distribution-panel {
+    padding: 16px;
+  }
+  .distribution-desktop-actions {
+    display: none;
+  }
+}

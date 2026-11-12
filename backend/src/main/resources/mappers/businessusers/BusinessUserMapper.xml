@@ -31,6 +31,11 @@
     SELECT role_id AS "roleId",role_nm AS "name",use_yn AS "useYn" FROM tb_sy_role
     WHERE role_id IN ('PM','SALES_LDR') AND use_yn='Y' ORDER BY role_id
   </select>
+  <select id="lockUser" resultType="string">SELECT pg_advisory_xact_lock(hashtextextended('USER:' || #{userId},0))::text</select>
+  <select id="connectedProjects" resultType="string">
+    SELECT DISTINCT s.proj_id FROM tb_sy_user_scope s
+    WHERE s.user_id=#{userId} AND s.scope_type_cd='PROJ' AND s.proj_id IS NOT NULL ORDER BY s.proj_id
+  </select>
   <insert id="insert">
     INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_chg_dttm,temp_pwd_yn,pwd_err_cnt,user_stat_cd,
       last_login_dttm,mfa_use_yn,mfa_code_hash,mfa_expr_dttm,mfa_err_cnt,reg_user_id,reg_dttm)

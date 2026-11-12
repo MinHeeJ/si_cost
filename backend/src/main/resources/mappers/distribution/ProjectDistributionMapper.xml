@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.distribution.ProjectDistributionMapper">
+  <select id="project" resultType="com.sicost.distribution.ProjectDistributionDtos$Project">
+    SELECT proj_id AS "id",proj_nm AS "name",cust_clnt_id AS "customerId",ctrt_type_cd AS "contractType",
+      CASE WHEN proj_stat_cd='LOSE' THEN 'LOSE' WHEN ctrt_end_dt &lt; #{today} THEN 'END' ELSE proj_stat_cd END AS "status",
+      ctrt_bgn_dt::text AS "startDate",ctrt_end_dt::text AS "endDate",work_plc_addr AS "workplace",feature_cn AS "feature",
+      est_amt::text AS "estimateAmount",orgnl_ctrt_amt::text AS "originalContractAmount",ctrt_amt::text AS "contractAmount",
+      bdgt_amt::text AS "budgetAmount",team_exps_amt::text AS "teamExpenseAmount",proj_exps_amt::text AS "projectExpenseAmount",
+      bdgt_manual_yn AS "budgetManual",lose_dt::text AS "lossDate",lose_rsn_cd AS "lossReason",lose_memo AS "lossMemo",opp_id AS "opportunityId"
+    FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="cells" resultType="com.sicost.distribution.ProjectDistributionDtos$StoredCell">
+    SELECT t.dstrb_step_cd AS "step",t.row_sn::integer AS "rowSn",
+      substring(t.dstrb_ym,1,4)||'-'||substring(t.dstrb_ym,5,2) AS "month",
+      t.row_type_cd AS "rowType",t.dev_id AS "developerId",t.item_nm AS "itemName",t.dstrb_amt AS "amount",
+      d.mng_no AS "managementNo",d.dev_nm AS "name",d.use_yn AS "useYn"
+    FROM tb_pj_tk_dstrb t LEFT JOIN tb_hr_dev d ON d.dev_id=t.dev_id
+    WHERE t.proj_id=#{id} ORDER BY t.dstrb_step_cd,t.row_sn,t.dstrb_ym
+  </select>
+  <select id="jobs" resultType="com.sicost.distribution.ProjectDistributionDtos$Job">
+    SELECT j."developerId",j."name" FROM (
+    SELECT a.dev_id AS "developerId",coalesce(c.code_nm,a.job_cd) AS "name",a.input_bgn_dt AS start_date,a.asgn_id AS assignment_id
+    FROM tb_pj_asgn a
+    LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=a.job_cd
+    WHERE a.proj_id=#{id} AND a.asgn_stat_cd &lt;&gt; 'CNCL'
+    UNION ALL
+    SELECT d.dev_id AS "developerId",coalesce(c.code_nm,d.job_cd) AS "name",NULL::date AS start_date,NULL::varchar AS assignment_id
+    FROM tb_hr_dev d LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=d.job_cd
+    WHERE EXISTS (SELECT 1 FROM tb_pj_tk_dstrb t WHERE t.proj_id=#{id} AND t.dev_id=d.dev_id)
+      AND NOT EXISTS (SELECT 1 FROM tb_pj_asgn a WHERE a.proj_id=#{id} AND a.dev_id=d.dev_id AND a.asgn_stat_cd &lt;&gt; 'CNCL')
+    ) j ORDER BY j.start_date,j.assignment_id,j."developerId"
+  </select>
+  <select id="actuals" resultType="com.sicost.distribution.ProjectDistributionDtos$Actual">
+    SELECT a.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS "name",
+      substring(m.input_ym,1,4)||'-'||substring(m.input_ym,5,2) AS "month",sum(m.mon_mm) AS "mm"
+    FROM tb_pj_asgn a JOIN tb_pj_asgn_mon m
+      ON m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id
+    JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+    WHERE a.proj_id=#{id} AND a.asgn_stat_cd='ACT'
+    GROUP BY a.dev_id,d.mng_no,d.dev_nm,m.input_ym ORDER BY a.dev_id,m.input_ym
+  </select>
+  <select id="uploads" resultType="com.sicost.distribution.ProjectDistributionDtos$UploadRecord">
+    SELECT u.upld_id::bigint AS "uploadId",u.trgt_dstrb_step_cd AS "step",u.file_nm AS "fileName",
+      coalesce(p.user_nm,u.reg_user_id) AS "actor",to_char(u.reg_dttm,'YYYY-MM-DD HH24:MI:SS') AS "registeredAt",
+      u.upld_stat_cd AS "status",to_char(u.aply_dttm,'YYYY-MM-DD HH24:MI:SS') AS "appliedAt"
+    FROM tb_sy_upld u LEFT JOIN tb_sy_user p ON p.user_id=u.reg_user_id
+    WHERE u.trgt_proj_id=#{id} AND u.form_type_cd='B6' AND u.scrn_id='UI-01'
+    ORDER BY u.reg_dttm DESC,u.upld_id DESC
+  </select>
+  <select id="aggregate" resultType="com.sicost.distribution.ProjectDistributionDtos$Aggregate">
+    SELECT row_to_json(p)::text AS "project",
+      (SELECT coalesce(json_agg(x),'[]'::json)::text FROM (SELECT * FROM tb_pj_proj_part WHERE proj_id=#{id} ORDER BY aply_bgn_ym) x) AS "parts",
+      (SELECT coalesce(json_agg(x),'[]'::json)::text FROM (SELECT * FROM tb_pj_mnpw_plan WHERE proj_id=#{id} ORDER BY job_cd) x) AS "plans",
+      (SELECT coalesce(json_agg(x),'[]'::json)::text FROM (SELECT * FROM tb_pj_drct_exps WHERE proj_id=#{id} ORDER BY exps_ym,exps_sn) x) AS "expenses",
+      (SELECT coalesce(json_agg(x),'[]'::json)::text FROM (SELECT * FROM tb_pj_tk_dstrb WHERE proj_id=#{id} ORDER BY dstrb_step_cd,row_sn,dstrb_ym) x) AS "stages",
+      (SELECT coalesce(json_agg(x),'[]'::json)::text FROM (SELECT * FROM tb_sy_user_scope WHERE proj_id=#{id} AND scope_type_cd='PROJ' ORDER BY user_id,scope_sn) x) AS "pm"
+    FROM tb_pj_proj p WHERE p.proj_id=#{id}
+  </select>
+</mapper>

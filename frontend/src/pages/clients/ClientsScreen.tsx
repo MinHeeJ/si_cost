@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ClientForm } from "./ClientForm";
@@ -323,8 +324,11 @@ export function ClientsScreen({
       ),
     },
   ];
+  const sortableColumns = columns.map((c) =>
+    c.id === "account" ? c : { ...c, sortable: true },
+  );
   const visible = columnView
-    ? columns
+    ? sortableColumns
         .filter(
           (column) =>
             column.id === "name" || !columnView.hidden.includes(column.id),
@@ -333,22 +337,7 @@ export function ClientsScreen({
           (a, b) =>
             columnView.order.indexOf(a.id) - columnView.order.indexOf(b.id),
         )
-    : [...columns];
-  if (!mobile)
-    visible.unshift({
-      id: "selection",
-      label: "선택",
-      render: (row) => (
-        <input
-          type="checkbox"
-          aria-label={`${row.name} 선택`}
-          data-testid={`client-select-${row.id}`}
-          checked={selection.items.has(row.id)}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => selection.toggle(row, event.target.checked)}
-        />
-      ),
-    });
+    : [...sortableColumns];
   return (
     <section
       className="clients-screen"
@@ -414,13 +403,13 @@ export function ClientsScreen({
               </button>
             </div>
           </div>
-          <form
-            data-testid="clients-filter-form"
+          <FilterBar
+            testId="clients-filter-form"
             className="clients-filter"
-            onSubmit={(event) => {
-              event.preventDefault();
-              apply();
-            }}
+            resetTestId="clients-reset"
+            searchTestId="clients-search-submit"
+            onSubmit={() => apply()}
+            onReset={() => apply(true)}
           >
             <label className="sicost-field">
               구분
@@ -478,21 +467,7 @@ export function ClientsScreen({
                 }
               />
             </label>
-            <button
-              type="button"
-              data-testid="clients-reset"
-              onClick={() => apply(true)}
-            >
-              초기화
-            </button>
-            <button
-              type="submit"
-              className="sicost-primary"
-              data-testid="clients-search-submit"
-            >
-              조회
-            </button>
-          </form>
+          </FilterBar>
           {notice && (
             <p role="status" className="sicost-banner sicost-tone-info">
               {notice}
@@ -517,49 +492,24 @@ export function ClientsScreen({
             </p>
           )}
           <div className="clients-toolbar">
-            <span>
-              총 {data?.total ?? 0}건 · 기준일 {data?.basisDate ?? "–"}
-            </span>
+            {!mobile && selection.count > 0 ? (
+              <ClientStatusToolbar
+                selection={selection}
+                rows={data?.items ?? []}
+                total={data?.total ?? 0}
+                onCommitted={async () => {
+                  await load();
+                }}
+                onRefresh={async () => {
+                  await load();
+                }}
+              />
+            ) : (
+              <span>
+                총 {data?.total ?? 0}건 · 기준일 {data?.basisDate ?? "–"}
+              </span>
+            )}
             <div className="clients-actions">
-              <label>
-                정렬
-                <select
-                  data-testid="clients-sort"
-                  value={filters.sort}
-                  onChange={(event) =>
-                    setFilters((previous) => ({
-                      ...previous,
-                      sort: event.target.value,
-                      page: 1,
-                    }))
-                  }
-                >
-                  {columns
-                    .filter((column) => column.id !== "account")
-                    .map((column) => (
-                      <option
-                        data-testid={`clients-sort-option-${column.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-                        key={column.id}
-                        value={column.id}
-                      >
-                        {column.label}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                data-testid="clients-direction"
-                onClick={() =>
-                  setFilters((previous) => ({
-                    ...previous,
-                    direction: previous.direction === "ASC" ? "DESC" : "ASC",
-                    page: 1,
-                  }))
-                }
-              >
-                {filters.direction === "ASC" ? "오름차순" : "내림차순"}
-              </button>
               {onColumnsChange && (
                 <button
                   type="button"
@@ -647,6 +597,38 @@ export function ClientsScreen({
               loading={loading}
               dense={dense}
               empty="조회된 거래처가 없습니다."
+              sort={{
+                id: filters.sort ?? "name",
+                direction: filters.direction === "DESC" ? "DESC" : "ASC",
+              }}
+              onSortChange={(id) =>
+                setFilters((previous) => ({
+                  ...previous,
+                  page: 1,
+                  sort: id as ClientFilters["sort"],
+                  direction:
+                    previous.sort === id && previous.direction === "ASC"
+                      ? "DESC"
+                      : "ASC",
+                }))
+              }
+              emptyAction={
+                <button
+                  type="button"
+                  data-testid="clients-empty-reset"
+                  onClick={() => apply(true)}
+                >
+                  조건 초기화
+                </button>
+              }
+              selectedKeys={[...selection.items.keys()]}
+              onSelectionChange={(keys) => {
+                const after = new Set(keys.map(String));
+                (data?.items ?? []).forEach((row) => {
+                  if (after.has(row.id) !== selection.items.has(row.id))
+                    selection.toggle(row, after.has(row.id));
+                });
+              }}
               page={filters.page}
               size={filters.size}
               total={data?.total ?? 0}
@@ -657,28 +639,6 @@ export function ClientsScreen({
                 setFilters((previous) => ({ ...previous, page: 1, size }))
               }
             />
-          )}
-          {!mobile && (
-            <ClientStatusToolbar
-              selection={selection}
-              rows={data?.items ?? []}
-              total={data?.total ?? 0}
-              onCommitted={async () => {
-                await load();
-              }}
-              onRefresh={async () => {
-                await load();
-              }}
-            />
-          )}
-          {!loading && !error && !data?.items.length && (
-            <button
-              type="button"
-              data-testid="clients-empty-reset"
-              onClick={() => apply(true)}
-            >
-              조건 초기화
-            </button>
           )}
         </div>
         {renderParts && (

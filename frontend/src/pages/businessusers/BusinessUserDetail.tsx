@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Dialog } from "../../shared/Dialog";
+import { UserProjectsPanel } from "../businessusersops/UserProjectsPanel";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -76,15 +78,27 @@ export function BusinessUserDetail({
   id,
   onClose,
   onEdit,
+  onDirtyChange,
 }: {
   id: string;
   onClose(): void;
   onEdit(user: api.BusinessUser): void;
+  onDirtyChange?(dirty: boolean): void;
 }) {
   const [user, setUser] = useState<api.BusinessUser>(),
     [error, setError] = useState<unknown>(),
     [refresh, setRefresh] = useState(0);
   const [tab, setTab] = useState<"basic" | "history">("basic");
+  const [dirty, setDirty] = useState(false);
+  const [leaving, setLeaving] = useState<"close" | "edit">();
+  const reportDirty = useCallback(
+    (value: boolean) => {
+      setDirty(value);
+      onDirtyChange?.(value);
+    },
+    [onDirtyChange],
+  );
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
   useEffect(() => {
     let active = true;
     setUser(undefined);
@@ -108,14 +122,14 @@ export function BusinessUserDetail({
       subtitle={user?.userId}
       testId="business-user-drawer"
       closeTestId="business-user-drawer-close"
-      onClose={onClose}
+      onClose={() => (dirty ? setLeaving("close") : onClose())}
       actions={
         user ? (
           <button
             type="button"
             className="sicost-primary"
             data-testid="business-user-edit"
-            onClick={() => onEdit(user)}
+            onClick={() => (dirty ? setLeaving("edit") : onEdit(user))}
           >
             수정
           </button>
@@ -205,6 +219,27 @@ export function BusinessUserDetail({
           </dl>
         )}
         {user && tab === "history" && <BusinessUserHistory id={user.userId} />}
+        {user && (
+          <UserProjectsPanel
+            key={user.userId}
+            user={user}
+            onDirtyChange={reportDirty}
+          />
+        )}
+        <Dialog
+          open={Boolean(leaving)}
+          title="사용자 상세 나가기"
+          onCancel={() => setLeaving(undefined)}
+          cancelLabel="계속 작성"
+          confirmLabel="나가기"
+          onConfirm={() => {
+            reportDirty(false);
+            if (leaving === "edit" && user) onEdit(user);
+            else onClose();
+          }}
+        >
+          <p>저장하지 않은 내용이 있습니다.</p>
+        </Dialog>
       </div>
     </DetailDrawer>
   );

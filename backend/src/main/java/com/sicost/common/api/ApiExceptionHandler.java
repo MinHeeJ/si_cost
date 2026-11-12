@@ -16,9 +16,14 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> mediaType(org.springframework.web.HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        return error(415, "UNSUPPORTED_MEDIA_TYPE", "요청 콘텐츠 형식을 확인해 주세요.", null, null, request);
+    }
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiError> uploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException e, HttpServletRequest request) {
-        if (java.util.Set.of("/api/excel/B7/validate", "/api/excel/B7/apply", "/api/excel/B8/validate", "/api/excel/B8/apply").contains(request.getRequestURI()))
+        if (java.util.Set.of("/api/excel/B7/validate", "/api/excel/B7/apply", "/api/excel/B8/validate", "/api/excel/B8/apply",
+                "/api/excel/B9/validate", "/api/excel/B9/apply", "/api/excel/B6/validate", "/api/excel/B6/apply").contains(request.getRequestURI()))
             return error(413, "FILE_TOO_LARGE", "파일은 10MiB 이하로 선택해 주세요.", "file", null, request);
         return unexpected(e, request);
     }

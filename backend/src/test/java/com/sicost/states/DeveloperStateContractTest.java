@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({DeveloperStateService.class,DeveloperStateRepository.class,DeveloperAggregateRevision.class,RevisionService.class,
     ChangeHistoryWriter.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
 class DeveloperStateContractTest {
-    static final String ID="DEV-000901",URL="/api/developers/"+ID+"/states";
+    static final String ID="DEV-000901",URL="/api/developers/DEV-000901/states";
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired DeveloperAggregateRevision revisions;
@@ -72,10 +72,34 @@ class DeveloperStateContractTest {
     ObjectNode command(String state,String start){return json.createObjectNode().put("state",state).put("startDate",start).put("expectedRevision",revision());}
     ObjectNode end(String date){ObjectNode b=json.createObjectNode().put("expectedRevision",revision());if(date==null)b.putNull("endDate");else b.put("endDate",date);return b;}
     ObjectNode cancel(){return json.createObjectNode().put("reason","취소 사유").put("expectedRevision",revision());}
-    ResultActions create(ObjectNode b)throws Exception{return mvc.perform(post(URL).contentType("application/json").content(b.toString()));}
-    ResultActions patch(ObjectNode b)throws Exception{return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(URL+"/1/end").contentType("application/json").content(b.toString()));}
-    ResultActions cancel(int sn,ObjectNode b)throws Exception{return mvc.perform(post(URL+"/"+sn+"/cancel").contentType("application/json").content(b.toString()));}
+    ResultActions create(ObjectNode b)throws Exception{return mvc.perform(post("/api/developers/DEV-000901/states").contentType("application/json").content(b.toString()));}
+    ResultActions patch(ObjectNode b)throws Exception{return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/developers/DEV-000901/states/1/end").contentType("application/json").content(b.toString()));}
+    ResultActions cancel(int sn,ObjectNode b)throws Exception{return mvc.perform(post("/api/developers/DEV-000901/states/{sn}/cancel",sn).contentType("application/json").content(b.toString()));}
     void noWrites(){verify(mapper,never()).insert(any());verify(mapper,never()).update(any());verify(mapper,never()).updateDeveloper(any());verify(mapper,never()).delete(anyString(),anyInt());verifyNoInteractions(history);}
+    @Test void createWithoutAuthCommitsLeaveAndServerActor() throws Exception {
+        mvc.perform(post("/api/developers/DEV-000901/states").contentType("application/json")
+            .content(command("LEAVE","2026-06-15").putNull("endDate").toString()))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.sn").value(1)).andExpect(jsonPath("$.data.warnings").isArray());
+        assertThat(rows).singleElement().satisfies(r->{assertThat(r.state()).isEqualTo("LEAVE");assertThat(r.regUserId()).isEqualTo("admin");});
+        verify(manager).commit(any());verify(history).insert(argThat(e->e.type().equals("NEW")));
+    }
+    @Test void patchWithoutAuthCommitsLeaveEndAndAudit() throws Exception {
+        leave(null);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/developers/DEV-000901/states/1/end")
+            .contentType("application/json").content(end("2026-06-20").toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.changed").value(true));
+        assertThat(rows.get(0).endDate()).isEqualTo(LocalDate.parse("2026-06-20"));
+        verify(manager).commit(any());verify(history).insert(argThat(e->e.item().equals("END_DT")&&e.type().equals("UPD")));
+    }
+    @Test void cancelWithoutAuthDeletesOnlyWorkAndRestoresNullLeaveEnd() throws Exception {
+        leave("2026-06-14");rows.add(row(2,"WORK","2026-06-15",null,1,null));greatest=2;
+        mvc.perform(post("/api/developers/DEV-000901/states/2/cancel").contentType("application/json").content(cancel().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.changed").value(true));
+        assertThat(rows).singleElement().satisfies(r->{assertThat(r.sn()).isEqualTo(1);assertThat(r.endDate()).isNull();});
+        verify(mapper).delete(ID,2);verify(manager).commit(any());
+        verify(history).insert(argThat(e->e.item().equals("재직 취소")&&e.type().equals("UPD")));
+    }
     @Test void getPublicSortedHistoryAndDisplayOnlyHireDate()throws Exception {
         leave(null);rows.add(row(2,"LEAVE","2026-08-01","2026-08-10",null,null));
         mvc.perform(get(URL)).andExpect(status().isOk()).andExpect(jsonPath("$.data.hireDate").value("2026-01-01"))

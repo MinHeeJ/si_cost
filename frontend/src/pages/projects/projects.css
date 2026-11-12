@@ -1,0 +1,128 @@
+.projects-screen {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.project-toolbar,
+.project-actions,
+.project-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.project-toolbar {
+  justify-content: space-between;
+}
+.project-search {
+  flex: 1;
+  min-width: 180px;
+}
+.project-unassigned {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.project-unassigned span {
+  flex: 1;
+}
+.project-link {
+  border: 0;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+}
+.project-link {
+  color: var(--primary);
+}
+.project-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 32px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 0 0 24px;
+}
+.project-form-grid legend {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 8px;
+}
+.project-form-grid p,
+.project-help {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.project-wide {
+  grid-column: 1 / -1;
+}
+.project-info {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 16px 12px;
+  margin: 20px 0;
+}
+.project-info dt {
+  color: var(--text-sub);
+}
+.project-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.project-tabs {
+  border-bottom: 1px solid var(--divider);
+  padding-bottom: 8px;
+  margin-bottom: 20px;
+}
+.project-tabs [aria-selected="true"] {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+.project-timeline {
+  border-left: 2px solid var(--divider);
+  padding-left: 20px;
+  margin: 16px 0 24px;
+}
+.project-timeline li {
+  padding: 8px 0;
+}
+.project-cards {
+  display: grid;
+  gap: 12px;
+}
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  padding: 16px;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+}
+.projects-screen details {
+  max-width: 320px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .project-form-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .project-wide {
+    grid-column: auto;
+  }
+  .project-info {
+    grid-template-columns: 100px 1fr;
+  }
+  .project-tabs {
+    align-items: stretch;
+  }
+}
+.project-search input {
+  min-width: 220px;
+}

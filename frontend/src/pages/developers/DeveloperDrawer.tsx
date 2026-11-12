@@ -9,7 +9,11 @@ import { DeveloperStatesPanel } from "../states/DeveloperStatesPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { priceHelp } from "./DeveloperForm";
 import * as api from "./peopleClient";
-import { getSalesPartOptions, type PartOption } from "../salespartsops/partStandardsApi";
+import { DeveloperSingleStatus } from "../developersops/DeveloperStatusToolbar";
+import {
+  getSalesPartOptions,
+  type PartOption,
+} from "../salespartsops/partStandardsApi";
 
 const won = (value: string | null | undefined) =>
   value == null ? value : value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -39,7 +43,9 @@ export function DeveloperDrawer({
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [parts, setParts] = useState<PartOption[]>([]);
-  const [positions, setPositions] = useState<{ code: string; name: string }[]>([]);
+  const [positions, setPositions] = useState<{ code: string; name: string }[]>(
+    [],
+  );
   useEffect(() => {
     let current = true;
     void Promise.resolve()
@@ -90,13 +96,31 @@ export function DeveloperDrawer({
       onClose={() => navigate(onClose)}
       actions={
         data && (
-          <button
-            type="button"
-            data-testid="developer-edit-button"
-            onClick={() => navigate(() => onEdit(data))}
-          >
-            수정
-          </button>
+          <>
+            <DeveloperSingleStatus
+              row={{
+                id: data.id,
+                revision: data.revision,
+                name: data.name,
+                useYn: data.useYn,
+              }}
+              onCommitted={async () => {
+                await onChanged?.();
+                await load();
+              }}
+              onRefresh={async () => {
+                await onChanged?.();
+                await load();
+              }}
+            />
+            <button
+              type="button"
+              data-testid="developer-edit-button"
+              onClick={() => navigate(() => onEdit(data))}
+            >
+              수정
+            </button>
+          </>
         )
       }
     >
@@ -143,10 +167,13 @@ export function DeveloperDrawer({
                     "주 직무": data.job,
                     등급: data.grade,
                     직위: data.positionCode
-                      ? (positions.find((c) => c.code === data.positionCode)?.name ?? label("JBPS", data.positionCode))
+                      ? (positions.find((c) => c.code === data.positionCode)
+                          ?.name ?? label("JBPS", data.positionCode))
                       : null,
                     "직접/간접": label("DRCT_CLS", data.directClass),
-                    "영업 파트": parts.find((p) => p.id === data.partId)?.name ?? data.partId,
+                    "영업 파트":
+                      parts.find((p) => p.id === data.partId)?.name ??
+                      data.partId,
                     입사일: data.hireDate,
                     "근무 상태": label("WORK_STAT", data.status),
                     "사용 여부": data.useYn === "Y" ? "사용" : "중지",

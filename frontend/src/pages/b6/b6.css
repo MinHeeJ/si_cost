@@ -1,0 +1,56 @@
+.b6-distribution {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.b6-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.b6-toolbar h2 {
+  margin: 0 auto 0 0;
+  font-size: 20px;
+}
+.b6-project-info,
+.b6-upload-context {
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.b6-project-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.b6-toolbar [aria-selected="true"] {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: var(--primary);
+}
+.b6-matrix {
+  min-width: 0;
+  overflow-x: auto;
+}
+.b6-matrix table {
+  white-space: nowrap;
+}
+.b6-month-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px;
+  background: var(--head-bg);
+  font-variant-numeric: tabular-nums;
+}
+.b6-comparison {
+  display: grid;
+  gap: 8px;
+}
+.b6-upload-context select {
+  min-height: 36px;
+  width: min(352px, 100%);
+}

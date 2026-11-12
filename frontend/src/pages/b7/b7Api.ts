@@ -18,6 +18,7 @@ export type UploadIssue = {
   columnName: string;
   inputValue: string;
   reason: string;
+  candidates?: { id: string; name: string; businessNo: string | null }[];
 };
 export type UploadIssuesPage = {
   items: UploadIssue[];

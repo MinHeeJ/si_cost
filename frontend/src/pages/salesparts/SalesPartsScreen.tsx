@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
 import { DetailDrawer } from "../../shared/DetailDrawer";
@@ -177,19 +178,8 @@ export function SalesPartsScreen({
     formatDecimal(api.salesPartAmount(value, amountUnit));
   const columns: Column<api.SalesPart>[] = ids.map((id, index) => ({
     id,
-    label:
-      id === "scheduledChange" ? (
-        labels[index]
-      ) : (
-        <button
-          data-testid={`sales-part-sort-${id.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
-          className="sales-part-sort"
-          onClick={() => sort(id)}
-        >
-          {labels[index]}
-          {query.sort === id ? (query.direction === "ASC" ? " ↑" : " ↓") : ""}
-        </button>
-      ),
+    label: labels[index],
+    sortable: id !== "scheduledChange",
     render: (row) => {
       const current = row.currentStandard;
       switch (id) {
@@ -282,12 +272,33 @@ export function SalesPartsScreen({
       <p className="sicost-banner sicost-tone-info">
         기준은 적용 시작월부터 사용하며 지난 정산은 유지됩니다.
       </p>
-      <form
+      <FilterBar
         className="sales-part-filters"
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply();
-        }}
+        resetTestId="sales-part-reset-button"
+        searchTestId="sales-part-search-button"
+        onSubmit={() => apply()}
+        onReset={() => apply(true)}
+        extra={
+          !mobile && (
+          <button
+            data-testid="sales-part-export-button"
+            type="button"
+            disabled={downloading}
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                await api.downloadSalesParts(query, amountUnit);
+              } catch (reason) {
+                setError(reason);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+          >
+            엑셀 다운로드
+          </button>
+          )
+        }
       >
         <Text
           label="파트명 검색"
@@ -308,36 +319,7 @@ export function SalesPartsScreen({
             <option value="">전체</option>
           </select>
         </label>
-        <button data-testid="sales-part-search-button" type="submit">
-          조회
-        </button>
-        <button
-          data-testid="sales-part-reset-button"
-          type="button"
-          onClick={() => apply(true)}
-        >
-          초기화
-        </button>
-        {!mobile && (
-          <button
-            data-testid="sales-part-export-button"
-            type="button"
-            disabled={downloading}
-            onClick={async () => {
-              setDownloading(true);
-              try {
-                await api.downloadSalesParts(query, amountUnit);
-              } catch (reason) {
-                setError(reason);
-              } finally {
-                setDownloading(false);
-              }
-            }}
-          >
-            엑셀 다운로드
-          </button>
-        )}
-      </form>
+      </FilterBar>
       {notice && (
         <p role="status" className="sicost-banner sicost-tone-info">
           {notice}
@@ -417,15 +399,20 @@ export function SalesPartsScreen({
           onSizeChange={(size) =>
             setQuery((old) => ({ ...old, size, page: 1 }))
           }
+          sort={{
+            id: query.sort ?? "name",
+            direction: query.direction === "DESC" ? "DESC" : "ASC",
+          }}
+          onSortChange={sort}
+          emptyAction={
+            <button
+              data-testid="sales-part-empty-reset"
+              onClick={() => apply(true)}
+            >
+              조건 초기화
+            </button>
+          }
         />
-      )}
-      {!loading && !error && data?.total === 0 && (
-        <button
-          data-testid="sales-part-empty-reset"
-          onClick={() => apply(true)}
-        >
-          조건 초기화
-        </button>
       )}
       {creating && (
         <SalesPartCreateDialog

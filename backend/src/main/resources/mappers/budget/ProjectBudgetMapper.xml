@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.budget.ProjectBudgetMapper">
+  <select id="find" resultType="com.sicost.budget.ProjectBudgetDtos$Stored">
+    SELECT proj_id AS "id",ctrt_type_cd AS "contractType",proj_stat_cd AS "status",ctrt_end_dt AS "endDate",
+      ctrt_amt AS "contractAmount",bdgt_amt AS "budgetAmount",bdgt_manual_yn AS "budgetManual"
+    FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT json_build_object(
+      'project',row_to_json(p),
+      'parts',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.aply_bgn_ym) FROM tb_pj_proj_part r WHERE r.proj_id=p.proj_id),'[]'::json),
+      'plans',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.job_cd) FROM tb_pj_mnpw_plan r WHERE r.proj_id=p.proj_id),'[]'::json),
+      'expenses',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.exps_ym,r.exps_sn) FROM tb_pj_drct_exps r WHERE r.proj_id=p.proj_id),'[]'::json),
+      'distribution',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.dstrb_step_cd,r.row_sn,r.dstrb_ym) FROM tb_pj_tk_dstrb r WHERE r.proj_id=p.proj_id),'[]'::json),
+      'pm',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.user_id,r.scope_sn) FROM tb_sy_user_scope r WHERE r.proj_id=p.proj_id AND r.scope_type_cd='PROJ'),'[]'::json)
+    )::text FROM tb_pj_proj p WHERE p.proj_id=#{id}
+  </select>
+  <select id="operatingValue" resultType="java.math.BigDecimal">
+    SELECT std_val FROM tb_sy_oper_std WHERE std_cd=#{key} AND aply_bgn_ym &lt;= #{month}
+    ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="greatestHistorySn" resultType="int">
+    SELECT COALESCE(max(hist_sn),0) FROM tb_pj_proj_chg WHERE proj_id=#{id}
+  </select>
+  <update id="update">
+    UPDATE tb_pj_proj SET bdgt_amt=#{amount},bdgt_manual_yn='Y',mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{id}
+  </update>
+  <insert id="insertHistory">
+    INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm)
+    VALUES(#{id},#{historySn},'BUDGET','예산',#{before},#{after},CAST(#{now} AS date),#{actor},#{now})
+  </insert>
+</mapper>

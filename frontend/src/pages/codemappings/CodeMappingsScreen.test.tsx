@@ -187,7 +187,7 @@ describe("엑셀 표기 대응", () => {
   it("선택 삭제는 확인 후 조회 revision으로 제출하고 성공 후 재조회한다", async () => {
     render(<CodeMappingsScreen />);
     await screen.findByText("독립 표기");
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getAllByRole("checkbox")[1]);
     await userEvent.click(screen.getByRole("button", { name: "선택 삭제" }));
     expect(api.deleteCodeMappings).not.toHaveBeenCalled();
     const dialog = screen.getByRole("dialog");
@@ -211,7 +211,7 @@ describe("엑셀 표기 대응", () => {
     );
     render(<CodeMappingsScreen />);
     await screen.findByText("독립 표기");
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getAllByRole("checkbox")[1]);
     await userEvent.click(screen.getByRole("button", { name: "선택 삭제" }));
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
@@ -219,7 +219,7 @@ describe("엑셀 표기 대응", () => {
       }),
     );
     await screen.findByText("다른 사용자가 변경했습니다.");
-    expect(screen.getByRole("checkbox")).toBeChecked();
+    expect(screen.getAllByRole("checkbox")[1]).toBeChecked();
     expect(api.deleteCodeMappings).toHaveBeenCalledTimes(1);
   });
   it("pending 중 중복삭제와 취소를 막는다", async () => {
@@ -231,7 +231,7 @@ describe("엑셀 표기 대응", () => {
     );
     render(<CodeMappingsScreen />);
     await screen.findByText("독립 표기");
-    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getAllByRole("checkbox")[1]);
     await userEvent.click(screen.getByRole("button", { name: "선택 삭제" }));
     const dialog = screen.getByRole("dialog"),
       button = within(dialog).getByRole("button", { name: "삭제 확인" });

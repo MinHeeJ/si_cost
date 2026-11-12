@@ -351,7 +351,7 @@ it("열 순서·필수열과 밀도·헤더 정렬을 유지한다", async () =>
     screen.queryByRole("columnheader", { name: "이메일" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("table")).toHaveClass("sicost-dense");
-  await userEvent.click(screen.getByRole("button", { name: "이름 정렬" }));
+  await userEvent.click(screen.getByTestId("sort-name"));
   await waitFor(() =>
     expect(api.getBusinessUsers).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "name", direction: "DESC", page: 1 }),

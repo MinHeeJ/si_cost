@@ -20,6 +20,7 @@ export function FavoriteButton({ screenId }: { screenId: string }) {
   return (
     <>
       <button
+        data-testid={`favorite-toggle-${screenId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
         type="button"
         className={`me-star${selected ? " me-star-selected" : ""}`}
         aria-label={selected ? "즐겨찾기 해제" : "즐겨찾기 추가"}
@@ -68,10 +69,11 @@ export function PreferenceQuickLinks({
     });
   if (collapsed) return null;
   return (
-    <section className="me-quick-links">
+    <section data-testid="preference-quick-links" className="me-quick-links">
       <div className="me-quick-caption">
         <span>☆ 즐겨찾기</span>
         <button
+          data-testid="favorite-edit-button"
           type="button"
           disabled={p.loading || p.pending}
           onClick={() => setEditing(true)}
@@ -85,6 +87,7 @@ export function PreferenceQuickLinks({
         <>
           {visible(favorites).map((m) => (
             <button
+              data-testid={`favorite-quick-link-${m.screenId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
               type="button"
               className="me-quick-link"
               key={m.screenId}
@@ -99,6 +102,7 @@ export function PreferenceQuickLinks({
           <p className="me-quick-caption">최근 본 화면</p>
           {visible(recent).map((m) => (
             <button
+              data-testid={`recent-quick-link-${m.screenId.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
               type="button"
               className="me-quick-link"
               key={m.screenId}
@@ -116,6 +120,7 @@ export function PreferenceQuickLinks({
         <div role="alert">
           설정을 불러오지 못했습니다.
           <button
+            data-testid="preference-quick-links-retry-button"
             type="button"
             onClick={() => void p.refresh().catch(() => {})}
           >
@@ -182,9 +187,14 @@ export function FavoritePreferences({
           const menu = menus.find((m) => m.screenId === id);
           if (!menu || (mobile && menu.pcOnly)) return null;
           return (
-            <div key={id} className="me-favorite-row">
+            <div
+              data-testid={`favorite-row-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+              key={id}
+              className="me-favorite-row"
+            >
               <span>{menu.name}</span>
               <button
+                data-testid={`favorite-move-up-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                 type="button"
                 disabled={p.pending || index === 0}
                 aria-label={`${menu.name} 위로`}
@@ -193,6 +203,7 @@ export function FavoritePreferences({
                 ▲
               </button>
               <button
+                data-testid={`favorite-move-down-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                 type="button"
                 disabled={p.pending || index === (draft ?? ids).length - 1}
                 aria-label={`${menu.name} 아래로`}
@@ -201,6 +212,7 @@ export function FavoritePreferences({
                 ▼
               </button>
               <button
+                data-testid={`favorite-remove-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
                 type="button"
                 disabled={p.pending}
                 onClick={() =>
@@ -221,6 +233,7 @@ export function FavoritePreferences({
               {error}
             </p>
             <button
+              data-testid="favorite-save-retry-button"
               type="button"
               disabled={p.pending}
               onClick={() => draft && void save(draft)}

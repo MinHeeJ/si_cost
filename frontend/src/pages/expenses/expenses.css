@@ -1,0 +1,66 @@
+.project-expenses {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 16px;
+}
+.project-expenses-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.project-expenses-help {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.project-expenses .sicost-table-viewport {
+  max-height: 242px;
+  overflow: auto;
+}
+.project-expenses .sicost-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--head-bg);
+}
+.project-expenses .sicost-table td {
+  height: 40px;
+}
+.project-expenses .sicost-table td[data-column="memo"] {
+  max-width: 250px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.project-expenses .sicost-table td button {
+  height: 28px;
+  font-size: 13px;
+  color: var(--bad);
+}
+.project-expenses-total {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.project-expenses-form {
+  display: grid;
+  gap: 16px;
+}
+.project-expenses-form textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 8px 10px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+.project-expenses-form textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+@media (max-width: 767px) {
+  .project-expenses .sicost-table {
+    min-width: 520px;
+  }
+}

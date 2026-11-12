@@ -13,6 +13,8 @@ public class BusinessUserRepository {
     public Stored find(String id,boolean lock) {return mapper.find(id,lock);}
     public List<Role> roles(String id) {return mapper.roles(id);}
     public List<Role> availableRoles() {return mapper.availableRoles();}
+    public void lockUser(String id) {mapper.lockUser(id);}
+    public List<String> connectedProjects(String id) {return mapper.connectedProjects(id);}
     public int insert(NewUser user) {return mapper.insert(user);}
     public int update(Mutation mutation) {return mapper.update(mutation);}
     public int link(RoleLink link) {return mapper.link(link);}

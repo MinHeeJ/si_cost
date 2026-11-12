@@ -104,4 +104,37 @@ class ChangeHistoryWriterTest {
         writer.append(new ChangeHistoryWriter.Change("TB_SY_CODE","A:B","UPD","CODE_NM","같음","같음",null));
         verifyNoInteractions(mapper,users);
     }
+    @Test void projectPlanExpenseScopeAndUploadReceiptsUseExistingAudit() {
+        when(users.userId()).thenReturn("admin");
+        for (String table : new String[]{"TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_SY_UPLD"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"P-1000:202601:1","NEW","등록",null,"원래 값",null));
+        }
+        verify(mapper,times(5)).insert(argThat(entry -> entry.userId().equals("admin") && entry.after().equals("원래 값")));
+    }
+    @Test void expenseAndScopeDeletionIsAuditedButProjectPlanUploadDeletionIsForbidden() {
+        when(users.userId()).thenReturn("admin");
+        for (String table : new String[]{"TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"P-1000:202601:1","DEL","삭제","원래 값",null,null));
+        }
+        for (String table : new String[]{"TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_SY_UPLD"}) {
+            assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change(table,"P-1000","DEL","삭제","값",null,null))).isInstanceOf(ApiException.class);
+        }
+        verify(mapper,times(2)).insert(argThat(entry -> entry.type().equals("DEL")));
+    }
+    @Test void immutableUploadContextAndOriginalProjectResultRemainExactJson() {
+        when(users.userId()).thenReturn("admin");
+        String context = "{\"year\":2026,\"contentSha256\":\"" + "a".repeat(64) + "\"}";
+        writer.append(new ChangeHistoryWriter.Change("TB_SY_UPLD","123","NEW","검증 문맥",null,context,"B9"));
+        String original = "{\"id\":\"P-1000\",\"name\":\"등록 이름\"}";
+        writer.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ","P-1000","NEW","등록",null,original,"B9 업로드:123;행:2"));
+        verify(mapper).insert(argThat(entry -> entry.tableName().equals("TB_SY_UPLD") && entry.after().equals(context) && entry.reason().equals("B9")));
+        verify(mapper).insert(argThat(entry -> entry.tableName().equals("TB_PJ_PROJ") && entry.after().equals(original) && entry.reason().equals("B9 업로드:123;행:2")));
+    }
+    @Test void projectNoOpAndFailedHistoryNeverProduceFalseSuccess() {
+        writer.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ","P-1000","UPD","예산","0","0",null));
+        verifyNoInteractions(mapper,users);
+        when(users.userId()).thenReturn("admin");
+        doThrow(new IllegalStateException("history failed")).when(mapper).insert(any());
+        assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ","P-1000","UPD","예산 수동","N","Y",null))).isInstanceOf(IllegalStateException.class);
+    }
 }

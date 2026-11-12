@@ -56,6 +56,18 @@ class DeveloperImportContractTest {
         when(mapper.lockUpload(1)).thenReturn(upload("CHECKED"));
     }
     private Upload upload(String status){return new Upload(1,"B8","UI-02",file.getOriginalFilename(),file.getSize(),"admin",status,1,1,0,0,LocalDateTime.of(2026,6,15,9,0));}
+    @Test void validateRejectsJsonBeforeUploadOrBusinessWrites() throws Exception {
+        mvc.perform(post("/api/excel/B8/validate").contentType("application/json").content("{}"))
+            .andExpect(status().isUnsupportedMediaType()).andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE")).andExpect(jsonPath("$.requestId").isString());
+        verifyNoInteractions(mapper,ids,history,transactions);
+    }
+    @Test void applyRejectsJsonBeforeUploadOrBusinessWrites() throws Exception {
+        mvc.perform(post("/api/excel/B8/apply").contentType("application/json").content("{}"))
+            .andExpect(status().isUnsupportedMediaType()).andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE")).andExpect(jsonPath("$.requestId").isString());
+        verifyNoInteractions(mapper,ids,history,transactions);
+    }
     @Test void publicTemplateIsActual17ColumnWorkbookGuideTextStylesLastInfoAndDnld() throws Exception {
         var r=mvc.perform(get("/api/excel/B8/template")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn();
         assertThat(r.getResponse().getHeader("Content-Disposition")).contains("20260615_090000.xlsx");

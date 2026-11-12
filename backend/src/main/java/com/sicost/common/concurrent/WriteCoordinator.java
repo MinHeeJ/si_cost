@@ -22,6 +22,22 @@ public class WriteCoordinator {
     }
     public record WriteResult(boolean changed, String revision, String message) {}
 
+    public WriteResult create(Collection<String> aggregateKeys, Supplier<?> storedSnapshot,
+                              Runnable validateDomain, Runnable dataAndHistory) {
+        var keys = aggregateKeys.stream().distinct().sorted().toList();
+        if (keys.isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
+        return transactions.execute(status -> {
+            keys.forEach(locks::lock);
+            validateDomain.run();
+            dataAndHistory.run();
+            Object snapshot = storedSnapshot.get();
+            if (snapshot == null) throw new IllegalStateException("생성된 집합을 조회하지 못했습니다.");
+            String revision = revisions.revision(snapshot);
+            keys.forEach(invalidation::afterCommit);
+            return new WriteResult(true, revision, null);
+        });
+    }
+
     public WriteResult write(Collection<String> aggregateKeys, String expectedRevision,
                               Supplier<?> lockedSnapshot, Runnable validateDomain,
                               BooleanSupplier hasActualChanges, Runnable dataAndHistory) {

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.pm.ProjectPmMapper">
+  <select id="find" resultType="com.sicost.pm.ProjectPmDtos$ProjectSource" flushCache="true" useCache="false">
+    SELECT proj_id AS "id",proj_stat_cd AS "status",ctrt_end_dt AS "endDate" FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="scopes" resultType="com.sicost.pm.ProjectPmDtos$Scope" flushCache="true" useCache="false">
+    SELECT s.user_id AS "userId",s.scope_sn AS "scopeSn",s.proj_id AS "projectId",u.user_nm AS "name"
+    FROM tb_sy_user_scope s JOIN tb_sy_user u ON u.user_id=s.user_id
+    WHERE s.proj_id=#{id} AND s.scope_type_cd='PROJ' ORDER BY s.user_id,s.scope_sn
+  </select>
+  <select id="eligible" resultType="boolean" flushCache="true" useCache="false">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_user u JOIN tb_sy_user_role ur ON ur.user_id=u.user_id
+      JOIN tb_sy_role r ON r.role_id=ur.role_id
+      WHERE u.user_id=#{userId} AND u.user_stat_cd='USE' AND r.role_id='PM' AND r.use_yn='Y')
+  </select>
+  <select id="greatestScopeSn" resultType="int">
+    SELECT COALESCE(max(scope_sn),0) FROM tb_sy_user_scope WHERE user_id=#{userId}
+  </select>
+  <insert id="insertScope">
+    INSERT INTO tb_sy_user_scope(user_id,scope_sn,scope_type_cd,part_id,proj_id,reg_user_id,reg_dttm)
+    VALUES(#{userId},#{scopeSn},'PROJ',NULL,#{projectId},#{actor},#{now})
+  </insert>
+  <delete id="deleteScope">
+    DELETE FROM tb_sy_user_scope WHERE user_id=#{userId} AND scope_sn=#{scopeSn} AND scope_type_cd='PROJ' AND proj_id=#{projectId}
+  </delete>
+  <insert id="insertHistory">
+    INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm)
+    VALUES(#{projectId},#{historySn},'ETC','PM',#{before},#{after},CAST(#{now} AS date),#{actor},#{now})
+  </insert>
+</mapper>

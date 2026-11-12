@@ -491,3 +491,88 @@ it("상세 닫기는 목록 검색조건을 유지", async () => {
   expect(screen.getByTestId("developer-search-input")).toHaveValue("검증");
   expect(window.scrollTo).toHaveBeenCalled();
 });
+
+it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 정렬 줄은 없다", async () => {
+  render(<DeveloperPoolScreen />);
+  await screen.findByText(developer.name);
+  expect(screen.queryByTestId("developer-sort-select")).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("developer-sort-direction"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByTestId("sort-name")).toHaveTextContent("이름");
+  expect(
+    screen.getByRole("columnheader", { name: /이름/ }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await userEvent.click(screen.getByTestId("sort-monthlyRate"));
+  await waitFor(() =>
+    expect(api.getDevelopers).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sort: "monthlyRate",
+        direction: "ASC",
+        page: 1,
+      }),
+    ),
+  );
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
+    "월 단가 ↑",
+  );
+  await userEvent.click(screen.getByTestId("sort-monthlyRate"));
+  await waitFor(() =>
+    expect(api.getDevelopers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: "monthlyRate", direction: "DESC" }),
+    ),
+  );
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
+    "월 단가 ↓",
+  );
+  expect(
+    screen.queryByTestId("developer-sort-current-projects"),
+  ).not.toBeInTheDocument();
+});
+it("이름 열은 기본이 오름차순이라 처음 누르면 내림차순이 된다", async () => {
+  render(<DeveloperPoolScreen />);
+  await screen.findByText(developer.name);
+  await userEvent.click(screen.getByTestId("sort-name"));
+  await waitFor(() =>
+    expect(api.getDevelopers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: "name", direction: "DESC" }),
+    ),
+  );
+  expect(screen.getByTestId("sort-name")).toHaveTextContent("이름 ↓");
+});
+it("행 체크박스·선택 도구 줄이 있고, 조회된 N건 모두 선택은 page·size 없이 조건만 보낸다", async () => {
+  render(<DeveloperPoolScreen />);
+  await screen.findByText(developer.name);
+  expect(
+    screen.queryByTestId("developer-status-toolbar"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/^총 \d+건$/)).toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("checkbox", { name: `${developer.id} 선택` }),
+  );
+  expect(screen.getByTestId("developer-status-toolbar")).toBeInTheDocument();
+  expect(screen.queryByText(/^총 \d+건$/)).not.toBeInTheDocument();
+  expect(screen.getByText("선택 1건")).toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("developer-select-all"));
+  const fetch = vi.mocked(globalThis.fetch);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([url]) =>
+        String(url).includes("/api/developers/selection"),
+      ),
+    ).toBe(true),
+  );
+  const url = String(
+    fetch.mock.calls.find(([u]) =>
+      String(u).includes("/api/developers/selection"),
+    )![0],
+  );
+  expect(url).not.toMatch(/page=|size=/);
+});
+it("상세에서 단건 사용 중지·다시 사용을 할 수 있다", async () => {
+  render(
+    <DeveloperDrawer id={developer.id} onClose={vi.fn()} onEdit={vi.fn()} />,
+  );
+  await screen.findByText("검증개발자");
+  expect(screen.getByRole("button", { name: "사용 중지" })).toBeInTheDocument();
+});

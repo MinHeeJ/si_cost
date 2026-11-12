@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.projects.ProjectMapper">
+  <sql id="source">
+    WITH source AS (
+      SELECT p.*,c.clnt_nm AS customer_name,cp.part_id,b.part_nm AS part_name,
+        CASE WHEN p.proj_stat_cd='LOSE' THEN 'LOSE' WHEN p.ctrt_end_dt &lt; #{today} THEN 'END' ELSE p.proj_stat_cd END AS effective_status,
+        ct.code_nm AS type_name,st.code_nm AS status_name,
+        (SELECT count(DISTINCT a.dev_id)::integer FROM tb_pj_asgn a WHERE a.proj_id=p.proj_id
+          AND a.asgn_stat_cd='ACT' AND a.input_bgn_dt &lt;= #{today} AND a.input_end_dt &gt;= #{today}) AS person_count
+      FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id
+      LEFT JOIN LATERAL (SELECT r.part_id FROM tb_pj_proj_part r WHERE r.proj_id=p.proj_id
+        ORDER BY (r.aply_bgn_ym &lt;= #{month}) DESC,
+          CASE WHEN r.aply_bgn_ym &lt;= #{month} THEN r.aply_bgn_ym END DESC,r.aply_bgn_ym ASC LIMIT 1) cp ON true
+      LEFT JOIN tb_bs_part b ON b.part_id=cp.part_id
+      LEFT JOIN tb_sy_code ct ON ct.code_grp_id='CTRT_TYPE' AND ct.code=p.ctrt_type_cd
+      LEFT JOIN tb_sy_code st ON st.code_grp_id='PROJ_STAT' AND st.code=CASE WHEN p.proj_stat_cd='LOSE' THEN 'LOSE'
+        WHEN p.ctrt_end_dt &lt; #{today} THEN 'END' ELSE p.proj_stat_cd END
+    )
+  </sql>
+  <sql id="filters">
+    p.ctrt_bgn_dt &lt;= #{lastDate} AND p.ctrt_end_dt &gt;= #{firstDate}
+    <if test="filter.contractType != null">AND p.ctrt_type_cd=#{filter.contractType}</if>
+    <if test="filter.status != null">AND p.effective_status=#{filter.status}</if>
+    <if test="filter.q != null">AND (strpos(p.proj_nm,#{filter.q}) &gt; 0 OR strpos(p.customer_name,#{filter.q}) &gt; 0)</if>
+  </sql>
+  <sql id="partFilter">
+    <if test="filter.partId != null">
+      <choose><when test="filter.partId == 'UNASSIGNED'">AND p.ctrt_type_cd&lt;&gt;'IN' AND p.part_id IS NULL</when>
+      <otherwise>AND p.ctrt_type_cd&lt;&gt;'IN' AND p.part_id=#{filter.partId}</otherwise></choose>
+    </if>
+  </sql>
+  <select id="list" resultType="com.sicost.projects.ProjectDtos$ListRow">
+    <include refid="source"/>
+    SELECT p.proj_id AS id,p.proj_nm AS name,p.ctrt_type_cd AS "contractType",p.ctrt_bgn_dt AS "startDate",p.ctrt_end_dt AS "endDate",
+      CASE WHEN p.ctrt_type_cd='IN' THEN NULL ELSE trim_scale(p.ctrt_amt)::text END AS "contractAmount",p.effective_status AS status,
+      CASE WHEN p.ctrt_type_cd='IN' THEN '(자체)' ELSE p.customer_name END AS "customerName",p.person_count AS "personCount",
+      CASE WHEN p.ctrt_type_cd='IN' THEN NULL ELSE p.part_name END AS "partName"
+    FROM source p WHERE <include refid="filters"/> <include refid="partFilter"/>
+    ORDER BY <choose>
+      <when test="filter.sort == 'id'">p.proj_id</when><when test="filter.sort == 'name'">p.proj_nm</when>
+      <when test="filter.sort == 'customerName'">CASE WHEN p.ctrt_type_cd='IN' THEN '(자체)' ELSE p.customer_name END</when>
+      <when test="filter.sort == 'contractType'">p.type_name</when><when test="filter.sort == 'contractAmount'">CASE WHEN p.ctrt_type_cd='IN' THEN NULL ELSE p.ctrt_amt END</when>
+      <when test="filter.sort == 'personCount'">p.person_count</when><when test="filter.sort == 'partName'">CASE WHEN p.ctrt_type_cd='IN' THEN NULL ELSE p.part_name END</when>
+      <when test="filter.sort == 'status'">p.status_name</when><otherwise>p.ctrt_bgn_dt</otherwise>
+    </choose> <choose><when test="filter.direction == 'ASC'">ASC</when><otherwise>DESC</otherwise></choose> NULLS LAST,p.proj_id ASC
+    LIMIT #{filter.size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long"><include refid="source"/> SELECT count(*) FROM source p WHERE <include refid="filters"/> <include refid="partFilter"/></select>
+  <select id="unassignedCount" resultType="long"><include refid="source"/> SELECT count(*) FROM source p WHERE <include refid="filters"/> AND p.ctrt_type_cd&lt;&gt;'IN' AND p.part_id IS NULL</select>
+  <select id="find" resultType="com.sicost.projects.ProjectDtos$Project">
+    SELECT proj_id AS id,proj_nm AS name,cust_clnt_id AS "customerId",ctrt_type_cd AS "contractType",proj_stat_cd AS status,
+      ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate",work_plc_addr AS workplace,feature_cn AS feature,
+      trim_scale(est_amt)::text AS "estimateAmount",trim_scale(orgnl_ctrt_amt)::text AS "originalContractAmount",
+      trim_scale(ctrt_amt)::text AS "contractAmount",trim_scale(bdgt_amt)::text AS "budgetAmount",
+      trim_scale(team_exps_amt)::text AS "teamExpenseAmount",trim_scale(proj_exps_amt)::text AS "projectExpenseAmount",
+      bdgt_manual_yn AS "budgetManual",lose_dt AS "lossDate",lose_rsn_cd AS "lossReason",lose_memo AS "lossMemo",opp_id AS "opportunityId"
+    FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="defaults" resultType="com.sicost.projects.ProjectDtos$DefaultsRow">
+    SELECT (SELECT std_val FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1) AS "cashBase",
+      (SELECT std_val FROM tb_sy_oper_std WHERE std_cd='TGT_MRGN_RT' AND aply_bgn_ym&lt;=#{month} ORDER BY aply_bgn_ym DESC LIMIT 1) AS "marginRate",
+      (SELECT c.code_val FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.code_grp_id='ALWNC' AND c.code='TEAM_FEE' AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y') AS "teamExpense",
+      (SELECT c.code_val FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.code_grp_id='ALWNC' AND c.code='PEXP_FEE' AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y') AS "projectExpense"
+  </select>
+  <select id="customer" resultType="com.sicost.projects.ProjectDtos$Reference">SELECT clnt_id AS id,clnt_nm AS name,(use_yn='Y' AND clnt_type_cd IN ('CUST','BOTH')) AS active FROM tb_bs_clnt WHERE clnt_id=#{id}</select>
+  <select id="part" resultType="com.sicost.projects.ProjectDtos$Reference">SELECT part_id AS id,part_nm AS name,(use_yn='Y') AS active FROM tb_bs_part WHERE part_id=#{id}</select>
+  <select id="activeType" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.code_grp_id='CTRT_TYPE' AND c.code=#{code} AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y')</select>
+  <select id="hasBills" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_bl_bill WHERE proj_id=#{id} AND cncl_yn='N')</select>
+  <select id="parts" resultType="com.sicost.projects.ProjectDtos$ProjectPart">
+    SELECT substring(r.aply_bgn_ym,1,4)||'-'||substring(r.aply_bgn_ym,5,2) AS "effectiveMonth",r.part_id AS "partId",
+      b.part_nm AS "partName",r.chg_rsn AS reason,COALESCE(u.user_nm,r.reg_user_id) AS actor,(r.aply_bgn_ym&gt;#{month}) AS scheduled
+    FROM tb_pj_proj_part r LEFT JOIN tb_bs_part b ON b.part_id=r.part_id
+    LEFT JOIN tb_sy_user u ON u.user_id=COALESCE(r.mod_user_id,r.reg_user_id) WHERE r.proj_id=#{id} ORDER BY r.aply_bgn_ym
+  </select>
+  <select id="pm" resultType="com.sicost.projects.ProjectDtos$ProjectPm">
+    SELECT s.user_id AS "userId",u.user_nm AS name,s.scope_sn AS "scopeSn" FROM tb_sy_user_scope s JOIN tb_sy_user u ON u.user_id=s.user_id
+    WHERE s.proj_id=#{id} AND s.scope_type_cd='PROJ' ORDER BY s.user_id,s.scope_sn
+  </select>
+  <select id="assignments" resultType="com.sicost.projects.ProjectDtos$ProjectAssignment">
+    SELECT a.asgn_id AS "assignmentId",a.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS name,
+      a.job_cd AS "jobCode",COALESCE(c.code_nm,a.job_cd) AS "jobName",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate",
+      a.ctrt_mm::text AS "contractMm",COALESCE((SELECT sum(m.mon_mm) FROM tb_pj_asgn_mon m WHERE m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id),0.00)::text AS "monthlyMmTotal",a.asgn_stat_cd AS status
+    FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=a.job_cd
+    WHERE a.proj_id=#{id} AND a.asgn_stat_cd IN <choose><when test="includeCancelled">('ACT','CNCL')</when><otherwise>('ACT')</otherwise></choose>
+    ORDER BY a.input_bgn_dt,a.asgn_id
+  </select>
+  <select id="history" resultType="com.sicost.projects.ProjectDtos$ProjectHistory">
+    SELECT h.hist_sn AS "historySn",h.chg_dt AS date,h.chg_item_cd AS "itemCode",h.chg_item_nm AS "itemName",h.bfr_val AS before,h.aft_val AS after,
+      COALESCE(u.user_nm,h.reg_user_id) AS actor,to_char(h.reg_dttm,'YYYY-MM-DD HH24:MI:SS.US') AS "registeredAt"
+    FROM tb_pj_proj_chg h LEFT JOIN tb_sy_user u ON u.user_id=h.reg_user_id WHERE h.proj_id=#{id} ORDER BY h.reg_dttm DESC,h.hist_sn DESC
+  </select>
+  <select id="actualMmTotal" resultType="string">
+    SELECT COALESCE(sum(m.mon_mm),0.00)::text FROM tb_pj_asgn a JOIN tb_pj_asgn_mon m ON m.asgn_id=a.asgn_id AND m.proj_id=a.proj_id AND m.dev_id=a.dev_id
+    WHERE a.proj_id=#{id} AND a.asgn_stat_cd='ACT'
+  </select>
+  <select id="expenseTotal" resultType="string">SELECT trim_scale(COALESCE(sum(exps_amt),0))::text FROM tb_pj_drct_exps WHERE proj_id=#{id}</select>
+  <select id="periodUses" resultType="com.sicost.projects.ProjectDtos$PeriodUse">
+    SELECT 'ACT:'||asgn_id AS target,to_char(input_bgn_dt,'YYYY-MM') AS month FROM tb_pj_asgn WHERE proj_id=#{id} AND asgn_stat_cd='ACT' AND input_bgn_dt&lt;#{startDate}
+    UNION ALL SELECT 'ACT:'||asgn_id,to_char(input_end_dt,'YYYY-MM') FROM tb_pj_asgn WHERE proj_id=#{id} AND asgn_stat_cd='ACT' AND input_end_dt&gt;#{endDate}
+    UNION ALL SELECT '배분표:'||dstrb_step_cd,substring(dstrb_ym,1,4)||'-'||substring(dstrb_ym,5,2) FROM tb_pj_tk_dstrb WHERE proj_id=#{id} AND (dstrb_ym&lt;to_char(CAST(#{startDate} AS date),'YYYYMM') OR dstrb_ym&gt;to_char(CAST(#{endDate} AS date),'YYYYMM'))
+    UNION ALL SELECT '영업 파트',substring(aply_bgn_ym,1,4)||'-'||substring(aply_bgn_ym,5,2) FROM tb_pj_proj_part WHERE proj_id=#{id} AND aply_bgn_ym&lt;&gt;#{firstMonth} AND (aply_bgn_ym&lt;=to_char(CAST(#{startDate} AS date),'YYYYMM') OR aply_bgn_ym&gt;to_char(CAST(#{endDate} AS date),'YYYYMM'))
+  </select>
+  <select id="protectedMonths" resultType="string">
+    SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE' AND close_ym&gt;=#{from} AND close_ym&lt;=#{to}
+    UNION SELECT input_ym FROM tb_pj_asgn_mon WHERE proj_id=#{id} AND fix_yn='Y' AND input_ym&gt;=#{from} AND input_ym&lt;=#{to}
+  </select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <update id="update">
+    UPDATE tb_pj_proj SET proj_nm=#{project.name},cust_clnt_id=#{project.customerId},proj_stat_cd=#{project.status},ctrt_bgn_dt=#{project.startDate},ctrt_end_dt=#{project.endDate},
+      work_plc_addr=#{project.workplace},feature_cn=#{project.feature},est_amt=CAST(#{project.estimateAmount} AS numeric),orgnl_ctrt_amt=CAST(#{project.originalContractAmount} AS numeric),
+      ctrt_amt=CAST(#{project.contractAmount} AS numeric),bdgt_amt=CAST(#{project.budgetAmount} AS numeric),bdgt_manual_yn=#{project.budgetManual},
+      team_exps_amt=CAST(#{project.teamExpenseAmount} AS numeric),proj_exps_amt=CAST(#{project.projectExpenseAmount} AS numeric),mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{project.id}
+  </update>
+  <update id="moveInitialPart">UPDATE tb_pj_proj_part SET aply_bgn_ym=#{newMonth},mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{id} AND aply_bgn_ym=#{oldMonth}</update>
+  <insert id="insertHistory">INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm) VALUES(#{id},#{sn},#{change.code},#{change.name},#{change.before},#{change.after},CAST(#{now} AS date),#{actor},#{now})</insert>
+</mapper>
