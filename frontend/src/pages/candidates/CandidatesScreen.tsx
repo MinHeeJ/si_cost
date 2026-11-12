@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -358,6 +359,11 @@ export function CandidatesScreen({
   const visible = (columnView?.order ?? candidateColumnOrder)
     .filter((k) => k === "name" || !columnView?.hidden.includes(k))
     .map((k) => columns.find((c) => c.id === k))
+    .map((c) =>
+      c && !["skills", "homeAddress"].includes(c.id)
+        ? { ...c, sortable: true }
+        : c,
+    )
     .filter((c): c is Column<api.CandidateItem> => Boolean(c));
   const highlightedRow =
     highlight && detail?.id === highlight ? detail : undefined;
@@ -401,13 +407,13 @@ export function CandidatesScreen({
           onRetry={() => setLookupRetry((v) => v + 1)}
         />
       )}
-      <form
+      <FilterBar
         className="candidate-filters"
-        data-testid="candidate-filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          apply();
-        }}
+        testId="candidate-filters"
+        resetTestId="candidate-reset"
+        searchTestId="candidate-query"
+        onSubmit={() => apply()}
+        onReset={() => apply(true)}
       >
         {(
           [
@@ -462,61 +468,10 @@ export function CandidatesScreen({
             <option value="THREE_MONTHS">3개월 안</option>
           </select>
         </label>
-        <button
-          type="button"
-          data-testid="candidate-reset"
-          onClick={() => apply(true)}
-        >
-          초기화
-        </button>
-        <button className="sicost-primary" data-testid="candidate-query">
-          조회
-        </button>
-      </form>
+      </FilterBar>
       <div className="candidate-toolbar">
         <strong>총 {data?.total ?? 0}건</strong>
         <div className="candidate-actions">
-          <label>
-            정렬
-            <select
-              data-testid="candidate-sort"
-              value={filters.sort ?? ""}
-              onChange={(e) => {
-                setHighlight(undefined);
-                setFilters((f) => ({
-                  ...f,
-                  sort: e.target.value || undefined,
-                  page: 1,
-                }));
-              }}
-            >
-              <option value="">기본 정렬</option>
-              {columns
-                .filter((c) => !["skills", "homeAddress"].includes(c.id))
-                .map((c) => (
-                  <option
-                    data-testid={`candidate-sort-option-${c.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-                    key={c.id}
-                    value={c.id}
-                  >
-                    {c.label}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <button
-            data-testid="candidate-direction"
-            onClick={() => {
-              setHighlight(undefined);
-              setFilters((f) => ({
-                ...f,
-                page: 1,
-                direction: f.direction === "DESC" ? "ASC" : "DESC",
-              }));
-            }}
-          >
-            {filters.direction === "DESC" ? "내림차순" : "오름차순"}
-          </button>
           {onColumnsChange && (
             <button data-testid="candidate-columns" onClick={onColumnsChange}>
               열 설정
@@ -631,6 +586,33 @@ export function CandidatesScreen({
           rowKey={(r) => r.id}
           loading={loading}
           empty="조회된 후보가 없습니다."
+          sort={
+            filters.sort
+              ? {
+                  id: filters.sort,
+                  direction: filters.direction === "DESC" ? "DESC" : "ASC",
+                }
+              : undefined
+          }
+          onSortChange={(id) => {
+            setHighlight(undefined);
+            setFilters((f) => ({
+              ...f,
+              page: 1,
+              sort: id,
+              direction:
+                f.sort === id && f.direction !== "DESC" ? "DESC" : "ASC",
+            }));
+          }}
+          emptyAction={
+            <button
+              type="button"
+              data-testid="candidate-empty-reset"
+              onClick={() => apply(true)}
+            >
+              조건 초기화
+            </button>
+          }
           page={filters.page}
           size={filters.size}
           total={data?.total ?? 0}

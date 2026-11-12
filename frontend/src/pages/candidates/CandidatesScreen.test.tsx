@@ -339,10 +339,8 @@ it("filter and sort changes reset page and preserve approved query shape", async
       expect.any(AbortSignal),
     ),
   );
-  await userEvent.selectOptions(
-    screen.getByTestId("candidate-sort"),
-    "availableDate",
-  );
+  expect(screen.queryByTestId("candidate-sort")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("sort-availableDate"));
   await waitFor(() =>
     expect(api.getCandidates).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "availableDate", page: 1 }),

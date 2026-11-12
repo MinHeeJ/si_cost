@@ -12,28 +12,10 @@
 .sales-parts-screen > .sales-part-toolbar {
   justify-content: space-between;
 }
-.sales-part-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: end;
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-}
 .sales-part-filters > .sicost-field:first-child {
   flex: 1;
   min-width: 160px;
   max-width: 360px;
-}
-.sales-part-sort {
-  border: 0;
-  padding: 0;
-  height: auto;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
 }
 .sales-part-link {
   color: var(--primary);
@@ -81,11 +63,7 @@
   padding: 16px;
 }
 @media (max-width: 767px) {
-  .sales-part-filters {
-    padding: 12px;
-  }
-  .sales-part-filters .sicost-field {
-    width: 100%;
+  .sales-part-filters > .sicost-field:first-child {
     max-width: none;
   }
   .sales-part-detail .sicost-table-viewport {

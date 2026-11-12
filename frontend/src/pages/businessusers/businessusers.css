@@ -15,18 +15,6 @@
   display: flex;
   gap: 8px;
 }
-.businessusers-filter {
-  display: flex;
-  align-items: end;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
-  background: var(--surface);
-}
-.businessusers-filter select {
-  min-width: 134px;
-}
 .businessusers-search {
   flex: 1;
 }
@@ -38,14 +26,6 @@
   margin-right: 4px;
   font-size: 12px;
   line-height: 20px;
-}
-.businessusers-sort {
-  border: 0;
-  padding: 0;
-  height: 32px;
-  font-size: 13px;
-  font-weight: 600;
-  background: transparent;
 }
 .businessusers-link {
   border: 0;

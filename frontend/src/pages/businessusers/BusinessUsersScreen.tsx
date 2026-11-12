@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import { BusinessUserForm } from "./BusinessUserForm";
@@ -124,25 +125,8 @@ export function BusinessUsersScreen({
     "lastLoginAt",
   ].map((id) => ({
     id,
-    label:
-      id === "roles" ? (
-        labels[id]
-      ) : (
-        <button
-          type="button"
-          className="businessusers-sort"
-          data-testid={`business-users-sort-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-          onClick={() => sort(id)}
-          aria-label={`${labels[id]} 정렬`}
-        >
-          {labels[id]}
-          {filters.sort === id
-            ? filters.direction === "ASC"
-              ? " ↑"
-              : " ↓"
-            : ""}
-        </button>
-      ),
+    label: labels[id],
+    sortable: id !== "roles",
     render: (row) =>
       id === "userId" ? (
         <button
@@ -215,13 +199,12 @@ export function BusinessUsersScreen({
             등록
           </button>
         </div>
-        <form
-          data-testid="business-users-filter-form"
-          className="businessusers-filter"
-          onSubmit={(event) => {
-            event.preventDefault();
-            apply();
-          }}
+        <FilterBar
+          testId="business-users-filter-form"
+          resetTestId="business-users-reset"
+          searchTestId="business-users-query"
+          onSubmit={apply}
+          onReset={reset}
         >
           <label className="sicost-field">
             역할
@@ -260,21 +243,7 @@ export function BusinessUsersScreen({
               onChange={(e) => setDraft({ ...draft, q: e.target.value })}
             />
           </label>
-          <button
-            type="button"
-            data-testid="business-users-reset"
-            onClick={reset}
-          >
-            초기화
-          </button>
-          <button
-            type="submit"
-            className="sicost-primary"
-            data-testid="business-users-query"
-          >
-            조회
-          </button>
-        </form>
+        </FilterBar>
         <div className="businessusers-toolbar">
           <span>총 {data?.total ?? 0}건</span>
           <div>
@@ -343,12 +312,17 @@ export function BusinessUsersScreen({
               }
             }}
             empty="조회된 사용자가 없습니다."
+            sort={{
+              id: filters.sort ?? "name",
+              direction: filters.direction === "DESC" ? "DESC" : "ASC",
+            }}
+            onSortChange={sort}
+            emptyAction={
+              <button data-testid="business-users-empty-reset" onClick={reset}>
+                조건 초기화
+              </button>
+            }
           />
-        )}
-        {!loading && !error && !data?.items.length && (
-          <button data-testid="business-users-empty-reset" onClick={reset}>
-            조건 초기화
-          </button>
         )}
       </div>
       {detail && !form && (

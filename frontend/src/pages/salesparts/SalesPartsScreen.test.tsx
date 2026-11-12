@@ -126,7 +126,7 @@ it("전체는 useYn을 생략하고 Enter로 검색하며 정렬 변경은 첫 �
       expect.any(AbortSignal),
     ),
   );
-  await userEvent.click(screen.getByTestId("sales-part-sort-profit-rate"));
+  await userEvent.click(screen.getByTestId("sort-profitRate"));
   await waitFor(() =>
     expect(api.getSalesParts).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "profitRate", page: 1 }),
