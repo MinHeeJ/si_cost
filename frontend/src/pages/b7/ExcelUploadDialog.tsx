@@ -76,7 +76,8 @@ export function ExcelUploadDialog({
   const [file, setFile] = useState<File>();
   const [result, setResult] = useState<UploadValidation>();
   const [applied, setApplied] = useState<UploadApplied>();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""),
+    [dragging, setDragging] = useState(false);
   const [pending, setPending] = useState(false),
     [confirmClose, setConfirmClose] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
@@ -169,6 +170,16 @@ export function ExcelUploadDialog({
   }
 
   const summary = applied?.summary ?? result?.summary;
+  function choose(selected: File | undefined) {
+    setFile(selected);
+    setResult(undefined);
+    setApplied(undefined);
+    setError("");
+    if (selected && (!/\.xlsx$/i.test(selected.name) || selected.size > 10485760)) {
+      setFile(undefined);
+      setError("10MiB 이하의 XLSX 파일을 선택해 주세요.");
+    }
+  }
   return (
     <>
       <Dialog
@@ -201,44 +212,81 @@ export function ExcelUploadDialog({
           data-screen-id={screenId}
           data-testid="b7-upload-dialog"
         >
-          <p className="b7-info">{description}</p>
+          <div className="b7-upload-head">
+            <p className="b7-info">{description}</p>
+            {onTemplate && (
+              <button
+                type="button"
+                className="b7-upload-template"
+                data-testid="import-template-button"
+                disabled={pending}
+                onClick={() => void run(onTemplate)}
+              >
+                양식 내려받기
+              </button>
+            )}
+          </div>
           {renderContext?.(pending, Boolean(applied))}
           {readOnly && <p className="b7-neutral">{readOnlyMessage}</p>}
-          {onTemplate && (
-            <button
-              type="button"
-              data-testid="import-template-button"
-              disabled={pending}
-              onClick={() => void run(onTemplate)}
-            >
-              양식 내려받기
-            </button>
-          )}
-          <label className="sicost-field">
-            파일 선택
+          <label
+            className={`b7-dropzone${dragging ? " b7-dropzone-active" : ""}${
+              readOnly || pending || applied ? " b7-dropzone-disabled" : ""
+            }${error && !result ? " b7-dropzone-invalid" : ""}`}
+            onDragOver={(event) => {
+              if (readOnly || pending || applied) return;
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              setDragging(false);
+              if (readOnly || pending || applied) return;
+              event.preventDefault();
+              choose(event.dataTransfer.files?.[0]);
+            }}
+          >
+            <span className="b7-dropzone-icon" aria-hidden="true">
+              ⬆
+            </span>
+            <span className="b7-dropzone-text">
+              <strong>XLSX 파일을 끌어다 놓거나 선택해 주세요</strong>
+              <small>10MiB 이하 · 첫 시트 기준</small>
+            </span>
+            <span className="b7-dropzone-button">파일 선택</span>
             <input
+              className="b7-file-input"
               data-testid="b7-file-input"
               type="file"
               accept=".xlsx"
+              aria-label="파일 선택"
               aria-invalid={Boolean(error && !result)}
               disabled={readOnly || pending || Boolean(applied)}
-              onChange={(event) => {
-                const selected = event.target.files?.[0];
-                setFile(selected);
-                setResult(undefined);
-                setApplied(undefined);
-                setError("");
-                if (
-                  selected &&
-                  (!/\.xlsx$/i.test(selected.name) || selected.size > 10485760)
-                ) {
-                  setFile(undefined);
-                  setError("10MiB 이하의 XLSX 파일을 선택해 주세요.");
-                }
-              }}
+              onChange={(event) => choose(event.target.files?.[0])}
             />
           </label>
-          {file && <p>{file.name}</p>}
+          {file && (
+            <div className="b7-file-chip" data-testid="b7-file-name">
+              <span className="b7-file-chip-name">{file.name}</span>
+              <span className="b7-file-chip-size">
+                {file.size >= 1048576
+                  ? `${(file.size / 1048576).toFixed(1)} MiB`
+                  : `${Math.max(1, Math.round(file.size / 1024))} KiB`}
+              </span>
+              {!applied && !pending && (
+                <button
+                  type="button"
+                  className="b7-file-chip-remove"
+                  onClick={() => {
+                    setFile(undefined);
+                    setResult(undefined);
+                    setError("");
+                  }}
+                >
+                  제거
+                </button>
+              )}
+            </div>
+          )}
           {result && (
             <p>
               업로드 번호 {result.uploadId} ·{" "}

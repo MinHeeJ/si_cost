@@ -300,40 +300,47 @@ function ClientDrawerContent({
                         key={label}
                       >
                         <dt>{label}</dt>
-                        <dd>{value ?? "–"}</dd>
+                        <dd>
+                          {label === "지급 계좌" && client.account ? (
+                            <span className="clients-account-row">
+                              {number === undefined ? (
+                                <span>{value}</span>
+                              ) : (
+                                <output data-testid="client-account-number">
+                                  {`${(client.account ?? "").split(" ")[0]} ${number}`}
+                                </output>
+                              )}
+                              {number === undefined ? (
+                                <button
+                                  type="button"
+                                  className="clients-account-toggle"
+                                  data-testid="client-account-show"
+                                  disabled={pending}
+                                  onClick={() => void reveal()}
+                                >
+                                  계좌 전체보기
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="clients-account-toggle"
+                                  data-testid="client-account-hide"
+                                  onClick={() => {
+                                    accountGeneration.current++;
+                                    setNumber(undefined);
+                                  }}
+                                >
+                                  숨기기
+                                </button>
+                              )}
+                            </span>
+                          ) : (
+                            (value ?? "–")
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
-                  {client.account && (
-                    <div className="clients-actions">
-                      {number === undefined ? (
-                        <button
-                          type="button"
-                          data-testid="client-account-show"
-                          disabled={pending}
-                          onClick={() => void reveal()}
-                        >
-                          계좌 전체보기
-                        </button>
-                      ) : (
-                        <>
-                          <output data-testid="client-account-number">
-                            {number}
-                          </output>
-                          <button
-                            type="button"
-                            data-testid="client-account-hide"
-                            onClick={() => {
-                              accountGeneration.current++;
-                              setNumber(undefined);
-                            }}
-                          >
-                            숨기기
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
                   <p>집계 기준일 {client.basisDate}</p>
                 </>
               )}

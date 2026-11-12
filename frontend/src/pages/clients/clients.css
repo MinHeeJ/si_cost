@@ -172,3 +172,14 @@
     align-items: flex-start;
   }
 }
+.clients-account-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.clients-account-toggle {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}

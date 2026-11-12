@@ -116,7 +116,7 @@ function draw(override: Partial<ProjectStatusPanelProps> = {}) {
 }
 async function ready() {
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "진행으로" })).not.toBeDisabled(),
+    expect(screen.getByRole("button", { name: "진행 처리" })).not.toBeDisabled(),
   );
 }
 async function openLoss() {
@@ -127,7 +127,7 @@ async function openLoss() {
 it("진행 확인 전에 쓰지 않고 확인 후 경로 id/year/revision만 보낸다", async () => {
   const props = draw();
   await ready();
-  await userEvent.click(screen.getByRole("button", { name: "진행으로" }));
+  await userEvent.click(screen.getByRole("button", { name: "진행 처리" }));
   expect(screen.getByRole("dialog")).toHaveTextContent(
     "금액/예산/원계약금액/배정/영업기회는 그대로입니다.",
   );
@@ -142,7 +142,7 @@ it("진행 확인 전에 쓰지 않고 확인 후 경로 id/year/revision만 보
 it("진행 취소는 요청하지 않는다", async () => {
   draw();
   await ready();
-  await userEvent.click(screen.getByRole("button", { name: "진행으로" }));
+  await userEvent.click(screen.getByRole("button", { name: "진행 처리" }));
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
   expect(api.saveProjectProgress).not.toHaveBeenCalled();
 });
@@ -152,7 +152,7 @@ it.each(["ING", "END", "LOSE"] as const)(
     draw({ effectiveStatus });
     await waitFor(() => expect(shared.getPeriodContext).toHaveBeenCalled());
     expect(
-      screen.queryByRole("button", { name: "진행으로" }),
+      screen.queryByRole("button", { name: "진행 처리" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "실주 처리" }),
@@ -163,7 +163,7 @@ it.each(["ING", "END", "LOSE"] as const)(
 it("지난 연도 전환을 비활성화한다", async () => {
   draw({ year: 2025 });
   await screen.findByText("지난 연도는 조회만 할 수 있습니다.");
-  expect(screen.getByRole("button", { name: "진행으로" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "진행 처리" })).toBeDisabled();
 });
 it("인원수와 배정건수·관리번호·전체 영향 및 빈 미래 배정을 분리해 표시한다", async () => {
   draw();
@@ -271,7 +271,7 @@ it("저장 후 조회 실패는 재저장이 아니라 조회만 재시도", asy
       .mockResolvedValue(undefined),
   });
   await ready();
-  await userEvent.click(screen.getByRole("button", { name: "진행으로" }));
+  await userEvent.click(screen.getByRole("button", { name: "진행 처리" }));
   await userEvent.click(screen.getByRole("button", { name: "진행 확인" }));
   await screen.findByText(/저장은 완료됐지만/);
   await userEvent.click(screen.getByTestId("project-status-refresh"));
@@ -287,7 +287,7 @@ it("저장 중 이중 제출 차단", async () => {
   );
   draw();
   await ready();
-  await userEvent.click(screen.getByRole("button", { name: "진행으로" }));
+  await userEvent.click(screen.getByRole("button", { name: "진행 처리" }));
   const dialog = screen.getByRole("dialog");
   fireEvent.submit(dialog);
   fireEvent.submit(dialog);

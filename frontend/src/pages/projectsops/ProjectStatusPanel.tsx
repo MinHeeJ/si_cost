@@ -1,3 +1,4 @@
+import "./projectStatus.css";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -186,9 +187,10 @@ function StatusContent({
       aria-label="프로젝트 상태 전환"
     >
       {effectiveStatus === "PRE" && (
-        <div className="sicost-toolbar">
+        <div className="project-status-actions">
           <button
             type="button"
+            className="sicost-primary"
             data-testid="project-progress-button"
             disabled={readonly || pending || Boolean(saved)}
             onClick={() => {
@@ -197,10 +199,11 @@ function StatusContent({
               setMode("progress");
             }}
           >
-            진행으로
+            진행 처리
           </button>
           <button
             type="button"
+            className="project-loss-trigger"
             data-testid="project-loss-button"
             disabled={readonly || pending || Boolean(saved)}
             onClick={() => {
@@ -247,7 +250,7 @@ function StatusContent({
       )}
       <Dialog
         open={mode === "progress"}
-        title="진행으로 전환 확인"
+        title="프로젝트 진행 처리"
         pending={pending}
         onCancel={close}
         onConfirm={save}
@@ -272,12 +275,14 @@ function StatusContent({
         confirmDisabled={readonly || stale || loading || !preview}
         confirmLabel="실주 확정"
       >
-        <div data-testid="project-loss-dialog">
-          <p>
-            {projectId} / {name}
+        <div className="project-loss-form" data-testid="project-loss-dialog">
+          <p className="project-loss-target">
+            <strong>{projectId}</strong> / {name}
           </p>
-          <label>
-            실주 사유 *
+          <label className="sicost-field">
+            <span className="project-loss-label">
+              실주 사유 <em>*</em>
+            </span>
             <select
               data-testid="project-loss-reason"
               value={reason}
@@ -298,10 +303,12 @@ function StatusContent({
           {fields.lossReason && (
             <p className="sicost-field-error">{fields.lossReason}</p>
           )}
-          <label>
-            메모
+          <label className="sicost-field">
+            <span className="project-loss-label">메모</span>
             <textarea
               data-testid="project-loss-memo"
+              rows={3}
+              placeholder="선택 입력 · 실주 사유를 보충할 내용을 적어 주세요."
               value={memo}
               aria-invalid={Boolean(fields.lossMemo)}
               onChange={(e) => setMemo(e.target.value)}
@@ -310,18 +317,24 @@ function StatusContent({
           {fields.lossMemo && (
             <p className="sicost-field-error">{fields.lossMemo}</p>
           )}
-          <button
-            type="button"
-            data-testid="project-loss-preview"
-            disabled={loading || pending}
-            onClick={() => void loadPreview()}
-          >
-            영향 미리보기
-          </button>
+          <div className="project-loss-preview-bar">
+            <span className="project-loss-hint">
+              {preview
+                ? `기준일 ${preview.basisDate} (서버 오늘)`
+                : "확정 전에 영향받는 투입 인원을 확인하세요."}
+            </span>
+            <button
+              type="button"
+              data-testid="project-loss-preview"
+              disabled={loading || pending}
+              onClick={() => void loadPreview()}
+            >
+              영향 미리보기
+            </button>
+          </div>
           {loading && <p role="status">불러오는 중입니다.</p>}
           {preview && (
             <>
-              <p>기준일 {preview.basisDate} (서버 오늘)</p>
               <h3>
                 <StatusBadge tone="warn">현재 투입</StatusBadge>{" "}
                 {preview.currentPersonCount}명 /{" "}

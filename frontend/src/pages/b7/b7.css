@@ -79,3 +79,124 @@
     justify-content: flex-start;
   }
 }
+.b7-upload-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.b7-upload-head .b7-info {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.b7-upload-template {
+  flex: none;
+  height: 36px;
+  white-space: nowrap;
+}
+.b7-dropzone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.b7-dropzone:hover,
+.b7-dropzone:focus-within,
+.b7-dropzone-active {
+  border-color: var(--primary);
+  background: var(--info-bg);
+}
+.b7-dropzone-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.b7-dropzone-invalid {
+  border-color: var(--bad);
+}
+.b7-dropzone-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--primary);
+  background: var(--info-bg);
+  font-size: 18px;
+}
+.b7-dropzone-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.b7-dropzone-text small {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.b7-dropzone-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.b7-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.b7-file-input:disabled {
+  cursor: not-allowed;
+}
+.b7-file-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.b7-file-chip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.b7-file-chip-size {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.b7-file-chip-remove {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.b7-upload > p,
+.b7-upload > .b7-summary {
+  margin: 0;
+}
+@media (max-width: 767px) {
+  .b7-upload-head,
+  .b7-dropzone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
