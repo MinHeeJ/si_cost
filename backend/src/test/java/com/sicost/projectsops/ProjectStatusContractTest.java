@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sicost.budget.ProjectBudgetRepository;
 import com.sicost.common.api.*;
+import com.sicost.common.assignments.AssignmentMonthlyService;
 import com.sicost.common.concurrent.*;
 import com.sicost.common.context.CurrentUserProvider;
 import com.sicost.common.history.*;
@@ -46,6 +47,7 @@ class ProjectStatusContractTest {
     @MockBean CommitInvalidation invalidation;
     @MockBean PlatformTransactionManager manager;
     @MockBean Clock clock;
+    @MockBean AssignmentMonthlyService monthly;
     Project row;
     String assignmentSnapshot;
     LocalDate day=LocalDate.of(2026,7,1);
@@ -133,6 +135,15 @@ class ProjectStatusContractTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.currentPersonCount").value(1)).andExpect(jsonPath("$.data.currentAssignmentCount").value(2))
             .andExpect(jsonPath("$.data.basisDate").value("2026-07-01")).andExpect(jsonPath("$.data.currentAssignments[0].developerId").value("DEV-PK"))
             .andExpect(jsonPath("$.data.currentAssignments[0].managementNo").value("M-77")).andExpect(jsonPath("$.data.previewToken").isString());noWrites();
+    }
+    @Test void progressRecomputesMonthlySalesOfActiveAssignmentsOnly() throws Exception {
+        row=project("PRE",LocalDate.of(2027,12,31));
+        var live=new AssignmentMonthlyService.Source("A-1","STATE-1","DEV-1","J1",LocalDate.of(2026,7,1),LocalDate.of(2026,12,31),new BigDecimal("1"),new BigDecimal("5000000"),"RATE",null,null,0,null,"ACT");
+        when(mapper.assignmentRows("STATE-1")).thenReturn(List.of(new AssignmentRow("A-1","DEV-1",LocalDate.of(2026,7,1),LocalDate.of(2026,12,31),new BigDecimal("1"),new BigDecimal("5000000"),"ACT"),
+            new AssignmentRow("A-2","DEV-2",LocalDate.of(2026,7,1),LocalDate.of(2026,12,31),new BigDecimal("1"),new BigDecimal("5000000"),"CNCL")));
+        when(monthly.required("A-1")).thenReturn(live);
+        putBody("progress",progress(),200,null);
+        verify(monthly).synchronize(live,"ING","TK");verify(monthly,never()).required("A-2");verify(monthly,times(1)).synchronize(any(),anyString(),anyString());
     }
     @Test void successfulProgressOnlyChangesStateAndCreatesOneEtcStatusHistory() throws Exception {
         Project before=row;putBody("progress",progress(),200,null);assertThat(row.status()).isEqualTo("ING");

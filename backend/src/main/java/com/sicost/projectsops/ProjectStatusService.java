@@ -3,6 +3,7 @@ package com.sicost.projectsops;
 import com.sicost.budget.ProjectBudgetCalculation;
 import com.sicost.common.TimeConfiguration;
 import com.sicost.common.api.ApiException;
+import com.sicost.common.assignments.AssignmentMonthlyService;
 import com.sicost.common.concurrent.*;
 import com.sicost.common.context.CurrentUserProvider;
 import com.sicost.common.history.ChangeHistoryWriter;
@@ -23,9 +24,10 @@ public class ProjectStatusService {
     private final CurrentUserProvider users;
     private final ChangeHistoryWriter history;
     private final Clock clock;
+    private final AssignmentMonthlyService monthly;
     public ProjectStatusService(ProjectStatusRepository repository,WriteCoordinator writes,RevisionService revisions,
-                                CurrentUserProvider users,ChangeHistoryWriter history,Clock clock) {
-        this.repository=repository;this.writes=writes;this.revisions=revisions;this.users=users;this.history=history;this.clock=clock;
+                                CurrentUserProvider users,ChangeHistoryWriter history,Clock clock,AssignmentMonthlyService monthly) {
+        this.monthly=monthly;this.repository=repository;this.writes=writes;this.revisions=revisions;this.users=users;this.history=history;this.clock=clock;
     }
     private LocalDate today() {return ProjectInputPolicy.today(clock);}
     private String db(YearMonth month) {return DatabaseMonthCodec.toDatabase(month.toString());}
@@ -68,7 +70,13 @@ public class ProjectStatusService {
         ProjectStatusInput.id(id);ProjectInputPolicy.expectedRevision(input.expectedRevision());String actor=users.userId();
         var result=writes.write(List.of("PROJECT:"+id,"operating-standards:CASH_BASE_YM"),input.expectedRevision(),()->repository.snapshot(id),
             ()->{requirePre(repository.required(id),today());ProjectInputPolicy.requireWritableYear(input.year(),repository.cashBase(),clock);},
-            ()->true,()->changeProject(id,"ING",null,null,actor,today()));
+            ()->true,()->{
+                changeProject(id,"ING",null,null,actor,today());
+                // The assignments keep their rows; now that the project is in progress their monthly sales are computed.
+                Project now=repository.required(id);String status=ProjectAssignmentMonths.effectiveStatus(now,today());
+                for(AssignmentRow row:repository.mapper().assignmentRows(id))
+                    if("ACT".equals(row.status()))monthly.synchronize(monthly.required(row.id()),status,now.contractType());
+            });
         return new Result(repository.required(id),result.revision(),result.changed());
     }
     @Transactional

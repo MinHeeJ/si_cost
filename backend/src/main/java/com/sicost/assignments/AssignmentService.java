@@ -26,12 +26,18 @@ public class AssignmentService {
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Page<Assignment> list(AssignmentInput.Query query) {
+        List<Assignment> rows=matching(query);
+        return new Page<>(rows.stream().skip((long)(query.page()-1)*query.size()).limit(query.size()).toList(),rows.size(),query.page(),query.size());
+    }
+    /** Every row the list would show for these conditions and order, without paging (used by the excel download). */
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public List<Assignment> listAll(AssignmentInput.Query query) {return matching(query);}
+    private List<Assignment> matching(AssignmentInput.Query query) {
         users.currentUser();ProjectInputPolicy.year(query.filters().year(),monthly.cashBase(),clock);
-        List<Assignment> rows=repository.ids(query.filters()).stream().map(id->actions.saved(id,query.filters().year(),false).assignment())
+        return repository.ids(query.filters()).stream().map(id->actions.saved(id,query.filters().year(),false).assignment())
             .filter(row->query.filters().warning()==null||row.warnings().stream().anyMatch(w->w.code().equals(query.filters().warning())
                 && (w.months().isEmpty()||w.months().stream().anyMatch(m->m.startsWith(query.filters().year()+"-")))))
             .sorted(order(query)).toList();
-        return new Page<>(rows.stream().skip((long)(query.page()-1)*query.size()).limit(query.size()).toList(),rows.size(),query.page(),query.size());
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Assignment get(String id,int year) {

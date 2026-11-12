@@ -42,6 +42,7 @@ class MasterDataExportContractTest {
     @Autowired ObjectMapper json;
     @MockBean MasterDataExportMapper mapper;
     @MockBean PeopleExportService people;
+    @MockBean AssignmentExportService assignments;
     @MockBean AccessLogMapper logs;
     @MockBean CurrentUserProvider users;
     @MockBean AccountCipher accounts;
@@ -183,5 +184,12 @@ class MasterDataExportContractTest {
         mvc.perform(post("/api/exports/master-data").contentType("application/json")
             .content("{\"view\":\"ZZZ\",\"filters\":{},\"columns\":[\"name\"]}")).andExpect(status().isBadRequest());
         verify(people, times(2)).create(any(), any());
+    }
+
+    @Test void assignmentViewIsRoutedToTheAssignmentExportOnly() throws Exception {
+        when(assignments.create(any(), any())).thenThrow(new ApiException(400, "VALIDATION_ERROR", "조건 오류", "filters", null));
+        mvc.perform(post("/api/exports/master-data").contentType("application/json")
+            .content("{\"view\":\"ASSIGNMENTS\",\"filters\":{\"year\":2026},\"columns\":[\"projectName\"]}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("filters"));
+        verify(assignments).create(any(), any());verify(people, never()).create(any(), any());
     }
 }

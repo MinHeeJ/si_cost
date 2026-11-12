@@ -137,6 +137,7 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean UploadIssuesService uploadIssues;
     @MockBean MasterDataExportService exports;
     @MockBean com.sicost.exportsops.PeopleExportService peopleExports;
+    @MockBean com.sicost.exportsops.AssignmentExportService assignmentExports;
     @MockBean AddressService addresses;
     @MockBean CandidateService candidates;
     @MockBean CandidateQueryService candidateQueries;
