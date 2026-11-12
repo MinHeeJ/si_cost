@@ -25,6 +25,13 @@ public class AssignmentMonthlyService {
     }
     public record Month(String month,String projectId,String developerId,int inputDays,String contractMm,String monthlyMm,
         String appliedUnitPrice,String salesAmount,String fixed) {}
+    /** 감사 전후값: 레코드 toString 대신 사람이 읽는 한 줄. */
+    private static String summary(Month m) {
+        return "일수 "+m.inputDays()+" · 계약MM "+m.contractMm()+" · 월MM "+m.monthlyMm()+" · 단가 "+(m.appliedUnitPrice()==null?"–":m.appliedUnitPrice())+" · 매출 "+m.salesAmount()+" · 고정 "+m.fixed();
+    }
+    private static String summary(StoredMonth m) {
+        return "일수 "+m.days()+" · 월MM "+(m.mm()==null?"–":m.mm().toPlainString())+" · 단가 "+(m.price()==null?"–":m.price().toPlainString())+" · 매출 "+(m.sales()==null?"–":m.sales().toPlainString())+" · 고정 "+m.fixed();
+    }
     public record StoredMonth(String month,int days,BigDecimal mm,BigDecimal price,BigDecimal sales,String fixed) {}
     public record MonthWrite(Source source,String month,Month value,String actor,LocalDateTime now) {}
     public record Projection(String id,BigDecimal mm,BigDecimal price,String actor,LocalDateTime now) {}
@@ -88,10 +95,10 @@ public class AssignmentMonthlyService {
         for(String key:keys) {
             StoredMonth old=stored.get(key);if(protectedMonth(key,old==null?null:old.fixed()))continue;
             Month next=desired.get(key);if(next==null) {
-                if(old!=null){mapper.deleteMonth(source.id(),db(key));audit.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN",source.id(),"UPD","월자료:"+key,old.toString(),null,null));}
+                if(old!=null){mapper.deleteMonth(source.id(),db(key));audit.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN",source.id(),"UPD","월자료:"+key,summary(old),null,null));}
             } else if(old==null||!view(source,old,histories).equals(next)) {
                 mapper.saveMonth(new MonthWrite(source,db(key),next,actor,now));
-                audit.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN",source.id(),"UPD","월자료:"+key,old==null?null:old.toString(),next.toString(),null));
+                audit.append(new ChangeHistoryWriter.Change("TB_PJ_ASGN",source.id(),"UPD","월자료:"+key,old==null?null:summary(old),summary(next),null));
             }
         }
         YearMonth display=YearMonth.from(ProjectInputPolicy.today(clock));if(display.isBefore(YearMonth.from(source.startDate())))display=YearMonth.from(source.startDate());
