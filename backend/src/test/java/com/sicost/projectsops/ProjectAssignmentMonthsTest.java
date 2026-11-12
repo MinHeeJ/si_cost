@@ -20,12 +20,13 @@ class ProjectAssignmentMonthsTest {
     @Test void latestEffectiveDateAndSerialWinIndependentlyForMmAndPrice() {
         var histories=List.of(h(1,"INPUT","2028-01-01","1","100","N",null),h(2,"RATE","2028-02-01","2",null,"N",null),
             h(3,"RATE","2028-02-01","3",null,"N",null),h(4,"UPRC","2028-02-01",null,"200","N",null),h(5,"RATE","2028-02-02","9",null,"N",null));
-        assertThat(ProjectAssignmentMonths.value(histories,month,true,BigDecimal.ZERO)).isEqualByComparingTo("3");
+        assertThat(ProjectAssignmentMonths.value(histories,month,true,BigDecimal.ZERO)).isEqualByComparingTo("9");
         assertThat(ProjectAssignmentMonths.value(histories,month,false,BigDecimal.ZERO)).isEqualByComparingTo("200");
     }
-    @Test void correctionRowsRemoveOriginalButDoNotSupplyReplacementValues() {
-        var histories=List.of(h(1,"INPUT","2028-01-01","1","100","N",null),h(2,"RATE","2028-02-01","3",null,"N",null),h(3,"CRCT","2028-02-01","9","900","Y",2));
-        assertThat(ProjectAssignmentMonths.value(histories,month,true,BigDecimal.ZERO)).isEqualByComparingTo("1");
+    @Test void correctedOriginalRemainsSourceAndCorrectionEventDoesNotSupplyValues() {
+        var histories=List.of(h(1,"INPUT","2028-01-01","1","100","N",null),h(2,"RATE","2028-02-01","3",null,"Y",null),h(3,"CRCT","2028-02-01","9","900","N",2));
+        assertThat(ProjectAssignmentMonths.value(histories,month,true,BigDecimal.ZERO)).isEqualByComparingTo("3");
+        assertThat(ProjectAssignmentMonths.value(histories,month,false,BigDecimal.ZERO)).isEqualByComparingTo("100");
     }
     @Test void missingPriorValueUsesEarliestUncorrectedInputThenAssignmentFallback() {
         var histories=List.of(h(1,"INPUT","2028-02-15","2","300","N",null),h(2,"INPUT","2028-03-15","3","400","N",null));

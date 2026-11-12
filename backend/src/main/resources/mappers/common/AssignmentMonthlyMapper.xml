@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.assignments.AssignmentMonthlyMapper">
+  <select id="source" resultType="com.sicost.common.assignments.AssignmentMonthlyService$Source">
+    SELECT asgn_id AS "id",proj_id AS "projectId",dev_id AS "developerId",job_cd AS "jobCode",input_bgn_dt AS "startDate",input_end_dt AS "endDate",
+      ctrt_mm AS "contractMm",bill_uprc AS "price",input_type_cd AS "inputType",ctrt_dev_id AS "contractDeveloperId",ext_psbl_cd AS "extensionPossibility",
+      ext_cnt::int AS "extensionCount",early_wthdr_yn AS "earlyWithdrawal",asgn_stat_cd AS "status" FROM tb_pj_asgn WHERE asgn_id=#{id}
+  </select>
+  <select id="histories" resultType="com.sicost.projectsops.ProjectStatusDtos$ValueHistory">
+    SELECT hist_sn::int AS "serial",asgn_chg_type_cd AS "type",aply_dt AS "date",new_ctrt_mm AS "mm",new_uprc AS "price",crct_yn AS "corrected",crct_trgt_sn::int AS "target"
+    FROM tb_pj_asgn_hist WHERE asgn_id=#{id} ORDER BY aply_dt,hist_sn
+  </select>
+  <select id="months" resultType="com.sicost.common.assignments.AssignmentMonthlyService$StoredMonth">
+    SELECT input_ym AS "month",input_day_cnt::int AS "days",mon_mm AS "mm",aply_uprc AS "price",sales_amt AS "sales",fix_yn AS "fixed"
+    FROM tb_pj_asgn_mon WHERE asgn_id=#{id} ORDER BY input_ym
+  </select>
+  <select id="cashBase" resultType="string">SELECT std_val::bigint::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="closeStatus" resultType="string">SELECT close_stat_cd FROM tb_cl_close WHERE close_ym=#{month}</select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <delete id="deleteMonth">DELETE FROM tb_pj_asgn_mon WHERE asgn_id=#{id} AND input_ym=#{month} AND fix_yn='N'</delete>
+  <insert id="saveMonth">
+    INSERT INTO tb_pj_asgn_mon(asgn_id,input_ym,dev_id,proj_id,input_day_cnt,mon_mm,aply_uprc,sales_amt,fix_yn,reg_user_id,reg_dttm)
+    VALUES(#{source.id},#{month},#{source.developerId},#{source.projectId},#{value.inputDays},CAST(#{value.monthlyMm} AS numeric),CAST(#{value.appliedUnitPrice,jdbcType=VARCHAR} AS numeric),CAST(#{value.salesAmount} AS numeric),'N',#{actor},#{now})
+    ON CONFLICT(asgn_id,input_ym) DO UPDATE SET input_day_cnt=EXCLUDED.input_day_cnt,mon_mm=EXCLUDED.mon_mm,aply_uprc=EXCLUDED.aply_uprc,sales_amt=EXCLUDED.sales_amt,mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tb_pj_asgn_mon.fix_yn='N'
+  </insert>
+  <update id="project">UPDATE tb_pj_asgn SET ctrt_mm=#{mm},bill_uprc=#{price,jdbcType=NUMERIC},mod_user_id=#{actor},mod_dttm=#{now} WHERE asgn_id=#{id}</update>
+</mapper>

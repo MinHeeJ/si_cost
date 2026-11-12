@@ -1,0 +1,41 @@
+.assignment-history-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.assignment-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.assignment-history-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+.assignment-history-panel td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 90px;
+}
+.assignment-history-panel td[data-column="before"],
+.assignment-history-panel td[data-column="after"] {
+  min-width: 160px;
+}
+.assignment-history-form {
+  display: grid;
+  gap: 16px;
+}
+.assignment-history-form textarea {
+  width: 100%;
+  padding: 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  resize: vertical;
+}

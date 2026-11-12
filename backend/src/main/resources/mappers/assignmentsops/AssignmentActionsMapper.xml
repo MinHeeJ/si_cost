@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.assignmentsops.AssignmentActionsMapper">
+  <select id="project" resultType="com.sicost.assignmentsops.AssignmentActionsDtos$Project">
+    SELECT proj_id AS "id",proj_nm AS "name",proj_stat_cd AS "status",ctrt_type_cd AS "contractType",ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate" FROM tb_pj_proj WHERE proj_id=#{id}
+  </select>
+  <select id="developer" resultType="com.sicost.assignmentsops.AssignmentActionsDtos$Developer">
+    SELECT dev_id AS "id",dev_nm AS "name",mng_no AS "managementNo",emp_type_cd AS "employeeType",drct_cls_cd AS "directClass",part_id AS "partId",use_yn AS "useYn",jncmp_dt AS "joinDate",retire_dt AS "retireDate" FROM tb_hr_dev WHERE dev_id=#{id}
+  </select>
+  <select id="labels" resultType="com.sicost.assignmentsops.AssignmentActionsDtos$Labels">
+    SELECT p.proj_nm AS "projectName",d.dev_nm AS "developerName",d.mng_no AS "managementNo",COALESCE(c.code_nm,a.job_cd) AS "jobName"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=a.job_cd WHERE a.asgn_id=#{id}
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT json_build_object('assignment',(SELECT row_to_json(a) FROM tb_pj_asgn a WHERE asgn_id=#{id}),
+      'history',COALESCE((SELECT json_agg(row_to_json(h) ORDER BY hist_sn) FROM tb_pj_asgn_hist h WHERE asgn_id=#{id}),'[]'::json),
+      'months',COALESCE((SELECT json_agg(row_to_json(m) ORDER BY input_ym) FROM tb_pj_asgn_mon m WHERE asgn_id=#{id}),'[]'::json))::text
+  </select>
+  <select id="matchingIds" resultType="string">
+    SELECT a.asgn_id FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id
+    WHERE ((a.input_bgn_dt &lt; make_date(#{year}+1,1,1) AND a.input_end_dt &gt;= make_date(#{year},1,1))
+      OR EXISTS(SELECT 1 FROM tb_pj_asgn_mon m WHERE m.asgn_id=a.asgn_id AND left(m.input_ym,4)=CAST(#{year} AS text)
+        AND (m.fix_yn='Y' OR m.input_ym &lt; (SELECT std_val::bigint::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1)
+          OR EXISTS(SELECT 1 FROM tb_cl_close c WHERE c.close_ym=m.input_ym AND c.close_stat_cd='CLOSE'))))
+    <if test="!includeCancelled">AND a.asgn_stat_cd!='CNCL'</if>
+    <if test="projectId != null">AND a.proj_id=#{projectId}</if>
+    <if test="jobCode != null">AND a.job_cd=#{jobCode}</if>
+    <if test="q != null">AND (strpos(lower(d.dev_nm),lower(#{q})) &gt; 0 OR strpos(lower(d.mng_no),lower(#{q})) &gt; 0)</if>
+    ORDER BY a.asgn_id
+  </select>
+  <select id="candidates" resultType="com.sicost.assignmentsops.AssignmentActionsDtos$CandidateSource">
+    SELECT DISTINCT ON(a.dev_id) a.dev_id AS "developerId",d.dev_nm AS "developerName",d.mng_no AS "managementNo",a.asgn_id AS "lastAssignmentId",a.input_end_dt AS "withdrawalDate"
+    FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id WHERE a.proj_id=#{projectId} AND a.dev_id!=#{developerId} AND a.asgn_stat_cd='ACT'
+    ORDER BY a.dev_id,a.input_end_dt DESC,a.input_bgn_dt DESC,a.asgn_id DESC
+  </select>
+  <select id="overlaps" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE proj_id=#{projectId} AND dev_id=#{developerId} AND asgn_stat_cd='ACT' AND input_bgn_dt &lt; #{date} AND input_end_dt &gt;= #{date} ORDER BY asgn_id</select>
+  <select id="substitutionContext" resultType="string">
+    SELECT json_build_object('project',(SELECT row_to_json(p) FROM tb_pj_proj p WHERE proj_id=#{projectId}),
+      'assignments',COALESCE((SELECT json_agg(row_to_json(a) ORDER BY asgn_id) FROM tb_pj_asgn a WHERE proj_id=#{projectId}),'[]'::json),
+      'history',COALESCE((SELECT json_agg(row_to_json(h) ORDER BY h.asgn_id,h.hist_sn) FROM tb_pj_asgn_hist h JOIN tb_pj_asgn a ON a.asgn_id=h.asgn_id WHERE a.proj_id=#{projectId}),'[]'::json),
+      'months',COALESCE((SELECT json_agg(row_to_json(m) ORDER BY m.asgn_id,m.input_ym) FROM tb_pj_asgn_mon m WHERE proj_id=#{projectId}),'[]'::json),
+      'close',COALESCE((SELECT json_agg(row_to_json(c) ORDER BY close_ym) FROM tb_cl_close c),'[]'::json),
+      'standards',COALESCE((SELECT json_agg(row_to_json(s) ORDER BY std_cd,aply_bgn_ym) FROM tb_sy_oper_std s WHERE std_cd IN ('CASH_BASE_YM','MM_OVER')),'[]'::json))::text
+  </select>
+  <select id="price" resultType="java.math.BigDecimal">SELECT mon_uprc FROM tb_hr_dev_prc WHERE dev_id=#{developerId} AND aply_bgn_ym &lt;= #{month} AND (aply_end_ym IS NULL OR aply_end_ym &gt;= #{month}) ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="mmLimit" resultType="java.math.BigDecimal">SELECT std_val FROM tb_sy_oper_std WHERE std_cd='MM_OVER' AND aply_bgn_ym &lt;= #{month} ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="totalMm" resultType="java.math.BigDecimal">SELECT COALESCE(sum(mon_mm),0) FROM tb_pj_asgn_mon WHERE dev_id=#{developerId} AND input_ym=#{month}<if test="excludedId != null"> AND asgn_id!=#{excludedId}</if></select>
+  <select id="projectPart" resultType="string">SELECT part_id FROM tb_pj_proj_part WHERE proj_id=#{projectId} AND aply_bgn_ym &lt;= #{month} ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="leave" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_hr_dev_stat WHERE dev_id=#{developerId} AND work_stat_cd='LEAVE' AND bgn_dt &lt;= #{endDate} AND (end_dt IS NULL OR end_dt &gt;= #{startDate}))</select>
+  <select id="active" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code} AND use_yn='Y' AND del_yn='N')</select>
+  <select id="duplicate" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_pj_asgn WHERE proj_id=#{projectId} AND dev_id=#{developerId} AND job_cd=#{jobCode} AND input_bgn_dt=#{startDate} AND input_end_dt=#{endDate} AND input_type_cd=#{inputType} AND asgn_stat_cd='ACT')</select>
+  <select id="turnkey" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_pj_tk_dstrb WHERE proj_id=#{projectId} AND dev_id=#{developerId})</select>
+  <select id="serial" resultType="int">SELECT COALESCE(max(hist_sn),0)::int FROM tb_pj_asgn_hist WHERE asgn_id=#{id}</select>
+  <insert id="insert">INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ctrt_dev_id,ext_psbl_cd,ext_cnt,early_wthdr_yn,asgn_stat_cd,reg_user_id,reg_dttm)
+    VALUES(#{source.id},#{source.projectId},#{source.developerId},#{source.jobCode},#{source.startDate},#{source.endDate},#{source.contractMm},#{source.price,jdbcType=NUMERIC},#{source.inputType},#{source.contractDeveloperId,jdbcType=VARCHAR},#{source.extensionPossibility,jdbcType=VARCHAR},#{source.extensionCount},#{source.earlyWithdrawal},#{source.status},#{actor},#{now})</insert>
+  <update id="update">UPDATE tb_pj_asgn SET input_end_dt=#{source.endDate},ctrt_mm=#{source.contractMm},bill_uprc=#{source.price,jdbcType=NUMERIC},input_type_cd=#{source.inputType},ext_psbl_cd=#{source.extensionPossibility,jdbcType=VARCHAR},ext_cnt=#{source.extensionCount},early_wthdr_yn=#{source.earlyWithdrawal},asgn_stat_cd=#{source.status},mod_user_id=#{actor},mod_dttm=#{now} WHERE asgn_id=#{source.id}</update>
+  <insert id="event">INSERT INTO tb_pj_asgn_hist(asgn_id,hist_sn,asgn_chg_type_cd,aply_dt,bfr_val,aft_val,asgn_chg_rsn_cd,chg_memo,new_uprc,new_ctrt_mm,rtro_yn,close_cross_yn,crct_yn,crct_trgt_sn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{serial},#{type},#{date},#{before,jdbcType=VARCHAR},#{after,jdbcType=VARCHAR},#{reason,jdbcType=VARCHAR},#{memo,jdbcType=VARCHAR},#{price,jdbcType=NUMERIC},#{mm,jdbcType=NUMERIC},#{retroactive},#{closeCross},'N',NULL,#{actor},#{now})</insert>
+</mapper>

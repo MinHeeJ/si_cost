@@ -10,5 +10,6 @@ public interface MasterIdMapper {
     BigInteger nextDeveloper();
     BigInteger nextCandidate();
     BigInteger nextManagementNo();
+    BigInteger nextAssignment();
     boolean managementNoExists(String managementNo);
 }

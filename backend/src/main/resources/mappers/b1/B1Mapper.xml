@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b1.B1Mapper">
+  <select id="developers" resultType="com.sicost.b1.B1Dtos$Developer">
+    SELECT dev_id AS "id",mng_no AS "managementNo",dev_nm AS "name",emp_type_cd AS "employeeType",drct_cls_cd AS "directClass",jbps_cd AS "position" FROM tb_hr_dev ORDER BY dev_id
+  </select>
+  <select id="rates" resultType="com.sicost.b1.B1Dtos$Rate">
+    SELECT c.code,c.code_val AS "value" FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    WHERE c.code_grp_id='ALWNC' AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y'
+      AND c.code IN ('ALLOW_TEAM','ALLOW_GROUP','SEV_RATE','INS_RATE') ORDER BY c.code FOR SHARE OF c,g
+  </select>
+  <select id="lockDevelopers" resultType="string">
+    SELECT dev_id FROM tb_hr_dev WHERE dev_id IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY dev_id FOR SHARE
+  </select>
+  <resultMap id="payrollRow" type="com.sicost.b1.B1Dtos$Payroll">
+    <constructor><arg column="developerId" javaType="java.lang.String"/><arg resultMap="payrollValues" javaType="com.sicost.b1.B1Dtos$Values"/></constructor>
+  </resultMap>
+  <resultMap id="payrollValues" type="com.sicost.b1.B1Dtos$Values">
+    <constructor>
+      <arg column="pay" javaType="java.math.BigDecimal"/><arg column="allowance" javaType="java.math.BigDecimal"/>
+      <arg column="companyInsurance" javaType="java.math.BigDecimal"/><arg column="selfInsurance" javaType="java.math.BigDecimal"/>
+      <arg column="retirement" javaType="java.math.BigDecimal"/><arg column="incomeTax" javaType="java.math.BigDecimal"/>
+      <arg column="withholding" javaType="java.math.BigDecimal"/><arg column="realPay" javaType="java.math.BigDecimal"/>
+      <arg column="vendorSupply" javaType="java.math.BigDecimal"/><arg column="employeeType" javaType="java.lang.String"/><arg column="directClass" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+  <select id="payroll" resultMap="payrollRow">
+    SELECT dev_id AS "developerId",pay_amt AS "pay",alwnc_amt AS "allowance",insr_cmpny_amt AS "companyInsurance",insr_self_amt AS "selfInsurance",
+      retire_rsv_amt AS "retirement",incm_tax_amt AS "incomeTax",wthld_tax_amt AS "withholding",real_pay_amt AS "realPay",vndr_sply_amt AS "vendorSupply",emp_type_cd AS "employeeType",drct_cls_cd AS "directClass"
+    FROM tb_hr_mon_pay WHERE pay_ym=#{month} ORDER BY pay_ym,dev_id
+  </select>
+  <select id="members" resultType="com.sicost.b1.B1Dtos$Removed">
+    SELECT p.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS "developerName" FROM tb_hr_mon_pay p JOIN tb_hr_dev d ON d.dev_id=p.dev_id WHERE p.pay_ym=#{month} ORDER BY p.dev_id
+  </select>
+  <select id="cashBase" resultType="string">SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1 FOR SHARE</select>
+  <select id="closed" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_cl_close WHERE close_ym=#{month} AND close_stat_cd='CLOSE')</select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <sql id="uploadColumns">upld_id AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS "filename",file_size AS "size",trgt_ym AS "month",reg_user_id AS "actor",upld_stat_cd AS "status",tot_row_cnt AS "totalRows",succ_cnt AS "successRows",warn_cnt AS "warningRows",err_cnt AS "errorRows"</sql>
+  <select id="upload" resultType="com.sicost.b1.B1Dtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId}</select>
+  <select id="lockUpload" resultType="com.sicost.b1.B1Dtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE</select>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,trgt_ym,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B1','UI-02',#{write.filename},#{write.size},#{write.month},#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},upld_stat_cd='CHECKED',mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}</update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm) VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})</insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">SELECT rslt_sn AS "sequence",rslt_type_cd AS "severity",row_no AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS "reason" FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn</select>
+  <select id="receipts" resultType="com.sicost.b1.B1Dtos$Receipt">SELECT chg_item_nm AS "item",aft_val AS "value" FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_UPLD' AND trgt_key=CAST(#{uploadId} AS text) AND chg_rsn=#{reason} ORDER BY hist_id</select>
+  <insert id="insertPay">
+    INSERT INTO tb_hr_mon_pay(pay_ym,dev_id,pay_amt,alwnc_amt,insr_cmpny_amt,insr_self_amt,retire_rsv_amt,incm_tax_amt,wthld_tax_amt,real_pay_amt,vndr_sply_amt,emp_type_cd,drct_cls_cd,upld_id,reg_user_id,reg_dttm)
+    VALUES(#{month},#{developerId},#{value.pay},#{value.allowance},#{value.companyInsurance},#{value.selfInsurance},#{value.retirement},#{value.incomeTax},#{value.withholding},#{value.realPay},#{value.vendorSupply},#{value.employeeType},#{value.directClass},#{uploadId},#{actor},#{now})
+  </insert>
+  <update id="updatePay">
+    UPDATE tb_hr_mon_pay SET pay_amt=#{value.pay},alwnc_amt=#{value.allowance},insr_cmpny_amt=#{value.companyInsurance},insr_self_amt=#{value.selfInsurance},retire_rsv_amt=#{value.retirement},incm_tax_amt=#{value.incomeTax},wthld_tax_amt=#{value.withholding},real_pay_amt=#{value.realPay},vndr_sply_amt=#{value.vendorSupply},emp_type_cd=#{value.employeeType},drct_cls_cd=#{value.directClass},upld_id=#{uploadId},mod_user_id=#{actor},mod_dttm=#{now} WHERE pay_ym=#{month} AND dev_id=#{developerId}
+  </update>
+  <delete id="deletePay">DELETE FROM tb_hr_mon_pay WHERE pay_ym=#{month} AND dev_id=#{developerId}</delete>
+  <update id="markApplied">UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'</update>
+</mapper>

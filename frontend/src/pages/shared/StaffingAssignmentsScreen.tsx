@@ -1,4 +1,1 @@
-import { FollowUpScreen } from "./FollowUpScreen";
-export function StaffingAssignmentsScreen() {
-  return <FollowUpScreen screenId="UI-12" />;
-}
+export { StaffingAssignmentsScreen } from "../assignments/StaffingAssignmentsScreen";

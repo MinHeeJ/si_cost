@@ -10,6 +10,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { B8UploadActions } from "../b8/B8UploadDialog";
+import { PayrollActions } from "../apiops/PayrollDialog";
 import { DeveloperForm } from "./DeveloperForm";
 import { DeveloperDrawer } from "./DeveloperDrawer";
 import * as api from "./peopleClient";
@@ -401,6 +402,7 @@ export function DeveloperPoolScreen({
             {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
             <div />
             <div className="developer-actions">
+              <PayrollActions onDirtyChange={onDirtyChange} />
               {!mobile && (
                 <B8UploadActions
                   onApplied={async () => {

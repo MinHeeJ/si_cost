@@ -107,10 +107,78 @@ class PersistenceBoundaryTest {
             }
         }
     }
-    @Test void sourceWritesAreLimitedToLossAndCostClassificationNeverAmounts() {
+    @Test void assignmentCreateAndApprovedMutationsPreserveIdentityColumns() {
+        for (String sql : new String[]{
+                "INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ctrt_dev_id,ext_psbl_cd,ext_cnt,early_wthdr_yn,asgn_stat_cd,reg_user_id,reg_dttm) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "UPDATE tb_pj_asgn SET input_end_dt=?,ext_cnt=ext_cnt+1,mod_user_id=?,mod_dttm=? WHERE asgn_id=?",
+                "UPDATE tb_pj_asgn SET input_type_cd=?,ext_psbl_cd=NULL WHERE asgn_id=?",
+                "UPDATE tb_pj_asgn SET asgn_stat_cd='CNCL',mod_user_id=?,mod_dttm=? WHERE asgn_id=? AND asgn_stat_cd='ACT'"}) {
+            assertThatCode(() -> PersistenceBoundary.requireAllowed(sql)).doesNotThrowAnyException();
+        }
+        for (String column : new String[]{"asgn_id","proj_id","dev_id","job_cd","input_bgn_dt","ctrt_dev_id","reg_user_id","reg_dttm"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("UPDATE tb_pj_asgn SET " + column + "=? WHERE asgn_id=?")).isInstanceOf(IllegalStateException.class);
+        }
+        for (String sql : new String[]{"UPDATE tb_pj_asgn SET bill_uprc=? WHERE proj_id=?",
+                "UPDATE tb_pj_asgn SET bill_uprc=? WHERE asgn_id=? OR 1=1",
+                "INSERT INTO tb_pj_asgn(asgn_id,unknown_column) VALUES(?,?)",
+                "INSERT INTO tb_pj_asgn(asgn_id,asgn_id) VALUES(?,?)",
+                "INSERT INTO tb_pj_asgn(asgn_id) VALUES(?) ON CONFLICT(asgn_id) DO UPDATE SET dev_id=?"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void onlyGuardedFullKeyCorrectionCanUpdateAssignmentHistory() {
+        String allowed="UPDATE tb_pj_asgn_hist SET crct_yn='Y' WHERE asgn_id=? AND hist_sn=? AND crct_yn='N'";
+        assertThatCode(() -> PersistenceBoundary.requireAllowed(allowed)).doesNotThrowAnyException();
+        for (String sql : new String[]{
+                allowed + " OR 1=1",allowed.replace("crct_yn='N'","crct_yn='Y'"),
+                allowed.replace("SET crct_yn='Y'","SET crct_yn='N'"),
+                allowed.replace("SET crct_yn='Y'","SET crct_yn=?"),
+                allowed.replace(" AND hist_sn=?",""),allowed.replace(" AND crct_yn='N'",""),
+                allowed.replace("SET crct_yn='Y'","SET crct_yn='Y',new_uprc=?"),
+                allowed.replace("SET crct_yn='Y'","SET crct_yn='Y',new_ctrt_mm=?"),
+                allowed.replace("SET crct_yn='Y'","SET crct_yn='Y',reg_dttm=?"),
+                "DELETE FROM tb_pj_asgn_hist WHERE asgn_id=? AND hist_sn=?"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void monthlyDeletionRequiresExactAssignmentMonthAndUnfixedRow() {
+        assertThatCode(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_pj_asgn_mon WHERE asgn_id=? AND input_ym=? AND fix_yn='N'")).doesNotThrowAnyException();
+        for (String where : new String[]{"asgn_id=?", "asgn_id=? AND input_ym=?", "asgn_id=? AND input_ym=? AND fix_yn='Y'",
+                "asgn_id=? AND input_ym>=? AND fix_yn='N'", "asgn_id=? AND input_ym=? AND fix_yn=?",
+                "asgn_id=? AND input_ym=? AND fix_yn='N' OR 1=1"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_pj_asgn_mon WHERE " + where)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void payrollReplacementOnlyDeletesOneExplicitMonthOrFullPrimaryKey() {
+        assertThatCode(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_hr_mon_pay WHERE pay_ym=?")).doesNotThrowAnyException();
+        assertThatCode(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_hr_mon_pay WHERE pay_ym=? AND dev_id=?")).doesNotThrowAnyException();
+        for (String where : new String[]{"", " WHERE dev_id=?", " WHERE pay_ym>=?", " WHERE pay_ym=? OR 1=1",
+                " WHERE pay_ym=? AND dev_id=? OR dev_id=?", " WHERE pay_ym=?; DELETE FROM tb_hr_dev"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM tb_hr_mon_pay" + where)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void payrollUpdatesAndUpsertsPreservePrimaryKeyAndOriginalRegistrationFields() {
+        String insert="INSERT INTO tb_hr_mon_pay(pay_ym,dev_id,pay_amt,alwnc_amt,insr_cmpny_amt,retire_rsv_amt,emp_type_cd,drct_cls_cd,reg_user_id) VALUES(?,?,?,?,?,?,?,?,?)";
+        assertThatCode(() -> PersistenceBoundary.requireAllowed(insert)).doesNotThrowAnyException();
+        assertThatCode(() -> PersistenceBoundary.requireAllowed(insert + " ON CONFLICT(pay_ym,dev_id) DO UPDATE SET pay_amt=?,upld_id=?,mod_user_id=?,mod_dttm=?")).doesNotThrowAnyException();
+        assertThatCode(() -> PersistenceBoundary.requireAllowed(insert + " ON\n CONFLICT(pay_ym,dev_id) DO UPDATE SET pay_amt=EXCLUDED.pay_amt,mod_user_id=EXCLUDED.mod_user_id")).doesNotThrowAnyException();
+        assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_hr_mon_pay SET alwnc_amt=?,retire_rsv_amt=?,wthld_tax_amt=?,real_pay_amt=?,mod_user_id=?,mod_dttm=? WHERE pay_ym=? AND dev_id=?")).doesNotThrowAnyException();
+        for (String column : new String[]{"pay_ym","dev_id","reg_user_id","reg_dttm","fix_yn"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("UPDATE tb_hr_mon_pay SET " + column + "=? WHERE pay_ym=? AND dev_id=?")).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(insert + " ON CONFLICT(pay_ym,dev_id) DO UPDATE SET " + column + "=?")).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(insert + " ON\n CONFLICT(pay_ym,dev_id) DO UPDATE SET " + column + "=?")).isInstanceOf(IllegalStateException.class);
+        }
+        for (String sql : new String[]{"UPDATE tb_hr_mon_pay SET pay_amt=?", "UPDATE tb_hr_mon_pay SET pay_amt=? WHERE pay_ym=?",
+                "UPDATE tb_hr_mon_pay SET pay_amt=? WHERE pay_ym=? AND dev_id=? OR 1=1",
+                insert + " ON CONFLICT(dev_id) DO UPDATE SET pay_amt=?"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void sourceWritesPermitApprovedProjectionAndCostClassificationNeverAmounts() {
         assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_pj_asgn SET input_end_dt=?,early_wthdr_yn='Y',mod_user_id=?,mod_dttm=? WHERE asgn_id=? AND asgn_stat_cd='ACT'")).doesNotThrowAnyException();
         assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_co_mon_cost SET cost_cls_cd='IDLE',mod_user_id=?,mod_dttm=? WHERE proj_id=? AND cost_cls_cd='PRE' AND fix_yn='N' AND cost_ym=?")).doesNotThrowAnyException();
-        for (String sql : new String[]{"INSERT INTO tb_pj_asgn(asgn_id) VALUES(?)", "UPDATE tb_pj_asgn SET bill_uprc=? WHERE asgn_id=?",
+        assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_pj_asgn SET bill_uprc=?,ctrt_mm=?,mod_user_id=?,mod_dttm=? WHERE asgn_id=?")).doesNotThrowAnyException();
+        for (String sql : new String[]{"UPDATE tb_pj_asgn SET dev_id=? WHERE asgn_id=?", "UPDATE tb_pj_asgn SET bill_uprc=?",
                 "UPDATE tb_co_mon_cost SET sales_amt=? WHERE proj_id=?", "UPDATE tb_co_mon_cost SET cost_cls_cd='IDLE' WHERE proj_id=?",
                 "UPDATE tb_co_mon_cost SET cost_cls_cd='IDLE' WHERE proj_id=? AND cost_cls_cd='PRE' AND fix_yn='Y'",
                 "INSERT INTO tb_co_mon_cost(cost_cls_cd) VALUES('IDLE')", "UPDATE tb_pj_drct_exps SET exps_amt=? WHERE proj_id=?",

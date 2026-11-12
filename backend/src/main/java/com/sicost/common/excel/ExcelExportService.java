@@ -109,13 +109,14 @@ public class ExcelExportService {
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
             case "UI-15" -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
-            case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사");
+            case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사", "급여_등록양식", "급여_업로드검사");
+            case "UI-12" -> Set.of("투입_신규양식", "투입_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
             case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> throw InputValidator.invalid("screenId");
         };
         if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
-        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사").contains(specification.kind())) {
+        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");

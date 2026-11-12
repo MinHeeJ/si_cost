@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.PayrollMapper">
+  <sql id="source">
+    FROM tb_hr_mon_pay p JOIN tb_hr_dev d ON d.dev_id=p.dev_id
+    WHERE p.pay_ym=#{month}
+    <if test="q != null">
+      AND (strpos(lower(d.dev_nm),lower(#{q})) &gt; 0 OR strpos(lower(d.mng_no),lower(#{q})) &gt; 0)
+    </if>
+  </sql>
+  <select id="rows" resultType="com.sicost.apiops.PayrollDtos$Row">
+    SELECT substring(p.pay_ym,1,4)||'-'||substring(p.pay_ym,5,2) AS "month",
+      p.dev_id AS "developerId",d.mng_no AS "managementNo",d.dev_nm AS "developerName",
+      p.emp_type_cd AS "employeeType",p.drct_cls_cd AS "directClass",
+      p.pay_amt::text AS "payAmount",p.alwnc_amt::text AS "allowanceAmount",
+      p.insr_cmpny_amt::text AS "companyInsuranceAmount",COALESCE(p.insr_self_amt,0)::text AS "selfInsuranceAmount",
+      p.retire_rsv_amt::text AS "retirementReserveAmount",COALESCE(p.incm_tax_amt,0)::text AS "incomeTaxAmount",
+      COALESCE(p.wthld_tax_amt,0)::text AS "withholdingTaxAmount",p.real_pay_amt::text AS "realPayAmount",
+      COALESCE(p.vndr_sply_amt,0)::text AS "vendorSupplyAmount",p.upld_id AS "uploadId"
+    <include refid="source"/>
+    ORDER BY d.dev_nm ASC,p.dev_id ASC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="count" resultType="long">SELECT count(*) <include refid="source"/></select>
+  <select id="snapshot" resultType="string">
+    SELECT json_build_object('month',CAST(#{month} AS text),'rows',
+      COALESCE((SELECT json_agg(row_to_json(p) ORDER BY p.pay_ym,p.dev_id)
+        FROM tb_hr_mon_pay p WHERE p.pay_ym=#{month}),'[]'::json))::text
+  </select>
+</mapper>

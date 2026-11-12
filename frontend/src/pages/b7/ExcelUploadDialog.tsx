@@ -52,6 +52,8 @@ export type ExcelUploadDialogProps = {
   renderContext?(pending: boolean, applied: boolean): ReactNode;
   renderValidation?(result: UploadValidation): ReactNode;
   renderApplied?(result: UploadApplied): ReactNode;
+  confirmAllowed?: boolean;
+  validationFailureMessage?: string;
 };
 export function ExcelUploadDialog({
   onClose,
@@ -68,6 +70,8 @@ export function ExcelUploadDialog({
   renderContext,
   renderValidation,
   renderApplied,
+  confirmAllowed = true,
+  validationFailureMessage,
 }: ExcelUploadDialogProps) {
   const [file, setFile] = useState<File>();
   const [result, setResult] = useState<UploadValidation>();
@@ -104,14 +108,26 @@ export function ExcelUploadDialog({
   async function check() {
     if (!file || readOnly) return;
     await run(async () => {
-      setResult(await (workflow?.validate ?? api.createB7Validation)(file));
+      const checked = await (workflow?.validate ?? api.createB7Validation)(
+        file,
+      );
+      setResult(checked);
       setApplied(undefined);
+      if (checked.status === "APPLIED" && workflow?.result) {
+        setApplied(await workflow.result(checked.uploadId));
+        try {
+          await onApplied();
+        } catch {
+          setRefreshFailed(true);
+        }
+      }
     });
   }
   async function apply() {
     if (
       !file ||
       !result?.canApply ||
+      !confirmAllowed ||
       applied ||
       readOnly ||
       result.summary.errorRows > 0 ||
@@ -173,7 +189,8 @@ export function ExcelUploadDialog({
             !file ||
             Boolean(
               result &&
-                (!result.canApply ||
+                (!confirmAllowed ||
+                  !result.canApply ||
                   result.summary.errorRows > 0 ||
                   result.summary.totalRows < 1),
             ))
@@ -251,9 +268,10 @@ export function ExcelUploadDialog({
               <p className={result.canApply ? "b7-info" : "b7-bad"}>
                 {result.canApply
                   ? "오류가 없어 반영할 수 있습니다. 경고 내용을 확인해 주세요."
-                  : screenId === "UI-02"
-                    ? "오류를 수정한 파일을 다시 검사해 주세요. 등록된 개발자는 없습니다."
-                    : `오류를 수정한 파일을 다시 검사해 주세요. ${emptyRegistrationMessage}`}
+                  : (validationFailureMessage ??
+                    (screenId === "UI-02"
+                      ? "오류를 수정한 파일을 다시 검사해 주세요. 등록된 개발자는 없습니다."
+                      : `오류를 수정한 파일을 다시 검사해 주세요. ${emptyRegistrationMessage}`))}
               </p>
               <div className="b7-actions">
                 <button

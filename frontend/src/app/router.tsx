@@ -19,6 +19,7 @@ import { ProjectStatusPanel } from "../pages/projectsops/ProjectStatusPanel";
 import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
+import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
@@ -261,7 +262,8 @@ function BusinessPartnersWorkspace({
   }, [dirty, onDirtyChange]);
   const view = (
     preferences.get("COLS", "UI-15")?.value as
-      ScreenColumnPreferences | undefined
+      | ScreenColumnPreferences
+      | undefined
   )?.clients;
   const size = preferences.get("PAGE_SIZE")?.value;
   const pageSize = size === 20 || size === 100 ? size : 50;
@@ -462,7 +464,8 @@ function PeopleWorkspace({
   const [error, setError] = useState<unknown>();
   const viewId = screenId === "UI-02" ? "developers" : "candidates";
   const columns = preferences.get("COLS", screenId)?.value as
-    ScreenColumnPreferences | undefined;
+    | ScreenColumnPreferences
+    | undefined;
   const size = preferences.get("PAGE_SIZE")?.value;
   const unit = preferences.get("AMT_UNIT")?.value;
   const dense = preferences.get("DENSE")?.value === "좁게";
@@ -654,6 +657,11 @@ function RegisteredApplication() {
   const [developersDirty, setDevelopersDirty] = useState(false),
     [candidatesDirty, setCandidatesDirty] = useState(false);
   const [projectsDirty, setProjectsDirty] = useState(false);
+  const [assignmentsDirty, setAssignmentsDirty] = useState(false);
+  const onAssignmentsDirty = useCallback(
+    (dirty: boolean) => setAssignmentsDirty(dirty),
+    [],
+  );
   const onProjectsDirty = useCallback(
     (dirty: boolean) => setProjectsDirty(dirty),
     [],
@@ -711,7 +719,9 @@ function RegisteredApplication() {
                 ? candidatesDirty
                 : id === "UI-01"
                   ? projectsDirty
-                  : id === "UI-23" && usersDirty
+                  : id === "UI-12"
+                    ? assignmentsDirty
+                    : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-01": (
@@ -724,6 +734,11 @@ function RegisteredApplication() {
         ),
         "UI-02": (
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
+        ),
+        "UI-12": (
+          <SharedScreenFrame screenId="UI-12">
+            <StaffingAssignmentsScreen onDirtyChange={onAssignmentsDirty} />
+          </SharedScreenFrame>
         ),
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />

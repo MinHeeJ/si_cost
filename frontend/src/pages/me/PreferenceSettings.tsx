@@ -104,6 +104,7 @@ export function PreferenceSettings({
                   </label>
                   {pref.stored && (
                     <button
+                      data-testid={`preference-reset-${setting.type.toLowerCase().replace(/_/g, "-")}`}
                       type="button"
                       disabled={preferences.pending}
                       onClick={() => setResetType(setting.type)}
@@ -119,6 +120,7 @@ export function PreferenceSettings({
                   )}
                   {draft[setting.type] !== undefined && failure != null && (
                     <button
+                      data-testid={`preference-retry-${setting.type.toLowerCase().replace(/_/g, "-")}`}
                       type="button"
                       disabled={preferences.pending}
                       onClick={() =>
