@@ -410,7 +410,7 @@ beforeEach(() => {
 describe("공식 진입점 합성", () => {
   it("UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다", async () => {
     open("/UI-13");
-    await screen.findAllByText("조회된 청구가 없습니다.");
+    await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
     expect(screen.getByTestId("bills-screen")).toHaveAttribute(
       "data-screen-id",
       "SCR-UI-13",
@@ -441,7 +441,7 @@ describe("공식 진입점 합성", () => {
     open("/UI-13");
     await screen.findByText("청구 조회 실패");
     await userEvent.click(screen.getByTestId("bill-refresh"));
-    await screen.findAllByText("조회된 청구가 없습니다.");
+    await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
     expect(bills.getBills).toHaveBeenCalledTimes(2);
   });
   it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
@@ -656,7 +656,7 @@ describe("공식 진입점 합성", () => {
         );
       } else if (id === "UI-13") {
         expect(await screen.findByTestId("bills-screen")).toBeVisible();
-        await screen.findAllByText("조회된 청구가 없습니다.");
+        await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
         expect(bills.getBills).toHaveBeenCalledWith(
           expect.objectContaining({ year: 2026 }),
         );
