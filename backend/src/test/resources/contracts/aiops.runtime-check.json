@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "backend": {
+    "service": "backend",
+    "container_port": 8080,
+    "health": {
+      "operation_id": "getHealth",
+      "method": "GET",
+      "path": "/api/health",
+      "expect": [
+        { "path": "meta", "op": "type", "value": "object" },
+        { "path": "success", "op": "equals", "value": true }
+      ]
+    }
+  },
+  "auth": { "required": false },
+  "first_menu": {
+    "route": "/UI-27",
+    "operation_id": "getCodeGroups",
+    "method": "GET",
+    "path": "/api/code-groups",
+    "expect": [
+      { "path": "success", "op": "equals", "value": true },
+      { "path": "data.items", "op": "type", "value": "array" }
+    ]
+  }
+}

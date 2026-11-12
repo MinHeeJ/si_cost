@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.billsops.BillOperationsMapper">
+  <select id="project" resultType="com.sicost.billsops.BillOperationsDtos$Project">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",COALESCE(c.clnt_nm,'–') AS "customerName",
+      p.ctrt_type_cd AS "contractType",p.proj_stat_cd AS "status",p.ctrt_end_dt AS "endDate"
+    FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id WHERE p.proj_id=#{id}
+  </select>
+  <sql id="billColumns">
+    bill_id AS "id",proj_id AS "projectId",bill_ord::int AS "order",bill_ym AS "month",bill_dt AS "billingDate",
+    sply_amt AS "supply",vat_rt AS "rate",vat_amt AS "vat",tot_amt AS "total",rcpt_sum_amt AS "receiptCache",
+    unpaid_amt AS "unpaidCache",pay_due_dt AS "dueDate",tax_invc_no AS "invoice",cncl_yn AS "cancelled",
+    cncl_rsn AS "cancelReason",cncl_user_id AS "cancelUserId",cncl_dttm AS "cancelledAt",
+    reg_user_id AS "registeredBy",reg_dttm AS "registeredAt",mod_user_id AS "modifiedBy",mod_dttm AS "modifiedAt"
+  </sql>
+  <select id="bill" resultType="com.sicost.billsops.BillOperationsDtos$StoredBill">
+    SELECT <include refid="billColumns"/> FROM tb_bl_bill WHERE bill_id=#{id}
+  </select>
+  <select id="bills" resultType="com.sicost.billsops.BillOperationsDtos$StoredBill">
+    SELECT <include refid="billColumns"/> FROM tb_bl_bill ORDER BY bill_id
+  </select>
+  <select id="snapshot" resultType="string">
+    <include refid="com.sicost.apiops.BillingReviewMapper.billSnapshotSql"/>
+  </select>
+  <select id="receipts" resultType="com.sicost.billsops.BillOperationsDtos$Receipt">
+    SELECT rcpt_id::bigint AS "id",bill_id AS "billId",rcpt_dt AS "date",rcpt_amt AS "amount",cncl_yn AS "cancelled",
+      cncl_rsn AS "reason",cncl_user_id AS "cancelUserId",cncl_dttm AS "cancelledAt",reg_user_id AS "registeredBy",
+      reg_dttm AS "registeredAt",mod_user_id AS "modifiedBy",mod_dttm AS "modifiedAt"
+    FROM tb_bl_rcpt WHERE bill_id=#{id} ORDER BY rcpt_id
+  </select>
+  <select id="assignments" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE proj_id=#{projectId} ORDER BY asgn_id</select>
+  <select id="developer" resultType="com.sicost.billsops.BillOperationsDtos$Developer">
+    SELECT dev_id AS "id",dev_nm AS "name",mng_no AS "managementNo" FROM tb_hr_dev WHERE dev_id=#{id}
+  </select>
+  <select id="latest" resultType="string">
+    SELECT bill_id FROM tb_bl_bill WHERE proj_id=#{projectId} AND cncl_yn='N' ORDER BY bill_ym DESC,bill_id DESC LIMIT 1
+  </select>
+  <select id="targetCount" resultType="int">
+    SELECT count(*)::int FROM tb_bl_bill WHERE proj_id=#{projectId} AND bill_ym=#{month} AND cncl_yn='N'
+  </select>
+  <select id="fixed" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_pj_asgn_mon WHERE proj_id=#{projectId} AND input_ym=#{month} AND fix_yn='Y')
+  </select>
+  <select id="greatestNumber" resultType="int">
+    SELECT COALESCE(max(right(bill_id,3)::int),0) FROM tb_bl_bill WHERE bill_ym=#{month}
+  </select>
+  <select id="greatestOrder" resultType="int">SELECT COALESCE(max(bill_ord)::int,0) FROM tb_bl_bill WHERE proj_id=#{projectId}</select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+  <update id="cancel">
+    UPDATE tb_bl_bill SET cncl_yn='Y',cncl_rsn=#{reason},cncl_user_id=#{actor},cncl_dttm=#{now},
+      rcpt_sum_amt=0,unpaid_amt=0,mod_user_id=#{actor},mod_dttm=#{now} WHERE bill_id=#{id} AND cncl_yn='N'
+  </update>
+  <insert id="insert">
+    INSERT INTO tb_bl_bill(bill_id,proj_id,bill_ord,bill_ym,bill_dt,sply_amt,vat_rt,vat_amt,tot_amt,rcpt_sum_amt,unpaid_amt,
+      pay_due_dt,tax_invc_no,cncl_yn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{projectId},#{order},#{month},#{billingDate},#{supply},#{rate},#{vat},#{total},0,#{total},#{dueDate},NULL,'N',#{actor},#{now})
+  </insert>
+</mapper>

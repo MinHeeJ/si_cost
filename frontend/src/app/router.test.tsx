@@ -31,9 +31,11 @@ import * as projects from "../pages/projects/projectsApi";
 import * as projectParts from "../pages/parts/projectPartsApi";
 import * as distribution from "../pages/distribution/distributionApi";
 import * as assignments from "../pages/assignmentsops/assignmentActionsApi";
+import * as bills from "../pages/bills/billsApi";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/bills/billsApi");
 vi.mock("../pages/assignmentsops/assignmentActionsApi");
 vi.mock("../pages/projects/projectsApi");
 vi.mock("../pages/parts/projectPartsApi");
@@ -212,6 +214,29 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(bills.getBills).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+    totals: {
+      supplyAmount: "0",
+      vatAmount: "0",
+      totalAmount: "0",
+      receiptAmount: "0",
+      unpaidAmount: "0",
+    },
+  });
+  vi.mocked(bills.getSummary).mockResolvedValue({
+    year: 2026,
+    includeCarryover: true,
+    billed: { amount: "0", count: 0, scope: "선택연도" },
+    currentMonth: { amount: "0", count: 0, scope: "이번달" },
+    unpaid: { amount: "0", count: 0, scope: "이월 포함" },
+    lateCount: 0,
+    lateScope: "이월 포함",
+  });
+  vi.mocked(bills.getProjectOptions).mockResolvedValue({ items: [] });
   vi.mocked(assignments.getAssignments).mockResolvedValue({
     items: [],
     total: 0,
@@ -383,6 +408,42 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다", async () => {
+    open("/UI-13");
+    await screen.findAllByText("조회된 청구가 없습니다.");
+    expect(screen.getByTestId("bills-screen")).toHaveAttribute(
+      "data-screen-id",
+      "SCR-UI-13",
+    );
+    expect(bills.getBills).toHaveBeenCalledWith(
+      expect.objectContaining({ year: 2026, includeCarryover: true }),
+    );
+    expect(screen.getAllByTestId("bills-screen")).toHaveLength(1);
+  });
+  it("청구 편집 dirty를 셸에 전달하여 탭 닫기 취소 시 입력을 보존한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    open("/UI-13");
+    await userEvent.click(await screen.findByTestId("bill-create"));
+    fireEvent.change(await screen.findByTestId("bill-supply-amount"), {
+      target: { value: "1234" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-13 탭 닫기" }),
+    );
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("bill-supply-amount")).toHaveValue("1234");
+    confirm.mockRestore();
+  });
+  it("등록된 청구 조회 실패는 기존 재조회 동작으로 복구한다", async () => {
+    vi.mocked(bills.getBills).mockRejectedValueOnce(
+      new Error("청구 조회 실패"),
+    );
+    open("/UI-13");
+    await screen.findByText("청구 조회 실패");
+    await userEvent.click(screen.getByTestId("bill-refresh"));
+    await screen.findAllByText("조회된 청구가 없습니다.");
+    expect(bills.getBills).toHaveBeenCalledTimes(2);
+  });
   it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     open("/UI-12");
@@ -591,6 +652,12 @@ describe("공식 진입점 합성", () => {
         ).toBeVisible();
         await screen.findByText("조회된 투입 배정이 없습니다.");
         expect(assignments.getAssignments).toHaveBeenCalledWith(
+          expect.objectContaining({ year: 2026 }),
+        );
+      } else if (id === "UI-13") {
+        expect(await screen.findByTestId("bills-screen")).toBeVisible();
+        await screen.findAllByText("조회된 청구가 없습니다.");
+        expect(bills.getBills).toHaveBeenCalledWith(
           expect.objectContaining({ year: 2026 }),
         );
       } else if (id === "UI-02" || id === "UI-33") {

@@ -18,6 +18,7 @@
         WHERE r.proj_id=p.proj_id AND r.aply_bgn_ym &lt;= #{month} ORDER BY r.aply_bgn_ym DESC LIMIT 1) AS "partName",NULL AS "distribution"
     FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id
     WHERE p.proj_stat_cd IN ('ING','PRE') AND p.ctrt_end_dt &gt;= #{today}
+    <if test="purpose == 'BILLING'">AND p.proj_stat_cd='ING' AND p.ctrt_type_cd&lt;&gt;'IN'</if>
     <if test="q != null">AND (strpos(p.proj_nm,#{q}) &gt; 0 OR strpos(p.proj_id,#{q}) &gt; 0 OR strpos(c.clnt_nm,#{q}) &gt; 0)</if>
     ORDER BY p.proj_nm,p.proj_id
   </select>

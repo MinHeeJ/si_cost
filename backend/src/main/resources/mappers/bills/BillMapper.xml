@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.bills.BillMapper">
+  <sql id="columns">
+    b.bill_id AS "id",b.proj_id AS "projectId",b.bill_ord::int AS "order",b.bill_ym AS "billingMonth",b.bill_dt AS "billingDate",
+    b.sply_amt AS "supplyAmount",b.vat_rt AS "vatRate",b.vat_amt AS "vatAmount",b.tot_amt AS "totalAmount",
+    b.rcpt_sum_amt AS "receiptAmount",b.unpaid_amt AS "unpaidAmount",b.pay_due_dt AS "dueDate",b.tax_invc_no AS "taxInvoiceNo",
+    (b.cncl_yn='Y') AS "cancelled",b.cncl_rsn AS "cancelReason",b.cncl_user_id AS "cancelUserId",b.cncl_dttm AS "cancelledAt",
+    b.reg_user_id AS "regUserId",b.reg_dttm AS "registeredAt",b.mod_user_id AS "modUserId",b.mod_dttm AS "modifiedAt"
+  </sql>
+  <select id="find" resultType="com.sicost.bills.BillDtos$Stored">SELECT <include refid="columns"/> FROM tb_bl_bill b WHERE b.bill_id=#{id}</select>
+  <select id="revisionSnapshot" resultType="string">
+    <include refid="com.sicost.apiops.BillingReviewMapper.billSnapshotSql"/>
+  </select>
+  <select id="list" resultType="com.sicost.bills.BillDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bl_bill b
+    LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS paid FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+    WHERE
+    <choose>
+      <when test="query.month != null">b.bill_ym=replace(#{query.month},'-','')</when>
+      <otherwise>
+        (left(b.bill_ym,4)=CAST(#{query.year} AS text)
+        <if test="query.includeCarryover and query.year == currentYear">OR (left(b.bill_ym,4)&lt;CAST(#{query.year} AS text) AND b.cncl_yn='N' AND b.tot_amt-COALESCE(r.paid,0)&gt;0)</if>)
+      </otherwise>
+    </choose>
+    <if test="query.projectId != null">AND b.proj_id=#{query.projectId}</if>
+    <if test="query.status != null">
+      AND (CASE WHEN b.cncl_yn='Y' THEN 'CNCL' WHEN b.tot_amt-COALESCE(r.paid,0)=0 THEN 'PAID'
+        WHEN b.pay_due_dt&lt;#{today} AND b.tot_amt-COALESCE(r.paid,0)&gt;0 THEN 'LATE' ELSE 'UNPAID' END)=#{query.status}
+    </if>
+    ORDER BY b.bill_dt DESC,b.bill_id DESC
+  </select>
+  <select id="receipts" resultType="com.sicost.bills.BillDtos$ReceiptStored">
+    SELECT rcpt_id::bigint AS "id",bill_id AS "billId",rcpt_dt AS "date",rcpt_amt AS "amount",(cncl_yn='Y') AS "cancelled",
+      cncl_rsn AS "cancelReason",cncl_user_id AS "cancelUserId",cncl_dttm AS "cancelledAt",reg_user_id AS "regUserId",
+      reg_dttm AS "registeredAt",mod_user_id AS "modUserId",mod_dttm AS "modifiedAt"
+    FROM tb_bl_rcpt WHERE bill_id=#{id} ORDER BY rcpt_id
+  </select>
+  <select id="project" resultType="com.sicost.bills.BillDtos$Project">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",COALESCE(c.clnt_nm,'–') AS "customerName",p.ctrt_type_cd AS "contractType",
+      p.proj_stat_cd AS "status",p.ctrt_end_dt AS "endDate" FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id WHERE p.proj_id=#{id}
+  </select>
+  <select id="projectBills" resultType="com.sicost.bills.BillDtos$Stored">
+    SELECT <include refid="columns"/> FROM tb_bl_bill b WHERE b.proj_id=#{projectId} ORDER BY b.bill_ym DESC,b.bill_id DESC
+  </select>
+  <select id="greatestNumber" resultType="int">SELECT COALESCE(max(right(bill_id,3)::int),0) FROM tb_bl_bill WHERE bill_ym=#{month}</select>
+  <select id="greatestOrder" resultType="int">SELECT COALESCE(max(bill_ord),0)::int FROM tb_bl_bill WHERE proj_id=#{projectId}</select>
+  <select id="standard" resultType="java.math.BigDecimal">SELECT std_val FROM tb_sy_oper_std WHERE std_cd=#{code} AND aply_bgn_ym&lt;=#{month} ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="sourceSnapshot" resultType="string">
+    <include refid="com.sicost.apiops.BillingReviewMapper.checkSnapshotSql"/>
+  </select>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <insert id="insert">
+    INSERT INTO tb_bl_bill(bill_id,proj_id,bill_ord,bill_ym,bill_dt,sply_amt,vat_rt,vat_amt,tot_amt,rcpt_sum_amt,unpaid_amt,pay_due_dt,tax_invc_no,cncl_yn,cncl_rsn,cncl_user_id,cncl_dttm,reg_user_id,reg_dttm)
+    VALUES(#{id},#{projectId},#{order},#{month},#{fields.billingDate},#{fields.supplyAmount},#{fields.vatRate},#{vat},#{total},0,#{total},#{fields.dueDate},#{fields.taxInvoiceNo,jdbcType=VARCHAR},'N',NULL,NULL,NULL,#{actor},#{now})
+  </insert>
+  <update id="update">
+    UPDATE tb_bl_bill SET sply_amt=#{fields.supplyAmount},vat_rt=#{fields.vatRate},bill_dt=#{fields.billingDate},pay_due_dt=#{fields.dueDate},tax_invc_no=#{fields.taxInvoiceNo,jdbcType=VARCHAR},
+      vat_amt=#{vat},tot_amt=#{total},rcpt_sum_amt=#{receipts},unpaid_amt=#{total}-#{receipts},mod_user_id=#{actor},mod_dttm=#{now} WHERE bill_id=#{id}
+  </update>
+</mapper>

@@ -255,33 +255,30 @@ describe("controlled 기간 선택", () => {
   });
 });
 describe("공식 화면과 공통 틀", () => {
-  // UI-02·UI-12·UI-33은 실제 화면이 연결돼 자리표시가 아니다. 이 화면들의 직접 진입은 router.test.tsx가 확인한다.
-  const implementedPeopleScreens = ["UI-02", "UI-12", "UI-33"];
+  // 실제 업무 화면의 직접 진입·입력·재조회는 router.test.tsx가 확인한다.
+  const implementedPeopleScreens = ["UI-02", "UI-12", "UI-13", "UI-33"];
   it.each(
     Object.keys(screenRegistry).filter(
       (id) => !implementedPeopleScreens.includes(id),
     ),
-  )(
-    "%s 직접 진입에서 DB 제목과 범위 내 본문을 렌더한다",
-    async (id) => {
-      render(
-        <MemoryRouter initialEntries={["/" + id]}>
-          <SharedApplication />
-        </MemoryRouter>,
-      );
-      await screen.findByRole("heading", { name: `DB ${id}` });
-      if (id !== "UI-27")
-        expect(
-          screen
-            .getAllByText("이 화면은 다음 단계에서 만듭니다.")
-            .some((element) => !element.closest("[hidden]")),
-        ).toBe(true);
-      else
-        expect(
-          screen.getByRole("tab", { name: "변경 이력" }),
-        ).toBeInTheDocument();
-    },
-  );
+  )("%s 직접 진입에서 DB 제목과 범위 내 본문을 렌더한다", async (id) => {
+    render(
+      <MemoryRouter initialEntries={["/" + id]}>
+        <SharedApplication />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("heading", { name: `DB ${id}` });
+    if (id !== "UI-27")
+      expect(
+        screen
+          .getAllByText("이 화면은 다음 단계에서 만듭니다.")
+          .some((element) => !element.closest("[hidden]")),
+      ).toBe(true);
+    else
+      expect(
+        screen.getByRole("tab", { name: "변경 이력" }),
+      ).toBeInTheDocument();
+  });
   it("루트와 hash 진입을 같은 공식 화면으로 replace한다", async () => {
     render(
       <MemoryRouter initialEntries={["/#UI-01"]}>

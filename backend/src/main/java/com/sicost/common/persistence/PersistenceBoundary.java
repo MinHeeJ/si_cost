@@ -21,7 +21,7 @@ public class PersistenceBoundary implements Interceptor {
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
             "TB_PJ_PROJ", "TB_PJ_PROJ_PART", "TB_PJ_PROJ_CHG", "TB_PJ_MNPW_PLAN", "TB_PJ_TK_DSTRB",
-            "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY");
+            "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT");
     private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
             "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT",
             "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON");
@@ -32,6 +32,7 @@ public class PersistenceBoundary implements Interceptor {
     private static final String PAYROLL_KEY = "PAY_YM\\s*=\\s*\\?\\s+AND\\s+DEV_ID\\s*=\\s*\\?";
     private static final String CORRECTION = "(?is)\\s+SET\\s+CRCT_YN\\s*=\\s*'Y'\\s+WHERE\\s+ASGN_ID\\s*=\\s*\\?\\s+AND\\s+HIST_SN\\s*=\\s*\\?\\s+AND\\s+CRCT_YN\\s*=\\s*'N'\\s*";
     public static void requireAllowed(String sql) {
+        if (sql.strip().equalsIgnoreCase("SET LOCAL lock_timeout = '10s'")) return;
         // Group creation serializes duplicate-name checks and sort allocation before its INSERT.
         if (sql.strip().equalsIgnoreCase("LOCK TABLE tb_sy_code_grp IN SHARE ROW EXCLUSIVE MODE")) return;
         if (sql.strip().equalsIgnoreCase("LOCK TABLE tb_cl_close IN SHARE MODE")

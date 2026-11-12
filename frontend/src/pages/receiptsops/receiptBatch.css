@@ -1,0 +1,33 @@
+.receipt-batch-dialog {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.receipt-batch-dialog > p {
+  margin: 0;
+}
+.receipt-batch-dialog > .sicost-field {
+  max-width: 240px;
+}
+.receipt-batch-toolbar,
+.receipt-batch-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.receipt-batch-toolbar strong {
+  margin-left: auto;
+}
+.receipt-batch-dialog .sicost-field input[inputmode="numeric"] {
+  text-align: right;
+  min-width: 140px;
+}
+.receipt-batch-dialog .sicost-tone-warn button {
+  margin-left: auto;
+}
+@media (max-width: 767px) {
+  .receipt-batch-action {
+    display: none;
+  }
+}

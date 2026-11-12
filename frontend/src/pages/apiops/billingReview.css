@@ -1,0 +1,113 @@
+.billing-review-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.billing-review-toolbar,
+.billing-review-months,
+.billing-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.billing-review-toolbar h2 {
+  margin-right: auto;
+}
+.billing-review-months button {
+  height: 28px;
+  font-size: 13px;
+}
+.billing-review-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.billing-review-check-cards {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.billing-review-cards article {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 20px 24px;
+  background: var(--surface);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.billing-review-cards h3 {
+  width: 100%;
+  font-size: 14px;
+  margin: 0;
+}
+.billing-review-cards article > span:first-child {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.billing-review-cards strong {
+  display: block;
+  width: 100%;
+  font-size: 24px;
+  line-height: 32px;
+  overflow-wrap: anywhere;
+}
+.billing-review-difference {
+  color: var(--bad);
+}
+.billing-review-caption {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.billing-review-explanation {
+  display: block;
+  min-width: 220px;
+  max-width: 360px;
+  white-space: normal;
+  padding: 8px 0;
+}
+.billing-review-actions {
+  min-width: 140px;
+  max-width: 300px;
+  padding: 8px 0;
+  white-space: normal;
+}
+.billing-review-history {
+  white-space: normal;
+  min-width: 220px;
+  max-width: 380px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.billing-review-history summary {
+  cursor: pointer;
+  color: var(--primary);
+}
+.billing-review-history details {
+  margin-top: 8px;
+}
+.billing-review-unassigned {
+  color: var(--warn);
+}
+.billing-review-mobile-notice {
+  display: none;
+}
+@media (max-width: 767px) {
+  .billing-review-cards,
+  .billing-review-check-cards {
+    grid-template-columns: 1fr;
+  }
+  .billing-review-cards article {
+    padding: 16px;
+  }
+  .billing-review-download {
+    display: none;
+  }
+  .billing-review-mobile-notice {
+    display: block;
+    font-size: 12px;
+    color: var(--text-sub);
+  }
+}
