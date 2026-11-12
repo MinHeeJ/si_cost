@@ -34,8 +34,8 @@ public class ProjectStatusService {
         users.currentUser();YearMonth month=YearMonth.from(today());
         BigDecimal rate=ProjectBudgetCalculation.validRate(repository.rate(db(month)));
         BigDecimal budget="IN".equals(type)?null:ProjectBudgetCalculation.preview(amount,rate);
-        BigDecimal team=ProjectBudgetCalculation.allowanceDefault(repository.mapper.allowance("TEAM_FEE"));
-        BigDecimal expense=ProjectBudgetCalculation.allowanceDefault(repository.mapper.allowance("PEXP_FEE"));
+        BigDecimal team=ProjectBudgetCalculation.allowanceDefault(repository.mapper().allowance("TEAM_FEE"));
+        BigDecimal expense=ProjectBudgetCalculation.allowanceDefault(repository.mapper().allowance("PEXP_FEE"));
         List<String> warnings=new ArrayList<>();
         if(budget==null&&!"IN".equals(type))warnings.add("유효한 목표이익률이 없습니다. 예산을 수기로 입력해 주세요.");
         if(team==null)warnings.add("유효한 팀비 기본금액이 없습니다. 직접 입력해 주세요.");
@@ -46,7 +46,7 @@ public class ProjectStatusService {
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Options options(String purpose,String q) {
         users.currentUser();LocalDate day=today();
-        return new Options(repository.mapper.options(new Selection(purpose,q,day,db(YearMonth.from(day)))));
+        return new Options(repository.mapper().options(new Selection(purpose,q,day,db(YearMonth.from(day)))));
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Preview preview(String id) {
@@ -54,14 +54,14 @@ public class ProjectStatusService {
         return previewValue(id,day);
     }
     private Preview previewValue(String id,LocalDate day) {
-        var assignments=repository.mapper.assignments(id);
+        var assignments=repository.mapper().assignments(id);
         var current=assignments.stream().filter(a->"ACT".equals(a.status())&&!a.startDate().isAfter(day)&&!a.endDate().isBefore(day)).toList();
         var future=assignments.stream().filter(a->"ACT".equals(a.status())&&a.startDate().isAfter(day)).toList();
         return new Preview(day,current.stream().map(Assignment::developerId).distinct().count(),future.stream().map(Assignment::developerId).distinct().count(),
             current.size(),future.size(),current,future,token(id,day),revisions.revision(repository.snapshot(id)));
     }
     private String token(String id,LocalDate day) {
-        return revisions.revision(new PreviewSnapshot(id,day,repository.mapper.assignmentSnapshot(id)));
+        return revisions.revision(new PreviewSnapshot(id,day,repository.mapper().assignmentSnapshot(id)));
     }
     @Transactional
     public Result progress(String id,Progress input) {
@@ -76,7 +76,7 @@ public class ProjectStatusService {
         ProjectStatusInput.id(id);ProjectInputPolicy.expectedRevision(input.expectedRevision());String actor=users.userId();
         // Discover membership before taking the globally sorted locks; recheck it under PROJECT.
         requirePre(repository.required(id),today());
-        List<String> discovered=repository.mapper.assignmentRows(id).stream().map(AssignmentRow::id).toList();
+        List<String> discovered=repository.mapper().assignmentRows(id).stream().map(AssignmentRow::id).toList();
         List<String> keys=new ArrayList<>();keys.add("PROJECT:"+id);keys.add("operating-standards:CASH_BASE_YM");
         discovered.forEach(a->keys.add("ASGN:"+a));
         LocalDate[] day=new LocalDate[1];String[] reason=new String[1];boolean[] initialSnapshot={true};
@@ -84,21 +84,21 @@ public class ProjectStatusService {
                 if(initialSnapshot[0]){requirePre(repository.required(id),today());initialSnapshot[0]=false;}
                 return repository.snapshot(id);
             },()->{
-                repository.mapper.lockClose();day[0]=today();requirePre(repository.required(id),day[0]);
+                repository.mapper().lockClose();day[0]=today();requirePre(repository.required(id),day[0]);
                 ProjectInputPolicy.requireWritableYear(input.year(),repository.cashBase(),clock);requireOpen(day[0]);
-                if(!discovered.equals(repository.mapper.assignmentRows(id).stream().map(AssignmentRow::id).toList()))throw stale();
+                if(!discovered.equals(repository.mapper().assignmentRows(id).stream().map(AssignmentRow::id).toList()))throw stale();
                 revisions.requireExpected(input.previewToken(),token(id,day[0]));
-                reason[0]=repository.mapper.reason(input.lossReason());
+                reason[0]=repository.mapper().reason(input.lossReason());
                 if(reason[0]==null)throw ProjectInputPolicy.invalid("lossReason");
                 ProjectInputPolicy.optionalText(input.lossMemo(),500,"lossMemo");
             },()->true,()->{
-                for(AssignmentRow row:repository.mapper.assignmentRows(id)) {
+                for(AssignmentRow row:repository.mapper().assignmentRows(id)) {
                     if(!"ACT".equals(row.status())||row.endDate().isBefore(day[0]))continue;
                     changeAssignment(id,row,day[0],reason[0],actor);
                 }
-                for(String month:repository.mapper.costMonths(id)) {
+                for(String month:repository.mapper().costMonths(id)) {
                     if(!repository.protectedMonth(YearMonth.parse(DatabaseMonthCodec.toApi(month))))
-                        repository.mapper.classifyCost(new CostWrite(id,month,actor,now()));
+                        repository.mapper().classifyCost(new CostWrite(id,month,actor,now()));
                 }
                 changeProject(id,"LOSE",input.lossReason(),input.lossMemo(),actor,day[0]);
             });
@@ -106,31 +106,31 @@ public class ProjectStatusService {
     }
     private void changeProject(String id,String status,String reason,String memo,String actor,LocalDate day) {
         Project before=repository.required(id);int serial=ProjectInputPolicy.nextSerial(repository.serial(id));LocalDateTime now=now();
-        repository.one(repository.mapper.updateProject(new ProjectWrite(id,status,day,reason,memo,actor,now)));
-        repository.one(repository.mapper.insertEvent(new Event(id,serial,before.status(),status,day,actor,now)));
+        repository.one(repository.mapper().updateProject(new ProjectWrite(id,status,day,reason,memo,actor,now)));
+        repository.one(repository.mapper().insertEvent(new Event(id,serial,before.status(),status,day,actor,now)));
         history.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ",id,"UPD","상태",before.status(),status,null));
     }
     private void changeAssignment(String projectId,AssignmentRow row,LocalDate day,String reason,String actor) {
         boolean future=row.startDate().isAfter(day);LocalDateTime now=now();
-        int serial=ProjectInputPolicy.nextSerial(repository.mapper.assignmentSerial(row.id()));
+        int serial=ProjectInputPolicy.nextSerial(repository.mapper().assignmentSerial(row.id()));
         boolean cross=false;
         for(YearMonth m=YearMonth.from(row.startDate());m.isBefore(YearMonth.from(day))&&!m.isAfter(YearMonth.from(row.endDate()));m=m.plusMonths(1))
             if(repository.protectedMonth(m)){cross=true;break;}
-        repository.one(repository.mapper.updateAssignment(new AssignmentWrite(row.id(),projectId,day,future,actor,now)));
-        repository.one(repository.mapper.insertAssignmentEvent(new AssignmentEvent(row.id(),serial,future?"CNCL":"EARLY",day,
+        repository.one(repository.mapper().updateAssignment(new AssignmentWrite(row.id(),projectId,day,future,actor,now)));
+        repository.one(repository.mapper().insertAssignmentEvent(new AssignmentEvent(row.id(),serial,future?"CNCL":"EARLY",day,
             future?row.status():row.endDate().toString(),future?"CNCL":day.toString(),ProjectAssignmentMonths.eventMemo(reason),cross?"Y":"N",actor,now)));
-        List<ValueHistory> values=repository.mapper.valueHistory(row.id());
-        Map<String,String> existing=new TreeMap<>();repository.mapper.months(row.id()).forEach(m->existing.put(m.month(),m.fixed()));
+        List<ValueHistory> values=repository.mapper().valueHistory(row.id());
+        Map<String,String> existing=new TreeMap<>();repository.mapper().months(row.id()).forEach(m->existing.put(m.month(),m.fixed()));
         Set<String> months=new TreeSet<>(existing.keySet());
         if(!future)for(YearMonth m=YearMonth.from(row.startDate());!m.isAfter(YearMonth.from(day));m=m.plusMonths(1))months.add(db(m));
         for(String key:months) {
             YearMonth month=YearMonth.parse(DatabaseMonthCodec.toApi(key));
             if("Y".equals(existing.get(key))||repository.protectedMonth(month))continue;
             int days=future?0:ProjectAssignmentMonths.days(month,row.startDate(),day);
-            if(days==0){if(existing.containsKey(key))repository.mapper.deleteMonth(row.id(),key);continue;}
+            if(days==0){if(existing.containsKey(key))repository.mapper().deleteMonth(row.id(),key);continue;}
             BigDecimal mm=ProjectAssignmentMonths.value(values,month,true,row.contractMm());
             BigDecimal price=ProjectAssignmentMonths.value(values,month,false,row.price());
-            repository.one(repository.mapper.saveMonth(new MonthWrite(row.id(),projectId,row.developerId(),key,days,ProjectAssignmentMonths.mm(mm,days,month),price,actor,now)));
+            repository.one(repository.mapper().saveMonth(new MonthWrite(row.id(),projectId,row.developerId(),key,days,ProjectAssignmentMonths.mm(mm,days,month),price,actor,now)));
         }
     }
     private void requirePre(Project project,LocalDate day) {

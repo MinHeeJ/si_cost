@@ -18,6 +18,8 @@ public class ProjectStatusRepository {
     public ProjectStatusRepository(ProjectStatusMapper mapper,ProjectBudgetRepository projects,SharedQueriesMapper shared) {
         this.mapper=mapper;this.projects=projects;this.shared=shared;
     }
+    /** Spring이 만드는 프록시 인스턴스에서는 필드가 비어 있으므로 서비스는 필드 대신 이 메서드로 접근한다. */
+    public ProjectStatusMapper mapper() {return mapper;}
     public Project required(String id) {
         Project p=mapper.project(id);if(p==null)throw new ApiException(404,"NOT_FOUND","프로젝트를 찾을 수 없습니다.");return p;
     }
