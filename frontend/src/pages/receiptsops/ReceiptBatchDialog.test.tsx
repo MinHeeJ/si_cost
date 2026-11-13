@@ -214,35 +214,49 @@ it("변경 입력은 취소 확인 후에만 닫힌다", async () => {
   expect(props.onClose).toHaveBeenCalledTimes(1);
   expect(api.createBatchReceipts).not.toHaveBeenCalled();
 });
-it("페이지/조회전체는 서버 선택 API로 준비하며 조건이 바뀌면 선택을 해제한다", async () => {
+it("고른 청구와 조회전체는 서버 선택 API로 준비하며 조건이 바뀌면 선택을 해제한다", async () => {
   const props = {
     filters: { year: 2026 },
-    pageIds: ["TEST-A"],
+    selectedIds: ["TEST-A"],
     today: "2026-07-15",
     minimumDate: "2025-01-01",
     onRefresh: vi.fn(),
   };
   const view = render(<ReceiptBatchAction {...props} />);
-  await userEvent.click(screen.getByTestId("receipt-batch-page"));
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
   expect(api.loadReceiptBatchSelection).toHaveBeenCalledWith(
     props.filters,
-    props.pageIds,
+    props.selectedIds,
     expect.any(AbortSignal),
   );
   view.rerender(
     <ReceiptBatchAction
       {...props}
       filters={{ year: 2026, month: "2026-08" }}
+      whole
     />,
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  await userEvent.click(screen.getByTestId("receipt-batch-all"));
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
   expect(api.loadReceiptBatchSelection).toHaveBeenLastCalledWith(
     { year: 2026, month: "2026-08" },
     undefined,
     expect.any(AbortSignal),
   );
+});
+it("일괄 입금 버튼은 하나이고 고른 청구가 없으면 눌리지 않는다", () => {
+  render(
+    <ReceiptBatchAction
+      filters={{ year: 2026 }}
+      selectedIds={[]}
+      today="2026-07-15"
+      minimumDate="2025-01-01"
+      onRefresh={vi.fn()}
+    />,
+  );
+  expect(screen.getAllByRole("button")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "일괄 입금" })).toBeDisabled();
 });
 it("선택 조회 실패는 저장창 대신 오류/재조회를 보인다", async () => {
   vi.mocked(api.loadReceiptBatchSelection).mockRejectedValue(
@@ -251,13 +265,14 @@ it("선택 조회 실패는 저장창 대신 오류/재조회를 보인다", asy
   render(
     <ReceiptBatchAction
       filters={{ year: 2026 }}
-      pageIds={[]}
+      selectedIds={[]}
+      whole
       today="2026-07-15"
       minimumDate="2025-01-01"
       onRefresh={vi.fn()}
     />,
   );
-  await userEvent.click(screen.getByTestId("receipt-batch-all"));
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
   expect(await screen.findByText("선택 조회 실패")).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(api.createBatchReceipts).not.toHaveBeenCalled();
@@ -267,7 +282,7 @@ it("모바일에는 다건입금 작업을 제공하지 않는다", () => {
     <ReceiptBatchAction
       mobile
       filters={{ year: 2026 }}
-      pageIds={[]}
+      selectedIds={[]}
       today="2026-07-15"
       minimumDate="2025-01-01"
       onRefresh={vi.fn()}

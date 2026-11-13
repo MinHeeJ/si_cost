@@ -14,8 +14,6 @@
 }
 .bill-heading > button {
   margin-left: auto;
-  background: var(--primary);
-  color: var(--on-primary);
 }
 .bill-summary {
   display: grid;

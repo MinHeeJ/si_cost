@@ -16,43 +16,42 @@ type Props = Pick<
   "today" | "minimumDate" | "projectNames" | "onRefresh"
 > & {
   filters: ReceiptBatchFilters;
-  pageIds: string[];
-  /** 목록에서 행을 골라 둔 상태면 그 행들이 입금 대상이다(아니면 현재 페이지). */
-  selected?: boolean;
+  /** 목록에서 고른 청구 번호들. `whole`이 아니면 이 행들이 입금 대상이다. */
+  selectedIds: string[];
+  /** 조회된 전체를 대상으로 삼는다(고른 행이 아니라 현재 조건에 맞는 모든 청구). */
+  whole?: boolean;
   mobile?: boolean;
 };
 export function ReceiptBatchAction(props: Props) {
-  const context = JSON.stringify(props.filters);
+  const context = JSON.stringify(props.filters) + (props.whole ? ":whole" : "");
   return <ReceiptBatchActionContent key={context} {...props} />;
 }
 function ReceiptBatchActionContent({
   filters,
-  pageIds,
+  selectedIds,
+  whole = false,
   today,
   minimumDate,
   projectNames,
   onRefresh,
-  selected,
   mobile,
 }: Props) {
   const [selection, setSelection] = useState<ReceiptBatchSelection>(),
     [error, setError] = useState<string>();
-  const [loading, setLoading] = useState(false),
-    [all, setAll] = useState(false);
+  const [loading, setLoading] = useState(false);
   const controller = useRef<AbortController>();
   useEffect(() => () => controller.current?.abort(), []);
-  async function prepare(whole: boolean) {
+  async function prepare() {
     controller.current?.abort();
     const request = new AbortController();
     controller.current = request;
     setLoading(true);
     setError(undefined);
     setSelection(undefined);
-    setAll(whole);
     try {
       const data = await loadReceiptBatchSelection(
         filters,
-        whole ? undefined : pageIds,
+        whole ? undefined : selectedIds,
         request.signal,
       );
       if (!request.signal.aborted) setSelection(data);
@@ -76,23 +75,16 @@ function ReceiptBatchActionContent({
     >
       <button
         type="button"
-        data-testid="receipt-batch-page"
-        disabled={readOnly || loading || pageIds.length === 0}
-        onClick={() => void prepare(false)}
+        className="sicost-primary"
+        data-testid="receipt-batch-open"
+        disabled={readOnly || loading || (!whole && selectedIds.length === 0)}
+        onClick={() => void prepare()}
       >
-        {selected ? "선택한 청구 일괄 입금" : "이 페이지 청구 일괄 입금"}
-      </button>
-      <button
-        type="button"
-        data-testid="receipt-batch-all"
-        disabled={readOnly || loading}
-        onClick={() => void prepare(true)}
-      >
-        조회전체 선택
+        일괄 입금
       </button>
       {loading && <span role="status">입금 대상을 불러오는 중입니다.</span>}
       {error && (
-        <ErrorBanner message={error} onRetry={() => void prepare(all)} />
+        <ErrorBanner message={error} onRetry={() => void prepare()} />
       )}
       {selection && (
         <ReceiptBatchDialog
@@ -103,7 +95,7 @@ function ReceiptBatchActionContent({
           selection={selection}
           projectNames={projectNames}
           onClose={() => setSelection(undefined)}
-          onReload={() => prepare(all)}
+          onReload={() => prepare()}
           onRefresh={onRefresh}
         />
       )}

@@ -247,21 +247,64 @@ it("조건 변경은 page1·선택해제이며 카드에는 목록조건을 보�
     ),
   );
 });
-it("선택 바는 행을 고른 때만 나타나고 선택 0건을 보이지 않는다", async () => {
+it("선택 바는 행을 고른 때만 나타나고 일괄 입금·조회전체 선택·선택 해제를 거기서 한다", async () => {
+  vi.mocked(api.getBills).mockResolvedValue({ ...page, total: 40 });
   render(<BillsScreen />);
   await screen.findByRole("button", { name: bill.id });
   expect(screen.queryByText(/선택 0건/)).not.toBeInTheDocument();
   expect(screen.queryByTestId("bill-selection-bar")).not.toBeInTheDocument();
-  await userEvent.click(screen.getAllByRole("checkbox")[1]);
-  expect(screen.getByTestId("bill-selection-bar")).toHaveTextContent("선택 1건");
   expect(
-    screen.getByRole("button", { name: "선택한 청구 일괄 입금" }),
-  ).toBeInTheDocument();
+    screen.queryByRole("button", { name: "일괄 입금" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "조회전체 선택" }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole("checkbox")[1]);
+  const bar = screen.getByTestId("bill-selection-bar");
+  expect(bar).toHaveTextContent("선택 1건");
+  expect(
+    within(bar).getByRole("button", { name: "일괄 입금" }),
+  ).toBeEnabled();
+  await userEvent.click(within(bar).getByRole("button", { name: "조회전체 선택" }));
+  expect(bar).toHaveTextContent("조회된 전체 40건 선택");
+  expect(
+    within(bar).queryByRole("button", { name: "조회전체 선택" }),
+  ).not.toBeInTheDocument();
   await userEvent.click(screen.getByTestId("bill-selection-clear"));
   expect(screen.queryByTestId("bill-selection-bar")).not.toBeInTheDocument();
+});
+it("일괄 입금은 고른 청구로, 조회전체 선택이면 조건 전체로 입금 창을 준비한다", async () => {
+  vi.mocked(api.getBills).mockResolvedValue({ ...page, total: 40 });
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  await userEvent.click(screen.getAllByRole("checkbox")[1]);
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
+  await waitFor(() =>
+    expect(batch.loadReceiptBatchSelection).toHaveBeenCalledTimes(1),
+  );
+  expect(vi.mocked(batch.loadReceiptBatchSelection).mock.calls[0][1]).toEqual([
+    bill.id,
+  ]);
+  await userEvent.click(
+    within(
+      screen
+        .getByTestId("receipt-batch-dialog")
+        .closest('[role="dialog"]') as HTMLElement,
+    ).getByRole("button", { name: "취소" }),
+  );
+  await userEvent.click(screen.getByTestId("bill-select-all"));
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
+  await waitFor(() =>
+    expect(batch.loadReceiptBatchSelection).toHaveBeenCalledTimes(2),
+  );
   expect(
-    screen.getByRole("button", { name: "이 페이지 청구 일괄 입금" }),
-  ).toBeInTheDocument();
+    vi.mocked(batch.loadReceiptBatchSelection).mock.calls[1][1],
+  ).toBeUndefined();
+});
+it("청구 등록은 흰 글자의 파란 주 버튼이다", async () => {
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  expect(screen.getByTestId("bill-create")).toHaveClass("sicost-primary");
 });
 it("조회 버튼은 필터 오른쪽 끝의 [초기화][조회]로 공통 필터 바를 쓴다", async () => {
   render(<BillsScreen />);
@@ -601,7 +644,8 @@ it("상세는 취소포함 입금의 전체·정상건수와 번호경고를 구
 it("기본 업무 호스트가 기존 점검·미수 패널과 다건 선택을 연결한다", async () => {
   render(<BillsScreen />);
   await screen.findByRole("button", { name: bill.id });
-  await userEvent.click(screen.getByTestId("receipt-batch-page"));
+  await userEvent.click(screen.getAllByRole("checkbox")[1]);
+  await userEvent.click(screen.getByTestId("receipt-batch-open"));
   await waitFor(() =>
     expect(batch.loadReceiptBatchSelection).toHaveBeenCalled(),
   );
