@@ -54,7 +54,9 @@ public class ExcelExportService {
         List<Column> columns = specification.columns();
         return generate(specification, sink -> {}, request, workbook -> {
             var text = workbook.createCellStyle(); text.setDataFormat(workbook.createDataFormat().getFormat("@"));
-            for (int i = 0; i < columns.size(); i++) workbook.getSheetAt(0).setDefaultColumnStyle(i, text);
+            var number = workbook.createCellStyle(); number.setDataFormat(workbook.createDataFormat().getFormat("0"));
+            for (int i = 0; i < columns.size(); i++) workbook.getSheetAt(0).setDefaultColumnStyle(i,
+                "재무_등록양식".equals(specification.kind()) && columns.get(i).type() == CellType.NUMBER ? number : text);
             var guide = workbook.createSheet("입력안내");
             for (int i = 0; i < instructions.size(); i++) guide.createRow(i).createCell(0).setCellValue(instructions.get(i));
         });
@@ -96,6 +98,8 @@ public class ExcelExportService {
                 case "개발자" -> "개발자목록";
                 case "개발자_등록양식" -> "B8_개발자양식";
                 case "개발자_업로드검사" -> "B8_검사";
+                case "재무_등록양식" -> "B2_재무양식";
+                case "재무_업로드검사" -> "B2_검사";
                 default -> specification.kind();
             };
             String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
@@ -112,12 +116,13 @@ public class ExcelExportService {
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사", "급여_등록양식", "급여_업로드검사");
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");
             case "UI-13" -> Set.of("청구", "청구누락점검", "미수알림");
+            case "UI-10" -> Set.of("재무_등록양식", "재무_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
             case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> throw InputValidator.invalid("screenId");
         };
         if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
-        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사").contains(specification.kind())) {
+        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사", "재무_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");

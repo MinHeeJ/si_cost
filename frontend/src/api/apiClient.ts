@@ -235,3 +235,26 @@ export {
   getReceivables,
 } from "../pages/apiops/billingReviewApi";
 export { downloadBillingReview } from "../pages/apiops/billingReviewExportApi";
+export {
+  getFinancialItems,
+  saveFinancialItems,
+} from "../pages/financialitems/financialApi";
+export {
+  getFinancialYearStatus,
+  createFinancialPreview,
+} from "../pages/financialitemsops/financialPreviewApi";
+export {
+  createCorporateTaxDefaults,
+  getCorporateTaxAllocation,
+  saveCorporateTaxPaymentConfirmation,
+} from "../pages/corporatetaxesops/corporateTaxApi";
+export {
+  getFinancialContributions,
+  getFinancialHistory,
+} from "../pages/apiops/financialReadApi";
+export {
+  getB2Template,
+  createB2Validation,
+  saveB2Apply,
+  getFinancialUploadResult,
+} from "../pages/b2/financialImportApi";

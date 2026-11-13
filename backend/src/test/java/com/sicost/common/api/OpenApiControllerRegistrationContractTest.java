@@ -92,7 +92,10 @@ import static org.assertj.core.api.Assertions.assertThat;
         com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class,
         com.sicost.bills.BillController.class, com.sicost.billsops.BillOperationsController.class,
         com.sicost.receipts.ReceiptController.class, com.sicost.receiptsops.ReceiptBatchController.class,
-        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class})
+        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class,
+        com.sicost.financialitems.FinancialController.class, com.sicost.financialitemsops.FinancialPreviewController.class,
+        com.sicost.corporatetaxesops.CorporateTaxController.class, com.sicost.apiops.FinancialReadController.class,
+        com.sicost.b2.FinancialImportController.class})
 @ContextConfiguration(classes={HealthController.class, SharedQueriesController.class, CodeGroupController.class,
         com.sicost.assignments.AssignmentController.class, com.sicost.assignmentsops.AssignmentActionsController.class,
         com.sicost.history.AssignmentHistoryController.class, com.sicost.apiops.PayrollController.class,
@@ -112,7 +115,10 @@ import static org.assertj.core.api.Assertions.assertThat;
         com.sicost.businessusersops.BusinessUserProjectsController.class, com.sicost.uploadsops.UploadResultController.class,
         com.sicost.bills.BillController.class, com.sicost.billsops.BillOperationsController.class,
         com.sicost.receipts.ReceiptController.class, com.sicost.receiptsops.ReceiptBatchController.class,
-        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class})
+        com.sicost.apiops.BillingCheckController.class, com.sicost.apiops.ReceivableController.class,
+        com.sicost.financialitems.FinancialController.class, com.sicost.financialitemsops.FinancialPreviewController.class,
+        com.sicost.corporatetaxesops.CorporateTaxController.class, com.sicost.apiops.FinancialReadController.class,
+        com.sicost.b2.FinancialImportController.class})
 class OpenApiControllerRegistrationContractTest {
     @Autowired RequestMappingHandlerMapping handlerMapping;
     @MockBean HealthService health;
@@ -177,6 +183,12 @@ class OpenApiControllerRegistrationContractTest {
     @MockBean com.sicost.receiptsops.ReceiptBatchService receiptBatches;
     @MockBean com.sicost.apiops.BillingCheckService billingChecks;
     @MockBean com.sicost.apiops.ReceivableService receivables;
+    @MockBean com.sicost.financialitems.FinancialService financialItems;
+    @MockBean com.sicost.financialitems.FinancialWriteService financialWrites;
+    @MockBean com.sicost.financialitemsops.FinancialPreviewService financialPreview;
+    @MockBean com.sicost.corporatetaxesops.CorporateTaxService corporateTaxes;
+    @MockBean com.sicost.apiops.FinancialReadService financialReads;
+    @MockBean com.sicost.b2.FinancialImportService financialImports;
     @MockBean Clock clock;
 
     @Test void everyDurableOpenApiOperationHasExactlyOneRegisteredLiteralHandler() {

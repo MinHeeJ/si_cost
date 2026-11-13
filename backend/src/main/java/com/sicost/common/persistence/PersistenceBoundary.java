@@ -21,10 +21,13 @@ public class PersistenceBoundary implements Interceptor {
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
             "TB_PJ_PROJ", "TB_PJ_PROJ_PART", "TB_PJ_PROJ_CHG", "TB_PJ_MNPW_PLAN", "TB_PJ_TK_DSTRB",
-            "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT");
+            "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
+            "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
+            "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER");
     private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
             "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT",
-            "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON");
+            "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON",
+            "TB_FI_ITEM", "TB_CO_PREV_ADJ", "TB_FI_LOAN", "TB_FI_XFER");
     private static final Set<String> APPEND_ONLY = Set.of("TB_SY_CHG_HIST", "TB_SY_ACCS_LOG", "TB_PJ_PROJ_CHG", "TB_PJ_ASGN_HIST");
     private static final Pattern TARGET = Pattern.compile("(?is)^\\s*(INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+(TB_[A-Z0-9_]+)\\b");
     private static final String ASSIGNMENT_VALUES = "INPUT_END_DT|CTRT_MM|BILL_UPRC|INPUT_TYPE_CD|EXT_PSBL_CD|EXT_CNT|EARLY_WTHDR_YN|ASGN_STAT_CD|MOD_USER_ID|MOD_DTTM";
@@ -88,6 +91,10 @@ public class PersistenceBoundary implements Interceptor {
                 case "TB_SY_USER_SCOPE" -> "USER_ID\\s*=\\s*\\?\\s+AND\\s+SCOPE_SN\\s*=\\s*\\?\\s+AND\\s+SCOPE_TYPE_CD\\s*=\\s*'PROJ'(?:\\s+AND\\s+PROJ_ID\\s*=\\s*\\?)?";
                 case "TB_PJ_ASGN_MON" -> "ASGN_ID\\s*=\\s*\\?\\s+AND\\s+INPUT_YM\\s*=\\s*\\?\\s+AND\\s+FIX_YN\\s*(?:<>\\s*'Y'|!=\\s*'Y'|=\\s*'N')";
                 case "TB_HR_MON_PAY" -> "PAY_YM\\s*=\\s*\\?(?:\\s+AND\\s+DEV_ID\\s*=\\s*\\?)?";
+                case "TB_FI_ITEM" -> "FIN_YM\\s*=\\s*\\?\\s+AND\\s+(?:ITEM_SN\\s*=\\s*\\?|UPLD_ID\\s+IS\\s+NOT\\s+NULL)";
+                case "TB_CO_PREV_ADJ" -> "APLY_YM\\s*=\\s*\\?\\s+AND\\s+ADJ_ID\\s*=\\s*\\?";
+                case "TB_FI_LOAN" -> "LOAN_SN\\s*=\\s*\\?\\s+AND\\s+LOAN_DT\\s*>=\\s*\\?\\s+AND\\s+LOAN_DT\\s*<\\s*\\?";
+                case "TB_FI_XFER" -> "XFER_SN\\s*=\\s*\\?\\s+AND\\s+XFER_DT\\s*>=\\s*\\?\\s+AND\\s+XFER_DT\\s*<\\s*\\?";
                 default -> null;
             };
             if (bounded != null && !remainder.matches("(?is)\\s+WHERE\\s+" + bounded + "\\s*")) {

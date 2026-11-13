@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.FinancialReadMapper">
+  <select id="sourceTotals" resultType="com.sicost.apiops.FinancialReadDtos$SourceTotals">
+    WITH items AS (
+      SELECT
+        COALESCE(sum(amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='SGA'),0) AS sga,
+        COALESCE(sum(vat_amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='SGA'),0) AS sga_vat,
+        COALESCE(sum(amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='NOPR_IN'),0) AS income,
+        COALESCE(sum(vat_amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='NOPR_IN'),0) AS income_vat,
+        COALESCE(sum(amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='NOPR_OUT'),0) AS expense,
+        COALESCE(sum(vat_amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='NOPR_OUT'),0) AS expense_vat,
+        COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd IN ('SGA','NOPR_OUT') AND
+          ((io_dt BETWEEN #{start} AND #{end}) OR (io_dt IS NULL AND fin_ym=#{databaseMonth}))),0) AS cash_expense,
+        COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd='NOPR_IN' AND io_dt BETWEEN #{start} AND #{end}),0) AS cash_income
+      FROM tb_fi_item WHERE fin_ym=#{databaseMonth} OR io_dt BETWEEN #{start} AND #{end}
+    ), transfers AS (
+      SELECT COALESCE(sum(amt) FILTER(WHERE xfer_cls_cd='EXP'),0) AS expense,
+        COALESCE(sum(amt) FILTER(WHERE xfer_cls_cd='SPCL'),0) AS labor,
+        COALESCE(sum(amt),0) AS total FROM tb_fi_xfer WHERE xfer_dt BETWEEN #{start} AND #{end}
+    ), loans AS (
+      SELECT COALESCE(sum(amt) FILTER(WHERE io_cd='IN'),0) AS incoming,
+        COALESCE(sum(amt) FILTER(WHERE io_cd='OUT'),0) AS outgoing FROM tb_fi_loan WHERE loan_dt BETWEEN #{start} AND #{end}
+    ), payments AS (
+      SELECT CASE WHEN p.pay_yn='Y' THEN p.pay_amt
+        WHEN p.pay_amt IS NOT NULL THEN p.pay_amt
+        WHEN p.pay_type_cd='MID' THEN 0
+        WHEN t.est_tax_amt IS NULL THEN NULL
+        ELSE GREATEST(0,t.est_tax_amt-COALESCE(mid.pay_amt,0)) END AS amount
+      FROM tb_fi_tax_pay p LEFT JOIN tb_fi_corp_tax t ON t.tax_yr=p.tax_yr
+      LEFT JOIN tb_fi_tax_pay mid ON mid.tax_yr=p.tax_yr AND mid.pay_type_cd='MID'
+      WHERE (p.pay_yn='Y' AND p.pay_dt BETWEEN #{start} AND #{end})
+        OR (p.pay_yn='N' AND p.pay_due_dt BETWEEN #{start} AND #{end})
+    )
+    SELECT i.sga AS "sgaAmount",i.sga_vat AS "sgaVatAmount",i.income AS "nonOperatingIncome",
+      i.income_vat AS "nonOperatingIncomeVat",i.expense AS "nonOperatingExpense",i.expense_vat AS "nonOperatingExpenseVat",
+      (SELECT COALESCE(sum(adj_amt),0) FROM tb_co_prev_adj WHERE aply_ym=#{databaseMonth}) AS "adjustmentProfit",
+      i.cash_expense AS "cashFinancialExpense",i.cash_income AS "cashMiscIncome",
+      (SELECT COALESCE(sum(cash_amt),0) FROM tb_fi_card_mon WHERE pay_ym=#{databaseMonth}) AS "cashCardExpense",
+      x.expense AS "cashTransferExpense",x.labor AS "cashUnpaidLabor",x.total AS "transferTotal",
+      l.incoming AS "cashLoanIn",l.outgoing AS "cashLoanOut",
+      (SELECT CASE WHEN count(*) FILTER(WHERE amount IS NULL)>0 THEN NULL ELSE COALESCE(sum(amount),0) END FROM payments) AS "cashTaxPayment"
+    FROM items i CROSS JOIN transfers x CROSS JOIN loans l
+  </select>
+  <select id="estimatedTax" resultType="java.math.BigDecimal">
+    SELECT est_tax_amt FROM tb_fi_corp_tax WHERE tax_yr=#{year}
+  </select>
+  <select id="taxMonths" resultType="com.sicost.apiops.FinancialReadDtos$TaxMonth">
+    SELECT to_char(m,'YYYYMM') AS "month",COALESCE(c.close_stat_cd,'WORK') AS "closeStatus",p.corp_tax_amt AS "amount"
+    FROM generate_series(to_date(#{year} || '0101','YYYYMMDD'),to_date(#{year} || '1201','YYYYMMDD'),interval '1 month') m
+    LEFT JOIN tb_cl_close c ON c.close_ym=to_char(m,'YYYYMM')
+    LEFT JOIN tb_co_mon_pl p ON p.pl_ym=to_char(m,'YYYYMM')
+    WHERE to_char(m,'YYYYMM') >= (SELECT trunc(std_val)::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1)
+    ORDER BY m
+  </select>
+  <sql id="historyScope">
+    WITH tax_keys AS (
+      SELECT tax_yr,pay_type_cd FROM tb_fi_tax_pay
+      WHERE tax_yr=#{period.year} OR (tax_yr=#{period.priorYear} AND pay_type_cd='CNFM')
+        OR (tax_yr &lt; #{period.priorYear} AND pay_yn='N')
+    )
+    SELECT h.* FROM tb_sy_chg_hist h WHERE
+    <choose>
+      <when test="scope == 'CARDS'">h.trgt_tbl_nm='TB_FI_CARD'</when>
+      <when test="scope == 'TAX'">
+        (h.trgt_tbl_nm='TB_FI_TAX_PAY' AND EXISTS(SELECT 1 FROM tax_keys t WHERE h.trgt_key=t.tax_yr || ':' || t.pay_type_cd))
+        OR (h.trgt_tbl_nm='TB_FI_CORP_TAX' AND (h.trgt_key=#{period.year} OR h.trgt_key IN (SELECT tax_yr FROM tax_keys)))
+      </when>
+      <otherwise>
+        (h.trgt_tbl_nm='TB_FI_ITEM' AND split_part(h.trgt_key,':',1)=#{period.databaseMonth} AND h.trgt_key LIKE #{period.databaseMonth} || ':%')
+        OR (h.trgt_tbl_nm='TB_FI_CARD_MON' AND h.trgt_key=#{period.databaseMonth})
+        OR (h.trgt_tbl_nm='TB_FI_CARD_PAY' AND split_part(h.trgt_key,':',1)=#{period.databaseMonth} AND h.trgt_key LIKE #{period.databaseMonth} || ':%')
+        OR (h.trgt_tbl_nm='TB_CO_PREV_ADJ' AND (
+          EXISTS(SELECT 1 FROM tb_co_prev_adj a WHERE a.adj_id::text=h.trgt_key AND a.aply_ym=#{period.databaseMonth})
+          OR EXISTS(SELECT 1 FROM tb_sy_chg_hist a WHERE a.trgt_tbl_nm=h.trgt_tbl_nm AND a.trgt_key=h.trgt_key
+            AND a.chg_item_nm='APLY_YM' AND (a.bfr_val=#{period.databaseMonth} OR a.aft_val=#{period.databaseMonth}))))
+        OR (h.trgt_tbl_nm='TB_FI_XFER' AND (
+          EXISTS(SELECT 1 FROM tb_fi_xfer x WHERE x.xfer_sn::text=h.trgt_key AND x.xfer_dt BETWEEN #{period.start} AND #{period.end})
+          OR EXISTS(SELECT 1 FROM tb_sy_chg_hist a WHERE a.trgt_tbl_nm=h.trgt_tbl_nm AND a.trgt_key=h.trgt_key
+            AND a.chg_item_nm='XFER_DT' AND (left(a.bfr_val,7)=#{period.month} OR left(a.aft_val,7)=#{period.month}))))
+        OR (h.trgt_tbl_nm='TB_FI_LOAN' AND (
+          EXISTS(SELECT 1 FROM tb_fi_loan l WHERE l.loan_sn::text=h.trgt_key AND l.loan_dt BETWEEN #{period.start} AND #{period.end})
+          OR EXISTS(SELECT 1 FROM tb_sy_chg_hist a WHERE a.trgt_tbl_nm=h.trgt_tbl_nm AND a.trgt_key=h.trgt_key
+            AND a.chg_item_nm='LOAN_DT' AND (left(a.bfr_val,7)=#{period.month} OR left(a.aft_val,7)=#{period.month}))))
+      </otherwise>
+    </choose>
+  </sql>
+  <select id="history" resultType="com.sicost.apiops.FinancialReadDtos$HistoryEntry">
+    SELECT hist_id::text AS "historyId",trgt_tbl_nm AS "targetTable",trgt_key AS "targetKey",chg_type_cd AS "changeType",
+      COALESCE(chg_item_nm,'') AS "field",bfr_val AS "beforeValue",aft_val AS "afterValue",chg_rsn AS "reason",reg_user_id AS "userId",
+      to_char(reg_dttm,'YYYY-MM-DD HH24:MI:SS') AS "occurredAt"
+    FROM (<include refid="historyScope"/>) filtered ORDER BY reg_dttm DESC,hist_id DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="historyCount" resultType="long">
+    SELECT count(*) FROM (<include refid="historyScope"/>) filtered
+  </select>
+</mapper>

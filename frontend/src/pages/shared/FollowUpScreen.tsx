@@ -6,9 +6,11 @@ import { Icon } from "../../shared/Icon";
 export function SharedScreenFrame({
   screenId,
   children,
+  periodBar,
 }: {
   screenId: string;
   children: ReactNode;
+  periodBar?: ReactNode;
 }) {
   const { menu, menus, favorites, star, pending } = useSharedScreen(screenId),
     navigate = useNavigate();
@@ -71,7 +73,11 @@ export function SharedScreenFrame({
       <div
         className={`sicost-screen-content${menu.pcOnly ? " sicost-pc-body" : ""}`}
       >
-        <ScreenPeriodBar screenId={screenId} />
+        {periodBar === undefined ? (
+          <ScreenPeriodBar screenId={screenId} />
+        ) : (
+          periodBar
+        )}
         {children}
       </div>
     </section>

@@ -235,8 +235,24 @@ export function SharedApplication({
       );
     }
   }, [menus, location.pathname, location.hash, location.key, prefsReady]);
-  const go = (id: string) => {
+  const go = (id: string, financialConfirmed = false) => {
     if (!byScreen(id)) return;
+    if (
+      !financialConfirmed &&
+      active === "UI-10" &&
+      id !== active &&
+      !window.dispatchEvent(
+        new CustomEvent("sicost:screen-navigation-request", {
+          cancelable: true,
+          detail: {
+            screenId: "UI-10",
+            label: "다른 화면으로 이동",
+            proceed: () => go(id, true),
+          },
+        }),
+      )
+    )
+      return;
     if (!tabs.includes(id) && tabs.length >= 8) {
       const oldest =
         lru.current.find((item) => item !== "UI-16" && item !== active) ??
@@ -249,6 +265,7 @@ export function SharedApplication({
       )
         return;
       if (
+        oldest !== "UI-10" &&
         isDirty?.(oldest) &&
         !window.confirm("저장하지 않은 변경을 버릴까요?")
       )
@@ -257,10 +274,27 @@ export function SharedApplication({
     }
     navigate(`/${id}`);
   };
-  const close = (id: string) => {
+  const close = (id: string, financialConfirmed = false) => {
+    if (
+      !financialConfirmed &&
+      id === "UI-10" &&
+      !window.dispatchEvent(
+        new CustomEvent("sicost:screen-navigation-request", {
+          cancelable: true,
+          detail: {
+            screenId: "UI-10",
+            label: "작업 탭 닫기",
+            proceed: () => close(id, true),
+          },
+        }),
+      )
+    )
+      return;
     if (
       id === "UI-16" ||
-      (isDirty?.(id) && !window.confirm("저장하지 않은 변경을 버릴까요?"))
+      (id !== "UI-10" &&
+        isDirty?.(id) &&
+        !window.confirm("저장하지 않은 변경을 버릴까요?"))
     )
       return;
     setTabs((previous) => previous.filter((item) => item !== id));

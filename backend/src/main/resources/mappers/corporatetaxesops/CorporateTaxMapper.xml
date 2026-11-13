@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.corporatetaxesops.CorporateTaxMapper">
+  <sql id="audit">reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"</sql>
+  <select id="annual" resultType="com.sicost.corporatetaxesops.CorporateTaxDtos$StoredAnnual">
+    SELECT tax_yr AS "year",est_tax_amt AS "estimatedTax",<include refid="audit"/>
+    FROM tb_fi_corp_tax WHERE tax_yr=#{year}
+  </select>
+  <select id="payments" resultType="com.sicost.corporatetaxesops.CorporateTaxDtos$StoredPayment">
+    SELECT tax_yr AS "year",pay_type_cd AS "payType",pay_due_dt AS "dueDate",pay_amt AS "payAmount",pay_dt AS "paidDate",pay_yn AS "payYn",<include refid="audit"/>
+    FROM tb_fi_tax_pay WHERE tax_yr=#{year} ORDER BY pay_type_cd
+  </select>
+  <select id="months" resultType="com.sicost.corporatetaxesops.CorporateTaxDtos$StoredMonth">
+    SELECT to_char(m,'YYYY-MM') AS "month",coalesce(c.close_stat_cd,'WORK') AS "closeStatus",
+      p.corp_tax_amt AS "amount",p.fix_yn AS "fixed",p.migr_yn AS "migrated"
+    FROM generate_series(to_date(#{year} || '0101','YYYYMMDD'),to_date(#{year} || '1201','YYYYMMDD'),interval '1 month') m
+    LEFT JOIN tb_cl_close c ON c.close_ym=to_char(m,'YYYYMM')
+    LEFT JOIN tb_co_mon_pl p ON p.pl_ym=to_char(m,'YYYYMM') ORDER BY m
+  </select>
+  <insert id="insertAnnual">
+    INSERT INTO tb_fi_corp_tax(tax_yr,est_tax_amt,reg_user_id,reg_dttm)
+    VALUES(#{year},#{estimatedTax},#{actor},#{now})
+  </insert>
+  <insert id="insertPayment">
+    INSERT INTO tb_fi_tax_pay(tax_yr,pay_type_cd,pay_due_dt,pay_amt,pay_dt,pay_yn,reg_user_id,reg_dttm)
+    VALUES(#{year},#{payType},#{dueDate},NULL,NULL,'N',#{actor},#{now})
+  </insert>
+  <update id="confirm">
+    UPDATE tb_fi_tax_pay SET pay_dt=#{paidDate},pay_amt=#{payAmount},pay_yn='Y',mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tax_yr=#{year} AND pay_type_cd=#{payType} AND pay_yn='N'
+  </update>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+</mapper>

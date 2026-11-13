@@ -11,6 +11,31 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AccessLogWriterTest {
+    @Test void financialTemplateAndIssuesRequireStructuredDownloadEvents() {
+        when(users.userId()).thenReturn("admin");when(mapper.insert(any())).thenReturn(1);
+        var request=new MockHttpServletRequest();request.setRemoteAddr("127.0.0.1");
+        writer.append(new AccessLogWriter.Event("DNLD","UI-10",null,"재무_등록양식",0L),request);
+        writer.append(new AccessLogWriter.Event("DNLD","UI-10","999999999999","재무_업로드검사",2L),request);
+        verify(mapper).insert(argThat(e -> e.userId().equals("admin") && e.screenId().equals("UI-10")
+            && e.action().equals("DNLD") && e.description().equals("999999999999 재무_업로드검사 2")
+            && e.clientIp().equals("127.0.0.1") && e.now().toString().equals("2026-01-02T08:59")));
+        verify(mapper,times(2)).insert(any());
+    }
+    @Test void financialAuditRejectsOtherEventsMissingCountAndWrongTargetKind() {
+        for (var event : new AccessLogWriter.Event[]{
+                new AccessLogWriter.Event("ACCT_VIEW","UI-10",null,"재무_등록양식",0L),
+                new AccessLogWriter.Event("USER_REG","UI-10",null,"재무_등록양식",0L),
+                new AccessLogWriter.Event("DNLD","UI-10",null,"재무_등록양식",null),
+                new AccessLogWriter.Event("DNLD","UI-10","123","재무_등록양식",0L),
+                new AccessLogWriter.Event("DNLD","UI-10",null,"재무_업로드검사",0L),
+                new AccessLogWriter.Event("DNLD","UI-10","0","재무_업로드검사",0L),
+                new AccessLogWriter.Event("DNLD","UI-10","1\r\nunsafe","재무_업로드검사",0L),
+                new AccessLogWriter.Event("DNLD","UI-10","1000000000000","재무_업로드검사",0L),
+                new AccessLogWriter.Event("DNLD","UI-10",null,"개발자",0L)}) {
+            assertThatThrownBy(() -> writer.append(event,new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        }
+        verifyNoInteractions(mapper,users);
+    }
     final AccessLogMapper mapper=mock(AccessLogMapper.class);
     final CurrentUserProvider users=mock(CurrentUserProvider.class);
     final AccessLogWriter writer=new AccessLogWriter(mapper,users,Clock.fixed(Instant.parse("2026-01-01T23:59:00Z"),ZoneId.of("Asia/Seoul")));

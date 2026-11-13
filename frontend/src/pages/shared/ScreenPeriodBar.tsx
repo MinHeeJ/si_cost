@@ -13,7 +13,18 @@ import {
   type PeriodValue,
   type SharedPreference,
 } from "./sharedApi";
-export function ScreenPeriodBar({ screenId }: { screenId: string }) {
+export function ScreenPeriodBar({
+  screenId,
+  controlled,
+}: {
+  screenId: string;
+  controlled?: {
+    month: string;
+    currentMonth: string;
+    onChange(month: string): void;
+    disabled?: boolean;
+  };
+}) {
   const type = screenPeriods[screenId] ?? "NONE";
   const [context, setContext] = useState<PeriodContext | null>(null),
     [value, setValue] = useState<PeriodValue | null>(null);
@@ -26,7 +37,7 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
   const saving = useRef(false),
     closeRead = useRef(0);
   useEffect(() => {
-    if (type === "NONE") return;
+    if (type === "NONE" || controlled) return;
     const refresh = (event: Event) => {
       if ((event as CustomEvent<{ cash: boolean }>).detail?.cash)
         setReload((n) => n + 1);
@@ -94,7 +105,7 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
     );
   };
   useEffect(() => {
-    if (type === "NONE") return;
+    if (type === "NONE" || controlled) return;
     let live = true;
     setLoading(true);
     setError("");
@@ -140,7 +151,7 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
     };
   }, [screenId, type, reload]);
   useEffect(() => {
-    if (!context || !value || type === "NONE") return;
+    if (controlled || !context || !value || type === "NONE") return;
     window.dispatchEvent(
       new CustomEvent("sicost:screen-period-changed", {
         detail: { screenId, value, context },
@@ -166,6 +177,34 @@ export function ScreenPeriodBar({ screenId }: { screenId: string }) {
       closeRead.current++;
     };
   }, [context, value, type]);
+  if (controlled)
+    return (
+      <section
+        className="sicost-period-bar"
+        aria-label="화면 기간"
+        data-testid="financial-controlled-period"
+      >
+        <label>
+          선택월{" "}
+          <input
+            data-testid="financial-period-input"
+            aria-label="선택월"
+            type="month"
+            min="0001-01"
+            max={controlled.currentMonth}
+            value={controlled.month}
+            disabled={controlled.disabled}
+            onChange={(event) => {
+              if (
+                /^(?!0000)\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value) &&
+                event.target.value <= controlled.currentMonth
+              )
+                controlled.onChange(event.target.value);
+            }}
+          />
+        </label>
+      </section>
+    );
   if (type === "NONE") return null;
   if (loading) return <p role="status">기간을 불러오는 중입니다.</p>;
   if (!context || !value)

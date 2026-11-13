@@ -21,6 +21,7 @@ import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
 import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
+import { FinancialItemsScreen } from "../pages/financialitems/FinancialItemsScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
@@ -660,6 +661,7 @@ function RegisteredApplication() {
   const [projectsDirty, setProjectsDirty] = useState(false);
   const [assignmentsDirty, setAssignmentsDirty] = useState(false);
   const [billingDirty, setBillingDirty] = useState(false);
+  const [financialDirty, setFinancialDirty] = useState(false);
   const onBillingDirty = useCallback(
     (dirty: boolean) => setBillingDirty(dirty),
     [],
@@ -729,7 +731,9 @@ function RegisteredApplication() {
                     ? assignmentsDirty
                     : id === "UI-13"
                       ? billingDirty
-                      : id === "UI-23" && usersDirty
+                      : id === "UI-10"
+                        ? financialDirty
+                        : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-01": (
@@ -749,6 +753,7 @@ function RegisteredApplication() {
           </SharedScreenFrame>
         ),
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
+        "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),

@@ -4,6 +4,46 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 class PersistenceBoundaryTest {
+    @Test void financialSourcesAreWritableButDoNotEnableProfitCloseOrOtherLedgers() {
+        for (String table : new String[]{"TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ",
+                "TB_FI_LOAN", "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER"}) {
+            assertThatCode(() -> PersistenceBoundary.requireAllowed("INSERT INTO " + table + " (reg_user_id) VALUES (?)")).doesNotThrowAnyException();
+        }
+        for (String table : new String[]{"TB_CO_MON_PL", "TB_CL_CLOSE", "TB_FI_BIZ_PLAN", "TB_CO_PART_SETL"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("INSERT INTO " + table + " (reg_user_id) VALUES (?)"))
+                .isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void financialDeletionRequiresSelectedMonthAndExactIdentityOrUploadOrigin() {
+        for (String sql : new String[]{
+                "DELETE FROM tb_fi_item WHERE fin_ym=? AND item_sn=?",
+                "DELETE FROM tb_fi_item WHERE fin_ym=? AND upld_id IS NOT NULL",
+                "DELETE FROM tb_co_prev_adj WHERE aply_ym=? AND adj_id=?",
+                "DELETE FROM tb_fi_loan WHERE loan_sn=? AND loan_dt>=? AND loan_dt<?",
+                "DELETE FROM tb_fi_xfer WHERE xfer_sn=? AND xfer_dt>=? AND xfer_dt<?"}) {
+            assertThatCode(() -> PersistenceBoundary.requireAllowed(sql)).doesNotThrowAnyException();
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql + " OR 1=1")).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql + "; DELETE FROM tb_fi_item")).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void financialDeletionCannotDeleteManualRowsOrUnboundedMonths() {
+        for (String sql : new String[]{
+                "DELETE FROM tb_fi_item", "DELETE FROM tb_fi_item WHERE fin_ym=?",
+                "DELETE FROM tb_fi_item WHERE item_sn=?", "DELETE FROM tb_fi_item WHERE fin_ym>=? AND item_sn=?",
+                "DELETE FROM tb_fi_item WHERE fin_ym=? AND upld_id IS NULL",
+                "DELETE FROM tb_fi_item WHERE upld_id IS NOT NULL",
+                "DELETE FROM tb_co_prev_adj WHERE adj_id=?", "DELETE FROM tb_co_prev_adj WHERE aply_ym=?",
+                "DELETE FROM tb_fi_loan WHERE loan_sn=?", "DELETE FROM tb_fi_loan WHERE loan_dt>=? AND loan_dt<?",
+                "DELETE FROM tb_fi_xfer WHERE xfer_sn=?", "DELETE FROM tb_fi_xfer WHERE xfer_dt>=? AND xfer_dt<?"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed(sql)).isInstanceOf(IllegalStateException.class);
+        }
+    }
+    @Test void financialCardsAndTaxRowsNeverPhysicallyDelete() {
+        for (String table : new String[]{"TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY"}) {
+            assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("DELETE FROM " + table + " WHERE pay_ym=? AND card_id=?"))
+                .isInstanceOf(IllegalStateException.class);
+        }
+    }
     @Test void existingAndExplicitMasterTablesOnlyAreWritable() {
         for (String table : new String[]{"TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST",
                 "TB_SY_USER", "TB_SY_USER_ROLE", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG",

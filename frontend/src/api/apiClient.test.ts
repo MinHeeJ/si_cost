@@ -1154,9 +1154,194 @@ const billingCases: typeof cases = [
     call: () => api.getReceivables({ page: 1, size: 20 }),
   },
 ];
-cases.push(...projectCases, ...assignmentCases, ...billingCases);
+const financialCases: typeof cases = [
+  {
+    name: "getFinancialItems default",
+    path: "/api/financial-items",
+    method: "GET",
+    call: () => api.getFinancialItems(),
+  },
+  {
+    name: "getFinancialItems",
+    path: "/api/financial-items?month=2026-11",
+    method: "GET",
+    call: () => api.getFinancialItems("2026-11"),
+  },
+  {
+    name: "saveFinancialItems",
+    path: "/api/financial-items",
+    method: "PUT",
+    call: () =>
+      api.saveFinancialItems({
+        month: "2026-11",
+        expectedRevision: "financial-revision",
+        items: { deleteIds: ["12"] },
+      }),
+    body: {
+      month: "2026-11",
+      expectedRevision: "financial-revision",
+      items: { deleteIds: ["12"] },
+    },
+  },
+  {
+    name: "getFinancialYearStatus",
+    path: "/api/financial-items/year-status?year=2026",
+    method: "GET",
+    call: () => api.getFinancialYearStatus("2026"),
+  },
+  {
+    name: "createFinancialPreview",
+    path: "/api/financial-items/preview",
+    method: "POST",
+    call: () =>
+      api.createFinancialPreview({
+        month: "2026-11",
+        expectedRevision: "financial-revision",
+        action: "LOAD_PREVIOUS",
+      }),
+    body: {
+      month: "2026-11",
+      expectedRevision: "financial-revision",
+      action: "LOAD_PREVIOUS",
+    },
+  },
+  {
+    name: "createCorporateTaxDefaults",
+    path: "/api/corporate-taxes/initialize",
+    method: "POST",
+    call: () => api.createCorporateTaxDefaults("2026-11"),
+    body: { month: "2026-11" },
+  },
+  {
+    name: "getCorporateTaxAllocation",
+    path: "/api/corporate-taxes/2026/allocation",
+    method: "GET",
+    call: () => api.getCorporateTaxAllocation("2026"),
+  },
+  {
+    name: "saveCorporateTaxPaymentConfirmation",
+    path: "/api/corporate-taxes/2026/payments/MID/confirmation",
+    method: "POST",
+    call: () =>
+      api.saveCorporateTaxPaymentConfirmation("2026", "MID", {
+        month: "2026-11",
+        expectedRevision: "payment-revision",
+        paidDate: "2026-11-10",
+        payAmount: "0",
+      }),
+    body: {
+      month: "2026-11",
+      expectedRevision: "payment-revision",
+      paidDate: "2026-11-10",
+      payAmount: "0",
+    },
+  },
+  {
+    name: "getFinancialContributions",
+    path: "/api/financial-contributions?month=2026-11",
+    method: "GET",
+    call: () => api.getFinancialContributions("2026-11"),
+  },
+  {
+    name: "getFinancialHistory",
+    path: "/api/financial-history?month=2026-11&scope=TAX&page=2&size=20",
+    method: "GET",
+    call: () => api.getFinancialHistory("2026-11", "TAX", 2, 20),
+  },
+  {
+    name: "getFinancialUploadResult",
+    path: "/api/uploads/999999999999/result",
+    method: "GET",
+    call: () => api.getFinancialUploadResult("999999999999"),
+  },
+  {
+    name: "getUploadIssues financial ID",
+    path: "/api/uploads/999999999999/issues?page=2&size=20&severity=ERR",
+    method: "GET",
+    call: () => api.getUploadIssues("999999999999", "ERR", 2, 20),
+  },
+];
+cases.push(
+  ...projectCases,
+  ...assignmentCases,
+  ...billingCases,
+  ...financialCases,
+);
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
+  it.each(["validate", "apply"] as const)(
+    "B2 %s는 문자열 ID와 재무 revision을 보존한다",
+    async (operation) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            meta: {},
+            data: { uploadId: "999999999999" },
+          }),
+        ),
+      );
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "financial.xlsx");
+      const result =
+        operation === "validate"
+          ? await api.createB2Validation(file, "2026-11")
+          : await api.saveB2Apply(
+              file,
+              "2026-11",
+              "999999999999",
+              "financial-revision",
+            );
+      expect(result.uploadId).toBe("999999999999");
+      expect(fetcher).toHaveBeenCalledOnce();
+      const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
+      expect(path).toBe(`/api/excel/B2/${operation}`);
+      expect(options.method).toBe("POST");
+      expect(new Headers(options.headers).has("Content-Type")).toBe(false);
+      const body = options.body as FormData;
+      expect(body.get("file")).toBe(file);
+      expect(body.get("month")).toBe("2026-11");
+      expect(body.get("uploadId")).toBe(
+        operation === "apply" ? "999999999999" : null,
+      );
+      expect(body.get("expectedRevision")).toBe(
+        operation === "apply" ? "financial-revision" : null,
+      );
+      expect(body.get("userId")).toBeNull();
+      expect(body.get("year")).toBeNull();
+    },
+  );
+  it.each(["validate", "apply"] as const)(
+    "B2 %s의 422 재무 진단을 평면 오류 그대로 보존한다",
+    async (operation) => {
+      const body = {
+        success: false,
+        meta: {},
+        code: "REVALIDATION_FAILED",
+        message: "재검사 오류",
+        requestId: "financial-upload-request",
+        details: {
+          financial: { upload: { uploadId: "999999999999", canApply: false } },
+        },
+      };
+      const fetcher = vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify(body), { status: 422 }));
+      vi.stubGlobal("fetch", fetcher);
+      const file = new File(["workbook"], "financial.xlsx");
+      await expect(
+        operation === "validate"
+          ? api.createB2Validation(file, "2026-11")
+          : api.saveB2Apply(
+              file,
+              "2026-11",
+              "999999999999",
+              "financial-revision",
+            ),
+      ).rejects.toMatchObject({ status: 422, body });
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
   it.each(["B1", "B5"] as const)(
     "%s 등록은 기존 multipart 문맥을 유지한다",
     async (form) => {
@@ -1246,24 +1431,26 @@ describe("승인 API 등록", () => {
     await expect(call()).rejects.toMatchObject({ status: 422, body });
     expect(fetcher).toHaveBeenCalledOnce();
   });
-  it.each([...projectCases, ...assignmentCases, ...billingCases])(
-    "$name은 평면 오류를 보존하고 재시도하지 않는다",
-    async (test) => {
-      const body = {
-        success: false,
-        meta: {},
-        code: "STALE_WRITE",
-        message: "다시 조회해 주세요.",
-        requestId: "project-request",
-      };
-      const fetcher = vi
-        .fn()
-        .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
-      vi.stubGlobal("fetch", fetcher);
-      await expect(test.call()).rejects.toMatchObject({ status: 409, body });
-      expect(fetcher).toHaveBeenCalledOnce();
-    },
-  );
+  it.each([
+    ...projectCases,
+    ...assignmentCases,
+    ...billingCases,
+    ...financialCases,
+  ])("$name은 평면 오류를 보존하고 재시도하지 않는다", async (test) => {
+    const body = {
+      success: false,
+      meta: {},
+      code: "STALE_WRITE",
+      message: "다시 조회해 주세요.",
+      requestId: "project-request",
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
+    vi.stubGlobal("fetch", fetcher);
+    await expect(test.call()).rejects.toMatchObject({ status: 409, body });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
   it.each(["B9", "B6"] as const)(
     "%s multipart 등록은 year와 업로드 문맥을 유지한다",
     async (form) => {
@@ -1371,6 +1558,16 @@ describe("승인 API 등록", () => {
   );
   it.each([
     {
+      path: "/api/excel/B2/template?month=2026-11",
+      call: () => api.getB2Template("2026-11"),
+      filename: "B2_재무양식_20261110_120000.xlsx",
+    },
+    {
+      path: "/api/uploads/999999999999/issues.xlsx?severity=WARN",
+      call: () => api.getUploadIssuesXlsx("999999999999", "WARN"),
+      filename: "B2_검사_999999999999_20261110_120000.xlsx",
+    },
+    {
       path: "/api/excel/B1/template",
       call: () => api.getPayrollTemplate(),
       filename: "payroll.xlsx",
@@ -1468,6 +1665,8 @@ describe("승인 API 등록", () => {
     expect(fetcher.mock.calls[0][0]).toBe(test.path);
   });
   it.each([
+    () => api.getB2Template("2026-11"),
+    () => api.getUploadIssuesXlsx("999999999999", "WARN"),
     () => api.getB7Template(),
     () =>
       api.downloadBillingReview({ view: "RECEIVABLES", amountUnit: "천원" }),

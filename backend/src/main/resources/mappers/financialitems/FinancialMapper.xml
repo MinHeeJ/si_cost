@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.financialitems.FinancialMapper">
+  <select id="rows" resultType="string">
+    SELECT to_jsonb(t)::text FROM ${kind.table} t
+    <where>
+      <choose>
+        <when test="kind.dated">${kind.scope} &gt;= #{start} AND ${kind.scope} &lt; #{end}</when>
+        <when test="kind.scope != null">${kind.scope}=#{month}</when>
+        <when test="kind.name() == 'ANNUAL'">tax_yr &lt;= substring(#{month},1,4)</when>
+        <when test="kind.name() == 'TAX_PAYMENTS'">tax_yr &lt;= substring(#{month},1,4)</when>
+      </choose>
+    </where>
+    ORDER BY ${kind.order}
+  </select>
+  <select id="closedMonths" resultType="string">SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE' ORDER BY close_ym DESC</select>
+  <select id="code" resultType="string">SELECT use_yn FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code} AND del_yn='N'</select>
+  <select id="nextId" resultType="string">
+    <choose>
+      <when test="kind.name() == 'ADJUSTMENTS'">SELECT nextval('sq_tb_co_prev_adj')::text</when>
+      <when test="kind.name() == 'TRANSFERS'">SELECT nextval('sq_tb_fi_xfer')::text</when>
+      <otherwise>SELECT nextval('sq_tb_fi_loan')::text</otherwise>
+    </choose>
+  </select>
+  <select id="greatestCardNumber" resultType="string">
+    SELECT COALESCE(max(n),0)::text FROM (
+      SELECT substring(card_id from 3)::numeric n FROM tb_fi_card WHERE card_id ~ '^K-[0-9]+$'
+      UNION ALL SELECT substring(trgt_key from 3)::numeric FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_FI_CARD' AND trgt_key ~ '^K-[0-9]+$'
+    ) ids
+  </select>
+  <insert id="insert">
+    INSERT INTO ${scope.kind.table}(<foreach collection="cells" item="cell" separator=",">${cell.column}</foreach>,reg_user_id,reg_dttm)
+    VALUES(<foreach collection="cells" item="cell" separator=",">#{cell.value}</foreach>,#{actor},#{now})
+  </insert>
+  <sql id="identity">
+    ${scope.kind.idColumn}=#{id}
+    <if test="scope.kind.name() == 'TAX_PAYMENTS'">AND pay_type_cd=#{cells[0].value}</if>
+    <if test="scope.kind.scope != null and scope.kind.idColumn != scope.kind.scope">
+      <choose>
+        <when test="scope.kind.dated">AND ${scope.kind.scope} &gt;= #{scope.start} AND ${scope.kind.scope} &lt; #{scope.end}</when>
+        <otherwise>AND ${scope.kind.scope}=#{scope.month}</otherwise>
+      </choose>
+    </if>
+  </sql>
+  <update id="update">
+    UPDATE ${scope.kind.table} SET <foreach collection="cells" item="cell" separator=",">${cell.column}=#{cell.value}</foreach>,mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE <include refid="identity"/>
+  </update>
+  <delete id="delete">
+    DELETE FROM ${scope.kind.table} WHERE
+    <choose>
+      <when test="scope.kind.name() == 'ITEMS'">fin_ym=#{scope.month} AND item_sn=#{id}</when>
+      <when test="scope.kind.name() == 'ADJUSTMENTS'">aply_ym=#{scope.month} AND adj_id=#{id}</when>
+      <otherwise><include refid="identity"/></otherwise>
+    </choose>
+  </delete>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+</mapper>
