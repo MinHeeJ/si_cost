@@ -96,6 +96,33 @@ class BillContractTest {
         mvc.perform(get("/api/bills").param("year","2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.totals.receiptAmount").value("11"));
         assertThat(bills.get(0)).isEqualTo(row);noWrites();
     }
+    String quickReason(String id) throws Exception {
+        String body=mvc.perform(get("/api/bills/"+id).param("year","2026")).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        var q=json.readTree(body).at("/data/bill/quickActions");return q.get("reason").isNull()?null:q.get("reason").asText();
+    }
+    boolean quickAllowed(String id) throws Exception {
+        String body=mvc.perform(get("/api/bills/"+id).param("year","2026")).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        return json.readTree(body).at("/data/bill/quickActions/copyAllowed").asBoolean();
+    }
+    @Test void quickBillingIsOfferedOnlyOnTheLatestOpenBillAndSaysWhyOtherwise() throws Exception {
+        create(draft()).andExpect(status().isCreated());String first=bills.get(0).id();
+        assertThat(quickAllowed(first)).isTrue();assertThat(quickReason(first)).isNull();
+        ObjectNode next=draft();next.put("billingMonth","2026-08").put("billingDate","2026-08-15").put("dueDate","2026-09-25");create(next).andExpect(status().isCreated());
+        assertThat(quickAllowed(first)).isFalse();
+        assertThat(quickReason(first)).contains("더 최근 청구");
+        String latest=bills.stream().filter(b->b.billingMonth().equals("202608")).findFirst().orElseThrow().id();
+        assertThat(quickAllowed(latest)).isTrue();assertThat(quickReason(latest)).isNull();
+    }
+    @Test void quickBillingExplainsAContractEndAnInternalProjectAndANonRunningProject() throws Exception {
+        project=new Project("P-BILL","청구 시험","시험 고객","MO","ING",LocalDate.of(2026,7,31));
+        create(draft()).andExpect(status().isCreated());String id=bills.get(0).id();
+        assertThat(quickAllowed(id)).isFalse();
+        assertThat(quickReason(id)).contains("2026-08").contains("계약 종료월").contains("2026-07");
+        project=new Project("P-BILL","청구 시험","시험 고객","MO","LOSE",LocalDate.of(2027,12,31));
+        assertThat(quickAllowed(id)).isFalse();assertThat(quickReason(id)).contains("진행 중인 프로젝트");
+        project=new Project("P-BILL","청구 시험","시험 고객","IN","ING",LocalDate.of(2027,12,31));
+        assertThat(quickAllowed(id)).isFalse();assertThat(quickReason(id)).contains("내부 프로젝트");
+    }
     @ParameterizedTest @ValueSource(strings={"userId","force","size"}) void detailRejectsUnknownQuery(String key) throws Exception {invalid(mvc.perform(get("/api/bills/B-202607-001").param("year","2026").param(key,"other")),key);noWrites();}
     @Test void listRejectsUnknownAndInvalidFilters() throws Exception {
         invalid(mvc.perform(get("/api/bills").param("year","2026").param("userId","other")),"userId");

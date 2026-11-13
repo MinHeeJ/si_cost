@@ -301,6 +301,29 @@ it("일괄 입금은 고른 청구로, 조회전체 선택이면 조건 전체�
     vi.mocked(batch.loadReceiptBatchSelection).mock.calls[1][1],
   ).toBeUndefined();
 });
+it("빠른 청구가 안 되는 청구는 사유를 마우스 없이도 보여 준다", async () => {
+  vi.mocked(api.getBills).mockResolvedValue({
+    ...page,
+    items: [
+      {
+        ...bill,
+        quickActions: {
+          copyAllowed: false,
+          nextMonthAllowed: false,
+          reason:
+            "다음 청구월(2027-01)이 프로젝트 계약 종료월(2026-12)을 넘습니다.",
+        },
+      },
+    ],
+  });
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  const reason = screen.getByTestId(`bill-quick-reason-${bill.id.toLowerCase()}`);
+  expect(reason).toHaveTextContent("계약 종료월(2026-12)을 넘습니다.");
+  expect(
+    screen.queryByRole("button", { name: "고쳐서 청구" }),
+  ).not.toBeInTheDocument();
+});
 it("청구 등록은 흰 글자의 파란 주 버튼이다", async () => {
   render(<BillsScreen />);
   await screen.findByRole("button", { name: bill.id });

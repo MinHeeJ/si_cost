@@ -488,7 +488,19 @@ function BillsContent({
               )}
             </>
           ) : (
-            "–"
+            <span
+              className="bill-quick-unavailable"
+              data-testid={`bill-quick-reason-${b.id.toLowerCase()}`}
+            >
+              {b.quickActions.reason ? (
+                <>
+                  <span aria-hidden="true">–</span>
+                  <small>{b.quickActions.reason}</small>
+                </>
+              ) : (
+                "–"
+              )}
+            </span>
           )}
         </span>
       ),
