@@ -34,6 +34,10 @@ import * as assignments from "../pages/assignmentsops/assignmentActionsApi";
 import * as bills from "../pages/bills/billsApi";
 import * as financial from "../pages/financialitems/financialApi";
 import * as corporateTax from "../pages/corporatetaxesops/corporateTaxApi";
+import * as analysis from "../pages/apiops/projectAnalysisApi";
+import * as costDetail from "../pages/costanalysis/projectCostApi";
+import * as progress from "../pages/progress/projectProgressApi";
+import * as issues from "../pages/issues/projectIssuesApi";
 import { financialEditorFixture } from "../pages/financialitems/financialFixtures";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
@@ -50,6 +54,14 @@ vi.mock("../pages/corporatetaxesops/corporateTaxApi", async (original) => ({
   createCorporateTaxDefaults: vi.fn(),
 }));
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/apiops/projectAnalysisApi", async (original) => ({
+  ...(await original<typeof import("../pages/apiops/projectAnalysisApi")>()),
+  getProjectCosts: vi.fn(),
+  getProjectStatusBoard: vi.fn(),
+}));
+vi.mock("../pages/costanalysis/projectCostApi");
+vi.mock("../pages/progress/projectProgressApi");
+vi.mock("../pages/issues/projectIssuesApi");
 vi.mock("../pages/bills/billsApi");
 vi.mock("../pages/assignmentsops/assignmentActionsApi");
 vi.mock("../pages/projects/projectsApi");
@@ -221,6 +233,54 @@ const columnViews = {
     hidden: [],
   },
 };
+const costColumns = [
+  "projectName",
+  "contractType",
+  "status",
+  "originalContractAmount",
+  "contractAmount",
+  "planMm",
+  "actualMm",
+  "cumulativeRevenue",
+  "cumulativeCost",
+  "cumulativeProfit",
+  "cumulativeMargin",
+  "forecastMargin",
+  "targetGap",
+  "budgetUsage",
+  "pricePerMm",
+  "costPerMm",
+  "profitPerMm",
+  "freeMm",
+  "freeLaborCost",
+  "alerts",
+];
+const boardColumns = [
+  "light",
+  "projectName",
+  "pm",
+  "currentStep",
+  "planProgress",
+  "actualProgress",
+  "costUsage",
+  "costProgressGap",
+  "openIssueCount",
+  "overdueIssueCount",
+  "lastUpdatedDate",
+  "elapsedDays",
+];
+const issueColumns = [
+  "importance",
+  "title",
+  "projectName",
+  "action",
+  "registeredBy",
+  "dueDate",
+  "status",
+  "registeredAt",
+  "modifiedBy",
+  "modifiedAt",
+];
 const open = (path = "/UI-27") =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -229,6 +289,58 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  const completeness: analysis.Completeness = {
+    costComplete: true,
+    revenueComplete: true,
+    estimated: false,
+    issues: [],
+    unknownProjectCount: 0,
+    rangeStartMonth: "2026-01",
+    rangeEndMonth: "2026-11",
+    missingBeforeMonth: null,
+  };
+  vi.mocked(analysis.getProjectCosts).mockResolvedValue({
+    month: context.currentMonth,
+    baseDate: "2026-11-30",
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+    summary: { completeness },
+  });
+  vi.mocked(analysis.getProjectStatusBoard).mockResolvedValue({
+    baseDate: context.currentDate,
+    currentMonth: context.currentMonth,
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+    summary: { projectCount: 0, openIssueCount: 0 },
+    staleProjects: [],
+    calculationNotice: "일정·원가 신호는 1차 경보입니다.",
+  });
+  vi.mocked(costDetail.getProjectCostAnalysis).mockRejectedValue(
+    new Error("상세 원가 조회 실패"),
+  );
+  vi.mocked(progress.getProjectProgress).mockRejectedValue(
+    new Error("진행 조회 실패"),
+  );
+  vi.mocked(issues.getProjectIssues).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+    openCount: 0,
+    baseDate: context.currentDate,
+  });
+  vi.mocked(issues.getProjectStatusIssues).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50,
+    openCount: 0,
+    baseDate: context.currentDate,
+  });
   vi.mocked(financial.getFinancialItems).mockImplementation(async (month) =>
     financialEditorFixture({
       month: month ?? context.currentMonth,
@@ -368,6 +480,25 @@ beforeEach(() => {
     revision: null,
     stored: false,
   });
+  preferences.push(
+    {
+      type: "COLS",
+      key: "UI-04",
+      value: { projectCost: { order: costColumns, hidden: [] } },
+      revision: null,
+      stored: false,
+    },
+    {
+      type: "COLS",
+      key: "UI-31",
+      value: {
+        statusBoard: { order: boardColumns, hidden: [] },
+        issues: { order: issueColumns, hidden: [] },
+      },
+      revision: null,
+      stored: false,
+    },
+  );
   vi.mocked(prefs.getPreferences).mockImplementation(async () => ({
     items: preferences,
   }));
@@ -470,6 +601,151 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it.each([
+    ["/UI-04", "projectCost", "유형", "contractType", costColumns],
+    ["/UI-31", "statusBoard", "PM", "pm", boardColumns],
+    ["/UI-31?view=issues", "issues", "조치", "action", issueColumns],
+  ] as const)(
+    "%s 열 설정은 전체순서와 다른 뷰를 보존한다",
+    async (path, view, label, hidden, order) => {
+      open(path);
+      await userEvent.click(
+        await screen.findByRole("button", { name: "열 설정" }),
+      );
+      const dialog = screen.getByRole("dialog", { name: "현재 표 열 설정" });
+      expect(within(dialog).getByLabelText("프로젝트 숨김")).toBeDisabled();
+      if (view === "issues")
+        expect(within(dialog).getByLabelText("제목 숨김")).toBeDisabled();
+      await userEvent.click(within(dialog).getByLabelText(`${label} 숨김`));
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "적용" }),
+      );
+      await waitFor(() =>
+        expect(prefs.putPreference).toHaveBeenCalledWith(
+          "COLS",
+          view === "projectCost" ? "UI-04" : "UI-31",
+          expect.objectContaining({ [view]: { order, hidden: [hidden] } }),
+          null,
+        ),
+      );
+      if (view !== "projectCost") {
+        const call = vi
+          .mocked(prefs.putPreference)
+          .mock.calls.find(([type]) => type === "COLS")!;
+        expect(call[2]).toMatchObject(
+          view === "issues"
+            ? { statusBoard: { order: boardColumns, hidden: [] } }
+            : { issues: { order: issueColumns, hidden: [] } },
+        );
+      }
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "현재 표 열 설정" }),
+        ).not.toBeInTheDocument(),
+      );
+    },
+  );
+  it.each(["/UI-04", "/UI-31"])(
+    "%s 열 설정 취소는 저장하지 않는다",
+    async (path) => {
+      open(path);
+      await userEvent.click(
+        await screen.findByRole("button", { name: "열 설정" }),
+      );
+      await userEvent.click(
+        screen.getByLabelText(path === "/UI-04" ? "유형 숨김" : "PM 숨김"),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "취소" }));
+      expect(
+        vi
+          .mocked(prefs.putPreference)
+          .mock.calls.filter(([type]) => type === "COLS"),
+      ).toHaveLength(0);
+    },
+  );
+  it("원가 열 설정 실패는 초안을 보존하고 자동 재시도하지 않는다", async () => {
+    open("/UI-04");
+    await userEvent.click(await screen.findByTestId("project-cost-columns"));
+    await userEvent.click(screen.getByLabelText("유형 숨김"));
+    vi.mocked(prefs.putPreference).mockRejectedValueOnce(
+      new Error("열 저장 실패"),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "적용" }));
+    await screen.findAllByText("열 저장 실패");
+    expect(screen.getByLabelText("유형 숨김")).toBeChecked();
+    expect(
+      vi
+        .mocked(prefs.putPreference)
+        .mock.calls.filter(([type]) => type === "COLS"),
+    ).toHaveLength(1);
+  });
+  it("UI-04 상세 직접 진입은 월과 선택 식별자로 원가 패널을 연결한다", async () => {
+    open("/UI-04?month=2026-10&detailProjectId=P-0042&page=2");
+    await screen.findByTestId("project-cost-detail");
+    await screen.findByText("상세 원가 조회 실패");
+    expect(costDetail.getProjectCostAnalysis).toHaveBeenCalledWith(
+      "P-0042",
+      "2026-10",
+    );
+    await userEvent.click(
+      within(screen.getByTestId("project-cost-detail")).getByRole("button", {
+        name: "닫기",
+      }),
+    );
+    expect(screen.queryByTestId("project-cost-detail")).not.toBeInTheDocument();
+    expect(analysis.getProjectCosts).toHaveBeenCalledWith(
+      expect.objectContaining({ month: "2026-10", page: "2" }),
+      expect.any(AbortSignal),
+    );
+  });
+  it("UI-01 진행 직접 진입은 기존 네 탭을 유지하고 진행 조회 오류를 표시한다", async () => {
+    open("/UI-01?projectId=P-0042&tab=progress");
+    await screen.findByText("진행 조회 실패");
+    expect(progress.getProjectProgress).toHaveBeenCalledWith("P-0042", 2026);
+    for (const label of [
+      "기본 정보",
+      "인원 계획",
+      "투입 인력",
+      "계약 변경 이력",
+      "진행 현황",
+      "이슈",
+    ])
+      expect(screen.getByRole("tab", { name: label })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "진행 현황" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+  it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
+    open("/UI-01?projectId=P-0042&tab=issues");
+    await screen.findByTestId("project-issues-panel");
+    await waitFor(() =>
+      expect(issues.getProjectIssues).toHaveBeenCalledWith(
+        "P-0042",
+        expect.objectContaining({ status: "OPEN_ACTIVE" }),
+      ),
+    );
+    expect(screen.getByRole("tab", { name: "이슈" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("issue-create")).toBeEnabled(),
+    );
+  });
+  it("UI-31 이슈 탭은 기간 선택 없이 조회와 공통 열 설정을 연결한다", async () => {
+    open("/UI-31?view=issues&light=위험");
+    await screen.findByTestId("project-issues-panel");
+    await waitFor(() =>
+      expect(issues.getProjectStatusIssues).toHaveBeenCalled(),
+    );
+    expect(screen.queryByLabelText("기간")).not.toBeVisible();
+    expect(analysis.getProjectStatusBoard).toHaveBeenCalledWith(
+      expect.objectContaining({ light: "위험" }),
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByTestId("issue-create")).toBeVisible();
+  });
   it("재무 직접 진입은 저장된 기간 대신 서버 현재월과 기존 프레임을 사용한다", async () => {
     preferences.push({
       type: "PERIOD",
@@ -904,9 +1180,24 @@ describe("공식 진입점 합성", () => {
         ).toBeVisible();
         expect(financial.getFinancialItems).toHaveBeenCalled();
       } else if (id === "UI-03") {
-        expect(await screen.findByTestId("profitability-overview")).toBeVisible();
-        expect(screen.getByRole("textbox", { name: "이름 검색" })).toBeVisible();
+        expect(
+          await screen.findByTestId("profitability-overview"),
+        ).toBeVisible();
+        expect(
+          screen.getByRole("textbox", { name: "이름 검색" }),
+        ).toBeVisible();
         expect(screen.getByTestId("profitability-search-button")).toBeVisible();
+      } else if (id === "UI-04" || id === "UI-31") {
+        expect(
+          await screen.findByTestId(
+            id === "UI-04" ? "project-cost-analysis" : "project-status-board",
+          ),
+        ).toBeVisible();
+        await screen.findByText(
+          id === "UI-04"
+            ? "조건에 맞는 프로젝트가 없습니다."
+            : "조건에 맞는 진행 프로젝트가 없습니다.",
+        );
       } else if (id === "UI-02" || id === "UI-33") {
         expect(
           await screen.findByTestId(

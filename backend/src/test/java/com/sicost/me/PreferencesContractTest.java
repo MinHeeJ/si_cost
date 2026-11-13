@@ -329,4 +329,70 @@ class PreferencesContractTest {
         mvc.perform(put("/api/me/preferences/{type}/{key}",type,key).contentType("application/json").content("{\"value\":"+value+",\"expectedRevision\":null}"))
                 .andExpect(status().isBadRequest()); verify(mapper,never()).insert(any()); verify(mapper,never()).update(any());
     }
+    @ParameterizedTest @ValueSource(strings={"projectCost","statusBoard","issues"})
+    void projectAnalysisColumnsRoundTripEntireOrderAndKeepSiblingAndOtherPreferences(String viewId) throws Exception {
+        String key=viewId.equals("projectCost")?"UI-04":"UI-31";
+        var value=preference("COLS",key).path("value").deepCopy();
+        var view=(com.fasterxml.jackson.databind.node.ObjectNode)value.path(viewId);
+        var order=new ArrayList<String>();view.path("order").forEach(n->order.add(n.asText()));
+        if(viewId.equals("projectCost"))assertThat(order).containsExactlyElementsOf(com.sicost.projectcostsops.ProjectCostExportInput.COLUMNS);
+        Collections.reverse(order);view.set("order",json.valueToTree(order));
+        view.set("hidden",json.valueToTree(List.of(viewId.equals("projectCost")?"alerts":viewId.equals("statusBoard")?"pm":"action")));
+        save("DENSE","*","\"좁게\"",null);
+        var before=new HashMap<>(rows);
+        String revision=save("COLS",key,value.toString(),null);
+        assertThat(preference("COLS",key).path("value")).isEqualTo(value);
+        assertThat(preference("COLS",key).path("revision").asText()).isEqualTo(revision);
+        save("COLS",key,value.toString(),revision);
+        verify(mapper,never()).update(any());
+        before.forEach((id,row)->assertThat(rows.get(id)).isEqualTo(row));
+        assertThat(rows.get("COLS/"+key).userId()).isEqualTo("admin");
+        verify(invalidation).afterCommit("preferences:admin:COLS:"+key);
+    }
+    @ParameterizedTest @ValueSource(strings={"projectCost","statusBoard","issues"})
+    void projectAnalysisStaleRevisionCannotOverwriteSettings(String viewId) throws Exception {
+        String key=viewId.equals("projectCost")?"UI-04":"UI-31";
+        var value=preference("COLS",key).path("value");
+        save("COLS",key,value.toString(),null);
+        var before=new HashMap<>(rows);
+        mvc.perform(put("/api/me/preferences/COLS/{key}",key).contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision","stale"))))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        assertThat(rows).isEqualTo(before);verify(mapper,never()).update(any());
+    }
+    @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({
+        "projectCost,duplicate","projectCost,missing","projectCost,unknown","projectCost,required","projectCost,hiddenDuplicate","projectCost,wrongView","projectCost,empty","projectCost,tooLong",
+        "statusBoard,duplicate","statusBoard,missing","statusBoard,unknown","statusBoard,required","statusBoard,hiddenDuplicate","statusBoard,wrongView","statusBoard,empty","statusBoard,tooLong",
+        "issues,duplicate","issues,missing","issues,unknown","issues,required","issues,hiddenDuplicate","issues,wrongView","issues,empty","issues,tooLong"
+    })
+    void invalidProjectAnalysisColumnsPreserveStoredValue(String viewId,String rule) throws Exception {
+        String key=viewId.equals("projectCost")?"UI-04":"UI-31";
+        var value=(com.fasterxml.jackson.databind.node.ObjectNode)preference("COLS",key).path("value").deepCopy();
+        String revision=save("COLS",key,value.toString(),null);
+        var before=new HashMap<>(rows);
+        var order=(com.fasterxml.jackson.databind.node.ArrayNode)value.path(viewId).path("order");
+        var hidden=(com.fasterxml.jackson.databind.node.ArrayNode)value.path(viewId).path("hidden");
+        switch(rule) {
+            case "duplicate" -> order.set(1,order.get(0));
+            case "missing" -> order.remove(1);
+            case "unknown" -> order.set(1,json.valueToTree("unknownColumn"));
+            case "required" -> hidden.add(viewId.equals("issues")?"title":"projectName");
+            case "hiddenDuplicate" -> {hidden.add("dueDate");hidden.add("dueDate");}
+            case "wrongView" -> value.set("clients",value.remove(viewId));
+            case "empty" -> value.removeAll();
+            case "tooLong" -> order.add("x".repeat(2000));
+            default -> throw new IllegalArgumentException(rule);
+        }
+        mvc.perform(put("/api/me/preferences/COLS/{key}",key).contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision",revision))))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.requestId").isNotEmpty());
+        assertThat(rows).isEqualTo(before);verify(mapper,never()).update(any());
+    }
+    @Test void statusBoardHasNoPeriodAndProjectCostRetainsMonthPeriod() throws Exception {
+        var response=mvc.perform(get("/api/me/preferences")).andExpect(status().isOk()).andReturn();
+        var items=json.readTree(response.getResponse().getContentAsString()).at("/data/items");
+        assertThat(items).noneMatch(n->n.path("type").asText().equals("PERIOD")&&n.path("key").asText().equals("UI-31"));
+        assertThat(preference("PERIOD","UI-04").path("value").path("type").asText()).isEqualTo("YEAR_MONTH");
+        invalid("PERIOD","UI-31","{\"type\":\"YEAR\",\"value\":\"2026\"}");
+    }
 }

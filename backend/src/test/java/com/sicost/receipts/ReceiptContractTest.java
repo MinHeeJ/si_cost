@@ -50,6 +50,41 @@ class ReceiptContractTest {
     List<StoredReceipt> rows;
     Cache cache;
     List<ChangeHistoryEntry> audits;
+    @Test void literalReceiptsHappyAuthBusinessValidationAndNoSideEffect() throws Exception {
+        mvc.perform(get("/api/bills/B-202501-001/receipts").param("year","2026"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/receipts",200))
+            .andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.total").value(0));
+        mvc.perform(get("/api/bills/B-202501-001/receipts").param("year","2026").param("userId","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/receipts",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        bill=null;
+        mvc.perform(get("/api/bills/B-202501-001/receipts").param("year","2026"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/receipts",404));noWrites();
+    }
+    @Test void literalReceiptCreateCommitsIndependentRowAndRejectsOverReceipt() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/bills/B-202501-001/receipts").contentType("application/json").content(create().toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/receipts",201))
+            .andExpect(jsonPath("$.data.receipt.amount").value("400"))
+            .andExpect(jsonPath("$.data.bill.unpaidAmount").value("700"));
+        verify(mapper).insert(anyMap());verify(mapper).updateCache(any());verify(manager).commit(any());
+        assertThat(audits).anyMatch(a->a.tableName().equals("TB_BL_RCPT")&&a.type().equals("NEW")&&a.userId().equals("admin"));
+        clearInvocations(mapper,history,invalidation);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/bills/B-202501-001/receipts").contentType("application/json").content(create().put("amount","701").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/receipts",409))
+            .andExpect(jsonPath("$.code").value("OVER_RECEIPT"));noWrites();assertThat(rows).hasSize(1);
+    }
+    @Test void literalReceiptCancelCommitsWithoutDeletingAndRejectsForgedActor() throws Exception {
+        add(1,"2026-07-01","400","N");cache=new Cache(new BigDecimal("400"),new BigDecimal("700"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/bills/B-202501-001/receipts/1/cancel").contentType("application/json").content(cancel().toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/receipts/{receiptId}/cancel",200))
+            .andExpect(jsonPath("$.data.receipt.cancelUserId").value("admin"))
+            .andExpect(jsonPath("$.data.bill.unpaidAmount").value("1100"));
+        verify(mapper).cancel(any());verify(manager).commit(any());assertThat(rows).hasSize(1);
+        clearInvocations(mapper,history,invalidation);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/bills/B-202501-001/receipts/1/cancel").contentType("application/json").content(cancel().put("cancelUserId","other").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/receipts/{receiptId}/cancel",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));noWrites();
+    }
     @BeforeEach void setup(){
         bill=bill("N",LocalDate.of(2026,7,1));rows=new ArrayList<>();audits=new ArrayList<>();cache=new Cache(BigDecimal.ZERO,new BigDecimal("1100"));
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","임시 관리자",List.of("ADMIN"),true));

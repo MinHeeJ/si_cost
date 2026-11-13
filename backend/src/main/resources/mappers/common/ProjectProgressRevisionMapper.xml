@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.concurrent.ProjectProgressRevisionMapper">
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    SELECT json_build_object(
+      'project', json_build_object('id',p.PROJ_ID,'contractType',p.CTRT_TYPE_CD,
+        'status',p.PROJ_STAT_CD,'startDate',p.CTRT_BGN_DT,'endDate',p.CTRT_END_DT),
+      'steps',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.STEP_SN)
+        FROM TB_PJ_STEP r WHERE r.PROJ_ID=p.PROJ_ID),'[]'::json),
+      'memos',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.MEMO_SN)
+        FROM TB_PJ_WEEK_MEMO r WHERE r.PROJ_ID=p.PROJ_ID),'[]'::json),
+      'issues',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.ISSUE_ID)
+        FROM TB_PJ_ISSUE r WHERE r.PROJ_ID=p.PROJ_ID),'[]'::json)
+    )::text FROM TB_PJ_PROJ p WHERE p.PROJ_ID=#{id}
+  </select>
+</mapper>

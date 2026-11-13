@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -32,6 +33,8 @@ import { downloadFilename } from "../shared/downloadFilename";
 import * as api from "./projectsApi";
 import "./projects.css";
 export type ProjectsRegistration = ProjectDetailRegistration & {
+  selectedProjectId?: string;
+  onSelectProject?(id?: string): void;
   distributionUpload?(
     context: Parameters<ProjectDistributionPanelProps["onUpload"]>[0] & {
       year: number;
@@ -94,8 +97,12 @@ export function ProjectsScreen({
     >({}),
     [parts, setParts] = useState<PartOption[]>([]);
   const [form, setForm] = useState<{ detail?: api.ProjectDetail }>(),
-    [selected, setSelected] =
-      useState<Pick<api.ProjectListItem, "id" | "customerName" | "partName">>();
+    [selected, setSelected] = useState<
+      Pick<api.ProjectListItem, "id" | "customerName" | "partName"> | undefined
+    >(() => {
+      const id = registration?.selectedProjectId;
+      return id ? { id, customerName: null, partName: null } : undefined;
+    });
   const [distribution, setDistribution] = useState<{
     id: string;
     customerName: string | null;
@@ -117,6 +124,13 @@ export function ProjectsScreen({
     [onDirtyChange],
   );
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+  useEffect(() => {
+    const id = registration?.selectedProjectId;
+    if (id)
+      setSelected((old) =>
+        old?.id === id ? old : { id, customerName: null, partName: null },
+      );
+  }, [registration?.selectedProjectId]);
   useEffect(() => {
     const guard = (e: Event) => {
       const event = e as CustomEvent<{ screenId: string; proceed(): void }>;
@@ -205,6 +219,7 @@ export function ProjectsScreen({
   function open(row: api.ProjectListItem) {
     scroll.current = window.scrollY;
     setSelected(row);
+    registration?.onSelectProject?.(row.id);
   }
   function openDistribution(row: api.ProjectListItem) {
     scroll.current = window.scrollY;
@@ -707,6 +722,7 @@ export function ProjectsScreen({
           registration={registration}
           onClose={() => {
             setSelected(undefined);
+            registration?.onSelectProject?.();
             window.scrollTo?.(0, scroll.current);
           }}
           onEdit={(detail) => setForm({ detail })}

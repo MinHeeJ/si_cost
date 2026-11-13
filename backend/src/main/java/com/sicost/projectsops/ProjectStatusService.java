@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.*;
 import static com.sicost.projectsops.ProjectStatusDtos.*;
 
 @Service
-public class ProjectStatusService {
+public class ProjectStatusService implements org.springframework.context.ApplicationEventPublisherAware {
+    private org.springframework.context.ApplicationEventPublisher events;
+    @Override public void setApplicationEventPublisher(org.springframework.context.ApplicationEventPublisher publisher) { this.events=publisher; }
     private final ProjectStatusRepository repository;
     private final WriteCoordinator writes;
     private final RevisionService revisions;
@@ -72,6 +74,7 @@ public class ProjectStatusService {
             ()->{requirePre(repository.required(id),today());ProjectInputPolicy.requireWritableYear(input.year(),repository.cashBase(),clock);},
             ()->true,()->{
                 changeProject(id,"ING",null,null,actor,today());
+                if (events!=null) events.publishEvent(new com.sicost.common.projects.ProjectLifecycle.Registered(id));
                 // The assignments keep their rows; now that the project is in progress their monthly sales are computed.
                 Project now=repository.required(id);String status=ProjectAssignmentMonths.effectiveStatus(now,today());
                 for(AssignmentRow row:repository.mapper().assignmentRows(id))

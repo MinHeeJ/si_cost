@@ -1,0 +1,100 @@
+.project-progress,
+.project-progress-editor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.project-progress-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.project-progress-actions h2,
+.project-progress-actions strong {
+  margin-right: auto;
+}
+.project-progress-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+.project-progress-metrics > div {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.project-progress-metrics span {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.project-progress-metrics strong {
+  font-size: 20px;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+.project-progress-current {
+  background: var(--primary-bg);
+}
+.project-progress-empty {
+  padding: 48px 16px !important;
+  text-align: center !important;
+  color: var(--text-sub);
+  white-space: normal !important;
+}
+.project-progress-memo {
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.project-progress-memo dl {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 8px;
+}
+.project-progress-memo dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.project-progress-memo dt,
+.project-progress-memo small {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.project-progress-editor textarea {
+  min-height: 80px;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+  width: 100%;
+}
+.project-progress-editor textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.project-progress-meter {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--head-bg);
+  overflow: hidden;
+}
+.project-progress-meter > span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  background: var(--primary);
+}
+@media (max-width: 600px) {
+  .project-progress-memo {
+    padding: 16px;
+  }
+  .project-progress-memo dl {
+    grid-template-columns: 1fr;
+  }
+}

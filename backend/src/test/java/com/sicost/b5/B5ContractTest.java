@@ -51,6 +51,30 @@ class B5ContractTest {
     MockMultipartFile file;
     Checked checked;
     String token;
+    @Test void literalValidationHasNoBusinessSideEffectAndRejectsForgedActor() throws Exception {
+        mvc.perform(post("/api/excel/B5/validate").param("year","2026").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B5/validate",200))
+            .andExpect(jsonPath("$.data.formType").value("B5"))
+            .andExpect(jsonPath("$.data.previewToken").value(token));
+        verify(repository).create(argThat(w->w.actor().equals("admin")),eq(checked),any());
+        mvc.perform(post("/api/excel/B5/validate").param("year","2026").param("REG_USER_ID","other").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B5/validate",400));
+        verify(repository,never()).apply(any(),any(),anyInt());
+    }
+    @Test void literalApplyCommitsAndStaleSnapshotRollsBack() throws Exception {
+        var selections=new MockMultipartFile("withdrawalSelections","","application/json","[]".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(post("/api/excel/B5/apply").param("year","2026").param("uploadId","7").param("previewToken",token)
+            .with(DurableOpenApi.multipart(file,selections)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B5/apply",200))
+            .andExpect(jsonPath("$.data.results[0].assignmentId").value("A-receipt"));
+        verify(repository).apply(any(),eq(checked),eq(2026));verify(transactions).commit(any());
+        clearInvocations(repository);when(mapper.snapshot()).thenReturn("concurrent-change");
+        mvc.perform(post("/api/excel/B5/apply").param("year","2026").param("uploadId","7").param("previewToken",token)
+            .with(DurableOpenApi.multipart(file,selections)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B5/apply",409))
+            .andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        verify(repository,never()).apply(any(),any(),anyInt());verify(transactions).rollback(any());
+    }
     @BeforeEach void setup() throws Exception {
         file=new MockMultipartFile("file","assignments.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",new byte[]{80,75,1,2});
         when(users.userId()).thenReturn("admin");when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),true));

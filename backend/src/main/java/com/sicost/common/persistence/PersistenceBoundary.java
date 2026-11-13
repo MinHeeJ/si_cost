@@ -21,6 +21,7 @@ public class PersistenceBoundary implements Interceptor {
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
             "TB_PJ_PROJ", "TB_PJ_PROJ_PART", "TB_PJ_PROJ_CHG", "TB_PJ_MNPW_PLAN", "TB_PJ_TK_DSTRB",
+            "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
             "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER");
@@ -55,6 +56,9 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         String tableName = match.group(2).toUpperCase(Locale.ROOT);
         String operation = match.group(1).toUpperCase(Locale.ROOT);
+        if (Set.of("TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE").contains(tableName)) {
+            requireProgressWrite(tableName, operation, remainder);
+        }
         if (tableName.equals("TB_PJ_ASGN")) {
             if (operation.startsWith("INSERT")) {
                 requireInsert(remainder, "ASGN_ID|PROJ_ID|DEV_ID|JOB_CD|INPUT_BGN_DT|CTRT_DEV_ID|REG_USER_ID|REG_DTTM|" + ASSIGNMENT_VALUES);
@@ -124,6 +128,36 @@ public class PersistenceBoundary implements Interceptor {
         remainder = remainder.replaceAll("(?is)ON\\s+CONFLICT\\s*\\([^)]*\\)\\s+DO\\s+UPDATE\\s+SET", "");
         if (remainder.contains(";") || remainder.matches("(?is).*\\b(INSERT|UPDATE|DELETE|TRUNCATE|DROP|ALTER|CREATE)\\b.*")) {
             throw new IllegalStateException("단일 업무 쓰기만 허용합니다.");
+        }
+    }
+    private static void requireProgressWrite(String table, String operation, String remainder) {
+        String values = switch (table) {
+            case "TB_PJ_STEP" -> "PLAN_BGN_DT|PLAN_END_DT|CMPL_DT";
+            case "TB_PJ_WEEK_MEMO" -> "THIS_WEEK_CN|NEXT_WEEK_CN|REQ_CN|ACTL_PRGRS_RT";
+            default -> "ISSUE_TTL|IMPR_CD|DDLN_DT|ISSUE_STAT_CD|ACTN_CN";
+        };
+        String keys = switch (table) {
+            case "TB_PJ_STEP" -> "PROJ_ID|STEP_SN";
+            case "TB_PJ_WEEK_MEMO" -> "PROJ_ID|MEMO_SN";
+            default -> "ISSUE_ID|PROJ_ID";
+        };
+        if (operation.startsWith("INSERT")) {
+            String initial = table.equals("TB_PJ_STEP") ? "|PROJ_STEP_CD|STEP_WGHT_RT"
+                : table.equals("TB_PJ_WEEK_MEMO") ? "|WRT_DT" : "";
+            requireInsert(remainder, keys + "|" + values + initial + "|REG_USER_ID|REG_DTTM|MOD_USER_ID|MOD_DTTM");
+            // Only bound single-row VALUES; ISSUE_ID may be omitted to use the installed sequence.
+            if (!remainder.matches("(?is)\\s*\\([A-Z_,\\s]+\\)\\s+VALUES\\s*\\(\\s*(?:\\?|NULL|DEFAULT)(?:\\s*,\\s*(?:\\?|NULL|DEFAULT))*\\s*\\)\\s*(?:RETURNING\\s+ISSUE_ID\\s*)?")) {
+                throw new IllegalStateException("진행 자료는 바인딩된 새 행만 등록할 수 있습니다.");
+            }
+        } else {
+            String key = table.equals("TB_PJ_STEP") ? "PROJ_ID\\s*=\\s*\\?\\s+AND\\s+STEP_SN\\s*=\\s*\\?"
+                : table.equals("TB_PJ_WEEK_MEMO") ? "PROJ_ID\\s*=\\s*\\?\\s+AND\\s+MEMO_SN\\s*=\\s*\\?"
+                : "(?:ISSUE_ID\\s*=\\s*\\?\\s+AND\\s+PROJ_ID\\s*=\\s*\\?|PROJ_ID\\s*=\\s*\\?\\s+AND\\s+ISSUE_ID\\s*=\\s*\\?)";
+            String item = "(?:" + values + "|MOD_USER_ID|MOD_DTTM)\\s*=\\s*(?:\\?|NULL)";
+            if (!operation.equals("UPDATE") || !remainder.matches("(?is)\\s+SET\\s+" + item
+                    + "(?:\\s*,\\s*" + item + ")*\\s+WHERE\\s+" + key + "\\s*")) {
+                throw new IllegalStateException("진행 자료의 전체 키와 최초 등록값은 보존해야 합니다.");
+            }
         }
     }
     private static String assignments(String columns) {

@@ -1,0 +1,137 @@
+.project-analysis {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  color: var(--text);
+}
+.project-analysis-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.project-analysis-summary section {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.project-analysis-summary span {
+  display: block;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.project-analysis-summary strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.project-analysis-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.project-analysis-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+.project-analysis-basis {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.project-analysis .sicost-table td {
+  vertical-align: top;
+}
+.project-analysis small {
+  display: block;
+  color: var(--text-sub);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.project-analysis-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+}
+.project-analysis-reasons {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+}
+.project-analysis-progress {
+  min-width: 110px;
+  font-size: 13px;
+}
+.project-analysis-track {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+  background: var(--divider);
+}
+.project-analysis-track i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+.project-analysis-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--divider);
+}
+.project-analysis-tabs button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+.project-analysis-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+.project-analysis section[hidden] {
+  display: none;
+}
+.project-analysis details {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.project-analysis details summary {
+  cursor: pointer;
+}
+@media (max-width: 800px) {
+  .project-analysis-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .project-analysis-summary section {
+    padding: 16px;
+  }
+  .project-analysis-summary strong {
+    font-size: 20px;
+  }
+}
+@media (max-width: 420px) {
+  .project-analysis-summary {
+    grid-template-columns: 1fr;
+  }
+}

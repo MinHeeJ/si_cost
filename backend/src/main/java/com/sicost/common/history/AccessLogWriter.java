@@ -25,7 +25,11 @@ public class AccessLogWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-04") && (!"DNLD".equals(event.action()) || event.targetId() != null
+                || !"프로젝트 원가".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-31") && (!"DNLD".equals(event.action()) || event.targetId() != null
+                || !"프로젝트현황".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-03") && (!"DNLD".equals(event.action()) || event.targetId() != null
                 || !"개인원가수익".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-10") && (!"DNLD".equals(event.action()) || event.count() == null
@@ -44,6 +48,8 @@ public class AccessLogWriter {
         String kind = event.fileType();
         Set<String> kinds = switch (event.screenId()) {
             case "UI-03" -> Set.of("개인원가수익");
+            case "UI-04" -> Set.of("프로젝트 원가");
+            case "UI-31" -> Set.of("프로젝트현황");
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사", "급여_등록양식", "급여_업로드검사");
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");
             case "UI-13" -> Set.of("청구", "청구누락점검", "미수알림");

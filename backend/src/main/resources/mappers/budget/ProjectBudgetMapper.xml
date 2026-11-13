@@ -9,6 +9,7 @@
   <select id="snapshot" resultType="string">
     SELECT json_build_object(
       'project',row_to_json(p),
+      'steps',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.step_sn) FROM tb_pj_step r WHERE r.proj_id=p.proj_id),'[]'::json),
       'parts',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.aply_bgn_ym) FROM tb_pj_proj_part r WHERE r.proj_id=p.proj_id),'[]'::json),
       'plans',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.job_cd) FROM tb_pj_mnpw_plan r WHERE r.proj_id=p.proj_id),'[]'::json),
       'expenses',COALESCE((SELECT json_agg(row_to_json(r) ORDER BY r.exps_ym,r.exps_sn) FROM tb_pj_drct_exps r WHERE r.proj_id=p.proj_id),'[]'::json),

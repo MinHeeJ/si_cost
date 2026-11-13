@@ -1,0 +1,74 @@
+.cost-metrics,
+.cost-simulation {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+}
+.cost-metrics h3,
+.cost-simulation h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.cost-metrics dl,
+.cost-simulation dl {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 1fr;
+  gap: 8px 16px;
+  padding: 16px;
+  margin: 0;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.cost-metrics dt,
+.cost-simulation dt {
+  color: var(--text-sub);
+}
+.cost-metrics dd,
+.cost-simulation dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.cost-help,
+.cost-source-issues {
+  color: var(--text-sub);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.cost-source-issues {
+  padding-left: 18px;
+}
+.cost-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--divider);
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.cost-tabs button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.cost-tabs button[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  font-weight: 600;
+}
+.cost-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.cost-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .cost-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

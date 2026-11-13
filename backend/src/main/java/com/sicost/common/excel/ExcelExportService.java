@@ -50,16 +50,21 @@ public class ExcelExportService {
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!"UI-03".equals(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-03", "UI-04", "UI-31").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
-            if (data.year() == null || !data.year().matches("[0-9]{4}")) throw InputValidator.invalid("year");
+            String qualifierPattern = switch (specification.screenId()) {
+                case "UI-04" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])";
+                case "UI-31" -> "[0-9]{8}";
+                default -> "[0-9]{4}";
+            };
+            if (data.year() == null || !data.year().matches(qualifierPattern)) throw InputValidator.invalid("year");
             for (Sheet sheet : data.sheets()) {
                 validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
                 SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), true);
                 sheet.rows().read(writer::append);
             }
-            return new Generated(data.people(), "_" + data.year(), data.information());
+            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), data.information());
         });
     }
     private record Generated(long count, String qualifier, List<Information> information) {}
@@ -189,6 +194,8 @@ public class ExcelExportService {
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
             case "UI-03" -> Set.of("개인원가수익");
+            case "UI-04" -> Set.of("프로젝트 원가");
+            case "UI-31" -> Set.of("프로젝트현황");
             case "UI-15" -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사", "급여_등록양식", "급여_업로드검사");
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");

@@ -43,6 +43,29 @@ public class MonthlyCostRepository {
         return load(period, new Range(from, to), at);
     }
 
+    public Sources loadRange(String requestedMonth) {
+        Instant at = clock.instant();
+        String base = DatabaseMonthCodec.toDatabase(shared.getPeriodContext().cashBaseMonth());
+        YearMonth current = YearMonth.from(at.atZone(TimeConfiguration.SEOUL));
+        YearMonth selected = requestedMonth == null ? current : com.sicost.common.validation.ProjectInputPolicy.month(requestedMonth, "month");
+        if (selected.isBefore(parseMonth(base)) || selected.isAfter(current)) throw invalid("month");
+        var period = new ProfitabilityPeriod(selected.getYear(), base, base, db(selected),
+            at.atZone(TimeConfiguration.SEOUL).toOffsetDateTime(), false);
+        return load(period, new Range(base, db(selected)), at);
+    }
+
+    public Sources loadRange(YearMonth selected) {
+        Instant at = clock.instant();
+        String base = DatabaseMonthCodec.toDatabase(shared.getPeriodContext().cashBaseMonth());
+        YearMonth start = parseMonth(base);
+        YearMonth current = YearMonth.from(at.atZone(TimeConfiguration.SEOUL));
+        if (selected.isBefore(start) || selected.isAfter(current))
+            throw com.sicost.common.validation.ProjectInputPolicy.invalid("month");
+        var period = new ProfitabilityPeriod(selected.getYear(), base, base, db(selected),
+            at.atZone(TimeConfiguration.SEOUL).toOffsetDateTime(), false);
+        return load(period, new Range(base, db(selected)), at);
+    }
+
     public Sources loadMonth(int year, int month) {
         Instant at = clock.instant();
         String base = DatabaseMonthCodec.toDatabase(shared.getPeriodContext().cashBaseMonth());

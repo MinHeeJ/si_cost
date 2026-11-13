@@ -186,7 +186,15 @@ class AssignmentActionsContractTest {
     @Test void subPreviewAndOnlySaveNeverWithdrawExisting() throws Exception {
         when(mapper.candidates(any())).thenReturn(List.of(new CandidateSource("D-101","계약상","M-101","A-101",day.plusMonths(2))));ObjectNode c=create().put("inputType","SUB").put("contractDeveloperId","D-101");
         ObjectNode body=json.createObjectNode().set("assignment",c);String response=mvc.perform(post("/api/assignments/substitution-preview").contentType("application/json").content(body.toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.candidates").isEmpty()).andReturn().getResponse().getContentAsString();
-        body.put("mode","ONLY").put("previewToken",json.readTree(response).path("data").path("previewToken").asText()).putArray("withdrawals");postBody("/api/assignments/substitutions",body,200);assertThat(rows.get("A-101").earlyWithdrawal()).isEqualTo("N");assertThat(rows.get("A-0102").inputType()).isEqualTo("SUB");
+        body.put("mode","ONLY").put("previewToken",json.readTree(response).path("data").path("previewToken").asText()).putArray("withdrawals");
+        mvc.perform(post("/api/assignments/substitutions").contentType("application/json").content(body.toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/assignments/substitutions",200))
+            .andExpect(jsonPath("$.data.assignment.id").value("A-0102"));
+        assertThat(rows.get("A-101").earlyWithdrawal()).isEqualTo("N");assertThat(rows.get("A-0102").inputType()).isEqualTo("SUB");
+        verify(mapper).insert(argThat(w->w.source().id().equals("A-0102")));
+        verify(manager,atLeastOnce()).commit(any());clearInvocations(mapper,months,audit,invalidation);
+        mvc.perform(post("/api/assignments/substitutions").contentType("application/json").content(body.put("REG_USER_ID","other").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/assignments/substitutions",400));noWrites();
     }
     @Test void subSamePersonAndTogetherEmptyAreInvalid() throws Exception {
         ObjectNode c=create().put("inputType","SUB").put("contractDeveloperId","D-102");ObjectNode n=json.createObjectNode().set("assignment",c);postBody("/api/assignments/substitution-preview",n,400);n.put("mode","TOGETHER").put("previewToken","token").putArray("withdrawals");postBody("/api/assignments/substitutions",n,400);noWrites();

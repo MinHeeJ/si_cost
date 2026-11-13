@@ -54,6 +54,41 @@ class BillOperationsContractTest {
     Project project;
     List<ChangeHistoryEntry> audits;
     static final String ID="B-202607-001";
+    @Test void literalCopyDraftHappyAuthValidationAndBusinessAreReadOnly() throws Exception {
+        mvc.perform(get("/api/bills/B-202607-001/copy-draft").param("year","2026"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/copy-draft",200))
+            .andExpect(jsonPath("$.data.billingMonth").value("2026-08"))
+            .andExpect(jsonPath("$.data.supplyAmount").value("1001"));
+        mvc.perform(get("/api/bills/B-202607-001/copy-draft").param("year","2026").param("userId","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/copy-draft",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        bills.clear();
+        mvc.perform(get("/api/bills/B-202607-001/copy-draft").param("year","2026"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/{id}/copy-draft",404));noWrites();
+    }
+    @Test void literalCancellationCommitsServerActorAndRejectsStaleRevision() throws Exception {
+        var body=command(true);
+        mvc.perform(post("/api/bills/B-202607-001/cancel").contentType("application/json").content(body.toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/cancel",200))
+            .andExpect(jsonPath("$.data.bill.cancelled").value(true))
+            .andExpect(jsonPath("$.data.bill.unpaidAmount").value("0"));
+        verify(mapper).cancel(argThat(w->w.actor().equals("admin")));verify(manager).commit(any());
+        assertThat(audits).isNotEmpty().allMatch(a->a.type().equals("UPD"));clearInvocations(mapper,history,invalidation);
+        mvc.perform(post("/api/bills/B-202607-001/cancel").contentType("application/json").content(body.toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/cancel",409))
+            .andExpect(jsonPath("$.code").value("STALE_WRITE"));noWrites();
+    }
+    @Test void literalNextMonthCommitsOneBillAndRejectsSourceRevisionReuse() throws Exception {
+        var body=command(false);var source=bills.get(ID);
+        mvc.perform(post("/api/bills/B-202607-001/next-month").contentType("application/json").content(body.toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/next-month",201))
+            .andExpect(jsonPath("$.data.bill.id").value("B-202608-001"))
+            .andExpect(jsonPath("$.data.bill.supplyAmount").value("1001"));
+        verify(mapper).insert(argThat(w->w.actor().equals("admin")));verify(manager).commit(any());
+        assertThat(bills.get(ID)).isEqualTo(source);clearInvocations(mapper,history,invalidation);
+        mvc.perform(post("/api/bills/B-202607-001/next-month").contentType("application/json").content(body.put("expectedRevision","stale").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/bills/{id}/next-month",409));noWrites();
+    }
     static BigDecimal n(String s) {return new BigDecimal(s);}
     @BeforeEach void setup() {
         bills=new LinkedHashMap<>();receipts=new HashMap<>();audits=new ArrayList<>();
