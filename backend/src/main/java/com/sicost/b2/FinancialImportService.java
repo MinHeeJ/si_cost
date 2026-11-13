@@ -52,8 +52,11 @@ public class FinancialImportService implements UploadResultProvider {
                 Result result=transaction.execute(status->{
                     mapper.lockTimeout();master.lockClose();final Checked[] checked={null};final Upload[] upload={null};
                     writes.write(keys,request.expectedRevision(),()->{
-                        upload[0]=repository.required(id,true);context(upload[0],filename,file.getSize(),month,fingerprint);
-                        if("APPLIED".equals(upload[0].status()))throw new Replay(repository.result(upload[0]));
+                        // The coordinator calls this again after writing; only the first read can be a replay.
+                        if(upload[0]==null) {
+                            upload[0]=repository.required(id,true);context(upload[0],filename,file.getSize(),month,fingerprint);
+                            if("APPLIED".equals(upload[0].status()))throw new Replay(repository.result(upload[0]));
+                        }
                         return mapper.snapshot(month);
                     },()->{
                         repository.expected(repository.context(id).get("검증revision"),repository.revision(month));
