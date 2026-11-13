@@ -9,7 +9,7 @@ import {
 export type Severity = "" | "ERR" | "WARN";
 export type { UploadIssue, UploadIssuesPage };
 export function getUploadIssues(
-  uploadId: number,
+  uploadId: number | string,
   severity: Severity,
   page: number,
   size: 20 | 50 | 100,
@@ -18,7 +18,10 @@ export function getUploadIssues(
   if (severity) query.set("severity", severity);
   return request<UploadIssuesPage>(`/api/uploads/${uploadId}/issues?${query}`);
 }
-export function getUploadIssuesXlsx(uploadId: number, severity: Severity) {
+export function getUploadIssuesXlsx(
+  uploadId: number | string,
+  severity: Severity,
+) {
   return downloadB7File(
     `/api/uploads/${uploadId}/issues.xlsx${severity ? `?severity=${severity}` : ""}`,
   );

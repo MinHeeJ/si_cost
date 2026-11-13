@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.b2.FinancialImportMapper">
+  <select id="items" resultType="com.sicost.b2.FinancialImportDtos$StoredItem">
+    SELECT fin_ym AS "month",item_sn::int AS "itemSn",fin_cls_cd AS "finClass",sga_item_cd AS "sgaItemCode",item_nm AS "itemName",
+      amt AS "amount",vat_amt AS "vatAmount",io_dt AS "ioDate",rpt_yn AS "repeat",rmrk AS "remark",auto_fill_yn AS "autoFill",
+      upld_id::bigint AS "uploadId",reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_fi_item WHERE fin_ym=#{month} ORDER BY item_sn
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT COALESCE(jsonb_agg(to_jsonb(f) ORDER BY f.fin_ym,f.item_sn),'[]'::jsonb)::text FROM tb_fi_item f WHERE f.fin_ym=#{month}
+  </select>
+  <select id="codes" resultType="com.sicost.b2.FinancialImportDtos$Code">
+    SELECT c.code_grp_id AS "groupId",c.code,c.code_nm AS "name",m.src_text AS "source"
+    FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    LEFT JOIN tb_sy_code_map m ON m.code_grp_id=c.code_grp_id AND m.code=c.code
+    WHERE c.code_grp_id IN ('FIN_CLS','SGA_ITEM') AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y'
+    ORDER BY c.code_grp_id,c.code,m.map_id
+  </select>
+  <select id="cashBase" resultType="string">SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="closed" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_cl_close WHERE close_ym=#{month} AND close_stat_cd='CLOSE')</select>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+  <sql id="uploadColumns">upld_id::bigint AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS "filename",file_size::bigint AS "size",trgt_ym AS "month",trgt_proj_id AS "projectId",trgt_dstrb_step_cd AS "step",reg_user_id AS "actor",upld_stat_cd AS "status",tot_row_cnt::int AS "totalRows",succ_cnt::int AS "successRows",warn_cnt::int AS "warningRows",err_cnt::int AS "errorRows",aply_dttm AS "appliedAt"</sql>
+  <select id="upload" resultType="com.sicost.b2.FinancialImportDtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId}</select>
+  <select id="lockUpload" resultType="com.sicost.b2.FinancialImportDtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE</select>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,trgt_ym,trgt_proj_id,trgt_dstrb_step_cd,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B2','UI-10',#{write.filename},#{write.size},#{write.month},NULL,NULL,#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},upld_stat_cd='CHECKED',mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId}</update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm) VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})</insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">SELECT rslt_sn::int AS "sequence",rslt_type_cd AS "severity",row_no::int AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS "reason" FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn</select>
+  <select id="metadata" resultType="com.sicost.b2.FinancialImportDtos$Metadata">SELECT chg_item_nm AS "item",aft_val AS "value" FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_UPLD' AND trgt_key=CAST(#{uploadId} AS text) AND chg_rsn='B2 문맥' ORDER BY hist_id</select>
+  <select id="resultItems" resultType="com.sicost.b2.FinancialImportDtos$ResultItem">
+    SELECT split_part(chg_rsn,':',3)::int AS "rowNumber",split_part(trgt_key,':',2) AS "itemSn" FROM tb_sy_chg_hist
+    WHERE trgt_tbl_nm='TB_FI_ITEM' AND chg_type_cd='NEW' AND chg_item_nm='ITEM_NM' AND chg_rsn LIKE ('B2:' || CAST(#{uploadId} AS text) || ':%') ORDER BY "rowNumber"
+  </select>
+  <delete id="deleteUploaded">DELETE FROM tb_fi_item WHERE fin_ym=#{month} AND upld_id IS NOT NULL</delete>
+  <insert id="insertItem">
+    INSERT INTO tb_fi_item(fin_ym,item_sn,fin_cls_cd,sga_item_cd,item_nm,amt,vat_amt,io_dt,rpt_yn,auto_fill_yn,rmrk,upld_id,reg_user_id,reg_dttm)
+    VALUES(#{month},#{itemSn},#{value.finClass},#{value.sgaItemCode},#{value.itemName},#{value.amount},#{value.vatAmount},#{value.ioDate},#{value.repeat},'N',#{value.remark},#{uploadId},#{actor},#{now})
+  </insert>
+  <update id="markApplied">UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'</update>
+</mapper>

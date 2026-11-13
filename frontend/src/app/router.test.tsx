@@ -32,8 +32,23 @@ import * as projectParts from "../pages/parts/projectPartsApi";
 import * as distribution from "../pages/distribution/distributionApi";
 import * as assignments from "../pages/assignmentsops/assignmentActionsApi";
 import * as bills from "../pages/bills/billsApi";
+import * as financial from "../pages/financialitems/financialApi";
+import * as corporateTax from "../pages/corporatetaxesops/corporateTaxApi";
+import { financialEditorFixture } from "../pages/financialitems/financialFixtures";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
+vi.mock("../pages/financialitems/financialApi", async (original) => ({
+  ...(await original<typeof import("../pages/financialitems/financialApi")>()),
+  getFinancialItems: vi.fn(),
+  saveFinancialItems: vi.fn(),
+  getFinancialYearStatus: vi.fn(),
+}));
+vi.mock("../pages/corporatetaxesops/corporateTaxApi", async (original) => ({
+  ...(await original<
+    typeof import("../pages/corporatetaxesops/corporateTaxApi")
+  >()),
+  createCorporateTaxDefaults: vi.fn(),
+}));
 vi.mock("../pages/clients/clientsApi");
 vi.mock("../pages/bills/billsApi");
 vi.mock("../pages/assignmentsops/assignmentActionsApi");
@@ -214,6 +229,53 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(financial.getFinancialItems).mockImplementation(async (month) =>
+    financialEditorFixture({
+      month: month ?? context.currentMonth,
+      today: context.currentDate,
+      cashBaseMonth: context.cashBaseMonth,
+    }),
+  );
+  vi.mocked(corporateTax.createCorporateTaxDefaults).mockResolvedValue({
+    changed: false,
+    corporateTax: {
+      year: "2026",
+      estimatedTax: "0",
+      audit: {
+        regUserId: "admin",
+        regDttm: "2026-11-10 09:00:00",
+        modUserId: null,
+        modDttm: null,
+      },
+    },
+    taxPayments: [],
+    revision: "revision-current",
+  });
+  vi.mocked(financial.getFinancialYearStatus).mockImplementation(
+    async (year) => ({
+      year,
+      months: Array.from({ length: 12 }, (_, index) => {
+        const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+        return {
+          month,
+          closeStatus: "WORK",
+          itemCount: month <= context.currentMonth ? 0 : null,
+          selectable: month <= context.currentMonth,
+          editable: month <= context.currentMonth,
+        };
+      }),
+    }),
+  );
+  vi.mocked(financial.saveFinancialItems).mockResolvedValue({
+    changed: true,
+    revision: "revision-saved",
+    message: "저장했습니다.",
+    editor: financialEditorFixture({
+      month: context.currentMonth,
+      today: context.currentDate,
+    }),
+    createdCards: [],
+  });
   vi.mocked(bills.getBills).mockResolvedValue({
     items: [],
     total: 0,
@@ -408,9 +470,177 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("재무 직접 진입은 저장된 기간 대신 서버 현재월과 기존 프레임을 사용한다", async () => {
+    preferences.push({
+      type: "PERIOD",
+      key: "UI-10",
+      value: { type: "YEAR_MONTH", value: "2025-12" },
+      revision: "stored-period",
+      stored: true,
+    });
+    open("/UI-10");
+    await screen.findByTestId("financial-items-panel");
+    expect(screen.getByLabelText("선택월")).toHaveValue(context.currentMonth);
+    expect(financial.getFinancialItems).toHaveBeenCalledWith(
+      undefined,
+      expect.any(AbortSignal),
+    );
+    expect(screen.getAllByRole("heading", { name: "DB UI-10" })).toHaveLength(
+      1,
+    );
+    expect(
+      screen
+        .getByTestId("financial-editor")
+        .closest("[data-screen-id='SCR-UI-10']"),
+    ).not.toBeNull();
+    expect(screen.getByTestId("financial-month-2026-12")).toBeDisabled();
+    expect(
+      applicationRoutes.filter((route) => route.path === "/UI-10"),
+    ).toHaveLength(1);
+    expect(
+      applicationRoutes.some((route) => route.path?.includes("UI-10-")),
+    ).toBe(false);
+  });
+  it("재무 편집 중 셸 이동의 계속 편집은 초안과 화면을 유지한다", async () => {
+    const confirm = vi.spyOn(window, "confirm");
+    open("/UI-10");
+    await userEvent.click(await screen.findByTestId("financial-items-add"));
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "계속 편집",
+      }),
+    );
+    expect(screen.getByTestId("financial-items-new-1-item-name")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "DB UI-10" })).toBeVisible();
+    expect(financial.saveFinancialItems).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+  it("재무 작업 탭 닫기의 버리고 이동은 쓰기 없이 대시보드로 돌아간다", async () => {
+    open("/UI-10");
+    await userEvent.click(await screen.findByTestId("financial-items-add"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-10 탭 닫기" }),
+    );
+    await screen.findByRole("dialog");
+    await userEvent.click(screen.getByTestId("financial-navigation-discard"));
+    await screen.findByRole("heading", { name: "DB UI-16" });
+    expect(
+      screen.queryByRole("button", { name: "DB UI-10 탭 닫기" }),
+    ).not.toBeInTheDocument();
+    expect(financial.saveFinancialItems).not.toHaveBeenCalled();
+    const navigation = within(
+      screen.getByRole("complementary", { name: "주 메뉴" }),
+    ).getByRole("navigation");
+    await userEvent.click(
+      within(navigation).getByRole("link", { name: /DB UI-10/ }),
+    );
+    await screen.findByTestId("financial-items-panel");
+    expect(
+      screen.queryByTestId("financial-items-new-1-item-name"),
+    ).not.toBeInTheDocument();
+  });
+  it("재무 저장 후 이동은 두 탭 변경을 한 번 저장한 뒤 셸 이동을 허용한다", async () => {
+    open("/UI-10");
+    await userEvent.click(await screen.findByTestId("financial-items-add"));
+    fireEvent.change(screen.getByTestId("financial-items-new-1-item-name"), {
+      target: { value: "경비" },
+    });
+    fireEvent.change(screen.getByTestId("financial-items-new-1-amount"), {
+      target: { value: "0" },
+    });
+    await userEvent.click(screen.getByTestId("financial-tab-cash"));
+    await userEvent.click(screen.getByTestId("financial-loans-add"));
+    fireEvent.change(screen.getByTestId("financial-loans-new-2-amount"), {
+      target: { value: "1" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "저장 후 이동",
+      }),
+    );
+    await screen.findByRole("heading", { name: "DB UI-16" });
+    expect(financial.saveFinancialItems).toHaveBeenCalledOnce();
+    expect(financial.saveFinancialItems).toHaveBeenCalledWith(
+      expect.objectContaining({
+        month: context.currentMonth,
+        expectedRevision: "revision-current",
+        items: expect.objectContaining({
+          add: [expect.objectContaining({ itemName: "경비", amount: "0" })],
+        }),
+        loans: expect.objectContaining({
+          add: [expect.objectContaining({ amount: "1" })],
+        }),
+      }),
+    );
+  });
+  it("재무 저장 실패는 셸 이동을 막고 입력과 세 선택을 보존한다", async () => {
+    vi.mocked(financial.saveFinancialItems).mockRejectedValueOnce(
+      new Error("재무 저장 실패"),
+    );
+    open("/UI-10");
+    await userEvent.click(await screen.findByTestId("financial-items-add"));
+    fireEvent.change(screen.getByTestId("financial-items-new-1-item-name"), {
+      target: { value: "보존 경비" },
+    });
+    fireEvent.change(screen.getByTestId("financial-items-new-1-amount"), {
+      target: { value: "1" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "DB UI-10 탭 닫기" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "저장 후 이동" }),
+    );
+    await within(dialog).findByText("재무 저장 실패");
+    expect(screen.getByRole("heading", { name: "DB UI-10" })).toBeVisible();
+    expect(screen.getByTestId("financial-items-new-1-item-name")).toHaveValue(
+      "보존 경비",
+    );
+    expect(financial.saveFinancialItems).toHaveBeenCalledOnce();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "계속 편집" }),
+    );
+  });
+  it("등록된 재무 조회 오류는 재조회로 복구하며 업무 저장을 호출하지 않는다", async () => {
+    vi.mocked(financial.getFinancialItems).mockRejectedValueOnce(
+      new Error("재무 조회 실패"),
+    );
+    open("/UI-10");
+    await screen.findByText("재무 조회 실패");
+    await userEvent.click(
+      within(screen.getByTestId("financial-editor")).getByRole("button", {
+        name: "다시 조회",
+      }),
+    );
+    await screen.findByTestId("financial-items-panel");
+    expect(financial.saveFinancialItems).not.toHaveBeenCalled();
+  });
+  it("마감 재무 화면의 등록은 읽기 전용과 비활성 저장을 유지한다", async () => {
+    vi.mocked(financial.getFinancialItems).mockResolvedValue(
+      financialEditorFixture({
+        editable: false,
+        closeStatus: "CLOSE",
+        readOnlyReason: "마감된 월입니다.",
+      }),
+    );
+    open("/UI-10");
+    await screen.findByText("마감된 월입니다.");
+    expect(screen.getByTestId("financial-save")).toBeDisabled();
+    expect(screen.getByTestId("financial-items-add")).toBeDisabled();
+    expect(screen.getByTestId("financial-upload-button")).toBeDisabled();
+    expect(corporateTax.createCorporateTaxDefaults).not.toHaveBeenCalled();
+  });
   it("UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다", async () => {
     open("/UI-13");
-    await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
+    await screen.findAllByText(
+      "조회된 청구가 없습니다.",
+      {},
+      { timeout: 5000 },
+    );
     expect(screen.getByTestId("bills-screen")).toHaveAttribute(
       "data-screen-id",
       "SCR-UI-13",
@@ -441,7 +671,11 @@ describe("공식 진입점 합성", () => {
     open("/UI-13");
     await screen.findByText("청구 조회 실패");
     await userEvent.click(screen.getByTestId("bill-refresh"));
-    await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
+    await screen.findAllByText(
+      "조회된 청구가 없습니다.",
+      {},
+      { timeout: 5000 },
+    );
     expect(bills.getBills).toHaveBeenCalledTimes(2);
   });
   it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
@@ -656,10 +890,19 @@ describe("공식 진입점 합성", () => {
         );
       } else if (id === "UI-13") {
         expect(await screen.findByTestId("bills-screen")).toBeVisible();
-        await screen.findAllByText("조회된 청구가 없습니다.", {}, { timeout: 5000 });
+        await screen.findAllByText(
+          "조회된 청구가 없습니다.",
+          {},
+          { timeout: 5000 },
+        );
         expect(bills.getBills).toHaveBeenCalledWith(
           expect.objectContaining({ year: 2026 }),
         );
+      } else if (id === "UI-10") {
+        expect(
+          await screen.findByTestId("financial-items-panel"),
+        ).toBeVisible();
+        expect(financial.getFinancialItems).toHaveBeenCalled();
       } else if (id === "UI-02" || id === "UI-33") {
         expect(
           await screen.findByTestId(

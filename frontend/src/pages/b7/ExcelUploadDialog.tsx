@@ -9,16 +9,26 @@ export type ImportNumberRow = {
   managementNo: string;
   id?: string;
 };
-export type UploadValidation = Omit<api.B7Validation, "status"> & {
+export type UploadValidation<Id extends string | number = number> = Omit<
+  api.B7Validation,
+  "status" | "uploadId" | "summary"
+> & {
+  summary: Omit<api.B7Summary, "fileWarningCount"> & {
+    fileWarningCount?: number;
+  };
+  uploadId: Id;
   status?: "CHECKED" | "APPLIED";
   expectedNumbers?: ImportNumberRow[];
   revision?: string | null;
   prospectiveComparison?: unknown;
   uploadedTableTotal?: string | null;
 };
-export type UploadApplied = {
-  summary: api.B7Summary & { tableWarningCount?: number };
-  uploadId?: number;
+export type UploadApplied<Id extends string | number = number> = {
+  summary: Omit<api.B7Summary, "fileWarningCount"> & {
+    fileWarningCount?: number;
+    tableWarningCount?: number;
+  };
+  uploadId?: Id;
   status?: "CHECKED" | "APPLIED";
   appliedCount?: number;
   appliedAt?: string;
@@ -26,22 +36,26 @@ export type UploadApplied = {
   results?: { rowNumber: number; id: string; name: string }[];
   revision?: string | null;
 };
-export type UploadWorkflow = {
-  validate(file: File): Promise<UploadValidation>;
+export type UploadWorkflow<Id extends string | number = number> = {
+  validate(file: File): Promise<UploadValidation<Id>>;
   apply(
     file: File,
-    uploadId: number,
+    uploadId: Id,
     revision?: string | null,
-  ): Promise<UploadApplied>;
-  result?(uploadId: number): Promise<UploadApplied>;
+  ): Promise<UploadApplied<Id>>;
+  result?(uploadId: Id): Promise<UploadApplied<Id>>;
 };
 
 // SCR-UI-15: B7 dialog lives in the retained clients tab, never in another route.
-export type ExcelUploadDialogProps = {
+export type ExcelUploadDialogProps<Id extends string | number = number> = {
   onClose(): void;
   onApplied(): void | Promise<void>;
   onDirtyChange?(dirty: boolean): void;
-  workflow?: UploadWorkflow;
+  workflow?: UploadWorkflow<Id>;
+  beforeApply?(result: UploadValidation<Id>): Promise<boolean>;
+  extractValidationError?(error: ApiError): UploadValidation<Id> | undefined;
+  requireRecheckOnConflict?: boolean;
+  applyLabel?: string;
   title?: string;
   description?: string;
   screenId?: string;
@@ -50,16 +64,20 @@ export type ExcelUploadDialogProps = {
   readOnlyMessage?: string;
   emptyRegistrationMessage?: string;
   renderContext?(pending: boolean, applied: boolean): ReactNode;
-  renderValidation?(result: UploadValidation): ReactNode;
-  renderApplied?(result: UploadApplied): ReactNode;
+  renderValidation?(result: UploadValidation<Id>): ReactNode;
+  renderApplied?(result: UploadApplied<Id>): ReactNode;
   confirmAllowed?: boolean;
   validationFailureMessage?: string;
 };
-export function ExcelUploadDialog({
+export function ExcelUploadDialog<Id extends string | number = number>({
   onClose,
   onApplied,
   onDirtyChange,
   workflow,
+  beforeApply,
+  extractValidationError,
+  requireRecheckOnConflict = false,
+  applyLabel = "전량 반영",
   title = "엑셀 업로드 결과 · 거래처",
   description = "B7 거래처 등록 · XLSX 10MiB 이하 · 첫 시트 최대 5,000행. 검사 후 같은 파일로 전량 반영합니다.",
   screenId = "UI-15",
@@ -72,10 +90,10 @@ export function ExcelUploadDialog({
   renderApplied,
   confirmAllowed = true,
   validationFailureMessage,
-}: ExcelUploadDialogProps) {
+}: ExcelUploadDialogProps<Id>) {
   const [file, setFile] = useState<File>();
-  const [result, setResult] = useState<UploadValidation>();
-  const [applied, setApplied] = useState<UploadApplied>();
+  const [result, setResult] = useState<UploadValidation<Id>>();
+  const [applied, setApplied] = useState<UploadApplied<Id>>();
   const [error, setError] = useState(""),
     [dragging, setDragging] = useState(false);
   const [pending, setPending] = useState(false),
@@ -109,9 +127,9 @@ export function ExcelUploadDialog({
   async function check() {
     if (!file || readOnly) return;
     await run(async () => {
-      const checked = await (workflow?.validate ?? api.createB7Validation)(
-        file,
-      );
+      const checked = workflow
+        ? await workflow.validate(file)
+        : ((await api.createB7Validation(file)) as UploadValidation<Id>);
       setResult(checked);
       setApplied(undefined);
       if (checked.status === "APPLIED" && workflow?.result) {
@@ -136,27 +154,41 @@ export function ExcelUploadDialog({
     )
       return;
     await run(async () => {
-      let saved: UploadApplied;
+      if (beforeApply && !(await beforeApply(result))) return;
+      let saved: UploadApplied<Id>;
       try {
         saved = workflow
           ? result.revision == null
             ? await workflow.apply(file, result.uploadId)
             : await workflow.apply(file, result.uploadId, result.revision)
-          : await api.saveB7Apply(file, result.uploadId);
+          : ((await api.saveB7Apply(
+              file,
+              result.uploadId as number,
+            )) as UploadApplied<Id>);
       } catch (e) {
         if (e instanceof ApiError && e.status === 422) {
-          const details = e.body.details as unknown as Omit<
-            api.B7Validation,
-            "status"
-          >;
-          if (details?.uploadId && details.issues && details.summary)
-            setResult({
-              ...details,
-              status: "CHECKED",
-              canApply: false,
-              ...(workflow ? { expectedNumbers: [] } : {}),
-            });
+          const extracted = extractValidationError?.(e);
+          if (extracted) setResult(extracted);
+          else {
+            const details = e.body.details as unknown as Omit<
+              UploadValidation<Id>,
+              "status"
+            >;
+            if (details?.uploadId && details.issues && details.summary)
+              setResult({
+                ...details,
+                status: "CHECKED",
+                canApply: false,
+                ...(workflow ? { expectedNumbers: [] } : {}),
+              });
+          }
         }
+        if (
+          e instanceof ApiError &&
+          e.status === 409 &&
+          requireRecheckOnConflict
+        )
+          setResult({ ...result, canApply: false });
         throw e;
       }
       setApplied(saved);
@@ -175,7 +207,10 @@ export function ExcelUploadDialog({
     setResult(undefined);
     setApplied(undefined);
     setError("");
-    if (selected && (!/\.xlsx$/i.test(selected.name) || selected.size > 10485760)) {
+    if (
+      selected &&
+      (!/\.xlsx$/i.test(selected.name) || selected.size > 10485760)
+    ) {
       setFile(undefined);
       setError("10MiB 이하의 XLSX 파일을 선택해 주세요.");
     }
@@ -192,7 +227,7 @@ export function ExcelUploadDialog({
           if (file && !applied) setConfirmClose(true);
           else onClose();
         }}
-        confirmLabel={applied ? "닫기" : result ? "전량 반영" : "검사"}
+        confirmLabel={applied ? "닫기" : result ? applyLabel : "검사"}
         cancelLabel="취소"
         confirmDisabled={
           !applied &&
@@ -299,7 +334,9 @@ export function ExcelUploadDialog({
               <span className="b7-ok">정상 {summary.successRows}건</span>
               <span className="b7-warn">경고 {summary.warningRows}건</span>
               <span className="b7-bad">오류 {summary.errorRows}건</span>
-              <span>파일 경고 {summary.fileWarningCount}건</span>
+              {summary.fileWarningCount !== undefined && (
+                <span>파일 경고 {summary.fileWarningCount}건</span>
+              )}
               {"tableWarningCount" in summary && (
                 <span>표 경고 {String(summary.tableWarningCount)}건</span>
               )}

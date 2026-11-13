@@ -1,0 +1,89 @@
+.corporate-tax-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.corporate-tax-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.corporate-tax-description {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.corporate-tax-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 16px;
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+.corporate-tax-summary dt {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.corporate-tax-summary dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.corporate-tax-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.corporate-tax-ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+.corporate-tax-info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.corporate-tax-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.corporate-tax-lock {
+  color: var(--lock);
+  background: var(--lock-bg);
+}
+.corporate-tax-neutral {
+  color: var(--text-sub);
+  border: 1px solid var(--border);
+  background: transparent;
+}
+.corporate-tax-negative {
+  color: var(--bad);
+}
+.corporate-tax-form {
+  display: grid;
+  gap: 16px;
+}
+.corporate-tax-form input {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 8px;
+  width: 100%;
+}
+.corporate-tax-form input[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.corporate-tax-section .sicost-table {
+  font-size: 13px;
+}
+.corporate-tax-section .sicost-table th,
+.corporate-tax-section .sicost-table td {
+  height: 40px;
+  padding: 0 12px;
+}

@@ -12,6 +12,43 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ChangeHistoryWriterTest {
+    @Test void financialFieldAuditsPreserveExactValuesCompositeKeysAndServerContext() {
+        when(users.userId()).thenReturn("admin");
+        for (String table : new String[]{"TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ",
+                "TB_FI_LOAN", "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"202601:1","NEW","AMT",null,"999999999999999","B2 업로드:123;행:2"));
+        }
+        verify(mapper,times(9)).insert(argThat(e -> e.targetKey().equals("202601:1") && e.after().equals("999999999999999")
+            && e.userId().equals("admin") && e.occurredAt().toString().equals("2026-01-01T09:00") && e.reason().equals("B2 업로드:123;행:2")));
+    }
+    @Test void financialDeletesPreserveBeforeValuesOnlyForPhysicallyDeletableSources() {
+        when(users.userId()).thenReturn("admin");
+        for (String table : new String[]{"TB_FI_ITEM", "TB_CO_PREV_ADJ", "TB_FI_LOAN", "TB_FI_XFER"}) {
+            writer.append(new ChangeHistoryWriter.Change(table,"202601:1","DEL","AMT","123",null,"명시 삭제"));
+        }
+        verify(mapper,times(4)).insert(argThat(e -> e.type().equals("DEL") && e.before().equals("123") && e.after()==null));
+    }
+    @Test void financialCardsAndTaxCannotClaimPhysicalDeletion() {
+        for (String table : new String[]{"TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY"}) {
+            assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change(table,"202601:1","DEL","AMT","123",null,null)))
+                .isInstanceOf(ApiException.class);
+        }
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void cardStopAndResumeAreAppendOnlyStateChangesNotDeletes() {
+        when(users.userId()).thenReturn("admin");
+        writer.append(new ChangeHistoryWriter.Change("TB_FI_CARD","K-01","STOP","USE_YN","Y","N",null));
+        writer.append(new ChangeHistoryWriter.Change("TB_FI_CARD","K-01","RESUME","USE_YN","N","Y",null));
+        verify(mapper).insert(argThat(e -> e.type().equals("STOP") && e.before().equals("Y") && e.after().equals("N")));
+        verify(mapper).insert(argThat(e -> e.type().equals("RESUME") && e.before().equals("N") && e.after().equals("Y")));
+    }
+    @Test void financialNoopDoesNotResolveActorOrAppendAndNullIsNotExplicitZero() {
+        writer.append(new ChangeHistoryWriter.Change("TB_FI_TAX_PAY","2026:CNFM","UPD","PAY_AMT","0","0",null));
+        verifyNoInteractions(mapper,users);
+        when(users.userId()).thenReturn("admin");
+        writer.append(new ChangeHistoryWriter.Change("TB_FI_TAX_PAY","2026:CNFM","UPD","PAY_AMT",null,"0",null));
+        verify(mapper).insert(argThat(e -> e.before()==null && e.after().equals("0")));
+    }
     final ChangeHistoryMapper mapper = mock(ChangeHistoryMapper.class);
     final CurrentUserProvider users = mock(CurrentUserProvider.class);
     final Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneId.of("Asia/Seoul"));

@@ -4,7 +4,7 @@ import * as api from "./uploadIssuesApi";
 import "./uploadIssues.css";
 
 export type UploadIssuesPanelProps = {
-  uploadId: number;
+  uploadId: number | string;
   initialPage: api.UploadIssuesPage;
   disabled?: boolean;
   screenId?: string;

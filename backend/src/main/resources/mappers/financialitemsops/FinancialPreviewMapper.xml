@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.financialitemsops.FinancialPreviewMapper">
+  <select id="yearStatus" resultType="com.sicost.financialitemsops.FinancialPreviewDtos$StoredMonth">
+    SELECT to_char(m,'YYYY-MM') AS "month",COALESCE(c.close_stat_cd,'WORK') AS "closeStatus",
+      (SELECT count(*)::int FROM tb_fi_item i WHERE i.fin_ym=to_char(m,'YYYYMM')) AS "itemCount"
+    FROM generate_series(to_date(#{year} || '0101','YYYYMMDD'),to_date(#{year} || '1201','YYYYMMDD'),interval '1 month') m
+    LEFT JOIN tb_cl_close c ON c.close_ym=to_char(m,'YYYYMM') ORDER BY m
+  </select>
+  <select id="taxMonths" resultType="com.sicost.common.financial.FinancialCalculation$TaxMonth">
+    SELECT to_char(m,'YYYY-MM') AS "month",COALESCE(c.close_stat_cd,'WORK') AS "closeStatus",p.corp_tax_amt AS "amount",
+      p.fix_yn AS "fixed",p.migr_yn AS "migrated"
+    FROM generate_series(to_date(left(#{month},4) || '0101','YYYYMMDD'),to_date(left(#{month},4) || '1201','YYYYMMDD'),interval '1 month') m
+    LEFT JOIN tb_cl_close c ON c.close_ym=to_char(m,'YYYYMM') LEFT JOIN tb_co_mon_pl p ON p.pl_ym=to_char(m,'YYYYMM')
+    WHERE to_char(m,'YYYYMM') >= (SELECT trunc(std_val)::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1)
+    ORDER BY m
+  </select>
+  <sql id="financialSnapshotSql">
+    WITH displayed_payments AS (
+      SELECT p.* FROM tb_fi_tax_pay p WHERE p.tax_yr=left(#{month},4)
+        OR (p.tax_yr=(left(#{month},4)::int-1)::text AND p.pay_type_cd='CNFM')
+        OR (p.tax_yr &lt; (left(#{month},4)::int-1)::text AND p.pay_yn='N')
+        OR (p.pay_yn='Y' AND to_char(p.pay_dt,'YYYY-MM')=#{month})
+        OR (p.pay_yn='N' AND to_char(p.pay_due_dt,'YYYY-MM')=#{month})
+    ), payment_context AS (
+      SELECT * FROM displayed_payments UNION
+      SELECT p.* FROM tb_fi_tax_pay p WHERE p.pay_type_cd='MID' AND p.tax_yr IN (SELECT tax_yr FROM displayed_payments)
+    )
+    SELECT jsonb_build_object(
+      'items',COALESCE((SELECT jsonb_agg(to_jsonb(i) ORDER BY i.fin_ym,i.item_sn) FROM tb_fi_item i
+        WHERE i.fin_ym=replace(#{month},'-','') OR to_char(i.io_dt,'YYYY-MM')=#{month}),'[]'::jsonb),
+      'adjustments',COALESCE((SELECT jsonb_agg(to_jsonb(a) ORDER BY a.adj_id) FROM tb_co_prev_adj a WHERE a.aply_ym=replace(#{month},'-','')),'[]'::jsonb),
+      'transfers',COALESCE((SELECT jsonb_agg(to_jsonb(x) ORDER BY x.xfer_sn) FROM tb_fi_xfer x WHERE to_char(x.xfer_dt,'YYYY-MM')=#{month}),'[]'::jsonb),
+      'loans',COALESCE((SELECT jsonb_agg(to_jsonb(l) ORDER BY l.loan_sn) FROM tb_fi_loan l WHERE to_char(l.loan_dt,'YYYY-MM')=#{month}),'[]'::jsonb),
+      'cards',COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.card_id) FROM tb_fi_card c),'[]'::jsonb),
+      'cardPayments',COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.card_id) FROM tb_fi_card_pay p WHERE p.pay_ym=replace(#{month},'-','')),'[]'::jsonb),
+      'cardMonths',COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.pay_ym) FROM tb_fi_card_mon c WHERE c.pay_ym=replace(#{month},'-','')),'[]'::jsonb),
+      'taxes',COALESCE((SELECT jsonb_agg(to_jsonb(t) ORDER BY t.tax_yr) FROM tb_fi_corp_tax t
+        WHERE t.tax_yr=left(#{month},4) OR t.tax_yr IN (SELECT tax_yr FROM payment_context)),'[]'::jsonb),
+      'taxPayments',COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY p.tax_yr,p.pay_type_cd) FROM payment_context p),'[]'::jsonb)
+    )::text
+  </sql>
+  <select id="snapshot" resultType="string"><include refid="financialSnapshotSql"/></select>
+  <select id="previousItems" resultType="string">
+    SELECT COALESCE(jsonb_agg(to_jsonb(i) ORDER BY i.item_sn),'[]'::jsonb)::text FROM tb_fi_item i WHERE i.fin_ym=replace(#{month},'-','')
+  </select>
+</mapper>

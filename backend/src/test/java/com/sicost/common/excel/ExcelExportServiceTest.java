@@ -23,6 +23,54 @@ import static org.mockito.Mockito.*;
 import static com.sicost.common.excel.ExcelExportService.*;
 
 class ExcelExportServiceTest {
+    @Test void financialTemplateRetainsTextColumnsGuideAndDownloadAuditBeforeExposure() throws Exception {
+        var columns=List.of(new Column("amount","금액*",CellType.TEXT));
+        var output=new ByteArrayOutputStream();
+        try (var download=service.generateTemplate(new Specification("재무_등록양식",null,columns,"B2","원","UI-10"),List.of("원 정수 입력"),request)) {
+            assertThat(download.filename()).isEqualTo("B2_재무양식_20260102_085900.xlsx");
+            verify(logs).append(argThat(e -> e.screenId().equals("UI-10") && e.fileType().equals("재무_등록양식") && e.count()==0),same(request));
+            verify(transactions,times(2)).commit(any());
+            download.transferTo(output);
+        }
+        try (var book=new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
+            assertThat(book.getSheetAt(0).getLastRowNum()).isZero();
+            assertThat(book.getSheetAt(0).getColumnStyle(0).getDataFormatString()).isEqualTo("@");
+            assertThat(book.getSheet("입력안내").getRow(0).getCell(0).getStringCellValue()).isEqualTo("원 정수 입력");
+        }
+    }
+    @Test void financialIssuesKeepDecimalStringIdAndFormulaLikeText() throws Exception {
+        var output=new ByteArrayOutputStream();
+        var columns=List.of(new Column("inputValue","입력값",CellType.TEXT));
+        try (var download=service.generate(new Specification("재무_업로드검사","999999999999",columns,"전체 문제","원","UI-10"),
+                sink -> sink.accept(List.of("=1+1")),request)) {
+            assertThat(download.filename()).isEqualTo("B2_검사_999999999999_20260102_085900.xlsx");
+            download.transferTo(output);
+        }
+        try (var book=new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
+            assertThat(book.getSheetAt(0).getRow(1).getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);
+        }
+        verify(logs).append(argThat(e -> e.screenId().equals("UI-10") && e.targetId().equals("999999999999") && e.count()==1),same(request));
+    }
+    @Test void financialDownloadRejectsMismatchedKindsAndTargetsBeforeGeneration() {
+        var columns=List.of(new Column("inputValue","입력값",CellType.TEXT));
+        for (var spec : List.of(
+                new Specification("재무_업로드검사",null,columns,"전체","원","UI-10"),
+                new Specification("재무_등록양식","1",columns,"전체","원","UI-10"),
+                new Specification("재무_업로드검사","1\r\nunsafe",columns,"전체","원","UI-10"),
+                new Specification("재무_등록양식",null,columns,"전체","원","UI-15"),
+                new Specification("거래처",null,columns,"전체","원","UI-10"))) {
+            assertThatThrownBy(() -> service.generate(spec,sink -> {throw new AssertionError();},request)).isInstanceOf(ApiException.class);
+        }
+        verifyNoInteractions(users,logs,transactions);
+    }
+    @Test void financialAuditFailureRollsBackAndDoesNotExposeDownload() {
+        doThrow(new IllegalStateException("private SQL")).when(logs).append(any(),any());
+        var spec=new Specification("재무_등록양식",null,List.of(new Column("amount","금액*",CellType.TEXT)),"B2","원","UI-10");
+        assertThatThrownBy(() -> service.generateTemplate(spec,List.of("원 입력"),request)).isInstanceOfSatisfying(ApiException.class,e -> {
+            assertThat(e.status()).isEqualTo(500);assertThat(e.getMessage()).doesNotContain("private SQL");
+        });
+        verify(transactions).rollback(any());
+    }
     final CurrentUserProvider users=mock(CurrentUserProvider.class);
     final AccessLogWriter logs=mock(AccessLogWriter.class);
     final PlatformTransactionManager transactions=mock(PlatformTransactionManager.class);
