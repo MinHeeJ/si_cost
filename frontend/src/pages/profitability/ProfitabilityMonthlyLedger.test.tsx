@@ -285,7 +285,7 @@ beforeEach(() => {
 });
 it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액/원가/노동비를 복제 없이 보여준다", async () => {
   render(
-    <ProfitabilityMonthlyLedger personId="owned" query={query} unit="원" />,
+    <ProfitabilityMonthlyLedger personId="owned" query={query} unit="원" jobLabels={{ DEV: "개발 직무" }} />,
   );
   const table = await screen.findByTestId(
     /^profitability-ledger-table-[a-f0-9-]+$/,
@@ -293,6 +293,7 @@ it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액
   const rows = within(table).getAllByRole("row").slice(1);
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("2026-01");
+  expect(rows[0].querySelector('[data-column="project"]')).toHaveTextContent("└ 2026-01 원본 프로젝트 · 개발 직무");
   expect(rows[0]).toHaveTextContent("owned-a");
   expect(rows[1]).toHaveTextContent("owned-b");
   for (const item of rows) {
@@ -375,6 +376,7 @@ it("평균과 누계 상세는 같은 월별 원본이며 IDLE 남는몫/실주/
     screen.getByText("월별 원본 원장 · 월평균 전 금액"),
   ).toBeInTheDocument();
   expect(screen.getByText(/대기 · 남는 몫/)).toBeInTheDocument();
+  expect(screen.getByText("└ 2026-01 남는 몫(대기 원가)")).toBeInTheDocument();
   expect(screen.getByText(/실주 대기/)).toBeInTheDocument();
   expect(screen.getByText(/선투입\(PRE\)/)).toBeInTheDocument();
   expect(screen.getByText("내부")).toBeInTheDocument();
@@ -600,9 +602,7 @@ it("보기 전환은 새 문맥으로 재조회하고 펼침 버튼은 상세 �
     screen.getByRole("button", { name: "인력 first 펼치기" }),
   );
   await screen.findByTestId(/^profitability-ledger-table-[a-f0-9-]+$/);
-  fireEvent.change(screen.getByTestId("profitability-view-select"), {
-    target: { value: "MONTHLY_AVERAGE" },
-  });
+  fireEvent.click(screen.getByRole("button", { name: "월 평균" }));
   await waitFor(() =>
     expect(
       screen.queryByTestId(/^profitability-monthly-ledger-/),

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import {
   getClientOptions,
@@ -67,15 +68,16 @@ export function ProfitabilityFilters({
   const set = (field: keyof ProfitabilityQuery, value: string) =>
     setDraft((d) => ({ ...d, [field]: value || undefined }));
   return (
-    <form
-      data-testid="profitability-filters"
+    <FilterBar
+      testId="profitability-filters"
       className="profitability-filters"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!loading) onApply(draft);
-      }}
+      disabled={loading}
+      onSubmit={() => { if (!loading) onApply(draft); }}
+      onReset={onReset}
+      searchTestId="profitability-search-button"
+      resetTestId="profitability-reset-button"
     >
-      <label>
+      <label className="sicost-field">
         이름
         <input
           data-testid="profitability-name-filter"
@@ -86,7 +88,7 @@ export function ProfitabilityFilters({
         />
         {fieldMessages.name && <small role="alert">{fieldMessages.name}</small>}
       </label>
-      <label>
+      <label className="sicost-field">
         직원구분
         <select
           data-testid="profitability-employee-filter"
@@ -101,7 +103,7 @@ export function ProfitabilityFilters({
           ))}
         </select>
       </label>
-      <label>
+      <label className="sicost-field">
         소속
         <select
           data-testid="profitability-company-filter"
@@ -117,7 +119,7 @@ export function ProfitabilityFilters({
           ))}
         </select>
       </label>
-      <label>
+      <label className="sicost-field">
         사람 파트
         <select
           data-testid="profitability-part-filter"
@@ -134,7 +136,7 @@ export function ProfitabilityFilters({
           ))}
         </select>
       </label>
-      <label>
+      <label className="sicost-field">
         주직무
         <select
           data-testid="profitability-job-filter"
@@ -160,7 +162,7 @@ export function ProfitabilityFilters({
       {expanded && (
         <fieldset data-testid="profitability-detail-filters-panel">
           <legend>상세조건</legend>
-          <label>
+          <label className="sicost-field">
             대상
             <select
               data-testid="profitability-show-filter"
@@ -177,7 +179,7 @@ export function ProfitabilityFilters({
               <option value="CONCURRENT">동시투입</option>
             </select>
           </label>
-          <label>
+          <label className="sicost-field">
             <input
               type="checkbox"
               data-testid="profitability-turnkey-filter"
@@ -190,22 +192,6 @@ export function ProfitabilityFilters({
           </label>
         </fieldset>
       )}
-      <button
-        type="submit"
-        className="sicost-primary"
-        data-testid="profitability-search-button"
-        disabled={loading}
-      >
-        조회
-      </button>
-      <button
-        type="button"
-        data-testid="profitability-reset-button"
-        disabled={loading}
-        onClick={onReset}
-      >
-        초기화
-      </button>
       {error && (
         <div role="alert">
           {error}
@@ -225,6 +211,6 @@ export function ProfitabilityFilters({
             {key}: {message}
           </small>
         ))}
-    </form>
+    </FilterBar>
   );
 }

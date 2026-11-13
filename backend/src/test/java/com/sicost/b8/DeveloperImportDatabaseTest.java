@@ -22,7 +22,7 @@ class DeveloperImportDatabaseTest {
     PostgreSqlDatabase db; B8Service service;
     @BeforeEach void install() throws Exception {
         db=new PostgreSqlDatabase();db.install();
-        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES('HQ','본사','Y','Y','admin')");
+        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES('HQ','본사','Y','Y','admin') ON CONFLICT (part_id) DO NOTHING");
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
         var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(configuration);factory.setPlugins(new PersistenceBoundary());factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));

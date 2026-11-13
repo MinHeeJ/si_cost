@@ -15,7 +15,7 @@ export function ProfitabilityContributionTable({
     ...new Map(cells.map((c) => [c.gradeCode, c.gradeName])).entries(),
   ];
   return (
-    <section data-testid="profitability-contribution">
+    <section className="profitability-contribution" data-testid="profitability-contribution">
       <button
         type="button"
         data-testid="profitability-contribution-toggle"
@@ -52,8 +52,7 @@ export function ProfitabilityContributionTable({
                     );
                     return (
                       <td key={JSON.stringify(grade)}>
-                        {formatAmount(cell?.averageProfit, unit)} /{" "}
-                        {cell?.personCount ?? 0}명
+                        {formatAmount(cell?.averageProfit, unit)} ({cell?.personCount ?? 0}명)
                         {cell && cell.unknownCount > 0
                           ? ` (미확인 ${cell.unknownCount}명)`
                           : ""}

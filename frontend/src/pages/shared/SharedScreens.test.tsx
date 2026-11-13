@@ -79,6 +79,7 @@ function Location() {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.getSharedCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({
     userId: "admin",
@@ -440,6 +441,8 @@ describe("공식 화면과 공통 틀", () => {
       expect(
         screen.getByTestId("profitability-search-button"),
       ).toBeInTheDocument();
+    } else if (id === "UI-10") {
+      expect(screen.getByTestId("financial-editor")).toBeInTheDocument();
     } else if (id !== "UI-27")
       expect(
         screen

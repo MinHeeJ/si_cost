@@ -49,10 +49,11 @@ class MasterInfrastructureDatabaseTest {
         assertThat(db.sql.queryForObject("SELECT cycle FROM pg_sequences WHERE schemaname=current_schema() AND sequencename='sq_tb_bs_clnt_id'",Boolean.class)).isFalse();
     }
     @Test void selectedEngineSequenceExhaustionBecomes409() {
+        long before = db.count("tb_bs_part");
         db.sql.execute("SELECT setval('sq_tb_bs_part_id',999999999999999,true)");
         var ids=new MasterIdService(session.getMapper(MasterIdMapper.class));
         assertThatThrownBy(()->transaction.execute(status->ids.nextPartId())).isInstanceOfSatisfying(com.sicost.common.api.ApiException.class,e->assertThat(e.code()).isEqualTo("ID_EXHAUSTED"));
-        assertThat(db.count("tb_bs_part")).isEqualTo(1);
+        assertThat(db.count("tb_bs_part")).isEqualTo(before);
     }
     @Test void newHistoryUsesRealPluginAndRollsBackWithBusinessChangeOnFailure() {
         var history=new ChangeHistoryWriter(session.getMapper(ChangeHistoryMapper.class),new CurrentUserProvider(session.getMapper(CurrentUserMapper.class)),

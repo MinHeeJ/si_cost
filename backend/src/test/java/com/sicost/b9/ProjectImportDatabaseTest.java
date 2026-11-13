@@ -25,10 +25,10 @@ class ProjectImportDatabaseTest {
     B9Service service;
     @BeforeEach void install() throws Exception {
         db=new PostgreSqlDatabase();db.install();
-        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES('HQ','본사','Y','Y','admin')");
+        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES('HQ','본사','Y','Y','admin') ON CONFLICT (part_id) DO NOTHING");
         db.sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,use_yn,reg_user_id) VALUES('C-1','CUST','고객','0012345678','Y','admin')");
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var config=new org.apache.ibatis.session.Configuration();config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
+        var config=new org.apache.ibatis.session.Configuration();config.addMapper(AggregateLockMapper.class);config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(config);factory.setPlugins(new PersistenceBoundary());factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());var mapper=session.getMapper(B9Mapper.class);
         var users=new CurrentUserProvider(session.getMapper(CurrentUserMapper.class));var clock=Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"),ZoneId.of("Asia/Seoul"));

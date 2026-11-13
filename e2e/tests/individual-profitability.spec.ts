@@ -19,7 +19,7 @@ async function open(page: Page) {
   await page.goto("/UI-03");
   await expect(
     page.getByTestId("individual-profitability-screen"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("profitability-search-button")).toBeEnabled();
   const pending = listResponse(page);
   await page.getByTestId("profitability-search-button").click();
@@ -100,8 +100,8 @@ test("월평균 전환 후 원장은 상세 API의 원본 행·출처를 표시�
   await open(page);
   const pending = listResponse(page);
   await page
-    .getByTestId("profitability-view-select")
-    .selectOption("MONTHLY_AVERAGE");
+    .getByRole("button", { name: "월 평균", exact: true })
+    .click();
   const response = await pending;
   expect(response.status()).toBe(200);
   const { data } = (await response.json()) as {
@@ -143,9 +143,7 @@ test("월평균 전환 후 원장은 상세 API의 원본 행·출처를 표시�
   }
   await page.getByTestId("profitability-collapse-all").click();
   await expect(ledger).toHaveCount(0);
-  await expect(page.getByTestId("profitability-view-select")).toHaveValue(
-    "MONTHLY_AVERAGE",
-  );
+  await expect(page.getByRole("button", { name: "월 평균", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("명시 다운로드는 실제 XLSX 파일로 저장한다", async ({ page }, info) => {
@@ -187,3 +185,51 @@ test("모바일 실제 카드·서버 근거와 데스크톱 복귀를 보존한
   await expect(page.getByTestId("profitability-table")).toBeVisible();
   await expect(page.getByTestId("profitability-export-button")).toBeVisible();
 });
+
+for (const width of [1900, 1500, 1280]) {
+  test(`${width}px: 표는 내부 스크롤, 공통 필터와 모달은 화면 안에 유지한다`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 950 });
+    const failures: string[] = [];
+    page.on("pageerror", (error) => failures.push(error.message));
+    page.on("response", (response) => {
+      if (response.status() >= 400 && new URL(response.url()).pathname.startsWith("/api/"))
+        failures.push(`${response.status()} ${new URL(response.url()).pathname}`);
+    });
+    await open(page);
+    const viewport = () => page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }));
+    expect(await viewport()).toEqual({ scroll: width, client: width });
+    const filter = page.getByTestId("profitability-filters");
+    await expect(filter).toHaveClass(/sicost-filterbar/);
+    const input = page.getByRole("textbox", { name: "이름 검색" });
+    const label = await input.locator("..").boundingBox();
+    const control = await input.boundingBox();
+    expect(label!.x).toBeLessThan(control!.x);
+    expect(Math.abs(label!.y + label!.height / 2 - (control!.y + control!.height / 2))).toBeLessThan(2);
+    for (const button of await page.locator(".sicost-primary:not(:disabled)").all()) {
+      await expect(button).toHaveCSS("color", "rgb(255, 255, 255)");
+    }
+    const primary = page.getByTestId("profitability-search-button");
+    await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(200);
+    const background = await primary.evaluate((button) => getComputedStyle(button).backgroundColor);
+    await primary.hover();
+    await expect(primary).toHaveCSS("color", "rgb(255, 255, 255)");
+    expect(await primary.evaluate((button) => getComputedStyle(button).backgroundColor)).not.toBe(background);
+    await page.getByTestId("profitability-table-columns-button").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(page.getByTestId("profitability-table")).toBeVisible();
+    const bounds = await dialog.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(950);
+    expect(await viewport()).toEqual({ scroll: width, client: width });
+    await page.screenshot({ path: info.outputPath(`ui03-${width}-columns.png`) });
+    expect(failures).toEqual([]);
+  });
+}

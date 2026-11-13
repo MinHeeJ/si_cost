@@ -69,6 +69,7 @@ public final class CostDatabaseSupport implements AutoCloseable {
         var configuration = new org.apache.ibatis.session.Configuration();
         configuration.setArgNameBasedConstructorAutoMapping(true);
         configuration.setMapUnderscoreToCamelCase(true);
+        configuration.addMapper(AggregateLockMapper.class);
         configuration.setLocalCacheScope(org.apache.ibatis.session.LocalCacheScope.STATEMENT);
         configuration.addInterceptor(new PersistenceBoundary()); factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));

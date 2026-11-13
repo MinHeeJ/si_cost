@@ -36,10 +36,12 @@ export function ProfitabilityMonthlyLedger({
   personId,
   query,
   unit = "천원",
+  jobLabels = {},
 }: {
   personId: string;
   query: ProfitabilityQuery;
   unit?: AmountUnit;
+  jobLabels?: Readonly<Record<string, string>>;
 }) {
   const { data, loading, error, retry } = useProfitabilityLedger(
     personId,
@@ -73,13 +75,15 @@ export function ProfitabilityMonthlyLedger({
     {
       id: "project",
       label: "프로젝트",
-      render: (row) => row.projectName ?? row.projectId,
+      render: (row) => row.projectId === "IDLE" && row.assignmentId === "IDLE"
+        ? `└ ${monthLabel(row.month)} 남는 몫(대기 원가)`
+        : `└ ${monthLabel(row.month)} ${row.projectName ?? row.projectId} · ${jobLabels[row.assignmentJobCode ?? ""] ?? row.assignmentJobCode ?? "–"}`,
     },
     { id: "assignment", label: "투입 ID", render: (row) => row.assignmentId },
     {
       id: "job",
       label: "투입 직무",
-      render: (row) => row.assignmentJobCode ?? "–",
+      render: (row) => jobLabels[row.assignmentJobCode ?? ""] ?? row.assignmentJobCode ?? "–",
     },
     {
       id: "classification",

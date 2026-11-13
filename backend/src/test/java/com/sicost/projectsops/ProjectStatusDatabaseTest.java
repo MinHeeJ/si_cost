@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.sicost.budget.*;
 import com.sicost.common.api.*;
+import com.sicost.common.assignments.*;
 import com.sicost.common.concurrent.*;
 import com.sicost.common.context.*;
 import com.sicost.common.history.*;
@@ -42,19 +43,20 @@ class ProjectStatusDatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);
         json=JsonMapper.builder().findAndAddModules().build();context.registerBean(ObjectMapper.class,()->json);
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
+        context.registerBean(AssignmentMonthlyMapper.class,()->session.getMapper(AssignmentMonthlyMapper.class));
         context.registerBean(ProjectStatusMapper.class,()->session.getMapper(ProjectStatusMapper.class));
         context.registerBean(ProjectBudgetMapper.class,()->session.getMapper(ProjectBudgetMapper.class));
         context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
-        context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
+        context.register(AssignmentMonthlyService.class,Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             ProjectBudgetRepository.class,ProjectStatusRepository.class,ProjectStatusService.class);context.refresh();
         service=context.getBean(ProjectStatusService.class);repository=context.getBean(ProjectStatusRepository.class);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectStatusController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
@@ -75,7 +77,8 @@ class ProjectStatusDatabaseTest {
     @Test void readsUseRealDatabaseAndNeverChangeProjectOrHistory() throws Exception {
         assignment("A","2080-07-01","2080-07-31");var before=project();long events=sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg",Long.class);
         mvc.perform(get("/api/projects/defaults").param("contractAmount","101").param("contractType","TK")).andExpect(status().isOk()).andExpect(jsonPath("$.data.budgetAmount").value("80"));
-        mvc.perform(get("/api/projects/options").param("purpose","BILLING").param("q",id)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].id").value(id));
+        mvc.perform(get("/api/projects/options").param("purpose","BILLING").param("q",id)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
+        mvc.perform(get("/api/projects/options").param("purpose","ASSIGNMENT").param("q",id)).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].id").value(id));
         mvc.perform(get("/api/projects/"+id+"/loss-preview")).andExpect(status().isOk()).andExpect(jsonPath("$.data.currentAssignments[0].developerId").value(developer));
         assertThat(project()).isEqualTo(before);assertThat(sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg",Long.class)).isEqualTo(events);
     }

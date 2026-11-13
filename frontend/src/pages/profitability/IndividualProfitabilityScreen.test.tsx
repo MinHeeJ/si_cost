@@ -249,6 +249,31 @@ describe("개인 기간 조회 본문", () => {
       screen.getByTestId("profitability-contribution-panel"),
     ).toHaveTextContent("미분류");
   });
+  it("공통 FilterBar의 왼쪽 이름표와 오른쪽 초기화·조회 및 로딩 차단을 사용한다", async () => {
+    mount();
+    await screen.findByText("인력 owned (관리-owned)");
+    const form = screen.getByTestId("profitability-filters");
+    expect(form).toHaveClass("sicost-filterbar");
+    expect(screen.getByRole("textbox", { name: "이름 검색" }).closest("label")).toHaveClass("sicost-field");
+    const actions = form.querySelector(".sicost-filterbar-actions")!;
+    expect(within(actions as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["초기화", "조회"]);
+    expect(screen.getByTestId("profitability-search-button")).toHaveClass("sicost-primary");
+    vi.mocked(api.getIndividualProfitability).mockImplementation(() => new Promise(() => {}));
+    await userEvent.click(screen.getByTestId("profitability-search-button"));
+    expect(screen.getByTestId("profitability-search-button")).toBeDisabled();
+    expect(screen.getByTestId("profitability-reset-button")).toBeDisabled();
+  });
+  it("모바일 빈 카드 안에서 조건 초기화로 기본 조회를 복구한다", async () => {
+    window.innerWidth = 390;
+    vi.mocked(api.getIndividualProfitability).mockResolvedValue(response([]));
+    mount();
+    const reset = await screen.findByTestId("profitability-mobile-empty-reset-button");
+    expect(reset.closest('[data-testid="profitability-mobile-cards"]')).not.toBeNull();
+    const callsBeforeReset = vi.mocked(api.getIndividualProfitability).mock.calls.length;
+    await userEvent.click(reset);
+    await waitFor(() => expect(api.getIndividualProfitability).toHaveBeenCalledTimes(callsBeforeReset + 1));
+    expect(api.getIndividualProfitability).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, size: 20, includeTurnkey: true }), expect.any(AbortSignal));
+  });
   it("등록 진입점은 실제 내보내기·계산안내와 서버 근거를 조립하고 응답 변경을 그대로 표시한다", async () => {
     const first = response();
     first.calculationBasis = [
@@ -294,9 +319,7 @@ describe("개인 기간 조회 본문", () => {
     changed.calculationBasis = ["새 응답의 월평균 근거"];
     changed.items[0].workedMonths = 7;
     vi.mocked(api.getIndividualProfitability).mockResolvedValue(changed);
-    fireEvent.change(screen.getByTestId("profitability-view-select"), {
-      target: { value: "MONTHLY_AVERAGE" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "월 평균" }));
     await screen.findByText("새 응답의 월평균 근거");
     await userEvent.click(
       screen.getByTestId("profitability-calculation-toggle"),
@@ -347,9 +370,7 @@ describe("개인 기간 조회 본문", () => {
   it("투입 저장 commit 뒤 다음 응답으로 갱신하고 보기·필터는 보존한다", async () => {
     mount();
     await screen.findByText("인력 owned (관리-owned)");
-    fireEvent.change(screen.getByTestId("profitability-view-select"), {
-      target: { value: "MONTHLY_AVERAGE" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "월 평균" }));
     await screen.findByRole("columnheader", { name: "월급여" });
     vi.mocked(api.getIndividualProfitability).mockResolvedValue(
       response([person("committed")]),
@@ -366,9 +387,7 @@ describe("개인 기간 조회 본문", () => {
       expect.objectContaining({ view: "MONTHLY_AVERAGE" }),
       expect.any(AbortSignal),
     );
-    expect(screen.getByTestId("profitability-view-select")).toHaveValue(
-      "MONTHLY_AVERAGE",
-    );
+    expect(screen.getByRole("button", { name: "월 평균" })).toHaveAttribute("aria-pressed", "true");
   });
   it("18개 기본열·4개 숨김열·누계급여 제목과 서버 전체합계/요약을 렌더링한다", async () => {
     mount();
@@ -431,9 +450,7 @@ describe("개인 기간 조회 본문", () => {
   it("보기/TK 제외/적자조건은 서버에 전송하고 프론트에서 금액을 재계산하지 않는다", async () => {
     mount();
     await screen.findByText("인력 owned (관리-owned)");
-    fireEvent.change(screen.getByTestId("profitability-view-select"), {
-      target: { value: "MONTHLY_AVERAGE" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "월 평균" }));
     await screen.findByRole("columnheader", { name: "월급여" });
     await userEvent.click(
       screen.getByTestId("profitability-detail-filters-button"),

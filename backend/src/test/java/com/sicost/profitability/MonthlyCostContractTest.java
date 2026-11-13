@@ -28,7 +28,11 @@ class MonthlyCostContractTest {
         repository=mock(MonthlyCostRepository.class);
         var payroll=new EstimatedPayrollAdapter();
         service=new MonthlyCostService(repository,new MonthlyCostCalculation(payroll),new TurnkeyRevenueCalculation(),payroll);
-        mvc=MockMvcBuilders.standaloneSetup(new MonthlyCostController(service)).setControllerAdvice(new ApiExceptionHandler()).build();
+        mvc=MockMvcBuilders.standaloneSetup(new MonthlyCostController(service)).setControllerAdvice(new ApiExceptionHandler())
+            .setMessageConverters(new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(
+                org.springframework.http.converter.json.Jackson2ObjectMapperBuilder.json()
+                    .featuresToDisable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build()))
+            .build();
     }
     static StoredCost stored(String assignment, String labor, String revenue, String fixed) {
         return new StoredCost(MONTH,"actual","project",assignment,n("0.50"),n("0.00"),n(revenue),n(labor),n("7"),n("3"),n("10"),

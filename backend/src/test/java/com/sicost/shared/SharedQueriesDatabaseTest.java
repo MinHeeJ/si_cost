@@ -33,7 +33,7 @@ class SharedQueriesDatabaseTest {
     @Autowired JdbcTemplate sql;
     String group;
     @BeforeEach void fixture() {
-        group="T"+UUID.randomUUID().toString().replace("-","").substring(0,20);
+        group="T"+UUID.randomUUID().toString().replace("-","").substring(0,20).toUpperCase(Locale.ROOT);
         sql.update("INSERT INTO TB_SY_CODE_GRP(CODE_GRP_ID,CODE_GRP_NM,SORT_ORD,REG_USER_ID) VALUES (?,'조회 시험',1,'admin')",group);
         for(String code:List.of("A","STOP","DELETED")) sql.update("INSERT INTO TB_SY_CODE(CODE_GRP_ID,CODE,CODE_NM,SORT_ORD,USE_YN,DEL_YN,REG_USER_ID) VALUES (?,?,?,1,?,?,'admin')",group,code,code,code.equals("STOP")?"N":"Y",code.equals("DELETED")?"Y":"N");
     }
@@ -43,7 +43,7 @@ class SharedQueriesDatabaseTest {
         sql.update("DELETE FROM TB_SY_CODE_GRP WHERE CODE_GRP_ID=?",group);
     }
     com.fasterxml.jackson.databind.JsonNode data(String path) throws Exception {
-        return json.readTree(mvc.perform(get(path)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("data");
+        return json.readTree(mvc.perform(get(path)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).get("data");
     }
     @Test void initialMenusHaveTenGroupsThirtyScreensAndNoDiagnostics() throws Exception {
         var before=sql.queryForList("SELECT * FROM TB_SY_MENU ORDER BY MENU_ID");

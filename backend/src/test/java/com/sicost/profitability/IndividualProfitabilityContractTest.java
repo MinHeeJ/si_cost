@@ -48,7 +48,7 @@ class IndividualProfitabilityContractTest {
     @Test void listAndDetailExposeTheSameServerOwnedPayrollAllocationExpenseTurnkeyAndAverageBasis() throws Exception {
         for (String path : List.of("/api/individual-profitability", "/api/individual-profitability/actual")) {
             mvc.perform(get(path)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.calculationBasis").value(IndividualProfitabilityCalculation.BASIS))
+                .andExpect(jsonPath("$.data.calculationBasis").value(org.hamcrest.Matchers.equalTo(IndividualProfitabilityCalculation.BASIS)))
                 .andExpect(jsonPath("$.data.calculationBasis", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("FT=급여+수당+회사보험+퇴직충당금"))))
                 .andExpect(jsonPath("$.data.calculationBasis", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("마지막 행에 잔액"))))
                 .andExpect(jsonPath("$.data.calculationBasis", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("저장된 각 금액×원본 월 MM"))))

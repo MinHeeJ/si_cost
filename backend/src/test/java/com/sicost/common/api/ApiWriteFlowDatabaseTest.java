@@ -45,7 +45,7 @@ class ApiWriteFlowDatabaseTest {
             .andExpect(status().isCreated()).andExpect(jsonPath("$.success").value(true));
     }
     JsonNode data(org.springframework.test.web.servlet.ResultActions request) throws Exception {
-        return json.readTree(request.andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("data");
+        return json.readTree(request.andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).get("data");
     }
     String revision() throws Exception {
         return data(mvc.perform(get("/api/code-groups/CONTRACT_EDU/codes"))).get("groupRevision").asText();

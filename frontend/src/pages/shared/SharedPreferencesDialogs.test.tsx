@@ -41,6 +41,7 @@ const menus = [
 ];
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.getSharedCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({
     userId: "admin",
@@ -178,7 +179,7 @@ it("PC 전용 화면은 안내·뒤로·홈과 보존되는 본문 컨테이너�
   );
   expect(
     screen
-      .getByText("이 화면은 다음 단계에서 만듭니다.")
+      .getByTestId("financial-editor")
       .closest(".sicost-pc-body"),
   ).toHaveClass("sicost-pc-body");
 });

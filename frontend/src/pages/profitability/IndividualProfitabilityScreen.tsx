@@ -74,6 +74,7 @@ export function IndividualProfitabilityScreen({
         personId={person.personId}
         query={applied}
         unit={unit}
+        jobLabels={Object.fromEntries((data?.contributions ?? []).map((cell) => [cell.jobCode, cell.jobName]))}
       />
     ));
   const [settingsError, setSettingsError] = useState("");
@@ -157,6 +158,30 @@ export function IndividualProfitabilityScreen({
       data-testid="profitability-overview"
       className="profitability-overview"
     >
+      {data && (<>
+          <p
+            className="profitability-context"
+            data-testid="profitability-context"
+          >
+            {data.context.period.year}년 {data.context.period.fromMonth ?? "–"}{" "}
+            ~ {data.context.period.toMonth ?? "–"}·{" "}
+            {data.context.view === "CUMULATIVE" ? "연 누계" : "월 평균"} · 턴키
+            단가 {data.context.includeTurnkey ? "포함" : "제외"} · 단가: 개인
+            배분 참고액 · 계산{" "}
+            {formatDateTime(data.context.period.calculatedAt)}
+          </p>
+          <ProfitabilitySummary summary={data.summary} unit={unit} />
+          {(data.unknownCount > 0 || data.estimatedCount > 0) && (
+            <p role="note">
+              자료 미확인 {data.unknownCount}명 · 급여 미업로드·예정{" "}
+              {data.estimatedCount}명. 미확인 금액은 0으로 계산하지 않습니다.
+            </p>
+          )}
+          <ProfitabilityContributionTable
+            cells={data.contributions}
+            unit={unit}
+          />
+      </>)}
       <ProfitabilityFilters
         query={query}
         onApply={apply}
@@ -166,23 +191,16 @@ export function IndividualProfitabilityScreen({
         onEmployeeTypes={setEmployeeTypes}
       />
       <div className="profitability-toolbar">
-        <label>
-          보기
-          <select
-            data-testid="profitability-view-select"
-            value={query.view}
-            disabled={loading}
-            onChange={(e) =>
-              apply({
-                ...query,
-                view: e.target.value as ProfitabilityQuery["view"],
-              })
-            }
-          >
-            <option value="CUMULATIVE">연 누계</option>
-            <option value="MONTHLY_AVERAGE">월 평균</option>
-          </select>
-        </label>
+        <div className="profitability-view" role="group" aria-label="금액 보기">
+          {([['CUMULATIVE', '연 누계'], ['MONTHLY_AVERAGE', '월 평균']] as const).map(([view, label]) => (
+            <button key={view} type="button" disabled={loading}
+              className={query.view === view ? "sicost-primary" : ""}
+              aria-pressed={query.view === view}
+              onClick={() => apply({ ...query, view })}>
+              {label}
+            </button>
+          ))}
+        </div>
         <label>
           단위
           <select
@@ -215,28 +233,6 @@ export function IndividualProfitabilityScreen({
       {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
       {data && (
         <>
-          <p
-            className="profitability-context"
-            data-testid="profitability-context"
-          >
-            {data.context.period.year}년 {data.context.period.fromMonth ?? "–"}{" "}
-            ~ {data.context.period.toMonth ?? "–"}·{" "}
-            {data.context.view === "CUMULATIVE" ? "연 누계" : "월 평균"} · 턴키
-            단가 {data.context.includeTurnkey ? "포함" : "제외"} · 단가: 개인
-            배분 참고액 · 계산{" "}
-            {formatDateTime(data.context.period.calculatedAt)}
-          </p>
-          <ProfitabilitySummary summary={data.summary} unit={unit} />
-          {(data.unknownCount > 0 || data.estimatedCount > 0) && (
-            <p role="note">
-              자료 미확인 {data.unknownCount}명 · 급여 미업로드·예정{" "}
-              {data.estimatedCount}명. 미확인 금액은 0으로 계산하지 않습니다.
-            </p>
-          )}
-          <ProfitabilityContributionTable
-            cells={data.contributions}
-            unit={unit}
-          />
           {!mobile && (
             <div
               className="profitability-toolbar"
@@ -309,6 +305,9 @@ export function IndividualProfitabilityScreen({
                   {data.context.period.noData
                     ? "개인 원가 자료 없음"
                     : "조건에 맞는 사람이 없습니다."}
+                  <button type="button" data-testid="profitability-mobile-empty-reset-button" onClick={state.reset}>
+                    조건 초기화
+                  </button>
                 </p>
               )}
               {state.cards.length < data.total && (

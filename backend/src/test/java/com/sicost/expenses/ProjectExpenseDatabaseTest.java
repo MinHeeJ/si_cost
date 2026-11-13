@@ -46,7 +46,7 @@ class ProjectExpenseDatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);
         configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
@@ -92,7 +92,7 @@ class ProjectExpenseDatabaseTest {
         var first=create("2080-07").value().items().get(0);create("2080-08");
         delete(first);assertThat(rows()).hasSize(1);assertThat(rows().get(0).get("exps_ym")).isEqualTo("208008");
         assertThat(audits().stream().filter(a->a.get("chg_type_cd").equals("DEL")).toList()).extracting(a->a.get("bfr_val")).containsExactly("2080-07","TRIP","1","가".repeat(500));
-        var next=create("2080-07");assertThat(next.value().items().get(0).expenseSn()).isEqualTo(2);
+        var next=create("2080-07");assertThat(next.value().items().stream().filter(row->row.expenseMonth().equals("2080-07")).findFirst().orElseThrow().expenseSn()).isEqualTo(2);
         assertThat(service.getProjectExpenses(id).items()).hasSize(2);
     }
     @Test void readNeverChangesRowsAuditTimesHistoryOrAccounting() throws Exception {

@@ -118,7 +118,7 @@ class CandidateSummaryDatabaseTest {
     }
     @Test void emptyFreshInstallationReturnsAllFiveZeroes() throws Exception {
         assertThat(db.count("tb_hr_cand")).isZero();
-        assertThat(summary()).isEqualTo(json.valueToTree(new CandidateSummaryDtos.Summary(0, 0, 0, 0, 0)));
+        assertThat(summary()).isEqualTo(json.readTree(json.writeValueAsString(new CandidateSummaryDtos.Summary(0, 0, 0, 0, 0))));
     }
     JsonNode summary() throws Exception {
         var response = mvc.perform(get("/api/candidates/summary")).andExpect(status().isOk())

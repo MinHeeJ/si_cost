@@ -83,12 +83,53 @@ public class ExcelExportService {
         });
     }
     private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {
-        return generateFile(specification, request, workbook -> {
-            SheetRows writer = new SheetRows(workbook, specification.columns());
-            rows.read(writer::append);
-            customize.accept(workbook);
-            return new Generated(writer.total, "", List.of());
-        });
+        validate(specification);
+        Path file = null;
+        try {
+            file = Files.createTempFile("sicost-export-", ".xlsx");
+            Path destination = file;
+            LocalDateTime now = LocalDateTime.now(clock.withZone(TimeConfiguration.SEOUL));
+            TransactionTemplate snapshot = new TransactionTemplate(transactions);
+            snapshot.setReadOnly(true); snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+            snapshot.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            Long total = snapshot.execute(status -> {
+                CurrentUserProvider.CurrentUser actor = users.currentUser();
+                SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+                workbook.setCompressTempFiles(true);
+                try (workbook; OutputStream output = Files.newOutputStream(destination)) {
+                    SheetRows writer = new SheetRows(workbook, specification.columns());
+                    rows.read(writer::append);
+                    customize.accept(workbook);
+                    var info = workbook.createSheet("다운로드정보");
+                    information(info.createRow(0), "처리자ID", actor.userId());
+                    information(info.createRow(1), "처리자명", actor.name());
+                    information(info.createRow(2), "생성시각", now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    information(info.createRow(3), "조건", specification.conditions());
+                    information(info.createRow(4), "단위", specification.amountUnit());
+                    Row count = info.createRow(5); count.createCell(0).setCellValue("총건수"); count.createCell(1).setCellValue(writer.total);
+                    workbook.write(output);
+                    return writer.total;
+                } catch (IOException e) { throw new IllegalStateException("엑셀 파일을 생성하지 못했습니다."); }
+                finally { workbook.dispose(); }
+            });
+            TransactionTemplate audit = new TransactionTemplate(transactions);
+            audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), total), request));
+            String prefix = switch (specification.kind()) {
+                case "개발자" -> "개발자목록";
+                case "개발자_등록양식" -> "B8_개발자양식";
+                case "개발자_업로드검사" -> "B8_검사";
+                case "재무_등록양식" -> "B2_재무양식";
+                case "재무_업로드검사" -> "B2_검사";
+                default -> specification.kind();
+            };
+            String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
+            return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx");
+        } catch (Exception e) {
+            if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
+            if (e instanceof ApiException api) throw api;
+            throw new ApiException(500, "INTERNAL_ERROR", "다운로드 파일 또는 접근기록을 생성하지 못했습니다. 다시 시도해 주세요.");
+        }
     }
     private Download generateFile(Specification specification, HttpServletRequest request, Writer writer) {
         validate(specification);

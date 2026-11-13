@@ -57,7 +57,7 @@ export function ProfitabilityExportButton({
     }
   };
   return (
-    <div data-testid="profitability-export" className="profitability-toolbar">
+    <div data-testid="profitability-export" className="profitability-toolbar profitability-export">
       <button
         type="button"
         className="sicost-button"
@@ -65,6 +65,7 @@ export function ProfitabilityExportButton({
         disabled={pending || preferences.loading || preferences.pending}
         onClick={() => void download()}
       >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4" /></svg>
         {pending ? "엑셀 생성 중…" : "엑셀 다운로드"}
       </button>
       {message &&
