@@ -83,10 +83,56 @@ class FinancialImportDatabaseTest {
     @Test void selectedMonthCloseRejectsAndPreservesState() {
         var result=checked();sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208007','CLOSE','admin')");var history=audits();assertThatThrownBy(()->apply(result)).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("MONTH_CLOSED"));assertThat(rows()).isEmpty();assertThat(audits()).isEqualTo(history);
     }
+    @Test void sameUploadReplayPreservesCommittedRowsStatusHistoryAndReceipt() {
+        Result checked=checked();Result first=apply(checked);var before=rows();var history=audits();
+        assertThat(first.status()).isEqualTo("APPLIED");assertThat(before).hasSize(1);
+        assertThat(service.result(Long.parseLong(checked.uploadId()))).isEqualTo(first);
+        assertThat(apply(checked)).isEqualTo(first);assertThat(rows()).isEqualTo(before);assertThat(audits()).isEqualTo(history);
+        assertThat(service.result(Long.parseLong(checked.uploadId()))).isEqualTo(first);
+    }
+    @Test void uploadWithValidationErrorsRejectsAllRowsAndKeepsCheckedDiagnostics()throws Exception {
+        manual("208007",1,"수동");manual("208006",1,"다른 월");
+        file=FinancialWorkbook.file(List.of(List.of("판관비","","정상","1","","","N",""),List.of("판관비","","오류","-1","","","N","")));
+        var before=rows();Result checked=checked();assertThat(checked.canApply()).isFalse();assertThat(checked.summary().errorRows()).isEqualTo(1);
+        var businessHistory=sql.queryForList("SELECT * FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_FI_ITEM' ORDER BY hist_id");
+        assertThatThrownBy(()->apply(checked)).isInstanceOfSatisfying(ApiException.class,e->{assertThat(e.status()).isEqualTo(422);assertThat(e.code()).isEqualTo("REVALIDATION_FAILED");});
+        assertThat(rows()).isEqualTo(before);assertThat(sql.queryForList("SELECT * FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_FI_ITEM' ORDER BY hist_id")).isEqualTo(businessHistory);
+        assertThat(service.result(Long.parseLong(checked.uploadId()))).isEqualTo(checked);
+    }
+    @Test void insertionAuditFailureRollsBackReplacedRowsMetadataAndUploadStatus() {
+        Result first=apply(checked());Result next=checked();var before=rows();var history=audits();
+        var uploads=sql.queryForList("SELECT * FROM tb_sy_upld ORDER BY upld_id");var issues=sql.queryForList("SELECT * FROM tb_sy_upld_err ORDER BY upld_id,rslt_sn");
+        sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_financial_insert CHECK(NOT(trgt_tbl_nm='TB_FI_ITEM' AND chg_type_cd='NEW')) NOT VALID");
+        assertThatThrownBy(()->apply(next)).isInstanceOf(RuntimeException.class);
+        assertThat(rows()).isEqualTo(before);assertThat(audits()).isEqualTo(history);assertThat(service.result(Long.parseLong(next.uploadId()))).isEqualTo(next);
+        assertThat(sql.queryForList("SELECT * FROM tb_sy_upld ORDER BY upld_id")).isEqualTo(uploads);assertThat(sql.queryForList("SELECT * FROM tb_sy_upld_err ORDER BY upld_id,rslt_sn")).isEqualTo(issues);
+        assertThat(service.result(Long.parseLong(first.uploadId()))).isEqualTo(first);
+    }
+    @Test void newCashMonthCloseRejectsAndPreservesCheckedUpload()throws Exception {
+        file=FinancialWorkbook.file(List.of(List.of("판관비","","임대료","1","","2080-06-10","N","")));
+        var result=checked();sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208006','CLOSE','admin')");var history=audits();
+        assertThatThrownBy(()->apply(result)).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("MONTH_CLOSED"));
+        assertThat(rows()).isEmpty();assertThat(audits()).isEqualTo(history);assertThat(service.result(Long.parseLong(result.uploadId()))).isEqualTo(result);
+    }
+    @Test void replacedCashMonthCloseRejectsAndPreservesOriginalReceipt()throws Exception {
+        file=FinancialWorkbook.file(List.of(List.of("판관비","","임대료","1","","2080-06-10","N","")));Result first=apply(checked());
+        file=FinancialWorkbook.valid();Result next=checked();var before=rows();var history=audits();
+        sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208006','CLOSE','admin')");
+        assertThatThrownBy(()->apply(next)).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("MONTH_CLOSED"));
+        assertThat(rows()).isEqualTo(before);assertThat(audits()).isEqualTo(history);assertThat(service.result(Long.parseLong(next.uploadId()))).isEqualTo(next);assertThat(service.result(Long.parseLong(first.uploadId()))).isEqualTo(first);
+    }
     @Test void concurrentSameUploadCommitsOnlyOnceAndBothReturnOriginalResult()throws Exception {
         Result checked=checked();CountDownLatch start=new CountDownLatch(1);
+        var repository=org.mockito.Mockito.spy(context.getBean(FinancialImportRepository.class));var reads=new java.util.concurrent.atomic.AtomicInteger();CountDownLatch initialReads=new CountDownLatch(2);
+        org.mockito.Mockito.doAnswer(call->{
+            Object upload=call.callRealMethod();
+            if(reads.incrementAndGet()<=2){initialReads.countDown();if(!initialReads.await(10,TimeUnit.SECONDS))throw new IllegalStateException("initial read timeout");}
+            return upload;
+        }).when(repository).required(Long.parseLong(checked.uploadId()),false);
+        service=new FinancialImportService(context.getBean(FinancialImportMapper.class),repository,context.getBean(FinancialImportDefinition.class),context.getBean(WriteCoordinator.class),context.getBean(MasterLockMapper.class),context.getBean(PlatformTransactionManager.class));
         var a=CompletableFuture.supplyAsync(()->concurrent(start,checked));var b=CompletableFuture.supplyAsync(()->concurrent(start,checked));start.countDown();
         assertThat(a.get(20,TimeUnit.SECONDS)).isEqualTo(b.get(20,TimeUnit.SECONDS));assertThat(rows()).hasSize(1);assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_FI_ITEM' AND chg_item_nm='ITEM_NM' AND chg_type_cd='NEW'",Integer.class)).isEqualTo(1);
+        assertThat(((Result)service.result(Long.parseLong(checked.uploadId()))).status()).isEqualTo("APPLIED");
     }
     Result concurrent(CountDownLatch start,Result result) { try { if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");return apply(result); }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);} }
 }
