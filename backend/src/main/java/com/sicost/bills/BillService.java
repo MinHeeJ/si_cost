@@ -142,9 +142,22 @@ public class BillService {
     private QuickActions quick(Stored row,Project project,int year) {
         Stored latest=repository.projectBills(row.projectId()).stream().filter(b->!b.cancelled()).findFirst().orElse(null);
         YearMonth next=YearMonth.parse(api(row.billingMonth())).plusMonths(1);
-        boolean allowed=!row.cancelled()&&latest!=null&&latest.id().equals(row.id())&&"ING".equals(effective(project))&&!"IN".equals(project.contractType())&&year>=today().getYear()
-            &&next.getYear()<=today().getYear()+1&&!next.isAfter(YearMonth.from(project.endDate()))&&next.getYear()>=today().getYear()&&!next.isBefore(repository.cashBase())&&!repository.closed(db(next.toString()));
-        return new QuickActions(allowed,allowed&&Set.of("MO","DP").contains(project.contractType()),allowed?null:"최신 미취소 청구·진행 프로젝트·열린 다음 청구월만 가능합니다.");
+        String reason=quickReason(row,project,year,latest,next);
+        boolean allowed=reason==null;
+        return new QuickActions(allowed,allowed&&Set.of("MO","DP").contains(project.contractType()),reason);
+    }
+    /** Why 고쳐서 청구 / 다음 달 청구 is not offered for this row; null when it is. The checks and their order are the original single condition, split so the screen can say which one failed. */
+    private String quickReason(Stored row,Project project,int year,Stored latest,YearMonth next) {
+        if(row.cancelled())return "취소된 청구입니다.";
+        if(latest==null||!latest.id().equals(row.id()))return "더 최근 청구가 있습니다.";
+        if(!"ING".equals(effective(project)))return "진행 중인 프로젝트만 빠른 청구를 할 수 있습니다.";
+        if("IN".equals(project.contractType()))return "내부 프로젝트는 청구 대상이 아닙니다.";
+        if(year<today().getYear())return "지난 연도 화면에서는 빠른 청구를 할 수 없습니다.";
+        if(next.isAfter(YearMonth.from(project.endDate())))return "다음 청구월("+next+")이 프로젝트 계약 종료월("+YearMonth.from(project.endDate())+")을 넘습니다.";
+        if(next.getYear()>today().getYear()+1||next.getYear()<today().getYear())return "다음 청구월("+next+")은 올해 안에서만 만들 수 있습니다.";
+        if(next.isBefore(repository.cashBase()))return "다음 청구월("+next+")이 운영 시작월 이전입니다.";
+        if(repository.closed(db(next.toString())))return "다음 청구월("+next+")은 이미 마감되었습니다.";
+        return null;
     }
     private String effective(Project p) {return "ING".equals(p.status())&&p.endDate().isBefore(today())?"END":p.status();}
     private Comparator<Bill> ordering(Query q) {

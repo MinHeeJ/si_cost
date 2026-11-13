@@ -2418,7 +2418,7 @@ COMMENT ON COLUMN TB_HR_DEV_PRC.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 
 COMMENT ON TABLE TB_HR_DEV_STAT IS '개발자근무상태이력의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
 COMMENT ON COLUMN TB_HR_DEV_STAT.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_HR_DEV_STAT.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
-COMMENT ON TABLE TB_HR_MON_PAY IS '월별급여원가 - 부록 B.1 업로드의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
+COMMENT ON TABLE TB_HR_MON_PAY IS '사람별 월급여 입력과 당시 계산 결과 사본. 개인 원가 조회는 이 금액과 당시 분류를 읽으며 FIX_YN 열을 사용하지 않는다.';
 COMMENT ON COLUMN TB_HR_MON_PAY.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_HR_MON_PAY.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON TABLE TB_HR_CAND IS '외부인력후보의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
@@ -2455,7 +2455,7 @@ COMMENT ON TABLE TB_PJ_ISSUE IS '이슈의 원천 구조를 보존한다. 현재
 COMMENT ON COLUMN TB_PJ_ISSUE.ISSUE_ID IS '이슈ID; 자체 업무 식별자이며 외부 참조 없음 (FK 미선언)';
 COMMENT ON COLUMN TB_PJ_ISSUE.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_PJ_ISSUE.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
-COMMENT ON TABLE TB_PJ_TK_DSTRB IS '턴키배분표의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
+COMMENT ON TABLE TB_PJ_TK_DSTRB IS '프로젝트·배분단계·행·월별 턴키 배분 원천. 개인 원가 조회의 배분 참고액이며 청구·입금 실매출 원장이 아니다.';
 COMMENT ON COLUMN TB_PJ_TK_DSTRB.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_PJ_TK_DSTRB.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON TABLE TB_PJ_DRCT_EXPS IS '프로젝트직접경비의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
@@ -2467,7 +2467,7 @@ COMMENT ON COLUMN TB_PJ_ASGN.REG_USER_ID IS '등록자ID: 등록한 사용자(TB
 COMMENT ON COLUMN TB_PJ_ASGN.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON TABLE TB_PJ_ASGN_HIST IS '투입변경이력의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
 COMMENT ON COLUMN TB_PJ_ASGN_HIST.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
-COMMENT ON TABLE TB_PJ_ASGN_MON IS '월별투입 - 마감 스냅샷의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
+COMMENT ON TABLE TB_PJ_ASGN_MON IS '투입별 월 MM·적용단가·매출의 원천 및 마감 사본. 개인 원가는 실제 DEV_ID를 기준으로 조회하며 조회 중 재일할하거나 수정하지 않는다.';
 COMMENT ON COLUMN TB_PJ_ASGN_MON.DEV_ID IS '개발자ID: 조회 편의(비정규화); TB_HR_DEV.DEV_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_PJ_ASGN_MON.PROJ_ID IS '프로젝트ID: 비정규화; TB_PJ_PROJ.PROJ_ID 참조 의도 (예약 식별자 허용으로 FK 미선언)';
 COMMENT ON COLUMN TB_PJ_ASGN_MON.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
@@ -2500,7 +2500,7 @@ COMMENT ON COLUMN TB_BL_RCPT.REG_USER_ID IS '등록자ID: 등록한 사용자(TB
 COMMENT ON COLUMN TB_BL_RCPT.MOD_USER_ID IS '수정자ID; TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
 COMMENT ON TABLE TB_BL_DUN_HIST IS '미수알림이력의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
 COMMENT ON COLUMN TB_BL_DUN_HIST.REG_USER_ID IS '등록자ID: 등록한 사용자(TB_SY_USER.USER_ID); TB_SY_USER.USER_ID 참조 의도 (FK 미선언)';
-COMMENT ON TABLE TB_CO_MON_COST IS '월별원가배분 - 마감 스냅샷의 원천 구조를 보존한다. 현재 업무 쓰기 미사용 — 후속 단계 연동 예정.';
+COMMENT ON TABLE TB_CO_MON_COST IS '사람·월·프로젝트·투입별 마감 원가 사본. 월별 조회는 기존 사본을 읽으며 마감·고정 사본을 재계산하거나 저장하지 않는다.';
 COMMENT ON COLUMN TB_CO_MON_COST.DEV_ID IS '개발자ID; TB_HR_DEV.DEV_ID 참조 의도 (FK 미선언)';
 COMMENT ON COLUMN TB_CO_MON_COST.PROJ_ID IS '프로젝트ID: 대기 몫은 ''IDLE'', 간접 인력 줄은 ''INDRCT''(2026-10-28); TB_PJ_PROJ.PROJ_ID 참조 의도 (예약 식별자 허용으로 FK 미선언)';
 COMMENT ON COLUMN TB_CO_MON_COST.ASGN_ID IS '투입ID: TB_PJ_ASGN.ASGN_ID. **한 줄 = 그 달 투입 1건**(2026-10-28). 대기 줄은 ''IDLE'', 간접 인력 줄은 ''INDRCT''(정해진 값이라 FK 없음, 01 규칙). 같은 사람이 같은 프로젝트에 투입 2건(예: 유상 0.5 + 무상지원 0.5, 직무가 다른 추가투입)이면 2줄로 저장; TB_PJ_ASGN.ASGN_ID 참조 의도 (예약 식별자 허용으로 FK 미선언)';

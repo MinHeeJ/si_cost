@@ -32,7 +32,7 @@ export function DeveloperDrawer({
   /** 공통코드 표시명 찾기(목록과 같은 코드 응답을 쓴다). */
   label?(group: string, value: string): string;
   onClose(): void;
-  onEdit(developer: api.DeveloperDetail): void;
+  onEdit?(developer: api.DeveloperDetail): void;
   onChanged?(): void | Promise<void>;
   onDirtyChange?(dirty: boolean): void;
 }) {
@@ -113,13 +113,15 @@ export function DeveloperDrawer({
                 await load();
               }}
             />
-            <button
-              type="button"
-              data-testid="developer-edit-button"
-              onClick={() => navigate(() => onEdit(data))}
-            >
-              수정
-            </button>
+            {onEdit && (
+              <button
+                type="button"
+                data-testid="developer-edit-button"
+                onClick={() => navigate(() => onEdit(data))}
+              >
+                수정
+              </button>
+            )}
           </>
         )
       }

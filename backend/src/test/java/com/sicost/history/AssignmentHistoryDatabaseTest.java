@@ -28,7 +28,7 @@ class AssignmentHistoryDatabaseTest {
     @BeforeEach void install() throws Exception {
         db=new PostgreSqlDatabase();db.install();
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var config=new org.apache.ibatis.session.Configuration();config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
+        var config=new org.apache.ibatis.session.Configuration();config.addMapper(AggregateLockMapper.class);config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(config);factory.setPlugins(new PersistenceBoundary());factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());var json=JsonMapper.builder().findAndAddModules().build();
         var users=new CurrentUserProvider(session.getMapper(CurrentUserMapper.class));var clock=Clock.fixed(Instant.parse("2080-07-14T15:00:00Z"),ZoneId.of("Asia/Seoul"));

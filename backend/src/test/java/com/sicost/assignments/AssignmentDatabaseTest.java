@@ -41,7 +41,7 @@ class AssignmentDatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));var session=new SqlSessionTemplate(factory.getObject());
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);json=JsonMapper.builder().findAndAddModules().build();context.registerBean(ObjectMapper.class,()->json);
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
@@ -52,10 +52,10 @@ class AssignmentDatabaseTest {
         String key=UUID.randomUUID().toString().replace("-","").substring(0,12);project="P-"+key;developer="D-"+key;part="T-"+key;
         sql.update("INSERT INTO tb_bs_part(part_id,part_nm,reg_user_id) VALUES (?,?,'admin')",part,part);
         sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,bdgt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES (?,?,'MO','ING','2080-01-01','2081-12-31',100,100,0,0,'admin')",project,project);
-        sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','DEV','DRCT',?,'IDLE','admin')",developer,developer,"Ab_% "+developer,part);
+        sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','BE','DRCT',?,'IDLE','admin')",developer,developer,"Ab_% "+developer,part);
     }
     @AfterEach void close(){if(context!=null)context.close();}
-    ObjectNode create(){return json.createObjectNode().put("year",2080).put("projectId",project).put("developerId",developer).put("jobCode","DEV").put("startDate","2080-07-01").put("endDate","2080-08-31").put("contractMm","1.00").put("billingUnitPrice","101");}
+    ObjectNode create(){return json.createObjectNode().put("year",2080).put("projectId",project).put("developerId",developer).put("jobCode","BE").put("startDate","2080-07-01").put("endDate","2080-08-31").put("contractMm","1.00").put("billingUnitPrice","101");}
     String save(ObjectNode body) throws Exception {var result=mvc.perform(post("/api/assignments").contentType("application/json").content(body.toString())).andExpect(status().isCreated()).andReturn();return json.readTree(result.getResponse().getContentAsString()).path("data").path("assignment").path("id").asText();}
     List<Map<String,Object>> all(String table){return sql.queryForList("SELECT * FROM "+table);}
     @Test void createReadbackKeepsSourceInputMonthlyIdentityAndOtherSourcesUntouched() throws Exception {

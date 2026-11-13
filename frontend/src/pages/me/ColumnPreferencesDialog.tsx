@@ -9,7 +9,7 @@ export type PreferenceColumn = {
   label: string;
   required?: boolean;
 };
-// SCR-UI-27-M9: callers supply the complete view definition, excluding check/action columns.
+// Callers supply the complete view definition, excluding check/action columns.
 export function ColumnPreferencesDialog({
   open,
   onClose,
@@ -44,7 +44,11 @@ export function ColumnPreferencesDialog({
         open={open}
         title="현재 표 열 설정"
         pending={p.pending}
-        onCancel={onClose}
+        onCancel={() => {
+          setDraft(null);
+          setReset(false);
+          onClose();
+        }}
         confirmLabel="적용"
         onConfirm={async () => {
           if (!value) throw new Error("먼저 열 설정을 조회해 주세요.");
@@ -53,7 +57,16 @@ export function ColumnPreferencesDialog({
           onClose();
         }}
       >
-        <div data-screen-id="SCR-UI-27-M9">
+        <div
+          data-screen-id={
+            screenId === "UI-27"
+              ? "SCR-UI-27-M9"
+              : screenId === "UI-03"
+                ? "SCR-UI-03-M1"
+                : `SCR-${screenId}-COLS`
+          }
+          data-testid="column-preferences-panel"
+        >
           {p.loading ? (
             <p role="status">불러오는 중…</p>
           ) : !value ? (

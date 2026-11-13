@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   compareDecimal,
+  formatAmount,
+  formatDate,
+  formatMm,
+  formatRate,
   formatDateTime,
   formatDecimal,
   normalizeDecimal,
@@ -8,6 +12,43 @@ import {
 } from "./format";
 
 describe("정밀한 공통 표시와 입력", () => {
+  it("원 정수를 비파괴 이동하여 단위를 바꾸며 추가 반올림하지 않는다", () => {
+    const row = Object.freeze({
+      amount: "999999999999999999999999",
+      negative: "-1000001",
+    });
+    expect(formatAmount(row.amount, "원")).toBe(
+      "999,999,999,999,999,999,999,999",
+    );
+    expect(formatAmount(row.amount)).toBe("999,999,999,999,999,999,999.999");
+    expect(formatAmount(row.amount, "백만원")).toBe(
+      "999,999,999,999,999,999.999999",
+    );
+    expect(formatAmount("1", "백만원")).toBe("0.000001");
+    expect(formatAmount("1001000", "천원")).toBe("1,001");
+    expect(formatAmount("1001000", "백만원")).toBe("1.001");
+    expect(formatAmount(row.negative, "백만원")).toBe("−1.000001");
+    expect(formatAmount("-0")).toBe("0");
+    expect(formatAmount("0", "원")).toBe("0");
+    expect(formatAmount(null)).toBe("–");
+    expect(formatAmount(undefined)).toBe("–");
+    expect(row.amount).toBe("999999999999999999999999");
+    expect(row.negative).toBe("-1000001");
+  });
+  it("MM 두 자리·율 한 자리와 날짜를 서버 표시값 그대로 유지한다", () => {
+    expect(formatMm("1")).toBe("1.00");
+    expect(formatMm("0.10")).toBe("0.10");
+    expect(formatMm("-0.01")).toBe("−0.01");
+    expect(formatMm("0")).toBe("0.00");
+    expect(formatMm(null)).toBe("–");
+    expect(formatRate("100")).toBe("100.0%");
+    expect(formatRate("-0.1")).toBe("−0.1%");
+    expect(formatRate("0.0")).toBe("0.0%");
+    expect(formatRate(null)).toBe("–");
+    expect(formatDate("2026-01-01")).toBe("2026-01-01");
+    expect(formatDate("2025-12-31T16:00:00Z")).toBe("2026-01-01");
+    expect(formatDate(null)).toBe("–");
+  });
   it("0, NULL, 음수를 구분하고 원값을 바꾸지 않는다", () => {
     const row = Object.freeze({
       value: "99999999999.1234",

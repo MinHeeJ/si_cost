@@ -45,7 +45,7 @@ class ProjectBudgetDatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);
         configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));

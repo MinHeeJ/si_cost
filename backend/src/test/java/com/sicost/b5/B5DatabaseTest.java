@@ -38,7 +38,7 @@ class B5DatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var config=new org.apache.ibatis.session.Configuration();config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);config.addInterceptor(new PersistenceBoundary());factory.setConfiguration(config);
+        var config=new org.apache.ibatis.session.Configuration();config.addMapper(AggregateLockMapper.class);config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);config.addInterceptor(new PersistenceBoundary());factory.setConfiguration(config);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));var session=new SqlSessionTemplate(factory.getObject());
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);context.registerBean(ObjectMapper.class,()->JsonMapper.builder().findAndAddModules().build());context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(B5Mapper.class,()->session.getMapper(B5Mapper.class));context.registerBean(AssignmentActionsMapper.class,()->session.getMapper(AssignmentActionsMapper.class));context.registerBean(AssignmentMonthlyMapper.class,()->session.getMapper(AssignmentMonthlyMapper.class));context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));context.registerBean(MasterIdMapper.class,()->session.getMapper(MasterIdMapper.class));
@@ -46,8 +46,8 @@ class B5DatabaseTest {
         String key=UUID.randomUUID().toString().replace("-","").substring(0,10);project="P-"+key;developer="D-"+key;contract="C-"+key;part="T-"+key;
         sql.update("INSERT INTO tb_bs_part(part_id,part_nm,reg_user_id) VALUES (?,?,'admin')",part,part);
         sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,bdgt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES (?,?,'MO','ING','2026-01-01','2027-12-31',100,100,0,0,'admin')",project,project);
-        for(String id:List.of(developer,contract))sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','DEV','DRCT',?,'IDLE','admin')",id,id,id,part);
-        job=codeName("JOB","DEV");newType=codeName("INPUT_TYPE","NEW");subType=codeName("INPUT_TYPE","SUB");reason=sql.queryForObject("SELECT code FROM tb_sy_code WHERE code_grp_id='ASGN_CHG_RSN' AND use_yn='Y' AND del_yn='N' ORDER BY sort_ord LIMIT 1",String.class);
+        for(String id:List.of(developer,contract))sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','BE','DRCT',?,'IDLE','admin')",id,id,id,part);
+        job=codeName("JOB","BE");newType=codeName("INPUT_TYPE","NEW");subType=codeName("INPUT_TYPE","SUB");reason=sql.queryForObject("SELECT code FROM tb_sy_code WHERE code_grp_id='ASGN_CHG_RSN' AND use_yn='Y' AND del_yn='N' ORDER BY sort_ord LIMIT 1",String.class);
     }
     String codeName(String group,String code){return sql.queryForObject("SELECT code_nm FROM tb_sy_code WHERE code_grp_id=? AND code=?",String.class,group,code);}
     @AfterEach void close(){if(context!=null)context.close();}
@@ -66,14 +66,14 @@ class B5DatabaseTest {
         assertThat(service.apply(file,apply(checked))).isEqualTo(result);assertThat(service.result(result.uploadId())).isEqualTo(result);assertThat(source()).isEqualTo(before);assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_chg_hist",Long.class)).isEqualTo(audit);
     }
     @Test void duplicateAfterValidationCommitsOnlyCheckedDiagnosticsWithoutRollbackOnlyLeak() throws Exception {
-        var file=file();var checked=service.validate(file,initial());sql.update("INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ext_cnt,asgn_stat_cd,reg_user_id) VALUES ('A-concurrent',?,?,'DEV','2026-06-01','2026-06-30',1,101,'NEW',0,'ACT','admin')",project,developer);var before=source();
+        var file=file();var checked=service.validate(file,initial());sql.update("INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ext_cnt,asgn_stat_cd,reg_user_id) VALUES ('A-concurrent',?,?,'BE','2026-06-01','2026-06-30',1,101,'NEW',0,'ACT','admin')",project,developer);var before=source();
         assertThatThrownBy(()->service.apply(file,apply(checked))).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.status()).isEqualTo(422));assertThat(source()).isEqualTo(before);assertThat(mapper.upload(checked.uploadId()).status()).isEqualTo("CHECKED");assertThat(mapper.issues(checked.uploadId())).isNotEmpty();
     }
     @Test void auditFailureRollsBackAllNewSourcesInputMonthsAndApplied() throws Exception {
         var file=file();var checked=service.validate(file,initial());sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_b5_audit CHECK(trgt_tbl_nm <> 'TB_PJ_ASGN')");assertThatThrownBy(()->service.apply(file,apply(checked))).isInstanceOf(RuntimeException.class);assertThat(source()).isEmpty();assertThat(sql.queryForList("SELECT * FROM tb_pj_asgn_hist")).isEmpty();assertThat(sql.queryForList("SELECT * FROM tb_pj_asgn_mon")).isEmpty();assertThat(mapper.upload(checked.uploadId()).status()).isEqualTo("CHECKED");
     }
     @Test void sameDateWithdrawalAndNewRowsCommitTogetherAndProtectFixedMonth() throws Exception {
-        String old="A-old";sql.update("INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ext_cnt,asgn_stat_cd,reg_user_id) VALUES (?, ?,?,'DEV','2026-01-01','2026-12-31',1,101,'NEW',0,'ACT','admin')",old,project,contract);
+        String old="A-old";sql.update("INSERT INTO tb_pj_asgn(asgn_id,proj_id,dev_id,job_cd,input_bgn_dt,input_end_dt,ctrt_mm,bill_uprc,input_type_cd,ext_cnt,asgn_stat_cd,reg_user_id) VALUES (?, ?,?,'BE','2026-01-01','2026-12-31',1,101,'NEW',0,'ACT','admin')",old,project,contract);
         sql.update("INSERT INTO tb_pj_asgn_hist(asgn_id,hist_sn,asgn_chg_type_cd,aply_dt,new_ctrt_mm,new_uprc,reg_user_id) VALUES (?,1,'INPUT','2026-01-01',1,101,'admin')",old);
         sql.update("INSERT INTO tb_pj_asgn_mon(asgn_id,input_ym,dev_id,proj_id,input_day_cnt,mon_mm,aply_uprc,sales_amt,fix_yn,reg_user_id) VALUES (?,'202606',?,?,30,1,101,101,'Y','admin')",old,contract,project);var fixed=sql.queryForList("SELECT * FROM tb_pj_asgn_mon WHERE asgn_id=? AND input_ym='202606'",old);
         var file=B5Workbook.file(b->{B5Workbook.row(b,1,project,developer,job,"2026-06-01","2026-06-30","0.50","101",subType,contract);B5Workbook.row(b,2,project,developer,job,"2026-06-01","2026-07-31","0.50","101",subType,contract);});var first=service.validate(file,initial());

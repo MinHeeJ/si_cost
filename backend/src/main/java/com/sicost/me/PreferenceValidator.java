@@ -13,22 +13,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class PreferenceValidator {
     public static final List<String> GLOBAL = List.of("FAV","RECENT","MENU_FOLD","PAGE_SIZE","DENSE","AMT_UNIT");
-    private static final Map<String,List<String>> COLUMNS = Map.of(
-            "projects",List.of("id","name","customerName","contractType","contractPeriod","contractAmount","personCount","partName","status","distribution"),
-            "codes",List.of("code","name","addVal1","addVal2","sortOrder","useYn"),
-            "valueCodes",List.of("code","name","codeVal","unitNm"),
-            "mappings",List.of("sourceText","groupId","code"),
-            "standards",List.of("key","name","value","unitNm","effectiveMonth","description"),
-            "history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor"),
-            "users",List.of("userId","name","email","roles","status","lastLoginAt"),
-            "clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn"),
-            "developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate"),
-            "candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source"));
-    private static final Map<String,List<String>> REQUIRED = Map.of(
-            "projects",List.of("id","name"),
-            "codes",List.of("code","name"),"valueCodes",List.of("code","name"),
-            "mappings",List.of("sourceText","groupId","code"),"standards",List.of("key","name","value"),"history",List.of("occurredAt","target"),
-            "users",List.of("userId","name"),"clients",List.of("name"),"developers",List.of("name"),"candidates",List.of("name"));
+    private static final Map<String,List<String>> COLUMNS = Map.ofEntries(
+            Map.entry("projects",List.of("id","name","customerName","contractType","contractPeriod","contractAmount","personCount","partName","status","distribution")),
+            Map.entry("codes",List.of("code","name","addVal1","addVal2","sortOrder","useYn")),
+            Map.entry("valueCodes",List.of("code","name","codeVal","unitNm")),
+            Map.entry("mappings",List.of("sourceText","groupId","code")),
+            Map.entry("standards",List.of("key","name","value","unitNm","effectiveMonth","description")),
+            Map.entry("history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor")),
+            Map.entry("users",List.of("userId","name","email","roles","status","lastLoginAt")),
+            Map.entry("clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn")),
+            Map.entry("developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate")),
+            Map.entry("candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source")),
+            Map.entry("individualProfitability",List.of("name","companyName","position","employeeType","hireDate","utilization","mm","revenue","pay","allowance","companyInsurance","retirementReserve","personalCost","teamExpense","projectExpense","totalCost","profit","profitRate","selfInsurance","withholdingTax","incomeTax","netPay")));
+    private static final Map<String,List<String>> REQUIRED = Map.ofEntries(
+            Map.entry("projects",List.of("id","name")),
+            Map.entry("codes",List.of("code","name")),Map.entry("valueCodes",List.of("code","name")),
+            Map.entry("mappings",List.of("sourceText","groupId","code")),Map.entry("standards",List.of("key","name","value")),Map.entry("history",List.of("occurredAt","target")),
+            Map.entry("users",List.of("userId","name")),Map.entry("clients",List.of("name")),Map.entry("developers",List.of("name")),Map.entry("candidates",List.of("name")),
+            Map.entry("individualProfitability",List.of("name","revenue","totalCost","profit")));
     private final PreferenceMapper mapper;
     private final ObjectMapper json;
     private final Clock clock;
@@ -37,7 +39,7 @@ public class PreferenceValidator {
         if (GLOBAL.contains(type)) {if (!"*".equals(key)) throw InputValidator.invalid("key");}
         else if (Set.of("COLS","PERIOD").contains(type)) {
             if (!mapper.screens().contains(key)) throw InputValidator.invalid("key");
-            if (type.equals("COLS") && !Set.of("UI-01","UI-02","UI-15","UI-23","UI-27","UI-33").contains(key)) throw InputValidator.invalid("key");
+            if (type.equals("COLS") && !Set.of("UI-01","UI-02","UI-03","UI-15","UI-23","UI-27","UI-33").contains(key)) throw InputValidator.invalid("key");
             if (type.equals("PERIOD") && periodType(key).equals("NONE")) throw InputValidator.invalid("type");
         } else throw InputValidator.invalid("type");
     }
@@ -76,6 +78,7 @@ public class PreferenceValidator {
         return switch(key) {
             case "UI-01" -> Set.of("projects");
             case "UI-02" -> Set.of("developers");
+            case "UI-03" -> Set.of("individualProfitability");
             case "UI-15" -> Set.of("clients");
             case "UI-23" -> Set.of("users");
             case "UI-27" -> Set.of("codes","valueCodes","mappings","standards","history");
@@ -85,6 +88,7 @@ public class PreferenceValidator {
     }
     private void columns(String key,JsonNode value) {
         fields(value,columnViews(key));
+        if(key.equals("UI-03")&&!value.has("individualProfitability"))throw InputValidator.invalid("value");
         value.fields().forEachRemaining(entry->{
             var view=entry.getValue();fields(view,Set.of("order","hidden"));
             var order=strings(view.get("order"),"value.order");var hidden=strings(view.get("hidden"),"value.hidden");
@@ -115,7 +119,7 @@ public class PreferenceValidator {
         String kind=periodType(key);fields(value,kind.equals("YEAR_CUM")?Set.of("type","year","month"):Set.of("type","value"));
         if(!kind.equals(text(value.get("type"),"value.type")))throw InputValidator.invalid("value.type");
         var base=base();var now=now();
-        if(kind.equals("YEAR")) {int y=year(value.get("value"));if(y<base.getYear()||y>now.getYear()+1)throw InputValidator.invalid("value");}
+        if(kind.equals("YEAR")) {int y=year(value.get("value"));int max=now.getYear()+(key.equals("UI-03")?0:1);if(y<base.getYear()||y>max)throw InputValidator.invalid("value");}
         else if(kind.equals("YEAR_MONTH")) {var m=month(value.get("value"));if(m.isBefore(base)||m.isAfter(now))throw InputValidator.invalid("value");}
         else if(kind.equals("YEAR_CUM")) {
             int y=year(value.get("year"));var m=month(value.get("month"));
@@ -129,7 +133,7 @@ public class PreferenceValidator {
             case "PAGE_SIZE" -> IntNode.valueOf(50);
             case "DENSE" -> TextNode.valueOf("넓게");
             case "AMT_UNIT" -> TextNode.valueOf("천원");
-            case "COLS" -> {var o=json.createObjectNode();COLUMNS.forEach((k,v)->{if(columnViews(key).contains(k)){var c=o.putObject(k);c.set("order",json.valueToTree(v));c.putArray("hidden");}});yield o;}
+            case "COLS" -> {var o=json.createObjectNode();COLUMNS.forEach((k,v)->{if(columnViews(key).contains(k)){var c=o.putObject(k);c.set("order",json.valueToTree(v));c.set("hidden",json.valueToTree(k.equals("individualProfitability")?List.of("selfInsurance","withholdingTax","incomeTax","netPay"):List.of()));}});yield o;}
             case "PERIOD" -> {
                 String kind=periodType(key);var o=json.createObjectNode().put("type",kind);var now=now();var base=base();
                 if(kind.equals("YEAR"))o.put("value",String.format("%04d",Math.max(base.getYear(),now.getYear())));

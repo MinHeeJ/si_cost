@@ -43,7 +43,7 @@ class CodeMappingsDatabaseTest {
     @SpyBean ChangeHistoryMapper history;
     String group;
     @BeforeEach void fixture() {
-        group="T"+UUID.randomUUID().toString().replace("-","").substring(0,20);
+        group="T"+UUID.randomUUID().toString().replace("-","").substring(0,20).toUpperCase(java.util.Locale.ROOT);
         sql.update("INSERT INTO TB_SY_CODE_GRP (CODE_GRP_ID,CODE_GRP_NM,SORT_ORD,REG_USER_ID) VALUES (?, '독립 시험',1,'admin')",group);
         for(String code:List.of("A","B","STOP","DELETED"))
             sql.update("INSERT INTO TB_SY_CODE (CODE_GRP_ID,CODE,CODE_NM,SORT_ORD,USE_YN,DEL_YN,REG_USER_ID) VALUES (?,?,?,1,?,?,'admin')",
@@ -63,7 +63,7 @@ class CodeMappingsDatabaseTest {
         var response=mvc.perform(get("/api/code-mappings").param("groupId",group).param("sourceText",source)
                 .param("page",String.valueOf(page)).param("size",String.valueOf(size)))
                 .andExpect(status().isOk()).andReturn().getResponse();
-        return json.readTree(response.getContentAsString()).get("data");
+        return json.readTree(response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8)).get("data");
     }
     private long historyCount(String type) {
         return sql.queryForObject("SELECT count(*) FROM TB_SY_CHG_HIST WHERE TRGT_TBL_NM='TB_SY_CODE_MAP' AND TRGT_KEY LIKE ? AND CHG_TYPE_CD=?",Long.class,group+":%",type);

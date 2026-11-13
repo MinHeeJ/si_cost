@@ -29,6 +29,8 @@ class PeopleMigrationDatabaseTest {
         Flyway.configure().dataSource(db.source).schemas(schema).defaultSchema(schema).locations("classpath:db/migration").target("3").load().migrate();
         applied=db.sql.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
         db.sql.update("INSERT INTO tb_sy_adm_area(area_cd,area_lvl_cd,sido_nm,sido_full_nm,use_yn,reg_user_id) VALUES('1100000000','SIDO','기존명','기존 전체명','N','admin')");
+        db.sql.update("INSERT INTO tb_sy_adm_area(area_cd,upper_area_cd,area_lvl_cd,sido_nm,sido_full_nm,sgg_nm,reg_user_id) VALUES('1111000000','1100000000','SGG','기존명','기존 전체명','기존 구','admin')");
+        db.sql.update("INSERT INTO tb_sy_adm_area(area_cd,upper_area_cd,area_lvl_cd,sido_nm,sido_full_nm,sgg_nm,emd_nm,reg_user_id) VALUES('1111010100','1111000000','EMD','기존명','기존 전체명','기존 구','기존 동','admin')");
         db.sql.update("INSERT INTO tb_sy_adm_hdong(hdong_cd,area_cd,hdong_nm,reg_user_id) VALUES('1111051500','1111010100','기존 행정동명','admin')");
         developer("DEV-000042","K-0042");
         db.sql.update("INSERT INTO tb_hr_cand(cand_id,cand_nm,emp_type_cd,job_cd,grade_cd,hope_uprc,input_psbl_dt,cntc_stat_cd,cand_src_cd,reg_user_id) VALUES('CAND-000024','기존 후보','FL','DEV','MD',1,DATE '2026-01-01','NEW','SITE','admin')");

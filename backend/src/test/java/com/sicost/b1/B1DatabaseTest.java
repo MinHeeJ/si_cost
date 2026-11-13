@@ -33,7 +33,7 @@ class B1DatabaseTest {
         db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES('B1-part','급여시험파트','N','Y','admin')");
         for(String id:List.of("D-one","D-two"))db.sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,use_yn,reg_user_id) VALUES(?,?,?,'FL','DEV','INDRCT','B1-part','RETIRE','N','admin')",id,id.equals("D-one")?"0001":"0002",id);
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(configuration);factory.setPlugins(new PersistenceBoundary());factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());mapper=session.getMapper(B1Mapper.class);
         var users=new CurrentUserProvider(session.getMapper(CurrentUserMapper.class));var clock=Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"),ZoneId.of("Asia/Seoul"));

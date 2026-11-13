@@ -43,6 +43,27 @@ public class ExcelExportService {
         }
     }
     @FunctionalInterface public interface Rows { void read(Consumer<List<Object>> sink); }
+    public record Sheet(String name, List<Column> columns, Rows rows) {}
+    public record Information(String label, Object value) {}
+    public record WorkbookData(List<Sheet> sheets, List<Information> information, long people, String year) {}
+    @FunctionalInterface public interface WorkbookSource { WorkbookData read(); }
+
+    /** The callback, including all source/preference reads, runs once in the export snapshot. */
+    public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
+        if (!"UI-03".equals(specification.screenId())) throw InputValidator.invalid("screenId");
+        return generateFile(specification, request, workbook -> {
+            WorkbookData data = source.read();
+            if (data.year() == null || !data.year().matches("[0-9]{4}")) throw InputValidator.invalid("year");
+            for (Sheet sheet : data.sheets()) {
+                validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
+                SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), true);
+                sheet.rows().read(writer::append);
+            }
+            return new Generated(data.people(), "_" + data.year(), data.information());
+        });
+    }
+    private record Generated(long count, String qualifier, List<Information> information) {}
+    @FunctionalInterface private interface Writer { Generated write(SXSSFWorkbook workbook); }
 
     public Download generate(Specification specification, Rows rows, HttpServletRequest request) {
         return generate(specification, rows, request, workbook -> {});
@@ -110,8 +131,64 @@ public class ExcelExportService {
             throw new ApiException(500, "INTERNAL_ERROR", "다운로드 파일 또는 접근기록을 생성하지 못했습니다. 다시 시도해 주세요.");
         }
     }
+    private Download generateFile(Specification specification, HttpServletRequest request, Writer writer) {
+        validate(specification);
+        Path file = null;
+        try {
+            file = Files.createTempFile("sicost-export-", ".xlsx");
+            Path destination = file;
+            LocalDateTime now = LocalDateTime.now(clock.withZone(TimeConfiguration.SEOUL));
+            TransactionTemplate snapshot = new TransactionTemplate(transactions);
+            snapshot.setReadOnly(true); snapshot.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+            snapshot.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            Generated generated = snapshot.execute(status -> {
+                CurrentUserProvider.CurrentUser actor = users.currentUser();
+                SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+                workbook.setCompressTempFiles(true);
+                try (workbook; OutputStream output = Files.newOutputStream(destination)) {
+                    Generated result = writer.write(workbook);
+                    var info = workbook.createSheet("다운로드정보");
+                    information(info.createRow(0), "처리자ID", actor.userId());
+                    information(info.createRow(1), "처리자명", actor.name());
+                    information(info.createRow(2), "생성시각", now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    information(info.createRow(3), "조건", specification.conditions());
+                    information(info.createRow(4), "단위", result.information().stream().filter(i -> "단위".equals(i.label()))
+                        .map(i -> i.value().toString()).findFirst().orElse(specification.amountUnit()));
+                    Row count = info.createRow(5); count.createCell(0).setCellValue("총건수"); count.createCell(1).setCellValue(result.count());
+                    int index = 6;
+                    for (Information item : result.information()) {
+                        Row row = info.createRow(index++); row.createCell(0).setCellValue(item.label());
+                        var cell = row.createCell(1);
+                        if (item.value() instanceof Number number) cell.setCellValue(number.doubleValue());
+                        else if (item.value() != null) cell.setCellValue(item.value().toString());
+                    }
+                    workbook.write(output);
+                    return result;
+                } catch (IOException e) { throw new IllegalStateException("엑셀 파일을 생성하지 못했습니다."); }
+                finally { workbook.dispose(); }
+            });
+            TransactionTemplate audit = new TransactionTemplate(transactions);
+            audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), generated.count()), request));
+            String prefix = switch (specification.kind()) {
+                case "개발자" -> "개발자목록";
+                case "개발자_등록양식" -> "B8_개발자양식";
+                case "개발자_업로드검사" -> "B8_검사";
+                case "재무_등록양식" -> "B2_재무양식";
+                case "재무_업로드검사" -> "B2_검사";
+                default -> specification.kind();
+            };
+            String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
+            return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx");
+        } catch (Exception e) {
+            if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
+            if (e instanceof ApiException api) throw api;
+            throw new ApiException(500, "INTERNAL_ERROR", "다운로드 파일 또는 접근기록을 생성하지 못했습니다. 다시 시도해 주세요.");
+        }
+    }
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
+            case "UI-03" -> Set.of("개인원가수익");
             case "UI-15" -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
             case "UI-02" -> Set.of("개발자", "개발자_등록양식", "개발자_업로드검사", "급여_등록양식", "급여_업로드검사");
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");
@@ -142,9 +219,14 @@ public class ExcelExportService {
         long total;
         int sheets;
         int row;
-        SheetRows(SXSSFWorkbook workbook, List<Column> columns) { this.workbook = workbook; this.columns = List.copyOf(columns); nextSheet(); }
+        final String name;
+        final boolean numericOnly;
+        SheetRows(SXSSFWorkbook workbook, List<Column> columns) { this(workbook, columns, "데이터", false); }
+        SheetRows(SXSSFWorkbook workbook, List<Column> columns, String name, boolean numericOnly) {
+            this.workbook = workbook; this.columns = List.copyOf(columns); this.name = name; this.numericOnly = numericOnly; nextSheet();
+        }
         void nextSheet() {
-            sheet = workbook.createSheet(++sheets == 1 ? "데이터" : "데이터_" + sheets);
+            sheet = workbook.createSheet(++sheets == 1 ? name : name + "_" + sheets);
             Row header = sheet.createRow(0);
             for (int i = 0; i < columns.size(); i++) header.createCell(i).setCellValue(columns.get(i).title());
             row = 1;
@@ -160,8 +242,9 @@ public class ExcelExportService {
                 Column column = columns.get(i);
                 if (column.type() == CellType.NUMBER) {
                     BigDecimal decimal = value instanceof BigDecimal number ? number : new BigDecimal(value.toString());
-                    if (decimal.stripTrailingZeros().precision() > 15 || !Double.isFinite(decimal.doubleValue())
-                            || BigDecimal.valueOf(decimal.doubleValue()).compareTo(decimal) != 0) {
+                    if (numericOnly && !Double.isFinite(decimal.doubleValue())) throw InputValidator.invalid("number");
+                    if (!numericOnly && (decimal.stripTrailingZeros().precision() > 15 || !Double.isFinite(decimal.doubleValue())
+                            || BigDecimal.valueOf(decimal.doubleValue()).compareTo(decimal) != 0)) {
                         cell.setCellValue(decimal.toPlainString());
                     } else cell.setCellValue(decimal.doubleValue());
                 } else {

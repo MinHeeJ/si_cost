@@ -1,6 +1,19 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { PreferencesProvider } from "../me/usePreferences";
+import type { PreferenceApi } from "../me/preferencesApi";
+import {
+  profitabilityColumns,
+  profitabilityReferenceColumns,
+} from "../profitability/profitabilityColumns";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PeriodSelector } from "./PeriodSelector";
 import { ScreenPeriodBar } from "./ScreenPeriodBar";
@@ -39,8 +52,34 @@ const menus = [
     })),
   },
 ];
+const columnApi: PreferenceApi = {
+  getPreferences: async () => ({
+    items: [
+      {
+        type: "COLS",
+        key: "UI-03",
+        value: {
+          individualProfitability: {
+            order: profitabilityColumns.map((c) => c.id),
+            hidden: [...profitabilityReferenceColumns],
+          },
+        },
+        revision: null,
+        stored: false,
+      },
+    ],
+  }),
+  putPreference: vi.fn(),
+  deletePreference: vi.fn(),
+};
+const render = (ui: ReactElement) =>
+  renderUi(<PreferencesProvider api={columnApi}>{ui}</PreferencesProvider>);
+function Location() {
+  return <output data-testid="current-path">{useLocation().pathname}</output>;
+}
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.getSharedCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({
     userId: "admin",
@@ -67,6 +106,64 @@ beforeEach(() => {
   });
 });
 describe("controlled 기간 선택", () => {
+  it("UI-03만 내년 선택을 막고 이전 유효 YEAR를 revision과 함께 복원한다", async () => {
+    vi.mocked(api.getPeriodContext).mockResolvedValue({
+      ...context,
+      cashBaseMonth: "2025-01",
+    });
+    vi.mocked(api.getSharedPreferences).mockResolvedValue({
+      items: [
+        {
+          type: "PERIOD",
+          key: "UI-03",
+          value: { type: "YEAR", value: "2025" },
+          stored: true,
+          revision: "period-original",
+        },
+      ],
+    });
+    render(<ScreenPeriodBar screenId="UI-03" />);
+    expect(await screen.findByLabelText("기간")).toHaveValue("2025");
+    expect(
+      screen.queryByRole("option", { name: "2027년" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("기간"), {
+      target: { value: "2026" },
+    });
+    await waitFor(() =>
+      expect(api.putSharedPreference).toHaveBeenCalledWith(
+        "PERIOD",
+        "UI-03",
+        { type: "YEAR", value: "2026" },
+        "period-original",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("다음 기간")).toBeDisabled(),
+    );
+    fireEvent.click(screen.getByLabelText("다음 기간"));
+    expect(api.putSharedPreference).toHaveBeenCalledTimes(1);
+  });
+  it("UI-03의 저장된 내년은 안내와 임시 기본값만 표시하고 자동 수정하지 않는다", async () => {
+    vi.mocked(api.getSharedPreferences).mockResolvedValue({
+      items: [
+        {
+          type: "PERIOD",
+          key: "UI-03",
+          value: { type: "YEAR", value: "2027" },
+          stored: true,
+          revision: "future-period",
+        },
+      ],
+    });
+    render(<ScreenPeriodBar screenId="UI-03" />);
+    expect(await screen.findByLabelText("기간")).toHaveValue("2026");
+    expect(
+      screen.getByText(/저장된 기간이 현재 허용 범위/),
+    ).toBeInTheDocument();
+    expect(api.putSharedPreference).not.toHaveBeenCalled();
+    expect(api.deleteSharedPreference).not.toHaveBeenCalled();
+  });
   it.each(["YEAR", "YEAR_MONTH"] as const)(
     "%s min/max/disabled는 이벤트를 만들지 않는다",
     (type) => {
@@ -255,6 +352,74 @@ describe("controlled 기간 선택", () => {
   });
 });
 describe("공식 화면과 공통 틀", () => {
+  it("UI-03 메뉴·작업탭·즐겨찾기 재진입은 동일 경로와 마운트된 화면을 유지한다", async () => {
+    let favorites: api.SharedPreference = {
+      type: "FAV",
+      key: "*",
+      value: [],
+      stored: false,
+      revision: null,
+    };
+    vi.mocked(api.getSharedPreferences).mockImplementation(async () => ({
+      items: [favorites],
+    }));
+    vi.mocked(api.putSharedPreference).mockImplementation(
+      async (type, key, value) => {
+        const preference = {
+          type,
+          key,
+          value,
+          stored: true,
+          revision: "saved",
+        };
+        if (type === "FAV") favorites = preference;
+        return { changed: true, preference };
+      },
+    );
+    render(
+      <MemoryRouter initialEntries={["/UI-03"]}>
+        <SharedApplication />
+        <Location />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("heading", { name: "DB UI-03" });
+    const root = screen.getByTestId("individual-profitability-screen");
+    await userEvent.click(
+      screen.getByRole("button", { name: "즐겨찾기 추가" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "즐겨찾기 해제" }),
+      ).toBeEnabled(),
+    );
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "열린 화면" })).getByRole(
+        "button",
+        { name: "DB UI-16" },
+      ),
+    );
+    expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-16");
+    const sidebar = screen.getByRole("complementary", { name: "주 메뉴" });
+    const links = within(sidebar).getAllByRole("link", { name: "DB UI-03" });
+    expect(links[0]).toHaveAttribute("href", "/UI-03");
+    await userEvent.click(links[0]);
+    expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-03");
+    expect(screen.getByTestId("individual-profitability-screen")).toBe(root);
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "열린 화면" })).getByRole(
+        "button",
+        { name: "DB UI-16" },
+      ),
+    );
+    await userEvent.click(
+      within(screen.getByRole("navigation", { name: "열린 화면" })).getByRole(
+        "button",
+        { name: "DB UI-03" },
+      ),
+    );
+    expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-03");
+    expect(screen.getByTestId("individual-profitability-screen")).toBe(root);
+  });
   // 실제 업무 화면의 직접 진입·입력·재조회는 router.test.tsx가 확인한다.
   const implementedPeopleScreens = ["UI-02", "UI-12", "UI-13", "UI-33"];
   it.each(
@@ -268,7 +433,17 @@ describe("공식 화면과 공통 틀", () => {
       </MemoryRouter>,
     );
     await screen.findByRole("heading", { name: `DB ${id}` });
-    if (id !== "UI-27")
+    if (id === "UI-03") {
+      expect(screen.getByTestId("profitability-overview")).toBeInTheDocument();
+      expect(
+        screen.getByRole("textbox", { name: "이름 검색" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("profitability-search-button"),
+      ).toBeInTheDocument();
+    } else if (id === "UI-10") {
+      expect(screen.getByTestId("financial-editor")).toBeInTheDocument();
+    } else if (id !== "UI-27")
       expect(
         screen
           .getAllByText("이 화면은 다음 단계에서 만듭니다.")

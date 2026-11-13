@@ -903,6 +903,10 @@ describe("공식 진입점 합성", () => {
           await screen.findByTestId("financial-items-panel"),
         ).toBeVisible();
         expect(financial.getFinancialItems).toHaveBeenCalled();
+      } else if (id === "UI-03") {
+        expect(await screen.findByTestId("profitability-overview")).toBeVisible();
+        expect(screen.getByRole("textbox", { name: "이름 검색" })).toBeVisible();
+        expect(screen.getByTestId("profitability-search-button")).toBeVisible();
       } else if (id === "UI-02" || id === "UI-33") {
         expect(
           await screen.findByTestId(

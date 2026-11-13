@@ -162,6 +162,1248 @@ x-basic135-open-questions:
   question: 동월 첫요청 무저장 확인을 409 DUPLICATE_BILL_CONFIRMATION_REQUIRED 및 ApiError.details.billing으로 표현하는 내부명/HTTP 매핑.
     신규경로 발명 없이 원문 동작을 투영하며 승인 확정 아님.
 paths:
+  /api/individual-profitability:
+    get:
+      operationId: getIndividualProfitability
+      summary: 개인 원가·수익 조회
+      description: BASIC-137 원문 계약. 인증 유예·임시 관리자의 전체 기능/열을 보존한다. 요청본문·업무 상태전이 없음.
+      security: []
+      x-related-requirements:
+      - REQ-1142
+      - REQ-1145
+      - REQ-1149
+      - REQ-1164
+      - REQ-1169
+      - REQ-1225
+      - REQ-1226
+      - REQ-1229
+      - REQ-1230
+      - REQ-1233
+      - REQ-1234
+      - REQ-1235
+      - REQ-1236
+      - REQ-1237
+      - REQ-1239
+      - REQ-1240
+      - REQ-1241
+      - REQ-1242
+      - REQ-1243
+      - REQ-1244
+      - REQ-1245
+      - REQ-1246
+      - REQ-1247
+      - REQ-1248
+      - REQ-1249
+      - REQ-1250
+      - REQ-1251
+      - REQ-1252
+      - REQ-1253
+      - REQ-1256
+      - REQ-1257
+      - REQ-1263
+      - REQ-1268
+      - REQ-1269
+      - REQ-1270
+      parameters:
+      - name: year
+        in: query
+        required: false
+        description: 기본 서울 Clock 올해. 운영시작연도~올해만 허용·올해 현재월/과거12월과 CASH_BASE_YM 교차
+        schema:
+          type: integer
+      - name: view
+        in: query
+        required: false
+        description: 연 누계 또는 사람별 월평균. 자식은 월 원본
+        schema:
+          type: string
+          enum:
+          - CUMULATIVE
+          - MONTHLY_AVERAGE
+          default: CUMULATIVE
+      - name: includeTurnkey
+        in: query
+        required: false
+        description: true/false만 허용·TK 단가만 제외하고 MM/비용/가동률 보존
+        schema:
+          type: boolean
+          default: true
+      - name: name
+        in: query
+        required: false
+        description: trim 후 0~100자·대소문자 구분 부분일치
+        schema:
+          type: string
+          maxLength: 100
+      - name: employeeType
+        in: query
+        required: false
+        description: 생략 전체·기존 EMP_TYPE 코드 검증
+        schema:
+          type: string
+      - name: companyId
+        in: query
+        required: false
+        description: SELF는 BLNG_CLNT_ID NULL·그 외 실제 협력사 ID
+        schema:
+          type: string
+      - name: partId
+        in: query
+        required: false
+        description: UNASSIGNED는 사람 DEV.PART_ID NULL·본사는 기존 실제 HQ 파트 ID; 프로젝트파트 아님
+        schema:
+          type: string
+      - name: jobCode
+        in: query
+        required: false
+        description: 현재 개발자 주직무·기존 코드 검증
+        schema:
+          type: string
+      - name: show
+        in: query
+        required: false
+        description: 보기 계산 후 LOSS=확정표시이익<0, CONCURRENT=같은달2투입이상 또는 MM합>1.00
+        schema:
+          type: string
+          enum:
+          - ALL
+          - LOSS
+          - CONCURRENT
+          default: ALL
+      - name: sort
+        in: query
+        required: false
+        description: 생략 사람파트표시명 ASC→이름 ASC→DEV_ID ASC. 숫자는 실제수치·NULL 양방향 항상뒤
+        schema:
+          type: string
+          enum:
+          - name
+          - companyName
+          - employeeType
+          - hireDate
+          - utilization
+          - mm
+          - revenue
+          - totalCost
+          - profit
+          - profitRate
+      - name: direction
+        in: query
+        required: false
+        description: ASC/DESC 외 400
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      - name: page
+        in: query
+        required: false
+        description: 1이상·초과페이지 빈목록
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: 페이지 크기
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      responses:
+        '200':
+          description: 동일 일관스냅샷에서 계산한 정상 조회. 미확인은 명시 상태/null과 진단으로 반환한다.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  description: ''
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/IndividualProfitabilityData'
+                  required:
+                  - data
+                  additionalProperties: true
+        '400':
+          description: 잘못된 기간/코드/열/중복 쿼리/알 수 없는 필드 또는 허용 형식 위반
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 서버 예외. 개인급여/원가를 일반 오류 로그에 남기지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      x-query-validation:
+        allowed:
+        - year
+        - view
+        - includeTurnkey
+        - name
+        - employeeType
+        - companyId
+        - partId
+        - jobCode
+        - show
+        - sort
+        - direction
+        - page
+        - size
+        duplicate: 중복 쿼리는400
+        unknown: 미등록 필드는400
+      x-business-rules:
+      - UI-03 안내를 개인 원가·수익 조회로 교체한다.
+      - 실제 로그인·역할·데이터 범위·민감열 제한은 후속이며 임시 관리자에게 이번 모든 기능과 열을 제공한다.
+      - UI-03 YEAR는 올해 현재월까지·과거 12월까지이며 내년 선택은 불가하다.
+      - 서울 Clock의 올해를 기본으로 운영시작~올해만 조회하고 CASH_BASE_YM 이전을 생성하지 않는다.
+      - 조회·다운로드·새로고침·보기 전환은 TB_CO_MON_COST/급여/배정/손익을 INSERT/UPDATE/DELETE하지 않는다.
+      - TK 단가만 제외하고 MM/원가/가동률 보존·혼합은 MO/DP만·TK전용 단가NULL/평균단가분모제외·이익은−원가로 평균/적자수 포함한다.
+      - TK 제외는 응답 표시모델만 바꾸고 원본은 불변이며 TK단가 미확인만 제외해 비TK 이익 표시 가능·비용 미확인은 유지한다.
+      - 행과 사람월별 costComplete/revenueComplete/estimated/issues를 반환하고 필요월 하나라도 미확인이면 해당 합계/평균/이익NULL·알려진 값/문제월 별도다.
+      - 미확인을 정상0/흑자/적자로 단정하지 않고 적자필터/적자수에서 제외한다.
+      - 사람당 부모1행·직접월만 집계·부모MM은 실제행ASGN_MM합으로 고정IDLE/INDRCT 제외다.
+      - P=L·E1/E2 실제행합·C=P+E1+E2·R=개인단가합·G=R−C·이익률 R>0만 G/R×100 1자리다.
+      - 월기초금액 합·프로젝트+대기 노동비=P·급여구성 사람월1회이며 프로젝트수로 중복하지 않는다.
+      - FT/CT 직접 재직운영 근무월(대기포함)·FL/OS MM>0월·전체무급휴직 제외·유급휴직 포함·비휴직급여0 포함·월구분변경 중복0으로 N을 센다.
+      - 각 기초누계/N DOWN·P 월인건비누계/N·C=평균P+E1+E2·G=평균R−C·MM HALF_UP2·N0 금액NULL·절사차이 도움말이다.
+      - 연초/입사월~기준월/퇴사월의 운영이후 직접 재직달·입사NULL 연초이며 간접월 제외·범위 도움말이다.
+      - MM>0월은0.40도1달·TK/FREE/IN/PRE포함·취소/전체휴직 제외·1자리율/투입달÷재직달 도움말·보기와 무관하다.
+      - 기준월 직접·기간 재직자를 대상으로 해당연도퇴사자는 마지막재직월급여분류·기준일휴직자는 표제외/총인원포함·중지로 과거 숨김0이다.
+      - 이름trim 0~100 부분일치·직원구분·SELF/협력사·사람파트 HQ/미지정·주직무로 검색하며 현재마스터 표시와 월snapshot 계산을 구별한다.
+      - ALL/LOSS/CONCURRENT와 TK포함 기본·제외를 제공하고 같은달2투입 또는T>1 동시투입·현재보기확정이익<0 적자를 전환계산후 필터링한다.
+      - 조회/Enter로 적용·초기화 기본·기본 사람파트명/이름/DEV_ID ASC·숫자 실제값·NULL뒤·허용10정렬키/ASC DESC만이다.
+      - page≥1·size20/50/100 기본50·초과페이지빈목록·필터/정렬/크기변경 첫페이지/펼침해제다.
+      - 기준월 재직직접·휴직포함·직원구분전체 총인원과 휴직·월평균가동/가득 인원을 표시한다.
+      - 필터 부모단가합/유효단가인원·대기/IN0포함·TK전용NULL제외·미확인 있으면 불완전 안내다.
+      - 필터원가합/휴직제외 표인원이며 원가미확인 있으면–/대상수다.
+      - 필터 이익합/표인원·확인음수만계수·미확인 평균–와 확인분 적자수다.
+      - 회사 H/U/F 월평균으로 가동/가득률을 계산하고 UI 필터로 분모를 바꾸지 않는다.
+      - CLOSE는 사본MM/계약/FREE_MM·H 재직직접·U MM>0·F MO/DP유상·사람중복0·월평균H/U/F 1자리 HALF_UP 후 그 값으로 율 계산·전체휴직H만이다.
+      - 기본접힘 주직무×초급/중급/고급/특급/전체·기존등급/미분류·현재필터보기 개인이익합/사람수 DOWN와 인원·0명/미확인–다.
+      - 원문18기본열과4숨김참고열·누계급여제목·보기/기간표시를 제공하고 부모 프로젝트/계약유형/가득률열은 추가하지 않는다.
+      - 기간 어느달T>1.00만 초과배지·문제월/MM 도움말·단가0율–·예정/미확인 배지와 설명을 구별한다.
+      - 전체필터 부모MM/금액합·페이지/펼침/숨김불변·평균은개인평균행합·총이익/총유효단가율·인원/가동률/개별율합산0이다.
+      - 하단에 원문 내부·대기와 회사손익 차이 문장을 그대로 표시하고 급여/분모/경비/TK참고액/평균 도움말은같은서버근거를쓴다.
+      - year/view/includeTurnkey/name/employeeType/companyId/partId/jobCode/show/page/size/sort/direction과 원문 기본값·strict
+        boolean·기간/코드/열/중복쿼리/미등록필드400이다.
+      - 생략전체·SELF=NULL소속·UNASSIGNED=NULL사람파트·HQ실제ID·이름대소문자구분·코드라벨DB조회·선택값마스터저장0이다.
+      - items/total/page/size·기준기간/보기·요약·전체합계·공헌이익·미확인/예정건수·계산시점을반환한다.
+      x-source-locators:
+      - canonical_id: REQ-1142
+        document: SPEC-REQUEST.md
+        line: 15
+      - canonical_id: REQ-1145
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1149
+        document: SPEC-REQUEST.md
+        line: 28
+      - canonical_id: REQ-1164
+        document: SPEC-REQUEST.md
+        line: 54
+      - canonical_id: REQ-1169
+        document: SPEC-REQUEST.md
+        line: 60
+      - canonical_id: REQ-1225
+        document: SPEC-REQUEST.md
+        line: 197
+      - canonical_id: REQ-1226
+        document: SPEC-REQUEST.md
+        line: 199
+      - canonical_id: REQ-1229
+        document: SPEC-REQUEST.md
+        line: 207
+      - canonical_id: REQ-1230
+        document: SPEC-REQUEST.md
+        line: 207
+      - canonical_id: REQ-1233
+        document: SPEC-REQUEST.md
+        line: 217
+      - canonical_id: REQ-1234
+        document: SPEC-REQUEST.md
+        line: 219
+      - canonical_id: REQ-1235
+        document: SPEC-REQUEST.md
+        line: 221
+      - canonical_id: REQ-1236
+        document: SPEC-REQUEST.md
+        line: 225
+      - canonical_id: REQ-1237
+        document: SPEC-REQUEST.md
+        line: 227
+      - canonical_id: REQ-1239
+        document: SPEC-REQUEST.md
+        line: 233
+      - canonical_id: REQ-1240
+        document: SPEC-REQUEST.md
+        line: 235
+      - canonical_id: REQ-1241
+        document: SPEC-REQUEST.md
+        line: 241
+      - canonical_id: REQ-1242
+        document: SPEC-REQUEST.md
+        line: 243
+      - canonical_id: REQ-1243
+        document: SPEC-REQUEST.md
+        line: 245
+      - canonical_id: REQ-1244
+        document: SPEC-REQUEST.md
+        line: 247
+      - canonical_id: REQ-1245
+        document: SPEC-REQUEST.md
+        line: 247
+      - canonical_id: REQ-1246
+        document: SPEC-REQUEST.md
+        line: 251
+      - canonical_id: REQ-1247
+        document: SPEC-REQUEST.md
+        line: 252
+      - canonical_id: REQ-1248
+        document: SPEC-REQUEST.md
+        line: 253
+      - canonical_id: REQ-1249
+        document: SPEC-REQUEST.md
+        line: 254
+      - canonical_id: REQ-1250
+        document: SPEC-REQUEST.md
+        line: 255
+      - canonical_id: REQ-1251
+        document: SPEC-REQUEST.md
+        line: 257
+      - canonical_id: REQ-1252
+        document: SPEC-REQUEST.md
+        line: 261
+      - canonical_id: REQ-1253
+        document: SPEC-REQUEST.md
+        line: 265
+      - canonical_id: REQ-1256
+        document: SPEC-REQUEST.md
+        line: 271
+      - canonical_id: REQ-1257
+        document: SPEC-REQUEST.md
+        line: 273
+      - canonical_id: REQ-1263
+        document: SPEC-REQUEST.md
+        line: 279
+      - canonical_id: REQ-1268
+        document: SPEC-REQUEST.md
+        line: 295
+      - canonical_id: REQ-1269
+        document: SPEC-REQUEST.md
+        line: 297
+      - canonical_id: REQ-1270
+        document: SPEC-REQUEST.md
+        line: 299
+      x-side-effects:
+      - 원가/급여/배정/손익 INSERT/UPDATE/DELETE 0건. 설정·원천 자동복구/0사본 생성 없음.
+      x-pagination:
+        mode: page
+        description: page≥1·size20/50/100 기본50. totals/summary/contributions는 현재필터 전체 결과
+      x-required-tests:
+      - 올해/과거/CASH_BASE_YM 경계와 미래연도400·중복year/미등록field/문자열 boolean400
+      - TK전용 미포함 단가null·이익−원가·대기 유효0 단가 보존·원가/MM/가동률 불변
+      - 동일필터 page/size 변경 시 전체합계/요약/공헌이익 불변·초과page items=[]
+      - 월평균 표시P+팀비+경비=C·R−C=G·개별N0 null·급여 사람월 중복합산0
+      - 회사 H/U/F 먼저 HALF_UP1 후 표시분모로 율 계산·이름/LOSS 필터와 독립
+      - 인증헤더 없는 임시관리자 조회에 모든 참고열 제공·원천/감사값 변경0건
+  /api/individual-profitability/{personId}:
+    get:
+      operationId: getIndividualProfitabilityPerson
+      summary: 개인 월별 원가 상세 조회
+      description: BASIC-137 원문 계약. 인증 유예·임시 관리자의 전체 기능/열을 보존한다. 요청본문·업무 상태전이 없음.
+      security: []
+      x-related-requirements:
+      - REQ-1169
+      - REQ-1227
+      - REQ-1228
+      - REQ-1229
+      - REQ-1231
+      - REQ-1238
+      - REQ-1254
+      - REQ-1255
+      - REQ-1268
+      - REQ-1270
+      - REQ-1271
+      parameters:
+      - name: personId
+        in: path
+        required: true
+        description: 실제 DEV_ID
+        schema:
+          type: string
+          maxLength: 20
+      - name: year
+        in: query
+        required: false
+        description: 기본 서울 Clock 올해. 운영시작연도~올해만 허용·올해 현재월/과거12월과 CASH_BASE_YM 교차
+        schema:
+          type: integer
+      - name: view
+        in: query
+        required: false
+        description: 연 누계 또는 사람별 월평균. 자식은 월 원본
+        schema:
+          type: string
+          enum:
+          - CUMULATIVE
+          - MONTHLY_AVERAGE
+          default: CUMULATIVE
+      - name: includeTurnkey
+        in: query
+        required: false
+        description: true/false만 허용·TK 단가만 제외하고 MM/비용/가동률 보존
+        schema:
+          type: boolean
+          default: true
+      - name: name
+        in: query
+        required: false
+        description: trim 후 0~100자·대소문자 구분 부분일치
+        schema:
+          type: string
+          maxLength: 100
+      - name: employeeType
+        in: query
+        required: false
+        description: 생략 전체·기존 EMP_TYPE 코드 검증
+        schema:
+          type: string
+      - name: companyId
+        in: query
+        required: false
+        description: SELF는 BLNG_CLNT_ID NULL·그 외 실제 협력사 ID
+        schema:
+          type: string
+      - name: partId
+        in: query
+        required: false
+        description: UNASSIGNED는 사람 DEV.PART_ID NULL·본사는 기존 실제 HQ 파트 ID; 프로젝트파트 아님
+        schema:
+          type: string
+      - name: jobCode
+        in: query
+        required: false
+        description: 현재 개발자 주직무·기존 코드 검증
+        schema:
+          type: string
+      - name: show
+        in: query
+        required: false
+        description: 보기 계산 후 LOSS=확정표시이익<0, CONCURRENT=같은달2투입이상 또는 MM합>1.00
+        schema:
+          type: string
+          enum:
+          - ALL
+          - LOSS
+          - CONCURRENT
+          default: ALL
+      - name: sort
+        in: query
+        required: false
+        description: 생략 사람파트표시명 ASC→이름 ASC→DEV_ID ASC. 숫자는 실제수치·NULL 양방향 항상뒤
+        schema:
+          type: string
+          enum:
+          - name
+          - companyName
+          - employeeType
+          - hireDate
+          - utilization
+          - mm
+          - revenue
+          - totalCost
+          - profit
+          - profitRate
+      - name: direction
+        in: query
+        required: false
+        description: ASC/DESC 외 400
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      responses:
+        '200':
+          description: 동일 일관스냅샷에서 계산한 정상 조회. 미확인은 명시 상태/null과 진단으로 반환한다.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  description: ''
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/IndividualProfitabilityPersonData'
+                  required:
+                  - data
+                  additionalProperties: true
+        '400':
+          description: 잘못된 기간/코드/열/중복 쿼리/알 수 없는 필드 또는 허용 형식 위반
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 서버 예외. 개인급여/원가를 일반 오류 로그에 남기지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: 존재하지 않는 DEV_ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      x-query-validation:
+        allowed:
+        - year
+        - view
+        - includeTurnkey
+        - name
+        - employeeType
+        - companyId
+        - partId
+        - jobCode
+        - show
+        - sort
+        - direction
+        duplicate: 중복 쿼리는400
+        unknown: 미등록 필드는400
+      x-business-rules:
+      - 조회·다운로드·새로고침·보기 전환은 TB_CO_MON_COST/급여/배정/손익을 INSERT/UPDATE/DELETE하지 않는다.
+      - CLOSE 모든 사본PK와 당시 배분/단가/경비/분류/MM/파트를 읽고 월인건비는 모든 사본 LABOR_ALLOC_AMT합·급여참고는 보호된 월급여다.
+      - 현재 표시명/직무 LEFT JOIN으로 원천마스터 부재에도 사본을 남기고 ID/자료 없음으로 표시한다.
+      - 행과 사람월별 costComplete/revenueComplete/estimated/issues를 반환하고 필요월 하나라도 미확인이면 해당 합계/평균/이익NULL·알려진 값/문제월 별도다.
+      - UI필터 독립 월전체/사람상세/진단에 완전성·사람월·누락원천·관련화면을 제공한다.
+      - 평균보기에서도 펼침 상세는 월평균 전 월별 원본이며 표제/도움말로 구별한다.
+      - 부모펼침/현재페이지 모두펼치기/모두접기·DEV_ID 부모키/월복합PK 자식키·월/PROJ/ASGN ASC·단일투입도펼침이다.
+      - YYYY-MM 프로젝트·ASGN직무/무상/내부/PRE/실주대기·MM/단가/노동비/경비/원가/이익/율·고정IDLE 남는몫·부모급여 복제0이다.
+      - year/view/includeTurnkey/name/employeeType/companyId/partId/jobCode/show/page/size/sort/direction과 원문 기본값·strict
+        boolean·기간/코드/열/중복쿼리/미등록필드400이다.
+      - items/total/page/size·기준기간/보기·요약·전체합계·공헌이익·미확인/예정건수·계산시점을반환한다.
+      - personId와동일조회문맥으로월별원본/인건비출처/문제·없는DEV_ID404·금액수정삭제API없음·미확인은정상명시상태다.
+      x-source-locators:
+      - canonical_id: REQ-1169
+        document: SPEC-REQUEST.md
+        line: 60
+      - canonical_id: REQ-1227
+        document: SPEC-REQUEST.md
+        line: 203
+      - canonical_id: REQ-1228
+        document: SPEC-REQUEST.md
+        line: 205
+      - canonical_id: REQ-1229
+        document: SPEC-REQUEST.md
+        line: 207
+      - canonical_id: REQ-1231
+        document: SPEC-REQUEST.md
+        line: 209
+      - canonical_id: REQ-1238
+        document: SPEC-REQUEST.md
+        line: 229
+      - canonical_id: REQ-1254
+        document: SPEC-REQUEST.md
+        line: 267
+      - canonical_id: REQ-1255
+        document: SPEC-REQUEST.md
+        line: 269
+      - canonical_id: REQ-1268
+        document: SPEC-REQUEST.md
+        line: 295
+      - canonical_id: REQ-1270
+        document: SPEC-REQUEST.md
+        line: 299
+      - canonical_id: REQ-1271
+        document: SPEC-REQUEST.md
+        line: 299
+      x-side-effects:
+      - 원가/급여/배정/손익 INSERT/UPDATE/DELETE 0건. 설정·원천 자동복구/0사본 생성 없음.
+      x-pagination:
+        mode: all
+        description: 페이지 없는 전체 조회
+      x-required-tests:
+      - 없는 DEV_ID404·존재사람 사본누락은200/완전성false/issues·유효0과 구분
+      - 같은월 같은프로젝트 두 ASGN_ID는 상세2행·마스터부재 LEFT JOIN에도 사본 유지
+      - 월평균/누계 전환 시 자식 월원본 동일·월/프로젝트/투입 ASC
+      - 상세 조회 전후 급여/배정/사본/손익 행·값·감사시각 불변
+  /api/monthly-costs:
+    get:
+      operationId: getMonthlyCosts
+      summary: 공통 월별 원가 전체 조회
+      description: BASIC-137 원문 계약. 인증 유예·임시 관리자의 전체 기능/열을 보존한다. 요청본문·업무 상태전이 없음.
+      security: []
+      x-related-requirements:
+      - REQ-1141
+      - REQ-1145
+      - REQ-1152
+      - REQ-1156
+      - REQ-1160
+      - REQ-1164
+      - REQ-1165
+      - REQ-1166
+      - REQ-1167
+      - REQ-1169
+      - REQ-1171
+      - REQ-1172
+      - REQ-1174
+      - REQ-1175
+      - REQ-1199
+      - REQ-1200
+      - REQ-1201
+      - REQ-1202
+      - REQ-1203
+      - REQ-1204
+      - REQ-1205
+      - REQ-1206
+      - REQ-1207
+      - REQ-1208
+      - REQ-1209
+      - REQ-1210
+      - REQ-1211
+      - REQ-1212
+      - REQ-1214
+      - REQ-1215
+      - REQ-1216
+      - REQ-1218
+      - REQ-1219
+      - REQ-1220
+      - REQ-1221
+      - REQ-1222
+      - REQ-1223
+      - REQ-1224
+      - REQ-1226
+      - REQ-1227
+      - REQ-1228
+      - REQ-1229
+      - REQ-1230
+      - REQ-1231
+      - REQ-1233
+      - REQ-1234
+      - REQ-1235
+      - REQ-1236
+      - REQ-1237
+      - REQ-1239
+      - REQ-1240
+      - REQ-1241
+      - REQ-1245
+      - REQ-1247
+      - REQ-1248
+      - REQ-1249
+      - REQ-1250
+      - REQ-1251
+      - REQ-1257
+      - REQ-1268
+      - REQ-1269
+      - REQ-1270
+      parameters:
+      - name: year
+        in: query
+        required: true
+        description: 운영시작연도~올해
+        schema:
+          type: integer
+      - name: month
+        in: query
+        required: true
+        description: year에 속한 월. 올해 현재월 이후/운영시작 이전은 계산하지 않음
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 12
+      - name: personId
+        in: query
+        required: false
+        description: 생략 월전체·지정하면 해당 실제 DEV_ID 사람월
+        schema:
+          type: string
+          maxLength: 20
+      responses:
+        '200':
+          description: 동일 일관스냅샷에서 계산한 정상 조회. 미확인은 명시 상태/null과 진단으로 반환한다.
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  description: ''
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/MonthlyCostsData'
+                  required:
+                  - data
+                  additionalProperties: true
+        '400':
+          description: 잘못된 기간/코드/열/중복 쿼리/알 수 없는 필드 또는 허용 형식 위반
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 서버 예외. 개인급여/원가를 일반 오류 로그에 남기지 않는다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      x-query-validation:
+        allowed:
+        - year
+        - month
+        - personId
+        duplicate: 중복 쿼리는400
+        unknown: 미등록 필드는400
+      x-business-rules:
+      - 후속 기능과 UI-03이 같은 월별 원가 배분 서비스를 사용한다.
+      - 실제 로그인·역할·데이터 범위·민감열 제한은 후속이며 임시 관리자에게 이번 모든 기능과 열을 제공한다.
+      - DeveloperQueryService/DeveloperRepository를 재사용하되 현재 중지·퇴사 기본 필터로 과거 원가를 제외하지 않는다.
+      - 코드·기간·CASH_BASE_YM·월마감은 SharedQueriesController/Service의 같은 원천을 조회한다.
+      - MON_MM/APLY_UPRC/SALES_AMT와 급여 snapshot/공통 파생함수를 재사용하고 실제 DEV_ID로 한 번만 원가를 배분한다.
+      - 서울 Clock의 올해를 기본으로 운영시작~올해만 조회하고 CASH_BASE_YM 이전을 생성하지 않는다.
+      - 입사월~퇴사월 포함·입사일 NULL은 조회연도 1월부터이며 입사 전/퇴사 다음달 이후는 비용·대기·가동률 분모에서 제외한다.
+      - 미마감은 계산하고 CLOSE/FIX_YN=Y/시작월 이전은 사본을 읽으며 재계산하지 않는다.
+      - CLOSE 사본 누락은 현재 급여로 보충하지 않고 자료 없음/확인 필요로 반환하며 실제 0원 행과 구별한다.
+      - 조회·다운로드·새로고침·보기 전환은 TB_CO_MON_COST/급여/배정/손익을 INSERT/UPDATE/DELETE하지 않는다.
+      - 금액은 원정수 BigDecimal이며 음수 포함 DOWN(0쪽 절사), 임의 10원 반올림을 하지 않는다.
+      - 분수 중간을 자르지 않고 원금×분자÷분모를 마지막 원정수에서 자른다.
+      - 율·월평균 인원은 소수1자리 HALF_UP이며 분모0은 NULL/–다.
+      - 원금/원가 행은 절댓값999,999,999,999,999 초과를 계산 오류로 반환하고 절단·보정·원천수정하지 않으며 기간 합계는 이 범위로 자르지 않는다.
+      - 월급여행이 있으면 당시 직원구분/직간접과 모든 입력·파생금액을 사용하며 명시0도 유효하다.
+      - 미마감 급여 미업로드월은 유효 MON_PAY_AMT와 현재 직원구분/직간접/직위로 05 공통함수를 호출해 예정과 예정실지급액을 표시한다.
+      - 유효 기본값 NULL·필수율 오류면 인건비/이익 미확인과 급여업로드 안내이며 직전급여 복사·원천 삽입은 하지 않는다.
+      - FT=급여+수당+회사보험+퇴직·CT=급여+수당+회사보험·FL=PAY_AMT·OS=VNDR_SPLY_AMT로 L을 계산한다.
+      - 수당/퇴직/공제는 저장값이며 회사원가에서 본인 공제를 빼거나 외주 VAT를 더하지 않고 OS 월급여/지급액은 공급가와 도움말이다.
+      - 월 snapshot DRCT_CLS_CD=INDRCT면 L 전액 간접고정행·기타배분/경비/단가0이며 UI 사람/인원/가동률에서 제외하되 공통결과는 보존한다.
+      - 직접 FT/CT 전체휴직월 L은 IDLE로만 배치·겹침 진단·매출0이고 부분휴직은 05 MM 그대로다.
+      - 퇴사 다음달 급여는 원가 가산 없이 자료 불일치를 안내한다.
+      - ACT·MON_MM>0·실제 DEV_ID만 읽고 CNCL 제외·FREE/IN/PRE 포함·PROJ_ID/ASGN_ID ASC로 정렬한다.
+      - FT/CT D=max(T,1.00), FL/OS D=T이고 각 노동비는 DOWN(L×MM÷D)다.
+      - FT/CT T<1은 마지막 IDLE에 L−실제행 노동비합을 두고 경비잔여를 보내지 않는다.
+      - FT/CT T≥1·FL/OS T>0은 마지막 실제행 L−앞행 합으로 보정하여 노동비 행합=L이다.
+      - FT/CT T0은 전액 IDLE·FL/OS는 대기를 만들지 않고 양수 지급이면 원금액/진단/배분완료false·투입월분모 제외다.
+      - 저장 팀비/프로젝트경비 각각 DOWN(월금액×행MM), 합은 DRCT_EXPS_AMT이며 FREE/IN/PRE/FL 포함·OS/간접/고정IDLE는0이다.
+      - 직접 실제행은 LOSE→IN→PRE→ALLOC 순이다. LOSE는 실제PK의 IDLE/단가0·IN은 RND/단가0·PRE는 PRE/단가0/경고·그밖 MO/DP/TK는 ALLOC이다. FREE는 단가0·노동비/경비유지, FT/CT 남는몫/전체휴직은 IDLE 고정행·단가0/경비0, 월간접은 INDRCT 고정행·L전액/단가0/경비0이다. 실주 실제경비는 보존하고 고정 IDLE에 복사하지 않는다.
+      - 조회가 배정기간을 변경하지 않고 실주후 중단은 05 월원천·이미마감 PRE는 사본 그대로다.
+      - 계산월 이하 최신 APLY_BGN_YM의 프로젝트 PART_ID·없음/IN/고정행 NULL이고 사람 DEV.PART_ID와 구분한다.
+      - 유상 MO/DP는 저장 월 SALES_AMT·PRE/LOSE/IN/FREE/고정행은0이고 다시 계약MM을 곱하지 않는다.
+      - 프로젝트 전체 행존재 PLAN>CTRT>EST 한 단계 선택·DEV 실제인력/월 DSTRB_AMT합·한월이라도 사람행 있으면 빈월/0셀0·ITEM 제외다.
+      - 사람/프로젝트/월 참고액은 유상 MM비율로 한 번 배분·DOWN/마지막 잔액·FREE0이며 MM 재곱은 없다.
+      - 유상투입0이면 표금액을 가산하지 않고 배분 불일치를 반환한다.
+      - 선택단계에 실제DEV 사람행 전무/표없음이면 유상행별 DOWN(LABOR_ALLOC_AMT×현재CTRT_AMT÷저장BDGT_AMT)를 쓴다.
+      - BDGT_AMT NULL/0이면 단가 미확인·예산안내이고 알려진 원가는 계속 표시한다.
+      - 대체투입도 실제DEV로 표를 찾아 계약상 인력과 중복 배분하지 않고 04 불일치 판단을 공유하며 업로드를 재구현하지 않는다.
+      - TK 제외는 응답 표시모델만 바꾸고 원본은 불변이며 TK단가 미확인만 제외해 비TK 이익 표시 가능·비용 미확인은 유지한다.
+      - CLOSE 모든 사본PK와 당시 배분/단가/경비/분류/MM/파트를 읽고 월인건비는 모든 사본 LABOR_ALLOC_AMT합·급여참고는 보호된 월급여다.
+      - 현재 표시명/직무 LEFT JOIN으로 원천마스터 부재에도 사본을 남기고 ID/자료 없음으로 표시한다.
+      - 행과 사람월별 costComplete/revenueComplete/estimated/issues를 반환하고 필요월 하나라도 미확인이면 해당 합계/평균/이익NULL·알려진 값/문제월 별도다.
+      - 미확인을 정상0/흑자/적자로 단정하지 않고 적자필터/적자수에서 제외한다.
+      - UI필터 독립 월전체/사람상세/진단에 완전성·사람월·누락원천·관련화면을 제공한다.
+      - 사람당 부모1행·직접월만 집계·부모MM은 실제행ASGN_MM합으로 고정IDLE/INDRCT 제외다.
+      - P=L·E1/E2 실제행합·C=P+E1+E2·R=개인단가합·G=R−C·이익률 R>0만 G/R×100 1자리다.
+      - 월기초금액 합·프로젝트+대기 노동비=P·급여구성 사람월1회이며 프로젝트수로 중복하지 않는다.
+      - FT/CT 직접 재직운영 근무월(대기포함)·FL/OS MM>0월·전체무급휴직 제외·유급휴직 포함·비휴직급여0 포함·월구분변경 중복0으로 N을 센다.
+      - 각 기초누계/N DOWN·P 월인건비누계/N·C=평균P+E1+E2·G=평균R−C·MM HALF_UP2·N0 금액NULL·절사차이 도움말이다.
+      - 연초/입사월~기준월/퇴사월의 운영이후 직접 재직달·입사NULL 연초이며 간접월 제외·범위 도움말이다.
+      - MM>0월은0.40도1달·TK/FREE/IN/PRE포함·취소/전체휴직 제외·1자리율/투입달÷재직달 도움말·보기와 무관하다.
+      - 기준월 직접·기간 재직자를 대상으로 해당연도퇴사자는 마지막재직월급여분류·기준일휴직자는 표제외/총인원포함·중지로 과거 숨김0이다.
+      - page≥1·size20/50/100 기본50·초과페이지빈목록·필터/정렬/크기변경 첫페이지/펼침해제다.
+      - 필터 부모단가합/유효단가인원·대기/IN0포함·TK전용NULL제외·미확인 있으면 불완전 안내다.
+      - 필터원가합/휴직제외 표인원이며 원가미확인 있으면–/대상수다.
+      - 필터 이익합/표인원·확인음수만계수·미확인 평균–와 확인분 적자수다.
+      - 회사 H/U/F 월평균으로 가동/가득률을 계산하고 UI 필터로 분모를 바꾸지 않는다.
+      - CLOSE는 사본MM/계약/FREE_MM·H 재직직접·U MM>0·F MO/DP유상·사람중복0·월평균H/U/F 1자리 HALF_UP 후 그 값으로 율 계산·전체휴직H만이다.
+      - 전체필터 부모MM/금액합·페이지/펼침/숨김불변·평균은개인평균행합·총이익/총유효단가율·인원/가동률/개별율합산0이다.
+      - year/view/includeTurnkey/name/employeeType/companyId/partId/jobCode/show/page/size/sort/direction과 원문 기본값·strict
+        boolean·기간/코드/열/중복쿼리/미등록필드400이다.
+      - 생략전체·SELF=NULL소속·UNASSIGNED=NULL사람파트·HQ실제ID·이름대소문자구분·코드라벨DB조회·선택값마스터저장0이다.
+      - items/total/page/size·기준기간/보기·요약·전체합계·공헌이익·미확인/예정건수·계산시점을반환한다.
+      x-source-locators:
+      - canonical_id: REQ-1141
+        document: SPEC-REQUEST.md
+        line: 15
+      - canonical_id: REQ-1145
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1152
+        document: SPEC-REQUEST.md
+        line: 31
+      - canonical_id: REQ-1156
+        document: SPEC-REQUEST.md
+        line: 35
+      - canonical_id: REQ-1160
+        document: SPEC-REQUEST.md
+        line: 43
+      - canonical_id: REQ-1164
+        document: SPEC-REQUEST.md
+        line: 54
+      - canonical_id: REQ-1165
+        document: SPEC-REQUEST.md
+        line: 56
+      - canonical_id: REQ-1166
+        document: SPEC-REQUEST.md
+        line: 58
+      - canonical_id: REQ-1167
+        document: SPEC-REQUEST.md
+        line: 58
+      - canonical_id: REQ-1169
+        document: SPEC-REQUEST.md
+        line: 60
+      - canonical_id: REQ-1171
+        document: SPEC-REQUEST.md
+        line: 66
+      - canonical_id: REQ-1172
+        document: SPEC-REQUEST.md
+        line: 67
+      - canonical_id: REQ-1174
+        document: SPEC-REQUEST.md
+        line: 69
+      - canonical_id: REQ-1175
+        document: SPEC-REQUEST.md
+        line: 70
+      - canonical_id: REQ-1199
+        document: SPEC-REQUEST.md
+        line: 121
+      - canonical_id: REQ-1200
+        document: SPEC-REQUEST.md
+        line: 123
+      - canonical_id: REQ-1201
+        document: SPEC-REQUEST.md
+        line: 125
+      - canonical_id: REQ-1202
+        document: SPEC-REQUEST.md
+        line: 131
+      - canonical_id: REQ-1203
+        document: SPEC-REQUEST.md
+        line: 136
+      - canonical_id: REQ-1204
+        document: SPEC-REQUEST.md
+        line: 138
+      - canonical_id: REQ-1205
+        document: SPEC-REQUEST.md
+        line: 140
+      - canonical_id: REQ-1206
+        document: SPEC-REQUEST.md
+        line: 140
+      - canonical_id: REQ-1207
+        document: SPEC-REQUEST.md
+        line: 146
+      - canonical_id: REQ-1208
+        document: SPEC-REQUEST.md
+        line: 148
+      - canonical_id: REQ-1209
+        document: SPEC-REQUEST.md
+        line: 150
+      - canonical_id: REQ-1210
+        document: SPEC-REQUEST.md
+        line: 151
+      - canonical_id: REQ-1211
+        document: SPEC-REQUEST.md
+        line: 152
+      - canonical_id: REQ-1212
+        document: SPEC-REQUEST.md
+        line: 158
+      - canonical_id: REQ-1214
+        document: SPEC-REQUEST.md
+        line: 173
+      - canonical_id: REQ-1215
+        document: SPEC-REQUEST.md
+        line: 173
+      - canonical_id: REQ-1216
+        document: SPEC-REQUEST.md
+        line: 175
+      - canonical_id: REQ-1218
+        document: SPEC-REQUEST.md
+        line: 183
+      - canonical_id: REQ-1219
+        document: SPEC-REQUEST.md
+        line: 187
+      - canonical_id: REQ-1220
+        document: SPEC-REQUEST.md
+        line: 189
+      - canonical_id: REQ-1221
+        document: SPEC-REQUEST.md
+        line: 189
+      - canonical_id: REQ-1222
+        document: SPEC-REQUEST.md
+        line: 191
+      - canonical_id: REQ-1223
+        document: SPEC-REQUEST.md
+        line: 191
+      - canonical_id: REQ-1224
+        document: SPEC-REQUEST.md
+        line: 193
+      - canonical_id: REQ-1226
+        document: SPEC-REQUEST.md
+        line: 199
+      - canonical_id: REQ-1227
+        document: SPEC-REQUEST.md
+        line: 203
+      - canonical_id: REQ-1228
+        document: SPEC-REQUEST.md
+        line: 205
+      - canonical_id: REQ-1229
+        document: SPEC-REQUEST.md
+        line: 207
+      - canonical_id: REQ-1230
+        document: SPEC-REQUEST.md
+        line: 207
+      - canonical_id: REQ-1231
+        document: SPEC-REQUEST.md
+        line: 209
+      - canonical_id: REQ-1233
+        document: SPEC-REQUEST.md
+        line: 217
+      - canonical_id: REQ-1234
+        document: SPEC-REQUEST.md
+        line: 219
+      - canonical_id: REQ-1235
+        document: SPEC-REQUEST.md
+        line: 221
+      - canonical_id: REQ-1236
+        document: SPEC-REQUEST.md
+        line: 225
+      - canonical_id: REQ-1237
+        document: SPEC-REQUEST.md
+        line: 227
+      - canonical_id: REQ-1239
+        document: SPEC-REQUEST.md
+        line: 233
+      - canonical_id: REQ-1240
+        document: SPEC-REQUEST.md
+        line: 235
+      - canonical_id: REQ-1241
+        document: SPEC-REQUEST.md
+        line: 241
+      - canonical_id: REQ-1245
+        document: SPEC-REQUEST.md
+        line: 247
+      - canonical_id: REQ-1247
+        document: SPEC-REQUEST.md
+        line: 252
+      - canonical_id: REQ-1248
+        document: SPEC-REQUEST.md
+        line: 253
+      - canonical_id: REQ-1249
+        document: SPEC-REQUEST.md
+        line: 254
+      - canonical_id: REQ-1250
+        document: SPEC-REQUEST.md
+        line: 255
+      - canonical_id: REQ-1251
+        document: SPEC-REQUEST.md
+        line: 257
+      - canonical_id: REQ-1257
+        document: SPEC-REQUEST.md
+        line: 273
+      - canonical_id: REQ-1268
+        document: SPEC-REQUEST.md
+        line: 295
+      - canonical_id: REQ-1269
+        document: SPEC-REQUEST.md
+        line: 297
+      - canonical_id: REQ-1270
+        document: SPEC-REQUEST.md
+        line: 299
+      x-side-effects:
+      - 원가/급여/배정/손익 INSERT/UPDATE/DELETE 0건. 설정·원천 자동복구/0사본 생성 없음.
+      x-pagination:
+        mode: all
+        description: 페이지 없는 전체 조회
+      x-required-tests:
+      - L4,970,000·MM1.00/0.50→3,313,333/1,656,667·합계보존
+      - L4,970,000·MM0.60→실제2,982,000/IDLE1,988,000; FL5,000,000·MM0.50→전액5,000,000
+      - CLOSE/FIX Y/시작이전 저장사본은 현재 원천변경 후 원숫자·FIX·감사값 보존; 사본0행 미확인
+      - 간접 MM0·IDLE max(0,1−T)·FREE_MM=FREE행 MM·0원 고정행 생성여부 명시
+      - FL/OS T0 양수 지급→배분완료false/진단/원금액·임의대기0건
+      - PLAN>CTRT>EST 프로젝트단계·빈사람월0·FREE0·마지막유상잔액·예산NULL/0 단가미확인/원가유지
+      - UI필터/휴직숨김/TK제외 없이 월전체·간접보존·페이지없음·요청본문없음·조회쓰기0건
+  /api/individual-profitability/export:
+    get:
+      operationId: getIndividualProfitabilityExport
+      summary: 개인 원가·수익 엑셀 다운로드
+      description: 조회문맥 전체 결과의 binary XLSX. page/size는 받지 않는다. 파일생성→TB_SY_ACCS_LOG DNLD 필수기록 commit→전송. 순수 업무조회이나
+        DNLD 접근기록 부수효과가 있다. 인증 유예 보존.
+      security: []
+      x-related-requirements:
+      - REQ-1155
+      - REQ-1169
+      - REQ-1264
+      - REQ-1265
+      - REQ-1266
+      - REQ-1267
+      - REQ-1268
+      - REQ-1269
+      parameters:
+      - name: year
+        in: query
+        required: false
+        description: 기본 서울 Clock 올해. 운영시작연도~올해만 허용·올해 현재월/과거12월과 CASH_BASE_YM 교차
+        schema:
+          type: integer
+      - name: view
+        in: query
+        required: false
+        description: 연 누계 또는 사람별 월평균. 자식은 월 원본
+        schema:
+          type: string
+          enum:
+          - CUMULATIVE
+          - MONTHLY_AVERAGE
+          default: CUMULATIVE
+      - name: includeTurnkey
+        in: query
+        required: false
+        description: true/false만 허용·TK 단가만 제외하고 MM/비용/가동률 보존
+        schema:
+          type: boolean
+          default: true
+      - name: name
+        in: query
+        required: false
+        description: trim 후 0~100자·대소문자 구분 부분일치
+        schema:
+          type: string
+          maxLength: 100
+      - name: employeeType
+        in: query
+        required: false
+        description: 생략 전체·기존 EMP_TYPE 코드 검증
+        schema:
+          type: string
+      - name: companyId
+        in: query
+        required: false
+        description: SELF는 BLNG_CLNT_ID NULL·그 외 실제 협력사 ID
+        schema:
+          type: string
+      - name: partId
+        in: query
+        required: false
+        description: UNASSIGNED는 사람 DEV.PART_ID NULL·본사는 기존 실제 HQ 파트 ID; 프로젝트파트 아님
+        schema:
+          type: string
+      - name: jobCode
+        in: query
+        required: false
+        description: 현재 개발자 주직무·기존 코드 검증
+        schema:
+          type: string
+      - name: show
+        in: query
+        required: false
+        description: 보기 계산 후 LOSS=확정표시이익<0, CONCURRENT=같은달2투입이상 또는 MM합>1.00
+        schema:
+          type: string
+          enum:
+          - ALL
+          - LOSS
+          - CONCURRENT
+          default: ALL
+      - name: sort
+        in: query
+        required: false
+        description: 생략 사람파트표시명 ASC→이름 ASC→DEV_ID ASC. 숫자는 실제수치·NULL 양방향 항상뒤
+        schema:
+          type: string
+          enum:
+          - name
+          - companyName
+          - employeeType
+          - hireDate
+          - utilization
+          - mm
+          - revenue
+          - totalCost
+          - profit
+          - profitRate
+      - name: direction
+        in: query
+        required: false
+        description: ASC/DESC 외 400
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      - name: order
+        in: query
+        required: false
+        description: 전체22열 순열. 생략시 COLS/UI-03 저장값 또는 기본열 순서
+        schema:
+          type: array
+          minItems: 22
+          maxItems: 22
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - name
+            - companyName
+            - position
+            - employeeType
+            - hireDate
+            - utilization
+            - mm
+            - revenue
+            - pay
+            - allowance
+            - companyInsurance
+            - retirementReserve
+            - personalCost
+            - teamExpense
+            - projectExpense
+            - totalCost
+            - profit
+            - profitRate
+            - selfInsurance
+            - withholdingTax
+            - incomeTax
+            - netPay
+        style: form
+        explode: false
+      - name: hidden
+        in: query
+        required: false
+        description: 선택 숨김열. 생략시 COLS/UI-03 또는 기본참고4열
+        schema:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - companyName
+            - position
+            - employeeType
+            - hireDate
+            - utilization
+            - mm
+            - pay
+            - allowance
+            - companyInsurance
+            - retirementReserve
+            - personalCost
+            - teamExpense
+            - projectExpense
+            - profitRate
+            - selfInsurance
+            - withholdingTax
+            - incomeTax
+            - netPay
+        style: form
+        explode: false
+      - name: unit
+        in: query
+        required: false
+        description: 원/천원/백만원. 생략시 AMT_UNIT 또는 기본천원·환산 반올림 없음
+        schema:
+          type: string
+          enum:
+          - 원
+          - 천원
+          - 백만원
+      responses:
+        '200':
+          description: 개인원가수익/턴키단가미포함/월별배분상세/다운로드정보 시트. 0건 제목/파일정보. 기존 시트분할규칙.
+          headers:
+            Content-Disposition:
+              description: 첨부파일 개인원가수익_YYYY_YYYYMMDD_HHmmss.xlsx
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 잘못된 기간/코드/열/중복 쿼리/알 수 없는 필드 또는 허용 형식 위반
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: 파일 생성/필수 DNLD 기록 실패. 기록실패 시 XLSX 전송 바이트는 0이다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      x-query-validation:
+        allowed:
+        - year
+        - view
+        - includeTurnkey
+        - name
+        - employeeType
+        - companyId
+        - partId
+        - jobCode
+        - show
+        - sort
+        - direction
+        - order
+        - hidden
+        - unit
+        duplicate: 중복 쿼리는400
+        unknown: 미등록 필드는400
+      x-business-rules:
+      - ExcelExportService/AccessLogWriter/exportsops에 UI-03 개인원가 파일종류만 허용 확장한다.
+      - 조회·다운로드·새로고침·보기 전환은 TB_CO_MON_COST/급여/배정/손익을 INSERT/UPDATE/DELETE하지 않는다.
+      - 현재기간/필터/정렬/열순서/숨김/단위/보기의 전체사람 xlsx·개인원가수익/턴키단가미포함 두시트는각TK보기뒤독립적자필터다.
+      - 펼침과무관한부모+합계/월별배분상세 원본전행·보기/행ID/예정/원가이익분류MM·다운로드정보 처리자/서버시각/기간/조건/단위/보기/인원/미확인수다.
+      - 금액/MM/건수 numeric·ID/사용자문자text/앞0/수식방지·NULL빈셀0숫자0·기존분할·개인원가수익_YYYY_YYYYMMDD_HHmmss.xlsx·0건제목정보다.
+      - 파일생성→DNLD필수기록commit→전송·기록실패500/파일미전송·개인급여원가일반에러로그금지다.
+      - year/view/includeTurnkey/name/employeeType/companyId/partId/jobCode/show/page/size/sort/direction과 원문 기본값·strict
+        boolean·기간/코드/열/중복쿼리/미등록필드400이다.
+      - 생략전체·SELF=NULL소속·UNASSIGNED=NULL사람파트·HQ실제ID·이름대소문자구분·코드라벨DB조회·선택값마스터저장0이다.
+      x-source-locators:
+      - canonical_id: REQ-1155
+        document: SPEC-REQUEST.md
+        line: 34
+      - canonical_id: REQ-1169
+        document: SPEC-REQUEST.md
+        line: 60
+      - canonical_id: REQ-1264
+        document: SPEC-REQUEST.md
+        line: 285
+      - canonical_id: REQ-1265
+        document: SPEC-REQUEST.md
+        line: 287
+      - canonical_id: REQ-1266
+        document: SPEC-REQUEST.md
+        line: 289
+      - canonical_id: REQ-1267
+        document: SPEC-REQUEST.md
+        line: 291
+      - canonical_id: REQ-1268
+        document: SPEC-REQUEST.md
+        line: 295
+      - canonical_id: REQ-1269
+        document: SPEC-REQUEST.md
+        line: 297
+      x-side-effects:
+      - 파일생성 후 TB_SY_ACCS_LOG에 ACT_TYPE_CD=DNLD/SCRN_ID=UI-03·서버 처리자/접근정보를 필수기록 commit한 뒤 전송한다. 기록실패500·XLSX 전송 바이트0.
+      - 원가/급여/배정/손익 및 원본 SALES_AMT/사본은 변경0건.
+      x-pagination:
+        mode: all
+        description: 페이지 없는 전체 조회
+      x-required-tests:
+      - 같은필터/정렬/열/단위/보기 전체 사람·페이지/펼침과 무관·동일 DB 일관스냅샷
+      - 개인원가수익은 선택보기·턴키단가미포함은 항상미포함·각보기 뒤 LOSS 독립적용·월별배분상세 원본전행/다운로드정보 제공
+      - =,+,-,@ 사용자문자열은 텍스트·ID앞0 보존·금액/MM/건수 숫자·NULL빈셀/0 숫자0·0건 제목정보만
+      - DNLD 기록 commit 성공 후만 binary 전송·기록실패500/파일전송0·민감금액 일반에러로그0
   /api/financial-items:
     get:
       operationId: getFinancialItems
@@ -2316,6 +3558,9 @@ paths:
       description: 설정 value/revision/stored·기본값 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
       security: []
       x-related-requirements:
+      - REQ-1154
+      - REQ-1258
+      - REQ-1259
       - REQ-047
       - REQ-049
       - REQ-051
@@ -2370,6 +3615,9 @@ paths:
         - items
         description: 성공 봉투의 공개 조회 DTO 결과 위치. data-model.md의 실제 물리 테이블에서 조회하며 별도 저장열을 만들지 않는다.
       x-business-rules:
+      - BASIC-137 COLS/UI-03={individualProfitability:{order,hidden}}만 추가. order는 원문22열 전체순열·hidden은 선택부분집합; name/revenue/totalCost/profit
+        숨김·중복/미등록/누락400. 직렬화 JSON2000자·기존 revision/stored/expectedRevision·다른 화면/공통 설정 보존. PERIOD/UI-03 YEAR는 운영시작연도~올해,
+        올해 현재월/과거12월. 필터/보기는 명시초기화 외 작업탭에서 유지한다.
       - admin 설정 value/revision/stored. 행없음은 stored=false·revision=null·기본값, MENU_FOLD만 value=null. 손상 JSON은 항목 error/revision을 반환, 다른항목 유지·자동 삭제0건.
       - FAV/RECENT 기본[], PAGE_SIZE 기본50, DENSE 기본넓게, AMT_UNIT 기본천원, COLS 기본 전체열/순서, PERIOD 기본은 서버 현재일/범위. 미저장 MENU_FOLD의 PC=false·태블릿=true는 화면 책임; 모바일 슬라이드는 임시.
       - 저장기간 범위 밖은 안내·기본기간 임시표시하되 DB 조용한 수정0건. PC 전용 항목은 표시만 숨기고 저장 배열 보존.
@@ -2382,6 +3630,8 @@ paths:
         작업/선택버튼 제외, 다른두탭/입금표는 고정열이다. dirty닫기확인·포커스/중복클릭 차단·상세닫기 조건/스크롤 유지, 폭768px미만은 카드20건/더보기·단건등록/입금/상세·일괄/다운로드PC전용이다.'
       - UI-13 COLS={bills:{order,hidden}}·12 열전체순열·id/projectName 필수·미등록/중복/누락/필수숨김400. PERIOD/UI-13 YEAR·공통 PAGE_SIZE/DENSE/AMT_UNIT 기존키 보존·업무쓰기year 규칙은설정API에잘못적용하지않음.
       x-required-tests:
+      - 'happy: TB_SY_USER_PREF에 유효 COLS/UI-03 22열 순열이 있는 상태에서 GET preferences -> value.individualProfitability.order/hidden과 stored/revision이 저장값과 동일'
+      - 'business: UI-03 PREF_VAL JSON이 손상된 상태에서 GET preferences -> 해당 항목 오류/revision 반환·다른 화면 설정 정상·손상행 자동삭제0건'
       - 'happy: TB_SY_USER_PREF 0행에서 getPreferences 호출 -> stored=false·기본PAGE_SIZE 정수50·MENU_FOLD value=null, DB INSERT0건'
       - 'business: 한설정 PREF_VAL이손상된DB에서 getPreferences 호출 -> 해당항목 error/revision·다른항목 정상반환, 손상행자동삭제0건'
       - 'validation: GET /api/me/preferences?userId=other -> 400 UNKNOWN_FIELD·field=userId'
@@ -2407,6 +3657,9 @@ paths:
       description: value/expectedRevision → 검증·upsert 원문 접두사 /api와 camelCase를 유지한다. 인증은 유예이며 로컬/제한 사설 환경만 허용한다.
       security: []
       x-related-requirements:
+      - REQ-1154
+      - REQ-1258
+      - REQ-1259
       - REQ-010
       - REQ-011
       - REQ-013
@@ -2508,6 +3761,9 @@ paths:
         allowed: []
         unknown: '허용되지 않은 query 필드(예: userId=other)는 REQ-129에 따라400 UNKNOWN_FIELD. 입력 없는 업무 GET도 예외가 아니다.'
       x-business-rules:
+      - BASIC-137 COLS/UI-03={individualProfitability:{order,hidden}}만 추가. order는 원문22열 전체순열·hidden은 선택부분집합; name/revenue/totalCost/profit
+        숨김·중복/미등록/누락400. 직렬화 JSON2000자·기존 revision/stored/expectedRevision·다른 화면/공통 설정 보존. PERIOD/UI-03 YEAR는 운영시작연도~올해,
+        올해 현재월/과거12월. 필터/보기는 명시초기화 외 작업탭에서 유지한다.
       - USER_ID는 서버 admin. 전역 FAV/RECENT/MENU_FOLD/PAGE_SIZE/DENSE/AMT_UNIT의 key는 *, COLS/PERIOD는 등록 screenId. JSON 직렬화 전체 최대2000자. 허용외 필드·다른 처리자400 UNKNOWN_FIELD.
       - 최초 expectedRevision=null·기본값과 같아도 INSERT. 기존행은 조회 토큰 필수·잠금 후 비교. 동시 최초 PK충돌409 STALE_WRITE; 임의 overwrite/재시도0회. 같은값은200 changed=false·바뀐 내용이 없습니다.·수정시각0건.
       - FAV 등록화면ID 배열 최대10·중복금지·순서 보존/11번째400. RECENT 등록화면ID 최대5·동일화면 맨앞·중복제거·초과 뒤제거는 활성화 부모가 계산하고 서버는 결과 타입/개수 검증. PC_ONLY 숨김 때문에 배열을 지우지 않는다.
@@ -2556,6 +3812,11 @@ paths:
         event: 저장
         to: 409 STALE_WRITE·이전행보존
       x-required-tests:
+      - 'happy: 유효한22열순열/허용hidden과 최신revision으로 COLS/UI-03 PUT -> TB_SY_USER_PREF PREF_VAL을 GET preferences에서 동일순서/hidden으로 재조회'
+      - 'auth: 인증헤더 없이 임시관리자 UI-03 설정 PUT -> 서버 admin 설정만 저장·401/403 추가없음; userId=other 본문 주입 ->400 UNKNOWN_FIELD·타사용자 설정불변'
+      - 'validation: UI-03 hidden에 profit 또는 order에 중복name/미등록/누락 또는 JSON2001자 PUT ->400·field=value·기존 PREF_VAL/revision 불변'
+      - 'business: 동일 UI-03 설정revision으로 선행저장 뒤 후행PUT ->409 STALE_WRITE·GET의 선행 order/hidden 유지'
+      - 'side-effect: COLS/UI-03 변경 commit -> 해당 TB_SY_USER_PREF 키만 변경·다른화면설정 및 급여/배정/월원가/손익/접근기록 불변; 동일값 PUT은 MOD_DTTM 불변'
       - 'happy: UI-01 COLS projects의 전체열순열/유효hidden 저장 -> TB_SY_USER_PREF COLS/UI-01의 JSON을 GET preferences에서 동일조회'
       - 'auth: 임시관리자로 UI-01 열설정저장 -> 기존 사용자설정 범위에서 허용·PM담당검사/401·403추가없음'
       - 'validation: projects hidden에 id/name 또는중복/미등록columnId 저장 -> 400·field=value·기존PREF_VAL불변'
@@ -26708,6 +27969,938 @@ paths:
       - OQ-006
 components:
   schemas:
+    MonthlyCostIssue:
+      type: object
+      description: 사람/월·누락 원천·관련 화면과 원금액의 정상 응답 내 진단. 비즈니스 실패 HTTP 코드로 바꾸지 않는다.
+      properties:
+        personId:
+          type: string
+          maxLength: 20
+        month:
+          type: string
+          pattern: ^[0-9]{6}$
+        message:
+          type: string
+        source:
+          type: string
+        relatedScreen:
+          type:
+          - string
+          - 'null'
+        sourceAmount:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+      required:
+      - personId
+      - month
+      - message
+      - source
+      - relatedScreen
+      - sourceAmount
+      additionalProperties: false
+    MonthlyCostCompleteness:
+      type: object
+      description: 필요월 미확인은 해당 금액 합계/평균/이익을 null로 전파하며 알려진 MM/금액은 별도 유지한다.
+      properties:
+        costComplete:
+          type: boolean
+        revenueComplete:
+          type: boolean
+        estimated:
+          type: boolean
+        allocationComplete:
+          type: boolean
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyCostIssue'
+      required:
+      - costComplete
+      - revenueComplete
+      - estimated
+      - allocationComplete
+      - issues
+      additionalProperties: false
+    MonthlyCostRow:
+      type: object
+      description: 기존 TB_CO_MON_COST 복합 PK(COST_YM,DEV_ID,PROJ_ID,ASGN_ID) 투영. 금액은 NUMERIC(15) 검사·DOWN(0쪽 절사). totalCost=노동비+직접경비,
+        profit=해당보기단가−원가이며 SQL 새 열 없음. FREE_MM=FREE행 MM, 나머지0; IDLE 고정 MM=max(0,1−T), 간접 고정 MM=0. 고정 contractType/파트는
+        null. 미마감 fixed=N·계산행 감사값 null, 사본은 원 FIX/감사값 보존. 표시 조인은 LEFT JOIN. rowGenerated로 0원 고정행 생성 여부를 명시한다.
+      properties:
+        personId:
+          type: string
+          maxLength: 20
+        projectId:
+          type: string
+          maxLength: 20
+        assignmentId:
+          type: string
+          maxLength: 20
+        month:
+          type: string
+          pattern: ^[0-9]{6}$
+        assignmentMm:
+          type: string
+          pattern: ^-?[0-9]+\.[0-9]{2}$
+          description: 소수 두 자리 십진 MM 문자열
+        freeMm:
+          type: string
+          pattern: ^-?[0-9]+\.[0-9]{2}$
+          description: 소수 두 자리 십진 MM 문자열
+        personalRevenue:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        laborAllocated:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        teamExpense:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        projectExpense:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        directExpense:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        totalCost:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        profit:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        costClass:
+          type: string
+          description: 기존 COST_CLS 코드 ALLOC/IDLE/RND/INDRCT/PRE; 새 코드 seed 없음
+        contractType:
+          type:
+          - string
+          - 'null'
+        projectSalesPartId:
+          type:
+          - string
+          - 'null'
+        fixed:
+          type: string
+          enum:
+          - Y
+          - N
+        projectName:
+          type:
+          - string
+          - 'null'
+        assignmentJobCode:
+          type:
+          - string
+          - 'null'
+        inputType:
+          type:
+          - string
+          - 'null'
+        profitRate:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        estimated:
+          type: boolean
+        costComplete:
+          type: boolean
+        revenueComplete:
+          type: boolean
+        rowGenerated:
+          type: boolean
+        regUserId:
+          type:
+          - string
+          - 'null'
+        regDttm:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        modUserId:
+          type:
+          - string
+          - 'null'
+        modDttm:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - personId
+      - projectId
+      - assignmentId
+      - month
+      - assignmentMm
+      - freeMm
+      - personalRevenue
+      - laborAllocated
+      - teamExpense
+      - projectExpense
+      - directExpense
+      - totalCost
+      - profit
+      - costClass
+      - contractType
+      - projectSalesPartId
+      - fixed
+      - projectName
+      - assignmentJobCode
+      - inputType
+      - profitRate
+      - estimated
+      - costComplete
+      - revenueComplete
+      - rowGenerated
+      - regUserId
+      - regDttm
+      - modUserId
+      - modDttm
+      additionalProperties: false
+    MonthlyLaborSource:
+      type: object
+      description: 업로드 snapshot 우선·명시0 유효. 미업로드는 유효 MON_PAY_AMT/현재 분류와 05 공통함수의 예정 계산만 수행한다. OS 급여/지급액은 공급가. 회사원가에서
+        공제 차감/VAT 가산 없음.
+      properties:
+        personId:
+          type: string
+          maxLength: 20
+        month:
+          type: string
+          pattern: ^[0-9]{6}$
+        employeeType:
+          type: string
+        directClass:
+          type: string
+        source:
+          type: string
+          description: 마감 사본/업로드 급여/급여 미업로드·예정/자료 없음의 인건비 출처
+        laborCost:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        pay:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        allowance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        companyInsurance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        retirementReserve:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        selfInsurance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        withholdingTax:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        incomeTax:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        netPay:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        estimated:
+          type: boolean
+      required:
+      - personId
+      - month
+      - employeeType
+      - directClass
+      - source
+      - laborCost
+      - pay
+      - allowance
+      - companyInsurance
+      - retirementReserve
+      - selfInsurance
+      - withholdingTax
+      - incomeTax
+      - netPay
+      - estimated
+      additionalProperties: false
+    MonthlyPersonCost:
+      type: object
+      description: 사람/월 전체 원본과 완전성. 사본0행과 유효 비용0 행 구별. FL/OS T=0 양수 지급은 배분완료 false·임의 IDLE 미생성. 0원 고정행 미생성도 플래그로 명시한다.
+      properties:
+        personId:
+          type: string
+          maxLength: 20
+        month:
+          type: string
+          pattern: ^[0-9]{6}$
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyCostRow'
+        laborSource:
+          $ref: '#/components/schemas/MonthlyLaborSource'
+        completeness:
+          $ref: '#/components/schemas/MonthlyCostCompleteness'
+        knownLaborAllocated:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        knownPersonalRevenue:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        assignmentMm:
+          type: string
+          pattern: ^-?[0-9]+\.[0-9]{2}$
+          description: 소수 두 자리 십진 MM 문자열
+        idleRowGenerated:
+          type: boolean
+        indirectRowGenerated:
+          type: boolean
+      required:
+      - personId
+      - month
+      - rows
+      - laborSource
+      - completeness
+      - knownLaborAllocated
+      - knownPersonalRevenue
+      - assignmentMm
+      - idleRowGenerated
+      - indirectRowGenerated
+      additionalProperties: false
+    ProfitabilityPeriod:
+      type: object
+      description: Asia/Seoul Clock 올해 현재월/과거12월과 CASH_BASE_YM 교차. 교차 자료 없으면 개인 원가 자료 없음·임의0사본 없음.
+      properties:
+        year:
+          type: integer
+        baseMonth:
+          type: string
+          pattern: ^[0-9]{6}$
+        fromMonth:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]{6}$
+        toMonth:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9]{6}$
+        calculatedAt:
+          type: string
+          format: date-time
+        noData:
+          type: boolean
+      required:
+      - year
+      - baseMonth
+      - fromMonth
+      - toMonth
+      - calculatedAt
+      - noData
+      additionalProperties: false
+    MonthlyCostsData:
+      type: object
+      description: year/month와 선택 personId의 월전체 결과. UI 필터/휴직 숨김/TK 제외와 독립·간접 보존. 페이지 없음·사람별 N+1 없이 집합 조회.
+      properties:
+        period:
+          $ref: '#/components/schemas/ProfitabilityPeriod'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyPersonCost'
+      required:
+      - period
+      - items
+      additionalProperties: false
+    IndividualProfitabilityMetrics:
+      type: object
+      description: 개인 인건비 P=L, C=P+팀비+프로젝트경비, G=R−C. 이익률 R>0만 G/R×100. 월평균 각 기초누계/N DOWN·표시P+평균경비=C·평균R−C=G·MM HALF_UP2·N0
+        금액 null. 공제 구성 사람월1회. 숨김과 무관한 필터 전체합계는 부모 표시행 합이다.
+      properties:
+        revenue:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        pay:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        allowance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        companyInsurance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        retirementReserve:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        personalCost:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        teamExpense:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        projectExpense:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        totalCost:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        profit:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        selfInsurance:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        withholdingTax:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        incomeTax:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        netPay:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        mm:
+          type: string
+          pattern: ^-?[0-9]+\.[0-9]{2}$
+          description: 소수 두 자리 십진 MM 문자열
+        profitRate:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+      required:
+      - revenue
+      - pay
+      - allowance
+      - companyInsurance
+      - retirementReserve
+      - personalCost
+      - teamExpense
+      - projectExpense
+      - totalCost
+      - profit
+      - selfInsurance
+      - withholdingTax
+      - incomeTax
+      - netPay
+      - mm
+      - profitRate
+      additionalProperties: false
+    ProfitabilityMonthBasis:
+      type: object
+      description: 월별 평균/재직/투입 분모와 MM초과 근거. MM1.00은 초과 아님·0.40도 투입1달.
+      properties:
+        month:
+          type: string
+          pattern: ^[0-9]{6}$
+        assignmentMm:
+          type: string
+          pattern: ^-?[0-9]+\.[0-9]{2}$
+          description: 소수 두 자리 십진 MM 문자열
+        assignmentCount:
+          type: integer
+          minimum: 0
+        averageMonthIncluded:
+          type: boolean
+        employmentMonthIncluded:
+          type: boolean
+        utilizedMonthIncluded:
+          type: boolean
+        explanation:
+          type: string
+      required:
+      - month
+      - assignmentMm
+      - assignmentCount
+      - averageMonthIncluded
+      - employmentMonthIncluded
+      - utilizedMonthIncluded
+      - explanation
+      additionalProperties: false
+    IndividualProfitabilityPerson:
+      type: object
+      description: DEV_ID 부모1행·직접월만 집계. 현재 사람 소속/직무/등급/직위 표시와 월급여 snapshot 계산 구별. 기준일 휴직은 표에서만 제외. TK전용 제외보기 단가 null은
+        미확인과 구별하고 이익−원가는 적자/평균 포함. 사람파트는 프로젝트파트와 별개. 가동률은 투입달/운영이후 직접재직달이며 보기로 바뀌지 않는다.
+      properties:
+        personId:
+          type: string
+          maxLength: 20
+        managementNo:
+          type:
+          - string
+          - 'null'
+        name:
+          type:
+          - string
+          - 'null'
+        companyName:
+          type:
+          - string
+          - 'null'
+        companyId:
+          type:
+          - string
+          - 'null'
+        personPartId:
+          type:
+          - string
+          - 'null'
+        personPartName:
+          type:
+          - string
+          - 'null'
+        position:
+          type:
+          - string
+          - 'null'
+        employeeType:
+          type: string
+        hireDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        jobCode:
+          type:
+          - string
+          - 'null'
+        gradeCode:
+          type:
+          - string
+          - 'null'
+        metrics:
+          $ref: '#/components/schemas/IndividualProfitabilityMetrics'
+        utilization:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        workedMonths:
+          type: integer
+          minimum: 0
+        employmentMonths:
+          type: integer
+          minimum: 0
+        utilizedMonths:
+          type: integer
+          minimum: 0
+        turnkeyOnlyExcluded:
+          type: boolean
+        monthBasis:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfitabilityMonthBasis'
+        completeness:
+          $ref: '#/components/schemas/MonthlyCostCompleteness'
+      required:
+      - personId
+      - managementNo
+      - name
+      - companyName
+      - companyId
+      - personPartId
+      - personPartName
+      - position
+      - employeeType
+      - hireDate
+      - jobCode
+      - gradeCode
+      - metrics
+      - utilization
+      - workedMonths
+      - employmentMonths
+      - utilizedMonths
+      - turnkeyOnlyExcluded
+      - monthBasis
+      - completeness
+      additionalProperties: false
+    ProfitabilitySummary:
+      type: object
+      description: 회사 H/U/F는 UI필터와 독립. H/U/F 월평균을 먼저 HALF_UP1 후 표시값으로 율 계산. 전체휴직 H만·간접 모두제외·마감은 사본 MM/유형/FREE_MM. 평균단가
+        유효0 포함/TK전용 null 제외·미확인 안내, 비용/이익 미확인 평균 null과 대상수·확인분 적자수.
+      properties:
+        companyHeadcount:
+          type: integer
+          minimum: 0
+        companyLeaveCount:
+          type: integer
+          minimum: 0
+        averageHeadcount:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        averageUtilizedHeadcount:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        averageEarnedHeadcount:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        companyUtilization:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        companyEarnedRate:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+\.[0-9]$
+          description: 소수 한 자리 HALF_UP. 분모 0은 null
+        averageRevenue:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        averageCost:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        averageProfit:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+        confirmedLossCount:
+          type: integer
+          minimum: 0
+        unknownCostCount:
+          type: integer
+          minimum: 0
+        unknownRevenueCount:
+          type: integer
+          minimum: 0
+        validRevenuePersonCount:
+          type: integer
+          minimum: 0
+      required:
+      - companyHeadcount
+      - companyLeaveCount
+      - averageHeadcount
+      - averageUtilizedHeadcount
+      - averageEarnedHeadcount
+      - companyUtilization
+      - companyEarnedRate
+      - averageRevenue
+      - averageCost
+      - averageProfit
+      - confirmedLossCount
+      - unknownCostCount
+      - unknownRevenueCount
+      - validRevenuePersonCount
+      additionalProperties: false
+    ProfitabilityContribution:
+      type: object
+      description: 현재필터/보기의 주직무×기존등급/미분류/전체. 개인이익합/사람수 DOWN; 0명/미확인은 null. 전체는 등급평균의 평균 아님·회사 전체 이익 아님.
+      properties:
+        jobCode:
+          type:
+          - string
+          - 'null'
+        jobName:
+          type: string
+        gradeCode:
+          type:
+          - string
+          - 'null'
+        gradeName:
+          type: string
+        personCount:
+          type: integer
+          minimum: 0
+        unknownCount:
+          type: integer
+          minimum: 0
+        averageProfit:
+          type:
+          - string
+          - 'null'
+          pattern: ^-?[0-9]+$
+          description: 원 정수 십진 문자열. 미확인은 null이며 유효 0과 구별한다. 기간 합계는 개별 행 NUMERIC(15) 범위로 절단하지 않는다.
+      required:
+      - jobCode
+      - jobName
+      - gradeCode
+      - gradeName
+      - personCount
+      - unknownCount
+      - averageProfit
+      additionalProperties: false
+    ProfitabilityViewContext:
+      type: object
+      description: 동일 DB 일관스냅샷의 기간/표시보기. TK제외는 응답만 변경하며 원가/MM/사본 불변.
+      properties:
+        period:
+          $ref: '#/components/schemas/ProfitabilityPeriod'
+        view:
+          type: string
+          enum:
+          - CUMULATIVE
+          - MONTHLY_AVERAGE
+        includeTurnkey:
+          type: boolean
+      required:
+      - period
+      - view
+      - includeTurnkey
+      additionalProperties: false
+    IndividualProfitabilityData:
+      type: object
+      description: 같은 스냅샷의 사람·요약·전체합계·공헌이익. 초과페이지 items=[]이나 전체지표 유지. calculationBasis는 급여/배분/경비/TK/평균의 같은 서버 계산근거다.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IndividualProfitabilityPerson'
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        context:
+          $ref: '#/components/schemas/ProfitabilityViewContext'
+        summary:
+          $ref: '#/components/schemas/ProfitabilitySummary'
+        totals:
+          $ref: '#/components/schemas/IndividualProfitabilityMetrics'
+        contributions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfitabilityContribution'
+        unknownCount:
+          type: integer
+          minimum: 0
+        estimatedCount:
+          type: integer
+          minimum: 0
+        calculationBasis:
+          type: array
+          items:
+            type: string
+      required:
+      - items
+      - total
+      - page
+      - size
+      - context
+      - summary
+      - totals
+      - contributions
+      - unknownCount
+      - estimatedCount
+      - calculationBasis
+      additionalProperties: false
+    IndividualProfitabilityPersonData:
+      type: object
+      description: personId와 동일 조회문맥의 월별 원본·인건비출처·문제. 평균보기라도 자식 월원본 유지·월/프로젝트/투입 ASC. 개발자 편집 상세를 복제하지 않는다.
+      properties:
+        person:
+          $ref: '#/components/schemas/IndividualProfitabilityPerson'
+        context:
+          $ref: '#/components/schemas/ProfitabilityViewContext'
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyPersonCost'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyCostIssue'
+        calculationBasis:
+          type: array
+          items:
+            type: string
+      required:
+      - person
+      - context
+      - months
+      - issues
+      - calculationBasis
+      additionalProperties: false
+    IndividualProfitabilityColumnView:
+      type: object
+      description: 'COLS/UI-03 individualProfitability: 22열 전체순열/선택숨김, 필수 name/revenue/totalCost/profit 숨김불가. 기본 order는
+        enum순서·hidden은 본인보험/원천세/소득세/실지급액. 직렬화2000자와 기존 revision 유지.'
+      properties:
+        order:
+          type: array
+          minItems: 22
+          maxItems: 22
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - name
+            - companyName
+            - position
+            - employeeType
+            - hireDate
+            - utilization
+            - mm
+            - revenue
+            - pay
+            - allowance
+            - companyInsurance
+            - retirementReserve
+            - personalCost
+            - teamExpense
+            - projectExpense
+            - totalCost
+            - profit
+            - profitRate
+            - selfInsurance
+            - withholdingTax
+            - incomeTax
+            - netPay
+        hidden:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+            - companyName
+            - position
+            - employeeType
+            - hireDate
+            - utilization
+            - mm
+            - pay
+            - allowance
+            - companyInsurance
+            - retirementReserve
+            - personalCost
+            - teamExpense
+            - projectExpense
+            - profitRate
+            - selfInsurance
+            - withholdingTax
+            - incomeTax
+            - netPay
+      required:
+      - order
+      - hidden
+      additionalProperties: false
     FinancialWon:
       type: string
       pattern: ^(0|[1-9][0-9]{0,14})$
@@ -28817,6 +31010,15 @@ components:
       description: order는 표 정의 전체열 순열, hidden은 선택열 부분집합.
     ColumnPreferences:
       x-screen-validation:
+        UI-03:
+          allowedTables:
+          - individualProfitability
+          requiredColumns:
+          - name
+          - revenue
+          - totalCost
+          - profit
+          maxSerializedLength: 2000
         UI-15:
           allowedTables:
           - clients
@@ -28877,6 +31079,8 @@ components:
         UI-33={candidates:{order,hidden}} 추가. 기존UI-27/15/23 유지.
       type: object
       properties:
+        individualProfitability:
+          $ref: '#/components/schemas/IndividualProfitabilityColumnView'
         clients:
           $ref: '#/components/schemas/ClientColumnView'
         users:
@@ -29010,6 +31214,7 @@ components:
         COLS/{screenId}: UI-27의원문5표정의·다른화면은표정의생성후·전체순열/선택열부분집합
         PERIOD/{screenId}: 화면등록유형YEAR/YEAR_MONTH/YEAR_CUM·연도/월일치·getPeriodContext허용범위·NONE400
         COLS/UI-12: assignments만·11열전체순열/숨김부분집합·projectName/developerName 숨김금지·미등록/중복400
+        COLS/UI-03: individualProfitability만·22열 전체순열/선택숨김·name/revenue/totalCost/profit 필수·2000자·기존 revision
     PreferenceSaveResult:
       type: object
       properties:
@@ -38566,6 +40771,206 @@ components:
       x-error-codes:
       - INTERNAL_ERROR
 x-uncovered-requirements:
+- canonical_id: REQ-1148
+  status: screen-only
+  evidence: SPEC-REQUEST.md:27 · screenRegistry.ts/app/router.tsx의 메뉴·작업탭·즐겨찾기 보존은 프런트 라우트 회귀로 검증한다. 조회 API로 탐색
+    상태를 변경하지 않는다.
+- canonical_id: REQ-1151
+  status: screen-only
+  evidence: SPEC-REQUEST.md:30 · 이름 클릭의 DEV_ID를 기존 DeveloperDrawer/peopleClient로 전달하는 연결이다. 기존 개발자 조회를 재사용하고 별도
+    개발자 편집/상세 API를 만들지 않는다.
+- canonical_id: REQ-1177
+  status: screen-only
+  evidence: SPEC-REQUEST.md:72 · 원/천원/백만원 0/3/6소수·뒤0제거·무반올림은 포매터 시험이다. API는 원 십진문자열을 보존하며 서버 저장금액 환산 명령은 없다.
+- canonical_id: REQ-1178
+  status: screen-only
+  evidence: SPEC-REQUEST.md:73 · NULL –/0 0/음수색·MM2자리/율1자리/날짜 형식은 응답 값을 렌더링하는 포매터 시험이다. 표시 문자열로 업무금액을 대체하지 않는다.
+- canonical_id: REQ-1260
+  status: screen-only
+  evidence: SPEC-REQUEST.md:275 · 공통 PAGE_SIZE/DENSE/AMT_UNIT/PERIOD는 기존 설정 API를 사용한다. 명시 초기화 외 작업탭 내 보기/필터 유지 자체는
+    React 탭 상태 회귀이며 새 서버 세션은 없다.
+- canonical_id: REQ-1261
+  status: screen-only
+  evidence: SPEC-REQUEST.md:277 · 펼침/설정/도움말의 이벤트 버블링 차단과 상세 닫기 조건·페이지·스크롤·펼침 보존은 브라우저 이벤트 시험이다. 클릭 처리용 HTTP 명령은
+    없다.
+- canonical_id: REQ-1262
+  status: screen-only
+  evidence: SPEC-REQUEST.md:277 · 768px 미만 카드/단건상세/더보기20건·엑셀숨김 및 PC 가로스크롤/이름고정은 반응형 UI 시험이다. 목록 size=20을 재사용하고 모바일
+    전용 API는 없다.
+- canonical_id: REQ-1143
+  status: non-functional
+  evidence: SPEC-REQUEST.md:17 · 지정 시안의 구조·색·간격·글꼴·아이콘·표·필터·접힘·단위·열 설정·계산 안내를 따르되 시안 고정 데이터와 임의율은 사용하지 않는다. 서버 구현/통합시험
+    및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1144
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:19 · 기존 테이블과 초기값을 사용하고 DDL/DML 전체 재실행·재적재·예제 자동 삽입을 하지 않는다. 기존 data-model.md 물리열/조회투영
+    계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1146
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:19 · 원천 편집·급여 업로드 재구현·개인 급여명세서·회사 손익/프로젝트 원가 화면·파트 정산·자금수지·마감 실행/해제·AI/추천은 만들지 않는다.
+    제외 경계로 보존하며 해당 저장/실행 HTTP 명령을 이번에 추가하지 않는다.
+- canonical_id: REQ-1147
+  status: non-functional
+  evidence: SPEC-REQUEST.md:23 · 37796fac4e2cf967769ebc8a72348d7a7c28f42d에 04~07 구현을 가정하지 않고 최신 병합 서비스·DTO·잠금 계약을
+    확인하여 연결한다. 서버 구현/통합시험 및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1150
+  status: non-functional
+  evidence: SPEC-REQUEST.md:29 · DataTable·DetailDrawer·Dialog·Feedback·format·api·useCommitRefresh를 재사용하고 펼침 행과
+    전체합계를 공통 표 옵션으로 확장한다. 서버 구현/통합시험 및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1153
+  status: non-functional
+  evidence: SPEC-REQUEST.md:32 · CurrentUserProvider·Clock·일관된 조회와 commit 무효화 계약을 공유한다. 서버 구현/통합시험 및 정본의 기존 논리섹션에서
+    검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1157
+  status: non-functional
+  evidence: SPEC-REQUEST.md:37 · 기존 Java/Spring MVC/MyBatis/Flyway 구성을 유지하고 무관한 ORM/빌드 도구를 전환하지 않는다. 서버 구현/통합시험
+    및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1158
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:41 · 03의 사람/가격/휴직·퇴사 원천을 사용하고 현재 표시 분류로 과거 급여 분류·금액을 대체하지 않는다. 기존 data-model.md 물리열/조회투영
+    계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1159
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:42 · 04 저장 팀비·경비·계약·예산·TK표·월파트·상태를 사용하며 기본값 변경으로 저장 금액을 재생성하지 않는다. 기존 data-model.md
+    물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1161
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:44 · TK 개인 참고액을 청구일 기준 실제 매출과 구분하고 청구·입금을 수정하거나 개인에게 나누지 않는다. 제외 경계로 보존하며 해당 저장/실행 HTTP
+    명령을 이번에 추가하지 않는다.
+- canonical_id: REQ-1162
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:45 · 카드·이체·대여금·전월조정·법인세·추가 직접경비는 개인에게 가산/배분하지 않는다. 제외 경계로 보존하며 해당 저장/실행 HTTP 명령을 이번에
+    추가하지 않는다.
+- canonical_id: REQ-1163
+  status: non-functional
+  evidence: SPEC-REQUEST.md:46 · 09/10/11/14는 공통 월별 원가/분류/TK 참고액 서비스를 재사용하고 UI 필터·휴직 숨김·TK 제외 결과를 전체원가/마감 원천으로 사용하지
+    않는다. 서버 구현/통합시험 및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1168
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:60 · 미마감 DTO FIX_YN=N·마감 DTO는 원값이고 사본 감사시각을 조회시각으로 덮지 않는다. 기존 data-model.md 물리열/조회투영
+    계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1170
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:60 · 사본 컬럼에 맞는 원가 DTO를 제공하되 이번에는 마감/확정 API·화면을 만들지 않는다. 기존 data-model.md 물리열/조회투영 계약과
+    DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1173
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:68 · 05 확정 소수2자리 MM을 재일할/반올림하지 않고 십진 합산한다. 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며
+    신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1176
+  status: non-functional
+  evidence: SPEC-REQUEST.md:71 · 금액/MM/큰 ID는 십진 문자열·건수/페이지는 정수이고 JS Number/float/double로 업무 계산하지 않는다. 서버 구현/통합시험
+    및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1179
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:81 · TB_CO_MON_COST PK는 COST_YM,DEV_ID,PROJ_ID,ASGN_ID이며 같은 프로젝트 다른 투입을 합치지 않는다. 기존
+    data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1180
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:85 · month/personId/projectId/assignmentId·assignmentMm/freeMm·personalRevenue/laborAllocated·teamExpense/projectExpense/directExpense·costClass/contractType/projectSalesPartId·fixed와
+    감사는 기존 컬럼/형식에 대응한다. 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1181
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:92 · 개인별 원가는 월인건비·원가합계는 LABOR_ALLOC_AMT+DRCT_EXPS_AMT·영업이익은 SALES_AMT−원가이며 동명 SQL열을
+    만들지 않는다. 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1182
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:94 · 대기는 PROJ_ID=ASGN_ID=IDLE·간접은 INDRCT이고 FK를 요구하지 않으며 실주는 실제 ID와 IDLE 분류를 유지한다. 기존
+    data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1183
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:100 · TB_HR_MON_PAY (PAY_YM,DEV_ID) — PAY_YM·DEV_ID, PAY_AMT/ALWNC_AMT/INSR_CMPNY_AMT/RETIRE_RSV_AMT/INSR_SELF_AMT/WTHLD_TAX_AMT/INCM_TAX_AMT/REAL_PAY_AMT/VNDR_SPLY_AMT
+    NUMERIC(15), EMP_TYPE_CD/DRCT_CLS_CD VARCHAR(10), UPLD_ID, A. 월 급여/계산 snapshot. FIX_YN열 없음 기존 data-model.md
+    물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1184
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:101 · TB_HR_DEV (DEV_ID) — DEV_ID·MNG_NO·DEV_NM·EMP_TYPE_CD·BLNG_CLNT_ID·GRADE_CD·JOB_CD·JBPS_CD·DRCT_CLS_CD·PART_ID·JNCMP_DT·RETIRE_DT·USE_YN.
+    사람 표시/재직/기본 분류 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1185
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:102 · TB_HR_DEV_PRC (DEV_ID,APLY_BGN_YM) — APLY_BGN_YM·APLY_END_YM·MON_PAY_AMT·MON_UPRC.
+    미업로드월의 유효 기본 지급액만 참조. MON_UPRC를 턴키 단가로 사용하지 않음 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를
+    추가하지 않는다.
+- canonical_id: REQ-1186
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:103 · TB_HR_DEV_STAT (DEV_ID,STAT_SN) — WORK_STAT_CD·BGN_DT·END_DT. 월 전체 휴직과조회 기준일 휴직
+    판정. 현재 WORK_STAT_CD문자 하나로 과거를 판정하지 않음 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1187
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:104 · TB_PJ_ASGN (ASGN_ID) — PROJ_ID·DEV_ID·JOB_CD·INPUT_TYPE_CD·CTRT_DEV_ID·ASGN_STAT_CD·INPUT_BGN_DT·INPUT_END_DT.
+    상세 직무/무상/취소 확인 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1188
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:105 · TB_PJ_ASGN_MON (ASGN_ID,INPUT_YM) — INPUT_YM·PROJ_ID·DEV_ID·MON_MM NUMERIC(6,2)·APLY_UPRC/SALES_AMT
+    NUMERIC(15)·FIX_YN. 실제 월 MM/월단위 매출 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1189
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:106 · TB_PJ_PROJ (PROJ_ID) — PROJ_NM·CTRT_TYPE_CD·PROJ_STAT_CD·LOSE_DT·CTRT_AMT·BDGT_AMT·TEAM_EXPS_AMT·PROJ_EXPS_AMT.
+    저장 계약/예산/1인당 경비 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1190
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:107 · TB_PJ_TK_DSTRB (PROJ_ID,DSTRB_STEP_CD,ROW_SN,DSTRB_YM) — ROW_TYPE_CD·DEV_ID·DSTRB_AMT·ITEM_NM·UPLD_ID.
+    사람/월별 배분액. JOB_CD열 없음 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1191
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:108 · TB_PJ_PROJ_PART (PROJ_ID,APLY_BGN_YM) — PART_ID. 계산월 이하 가장 최근 시작행의 프로젝트 영업 파트.
+    종료월열 없음 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1192
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:109 · TB_BS_CLNT (CLNT_ID) — CLNT_NM·USE_YN. DEV.BLNG_CLNT_ID로 협력사 표시 기존 data-model.md
+    물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1193
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:110 · TB_BS_PART (PART_ID) — PART_NM·HQ_YN·USE_YN. 사람 소속파트/프로젝트파트 표시. 둘을 혼동하지 않음 기존
+    data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1194
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:111 · TB_CL_CLOSE (CLOSE_YM) — CLOSE_STAT_CD. CLOSE=마감·WORK=미마감 기존 data-model.md 물리열/조회투영
+    계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1195
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:112 · TB_SY_OPER_STD (STD_CD,APLY_BGN_YM) — STD_VAL. CASH_BASE_YM 현재값. 원금/시작월을 새로 입력받지
+    않음 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1196
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:113 · TB_SY_CODE (CODE_GRP_ID,CODE) — CODE_NM·CODE_VAL·SORT_ORD·USE_YN·DEL_YN. EMP_TYPE/DRCT_CLS/JBPS/JOB/GRADE/ALWNC/CTRT_TYPE/COST_CLS
+    등 표시/기준 조회 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1197
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:114 · TB_SY_USER_PREF (USER_ID,PREF_TYPE_CD,PREF_KEY) — PREF_VAL·A. 기존 설정 서비스로 COLS/AMT_UNIT/DENSE/PAGE_SIZE/PERIOD
+    저장·복원 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1198
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:115 · TB_SY_ACCS_LOG (LOG_ID) — USER_ID·ACT_TYPE_CD=DNLD·SCRN_ID=UI-03·TRGT_DESC·CLIENT_IP·ACT_DTTM·REG_USER_ID·REG_DTTM.
+    파일 전송 전 필수 접근기록 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1213
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:160 · 추가 직접경비/카드/이체는 개인행에 넣지 않고 두 경비를 노동비와 혼합배분하지 않는다. 제외 경계로 보존하며 해당 저장/실행 HTTP 명령을
+    이번에 추가하지 않는다.
+- canonical_id: REQ-1217
+  status: data-constraint
+  evidence: SPEC-REQUEST.md:177 · FREE_MM은 FREE에서 ASGN_MM·그외0, IDLE ASGN_MM=max(0,1−T)·FREE0/유형NULL·간접MM0이며 0원 고정행
+    존재여부를 DTO로 명시한다. 기존 data-model.md 물리열/조회투영 계약과 DTO 대조로 검증하며 신규 테이블/컬럼/저장 API를 추가하지 않는다.
+- canonical_id: REQ-1232
+  status: non-functional
+  evidence: SPEC-REQUEST.md:211 · 미마감 다음조회는 최신원천이며 캐시 사용시 사람월/프로젝트월/급여/배정/가격/경비/계약/예산/TK/파트/마감 commit뒤 무효화·마감캐시
+    분리다. 서버 구현/통합시험 및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1272
+  status: non-functional
+  evidence: SPEC-REQUEST.md:301 · 한응답 부모/자식/요약/합계/공헌이익과대량다운로드는같은DB일관스냅샷·기간/사람집합조회·N+1/전체기간쓰기잠금금지다. 서버 구현/통합시험 및
+    정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1273
+  status: non-functional
+  evidence: SPEC-REQUEST.md:303 · 입출력·사본선택·완전성·분류/보정순서·무효화대상과월매출/프로젝트참고/개인단가/노동비/경비구분 DTO를저장소문서로남긴다. 서버 구현/통합시험
+    및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1274
+  status: non-functional
+  evidence: SPEC-REQUEST.md:307 · 필터/요약/공헌이익/월원장/단위/설정/배지/근거/개발자상세를공통부품/훅으로분리해실사용하고서버계산과분리·경로/Props문서화다. 서버 구현/통합시험
+    및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
+- canonical_id: REQ-1275
+  status: non-functional
+  evidence: SPEC-REQUEST.md:309 · 실제DB로합보존/보정/경비/구분snapshot/TK/마감/평균/인원율/전체합계/출력일치·빌드/관련시험/미리보기·공유기능및03~07회귀·조회원천불변을검증한다.
+    서버 구현/통합시험 및 정본의 기존 논리섹션에서 검증할 제약이며 이를 별도 HTTP 명령으로 노출하지 않는다.
 - canonical_id: REQ-963
   status: non-functional
   evidence: SPEC-REQUEST.md:15 · UI-10 구현 경계는 모듈/라우트 책임이다. financial-items와B2 연산 집합 외에 범위 확인용 HTTP 명령을 만들지 않으며 architecture

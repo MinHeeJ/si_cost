@@ -342,6 +342,10 @@ describe("표 열 설정", () => {
       </PreferencesProvider>,
     );
     expect(await screen.findByLabelText("코드 숨김")).toBeDisabled();
+    expect(screen.getByTestId("column-preferences-panel")).toHaveAttribute(
+      "data-screen-id",
+      "SCR-UI-27-M9",
+    );
     expect(screen.getByLabelText("이름 숨김")).toBeDisabled();
     fireEvent.click(screen.getByLabelText("단위 숨김"));
     fireEvent.click(screen.getByRole("button", { name: "단위 위로" }));

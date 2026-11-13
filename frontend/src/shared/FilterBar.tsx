@@ -11,6 +11,7 @@ export type FilterBarProps = {
   className?: string;
   resetTestId?: string;
   searchTestId?: string;
+  disabled?: boolean;
   /** 초기화·조회 왼쪽에 붙이는 추가 칸이나 버튼. */
   extra?: ReactNode;
 };
@@ -27,6 +28,7 @@ export function FilterBar({
   className = "",
   resetTestId,
   searchTestId,
+  disabled,
   extra,
 }: FilterBarProps) {
   return (
@@ -41,13 +43,14 @@ export function FilterBar({
       {children}
       <div className="sicost-filterbar-actions">
         {extra}
-        <button type="button" data-testid={resetTestId} onClick={onReset}>
+        <button type="button" data-testid={resetTestId} onClick={onReset} disabled={disabled}>
           초기화
         </button>
         <button
           type="submit"
           className="sicost-primary"
           data-testid={searchTestId}
+          disabled={disabled}
         >
           조회
         </button>

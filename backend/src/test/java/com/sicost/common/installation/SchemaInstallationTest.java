@@ -13,7 +13,7 @@ class SchemaInstallationTest {
         PostgreSqlDatabase db = new PostgreSqlDatabase(); db.install();
         assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(68);
         assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(836);
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(13);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(19);
         for (var expected : java.util.Map.of("f",73L,"c",46L,"u",5L,"p",68L).entrySet()) {
             assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=? AND c.contype::text=? AND c.conrelid::regclass::text NOT LIKE '%flyway%'", Long.class, db.schema, expected.getKey())).isEqualTo(expected.getValue());
         }
@@ -24,7 +24,7 @@ class SchemaInstallationTest {
             var table = tables.next(); String name = table.getKey().toLowerCase(java.util.Locale.ROOT);
             for (JsonNode column : table.getValue().get("columns")) {
                 var actual = db.sql.queryForMap("SELECT format_type(a.atttypid,a.atttypmod) AS type, NOT a.attnotnull AS nullable, pg_get_expr(d.adbin,d.adrelid) AS default_value, col_description(a.attrelid,a.attnum) AS comment FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname=? AND c.relname=? AND a.attname=? AND a.attnum>0", db.schema, name, column.get("name").asText());
-                String expectedType = column.get("type").asText().replace("varchar(","character varying(").replace("char(","character(").replace("timestamp","timestamp without time zone");
+                String expectedType = column.get("type").asText().replace("varchar(","character varying(").replace("char(","character(").replace("timestamp","timestamp without time zone").replaceAll("numeric\\((\\d+)\\)", "numeric($1,0)");
                 assertThat(actual.get("type")).as(name+"."+column.get("name").asText()).isEqualTo(expectedType);
                 assertThat(actual.get("nullable")).isEqualTo(column.get("nullable").asBoolean());
                 assertThat(actual.get("comment")).isNotNull();
@@ -49,9 +49,12 @@ class SchemaInstallationTest {
         assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_sy_code_grp WHERE sys_code_yn='Y'",Long.class)).isEqualTo(44);
         assertThat(db.sql.queryForObject("SELECT std_val::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM'",String.class)).isEqualTo("202601.0000");
         assertThat(db.sql.queryForObject("SELECT std_val::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_AMT'",String.class)).isEqualTo("1150000000.0000");
-        for (String table : new String[]{"tb_sy_adm_area","tb_sy_adm_hdong","tb_sy_code_map","tb_sy_chg_hist","tb_sy_user_pref","tb_cl_close","tb_cl_close_hist","tb_cl_close_chk"}) assertThat(db.count(table)).as(table).isZero();
+        var addressCounts = java.util.Map.of("tb_sy_adm_area", db.count("tb_sy_adm_area"), "tb_sy_adm_hdong", db.count("tb_sy_adm_hdong"));
+        addressCounts.forEach((table, count) -> assertThat(count).as(table + " installed by V5").isPositive());
+        for (String table : new String[]{"tb_sy_code_map","tb_sy_chg_hist","tb_sy_user_pref","tb_cl_close","tb_cl_close_hist","tb_cl_close_chk"}) assertThat(db.count(table)).as(table).isZero();
         assertThat(db.flyway().migrate().migrationsExecuted).isZero();
         counts.forEach((table, count) -> assertThat(db.count(table)).as(table).isEqualTo(count));
         assertThat(db.flyway().validateWithResult().validationSuccessful).isTrue();
+        addressCounts.forEach((table, count) -> assertThat(db.count(table)).as(table).isEqualTo(count));
     }
 }

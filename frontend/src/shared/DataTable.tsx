@@ -1,4 +1,10 @@
-import type { Key, ReactNode } from "react";
+import {
+  Fragment,
+  useId,
+  type CSSProperties,
+  type Key,
+  type ReactNode,
+} from "react";
 import { ErrorBanner } from "./Feedback";
 import { Icon } from "./Icon";
 
@@ -34,6 +40,19 @@ export type DataTableProps<T> = {
   onRowAction?(row: T): void;
   onColumnsChange?(): void;
   dense?: boolean;
+  /** Screen-owned state survives work-tab switches. */
+  expandableRow?: {
+    expandedKeys: readonly Key[];
+    onExpandedChange(keys: Key[]): void;
+    render(row: T): ReactNode;
+    canExpand?(row: T): boolean;
+    label?(row: T): string;
+  };
+  /** Filter-wide server totals, never a reduction of current-page rows/children. */
+  footer?: { label: string; render(column: Column<T>): ReactNode };
+  /** Fixed pixel widths; offsets follow the currently visible column order. */
+  stickyColumns?: readonly { id: string; width: number }[];
+  testId?: string;
 };
 export function DataTable<T>({
   rows,
@@ -56,15 +75,53 @@ export function DataTable<T>({
   onRowAction,
   onColumnsChange,
   dense,
+  expandableRow,
+  footer,
+  stickyColumns,
+  testId = "data-table",
 }: DataTableProps<T>) {
+  const instanceId = useId();
   if (error) return <ErrorBanner message={error} onRetry={onRetry} />;
   const pages = Math.max(1, Math.ceil(total / size));
+  const span =
+    columns.length + (onSelectionChange ? 1 : 0) + (expandableRow ? 1 : 0);
+  const marker = (key: Key) =>
+    String(key)
+      .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+      .replace(/[^a-z0-9-]/g, "-");
+  const cellStyle = (column: Column<T>): CSSProperties => {
+    const fixed = stickyColumns?.find((item) => item.id === column.id);
+    if (!fixed) return { textAlign: column.align };
+    const before = columns.slice(0, columns.indexOf(column));
+    const left = before.reduce(
+      (sum, item) =>
+        sum + (stickyColumns?.find((c) => c.id === item.id)?.width ?? 0),
+      (onSelectionChange ? 44 : 0) + (expandableRow ? 44 : 0),
+    );
+    return {
+      textAlign: column.align,
+      position: "sticky",
+      left,
+      width: fixed.width,
+      minWidth: fixed.width,
+      maxWidth: fixed.width,
+    };
+  };
+  const utilityStyle = (left: number): CSSProperties | undefined =>
+    stickyColumns?.length
+      ? { position: "sticky", left, width: 44, minWidth: 44, maxWidth: 44 }
+      : undefined;
   return (
-    <div className="sicost-grid" aria-busy={Boolean(loading)}>
+    <div
+      className="sicost-grid"
+      data-testid={testId}
+      aria-busy={Boolean(loading)}
+    >
       {onColumnsChange && (
         <button
           type="button"
           className="sicost-columns-action"
+          data-testid={`${testId}-columns-button`}
           onClick={onColumnsChange}
         >
           열 설정
@@ -75,10 +132,17 @@ export function DataTable<T>({
           <thead>
             <tr>
               {onSelectionChange && (
-                <th scope="col">
+                <th
+                  scope="col"
+                  className={
+                    stickyColumns?.length ? "sicost-sticky-cell" : undefined
+                  }
+                  style={utilityStyle(0)}
+                >
                   <input
                     type="checkbox"
                     aria-label="이 페이지 전체 선택"
+                    data-testid={`${testId}-select-all`}
                     checked={
                       rows.length > 0 &&
                       rows.every((row) => selectedKeys?.includes(rowKey(row)))
@@ -101,11 +165,27 @@ export function DataTable<T>({
                   />
                 </th>
               )}
+              {expandableRow && (
+                <th
+                  scope="col"
+                  className={
+                    stickyColumns?.length ? "sicost-sticky-cell" : undefined
+                  }
+                  style={utilityStyle(onSelectionChange ? 44 : 0)}
+                >
+                  <span className="sicost-sr-only">월별 상세</span>
+                </th>
+              )}
               {columns.map((column) => (
                 <th
                   scope="col"
                   key={column.id}
-                  style={{ textAlign: column.align }}
+                  className={
+                    stickyColumns?.some((c) => c.id === column.id)
+                      ? "sicost-sticky-cell"
+                      : undefined
+                  }
+                  style={cellStyle(column)}
                   aria-sort={
                     sort?.id === column.id
                       ? sort.direction === "ASC"
@@ -138,7 +218,7 @@ export function DataTable<T>({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length + (onSelectionChange ? 1 : 0)}>
+                <td colSpan={span}>
                   <div
                     role="status"
                     className="sicost-empty sicost-loading-state"
@@ -154,7 +234,7 @@ export function DataTable<T>({
               </tr>
             ) : !rows.length ? (
               <tr>
-                <td colSpan={columns.length + (onSelectionChange ? 1 : 0)}>
+                <td colSpan={span}>
                   <div className="sicost-empty sicost-empty-state">
                     <Icon name="search" size={26} />
                     <span>{empty}</span>
@@ -165,57 +245,147 @@ export function DataTable<T>({
             ) : (
               rows.map((row) => {
                 const key = rowKey(row);
+                const expanded =
+                  expandableRow?.expandedKeys.includes(key) ?? false;
+                const detailId = `${instanceId}-${String(key)}`;
                 return (
-                  <tr
-                    key={key}
-                    aria-selected={
-                      onSelectionChange
-                        ? (selectedKeys?.includes(key) ?? false)
-                        : undefined
-                    }
-                    tabIndex={onRowAction ? 0 : undefined}
-                    onClick={() => onRowAction?.(row)}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        event.target === event.currentTarget
-                      )
-                        onRowAction?.(row);
-                    }}
-                  >
-                    {onSelectionChange && (
-                      <td>
-                        <input
-                          type="checkbox"
-                          aria-label={`${String(key)} 선택`}
-                          checked={selectedKeys?.includes(key) ?? false}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={(event) =>
-                            onSelectionChange(
-                              event.target.checked
-                                ? [...(selectedKeys ?? []), key]
-                                : (selectedKeys ?? []).filter(
-                                    (item) => item !== key,
-                                  ),
-                            )
+                  <Fragment key={key}>
+                    <tr
+                      data-testid={`${testId}-row-${marker(key)}`}
+                      aria-selected={
+                        onSelectionChange
+                          ? (selectedKeys?.includes(key) ?? false)
+                          : undefined
+                      }
+                      tabIndex={onRowAction ? 0 : undefined}
+                      onClick={() => onRowAction?.(row)}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" &&
+                          event.target === event.currentTarget
+                        )
+                          onRowAction?.(row);
+                      }}
+                    >
+                      {onSelectionChange && (
+                        <td
+                          className={
+                            stickyColumns?.length
+                              ? "sicost-sticky-cell"
+                              : undefined
                           }
-                        />
-                      </td>
-                    )}
-                    {columns.map((column) => (
-                      <td
-                        key={column.id}
-                        data-column={column.id}
-                        style={{ textAlign: column.align }}
+                          style={utilityStyle(0)}
+                        >
+                          <input
+                            type="checkbox"
+                            aria-label={`${String(key)} 선택`}
+                            data-testid={`${testId}-select-${marker(key)}`}
+                            checked={selectedKeys?.includes(key) ?? false}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) =>
+                              onSelectionChange(
+                                event.target.checked
+                                  ? [...(selectedKeys ?? []), key]
+                                  : (selectedKeys ?? []).filter(
+                                      (item) => item !== key,
+                                    ),
+                              )
+                            }
+                          />
+                        </td>
+                      )}
+                      {expandableRow && (
+                        <td
+                          className={
+                            stickyColumns?.length
+                              ? "sicost-sticky-cell"
+                              : undefined
+                          }
+                          style={utilityStyle(onSelectionChange ? 44 : 0)}
+                        >
+                          {(!expandableRow.canExpand ||
+                            expandableRow.canExpand(row)) && (
+                            <button
+                              type="button"
+                              data-testid={`${testId}-expand-${marker(key)}`}
+                              aria-label={`${expandableRow.label?.(row) ?? String(key)} ${expanded ? "접기" : "펼치기"}`}
+                              aria-expanded={expanded}
+                              aria-controls={expanded ? detailId : undefined}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                expandableRow.onExpandedChange(
+                                  expanded
+                                    ? expandableRow.expandedKeys.filter(
+                                        (item) => item !== key,
+                                      )
+                                    : [...expandableRow.expandedKeys, key],
+                                );
+                              }}
+                            >
+                              {expanded ? "−" : "+"}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {columns.map((column) => (
+                        <td
+                          key={column.id}
+                          data-column={column.id}
+                          className={
+                            stickyColumns?.some((c) => c.id === column.id)
+                              ? "sicost-sticky-cell"
+                              : undefined
+                          }
+                          style={cellStyle(column)}
+                        >
+                          {column.render(row)}
+                        </td>
+                      ))}
+                    </tr>
+                    {expanded && expandableRow && (
+                      <tr
+                        data-testid={`${testId}-detail-${marker(key)}`}
+                        className="sicost-expanded-row"
                       >
-                        {column.render(row)}
-                      </td>
-                    ))}
-                  </tr>
+                        <td colSpan={span}>
+                          <div
+                            id={detailId}
+                            role="region"
+                            aria-label={`${expandableRow.label?.(row) ?? String(key)} 상세`}
+                            data-testid={`${testId}-panel-${marker(key)}`}
+                          >
+                            {expandableRow.render(row)}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })
             )}
           </tbody>
+          {footer && !loading && (
+            <tfoot aria-label={footer.label} data-testid={`${testId}-totals`}>
+              <tr>
+                {onSelectionChange && <td />}
+                {expandableRow && <td />}
+                {columns.map((column) => (
+                  <td
+                    key={column.id}
+                    data-column={column.id}
+                    className={
+                      stickyColumns?.some((c) => c.id === column.id)
+                        ? "sicost-sticky-cell"
+                        : undefined
+                    }
+                    style={cellStyle(column)}
+                  >
+                    {footer.render(column)}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       {page !== undefined && (
@@ -228,6 +398,7 @@ export function DataTable<T>({
             <button
               type="button"
               aria-label="처음 페이지"
+              data-testid={`${testId}-first-page`}
               disabled={loading || page <= 1}
               onClick={() => onPageChange?.(1)}
             >
@@ -236,6 +407,7 @@ export function DataTable<T>({
             <button
               type="button"
               aria-label="이전 페이지"
+              data-testid={`${testId}-previous-page`}
               disabled={loading || page <= 1}
               onClick={() => onPageChange?.(page - 1)}
             >
@@ -245,6 +417,7 @@ export function DataTable<T>({
             <button
               type="button"
               aria-label="다음 페이지"
+              data-testid={`${testId}-next-page`}
               disabled={loading || page >= pages}
               onClick={() => onPageChange?.(page + 1)}
             >
@@ -253,6 +426,7 @@ export function DataTable<T>({
             <button
               type="button"
               aria-label="마지막 페이지"
+              data-testid={`${testId}-last-page`}
               disabled={loading || page >= pages}
               onClick={() => onPageChange?.(pages)}
             >
@@ -261,6 +435,7 @@ export function DataTable<T>({
           </div>
           <select
             aria-label="한 화면 건수"
+            data-testid={`${testId}-page-size`}
             value={size}
             disabled={loading}
             onChange={(event) =>

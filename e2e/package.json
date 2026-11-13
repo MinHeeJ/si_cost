@@ -1,0 +1,9 @@
+{
+  "name": "sicost-browser-acceptance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "20.x", "npm": "10.x" },
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "1.51.1" }
+}

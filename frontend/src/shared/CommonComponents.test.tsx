@@ -5,6 +5,7 @@ import {
   renderHook,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -19,6 +20,114 @@ import { Text } from "./Text";
 import { COMMITTED_REFRESH_FAILED, useCommitRefresh } from "./useCommitRefresh";
 
 describe("공통 부품 계약", () => {
+  it("제어형 펼침은 행 선택/상세를 호출하지 않고 서버 전체합계와 고정열을 유지한다", async () => {
+    const rowAction = vi.fn(),
+      selection = vi.fn(),
+      detail = vi.fn((row: { id: string; name: string }) => (
+        <button onClick={() => rowAction(row.id)}>원본 보기</button>
+      ));
+    const rows = [{ id: "person-a", name: "독립 시험" }];
+    const totals = vi.fn((column: { id: string }) =>
+      column.id === "name" ? "전체 합계" : "9,999",
+    );
+    function Table() {
+      const [expandedKeys, setExpandedKeys] = useState<import("react").Key[]>(
+        [],
+      );
+      return (
+        <DataTable
+          rows={rows}
+          rowKey={(row) => row.id}
+          onRowAction={rowAction}
+          onSelectionChange={selection}
+          selectedKeys={[]}
+          columns={[
+            { id: "name", label: "이름", render: (row) => row.name },
+            { id: "profit", label: "이익", render: () => "1" },
+          ]}
+          stickyColumns={[{ id: "name", width: 180 }]}
+          footer={{ label: "필터 전체 합계", render: totals }}
+          expandableRow={{
+            expandedKeys,
+            onExpandedChange: setExpandedKeys,
+            label: (row) => row.name,
+            render: detail,
+          }}
+        />
+      );
+    }
+    render(<Table />);
+    expect(detail).not.toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole("button", { name: "독립 시험 펼치기" }),
+    );
+    const button = screen.getByRole("button", { name: "독립 시험 접기" });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("region", { name: "독립 시험 상세" }),
+    ).toHaveAttribute("id", button.getAttribute("aria-controls"));
+    expect(detail).toHaveBeenCalledWith(rows[0]);
+    expect(rowAction).not.toHaveBeenCalled();
+    expect(selection).not.toHaveBeenCalled();
+    expect(
+      within(screen.getByTestId("data-table-totals")).getByText("9,999"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "이름" })).toHaveStyle({
+      position: "sticky",
+      left: "88px",
+      minWidth: "180px",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "원본 보기" }));
+    expect(rowAction).toHaveBeenCalledOnce();
+    await userEvent.click(button);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.getByTestId("data-table-totals")).toHaveTextContent("9,999");
+  });
+  it("열 순서/숨김을 바꾸면 고정열 offset도 현재 표시열에 맞고 상태행 colspan을 확장한다", () => {
+    const columns = [
+      { id: "name", label: "이름", render: () => "이름" },
+      { id: "companyName", label: "소속", render: () => "소속" },
+    ];
+    const props: DataTableProps<{ id: string }> = {
+      rows: [],
+      rowKey: (row) => row.id,
+      columns,
+      stickyColumns: [
+        { id: "name", width: 180 },
+        { id: "companyName", width: 120 },
+      ],
+      expandableRow: {
+        expandedKeys: [],
+        onExpandedChange: vi.fn(),
+        render: () => "상세",
+      },
+    };
+    const { rerender } = render(<DataTable {...props} loading />);
+    expect(screen.getByRole("columnheader", { name: "소속" })).toHaveStyle({
+      left: "224px",
+    });
+    expect(screen.getByRole("status").closest("td")).toHaveAttribute(
+      "colspan",
+      "3",
+    );
+    rerender(<DataTable {...props} columns={[columns[1], columns[0]]} />);
+    expect(screen.getByRole("columnheader", { name: "소속" })).toHaveStyle({
+      left: "44px",
+    });
+    expect(screen.getByRole("columnheader", { name: "이름" })).toHaveStyle({
+      left: "164px",
+    });
+    rerender(<DataTable {...props} columns={[columns[0]]} />);
+    expect(
+      screen.queryByRole("columnheader", { name: "소속" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "이름" })).toHaveStyle({
+      left: "44px",
+    });
+    expect(
+      screen.getByText("조회된 자료가 없습니다.").closest("td"),
+    ).toHaveAttribute("colspan", "2");
+  });
   it("화면이 제공한 열·렌더러·페이지·선택 이벤트를 사용한다", async () => {
     const page = vi.fn(),
       selection = vi.fn();

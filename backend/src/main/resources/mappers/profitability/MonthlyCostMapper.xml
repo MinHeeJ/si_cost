@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.profitability.MonthlyCostMapper">
+  <select id="payroll" resultType="com.sicost.profitability.MonthlyCostDtos$Payroll" useCache="false">
+    SELECT PAY_YM AS "month", DEV_ID AS "personId", PAY_AMT AS "pay", ALWNC_AMT AS "allowance",
+      INSR_CMPNY_AMT AS "companyInsurance", INSR_SELF_AMT AS "selfInsurance",
+      RETIRE_RSV_AMT AS "retirementReserve", INCM_TAX_AMT AS "incomeTax",
+      WTHLD_TAX_AMT AS "withholdingTax", REAL_PAY_AMT AS "netPay", VNDR_SPLY_AMT AS "vendorSupply",
+      EMP_TYPE_CD AS "employeeType", DRCT_CLS_CD AS "directClass", UPLD_ID::text AS "uploadId",
+      REG_USER_ID AS "regUserId", REG_DTTM AS "regDttm", MOD_USER_ID AS "modUserId", MOD_DTTM AS "modDttm"
+    FROM TB_HR_MON_PAY WHERE PAY_YM &gt;= #{fromMonth} AND PAY_YM &lt;= #{toMonth}
+    ORDER BY PAY_YM,DEV_ID
+  </select>
+  <sql id="assignmentColumns">
+    m.INPUT_YM AS "month", m.DEV_ID AS "personId", m.PROJ_ID AS "projectId", m.ASGN_ID AS "assignmentId",
+    m.MON_MM AS "assignmentMm", m.APLY_UPRC AS "appliedUnitPrice", m.SALES_AMT AS "salesAmount",
+    m.FIX_YN AS "fixed", a.JOB_CD AS "jobCode", a.INPUT_TYPE_CD AS "inputType",
+    a.CTRT_DEV_ID AS "contractPersonId", a.ASGN_STAT_CD AS "status",
+    a.INPUT_BGN_DT AS "fromDate", a.INPUT_END_DT AS "toDate"
+  </sql>
+  <select id="assignments" resultType="com.sicost.profitability.MonthlyCostDtos$Assignment" useCache="false">
+    SELECT <include refid="assignmentColumns"/>
+    FROM TB_PJ_ASGN_MON m LEFT JOIN TB_PJ_ASGN a ON a.ASGN_ID=m.ASGN_ID
+    WHERE m.INPUT_YM &gt;= #{fromMonth} AND m.INPUT_YM &lt;= #{toMonth}
+    ORDER BY m.INPUT_YM,m.DEV_ID,m.PROJ_ID,m.ASGN_ID
+  </select>
+  <!-- Full project-period denominator, including rows outside the requested year. No current price*MM reconstruction. -->
+  <select id="projectMonths" resultType="com.sicost.profitability.MonthlyCostDtos$Assignment" useCache="false">
+    SELECT <include refid="assignmentColumns"/>
+    FROM TB_PJ_ASGN_MON m LEFT JOIN TB_PJ_ASGN a ON a.ASGN_ID=m.ASGN_ID
+    WHERE EXISTS (SELECT 1 FROM TB_PJ_ASGN_MON r WHERE r.PROJ_ID=m.PROJ_ID
+      AND r.INPUT_YM &gt;= #{fromMonth} AND r.INPUT_YM &lt;= #{toMonth})
+    ORDER BY m.PROJ_ID,m.INPUT_YM,m.DEV_ID,m.ASGN_ID
+  </select>
+  <select id="projects" resultType="com.sicost.profitability.MonthlyCostDtos$Project" useCache="false">
+    SELECT PROJ_ID AS "projectId", PROJ_NM AS "name", CTRT_TYPE_CD AS "contractType",
+      PROJ_STAT_CD AS "status", LOSE_DT AS "loseDate", CTRT_BGN_DT AS "fromDate", CTRT_END_DT AS "toDate",
+      CTRT_AMT AS "contractAmount", BDGT_AMT AS "budget", TEAM_EXPS_AMT AS "teamExpense",
+      PROJ_EXPS_AMT AS "projectExpense" FROM TB_PJ_PROJ ORDER BY PROJ_ID
+  </select>
+  <select id="projectParts" resultType="com.sicost.profitability.MonthlyCostDtos$ProjectPart" useCache="false">
+    SELECT PROJ_ID AS "projectId", APLY_BGN_YM AS "fromMonth", PART_ID AS "partId"
+    FROM TB_PJ_PROJ_PART ORDER BY PROJ_ID,APLY_BGN_YM
+  </select>
+  <select id="turnkey" resultType="com.sicost.profitability.MonthlyCostDtos$TurnkeyCell" useCache="false">
+    SELECT PROJ_ID AS "projectId", DSTRB_STEP_CD AS "step", ROW_SN::text AS "sequence",
+      DSTRB_YM AS "month", ROW_TYPE_CD AS "rowType", DEV_ID AS "personId",
+      ITEM_NM AS "itemName", DSTRB_AMT AS "amount", UPLD_ID::text AS "uploadId"
+    FROM TB_PJ_TK_DSTRB ORDER BY PROJ_ID,DSTRB_STEP_CD,ROW_SN,DSTRB_YM
+  </select>
+  <!-- Start at the snapshot: missing display masters, IDLE and INDRCT must survive. -->
+  <select id="storedCosts" resultType="com.sicost.profitability.MonthlyCostDtos$StoredCost" useCache="false">
+    SELECT c.COST_YM AS "month", c.DEV_ID AS "personId", c.PROJ_ID AS "projectId", c.ASGN_ID AS "assignmentId",
+      c.ASGN_MM AS "assignmentMm", c.FREE_MM AS "freeMm", c.SALES_AMT AS "personalRevenue",
+      c.LABOR_ALLOC_AMT AS "laborAllocated", c.TEAM_EXPS_AMT AS "teamExpense",
+      c.PROJ_EXPS_AMT AS "projectExpense", c.DRCT_EXPS_AMT AS "directExpense", c.COST_CLS_CD AS "costClass",
+      c.CTRT_TYPE_CD AS "contractType", c.PART_ID AS "projectSalesPartId", c.FIX_YN AS "fixed",
+      c.REG_USER_ID AS "regUserId", c.REG_DTTM AS "regDttm", c.MOD_USER_ID AS "modUserId", c.MOD_DTTM AS "modDttm",
+      p.PROJ_NM AS "projectName", a.JOB_CD AS "assignmentJobCode", a.INPUT_TYPE_CD AS "inputType"
+    FROM TB_CO_MON_COST c LEFT JOIN TB_PJ_PROJ p ON p.PROJ_ID=c.PROJ_ID
+    LEFT JOIN TB_PJ_ASGN a ON a.ASGN_ID=c.ASGN_ID
+    WHERE c.COST_YM &gt;= #{fromMonth} AND c.COST_YM &lt;= #{toMonth}
+    ORDER BY c.COST_YM,c.DEV_ID,c.PROJ_ID,c.ASGN_ID
+  </select>
+  <select id="standards" resultType="com.sicost.profitability.MonthlyCostDtos$Standard" useCache="false">
+    SELECT STD_CD AS "code", APLY_BGN_YM AS "fromMonth", STD_VAL AS "value"
+    FROM TB_SY_OPER_STD WHERE APLY_BGN_YM &lt;= #{toMonth} ORDER BY STD_CD,APLY_BGN_YM
+  </select>
+  <select id="parts" resultType="com.sicost.profitability.MonthlyCostDtos$Part" useCache="false">
+    SELECT PART_ID AS "partId", PART_NM AS "name", HQ_YN AS "headquarters", USE_YN AS "useYn"
+    FROM TB_BS_PART ORDER BY PART_ID
+  </select>
+  <select id="companies" resultType="com.sicost.profitability.MonthlyCostDtos$Company" useCache="false">
+    SELECT CLNT_ID AS "companyId", CLNT_NM AS "name" FROM TB_BS_CLNT
+    WHERE CLNT_TYPE_CD IN ('VNDR','BOTH') ORDER BY CLNT_NM, CLNT_ID
+  </select>
+</mapper>

@@ -180,7 +180,8 @@ function BillsContent({
     [summary, setSummary] = useState<api.Summary>(),
     [summaryError, setSummaryError] = useState<unknown>(),
     [summaryLoading, setSummaryLoading] = useState(true);
-  const [selected, setSelected] = useState<Key[]>([]),
+  const [selected, setSelectedKeys] = useState<Key[]>([]),
+    [allMatching, setAllMatching] = useState(false),
     [detailId, setDetailId] = useState<string>(),
     [form, setForm] = useState<{ bill?: api.Bill; initial?: api.CreateBill }>(),
     [refreshKey, setRefreshKey] = useState(0);
@@ -487,12 +488,28 @@ function BillsContent({
               )}
             </>
           ) : (
-            "–"
+            <span
+              className="bill-quick-unavailable"
+              data-testid={`bill-quick-reason-${b.id.toLowerCase()}`}
+            >
+              {b.quickActions.reason ? (
+                <>
+                  <span aria-hidden="true">–</span>
+                  <small>{b.quickActions.reason}</small>
+                </>
+              ) : (
+                "–"
+              )}
+            </span>
           )}
         </span>
       ),
     },
   ];
+  const setSelected = useCallback((keys: Key[]) => {
+    setSelectedKeys(keys);
+    setAllMatching(false);
+  }, []);
   const actionContext: BillsActionsContext = {
     query,
     selected,
@@ -517,6 +534,7 @@ function BillsContent({
         </select>
         <button
           type="button"
+          className="sicost-primary"
           data-testid="bill-create"
           disabled={readonly || pending}
           onClick={() => setForm({})}
@@ -745,9 +763,46 @@ function BillsContent({
         <BillError error={actionError} />
         {message && <p role="status">{message}</p>}
         <div className="bill-list-actions">
-          {selected.length ? (
+          {selected.length > 0 || allMatching ? (
             <span className="bill-selection-bar" data-testid="bill-selection-bar">
-              <strong>선택 {selected.length}건</strong>
+              <strong>
+                {allMatching
+                  ? `조회된 전체 ${data?.total ?? 0}건 선택`
+                  : `선택 ${selected.length}건`}
+              </strong>
+              {!allMatching && (data?.total ?? 0) > selected.length && (
+                <button
+                  type="button"
+                  data-testid="bill-select-all"
+                  onClick={() => setAllMatching(true)}
+                >
+                  조회전체 선택
+                </button>
+              )}
+              {renderActions ? (
+                renderActions(actionContext)
+              ) : (
+                <ReceiptBatchAction
+                  filters={{
+                    year,
+                    includeCarryover: query.includeCarryover,
+                    status: query.status,
+                    month: query.month,
+                    projectId: query.projectId,
+                    sort: query.sort,
+                    direction: query.direction,
+                  }}
+                  selectedIds={selected.map(String)}
+                  whole={allMatching}
+                  today={period.currentDate}
+                  minimumDate={`${period.cashBaseMonth}-01`}
+                  projectNames={Object.fromEntries(
+                    (data?.items ?? []).map((b) => [b.id, b.projectName]),
+                  )}
+                  mobile={mobile}
+                  onRefresh={refresh}
+                />
+              )}
               <button
                 type="button"
                 data-testid="bill-selection-clear"
@@ -786,34 +841,6 @@ function BillsContent({
                 direction: query.direction,
               }}
             />
-          {renderActions ? (
-            renderActions(actionContext)
-          ) : (
-            <ReceiptBatchAction
-              filters={{
-                year,
-                includeCarryover: query.includeCarryover,
-                status: query.status,
-                month: query.month,
-                projectId: query.projectId,
-                sort: query.sort,
-                direction: query.direction,
-              }}
-              pageIds={
-                selected.length
-                  ? selected.map(String)
-                  : (data?.items.map((b) => b.id) ?? [])
-              }
-              today={period.currentDate}
-              minimumDate={`${period.cashBaseMonth}-01`}
-              projectNames={Object.fromEntries(
-                (data?.items ?? []).map((b) => [b.id, b.projectName]),
-              )}
-              selected={selected.length > 0}
-              mobile={mobile}
-              onRefresh={refresh}
-            />
-          )}
           </span>
         </div>
         <div className="bill-desktop">
