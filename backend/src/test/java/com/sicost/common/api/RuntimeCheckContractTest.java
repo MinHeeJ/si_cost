@@ -22,9 +22,10 @@ class RuntimeCheckContractTest {
         }
     }
 
+    /** 앱 사용 확인기가 계약을 읽는 상한(services/agent_sandboxes/quality_agent/graph/nodes/_runtime_smoke.py 의 _OPENAPI_LIMIT, 8MiB)과 같게 둔다. */
     @Test void durableOpenApiFitsRuntimeReaderBudget() throws IOException {
         try (var stream = new ClassPathResource("contracts/openapi.yaml").getInputStream()) {
-            assertThat(stream.readAllBytes().length).isLessThanOrEqualTo(1024 * 1024);
+            assertThat(stream.readAllBytes().length).isLessThanOrEqualTo(8 * 1024 * 1024);
         }
     }
 
