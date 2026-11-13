@@ -1,6 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.sicost.developers.DeveloperMapper">
+  <select id="historicalPeople" resultType="com.sicost.profitability.MonthlyCostDtos$Person" useCache="false">
+    SELECT d.DEV_ID AS "personId", d.MNG_NO AS "managementNo", d.DEV_NM AS "name",
+      d.EMP_TYPE_CD AS "employeeType", d.BLNG_CLNT_ID AS "companyId", c.CLNT_NM AS "companyName",
+      d.GRADE_CD AS "gradeCode", d.JOB_CD AS "jobCode", d.JBPS_CD AS "positionCode",
+      j.CODE_NM AS "position", d.DRCT_CLS_CD AS "directClass", d.PART_ID AS "personPartId",
+      p.PART_NM AS "personPartName", d.JNCMP_DT AS "hireDate", d.RETIRE_DT AS "retireDate",
+      d.WORK_STAT_CD AS "workStatus", d.USE_YN AS "useYn"
+    FROM TB_HR_DEV d LEFT JOIN TB_BS_CLNT c ON c.CLNT_ID=d.BLNG_CLNT_ID
+    LEFT JOIN TB_BS_PART p ON p.PART_ID=d.PART_ID
+    LEFT JOIN TB_SY_CODE j ON j.CODE_GRP_ID='JBPS' AND j.CODE=d.JBPS_CD
+    ORDER BY d.DEV_ID
+  </select>
+  <select id="historicalPrices" resultType="com.sicost.profitability.MonthlyCostDtos$Price" useCache="false">
+    SELECT DEV_ID AS "personId", APLY_BGN_YM AS "fromMonth", APLY_END_YM AS "toMonth",
+      MON_PAY_AMT AS "monthlyPay", MON_UPRC AS "monthlyRate"
+    FROM TB_HR_DEV_PRC WHERE APLY_BGN_YM &lt;= #{toMonth}
+      AND (APLY_END_YM IS NULL OR APLY_END_YM &gt;= #{fromMonth}) ORDER BY DEV_ID,APLY_BGN_YM
+  </select>
+  <select id="historicalStates" resultType="com.sicost.profitability.MonthlyCostDtos$WorkState" useCache="false">
+    SELECT DEV_ID AS "personId", STAT_SN::text AS "sequence", WORK_STAT_CD AS "status",
+      BGN_DT AS "fromDate", END_DT AS "toDate"
+    FROM TB_HR_DEV_STAT WHERE BGN_DT &lt;= #{toDate}
+      AND (END_DT IS NULL OR END_DT &gt;= #{fromDate}) ORDER BY DEV_ID,STAT_SN
+  </select>
   <sql id="columns">d.dev_id AS "id",d.mng_no AS "managementNo",d.dev_nm AS "name",d.emp_type_cd AS "employeeType",d.blng_clnt_id AS "companyId",d.grade_cd AS "gradeCode",d.job_cd AS "jobCode",d.sub_job_cd AS "subJobCode",d.jbps_cd AS "positionCode",d.drct_cls_cd AS "directClass",d.part_id AS "partId",d.jncmp_dt AS "hireDate",d.retire_dt AS "retireDate",d.work_stat_cd AS "status",d.home_area_cd AS "homeAreaCode",d.home_addr AS "homeAddress",d.telno AS "phone",d.use_yn AS "useYn",d.reg_user_id AS "regUserId",d.reg_dttm AS "regDttm",d.mod_user_id AS "modUserId",d.mod_dttm AS "modDttm"</sql>
   <sql id="filters"><where>
     <if test="query.filters.employeeType != null">AND d.emp_type_cd=#{query.filters.employeeType}</if>

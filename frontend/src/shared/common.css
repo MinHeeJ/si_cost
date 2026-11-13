@@ -173,6 +173,41 @@ button:disabled {
   height: 28px;
   padding: 0 6px;
 }
+.sicost-table .sicost-sticky-cell {
+  z-index: 1;
+  background: var(--surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sicost-table thead .sicost-sticky-cell {
+  z-index: 2;
+  background: var(--head-bg);
+}
+.sicost-table tfoot td {
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+  background: var(--head-bg);
+}
+.sicost-table tfoot .sicost-sticky-cell {
+  background: var(--head-bg);
+}
+.sicost-table .sicost-expanded-row > td {
+  padding: 12px;
+  white-space: normal;
+  background: var(--bg);
+}
+.sicost-number-negative {
+  color: var(--bad);
+}
+.sicost-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .sicost-dense td,
 .sicost-dense th {
   height: 32px;

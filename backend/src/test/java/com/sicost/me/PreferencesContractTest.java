@@ -216,6 +216,115 @@ class PreferencesContractTest {
     @Test void reversedRangeCannotWrite() throws Exception {
         when(mapper.cashBaseMonth()).thenReturn("999901");invalid("PERIOD","UI-16","{\"type\":\"YEAR_MONTH\",\"value\":\"2026-02\"}");
     }
+    @Test void temporaryAdminCanRestoreEveryProfitabilityReferenceColumnWithoutAuthentication() throws Exception {
+        var response=mvc.perform(get("/api/me/preferences")).andExpect(status().isOk()).andReturn();
+        var items=json.readTree(response.getResponse().getContentAsString()).at("/data/items");
+        var preference=java.util.stream.StreamSupport.stream(items.spliterator(),false)
+            .filter(n->n.path("type").asText().equals("COLS") && n.path("key").asText().equals("UI-03")).findFirst().orElseThrow();
+        var value=preference.path("value").deepCopy();
+        var view=value.path("individualProfitability");
+        assertThat(view.path("order").size()).isEqualTo(22);
+        assertThat(view.path("hidden")).extracting(n->n.asText())
+            .containsExactly("selfInsurance","withholdingTax","incomeTax","netPay");
+        ((com.fasterxml.jackson.databind.node.ArrayNode)view.path("hidden")).removeAll();
+        String revision=save("COLS","UI-03",value.toString(),null);
+        assertThat(json.readTree(rows.get("COLS/UI-03").value()).path("individualProfitability").path("hidden")).isEmpty();
+        var saved=rows.get("COLS/UI-03");
+        save("DENSE","*","\"좁게\"",null);
+        var other=rows.get("DENSE/*");
+        for(String required:List.of("name","revenue","totalCost","profit")) {
+            var invalidValue=value.deepCopy();
+            ((com.fasterxml.jackson.databind.node.ArrayNode)invalidValue.path("individualProfitability").path("hidden")).add(required);
+            mvc.perform(put("/api/me/preferences/COLS/UI-03").contentType("application/json")
+                .content(json.writeValueAsString(Map.of("value",invalidValue,"expectedRevision",revision))))
+                .andExpect(status().isBadRequest());
+            assertThat(rows.get("COLS/UI-03")).isEqualTo(saved);
+        }
+        mvc.perform(put("/api/me/preferences/COLS/UI-03").contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision","stale"))))
+            .andExpect(status().isConflict());
+        var read=mvc.perform(get("/api/me/preferences")).andExpect(status().isOk()).andReturn();
+        assertThat(json.readTree(read.getResponse().getContentAsString()).at("/data/items"))
+            .anyMatch(n->n.path("key").asText().equals("UI-03") && n.path("type").asText().equals("COLS")
+                && n.path("value").equals(value));
+        assertThat(rows.get("DENSE/*")).isEqualTo(other);
+    }
+    private com.fasterxml.jackson.databind.JsonNode preference(String type,String key) throws Exception {
+        var response=mvc.perform(get("/api/me/preferences")).andExpect(status().isOk()).andReturn();
+        return java.util.stream.StreamSupport.stream(json.readTree(response.getResponse().getContentAsString()).at("/data/items").spliterator(),false)
+            .filter(n->n.path("type").asText().equals(type)&&n.path("key").asText().equals(key)).findFirst().orElseThrow();
+    }
+    @Test void profitabilityPermutationRoundTripsWithoutChangingOtherScreensOrGlobalPreferences() throws Exception {
+        var other=preference("COLS","UI-27").path("value");
+        save("COLS","UI-27",other.toString(),null);
+        save("PAGE_SIZE","*","20",null); save("DENSE","*","\"좁게\"",null); save("AMT_UNIT","*","\"백만원\"",null);
+        var before=new HashMap<>(rows);
+        var value=preference("COLS","UI-03").path("value").deepCopy();
+        var view=(com.fasterxml.jackson.databind.node.ObjectNode)value.path("individualProfitability");
+        var order=new ArrayList<String>(); view.path("order").forEach(n->order.add(n.asText()));
+        Collections.rotate(order,3); view.set("order",json.valueToTree(order));
+        view.set("hidden",json.valueToTree(List.of("companyName","selfInsurance")));
+        assertThat(value.toString().codePointCount(0,value.toString().length())).isLessThanOrEqualTo(2000);
+        var revision=save("COLS","UI-03",value.toString(),null);
+        var read=preference("COLS","UI-03");
+        assertThat(read.path("value")).isEqualTo(value);
+        assertThat(read.path("revision").asText()).isEqualTo(revision);
+        assertThat(read.path("stored").asBoolean()).isTrue();
+        assertThat(read.path("value").path("individualProfitability").path("order")).hasSize(22);
+        assertThat(save("COLS","UI-03",value.toString(),revision)).isEqualTo(revision);
+        before.forEach((key,row)->assertThat(rows.get(key)).isEqualTo(row));
+    }
+    @ParameterizedTest @ValueSource(strings={"duplicate","unknown","missing","hiddenUnknown","hiddenDuplicate","wrongView","empty","tooLong"})
+    void invalidProfitabilityColumnsCannotChangeStoredValueOrRevision(String kind) throws Exception {
+        var value=preference("COLS","UI-03").path("value").deepCopy();
+        var revision=save("COLS","UI-03",value.toString(),null);
+        var before=new HashMap<>(rows);
+        var order=(com.fasterxml.jackson.databind.node.ArrayNode)value.path("individualProfitability").path("order");
+        var hidden=(com.fasterxml.jackson.databind.node.ArrayNode)value.path("individualProfitability").path("hidden");
+        switch(kind) {
+            case "duplicate" -> order.set(1,json.getNodeFactory().textNode("name"));
+            case "unknown" -> order.set(1,json.getNodeFactory().textNode("notRegistered"));
+            case "missing" -> order.remove(1);
+            case "hiddenUnknown" -> hidden.add("actions");
+            case "hiddenDuplicate" -> hidden.add("selfInsurance");
+            case "wrongView" -> {var root=(com.fasterxml.jackson.databind.node.ObjectNode)value;var view=root.remove("individualProfitability");root.set("developers",view);}
+            case "empty" -> ((com.fasterxml.jackson.databind.node.ObjectNode)value).removeAll();
+            case "tooLong" -> order.add("x".repeat(2000));
+            default -> throw new IllegalArgumentException(kind);
+        }
+        mvc.perform(put("/api/me/preferences/COLS/UI-03").contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision",revision))))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.requestId").isNotEmpty());
+        assertThat(rows).isEqualTo(before);
+        assertThat(preference("COLS","UI-03").path("revision").asText()).isEqualTo(revision);
+        verify(mapper,never()).update(any());
+    }
+    @Test void damagedProfitabilityColumnsAreIsolatedWithoutAutomaticRepair() throws Exception {
+        save("COLS","UI-27",preference("COLS","UI-27").path("value").toString(),null);
+        rows.put("COLS/UI-03",new PreferenceDtos.StoredPreference("admin","COLS","UI-03","{broken","admin",time,null,null));
+        var before=new HashMap<>(rows);
+        var read=preference("COLS","UI-03");
+        assertThat(read.path("error").path("code").asText()).isEqualTo("INVALID_PREFERENCE");
+        assertThat(read.path("revision").asText()).isNotBlank();
+        assertThat(read.path("value").path("individualProfitability").path("order")).hasSize(22);
+        assertThat(preference("COLS","UI-27").has("error")).isFalse();
+        assertThat(rows).isEqualTo(before);
+        verify(mapper,never()).update(any());verify(mapper,never()).delete(any());
+    }
+    @Test void profitabilityYearIsScopedToCurrentYearWhileOtherYearScreensKeepNextYear() throws Exception {
+        int year=java.time.Year.now(java.time.ZoneId.of("Asia/Seoul")).getValue();
+        when(mapper.cashBaseMonth()).thenReturn(String.format("%04d01",year-1));
+        var current=json.writeValueAsString(Map.of("type","YEAR","value",String.valueOf(year)));
+        var revision=save("PERIOD","UI-03",current,null);
+        var before=rows.get("PERIOD/UI-03");
+        var next=Map.of("type","YEAR","value",String.valueOf(year+1));
+        mvc.perform(put("/api/me/preferences/PERIOD/UI-03").contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",next,"expectedRevision",revision))))
+            .andExpect(status().isBadRequest());
+        assertThat(rows.get("PERIOD/UI-03")).isEqualTo(before);
+        save("PERIOD","UI-01",json.writeValueAsString(next),null);
+        assertThat(preference("PERIOD","UI-03").path("value")).isEqualTo(json.readTree(current));
+    }
     private void invalid(String type,String key,String value) throws Exception {
         mvc.perform(put("/api/me/preferences/{type}/{key}",type,key).contentType("application/json").content("{\"value\":"+value+",\"expectedRevision\":null}"))
                 .andExpect(status().isBadRequest()); verify(mapper,never()).insert(any()); verify(mapper,never()).update(any());

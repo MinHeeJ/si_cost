@@ -9,6 +9,7 @@ import com.sicost.b9.B9Dtos.Summary;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.excel.ImportDefinition;
 import com.sicost.common.validation.ProjectInputPolicy;
+import com.sicost.common.payroll.PayrollCalculation;
 import java.math.*;
 import java.util.*;
 import org.springframework.stereotype.Component;
@@ -70,22 +71,15 @@ public class B1ImportDefinition {
             if(!c.text().isEmpty()||c.error()!=null)add(issues,row,field,"WARN","해당 직원구분에 적용하지 않는 값은 반영하지 않습니다.");
         }
         BigDecimal zero=BigDecimal.ZERO;
-        if(os)return new Values(zero,zero,zero,zero,zero,zero,zero,null,amount(row,"외주 공급가"),d.employeeType(),d.directClass());
-        BigDecimal pay=amount(row,"급여"),income=amount(row,"근로소득세");
-        BigDecimal allowance=zero,company=zero,self=zero,retire=zero,withholding;
-        if(!fl) {
-            if("TEAM".equals(d.position()))allowance=rate(rates,"ALLOW_TEAM");
-            else if("GROUP".equals(d.position()))allowance=rate(rates,"ALLOW_GROUP");
-            self=amount(row,"4대보험 본인");
-            CellValue c=row.cells().get("4대보험 회사");
-            company=c.text().isEmpty()&&c.error()==null?down(pay.multiply(rate(rates,"INS_RATE")).movePointLeft(2)):amount(row,"4대보험 회사");
-            if(d.employeeType().equals("FT"))retire=down(pay.add(allowance).multiply(rate(rates,"SEV_RATE")).movePointLeft(2));
-        }
-        withholding=d.employeeType().equals("FT")?zero:down(pay.add(allowance).multiply(new BigDecimal("0.033")));
-        BigDecimal real=pay.add(allowance).subtract(self).subtract(withholding).subtract(income);
-        for(BigDecimal value:List.of(pay,allowance,company,self,retire,income,withholding,real))
-            if(value.abs().compareTo(new BigDecimal("999999999999999"))>0)throw invalid("급여","계산 결과가 NUMERIC(15) 범위를 초과합니다.");
-        return new Values(pay,allowance,company,self,retire,income,withholding,real,zero,d.employeeType(),d.directClass());
+        CellValue insurance=row.cells().get("4대보험 회사");
+        BigDecimal company=os||fl?zero:insurance.text().isEmpty()&&insurance.error()==null?null:amount(row,"4대보험 회사");
+        var input=new PayrollCalculation.Amounts(os?zero:amount(row,"급여"),company,
+            os||fl?zero:amount(row,"4대보험 본인"),os?zero:amount(row,"근로소득세"),os?amount(row,"외주 공급가"):zero);
+        try {
+            var value=PayrollCalculation.calculate(new PayrollCalculation.Classification(d.employeeType(),d.directClass(),d.position()),input,rates);
+            return new Values(value.pay(),value.allowance(),value.companyInsurance(),value.selfInsurance(),value.retirement(),
+                value.incomeTax(),value.withholding(),value.realPay(),value.vendorSupply(),value.employeeType(),value.directClass());
+        } catch(IllegalArgumentException|ArithmeticException e) { throw invalid("급여",e.getMessage()); }
     }
     private BigDecimal amount(SourceRow row,String field) {
         CellValue cell=row.cells().get(field);
@@ -94,16 +88,7 @@ public class B1ImportDefinition {
         try { return ProjectInputPolicy.amount(cell.text(),field); }
         catch(ApiException e) { throw invalid(field,"원 단위 정수와 허용 범위를 확인해 주세요."); }
     }
-    private BigDecimal rate(Map<String,BigDecimal> rates,String key) {
-        BigDecimal value=rates.get(key);
-        if(value==null||value.signum()<0)throw invalid("급여","현재 활성 ALWNC "+key+" 기준값을 확인해 주세요.");
-        return downIfAmount(key,value);
-    }
-    private BigDecimal downIfAmount(String key,BigDecimal value) {
-        if(key.startsWith("ALLOW_")&&value.stripTrailingZeros().scale()>0)throw invalid("급여","수당은 원 단위 정수여야 합니다.");
-        return value;
-    }
-    private BigDecimal down(BigDecimal value) { return value.setScale(0,RoundingMode.DOWN); }
+
     private ApiException invalid(String field,String message) { return new ApiException(400,"INVALID_INPUT",message,field,null); }
     private void add(List<Issue> issues,SourceRow row,String field,String severity,String reason) {
         String value=row.cells().get(field).text();

@@ -1,0 +1,167 @@
+.profitability-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.profitability-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+}
+.profitability-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+.profitability-filters input:not([type="checkbox"]),
+.profitability-filters select,
+.profitability-toolbar select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 8px;
+  max-width: 100%;
+}
+.profitability-filters fieldset {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border: 1px solid var(--divider);
+}
+.profitability-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.profitability-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profitability-context {
+  color: var(--text-sub);
+  overflow-wrap: anywhere;
+}
+.profitability-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.profitability-summary article {
+  min-width: 0;
+  background: var(--surface);
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+.profitability-summary strong {
+  display: block;
+  font-size: 20px;
+  line-height: 28px;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+.profitability-summary p,
+.profitability-summary small {
+  color: var(--text-sub);
+}
+.profitability-negative {
+  color: var(--bad);
+}
+.profitability-overview .sicost-table-viewport {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.profitability-overview .sicost-table {
+  white-space: nowrap;
+}
+.profitability-mobile-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.profitability-mobile-cards article {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.profitability-mobile-cards p {
+  margin: 8px 0;
+}
+.profitability-ledger {
+  min-width: 0;
+  padding: 12px;
+  background: var(--surface);
+  white-space: normal;
+}
+.profitability-ledger h3 {
+  margin: 0 0 8px;
+}
+.profitability-ledger summary {
+  cursor: pointer;
+  color: var(--text-sub);
+}
+.profitability-ledger p,
+.profitability-ledger li {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.profitability-calculation-guide {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+}
+.profitability-calculation-guide summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.profitability-calculation-guide p,
+.profitability-calculation-guide li {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .profitability-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .profitability-summary {
+    grid-template-columns: 1fr;
+  }
+  .profitability-filters {
+    padding: 12px;
+  }
+  .profitability-filters label {
+    flex: 1 1 140px;
+  }
+  .profitability-filters input:not([type="checkbox"]),
+  .profitability-filters select {
+    width: 100%;
+  }
+  .profitability-filters fieldset {
+    width: 100%;
+    min-width: 0;
+  }
+  .profitability-mobile-cards h2 button {
+    height: auto;
+    min-height: 36px;
+    white-space: normal;
+    text-align: left;
+  }
+}

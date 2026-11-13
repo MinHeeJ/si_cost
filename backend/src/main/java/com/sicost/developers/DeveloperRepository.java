@@ -24,6 +24,10 @@ public class DeveloperRepository {
         recalculation=new TransactionTemplate(manager);recalculation.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
     public DeveloperMapper mapper(){return mapper;}
+    /** Historical cost reads deliberately bypass query-service refresh and current active-only filters. */
+    public List<com.sicost.profitability.MonthlyCostDtos.Person> historicalPeople(){return mapper.historicalPeople();}
+    public List<com.sicost.profitability.MonthlyCostDtos.Price> historicalPrices(com.sicost.profitability.MonthlyCostDtos.Range range){return mapper.historicalPrices(range);}
+    public List<com.sicost.profitability.MonthlyCostDtos.WorkState> historicalStates(com.sicost.profitability.MonthlyCostDtos.Range range){return mapper.historicalStates(range);}
     public String actor(){return users.userId();}
     public String revision(String id,boolean lock){return revisions.revision(id,lock);}
     public void lockNumber(String number){locks.lock("developers:management-number:"+number);}

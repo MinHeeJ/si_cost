@@ -7,6 +7,9 @@ import static com.sicost.developers.DeveloperInput.*;
 
 @Mapper
 public interface DeveloperMapper {
+    List<com.sicost.profitability.MonthlyCostDtos.Person> historicalPeople();
+    List<com.sicost.profitability.MonthlyCostDtos.Price> historicalPrices(com.sicost.profitability.MonthlyCostDtos.Range range);
+    List<com.sicost.profitability.MonthlyCostDtos.WorkState> historicalStates(com.sicost.profitability.MonthlyCostDtos.Range range);
     List<Map<String,Object>> list(Selection selection);
     long count(@Param("query") Query query);
     Map<String,Object> find(@Param("id") String id,@Param("lock") boolean lock);

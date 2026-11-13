@@ -36,6 +36,18 @@ export function ScreenPeriodBar({
     [reload, setReload] = useState(0);
   const saving = useRef(false),
     closeRead = useRef(0);
+  const applyPeriod = useRef<(next: PeriodValue) => void>(() => {});
+  useEffect(() => {
+    if (screenId !== "UI-03" || !context) return;
+    const reset = () =>
+      applyPeriod.current({
+        type: "YEAR",
+        value: context.currentMonth.slice(0, 4),
+      });
+    window.addEventListener("sicost:profitability-reset-period", reset);
+    return () =>
+      window.removeEventListener("sicost:profitability-reset-period", reset);
+  }, [screenId, context]);
   useEffect(() => {
     if (type === "NONE" || controlled) return;
     const refresh = (event: Event) => {
@@ -57,7 +69,10 @@ export function ScreenPeriodBar({
             ["UI-07", "UI-08", "UI-09"].includes(screenId)
               ? String(Number(startYear) - 1)
               : startYear,
-          max: type === "YEAR" ? String(Number(currentYear) + 1) : currentYear,
+          max:
+            type === "YEAR" && screenId !== "UI-03"
+              ? String(Number(currentYear) + 1)
+              : currentYear,
         };
   };
   const cumulative = (
@@ -256,6 +271,9 @@ export function ScreenPeriodBar({
       saving.current = false;
       setPending(false);
     }
+  };
+  applyPeriod.current = (next) => {
+    void save(next);
   };
   return (
     <section

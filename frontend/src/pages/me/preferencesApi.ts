@@ -19,7 +19,12 @@ export type ColumnPreferences = Partial<
 export type ScreenColumnPreferences = ColumnPreferences &
   Partial<
     Record<
-      "users" | "clients" | "developers" | "candidates" | "projects",
+      | "users"
+      | "clients"
+      | "developers"
+      | "candidates"
+      | "projects"
+      | "individualProfitability",
       ColumnView
     >
   >;
