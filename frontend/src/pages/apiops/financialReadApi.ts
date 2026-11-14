@@ -1,6 +1,11 @@
 import { request } from "../../shared/api";
 
-export type FinancialHistoryScope = "MONTH" | "TAX" | "CARDS";
+export type FinancialHistoryScope =
+  | "MONTH"
+  | "TAX"
+  | "CARDS"
+  | "BUSINESS_PLAN"
+  | "HISTORICAL_PROFIT_LOSS";
 export type FinancialHistoryEntry = {
   historyId: string;
   targetTable: string;

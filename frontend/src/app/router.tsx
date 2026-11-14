@@ -1,3 +1,4 @@
+import "../pages/shared/financialDisplay.css";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner } from "../shared/Feedback";
 import {
@@ -30,6 +31,10 @@ import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
 import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
 import { FinancialItemsScreen } from "../pages/financialitems/FinancialItemsScreen";
+import { ProfitStructureScreen } from "../pages/shared/ProfitStructureScreen";
+import { OperatingProfitScreen } from "../pages/shared/OperatingProfitScreen";
+import { NetProfitScreen } from "../pages/shared/NetProfitScreen";
+import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerformanceScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
@@ -114,6 +119,24 @@ const tableColumns: Record<View, PreferenceColumn[]> = {
     { id: "actor", label: "처리자" },
   ],
 };
+
+function RegisteredCompanyProfit({ screenId }: { screenId: "UI-07" | "UI-08" | "UI-09" | "UI-18" }) {
+  const preferences = usePreferences();
+  const [error, setError] = useState("");
+  const storedUnit = preferences.get("AMT_UNIT")?.value;
+  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
+  const Screen = { "UI-07": ProfitStructureScreen, "UI-08": OperatingProfitScreen,
+    "UI-09": NetProfitScreen, "UI-18": BusinessPlanPerformanceScreen }[screenId];
+  return <>
+    {error && <ErrorBanner message={error} />}
+    <Screen dense={preferences.get("DENSE")?.value === "좁게"} amountUnit={amountUnit} onAmountUnitChange={(value) => {
+      setError("");
+      void preferences.put("AMT_UNIT", "*", value).catch((failure: unknown) => {
+        setError(failure instanceof Error ? failure.message : "금액 단위를 저장하지 못했습니다.");
+      });
+    }} />
+  </>;
+}
 
 function CommonCodeWorkspace({
   onCodesDirty,
@@ -976,6 +999,10 @@ function RegisteredApplication() {
         ),
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
         "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
+        "UI-07": <RegisteredCompanyProfit screenId="UI-07" />,
+        "UI-08": <RegisteredCompanyProfit screenId="UI-08" />,
+        "UI-09": <RegisteredCompanyProfit screenId="UI-09" />,
+        "UI-18": <RegisteredCompanyProfit screenId="UI-18" />,
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),

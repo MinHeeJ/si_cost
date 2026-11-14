@@ -1,0 +1,27 @@
+.migration-changes {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--divider, #e5e7eb);
+  border-radius: 8px;
+  margin-block: 12px;
+}
+.migration-changes table {
+  width: 100%;
+  min-width: 780px;
+  font-size: 13px;
+}
+.migration-changes th,
+.migration-changes td {
+  height: 40px;
+  padding: 0 12px;
+  white-space: nowrap;
+  text-align: right;
+}
+.migration-changes th {
+  background: var(--head-bg, #f3f4f6);
+  font-weight: 600;
+}
+.migration-changes th:first-child,
+.migration-changes td:first-child {
+  text-align: left;
+}

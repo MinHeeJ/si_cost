@@ -294,3 +294,28 @@ export {
   saveB2Apply,
   getFinancialUploadResult,
 } from "../pages/b2/financialImportApi";
+export {
+  getProfitLossStructure,
+  downloadProfitLossStructure,
+} from "../pages/structure/profitStructureApi";
+export {
+  getOperatingProfitLoss,
+  downloadOperatingProfitLoss,
+} from "../pages/operating/operatingProfitApi";
+export {
+  getNetProfitLoss,
+  downloadNetProfitLoss,
+} from "../pages/net/netProfitApi";
+export { getBusinessPlanPerformance } from "../pages/businessplansops/businessPlanPerformanceApi";
+export {
+  getBusinessPlanImportTemplate,
+  createBusinessPlanImportValidation,
+  saveBusinessPlanImport,
+  getBusinessPlanUploadResult,
+} from "../pages/imports/businessPlanImportsApi";
+export {
+  getHistoricalProfitLossImportTemplate,
+  createHistoricalProfitLossImportValidation,
+  saveHistoricalProfitLossImport,
+  getHistoricalProfitLossUploadResult,
+} from "../pages/migration/historicalProfitLossImportsApi";

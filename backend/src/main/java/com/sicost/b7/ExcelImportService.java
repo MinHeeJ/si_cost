@@ -90,6 +90,9 @@ public class ExcelImportService {
                         if (definition.dates().contains(title) && type == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
                             value = cell.getLocalDateTimeCellValue().toLocalDate().toString();
                         }
+                        if (definition.monthDates().contains(title) && type == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+                            value = java.time.YearMonth.from(cell.getLocalDateTimeCellValue()).toString();
+                        }
                         if (definition.identifiers().contains(title) && type == CellType.NUMERIC) {
                             BigDecimal number = BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros();
                             if (number.scale() <= 0 && number.precision() - number.scale() >= 16) error = "텍스트 형식으로 입력하세요";

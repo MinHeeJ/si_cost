@@ -1,0 +1,43 @@
+.net-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.net-contributions {
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.net-contributions h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+.net-contribution-row {
+  display: grid;
+  grid-template-columns: 80px minmax(140px, 1fr) 80px minmax(80px, 2fr);
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  padding: 10px 0;
+}
+.net-contribution-track {
+  height: 12px;
+  border-radius: 4px;
+  background: var(--head-bg);
+  overflow: hidden;
+}
+.net-contribution-track > div {
+  height: 100%;
+  background: var(--primary);
+}
+@media (max-width: 767px) {
+  .net-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .net-contribution-row {
+    grid-template-columns: 60px minmax(0, 1fr) 64px;
+  }
+  .net-contribution-track {
+    grid-column: 1 / -1;
+  }
+}

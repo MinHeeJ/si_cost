@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.businessplansops.BusinessPlanPerformanceMapper">
+  <select id="baseMonth" resultType="string">
+    SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std
+    WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="targets" resultType="com.sicost.businessplansops.BusinessPlanPerformanceDtos$Target">
+    SELECT plan_ym AS "month", sales_tgt_amt AS "sales", oprt_prft_tgt_amt AS "profit"
+    FROM tb_fi_biz_plan WHERE part_id='ALL' AND plan_ym BETWEEN #{fromMonth} AND #{toMonth} ORDER BY plan_ym
+  </select>
+  <select id="snapshots" resultType="com.sicost.businessplansops.BusinessPlanPerformanceDtos$Snapshot">
+    SELECT pl_ym AS "month", fix_yn AS "fixed", migr_yn AS "migrated", sales_amt AS "salesAmt",
+      alloc_cost_amt AS "allocCostAmt", idle_cost_amt AS "idleCostAmt", drct_exps_amt AS "drctExpsAmt",
+      sales_cost_amt AS "salesCostAmt", gross_prft_amt AS "grossPrftAmt", sga_input_amt AS "sgaInputAmt",
+      indrct_labor_amt AS "indrctLaborAmt", rnd_amt AS "rndAmt", sga_tot_amt AS "sgaTotAmt",
+      prev_adj_amt AS "prevAdjAmt", oprt_prft_amt AS "oprtPrftAmt", nopr_incm_amt AS "noprIncmAmt",
+      nopr_exps_amt AS "noprExpsAmt", corp_tax_amt AS "corpTaxAmt", net_prft_amt AS "netPrftAmt"
+    FROM tb_co_mon_pl WHERE pl_ym BETWEEN #{fromMonth} AND #{toMonth} ORDER BY pl_ym
+  </select>
+  <select id="closes" resultType="com.sicost.businessplansops.BusinessPlanPerformanceDtos$Close">
+    SELECT close_ym AS "month", close_stat_cd AS "status" FROM tb_cl_close
+    WHERE close_ym BETWEEN #{fromMonth} AND #{toMonth} ORDER BY close_ym
+  </select>
+  <select id="annualTax" resultType="java.math.BigDecimal">
+    SELECT est_tax_amt FROM tb_fi_corp_tax WHERE tax_yr=#{year}
+  </select>
+  <select id="financialSources" resultType="com.sicost.businessplansops.BusinessPlanPerformanceDtos$Source">
+    SELECT to_char(b.bill_dt,'YYYY-MM') AS "month", 'TB_BL_BILL' AS "sourceTable", b.bill_id AS "sourceKey",
+      'tkSales' AS "metric", b.sply_amt::text AS "amount", false AS "estimated", 'TK 청구일 공급가액·취소 제외·VAT 제외·입금액 아님' AS "reason"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id
+    WHERE p.ctrt_type_cd='TK' AND b.cncl_yn='N' AND b.bill_dt &gt;= to_date(#{fromMonth},'YYYYMM')
+      AND b.bill_dt &lt; (to_date(#{toMonth},'YYYYMM')+interval '1 month')
+    UNION ALL
+    SELECT substr(fin_ym,1,4)||'-'||substr(fin_ym,5,2), 'TB_FI_ITEM', fin_ym||':'||item_sn,
+      CASE fin_cls_cd WHEN 'SGA' THEN 'sgaInputAmt' WHEN 'NOPR_IN' THEN 'noprIncmAmt' WHEN 'NOPR_OUT' THEN 'noprExpsAmt' END,
+      amt::text, false, '재무 귀속월 금액·VAT 제외'
+    FROM tb_fi_item WHERE fin_ym BETWEEN #{fromMonth} AND #{toMonth} AND fin_cls_cd IN ('SGA','NOPR_IN','NOPR_OUT')
+    UNION ALL
+    SELECT substr(aply_ym,1,4)||'-'||substr(aply_ym,5,2), 'TB_CO_PREV_ADJ', adj_id::text,
+      'prevAdjAmt', adj_amt::text, false, '적용월 전월 조정·원부호 유지'
+    FROM tb_co_prev_adj WHERE aply_ym BETWEEN #{fromMonth} AND #{toMonth}
+    UNION ALL
+    SELECT substr(e.exps_ym,1,4)||'-'||substr(e.exps_ym,5,2), 'TB_PJ_DRCT_EXPS', e.proj_id||':'||e.exps_ym,
+      CASE WHEN p.ctrt_type_cd='IN' THEN 'rndExtra' ELSE 'directExtra' END,
+      sum(e.exps_amt)::text, false, '프로젝트·월 추가경비·투입 JOIN 없음'
+    FROM tb_pj_drct_exps e JOIN tb_pj_proj p ON p.proj_id=e.proj_id
+    WHERE e.exps_ym BETWEEN #{fromMonth} AND #{toMonth} GROUP BY e.proj_id,e.exps_ym,p.ctrt_type_cd
+    ORDER BY "month", "sourceTable", "sourceKey"
+  </select>
+</mapper>

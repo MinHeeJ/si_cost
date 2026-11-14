@@ -24,7 +24,7 @@ public class PersistenceBoundary implements Interceptor {
             "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
-            "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER");
+            "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL");
     private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
             "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT",
             "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON",
@@ -56,6 +56,26 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         String tableName = match.group(2).toUpperCase(Locale.ROOT);
         String operation = match.group(1).toUpperCase(Locale.ROOT);
+        if (tableName.equals("TB_CO_MON_PL")) {
+            String normalized = remainder.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+            String amounts = "SALES_AMT|SALES_COST_AMT|SGA_TOT_AMT|OPRT_PRFT_AMT|ALLOC_COST_AMT|IDLE_COST_AMT|DRCT_EXPS_AMT|GROSS_PRFT_AMT|SGA_INPUT_AMT|INDRCT_LABOR_AMT|RND_AMT|PREV_ADJ_AMT|NOPR_INCM_AMT|NOPR_EXPS_AMT|CORP_TAX_AMT|NET_PRFT_AMT";
+            String columns = amounts.replace('|', ',');
+            String range = "?< ?".replace(" ", "") + "AND?>=((SUBSTRING(?,1,4)::INT-1)::TEXT||'01')";
+            String insert = "(PL_YM," + columns + ",MIGR_YN,FIX_YN,REG_USER_ID,REG_DTTM)SELECT?" + ",?".repeat(16) + ",'Y','Y',?,?WHERE" + range;
+            String update = "SET" + String.join("=?,", amounts.split("\\|")) + "=?,MIGR_YN='Y',FIX_YN='Y',MOD_USER_ID=?,MOD_DTTM=?WHEREPL_YM=?ANDPL_YM<?ANDPL_YM>=((SUBSTRING(?,1,4)::INT-1)::TEXT||'01')";
+            if (!(operation.startsWith("INSERT") && normalized.equals(insert))
+                    && !(operation.equals("UPDATE") && normalized.equals(update))) {
+                throw new IllegalStateException("BASE 이전 지정 이관 월의 원값 등록·수정만 허용합니다.");
+            }
+        }
+        if (tableName.equals("TB_FI_BIZ_PLAN")) {
+            String normalized = remainder.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+            boolean insert = operation.startsWith("INSERT") && normalized.equals(
+                "(PLAN_YM,PART_ID,SALES_TGT_AMT,OPRT_PRFT_TGT_AMT,UPLD_ID,REG_USER_ID,REG_DTTM)VALUES(?,'ALL',?,?,?,?,?)");
+            boolean update = operation.equals("UPDATE") && normalized.equals(
+                "SETSALES_TGT_AMT=?,OPRT_PRFT_TGT_AMT=?,UPLD_ID=?,MOD_USER_ID=?,MOD_DTTM=?WHEREPLAN_YM=?ANDPART_ID='ALL'");
+            if (!insert && !update) throw new IllegalStateException("지정 월 ALL 목표의 등록·수정만 허용합니다.");
+        }
         if (Set.of("TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE").contains(tableName)) {
             requireProgressWrite(tableName, operation, remainder);
         }
@@ -177,6 +197,15 @@ public class PersistenceBoundary implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
+        if (statement.getBoundSql(invocation.getArgs()[1]).getSql().matches("(?is).*\\b(?:INTO|UPDATE)\\s+TB_CO_MON_PL\\b.*")) {
+            var value = org.apache.ibatis.reflection.SystemMetaObject.forObject(invocation.getArgs()[1]);
+            String month = (String) value.getValue("month"), base = (String) value.getValue("base");
+            if (month == null || base == null || !month.matches("(?!0000)[0-9]{4}(0[1-9]|1[0-2])")
+                    || !base.matches("(?!0000)[0-9]{4}(0[1-9]|1[0-2])") || month.compareTo(base) >= 0
+                    || Integer.parseInt(month.substring(0,4)) < Integer.parseInt(base.substring(0,4))-1) {
+                throw new IllegalStateException("이관 허용 범위를 확인해 주세요.");
+            }
+        }
         requireAllowed(statement.getBoundSql(invocation.getArgs()[1]).getSql());
         return invocation.proceed();
     }

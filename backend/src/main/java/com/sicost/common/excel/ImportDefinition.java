@@ -5,7 +5,11 @@ import java.util.Map;
 import java.util.Set;
 
 public record ImportDefinition(List<String> headers, Set<String> required, Set<String> identifiers,
-                               Set<String> dates, Map<String,String> aliases, Set<String> exactNumbers) {
+                               Set<String> dates, Map<String,String> aliases, Set<String> exactNumbers, Set<String> monthDates) {
+    public ImportDefinition(List<String> headers, Set<String> required, Set<String> identifiers,
+                            Set<String> dates, Map<String,String> aliases, Set<String> exactNumbers) {
+        this(headers, required, identifiers, dates, aliases, exactNumbers, Set.of());
+    }
     public ImportDefinition(List<String> headers, Set<String> required, Set<String> identifiers,
                             Set<String> dates, Map<String,String> aliases) {
         this(headers,required,identifiers,dates,aliases,Set.of());

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
@@ -21,16 +22,23 @@ import "./financial.css";
 
 export type FinancialItemsScreenProps = {
   onDirtyChange?(dirty: boolean): void;
+  openAdjustments?: boolean;
+  openTax?: boolean;
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
+  const location = useLocation();
+  const section = (location.state as { section?: string } | null)?.section;
+  const openAdjustments = section === "adjustments";
   return (
     <SharedScreenFrame screenId="UI-10" periodBar={null}>
-      <FinancialItemsEditor {...props} />
+      <FinancialItemsEditor {...props} openAdjustments={openAdjustments} openTax={section === "tax"} />
     </SharedScreenFrame>
   );
 }
 export function FinancialItemsEditor({
   onDirtyChange,
+  openAdjustments,
+  openTax,
 }: FinancialItemsScreenProps) {
   const [month, setMonth] = useState<string>();
   const state = useFinancialEditor(month, onDirtyChange),
@@ -50,6 +58,29 @@ export function FinancialItemsEditor({
     [statusError, setStatusError] = useState<unknown>(),
     [statusRetry, setStatusRetry] = useState(0);
   const next = useRef(0);
+  const adjustmentOpened = useRef(false);
+  useEffect(() => {
+    if (
+      (!openAdjustments && !openTax) ||
+      !editor ||
+      state.loading ||
+      adjustmentOpened.current
+    )
+      return;
+    if (
+      !editor.editable &&
+      editor.firstEditableMonth &&
+      month !== editor.firstEditableMonth
+    ) {
+      setMonth(editor.firstEditableMonth);
+      return;
+    }
+    adjustmentOpened.current = true;
+    setTab("financial");
+    document
+      .getElementById(openTax ? "financial-tax-section" : "financial-adjustments-section")
+      ?.scrollIntoView?.({ block: "start" });
+  }, [openAdjustments, openTax, editor, state.loading, month]);
   useEffect(() => {
     let live = true;
     void getSharedCodes("SGA_ITEM")
@@ -546,6 +577,7 @@ export function FinancialItemsEditor({
         </div>
         <section
           className="financial-section"
+          id="financial-tax-section"
           data-testid="financial-tax-panel"
         >
           <h2>

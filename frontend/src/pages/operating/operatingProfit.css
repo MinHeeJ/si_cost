@@ -1,0 +1,157 @@
+.operating-profit {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.operating-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.operating-toolbar label {
+  margin-left: auto;
+}
+.operating-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.operating-muted {
+  color: var(--text-sub);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.operating-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.operating-card {
+  padding: 20px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.operating-card h2 {
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+.operating-card strong {
+  display: block;
+  font-size: 24px;
+  line-height: 32px;
+  overflow-wrap: anywhere;
+}
+.operating-card strong small {
+  font-size: 14px;
+}
+.operating-card p,
+.operating-change {
+  font-size: 12px;
+}
+.operating-card .operating-change {
+  display: block;
+  margin-top: 6px;
+}
+.operating-profit .adverse {
+  color: var(--bad);
+}
+.operating-profit .favorable {
+  color: var(--ok);
+}
+.operating-profit .neutral,
+.operating-profit .unknown {
+  color: var(--text-sub);
+}
+.operating-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.operating-banner.info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.operating-banner button {
+  margin-left: auto;
+}
+.operating-empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-sub);
+}
+.operating-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.operating-profit table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.operating-profit th,
+.operating-profit td {
+  padding: 10px 12px;
+  height: 40px;
+  min-width: 100px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--divider);
+}
+.operating-profit thead th {
+  background: var(--head-bg);
+  font-weight: 600;
+}
+.operating-profit tr > th:first-child {
+  position: sticky;
+  left: 0;
+  min-width: 156px;
+  text-align: left;
+  z-index: 1;
+  background: var(--surface);
+}
+.operating-profit thead tr > th:first-child {
+  background: var(--head-bg);
+  z-index: 2;
+}
+.operating-profit .operating-detail th {
+  padding-left: 24px;
+  font-weight: 400;
+  color: var(--text-sub);
+}
+.operating-profit .operating-total td,
+.operating-profit .operating-total th {
+  font-weight: 600;
+}
+.operating-profit .operating-current {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+.operating-profit .operating-cumulative {
+  background: var(--head-bg);
+}
+@media (max-width: 1100px) {
+  .operating-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .operating-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

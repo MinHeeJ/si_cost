@@ -1,0 +1,197 @@
+.profit-structure {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.profit-structure [role="tabpanel"] {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.profit-structure-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profit-structure-toolbar > label {
+  margin-left: auto;
+}
+.profit-structure-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.profit-structure [role="tab"][aria-selected="true"] {
+  color: var(--primary);
+  background: var(--primary-bg);
+  border-color: var(--primary);
+}
+.profit-structure-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.profit-structure-card {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-width: 0;
+}
+.profit-structure-summary h2 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+.profit-structure-summary strong,
+.profit-structure-value-link {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+  overflow-wrap: anywhere;
+}
+.profit-structure-value-link {
+  padding: 0;
+  border: 0;
+  height: auto;
+  text-align: left;
+  color: var(--primary);
+  background: transparent;
+}
+.profit-structure-summary p,
+.profit-structure-muted,
+.profit-structure-change {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.profit-structure-change {
+  display: block;
+}
+.profit-structure .adverse {
+  color: var(--bad);
+}
+.profit-structure .favorable {
+  color: var(--ok);
+}
+.profit-structure .neutral,
+.profit-structure .unknown {
+  color: var(--text-sub);
+}
+.profit-structure-banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--warn);
+  background: var(--warn-bg);
+  overflow-wrap: anywhere;
+}
+.profit-structure-empty {
+  padding: 32px 16px;
+  color: var(--text-sub);
+  text-align: center;
+}
+.profit-structure-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.profit-structure-wide {
+  grid-column: 1 / -1;
+}
+.profit-structure-chart-scroll,
+.profit-structure-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.profit-structure-chart-scroll svg {
+  display: block;
+  min-width: 580px;
+  width: 100%;
+}
+.profit-structure svg text {
+  fill: var(--text-sub);
+  font-size: 11px;
+}
+.profit-structure-axis {
+  stroke: var(--border);
+}
+.profit-structure-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+}
+.profit-structure-compositions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.profit-structure-group {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divider);
+}
+.profit-structure-group > div {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.profit-structure-group svg {
+  width: 100%;
+  height: 12px;
+  margin: 6px 0;
+}
+.profit-structure-group span,
+.profit-structure-group small {
+  font-size: 12px;
+}
+.profit-structure table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.profit-structure td,
+.profit-structure th {
+  padding: 10px 12px;
+  min-width: 120px;
+  border-bottom: 1px solid var(--divider);
+  text-align: right;
+  vertical-align: top;
+}
+.profit-structure thead th {
+  background: var(--head-bg);
+  font-weight: 600;
+}
+.profit-structure tr > :first-child {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  background: var(--surface);
+  z-index: 1;
+}
+.profit-structure .latest {
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .profit-structure-summary,
+  .profit-structure-compositions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .profit-structure-summary,
+  .profit-structure-charts,
+  .profit-structure-compositions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profit-structure-card {
+    padding: 16px;
+  }
+}

@@ -50,11 +50,12 @@ public class ExcelExportService {
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!Set.of("UI-03", "UI-04", "UI-31").contains(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
             String qualifierPattern = switch (specification.screenId()) {
-                case "UI-04" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])";
+                case "UI-07" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])_(MONTH|QUARTER|YTD)";
+                case "UI-04", "UI-08", "UI-09" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])";
                 case "UI-31" -> "[0-9]{8}";
                 default -> "[0-9]{4}";
             };
@@ -184,7 +185,7 @@ public class ExcelExportService {
                 default -> specification.kind();
             };
             String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
-            return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx");
+            return new Download(file, kind + (Set.of("UI-07", "UI-08", "UI-09").contains(specification.screenId()) ? "" : "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))) + ".xlsx");
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
             if (e instanceof ApiException api) throw api;
@@ -193,6 +194,8 @@ public class ExcelExportService {
     }
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
+            case "UI-07" -> Set.of("전체수익구조");
+            case "UI-09" -> Set.of("순이익표");
             case "UI-03" -> Set.of("개인원가수익");
             case "UI-04" -> Set.of("프로젝트 원가");
             case "UI-31" -> Set.of("프로젝트현황");
@@ -201,12 +204,14 @@ public class ExcelExportService {
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");
             case "UI-13" -> Set.of("청구", "청구누락점검", "미수알림");
             case "UI-10" -> Set.of("재무_등록양식", "재무_업로드검사");
+            case "UI-18" -> Set.of("사업계획_등록양식", "사업계획_업로드검사");
+            case "UI-08" -> Set.of("영업이익표", "이관손익_등록양식", "이관손익_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
             case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> throw InputValidator.invalid("screenId");
         };
         if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
-        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사", "재무_업로드검사").contains(specification.kind())) {
+        if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사", "재무_업로드검사", "사업계획_업로드검사", "이관손익_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");

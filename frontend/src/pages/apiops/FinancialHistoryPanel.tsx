@@ -10,7 +10,12 @@ import {
 } from "./financialReadApi";
 import "./financialRead.css";
 
-type Props = { month: string; refreshKey?: string | number; dense?: boolean };
+type Props = {
+  month: string;
+  refreshKey?: string | number;
+  dense?: boolean;
+  initialScope?: FinancialHistoryScope;
+};
 const types: Record<
   FinancialHistoryEntry["changeType"],
   { label: string; tone: Tone }
@@ -111,9 +116,10 @@ function FinancialHistoryContent({
   month,
   refreshKey,
   dense,
+  initialScope = "MONTH",
   onClose,
 }: Props & { onClose(): void }) {
-  const [scope, setScope] = useState<FinancialHistoryScope>("MONTH");
+  const [scope, setScope] = useState<FinancialHistoryScope>(initialScope);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<FinancialHistoryPage>();
@@ -153,6 +159,12 @@ function FinancialHistoryContent({
             <option value="MONTH">선택월 원천</option>
             <option value="TAX">관련 세금</option>
             <option value="CARDS">전역 카드</option>
+            {initialScope === "BUSINESS_PLAN" && (
+              <option value="BUSINESS_PLAN">사업계획 목표</option>
+            )}
+            {initialScope === "HISTORICAL_PROFIT_LOSS" && (
+              <option value="HISTORICAL_PROFIT_LOSS">이관 손익</option>
+            )}
           </select>
         </label>
         <span>{month} · 조회 전용</span>

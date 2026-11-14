@@ -1,0 +1,27 @@
+.business-plan-import-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--divider, #e5e7eb);
+  border-radius: 8px;
+  margin-block: 12px;
+}
+.business-plan-import-scroll table {
+  min-width: 780px;
+  width: 100%;
+  font-size: 13px;
+}
+.business-plan-import-scroll th,
+.business-plan-import-scroll td {
+  height: 40px;
+  padding: 0 12px;
+  white-space: nowrap;
+  text-align: right;
+}
+.business-plan-import-scroll th {
+  background: var(--head-bg, #f3f4f6);
+  font-weight: 600;
+}
+.business-plan-import-scroll th:first-child,
+.business-plan-import-scroll td:first-child {
+  text-align: left;
+}
