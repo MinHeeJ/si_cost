@@ -23,20 +23,22 @@ import "./financial.css";
 export type FinancialItemsScreenProps = {
   onDirtyChange?(dirty: boolean): void;
   openAdjustments?: boolean;
+  openTax?: boolean;
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const location = useLocation();
-  const openAdjustments =
-    (location.state as { section?: string } | null)?.section === "adjustments";
+  const section = (location.state as { section?: string } | null)?.section;
+  const openAdjustments = section === "adjustments";
   return (
     <SharedScreenFrame screenId="UI-10" periodBar={null}>
-      <FinancialItemsEditor {...props} openAdjustments={openAdjustments} />
+      <FinancialItemsEditor {...props} openAdjustments={openAdjustments} openTax={section === "tax"} />
     </SharedScreenFrame>
   );
 }
 export function FinancialItemsEditor({
   onDirtyChange,
   openAdjustments,
+  openTax,
 }: FinancialItemsScreenProps) {
   const [month, setMonth] = useState<string>();
   const state = useFinancialEditor(month, onDirtyChange),
@@ -59,7 +61,7 @@ export function FinancialItemsEditor({
   const adjustmentOpened = useRef(false);
   useEffect(() => {
     if (
-      !openAdjustments ||
+      (!openAdjustments && !openTax) ||
       !editor ||
       state.loading ||
       adjustmentOpened.current
@@ -76,9 +78,9 @@ export function FinancialItemsEditor({
     adjustmentOpened.current = true;
     setTab("financial");
     document
-      .getElementById("financial-adjustments-section")
+      .getElementById(openTax ? "financial-tax-section" : "financial-adjustments-section")
       ?.scrollIntoView?.({ block: "start" });
-  }, [openAdjustments, editor, state.loading, month]);
+  }, [openAdjustments, openTax, editor, state.loading, month]);
   useEffect(() => {
     let live = true;
     void getSharedCodes("SGA_ITEM")
@@ -575,6 +577,7 @@ export function FinancialItemsEditor({
         </div>
         <section
           className="financial-section"
+          id="financial-tax-section"
           data-testid="financial-tax-panel"
         >
           <h2>

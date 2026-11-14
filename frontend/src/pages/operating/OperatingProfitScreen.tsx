@@ -1,3 +1,4 @@
+import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -76,7 +77,11 @@ function Change({
   );
 }
 // SCR-UI-08
-export function OperatingProfitScreen() {
+export function OperatingProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
+  amountUnit?: AmountUnit;
+  dense?: boolean;
+  onAmountUnitChange?(unit: AmountUnit): void;
+} = {}) {
   const navigate = useNavigate(),
     location = useLocation();
   const incoming = location.state as {
@@ -84,9 +89,14 @@ export function OperatingProfitScreen() {
     period?: { month?: string };
   } | null;
   const initialMonth = incoming?.period?.month ?? incoming?.month;
+  function setUnit(next: AmountUnit) {
+    if (onAmountUnitChange) onAmountUnitChange(next);
+    else setLocalUnit(next);
+  }
   const [period, setPeriod] = useState<{ year: number; month: string }>();
-  const [unit, setUnit] = useState<AmountUnit>("천원"),
+  const [localUnit, setLocalUnit] = useState<AmountUnit>("천원"),
     [data, setData] = useState<api.OperatingProfitData>();
+  const unit = amountUnit ?? localUnit;
   const [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
@@ -177,7 +187,7 @@ export function OperatingProfitScreen() {
       }
     >
       <div
-        className="operating-profit"
+        className={`operating-profit${dense ? " financial-display-dense" : ""}`}
         data-testid="operating-profit-screen"
         data-screen-id="SCR-UI-08"
       >
@@ -266,6 +276,7 @@ export function OperatingProfitScreen() {
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
                 않습니다.
+                <FinancialEmptyReset screenId="UI-08" />
               </div>
             )}
             <div className="operating-summary">
@@ -276,7 +287,7 @@ export function OperatingProfitScreen() {
                   data-testid={`operating-card-${kebab(card.metric)}`}
                 >
                   <h2>{labels[card.metric] ?? card.metric}</h2>
-                  <strong>
+                  <strong data-financial-negative={card.amount?.startsWith("-")}>
                     {formatAmount(card.amount, unit)} <small>{unit}</small>
                   </strong>
                   {card.metric === "oprtPrftAmt" && (

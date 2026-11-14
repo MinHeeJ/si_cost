@@ -322,3 +322,48 @@ it("keeps open financial tabs mounted and refreshes them after an import", async
     screen.getByRole("navigation", { name: "열린 화면" }),
   ).toHaveTextContent("영업이익표");
 });
+
+it.each(screens)("/$id uses and saves the shared amount unit", async (item) => {
+  const amount = { type: "AMT_UNIT" as const, key: "*", value: "백만원", revision: "unit-v1", stored: true };
+  vi.mocked(prefs.getPreferences).mockResolvedValue({ items: [amount] });
+  open(item.id);
+  const content = await screen.findByTestId(item.testId);
+  await within(content).findByText(statement.notices[0]);
+  expect(within(content).getByLabelText("단위")).toHaveValue("백만원");
+  vi.mocked(prefs.getPreferences).mockResolvedValue({ items: [{ ...amount, value: "원", revision: "saved" }] });
+  await userEvent.selectOptions(within(content).getByLabelText("단위"), "원");
+  await waitFor(() => expect(prefs.putPreference).toHaveBeenCalledWith("AMT_UNIT", "*", "원", "unit-v1"));
+  expect(within(content).getByLabelText("단위")).toHaveValue("원");
+});
+it("keeps the amount unit and reports a failed preference save", async () => {
+  vi.mocked(prefs.getPreferences).mockResolvedValue({ items: [{ type: "AMT_UNIT", key: "*", value: "천원", revision: "unit-v1", stored: true }] });
+  vi.mocked(prefs.putPreference).mockRejectedValue(new Error("단위 저장 실패"));
+  open("UI-08");
+  const content = await screen.findByTestId("operating-profit-screen");
+  await within(content).findByText(statement.notices[0]);
+  await userEvent.selectOptions(within(content).getByLabelText("단위"), "원");
+  expect(await screen.findByText("단위 저장 실패")).toBeInTheDocument();
+  expect(within(content).getByLabelText("단위")).toHaveValue("천원");
+});
+
+it.each(screens)("/$id defaults to thousands and keeps dense table settings", async (item) => {
+  vi.mocked(prefs.getPreferences).mockResolvedValue({ items: [{ type: "DENSE", key: "*", value: "좁게", revision: null, stored: true }] });
+  open(item.id);
+  const content = await screen.findByTestId(item.testId);
+  await within(content).findByText(statement.notices[0]);
+  expect(within(content).getByLabelText("단위")).toHaveValue("천원");
+  expect(content).toHaveClass("financial-display-dense");
+});
+it.each(screens.filter(item => item.id !== "UI-18"))("/$id includes period reset inside the empty state", async (item) => {
+  const handler = vi.fn();
+  window.addEventListener("sicost:company-profit-reset-period", handler);
+  try {
+    open(item.id);
+    const content = await screen.findByTestId(item.testId);
+    await within(content).findByText(statement.notices[0]);
+    const reset = within(content).getByRole("button", { name: "조건 초기화" });
+    expect(reset.parentElement).toHaveTextContent("손익 자료가 없습니다");
+    await userEvent.click(reset);
+    expect(handler.mock.calls[0][0].detail).toEqual({ screenId: item.id });
+  } finally { window.removeEventListener("sicost:company-profit-reset-period", handler); }
+});

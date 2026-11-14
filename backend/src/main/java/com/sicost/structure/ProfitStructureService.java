@@ -56,7 +56,10 @@ public class ProfitStructureService {
             if(b.completeness().availableMonthCount()!=b.monthCount())notices.add(b.key()+" 자료 "+b.completeness().availableMonthCount()+"/"+b.monthCount()+"개월 · 빠진 월: "+String.join(", ",b.completeness().missingMonths()));
             if(!b.composition().visible())notices.add(RevenueCompositionCalculation.MIGRATED);
         }
-        return new Data(read.context(),read.months(),List.copyOf(buckets),List.copyOf(summary),waterfall(last.amounts()),List.copyOf(numeric),methods(),notices.stream().distinct().toList());
+        List<Waterfall> waterfall=waterfall(last.amounts());
+        if(!last.composition().visible()&&waterfall.stream().anyMatch(w->"CHANGE".equals(w.kind())&&!w.connected()))
+            notices.add("이관 세부금액 없음/구성 불일치: 확인되지 않는 폭포 구간은 연결하지 않습니다.");
+        return new Data(read.context(),read.months(),List.copyOf(buckets),List.copyOf(summary),waterfall,List.copyOf(numeric),methods(),notices.stream().distinct().toList());
     }
     static List<List<String>> bucketMonths(Query query) {
         List<List<String>> result=new ArrayList<>();int end=YearMonth.parse(query.month()).getMonthValue();
@@ -95,8 +98,9 @@ public class ProfitStructureService {
                 String[] parts=metric.equals("idleCostShare")?new String[]{"idleCostAmt","salesCostAmt"}:new String[]{metric.equals("grossProfitRate")?"grossPrftAmt":metric.equals("operatingProfitRate")?"oprtPrftAmt":"netPrftAmt","salesAmt"};
                 var a=aggregate(current);var b=aggregate(past);
                 BigDecimal an=new BigDecimal(a.get(parts[0])),ad=new BigDecimal(a.get(parts[1])),bn=new BigDecimal(b.get(parts[0])),bd=new BigDecimal(b.get(parts[1]));
-                delta=an.multiply(bd).subtract(bn.multiply(ad)).multiply(new BigDecimal("100")).divide(ad.multiply(bd),12,RoundingMode.HALF_UP);
-                points=delta.setScale(1,RoundingMode.HALF_UP).toPlainString();
+                BigDecimal numerator=an.multiply(bd).subtract(bn.multiply(ad)).multiply(new BigDecimal("100")),denominator=ad.multiply(bd);
+                points=numerator.divide(denominator,1,RoundingMode.HALF_UP).toPlainString();
+                delta=new BigDecimal(points);
             } else if(new BigDecimal(before).signum()!=0)change=delta.multiply(new BigDecimal("100")).divide(new BigDecimal(before).abs(),1,RoundingMode.HALF_UP).toPlainString();
             boolean cost=Set.of("salesCostAmt","allocCostAmt","idleCostAmt","drctExpsAmt","sgaInputAmt","indrctLaborAmt","rndAmt","sgaTotAmt","noprExpsAmt","corpTaxAmt","idleCostShare").contains(metric);
             direction=delta.signum()==0?"NEUTRAL":(delta.signum()>0)==cost?"ADVERSE":"FAVORABLE";
@@ -105,13 +109,25 @@ public class ProfitStructureService {
     }
     static List<Waterfall> waterfall(Map<String,String> a) {
         List<Waterfall> result=new ArrayList<>();String[] metrics={"salesAmt","salesCostAmt","grossPrftAmt","sgaTotAmt","prevAdjAmt","oprtPrftAmt","nonOperatingNet","corpTaxAmt","netPrftAmt"};
+        boolean gross=reconciles(a.get("grossPrftAmt"),subtract(a.get("salesAmt"),a.get("salesCostAmt")));
+        boolean operating=reconciles(a.get("oprtPrftAmt"),add(subtract(a.get("grossPrftAmt"),a.get("sgaTotAmt")),a.get("prevAdjAmt")));
+        boolean net=reconciles(a.get("netPrftAmt"),subtract(add(a.get("oprtPrftAmt"),a.get("noprIncmAmt")),add(a.get("noprExpsAmt"),a.get("corpTaxAmt"))));
         boolean known=true;for(String metric:metrics) {
             boolean subtotal=Set.of("salesAmt","grossPrftAmt","oprtPrftAmt","netPrftAmt").contains(metric);
             String value=metric.equals("nonOperatingNet")?subtract(a.get("noprIncmAmt"),a.get("noprExpsAmt")):a.get(metric);
             if(Set.of("salesCostAmt","sgaTotAmt","corpTaxAmt").contains(metric)&&value!=null)value=new BigDecimal(value).negate().toPlainString();
-            boolean connected=known&&value!=null;if(subtotal)known=value!=null;else known=connected;
+            boolean reconciled=switch(metric) {
+                case "salesCostAmt"->gross;
+                case "sgaTotAmt","prevAdjAmt"->operating;
+                case "nonOperatingNet","corpTaxAmt"->net;
+                default->true;
+            };
+            boolean connected=known&&value!=null&&reconciled;if(subtotal)known=value!=null;else known=connected;
             result.add(new Waterfall(metric,metric.equals("nonOperatingNet")?"영업외손익":LABELS.get(metric),subtotal?"SUBTOTAL":"CHANGE",value,connected));
         }return List.copyOf(result);
+    }
+    private static boolean reconciles(String stored,String calculated) {
+        return stored!=null&&calculated!=null&&new BigDecimal(stored).compareTo(new BigDecimal(calculated))==0;
     }
     static List<Method> methods() {
         return List.of(new Method("salesAmt",List.of("TB_PJ_ASGN_MON","TB_BL_BILL"),"MO/DP 유상 귀속월 SALES_AMT + TK BILL_DT월 유효 SPLY_AMT; MM 재곱 없음; 입금액 아님",false,true),

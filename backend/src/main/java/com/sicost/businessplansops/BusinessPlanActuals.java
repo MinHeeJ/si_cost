@@ -45,7 +45,11 @@ public class BusinessPlanActuals {
             p.completeness().issues().forEach(i->issues.add(new Issue(month,i.source(),"SOURCE_UNCONFIRMED",i.message(),p.completeness().estimated())));
         }
         Map<String,String> values=empty();
-        boolean unallocated=persons.stream().anyMatch(p->!p.completeness().allocationComplete()||p.rows().isEmpty());
+        // An unknown salary in an identified class only invalidates that class's sums.
+        // Missing allocation coverage still makes the company costs unconfirmed.
+        boolean unallocated=persons.stream().anyMatch(p->!p.completeness().allocationComplete()
+            &&(p.rows().isEmpty()||input.originals().protectedPersonMonth(key,p.personId())))
+            ||rows.stream().anyMatch(r->!Set.of("ALLOC","PRE","IDLE","INDRCT","RND").contains(Objects.toString(r.costClass(),"")));
         values.put("allocCostAmt",unallocated?null:sum(rows.stream().filter(r->("ALLOC".equals(r.costClass())||"PRE".equals(r.costClass()))&&!MonthlyCostService.synthetic(r)).toList(),MonthlyCostRow::laborAllocated));
         values.put("idleCostAmt",unallocated?null:sum(rows.stream().filter(r->"IDLE".equals(r.costClass())).toList(),MonthlyCostRow::laborAllocated));
         values.put("indrctLaborAmt",unallocated?null:sum(rows.stream().filter(r->"INDRCT".equals(r.costClass())).toList(),MonthlyCostRow::laborAllocated));

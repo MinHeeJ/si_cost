@@ -161,3 +161,14 @@ it("파일 생성 중 중복 클릭을 막고 성공 후 제어를 복구한다"
   resolve({ blob: new Blob(), filename: "검사.xlsx" });
   await screen.findByText("현재 유형의 전체 문제를 다운로드했습니다.");
 });
+
+it.each(["UI-08", "UI-18"])("%s places reset inside the empty issue table and restores all severities", async (screenId) => {
+  vi.mocked(api.getUploadIssues).mockResolvedValueOnce({ items: [], total: 0, page: 1, size: 50 });
+  render(<UploadIssuesPanel uploadId={17} initialPage={initialPage} screenId={screenId} />);
+  await userEvent.selectOptions(screen.getByLabelText("문제 유형"), "WARN");
+  const reset = await screen.findByRole("button", { name: "조건 초기화" });
+  expect(reset.closest("td")).not.toBeNull();
+  expect(reset.closest("td")).toHaveTextContent("검사 문제가 없습니다.");
+  await userEvent.click(reset);
+  expect(api.getUploadIssues).toHaveBeenLastCalledWith(17, "", 1, 50);
+});

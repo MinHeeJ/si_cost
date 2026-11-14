@@ -67,3 +67,14 @@ it("ordinary financial entry keeps its existing month without adjustment redirec
     ),
   ).toBe(false);
 });
+
+it("tax entry uses the editable month and opens the tax section without saving", async () => {
+  data = financialEditorFixture({ month: "2026-06", editable: false, closeStatus: "CLOSE", firstEditableMonth: "2026-07" });
+  const scroll = vi.fn();
+  HTMLElement.prototype.scrollIntoView = scroll;
+  render(<FinancialItemsEditor openTax />);
+  await waitFor(() => expect(screen.getByLabelText("선택월")).toHaveValue("2026-07"));
+  await waitFor(() => expect(scroll).toHaveBeenCalled());
+  expect(screen.getByTestId("financial-tax-panel")).toHaveAttribute("id", "financial-tax-section");
+  expect(fetcher.mock.calls.some(([, options]) => options?.method === "PUT")).toBe(false);
+});

@@ -67,4 +67,46 @@ class BusinessPlanActualsTest {
         assertThat(BusinessPlanPerformanceService.margin("100","10","0","10").adverse()).isNull();
         assertThat(BusinessPlanPerformanceService.margin("100","10","-100","10").rate()).isNull();
     }
+    Sources withoutAssignments() {
+        var s=sources();
+        return new Sources(s.period(),s.actor(),s.asOfDate(),s.people(),s.prices(),s.states(),s.payroll(),
+            List.of(),List.of(),s.projects(),s.projectParts(),s.turnkey(),s.storedCosts(),s.standards(),s.parts(),s.closes(),s.allowanceCodes());
+    }
+    @Test void unknownIdleSalaryOnlyInvalidatesItsDependentMetrics() {
+        var unknown=new MonthlyPersonCost("unknown","202607",List.of(row("IDLE","MO",null,"0","0")),null,
+            new MonthlyCostCompleteness(false,true,true,false,List.of()),null,"0","0.00",true,false);
+        var known=person(List.of(row("ALLOC","TK","100","17",null),row("INDRCT",null,"40","0","0"),row("RND","IN","50","3","0")));
+        var actual=calculation.calculated("2026-07",new BusinessPlanActuals.OperatingSources(List.of(unknown,known),
+            List.of(source("tkSales","500"),source("directExtra","7"),source("rndExtra","4"),source("sgaInputAmt","20")),withoutAssignments()),"8",at);
+        assertThat(actual.amounts()).containsEntry("allocCostAmt","100").containsEntry("idleCostAmt",null)
+            .containsEntry("drctExpsAmt","24").containsEntry("indrctLaborAmt","40").containsEntry("rndAmt","57")
+            .containsEntry("sgaTotAmt","117").containsEntry("salesAmt","500").containsEntry("corpTaxAmt","8")
+            .containsEntry("oprtPrftAmt",null).containsEntry("netPrftAmt",null);
+    }
+    @Test void confirmedZeroWithoutAllocationsIsZeroRatherThanUnknown() {
+        var actual=calculation.calculated("2026-07",new BusinessPlanActuals.OperatingSources(List.of(person(List.of())),List.of(),withoutAssignments()),"0",at);
+        assertThat(actual.amounts()).containsEntry("allocCostAmt","0").containsEntry("idleCostAmt","0")
+            .containsEntry("salesCostAmt","0").containsEntry("oprtPrftAmt","0");
+        assertThat(actual.completeness().costComplete()).isTrue();
+    }
+    @Test void unpaidAllocationCoverageStillPropagatesUnknownInsteadOfZero() {
+        var unknown=new MonthlyPersonCost("unknown","202607",List.of(),null,
+            new MonthlyCostCompleteness(false,false,false,false,List.of()),null,null,"0.00",false,false);
+        var actual=calculation.calculated("2026-07",new BusinessPlanActuals.OperatingSources(List.of(unknown),
+            List.of(source("tkSales","500"),source("sgaInputAmt","20")),withoutAssignments()),"8",at);
+        assertThat(actual.amounts()).containsEntry("salesAmt","500").containsEntry("sgaInputAmt","20")
+            .containsEntry("allocCostAmt",null).containsEntry("salesCostAmt",null).containsEntry("corpTaxAmt","8");
+    }
+
+    @Test void incompleteProtectedAllocationCoverageCannotBecomeKnownPartialCosts() {
+        var original=withoutAssignments();
+        var stored=new StoredCost("202607","owned","mo","owned-assignment",n("0.60"),n("0"),n("1200"),n("100"),n("0"),n("0"),n("0"),"ALLOC","MO",null,"Y",null,null,null,null,"mo","DEV","PAID");
+        var protectedSources=new Sources(original.period(),original.actor(),original.asOfDate(),original.people(),original.prices(),original.states(),original.payroll(),
+            original.assignments(),original.projectMonths(),original.projects(),original.projectParts(),original.turnkey(),List.of(stored),original.standards(),original.parts(),original.closes(),original.allowanceCodes());
+        var incomplete=new MonthlyPersonCost("owned","202607",List.of(stored.toRow()),null,
+            new MonthlyCostCompleteness(false,false,false,false,List.of()),"100","1200","0.60",false,false);
+        var actual=calculation.calculated("2026-07",new BusinessPlanActuals.OperatingSources(List.of(incomplete),List.of(),protectedSources),"8",at);
+        assertThat(actual.amounts()).containsEntry("allocCostAmt",null).containsEntry("salesCostAmt",null);
+    }
+
 }

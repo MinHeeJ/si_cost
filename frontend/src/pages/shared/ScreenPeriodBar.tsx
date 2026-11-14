@@ -40,6 +40,15 @@ export function ScreenPeriodBar({
     closeRead = useRef(0);
   const applyPeriod = useRef<(next: PeriodValue) => void>(() => {});
   useEffect(() => {
+    if (!["UI-07", "UI-08", "UI-09", "UI-18"].includes(screenId) || !context) return;
+    const reset = (event: Event) => {
+      if ((event as CustomEvent<{ screenId: string }>).detail?.screenId !== screenId) return;
+      applyPeriod.current({ type: "YEAR_CUM", year: context.currentMonth.slice(0, 4), month: context.currentMonth });
+    };
+    window.addEventListener("sicost:company-profit-reset-period", reset);
+    return () => window.removeEventListener("sicost:company-profit-reset-period", reset);
+  }, [screenId, context]);
+  useEffect(() => {
     if (screenId !== "UI-03" || !context) return;
     const reset = () =>
       applyPeriod.current({

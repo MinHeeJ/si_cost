@@ -449,7 +449,7 @@ it("navigates to existing tax screen without forcing a closed source month", asy
     screen.getByRole("button", { name: "법인세 월할 확인" }),
   );
   expect(screen.getByTestId("destination")).toHaveTextContent(
-    '{"path":"/UI-10","state":null}',
+    '{"path":"/UI-10","state":{"section":"tax"}}',
   );
 });
 it("cashflow action only navigates to the existing follow-up screen", async () => {

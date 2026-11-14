@@ -1,3 +1,4 @@
+import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -41,7 +42,11 @@ const sourceEvents = [
   "sicost:distribution-committed",
 ];
 // SCR-UI-09
-export function NetProfitScreen() {
+export function NetProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
+  amountUnit?: AmountUnit;
+  dense?: boolean;
+  onAmountUnitChange?(unit: AmountUnit): void;
+} = {}) {
   const navigate = useNavigate(),
     location = useLocation();
   const incoming = location.state as {
@@ -49,9 +54,14 @@ export function NetProfitScreen() {
     period?: { month?: string };
   } | null;
   const initialMonth = incoming?.period?.month ?? incoming?.month;
+  function setUnit(next: AmountUnit) {
+    if (onAmountUnitChange) onAmountUnitChange(next);
+    else setLocalUnit(next);
+  }
   const [period, setPeriod] = useState<{ year: number; month: string }>();
-  const [unit, setUnit] = useState<AmountUnit>("천원"),
+  const [localUnit, setLocalUnit] = useState<AmountUnit>("천원"),
     [data, setData] = useState<api.NetProfitData>();
+  const unit = amountUnit ?? localUnit;
   const [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
@@ -142,7 +152,7 @@ export function NetProfitScreen() {
       }
     >
       <div
-        className="operating-profit net-profit"
+        className={`operating-profit net-profit${dense ? " financial-display-dense" : ""}`}
         data-testid="net-profit-screen"
         data-screen-id="SCR-UI-09"
       >
@@ -213,6 +223,7 @@ export function NetProfitScreen() {
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
                 않습니다.
+                <FinancialEmptyReset screenId="UI-09" />
               </div>
             )}
             <div className="operating-summary net-summary">
@@ -231,7 +242,7 @@ export function NetProfitScreen() {
                       ? "누계 순이익"
                       : "기준월 순이익"}
                   </h2>
-                  <strong>
+                  <strong data-financial-negative={card.amount?.startsWith("-")}>
                     {formatAmount(card.amount, unit)} <small>{unit}</small>
                   </strong>
                   <p>순이익률 {formatRate(card.rate)}</p>
@@ -328,7 +339,7 @@ export function NetProfitScreen() {
               <button
                 type="button"
                 data-testid="net-tax-link"
-                onClick={() => navigate("/UI-10")}
+                onClick={() => navigate("/UI-10", { state: { section: "tax" } })}
               >
                 법인세 월할 확인
               </button>

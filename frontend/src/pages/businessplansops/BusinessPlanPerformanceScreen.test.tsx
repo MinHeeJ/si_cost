@@ -151,7 +151,7 @@ it("keeps unregistered actuals and upload guidance", async () => {
   ).toBeInTheDocument();
   expect(
     screen.getByTestId("business-plan-row-sales-actual-amt"),
-  ).toHaveTextContent("0.099");
+  ).toHaveTextContent("99");
   expect(
     screen.getByTestId("business-plan-summary-cumulative-sales"),
   ).toHaveTextContent("–");
@@ -208,7 +208,7 @@ it("shows future targets but omits future bars and preserves source explanations
   ).not.toBeInTheDocument();
   expect(
     screen.getByTestId("business-plan-row-sales-target-amt"),
-  ).toHaveTextContent("0.099001");
+  ).toHaveTextContent("99.001");
   expect(screen.getByLabelText("매출 실적 원천 설명")).toHaveAttribute(
     "title",
     expect.stringContaining("TK는 청구일"),
@@ -229,7 +229,7 @@ it("formats large exact amounts by string scaling, not Number", async () => {
     screen.getByTestId("business-plan-summary-cumulative-sales"),
   ).toHaveTextContent("9,007,199,254,740,993");
 });
-it("downloads the selected year template but opens current-year upload from a past-year view", async () => {
+it("downloads the selected year template and keeps past-year uploads read-only", async () => {
   const data = result();
   data.context.year = 2025;
   data.context.month = "2025-12";
@@ -239,6 +239,11 @@ it("downloads the selected year template but opens current-year upload from a pa
   await screen.findByRole("table");
   await userEvent.click(screen.getByTestId("business-plan-template"));
   expect(api.downloadBusinessPlanTemplate).toHaveBeenCalledWith(2025);
+  expect(screen.getByTestId("business-plan-upload")).toBeDisabled();
+  expect(screen.queryByLabelText("파일 선택")).not.toBeInTheDocument();
+});
+it("opens the current-year upload from the current-year view", async () => {
+  await draw();
   await userEvent.click(screen.getByTestId("business-plan-upload"));
   expect(
     await screen.findByTestId("business-plan-import-year"),

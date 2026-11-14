@@ -451,11 +451,7 @@ describe("공식 화면과 공통 틀", () => {
     } else if (id === "UI-10") {
       expect(screen.getByTestId("financial-editor")).toBeInTheDocument();
     } else if (id === "UI-04" || id === "UI-31") {
-      expect(
-        await screen.findByTestId(
-          id === "UI-04" ? "project-cost-analysis" : "project-status-board",
-        ),
-      ).toBeInTheDocument();
+      expect(await screen.findByTestId(id === "UI-04" ? "project-cost-analysis" : "project-status-board")).toBeInTheDocument();
     } else if (financialScreenTestIds[id]) {
       expect(
         await screen.findByTestId(financialScreenTestIds[id]),

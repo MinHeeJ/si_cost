@@ -68,13 +68,22 @@ const rows: {
 ];
 
 // SCR-UI-18 — the existing router and shared frame retain menu, favorites, tabs and YEAR_CUM.
-export function BusinessPlanPerformanceScreen() {
+export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, dense }: {
+  amountUnit?: AmountUnit;
+  dense?: boolean;
+  onAmountUnitChange?(unit: AmountUnit): void;
+} = {}) {
+  function setUnit(next: AmountUnit) {
+    if (onAmountUnitChange) onAmountUnitChange(next);
+    else setLocalUnit(next);
+  }
   const [period, setPeriod] = useState<{ year: number; month: string }>();
   const [data, setData] = useState<api.BusinessPlanPerformanceData>();
   const [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
-  const [unit, setUnit] = useState<AmountUnit>("백만원");
+  const [localUnit, setLocalUnit] = useState<AmountUnit>("천원");
+  const unit = amountUnit ?? localUnit;
   const [upload, setUpload] = useState(false),
     [downloading, setDownloading] = useState(false);
   const [uploadYear, setUploadYear] = useState<number>();
@@ -152,7 +161,7 @@ export function BusinessPlanPerformanceScreen() {
   return (
     <SharedScreenFrame screenId="UI-18">
       <div
-        className="business-plan-performance"
+        className={`business-plan-performance${dense ? " financial-display-dense" : ""}`}
         data-testid="business-plan-performance"
         data-screen-id="SCR-UI-18"
       >
@@ -181,7 +190,7 @@ export function BusinessPlanPerformanceScreen() {
             data-testid="business-plan-upload"
             className="sicost-primary"
             type="button"
-            disabled={!data || mobile}
+            disabled={!data || mobile || data.context.year !== Number(data.context.nowMonth.slice(0, 4))}
             onClick={() => {
               setUploadYear(Number(data!.context.nowMonth.slice(0, 4)));
               setUpload(true);
@@ -224,8 +233,7 @@ export function BusinessPlanPerformanceScreen() {
             {data.context.year !==
               Number(data.context.nowMonth.slice(0, 4)) && (
               <p className="business-plan-warning">
-                지난 해 실적·목표는 읽기 전용입니다. 목표 업로드는 올해 목표를
-                변경합니다.
+                지난 해 실적·목표는 읽기 전용입니다.
               </p>
             )}
             {data.notices.map((notice, index) => (
@@ -326,6 +334,7 @@ export function BusinessPlanPerformanceScreen() {
                         return (
                           <td
                             key={month.month}
+                            data-financial-negative={row.amount && value?.startsWith("-")}
                             className={
                               row.adverse && month[row.adverse] === true
                                 ? "business-plan-adverse"

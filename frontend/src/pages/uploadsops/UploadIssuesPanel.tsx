@@ -217,8 +217,12 @@ export function UploadIssuesPanel({
           },
         ]}
         empty="검사 문제가 없습니다."
+        emptyAction={(screenId === "UI-08" || screenId === "UI-18") && !error && !loading && severity ? (
+          <button type="button" data-testid="upload-issues-reset" disabled={pending}
+            onClick={() => void load({ severity: "", page: 1, size: result.size })}>조건 초기화</button>
+        ) : undefined}
       />
-      {!error && !loading && result.total === 0 && severity && (
+      {!error && !loading && result.total === 0 && severity && screenId !== "UI-08" && screenId !== "UI-18" && (
         <button
           type="button"
           data-testid="upload-issues-reset"

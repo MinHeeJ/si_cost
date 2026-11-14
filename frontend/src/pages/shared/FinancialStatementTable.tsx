@@ -132,6 +132,7 @@ export function FinancialStatementTable({
               {row.monthlyValues.map((value, index) => (
                 <td
                   key={months[index].month}
+                  data-financial-negative={value?.startsWith("-")}
                   className={
                     months[index].month === month ? "operating-current" : ""
                   }
@@ -143,14 +144,14 @@ export function FinancialStatementTable({
                   {row.isRate ? formatRate(value) : formatAmount(value, unit)}
                 </td>
               ))}
-              <td className="operating-cumulative">
+              <td className="operating-cumulative" data-financial-negative={row.cumulativeValue?.startsWith("-")}>
                 {row.isRate
                   ? formatRate(row.cumulativeValue)
                   : formatAmount(row.cumulativeValue, unit)}
               </td>
               {showPreviousYear && (
                 <>
-                  <td>
+                  <td data-financial-negative={row.previousYearCumulativeValue?.startsWith("-")}>
                     {row.isRate
                       ? formatRate(row.previousYearCumulativeValue)
                       : formatAmount(row.previousYearCumulativeValue, unit)}

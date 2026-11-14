@@ -35,6 +35,7 @@ class HistoricalProfitLossImportDatabaseTest {
     static class Transactions { @Bean PlatformTransactionManager transactionManager(DataSource source) {return new DataSourceTransactionManager(source);} }
     @BeforeEach void install()throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
+        sql.update("UPDATE tb_sy_oper_std SET std_val=208007 WHERE std_cd='CASH_BASE_YM'");
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
         var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
@@ -64,12 +65,12 @@ class HistoricalProfitLossImportDatabaseTest {
         assertThat(audits()).allMatch(a->a.get("trgt_key").equals("207901")&&a.get("chg_rsn").equals("HistoricalProfitLossImport:"+result.uploadId()+":2:ALL"));
     }
     @Test void auditFailureRollsBackPlAndStatus() {
-        var checked=checked();sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_historical_history CHECK(trgt_tbl_nm <> 'TB_CO_MON_PL') NOT VALID");
+        var checked=checked();assertThat(checked.canApply()).isTrue();sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_historical_history CHECK(trgt_tbl_nm <> 'TB_CO_MON_PL') NOT VALID");
         assertThatThrownBy(()->apply(checked)).isInstanceOf(RuntimeException.class);assertThat(rows()).isEmpty();assertThat(audits()).isEmpty();
         assertThat(((Result)service.result(Long.parseLong(checked.uploadId()))).status()).isEqualTo("CHECKED");
     }
     @Test void statusFailureRollsBackBusinessAndAudit() {
-        var checked=checked();sql.execute("ALTER TABLE tb_sy_upld ADD CONSTRAINT reject_historical_apply CHECK(upld_stat_cd <> 'APPLIED') NOT VALID");
+        var checked=checked();assertThat(checked.canApply()).isTrue();sql.execute("ALTER TABLE tb_sy_upld ADD CONSTRAINT reject_historical_apply CHECK(upld_stat_cd <> 'APPLIED') NOT VALID");
         assertThatThrownBy(()->apply(checked)).isInstanceOf(RuntimeException.class);assertThat(rows()).isEmpty();assertThat(audits()).isEmpty();
     }
     @Test void identicalSecondUploadPreservesModAuditOtherMonthsAndStillCompletes() {

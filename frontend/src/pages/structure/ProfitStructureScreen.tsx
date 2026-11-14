@@ -1,3 +1,4 @@
+import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -146,11 +147,20 @@ function RevenueComposition({
   );
 }
 // SCR-UI-07 — same materialized buckets drive cards, charts, compositions and numeric tables.
-export function ProfitStructureScreen() {
+export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }: {
+  amountUnit?: AmountUnit;
+  dense?: boolean;
+  onAmountUnitChange?(unit: AmountUnit): void;
+} = {}) {
   const navigate = useNavigate();
+  function setUnit(next: AmountUnit) {
+    if (onAmountUnitChange) onAmountUnitChange(next);
+    else setLocalUnit(next);
+  }
   const [period, setPeriod] = useState<{ year: number; month: string }>();
   const [aggregation, setAggregation] = useState<api.Aggregation>("MONTH"),
-    [unit, setUnit] = useState<AmountUnit>("백만원");
+    [localUnit, setLocalUnit] = useState<AmountUnit>("천원");
+  const unit = amountUnit ?? localUnit;
   const [data, setData] = useState<api.StructureData>(),
     [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true),
@@ -261,7 +271,7 @@ export function ProfitStructureScreen() {
   return (
     <SharedScreenFrame screenId="UI-07">
       <div
-        className="profit-structure"
+        className={`profit-structure${dense ? " financial-display-dense" : ""}`}
         data-testid="profit-structure-screen"
         data-screen-id="SCR-UI-07"
       >
@@ -368,6 +378,7 @@ export function ProfitStructureScreen() {
               <p className="profit-structure-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
                 않습니다.
+                <FinancialEmptyReset screenId="UI-07" />
               </p>
             )}
             <div className="profit-structure-summary">
@@ -381,6 +392,7 @@ export function ProfitStructureScreen() {
                   {card.metric === "oprtPrftAmt" ? (
                     <button
                       className="profit-structure-value-link"
+                      data-financial-negative={card.amount?.startsWith("-")}
                       type="button"
                       data-testid="structure-operating-card"
                       onClick={() => go("/UI-08")}
@@ -388,7 +400,7 @@ export function ProfitStructureScreen() {
                       {formatAmount(card.amount, unit)} {unit}
                     </button>
                   ) : (
-                    <strong>
+                    <strong data-financial-negative={card.amount?.startsWith("-")}>
                       {card.metric === "idleCostAmt"
                         ? formatRate(card.rate)
                         : `${formatAmount(card.amount, unit)} ${unit}`}
@@ -515,6 +527,7 @@ export function ProfitStructureScreen() {
                           {row.bucketValues.map((value, i) => (
                             <td
                               key={row.bucketKeys[i]}
+                              data-financial-negative={value?.startsWith("-")}
                               className={
                                 i === row.bucketValues.length - 1
                                   ? "latest"
