@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.salespartsettlementsops.SettlementCommandMapper">
+  <select id="sourceKeys" resultType="string" useCache="false">
+    SELECT 'PART:'||part_id FROM tb_bs_part
+    UNION SELECT 'DEV:'||dev_id FROM tb_hr_dev
+    UNION SELECT 'ASGN:'||asgn_id FROM tb_pj_asgn
+    UNION SELECT 'PROJECT:'||proj_id FROM tb_pj_proj
+    UNION SELECT 'PAY:'||#{month}
+    UNION SELECT 'operating-standards:CASH_BASE_YM'
+    ORDER BY 1
+  </select>
+  <insert id="insertParent">
+    INSERT INTO TB_CO_PART_SETL (PART_ID,SETL_YM,CORP_CARD_AMT,PART_PRFT_AMT,SETL_STAT_CD,CNFM_USER_ID,CNFM_DTTM,CNCL_RSN,REG_USER_ID,REG_DTTM)
+    VALUES (#{partId},#{month},#{card},#{profit},#{status},#{confirmedBy},#{confirmedAt},#{reason},#{actor},#{at})
+  </insert>
+  <update id="updateParent">
+    UPDATE TB_CO_PART_SETL SET CORP_CARD_AMT=#{card},PART_PRFT_AMT=#{profit},SETL_STAT_CD=#{status},CNFM_USER_ID=#{confirmedBy},CNFM_DTTM=#{confirmedAt},CNCL_RSN=#{reason},MOD_USER_ID=#{actor},MOD_DTTM=#{at}
+    WHERE PART_ID=#{partId} AND SETL_YM=#{month}
+  </update>
+  <insert id="insertDetail">
+    INSERT INTO TB_CO_PART_SETL_DTL (PART_ID,SETL_YM,DEV_ID,EMP_TYPE_CD,PROJ_NM_LIST,MM,UPRC_AMT,PAY_AMT,SALES_EXPS_AMT,RETIRE_AMT,COST_AMT,DIFF_AMT,PRFT_AMT,RMRK,REG_USER_ID,REG_DTTM)
+    VALUES (#{partId},#{month},#{developerId},#{employeeType},#{projects},#{mm},#{unitPrice},#{pay},#{expense},#{retirement},#{cost},#{profit},#{share},#{remark},#{actor},#{at})
+  </insert>
+  <delete id="deleteDetails">
+    DELETE FROM TB_CO_PART_SETL_DTL WHERE PART_ID=#{partId} AND SETL_YM=#{month}
+  </delete>
+</mapper>

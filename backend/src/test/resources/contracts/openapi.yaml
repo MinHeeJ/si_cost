@@ -162,6 +162,1698 @@ x-basic135-open-questions:
   question: 동월 첫요청 무저장 확인을 409 DUPLICATE_BILL_CONFIRMATION_REQUIRED 및 ApiError.details.billing으로 표현하는 내부명/HTTP 매핑.
     신규경로 발명 없이 원문 동작을 투영하며 승인 확정 아님.
 paths:
+  /api/sales-part-settlements:
+    get:
+      operationId: getSalesPartSettlements
+      summary: 월별 영업 파트 정산 대상 조회
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1630
+      - REQ-1631
+      - REQ-1632
+      - REQ-1657
+      - REQ-1679
+      - REQ-1709
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SettlementMonth'
+        description: 기본 서버M; BASE~M 조회. year 별도 추측/쿼리 금지.
+      x-query-validation:
+        allowed:
+        - month
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementTabsResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1630 (SPEC-REQUEST.md:94): HQ 제외·유효 월 기준·월말 사용 Y 일반 파트를 USE_YN STOP/RESUME 이력의 REG_DTTM/HIST_ID 순으로 해석한다.'
+      - 'REQ-1631 (SPEC-REQUEST.md:96): 현재 상태/기준과 무관하게 해당월 확정 파트는 이력 탭으로 남기고 비대상 이력 탭은 새 계산/편집/확정을 하지 않는다.'
+      - 'REQ-1632 (SPEC-REQUEST.md:98): 월 유효 기준 한 행·배분율0~100·관리비 범위를 검사하고 겹침/부재를 최신값으로 숨기지 않는다.'
+      - 'REQ-1657 (SPEC-REQUEST.md:150): 월 아래 일반 파트 탭·PART_NM/PART_ID 첫탭과 선택유지를 제공하고 대상에서 벗어나면 유효 첫탭으로 바꾸어 안내한다.'
+      - 'REQ-1679 (SPEC-REQUEST.md:188): 단일 정산 서비스의 listEligibleParts·previewSettlement는 빈 인원 포함 같은 월대상과 파트수/확정수/미확정수·문제를
+        제공한다.'
+      - 'REQ-1709 (SPEC-REQUEST.md:248): GET /api/sales-part-settlements?month=는 월대상/이력탭·기준·상태를 반환한다.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1630
+        document: SPEC-REQUEST.md
+        line: 94
+      - canonical_id: REQ-1631
+        document: SPEC-REQUEST.md
+        line: 96
+      - canonical_id: REQ-1632
+        document: SPEC-REQUEST.md
+        line: 98
+      - canonical_id: REQ-1657
+        document: SPEC-REQUEST.md
+        line: 150
+      - canonical_id: REQ-1679
+        document: SPEC-REQUEST.md
+        line: 188
+      - canonical_id: REQ-1709
+        document: SPEC-REQUEST.md
+        line: 248
+      x-request-body-not-applicable: 순수 GET·명시 query/path만·requestBody 없음·정산/급여/원가/단가 저장0.
+      x-side-effects:
+      - 업무/감사/가정설정/마감 쓰기0; 미확정은 읽을 때 계산·확정은 사본 유지.
+      x-state-transitions: []
+      x-required-tests:
+      - 'happy: 8월STOP/9월RESUME 파트의7/8/9월 탭 조회 ->7월대상/8월제외/9월대상·HQ없음·기존확정은이력탭'
+      - 'auth: 임시관리자가 월별 대상파트 GET ->일반파트 전체상태/기준조회·역할403없음; actor query ->400'
+      - 'validation: 잘못된month/중복month 또는 미등록page 쿼리 ->400 field/details·파트탭원천변경0'
+      - 'business: 유효기준 부재/중첩과 비대상확정이력 조회 ->기준미확인·이력사본유지·임의기본율/최신기준대체0; 대상수편입은OQ-B140-003'
+      - 'side-effect: 부모없는월의 탭GET 전후 ->TB_CO_PART_SETL/DTL 신규행0·카드기본0은표시만'
+  /api/sales-part-settlements/{partId}:
+    get:
+      operationId: getSalesPartSettlement
+      summary: 영업 파트 월 정산 상세 조회
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1615
+      - REQ-1616
+      - REQ-1617
+      - REQ-1618
+      - REQ-1621
+      - REQ-1634
+      - REQ-1635
+      - REQ-1636
+      - REQ-1637
+      - REQ-1639
+      - REQ-1640
+      - REQ-1641
+      - REQ-1642
+      - REQ-1643
+      - REQ-1644
+      - REQ-1645
+      - REQ-1646
+      - REQ-1647
+      - REQ-1648
+      - REQ-1649
+      - REQ-1650
+      - REQ-1651
+      - REQ-1652
+      - REQ-1653
+      - REQ-1654
+      - REQ-1655
+      - REQ-1656
+      - REQ-1657
+      - REQ-1658
+      - REQ-1662
+      - REQ-1664
+      - REQ-1673
+      - REQ-1701
+      - REQ-1710
+      parameters:
+      - name: partId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      - name: month
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SettlementMonth'
+        description: 기본 서버M; BASE~M 조회. year 별도 추측/쿼리 금지.
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name
+          - employeeType
+          - mm
+          - unitPrice
+          - payAmount
+          - costAmount
+          - profitAmount
+          - profitShareAmount
+          default: name
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      x-query-validation:
+        allowed:
+        - month
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1615 (SPEC-REQUEST.md:41): 파트 정산은 TB_HR_DEV.PART_ID로 귀속하고 프로젝트/원가행 PART_ID로 인력을 이동하지 않는다.'
+      - 'REQ-1616 (SPEC-REQUEST.md:42): 파트 비용은 급여+관리비+파트식 퇴직금이며 재협상 원가는 해당 배정 LABOR_ALLOC_AMT만 사용한다.'
+      - 'REQ-1617 (SPEC-REQUEST.md:43): 미확정 월은 조회 시 계산하고 조회·시뮬레이션·다운로드로 사본·급여·단가를 저장하지 않는다.'
+      - 'REQ-1618 (SPEC-REQUEST.md:47): Asia/Seoul 현재월 M·CASH_BASE_YM을 사용하고 BASE~M 조회·기본 M, 과거연도 조회전용·올해 미마감월만 수동
+        쓰기를 허용한다.'
+      - 'REQ-1621 (SPEC-REQUEST.md:51): 율1자리 HALF_UP·MM2자리·NULL은 –·0은 0·음수 부호/색·기본 천원·원/천원/백만원 표시와 날짜/연월 변환을 준수한다.'
+      - 'REQ-1634 (SPEC-REQUEST.md:102): 현재 사람 PART_ID와 해당월 비내부 실제 MM>0을 DEV_ID별1행으로 계산한다. FREE 포함·IN 제외·PRE/LOSE
+        단가0·종료프로젝트 유효투입 포함·취소와 마감사본은05 규칙을 따른다.'
+      - 'REQ-1635 (SPEC-REQUEST.md:104): 과거 정상 투입은 현재 중지/퇴사로 지우지 않고 월급여 snapshot 우선, 월전체휴직/간접 제외·내부만/투입0 제외·혼합은 비내부
+        표시하되 월급여/관리비는 재분할하지 않는다.'
+      - 'REQ-1636 (SPEC-REQUEST.md:106): 실제 DEV_ID별 대상 프로젝트를 MM DESC·이름 ASC·ID ASC로 중복 제거하고 첫 이름 외 n건과 전체 도움말을 표시한다.'
+      - 'REQ-1637 (SPEC-REQUEST.md:108): 다른 파트 CNFM/AUTO에 고정된 사람월은 미확정 계산에서 제외·안내하고 동시 확정도 사람월 중복을 차단한다.'
+      - 'REQ-1639 (SPEC-REQUEST.md:112): CNFM/AUTO는 부모/상세 전체를 그대로 읽으며 현재 이름/관리번호 외 금액·MM·직원구분·프로젝트 목록을 재계산하지 않는다.'
+      - 'REQ-1640 (SPEC-REQUEST.md:112): 부모 PART_PRFT_AMT와 상세 PRFT_AMT합−CORP_CARD_AMT 불일치는 정산 사본 불일치로 표시하고 원천 보정하지
+        않는다.'
+      - 'REQ-1641 (SPEC-REQUEST.md:114): CLOSE 사본/필수자료가 없으면 마감 정산 자료 미확인으로 표시하고 자동확정/0사본을 만들지 않는다. 기준 표시자료 결측도 저장금액은
+        유지한다.'
+      - 'REQ-1642 (SPEC-REQUEST.md:120): 월 MM은 비내부 실제합·MO/DP 단가는05 귀속월 SALES_AMT합이며 FREE/PRE/LOSE0·IN제외다.'
+      - 'REQ-1643 (SPEC-REQUEST.md:122): 프로젝트 전체 최후 PLAN>CTRT>EST의 실제 DEV행·월금액을 쓰고 ITEM 제외·존재하는 사람행 빈월/명시0은0·여러 유상배정
+        MM 분배·잔액보정·FREE0이다.'
+      - 'REQ-1644 (SPEC-REQUEST.md:122): 표/사람행 부재일 때만 유상배정별 DOWN(LABOR_ALLOC_AMT×현재 계약금액/저장예산), 예산≤0/NULL이면 단가 미확인이다.'
+      - 'REQ-1645 (SPEC-REQUEST.md:126): 취소되지 않은 전체 배정의 최초 시작일을 내부 포함하여 정하고 그 첫월만 일할하며 철수월을 임의 감액하지 않는다.'
+      - 'REQ-1646 (SPEC-REQUEST.md:130): 첫 시작월은 유효 MON_PAY_AMT×(달력일수−최초시작일+1)/달력일수 DOWN이며 업로드 일할급여를 재일할하지 않는다.'
+      - 'REQ-1647 (SPEC-REQUEST.md:131): 첫월 외 FT/CT/FL은 MON_PAY.PAY_AMT·OS는 VNDR_SPLY_AMT 전액이며 추가 일할하지 않는다.'
+      - 'REQ-1648 (SPEC-REQUEST.md:132): 미업로드 월은 유효 MON_PAY_AMT 예정계산·근거 표시, 명시0 유효·NULL 미확인이다.'
+      - 'REQ-1649 (SPEC-REQUEST.md:134): 시작월 기본급NULL만 PAY_AMT0·빨간 경고로 허용하고 다른 월 급여결측은 의존합계 미확인·확정 차단한다.'
+      - 'REQ-1650 (SPEC-REQUEST.md:134): 유효 예정급여로 확정한 값은 이후 업로드가 변경하지 않는다.'
+      - 'REQ-1651 (SPEC-REQUEST.md:136): 관리비는 해당월 파트 기준으로 OS0·FT/CT/FL 월1회 전액, 퇴직금은 FT만 DOWN(PAY_AMT/12)·기타0이다.'
+      - 'REQ-1652 (SPEC-REQUEST.md:140): COST=PAY+관리비+퇴직금, DIFF=UPRC−COST, PRFT=DOWN(DIFF×배분율/100)이며 인력별 절사 뒤 합한다.'
+      - 'REQ-1653 (SPEC-REQUEST.md:140): 파트 이익금은 전체 인력 PRFT합−파트 카드액이며 음수 합계도 유지한다.'
+      - 'REQ-1654 (SPEC-REQUEST.md:142): 회사 카드액을 복사/재반영하지 않고 급여/단가 결측은 의존 금액·합계만 –로 전파하며 알려진 수치를 유지한다.'
+      - 'REQ-1655 (SPEC-REQUEST.md:144): 조회/미리보기/확정/출력의 근거·경고·계산은 같아야 하며 금액 NUMERIC(15)·MM NUMERIC(6,2) 초과시 전체 확정을
+        취소한다.'
+      - 'REQ-1656 (SPEC-REQUEST.md:146): 필요 원천별 완전성을 검사하며 정산 불필요 보험/경비 또는 재협상 무관 경비 결측 때문에 유효 계산을 막거나 노동비를0으로 대체하지
+        않는다.'
+      - 'REQ-1657 (SPEC-REQUEST.md:150): 월 아래 일반 파트 탭·PART_NM/PART_ID 첫탭과 선택유지를 제공하고 대상에서 벗어나면 유효 첫탭으로 바꾸어 안내한다.'
+      - 'REQ-1658 (SPEC-REQUEST.md:152): 월 기준 파트장/율/관리비·DISTINCT 인원·DIFF합·파트 이익금4칸 및 하단합계는 파트월 전체를 기준으로 한다.'
+      - 'REQ-1662 (SPEC-REQUEST.md:158): 명시된 열·이름/DEV_ID 기본·허용열 원값정렬/동률DEV_ID/NULL뒤·20/50/100 기본50·전체 MM/금액합을 제공한다.'
+      - 'REQ-1664 (SPEC-REQUEST.md:160): 관리비/퇴직금·시작일수·FREE/PRE·급여 예정/누락·TK 출처를 표시하고 첫월급여0은 빨강과 설명을 보존한다.'
+      - 'REQ-1673 (SPEC-REQUEST.md:178): 수동/마감자동·확정자/시각 띠와 카드/금액 읽기전용을 표시하고 원천변경에도 사본을 유지한다.'
+      - 'REQ-1701 (SPEC-REQUEST.md:232): 미확정 revision은 부모/상세와 전체원천 식별자·저장값·REG/MOD를 PK순으로 포함하며 무부모도 유효하고 확정취소revision은
+        사본/마감/파트 식별값으로 만든다.'
+      - 'REQ-1710 (SPEC-REQUEST.md:249): GET /api/sales-part-settlements/{partId}는 month/page/size/sort/direction과
+        전체요약·페이지·카드·근거·revision을 제공한다.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1615
+        document: SPEC-REQUEST.md
+        line: 41
+      - canonical_id: REQ-1616
+        document: SPEC-REQUEST.md
+        line: 42
+      - canonical_id: REQ-1617
+        document: SPEC-REQUEST.md
+        line: 43
+      - canonical_id: REQ-1618
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1621
+        document: SPEC-REQUEST.md
+        line: 51
+      - canonical_id: REQ-1634
+        document: SPEC-REQUEST.md
+        line: 102
+      - canonical_id: REQ-1635
+        document: SPEC-REQUEST.md
+        line: 104
+      - canonical_id: REQ-1636
+        document: SPEC-REQUEST.md
+        line: 106
+      - canonical_id: REQ-1637
+        document: SPEC-REQUEST.md
+        line: 108
+      - canonical_id: REQ-1639
+        document: SPEC-REQUEST.md
+        line: 112
+      - canonical_id: REQ-1640
+        document: SPEC-REQUEST.md
+        line: 112
+      - canonical_id: REQ-1641
+        document: SPEC-REQUEST.md
+        line: 114
+      - canonical_id: REQ-1642
+        document: SPEC-REQUEST.md
+        line: 120
+      - canonical_id: REQ-1643
+        document: SPEC-REQUEST.md
+        line: 122
+      - canonical_id: REQ-1644
+        document: SPEC-REQUEST.md
+        line: 122
+      - canonical_id: REQ-1645
+        document: SPEC-REQUEST.md
+        line: 126
+      - canonical_id: REQ-1646
+        document: SPEC-REQUEST.md
+        line: 130
+      - canonical_id: REQ-1647
+        document: SPEC-REQUEST.md
+        line: 131
+      - canonical_id: REQ-1648
+        document: SPEC-REQUEST.md
+        line: 132
+      - canonical_id: REQ-1649
+        document: SPEC-REQUEST.md
+        line: 134
+      - canonical_id: REQ-1650
+        document: SPEC-REQUEST.md
+        line: 134
+      - canonical_id: REQ-1651
+        document: SPEC-REQUEST.md
+        line: 136
+      - canonical_id: REQ-1652
+        document: SPEC-REQUEST.md
+        line: 140
+      - canonical_id: REQ-1653
+        document: SPEC-REQUEST.md
+        line: 140
+      - canonical_id: REQ-1654
+        document: SPEC-REQUEST.md
+        line: 142
+      - canonical_id: REQ-1655
+        document: SPEC-REQUEST.md
+        line: 144
+      - canonical_id: REQ-1656
+        document: SPEC-REQUEST.md
+        line: 146
+      - canonical_id: REQ-1657
+        document: SPEC-REQUEST.md
+        line: 150
+      - canonical_id: REQ-1658
+        document: SPEC-REQUEST.md
+        line: 152
+      - canonical_id: REQ-1662
+        document: SPEC-REQUEST.md
+        line: 158
+      - canonical_id: REQ-1664
+        document: SPEC-REQUEST.md
+        line: 160
+      - canonical_id: REQ-1673
+        document: SPEC-REQUEST.md
+        line: 178
+      - canonical_id: REQ-1701
+        document: SPEC-REQUEST.md
+        line: 232
+      - canonical_id: REQ-1710
+        document: SPEC-REQUEST.md
+        line: 249
+      x-request-body-not-applicable: 순수 GET·명시 query/path만·requestBody 없음·정산/급여/원가/단가 저장0.
+      x-side-effects:
+      - 업무/감사/가정설정/마감 쓰기0; 미확정은 읽을 때 계산·확정은 사본 유지.
+      x-state-transitions: []
+      x-required-tests:
+      - 'happy: 유효 파트월 상세를 size20/50/100으로 조회 ->200·DEV별items·카드/계산근거/revision·summary/totals 전체합계는같음'
+      - 'auth: 인증헤더없는 임시관리자 partId 상세GET ->일반파트금액·현재이름 허용; 숨은partScope/userId query주입 ->400·권한403추가없음'
+      - 'validation: 상세GET의 page0/size21/중복sort/미등록direction ->400·field/details·SETL 저장0'
+      - 'business: CNFM/AUTO 저장후 원천급여/프로젝트명/소속을 변경하고 상세GET ->저장금액/목록/구분/MM불변; 부모합불일치 경고·CLOSE사본부재 미확인'
+      - 'side-effect: WORK무부모 상세GET과 기존확정 상세GET 전후 비교 ->SETL/DTL/원천/감사 전필드·REG/MOD불변·0사본생성0'
+      x-sort-rules: 기본 name ASC/DEV_ID ASC; 허용열 숫자 원값정렬·직원구분 표시명·동률DEV_ID·NULL뒤. summary/totals 페이지무관.
+  /api/sales-part-settlements/{partId}/trend:
+    get:
+      operationId: getSalesPartSettlementTrend
+      summary: 영업 파트 정산 기간 추이 조회
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1617
+      - REQ-1618
+      - REQ-1639
+      - REQ-1641
+      - REQ-1665
+      - REQ-1666
+      - REQ-1711
+      parameters:
+      - name: partId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      - name: month
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SettlementMonth'
+        description: 기본 서버M; BASE~M 조회. year 별도 추측/쿼리 금지.
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      x-query-validation:
+        allowed:
+        - month
+        - page
+        - size
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementTrendResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1617 (SPEC-REQUEST.md:43): 미확정 월은 조회 시 계산하고 조회·시뮬레이션·다운로드로 사본·급여·단가를 저장하지 않는다.'
+      - 'REQ-1618 (SPEC-REQUEST.md:47): Asia/Seoul 현재월 M·CASH_BASE_YM을 사용하고 BASE~M 조회·기본 M, 과거연도 조회전용·올해 미마감월만 수동
+        쓰기를 허용한다.'
+      - 'REQ-1639 (SPEC-REQUEST.md:112): CNFM/AUTO는 부모/상세 전체를 그대로 읽으며 현재 이름/관리번호 외 금액·MM·직원구분·프로젝트 목록을 재계산하지 않는다.'
+      - 'REQ-1641 (SPEC-REQUEST.md:114): CLOSE 사본/필수자료가 없으면 마감 정산 자료 미확인으로 표시하고 자동확정/0사본을 만들지 않는다. 기준 표시자료 결측도 저장금액은
+        유지한다.'
+      - 'REQ-1665 (SPEC-REQUEST.md:162): 기간 중 정산MM>0 사람합집합에 MM/단가/비용/이익/이익금5행·1월~기준월/합계/비고를 표시하고 월별 사본/계산을 독립 선택한다.'
+      - 'REQ-1666 (SPEC-REQUEST.md:164): 월별 전체 인력이익금−그월카드 및 기간 월결과합·개인 유효MM월 합을 사용하며 결측 의존합계는 –와 문제월을 표시한다.'
+      - 'REQ-1711 (SPEC-REQUEST.md:250): GET /api/sales-part-settlements/{partId}/trend는 month/page/size와 사람별5행·1월~기준월·기간합계를
+        제공한다.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1617
+        document: SPEC-REQUEST.md
+        line: 43
+      - canonical_id: REQ-1618
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1639
+        document: SPEC-REQUEST.md
+        line: 112
+      - canonical_id: REQ-1641
+        document: SPEC-REQUEST.md
+        line: 114
+      - canonical_id: REQ-1665
+        document: SPEC-REQUEST.md
+        line: 162
+      - canonical_id: REQ-1666
+        document: SPEC-REQUEST.md
+        line: 164
+      - canonical_id: REQ-1711
+        document: SPEC-REQUEST.md
+        line: 250
+      x-request-body-not-applicable: 순수 GET·명시 query/path만·requestBody 없음·정산/급여/원가/단가 저장0.
+      x-side-effects:
+      - 업무/감사/가정설정/마감 쓰기0; 미확정은 읽을 때 계산·확정은 사본 유지.
+      x-state-transitions: []
+      x-required-tests:
+      - 'happy: 과거월만MM>0이고현재월MM0인 인력의 추이GET ->기간합집합에남고사람당5행·1월~기준월·월별카드1회·전체기간합은페이지불변'
+      - 'auth: 임시관리자 파트기간GET ->해당파트과거확정인력까지조회; actor/임의year query ->400·실제권한403추가없음'
+      - 'validation: trend month형식오류/page0/size21 또는 허용안된sort query ->400 field/details·추이원천무변경'
+      - 'business: 기간에CNFM/AUTO/미확정/BASE전/투입0/결측월 혼합 ->월별사본독립·BASE전/0MM은null/합계제외·필요결측은의존합계null와문제월'
+      - 'side-effect: 추이전체조회/사람페이지변경 전후 ->과거SETL/DTL·급여·배정·원가·감사행/시각불변·월자동확정0'
+      x-sort-rules: name ASC/DEV_ID ASC·사람단위페이지·5 metric 정확히1개씩. BASE이전/투입0 null 제외·월별사본 독립.
+  /api/sales-part-settlements/{partId}/card:
+    put:
+      operationId: saveSalesPartSettlementCard
+      summary: 영업 파트 정산 카드 저장
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1618
+      - REQ-1622
+      - REQ-1624
+      - REQ-1625
+      - REQ-1627
+      - REQ-1659
+      - REQ-1702
+      - REQ-1704
+      - REQ-1705
+      - REQ-1706
+      - REQ-1712
+      parameters:
+      - name: partId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      x-query-validation:
+        allowed: []
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementMutationResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 올해 미마감/대상·상태·revision/잠금 재검사 실패. 해당 월·파트·인력/필드를 details.violations/references로 안내, 부분저장0.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - CLOSED_MONTH
+          - STATE_CONFLICT
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1618 (SPEC-REQUEST.md:47): Asia/Seoul 현재월 M·CASH_BASE_YM을 사용하고 BASE~M 조회·기본 M, 과거연도 조회전용·올해 미마감월만 수동
+        쓰기를 허용한다.'
+      - 'REQ-1622 (SPEC-REQUEST.md:53): 카드는 trim·정상 천단위 쉼표 제거 뒤0~999,999,999,999,999 원정수이며 빈칸0, 음수·소수·접미사·잘못된 쉼표·초과는400이다.'
+      - 'REQ-1624 (SPEC-REQUEST.md:57): A의 주체·시각은 서버가 정하고 최초 REG_USER_ID/REG_DTTM을 보존한다.'
+      - 'REQ-1625 (SPEC-REQUEST.md:61): TB_CO_PART_SETL의 PK·원문 필드·NUMERIC(15)·NULL·WORK/CNFM/AUTO를 그대로 사용한다.'
+      - 'REQ-1627 (SPEC-REQUEST.md:64): WORK는 카드만 보존하고 확정합계·확정자·시각은 NULL이며 상세는 확정 때만 생성한다. 번호·율·확정이력 전용 열/테이블은 추가하지
+        않는다.'
+      - 'REQ-1659 (SPEC-REQUEST.md:154): 카드 저장은 month/cardAmount/expectedRevision으로 부모 신규WORK 또는 갱신만 하며 상세를 만들지 않는다.
+        무부모 동일0은 무행 changed=false 허용이다.'
+      - 'REQ-1702 (SPEC-REQUEST.md:234): 카드/확정/취소 expectedRevision을 잠금 후 재검사·stale409 STALE_WRITE/부분저장0·최신동일값 changed=false/감사·시각불변이다.'
+      - 'REQ-1704 (SPEC-REQUEST.md:236): 기존 PartStandardService의 파트/기준→마감/정산 검사와 같은 순서로 관련 PART/월/DEV/ASGN/PAY/기준/프로젝트를
+        조정하고 DEV_ID+월 중복확정을 막는다.'
+      - 'REQ-1705 (SPEC-REQUEST.md:238): 부모/상세/감사를 단일트랜잭션으로 NEW/UPD/DEL 전후·명시키·사유 기록하고 NULL/0구분·500자 전체JSON절단금지·감사실패
+        롤백이다.'
+      - 'REQ-1706 (SPEC-REQUEST.md:240): SETL은INSERT/UPDATE만·DTL은동일파트월 WORK전환/확정교체트랜잭션 DELETE/INSERT만 허용하고 CNFM/AUTO/CLOSE
+        임의변경·타파트월 삭제금지다.'
+      - 'REQ-1712 (SPEC-REQUEST.md:251): PUT /api/sales-part-settlements/{partId}/card는 month/cardAmount/expectedRevision으로
+        카드를 저장한다.'
+      - 'SPEC-REQUEST.md:47/156/234: 올해 BASE~M 미마감 범위만 허용. 과거연도/CLOSE·비대상 편집·현재상태 불일치는409, 없는대상404, 입력/변조400. 새역할403
+        없음.'
+      - 'SPEC-REQUEST.md:232/234/236: 파트/기준→마감/정산 기존 잠금순서 공유·관련 PART/월/DEV/ASGN/PAY/기준/프로젝트 조정·DEV_ID+월 중복확정 잠금. 잠금
+        후 전체원천과 expectedRevision 재검사. stale409 STALE_WRITE·부분저장0.'
+      - 'SPEC-REQUEST.md:238/240: 부모/상세/필드별 NEW/UPD/DEL 감사 단일트랜잭션·부모 partId:month/상세 partId:month:devId. NULL/0 구별·감사500자
+        전체JSON절단금지·감사실패 전체롤백. 다른파트/월 삭제 금지.'
+      - 'SPEC-REQUEST.md:234: 최신동일값 changed=false·감사/MOD시각 불변. 성공후 목록/상세/추이/요약 무효화·2초내 현재브라우저 갱신. 응답유실은 현재조회후 수동재시도·자동재확정
+        금지; commit후 GET만 실패하면 저장됨안내·재조회만.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1618
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1622
+        document: SPEC-REQUEST.md
+        line: 53
+      - canonical_id: REQ-1624
+        document: SPEC-REQUEST.md
+        line: 57
+      - canonical_id: REQ-1625
+        document: SPEC-REQUEST.md
+        line: 61
+      - canonical_id: REQ-1627
+        document: SPEC-REQUEST.md
+        line: 64
+      - canonical_id: REQ-1659
+        document: SPEC-REQUEST.md
+        line: 154
+      - canonical_id: REQ-1702
+        document: SPEC-REQUEST.md
+        line: 234
+      - canonical_id: REQ-1704
+        document: SPEC-REQUEST.md
+        line: 236
+      - canonical_id: REQ-1705
+        document: SPEC-REQUEST.md
+        line: 238
+      - canonical_id: REQ-1706
+        document: SPEC-REQUEST.md
+        line: 240
+      - canonical_id: REQ-1712
+        document: SPEC-REQUEST.md
+        line: 251
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveSalesPartSettlementCardRequest'
+      x-side-effects:
+      - 해당파트월 부모 INSERT/UPDATE와 실제변경 감사만. DTL 생성0·급여/원가/배정/단가/파트기준 불변.
+      x-state-transitions:
+      - from: 무부모/WORK
+        event: 올해 미마감 대상·최신revision 카드저장
+        to: WORK·확정합/주체/시각NULL·DTL0
+      - from: 무부모·카드0 또는 동일최신값
+        event: 무변경 저장
+        to: changed=false·행/이력/시각 불변
+      x-required-tests:
+      - 'happy: 기존 양수카드 WORK를 최신토큰·cardAmount=0으로 저장 ->200·GET cardAmount=0·DTL0·확정메타NULL; 무부모0 동일저장 changed=false
+        허용'
+      - 'auth: CNFM/AUTO 또는 CLOSE 파트월에 카드 PUT ->409·GET CORP_CARD_AMT/확정사본 불변; 올해 미마감 일반WORK는 임시관리자로 허용·역할403 없음'
+      - 'validation: cardAmount=-1/1.5/1,00/통화접미사/금액상한초과 또는 expectedRevision누락 ->400·cardAmount/expectedRevision field
+        오류·SETL 무변경'
+      - 'business: 동일 WORK 원천revision으로 선행카드 저장 뒤 후행PUT ->409 STALE_WRITE·GET은 선행 CORP_CARD_AMT 유지; 최신동일값은 changed=false'
+      - 'side-effect: 실제카드변경 commit ->TB_SY_CHG_HIST 부모키 partId:month의 CORP_CARD_AMT 전후/카드저장 사유 기록·DTL0; 감사실패 주입 ->500·카드/감사
+        전체롤백'
+  /api/sales-part-settlements/{partId}/confirm:
+    post:
+      operationId: createSalesPartSettlementConfirmation
+      summary: 영업 파트 정산 수동 확정
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1618
+      - REQ-1622
+      - REQ-1624
+      - REQ-1625
+      - REQ-1626
+      - REQ-1627
+      - REQ-1632
+      - REQ-1637
+      - REQ-1649
+      - REQ-1650
+      - REQ-1655
+      - REQ-1668
+      - REQ-1669
+      - REQ-1670
+      - REQ-1671
+      - REQ-1672
+      - REQ-1674
+      - REQ-1702
+      - REQ-1704
+      - REQ-1705
+      - REQ-1706
+      - REQ-1713
+      parameters:
+      - name: partId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      x-query-validation:
+        allowed: []
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementMutationResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 올해 미마감/대상·상태·revision/잠금 재검사 실패. 해당 월·파트·인력/필드를 details.violations/references로 안내, 부분저장0.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - CLOSED_MONTH
+          - STATE_CONFLICT
+          - SNAPSHOT_TEXT_TOO_LONG
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1618 (SPEC-REQUEST.md:47): Asia/Seoul 현재월 M·CASH_BASE_YM을 사용하고 BASE~M 조회·기본 M, 과거연도 조회전용·올해 미마감월만 수동
+        쓰기를 허용한다.'
+      - 'REQ-1622 (SPEC-REQUEST.md:53): 카드는 trim·정상 천단위 쉼표 제거 뒤0~999,999,999,999,999 원정수이며 빈칸0, 음수·소수·접미사·잘못된 쉼표·초과는400이다.'
+      - 'REQ-1624 (SPEC-REQUEST.md:57): A의 주체·시각은 서버가 정하고 최초 REG_USER_ID/REG_DTTM을 보존한다.'
+      - 'REQ-1625 (SPEC-REQUEST.md:61): TB_CO_PART_SETL의 PK·원문 필드·NUMERIC(15)·NULL·WORK/CNFM/AUTO를 그대로 사용한다.'
+      - 'REQ-1626 (SPEC-REQUEST.md:62): TB_CO_PART_SETL_DTL은 PART_ID/SETL_YM/DEV_ID와 명시된 snapshot 필드만 사용하며 RMRK 외
+        업무값은 NOT NULL이다.'
+      - 'REQ-1627 (SPEC-REQUEST.md:64): WORK는 카드만 보존하고 확정합계·확정자·시각은 NULL이며 상세는 확정 때만 생성한다. 번호·율·확정이력 전용 열/테이블은 추가하지
+        않는다.'
+      - 'REQ-1632 (SPEC-REQUEST.md:98): 월 유효 기준 한 행·배분율0~100·관리비 범위를 검사하고 겹침/부재를 최신값으로 숨기지 않는다.'
+      - 'REQ-1637 (SPEC-REQUEST.md:108): 다른 파트 CNFM/AUTO에 고정된 사람월은 미확정 계산에서 제외·안내하고 동시 확정도 사람월 중복을 차단한다.'
+      - 'REQ-1649 (SPEC-REQUEST.md:134): 시작월 기본급NULL만 PAY_AMT0·빨간 경고로 허용하고 다른 월 급여결측은 의존합계 미확인·확정 차단한다.'
+      - 'REQ-1650 (SPEC-REQUEST.md:134): 유효 예정급여로 확정한 값은 이후 업로드가 변경하지 않는다.'
+      - 'REQ-1655 (SPEC-REQUEST.md:144): 조회/미리보기/확정/출력의 근거·경고·계산은 같아야 하며 금액 NUMERIC(15)·MM NUMERIC(6,2) 초과시 전체 확정을
+        취소한다.'
+      - 'REQ-1668 (SPEC-REQUEST.md:170): 확정은 별도 선행 카드저장 없이 카드·부모·상세·감사를 한 번에 저장한다.'
+      - 'REQ-1669 (SPEC-REQUEST.md:172): 최신revision·월/파트기준/전체대상을 잠금 후 검사하고 금액결측·기준오류·범위초과·타파트경합은409·전체 무확정이다.'
+      - 'REQ-1670 (SPEC-REQUEST.md:174): 성공시 CNFM·현재주체/서버시각·최종합계·사유NULL 및 전체사람 snapshot을 같은 계산결과로 저장하며0인원도 허용한다.'
+      - 'REQ-1671 (SPEC-REQUEST.md:176): PROJ_NM_LIST는 정렬이름 배열 JSON문자열·최대1000자이며 RMRK는100자 이내 짧은 고정 비고다.'
+      - 'REQ-1672 (SPEC-REQUEST.md:176): PROJ_NM_LIST1000자 초과는409 SNAPSHOT_TEXT_TOO_LONG과 인력/필드를 안내하며 절단 없이 전체 취소한다.'
+      - 'REQ-1674 (SPEC-REQUEST.md:178): 최신revision의 이미확정 재요청은 changed=false·기존확정자/시각 유지, 오래된revision은409 STALE_WRITE다.'
+      - 'REQ-1702 (SPEC-REQUEST.md:234): 카드/확정/취소 expectedRevision을 잠금 후 재검사·stale409 STALE_WRITE/부분저장0·최신동일값 changed=false/감사·시각불변이다.'
+      - 'REQ-1704 (SPEC-REQUEST.md:236): 기존 PartStandardService의 파트/기준→마감/정산 검사와 같은 순서로 관련 PART/월/DEV/ASGN/PAY/기준/프로젝트를
+        조정하고 DEV_ID+월 중복확정을 막는다.'
+      - 'REQ-1705 (SPEC-REQUEST.md:238): 부모/상세/감사를 단일트랜잭션으로 NEW/UPD/DEL 전후·명시키·사유 기록하고 NULL/0구분·500자 전체JSON절단금지·감사실패
+        롤백이다.'
+      - 'REQ-1706 (SPEC-REQUEST.md:240): SETL은INSERT/UPDATE만·DTL은동일파트월 WORK전환/확정교체트랜잭션 DELETE/INSERT만 허용하고 CNFM/AUTO/CLOSE
+        임의변경·타파트월 삭제금지다.'
+      - 'REQ-1713 (SPEC-REQUEST.md:252): POST /api/sales-part-settlements/{partId}/confirm은 month/cardAmount/expectedRevision으로
+        확정한다.'
+      - 'SPEC-REQUEST.md:47/156/234: 올해 BASE~M 미마감 범위만 허용. 과거연도/CLOSE·비대상 편집·현재상태 불일치는409, 없는대상404, 입력/변조400. 새역할403
+        없음.'
+      - 'SPEC-REQUEST.md:232/234/236: 파트/기준→마감/정산 기존 잠금순서 공유·관련 PART/월/DEV/ASGN/PAY/기준/프로젝트 조정·DEV_ID+월 중복확정 잠금. 잠금
+        후 전체원천과 expectedRevision 재검사. stale409 STALE_WRITE·부분저장0.'
+      - 'SPEC-REQUEST.md:238/240: 부모/상세/필드별 NEW/UPD/DEL 감사 단일트랜잭션·부모 partId:month/상세 partId:month:devId. NULL/0 구별·감사500자
+        전체JSON절단금지·감사실패 전체롤백. 다른파트/월 삭제 금지.'
+      - 'SPEC-REQUEST.md:234: 최신동일값 changed=false·감사/MOD시각 불변. 성공후 목록/상세/추이/요약 무효화·2초내 현재브라우저 갱신. 응답유실은 현재조회후 수동재시도·자동재확정
+        금지; commit후 GET만 실패하면 저장됨안내·재조회만.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1618
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1622
+        document: SPEC-REQUEST.md
+        line: 53
+      - canonical_id: REQ-1624
+        document: SPEC-REQUEST.md
+        line: 57
+      - canonical_id: REQ-1625
+        document: SPEC-REQUEST.md
+        line: 61
+      - canonical_id: REQ-1626
+        document: SPEC-REQUEST.md
+        line: 62
+      - canonical_id: REQ-1627
+        document: SPEC-REQUEST.md
+        line: 64
+      - canonical_id: REQ-1632
+        document: SPEC-REQUEST.md
+        line: 98
+      - canonical_id: REQ-1637
+        document: SPEC-REQUEST.md
+        line: 108
+      - canonical_id: REQ-1649
+        document: SPEC-REQUEST.md
+        line: 134
+      - canonical_id: REQ-1650
+        document: SPEC-REQUEST.md
+        line: 134
+      - canonical_id: REQ-1655
+        document: SPEC-REQUEST.md
+        line: 144
+      - canonical_id: REQ-1668
+        document: SPEC-REQUEST.md
+        line: 170
+      - canonical_id: REQ-1669
+        document: SPEC-REQUEST.md
+        line: 172
+      - canonical_id: REQ-1670
+        document: SPEC-REQUEST.md
+        line: 174
+      - canonical_id: REQ-1671
+        document: SPEC-REQUEST.md
+        line: 176
+      - canonical_id: REQ-1672
+        document: SPEC-REQUEST.md
+        line: 176
+      - canonical_id: REQ-1674
+        document: SPEC-REQUEST.md
+        line: 178
+      - canonical_id: REQ-1702
+        document: SPEC-REQUEST.md
+        line: 234
+      - canonical_id: REQ-1704
+        document: SPEC-REQUEST.md
+        line: 236
+      - canonical_id: REQ-1705
+        document: SPEC-REQUEST.md
+        line: 238
+      - canonical_id: REQ-1706
+        document: SPEC-REQUEST.md
+        line: 240
+      - canonical_id: REQ-1713
+        document: SPEC-REQUEST.md
+        line: 252
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmSalesPartSettlementRequest'
+      x-side-effects:
+      - 미저장 카드와 부모/전체인력 상세/필드별 감사 한 번 commit. 페이지 일부확정 금지. 금액 NUMERIC(15)/MM NUMERIC(6,2)/PROJ_NM_LIST JSON1000/RMRK100
+        초과409 전체롤백·절단 없음.0인원 허용. 예정급여/첫월급여0/적자 경고 자체는 허용. CNFM 뒤 원천변경 사본불변·자동마감 실행0.
+      x-state-transitions:
+      - from: 무부모/WORK
+        event: 올해 미마감 대상·원천완전·최신revision 확정
+        to: CNFM·전체상세/카드/합계/서버확정메타·사유NULL 원자저장
+      - from: CNFM/AUTO·최신revision
+        event: 이미확정 재요청
+        to: changed=false·확정자/시각/상세 유지
+      - from: 임의상태·stale/미확인/경합/범위초과
+        event: 확정 요청
+        to: 409·카드/부모/상세/감사 모두불변
+      x-required-tests:
+      - 'happy: 미저장카드·페이지밖인력·첫월급여0/예정/적자 포함 확정 ->200 CNFM·GET 전체DTL/경고/서버메타 일치·카드 선행부분저장 없음'
+      - 'auth: 과거연도 또는 비대상 이력파트에 confirm POST ->409·기존 SETL/DTL 불변; 올해 미마감 대상은 서버현재주체로 CNFM·역할403 추가없음'
+      - 'validation: confirm 본문에 계산합계/확정자 주입 또는 cardAmount의 잘못된쉼표 ->400·해당 field 오류·초안카드/부모/DTL/감사 저장0'
+      - 'business: 금액미확인/기준겹침/범위초과 또는 DEV_ID+월 다른파트 확정경합 ->409·미저장카드도 미반영·두파트 중 한 사본만 존재; PROJ_NM_LIST1001자는409 SNAPSHOT_TEXT_TOO_LONG'
+      - 'side-effect: 확정 commit ->전체 TB_CO_PART_SETL_DTL INSERT와 부모CNFM의 NEW/UPD 필드감사가 정확키/수동확정 사유로 존재·page밖인력포함;
+        감사실패 ->500·카드/부모/상세 전체롤백'
+  /api/sales-part-settlements/{partId}/cancel:
+    post:
+      operationId: createSalesPartSettlementCancellation
+      summary: 영업 파트 정산 확정 취소
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1618
+      - REQ-1619
+      - REQ-1623
+      - REQ-1638
+      - REQ-1676
+      - REQ-1677
+      - REQ-1678
+      - REQ-1702
+      - REQ-1704
+      - REQ-1705
+      - REQ-1706
+      - REQ-1714
+      parameters:
+      - name: partId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      x-query-validation:
+        allowed: []
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/SalesPartSettlementMutationResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+        '409':
+          description: 올해 미마감/대상·상태·revision/잠금 재검사 실패. 해당 월·파트·인력/필드를 details.violations/references로 안내, 부분저장0.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - CLOSED_MONTH
+          - STATE_CONFLICT
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1618 (SPEC-REQUEST.md:47): Asia/Seoul 현재월 M·CASH_BASE_YM을 사용하고 BASE~M 조회·기본 M, 과거연도 조회전용·올해 미마감월만 수동
+        쓰기를 허용한다.'
+      - 'REQ-1619 (SPEC-REQUEST.md:47): CNFM/AUTO는 현재 마감이 해제되어 있으면 올해 운영 범위에서 사유를 남겨 취소할 수 있다.'
+      - 'REQ-1623 (SPEC-REQUEST.md:53): 취소 사유는 trim 후1~500자 필수이며 초과 문자열은 자동 절단하지 않는다.'
+      - 'REQ-1638 (SPEC-REQUEST.md:108): 소속 변경은 사본을 이동/삭제하지 않으며 미마감월 기존 확정 취소 후 새 소속에서 재확정한다.'
+      - 'REQ-1676 (SPEC-REQUEST.md:184): 취소는 부모WORK·확정합계/주체/시각NULL·사유저장·카드보존 및 해당파트월 상세만 삭제 후 현재원천 재계산한다.'
+      - 'REQ-1677 (SPEC-REQUEST.md:184): 상세 삭제전 값과 취소사유를 같은 트랜잭션에 기록하고 재확정 뒤에도 이전취소 이력을 보존한다.'
+      - 'REQ-1678 (SPEC-REQUEST.md:184): WORK에 대한 취소 요청은409 STATE_CONFLICT다.'
+      - 'REQ-1702 (SPEC-REQUEST.md:234): 카드/확정/취소 expectedRevision을 잠금 후 재검사·stale409 STALE_WRITE/부분저장0·최신동일값 changed=false/감사·시각불변이다.'
+      - 'REQ-1704 (SPEC-REQUEST.md:236): 기존 PartStandardService의 파트/기준→마감/정산 검사와 같은 순서로 관련 PART/월/DEV/ASGN/PAY/기준/프로젝트를
+        조정하고 DEV_ID+월 중복확정을 막는다.'
+      - 'REQ-1705 (SPEC-REQUEST.md:238): 부모/상세/감사를 단일트랜잭션으로 NEW/UPD/DEL 전후·명시키·사유 기록하고 NULL/0구분·500자 전체JSON절단금지·감사실패
+        롤백이다.'
+      - 'REQ-1706 (SPEC-REQUEST.md:240): SETL은INSERT/UPDATE만·DTL은동일파트월 WORK전환/확정교체트랜잭션 DELETE/INSERT만 허용하고 CNFM/AUTO/CLOSE
+        임의변경·타파트월 삭제금지다.'
+      - 'REQ-1714 (SPEC-REQUEST.md:253): POST /api/sales-part-settlements/{partId}/cancel은 month/reason/expectedRevision으로
+        취소한다.'
+      - 'SPEC-REQUEST.md:47/156/234: 올해 BASE~M 미마감 범위만 허용. 과거연도/CLOSE·비대상 편집·현재상태 불일치는409, 없는대상404, 입력/변조400. 새역할403
+        없음.'
+      - 'SPEC-REQUEST.md:232/234/236: 파트/기준→마감/정산 기존 잠금순서 공유·관련 PART/월/DEV/ASGN/PAY/기준/프로젝트 조정·DEV_ID+월 중복확정 잠금. 잠금
+        후 전체원천과 expectedRevision 재검사. stale409 STALE_WRITE·부분저장0.'
+      - 'SPEC-REQUEST.md:238/240: 부모/상세/필드별 NEW/UPD/DEL 감사 단일트랜잭션·부모 partId:month/상세 partId:month:devId. NULL/0 구별·감사500자
+        전체JSON절단금지·감사실패 전체롤백. 다른파트/월 삭제 금지.'
+      - 'SPEC-REQUEST.md:234: 최신동일값 changed=false·감사/MOD시각 불변. 성공후 목록/상세/추이/요약 무효화·2초내 현재브라우저 갱신. 응답유실은 현재조회후 수동재시도·자동재확정
+        금지; commit후 GET만 실패하면 저장됨안내·재조회만.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1618
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1619
+        document: SPEC-REQUEST.md
+        line: 47
+      - canonical_id: REQ-1623
+        document: SPEC-REQUEST.md
+        line: 53
+      - canonical_id: REQ-1638
+        document: SPEC-REQUEST.md
+        line: 108
+      - canonical_id: REQ-1676
+        document: SPEC-REQUEST.md
+        line: 184
+      - canonical_id: REQ-1677
+        document: SPEC-REQUEST.md
+        line: 184
+      - canonical_id: REQ-1678
+        document: SPEC-REQUEST.md
+        line: 184
+      - canonical_id: REQ-1702
+        document: SPEC-REQUEST.md
+        line: 234
+      - canonical_id: REQ-1704
+        document: SPEC-REQUEST.md
+        line: 236
+      - canonical_id: REQ-1705
+        document: SPEC-REQUEST.md
+        line: 238
+      - canonical_id: REQ-1706
+        document: SPEC-REQUEST.md
+        line: 240
+      - canonical_id: REQ-1714
+        document: SPEC-REQUEST.md
+        line: 253
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSalesPartSettlementRequest'
+      x-side-effects:
+      - 그파트월 DTL 삭제전 모든필드/사유 감사와 부모WORK 전환 원자저장. 다른파트월/급여/투입/파트기준/회사원가 되돌림0. 재확정은 새사본·이전취소감사 보존. 후속GET 현재원천 계산.
+      x-state-transitions:
+      - from: CNFM/AUTO·올해 미마감
+        event: 최신revision·trim1~500사유 취소
+        to: WORK·카드보존·확정합/확정자/시각NULL·사유저장·해당파트월DTL만삭제
+      - from: WORK/CLOSE/과거연도/stale
+        event: 취소 요청
+        to: 409 STATE_CONFLICT/CLOSED_MONTH/STALE_WRITE·사본불변
+      x-required-tests:
+      - 'happy: 마감해제된 올해AUTO에 유효사유/최신토큰 취소 ->200 WORK·GET 카드보존/확정메타NULL·해당DTL0·현재원천 재계산'
+      - 'auth: CLOSE인 AUTO를 cancel POST ->409 CLOSED_MONTH·CNFM_USER_ID/CNFM_DTTM/DTL 보존; 마감해제된 올해AUTO는 임시관리자 취소허용·역할403
+        없음'
+      - 'validation: cancel reason 공백만 또는 trim후501자 ->400·reason field 오류·CNCL_RSN/DTL 무변경; trim후500자는 절단없이 저장'
+      - 'business: WORK cancel ->409 STATE_CONFLICT·CORP_CARD_AMT/감사 불변; 오래된 사본revision cancel ->409 STALE_WRITE·확정사본
+        유지'
+      - 'side-effect: 취소 commit ->해당파트월 DTL DEL 전값/사용자사유가 TB_SY_CHG_HIST에 남고 부모WORK·카드보존·타파트월DTL불변; 감사실패 ->500·원래CNFM/AUTO와
+        상세 복원'
+  /api/rate-renegotiations:
+    get:
+      operationId: getRateRenegotiations
+      summary: 저마진 배정과 단가 인상 효과 조회
+      description: SPEC-REQUEST.md §2~§11. 기존 임시 관리자·security=[]·bearerAuth 정의 보존. 실제 권한/PART_SCOPE/민감금액 가림 후속; 역할403
+        추가 금지. 처리자/시각 서버소유.
+      security: []
+      x-related-requirements:
+      - REQ-1602
+      - REQ-1620
+      - REQ-1708
+      - REQ-1716
+      - REQ-1616
+      - REQ-1621
+      - REQ-1656
+      - REQ-1682
+      - REQ-1683
+      - REQ-1684
+      - REQ-1685
+      - REQ-1686
+      - REQ-1687
+      - REQ-1689
+      - REQ-1690
+      - REQ-1691
+      - REQ-1692
+      - REQ-1693
+      - REQ-1694
+      - REQ-1695
+      - REQ-1696
+      - REQ-1697
+      - REQ-1698
+      - REQ-1699
+      - REQ-1700
+      - REQ-1707
+      - REQ-1715
+      parameters:
+      - name: renewalWindow
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - '92'
+          - '183'
+          - '366'
+          - ALL
+          default: '183'
+      - name: marginBelow
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - '10'
+          - '15'
+          - '20'
+          - ALL
+          default: '15'
+      - name: employeeType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - FT
+          - CT
+          - FL
+          - OS
+      - name: projectId
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+      - name: increaseRate
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RenegotiationIncreaseInput'
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - name
+          - projectName
+          - renewalDate
+          - contractMm
+          - unitPrice
+          - monthlyLaborCost
+          - marginRate
+          - targetUnitPrice
+          - requiredIncreaseRate
+          - annualGain
+          default: marginRate
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+      x-query-validation:
+        allowed:
+        - renewalWindow
+        - marginBelow
+        - employeeType
+        - projectId
+        - increaseRate
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 미등록/중복 query·허용외 열/코드/방향400·year 및 UI-32 month 금지. 미등록 JSON/서버처리자·계산필드 주입400.
+        duplicates: 동일 query키가2회 이상이면400; 배열/마지막값 취사선택 금지.
+      responses:
+        '200':
+          description: 순수 조회 결과 또는 트랜잭션 commit 결과
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/RateRenegotiationsResult'
+        '400':
+          description: 입력·변조·필수·길이·연월·페이지·중복쿼리 오류. 한국어 message/field/details. 절단 없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - VALIDATION_ERROR
+          - UNKNOWN_FIELD
+        '404':
+          description: 없는 파트/프로젝트 대상. 기존 대상의 빈 인력·빈 후보·이력0건은200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '500':
+          description: 계산/조회/필수 감사 실패. SQL/스택 미노출·변경 트랜잭션 전체롤백.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 'REQ-1602 (SPEC-REQUEST.md:19): 로그인·실제 권한·파트별 접근 제한·민감 금액 숨김은 마지막 단계이며 현재 임시 관리자로 모든 일반 파트를 조회·편집한다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은
+        금지한다.'
+      - 'REQ-1708 (SPEC-REQUEST.md:244): 기존 /api 봉투·페이지·한국어 오류 field/details/requestId를 쓰고400/404/409/500을 구분·SQL/스택미노출·역할403미추가다.'
+      - 'REQ-1716 (SPEC-REQUEST.md:256): year는month에서만 판정·UI-32임의과거월금지·YYYY-MM/page≥1/size20·50·100/허용열·코드·방향만 허용하고
+        중복쿼리·미등록필드는400이다.'
+      - 'REQ-1616 (SPEC-REQUEST.md:42): 파트 비용은 급여+관리비+파트식 퇴직금이며 재협상 원가는 해당 배정 LABOR_ALLOC_AMT만 사용한다.'
+      - 'REQ-1621 (SPEC-REQUEST.md:51): 율1자리 HALF_UP·MM2자리·NULL은 –·0은 0·음수 부호/색·기본 천원·원/천원/백만원 표시와 날짜/연월 변환을 준수한다.'
+      - 'REQ-1656 (SPEC-REQUEST.md:146): 필요 원천별 완전성을 검사하며 정산 불필요 보험/경비 또는 재협상 무관 경비 결측 때문에 유효 계산을 막거나 노동비를0으로 대체하지
+        않는다.'
+      - 'REQ-1682 (SPEC-REQUEST.md:194): UI-32는4요약→가정→필터/표→계산방법이며 기준월M/계산시각·초기가정5·6개월/15미만/구분·프로젝트전체를 표시한다.'
+      - 'REQ-1683 (SPEC-REQUEST.md:196): ACT·ING·MO/DP·비FREE·종료일≥D·기준월m>0/R>0을 ASGN_ID별로 선정하고 미래월/TK/IN/PRE/LOSE/END/취소는
+        제외한다.'
+      - 'REQ-1684 (SPEC-REQUEST.md:198): U=05적용단가·m=월MM·R=월SALES_AMT·C=08동일DEV/PROJ/ASGN 노동비·k=기준월적용 계약MM이며 미래이력을
+        앞당기지 않는다.'
+      - 'REQ-1685 (SPEC-REQUEST.md:200): C/R 미확인 배정은 표/요약에서 제외하고 건수·인력/프로젝트·근거를 조회 가능하게 하며 CLOSE는08사본을 쓴다.'
+      - 'REQ-1686 (SPEC-REQUEST.md:202): 갱신 ALL/92/183/366·이익률 ALL/10/15/20미만·구분/프로젝트 필터와 실행/초기화/Enter·페이지20/50/100
+        기본50을 제공한다.'
+      - 'REQ-1687 (SPEC-REQUEST.md:204): 명시11열·표MM=k/도움말m·이익률/종료일/ASGN_ID 기본 및 허용열정렬·NULL뒤·원값정렬을 제공한다.'
+      - 'REQ-1689 (SPEC-REQUEST.md:210): T는 기준월 유효 TGT_MRGN_RT이며 고정20을 넣지 않는다.'
+      - 'REQ-1690 (SPEC-REQUEST.md:214): 현재이익률=(R−C)/R×100이며 C는 회사보험포함 노동비 배분원가만·팀비/경비 제외다.'
+      - 'REQ-1691 (SPEC-REQUEST.md:215): V=C/m/(1−T/100)를10000원 단위 CEILING한다.'
+      - 'REQ-1692 (SPEC-REQUEST.md:216): 필요율=max(0,(V−U)/U×100)이며 올림된 목표단가를 사용한다.'
+      - 'REQ-1693 (SPEC-REQUEST.md:217): 가정연증가=DOWN(U×r/100×k×12)다.'
+      - 'REQ-1694 (SPEC-REQUEST.md:218): 목표연증가=DOWN(max(0,V−U)×k×12)다.'
+      - 'REQ-1695 (SPEC-REQUEST.md:220): R/U/m양수·C완전성을 검사하고 T0은유효·T100/기준미확인은 목표3지표만 – 및 안내, 현재율/가정액은 유지한다.'
+      - 'REQ-1696 (SPEC-REQUEST.md:222): 초기5·빈칸0·소수최대2자리이며 음수0/50초과50 보정·적용값표시, 범위내초과소수/문자/NaN은 오류·직전 정상결과 유지다.'
+      - 'REQ-1697 (SPEC-REQUEST.md:222): Enter/입력확정 뒤 같은필터/가정으로 전체결과를 서버 재계산하고 이동전까지 유지하되 DB저장/키입력이력은 없다.'
+      - 'REQ-1698 (SPEC-REQUEST.md:224): 연 증가는 k로12개월 계속투입, 월율/목표는m이며 미래연장/급여/부가세를 추정하지 않는다.'
+      - 'REQ-1699 (SPEC-REQUEST.md:226): 전체필터 DISTINCT인원/배정수·가중율(ΣR−ΣC)/ΣR·배정별원정수 연증가합을 사용하고 목표결측은해당요약만 –다.'
+      - 'REQ-1700 (SPEC-REQUEST.md:228): 갱신일/월원가/율/목표/필요율/연증가 도움말과 계산표에 기준월·두MM·만원올림·1년가정을 표시한다.'
+      - 'REQ-1707 (SPEC-REQUEST.md:240): UI-32 업무쓰기API와 급여/원가/청구/파트기준 수정은 없다.'
+      - 'REQ-1715 (SPEC-REQUEST.md:254): GET /api/rate-renegotiations는 명시 필터·가정·정렬·페이지와 요약/배정/적용가정율을 제공한다.'
+      - 'SPEC-REQUEST.md:214~224: margin=(R-C)/R×100; V=CEILING(C/m/(1-T/100),10000원); 필요율=max(0,(V-U)/U×100); 가정연=DOWN(U×r/100×k×12);
+        목표연=DOWN(max(0,V-U)×k×12). m/k 혼용금지·목표가낮아도 인하없음. R/U/m양수·C완전성 필요; 미평가 인력/프로젝트/근거 분리.'
+      x-source-locators:
+      - canonical_id: REQ-1602
+        document: SPEC-REQUEST.md
+        line: 19
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1708
+        document: SPEC-REQUEST.md
+        line: 244
+      - canonical_id: REQ-1716
+        document: SPEC-REQUEST.md
+        line: 256
+      - canonical_id: REQ-1616
+        document: SPEC-REQUEST.md
+        line: 42
+      - canonical_id: REQ-1621
+        document: SPEC-REQUEST.md
+        line: 51
+      - canonical_id: REQ-1656
+        document: SPEC-REQUEST.md
+        line: 146
+      - canonical_id: REQ-1682
+        document: SPEC-REQUEST.md
+        line: 194
+      - canonical_id: REQ-1683
+        document: SPEC-REQUEST.md
+        line: 196
+      - canonical_id: REQ-1684
+        document: SPEC-REQUEST.md
+        line: 198
+      - canonical_id: REQ-1685
+        document: SPEC-REQUEST.md
+        line: 200
+      - canonical_id: REQ-1686
+        document: SPEC-REQUEST.md
+        line: 202
+      - canonical_id: REQ-1687
+        document: SPEC-REQUEST.md
+        line: 204
+      - canonical_id: REQ-1689
+        document: SPEC-REQUEST.md
+        line: 210
+      - canonical_id: REQ-1690
+        document: SPEC-REQUEST.md
+        line: 214
+      - canonical_id: REQ-1691
+        document: SPEC-REQUEST.md
+        line: 215
+      - canonical_id: REQ-1692
+        document: SPEC-REQUEST.md
+        line: 216
+      - canonical_id: REQ-1693
+        document: SPEC-REQUEST.md
+        line: 217
+      - canonical_id: REQ-1694
+        document: SPEC-REQUEST.md
+        line: 218
+      - canonical_id: REQ-1695
+        document: SPEC-REQUEST.md
+        line: 220
+      - canonical_id: REQ-1696
+        document: SPEC-REQUEST.md
+        line: 222
+      - canonical_id: REQ-1697
+        document: SPEC-REQUEST.md
+        line: 222
+      - canonical_id: REQ-1698
+        document: SPEC-REQUEST.md
+        line: 224
+      - canonical_id: REQ-1699
+        document: SPEC-REQUEST.md
+        line: 226
+      - canonical_id: REQ-1700
+        document: SPEC-REQUEST.md
+        line: 228
+      - canonical_id: REQ-1707
+        document: SPEC-REQUEST.md
+        line: 240
+      - canonical_id: REQ-1715
+        document: SPEC-REQUEST.md
+        line: 254
+      x-request-body-not-applicable: 순수 GET·명시 query/path만·requestBody 없음·정산/급여/원가/단가 저장0.
+      x-side-effects:
+      - 업무/감사/가정설정/마감 쓰기0; 미확정은 읽을 때 계산·확정은 사본 유지.
+      x-state-transitions: []
+      x-required-tests:
+      - 'happy: 기준월 U6000000·m/k1.00·C5400000·T20·r5인 ACT/ING MO배정을 조회 ->200·marginRate10.0/targetUnitPrice6750000/requiredIncreaseRate12.5/targetAnnualGain9000000/annualGain3600000'
+      - 'auth: 인증헤더없이 임시관리자로 getRateRenegotiations 호출 ->전체일반파트 금액조회 허용; actor/userId 쿼리주입 ->400·권한403추가없음'
+      - 'validation: increaseRate=-1/51/빈칸 ->appliedIncreaseRate0/50/0; 범위내1.234/문자/NaN 또는 month/year주입 ->400·화면직전정상결과
+        유지'
+      - 'business: m0.52/k1.00과 T100·C결측배정을 조회 ->월은m/연은k·목표3지표만null·C결측은unevaluatedAssignments와건수에만반영·현재율/가정액유지'
+      - 'side-effect: 필터조회/가정재계산 전후 DB비교 ->TB_PJ_ASGN_HIST/급여/원가/SETL/DTL/가정설정 쓰기0·배정별행/가중요약은페이지무관'
+      x-sort-rules: 기본 marginRate ASC→renewalDate ASC→ASGN_ID ASC·사용자정렬도동률ASGN_ID·NULL뒤·금액/MM/율 수치원값. d0≤d≤92/183/366,
+        marginBelow 반올림전 엄격미만.
   /api/individual-profitability:
     get:
       operationId: getIndividualProfitability
@@ -2612,6 +4304,7 @@ paths:
       - REQ-1109
       - REQ-1589
       - REQ-1574
+      - REQ-1717
       parameters:
       - name: month
         in: query
@@ -2629,6 +4322,7 @@ paths:
           - CARDS
           - BUSINESS_PLAN
           - HISTORICAL_PROFIT_LOSS
+          - PART_SETTLEMENT
       - name: page
         in: query
         required: false
@@ -2652,6 +4346,14 @@ paths:
         schema:
           $ref: '#/components/schemas/FinancialUploadId'
         description: 신규 두 scope에서만 허용·감사사유의 uploadId 정확필터·기존scope주입400
+      - name: partId
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+        description: scope=PART_SETTLEMENT에서만 필수. 기존scope에는금지400. month와 부모/상세 감사키를 정확히제한·앞부분일치로다른파트월 혼입금지.
       responses:
         '200':
           description: 실제 조회 결과 또는 commit 완료 결과
@@ -2733,6 +4435,7 @@ paths:
         - page
         - size
         - uploadId
+        - partId
         unknown: 미등록 query/서버주체 주입은400 UNKNOWN_FIELD
       x-business-rules:
       - 로그인/실제 역할·데이터범위 제한은 후속. security=[]·기존 임시 관리자 CurrentUserProvider와 Clock(Asia/Seoul) 사용. 처리자/감사/자동값/미정의 필드는
@@ -2742,6 +4445,10 @@ paths:
       - scope=BUSINESS_PLAN은 month의 연도 ALL 목표 PLAN_YM:ALL·TB_FI_BIZ_PLAN만, scope=HISTORICAL_PROFIT_LOSS는 month의 PL_YM
         이관·TB_CO_MON_PL만. month는 기존필수 YYYY-MM 유지. 선택uploadId는 해당기능 감사사유의uploadId 정확일치로 추가필터. 기존 MONTH/TAX/CARDS 범위불변.
       - NEW/UPD 실제필드별 beforeValue/afterValue(원정수십진문자열 또는NULL)·기능명/uploadId/파일행/모드 reason·등록시각DESC/historyId DESC·동일/유지월가짜감사없음·전체행JSON절단0.
+      - 'REQ-1717 (SPEC-REQUEST.md:258): UI-19 변경이력은 기존창에서 해당파트월 카드/확정/취소만 조회하고 UI-32 실제단가이력은 UI-12를 따른다.'
+      - BASIC-140 scope=PART_SETTLEMENT·partId/month 필수·TB_CO_PART_SETL 키 partId:YYYY-MM 및 TB_CO_PART_SETL_DTL 키 partId:YYYY-MM:devId만조회(업무감사작성의
+        canonical키와 정확일치). 카드/확정/취소·삭제전값/사용자사유·REG_DTTM DESC/HIST_ID DESC·기존 FinancialHistoryPage 재사용. 기존 scope들 partId금지·동작불변.
+        UI-32 가정저장이력 없음·실제단가변경은 기존 /api/assignments/{id}/history.
       x-side-effects:
       - 조회/미리보기는 업무/감사/수정시각 변경0·기본행 생성0.
       - 조회전후 업무/업로드/문제/감사/수정시각 불변·원본파일/파싱결과보관/자동정리 추가없음.
@@ -2761,6 +4468,9 @@ paths:
       - 'validation: 없는id404·미등록/중복query·severity=ALL/page0/size30 또는허용외scope400 ->DB불변'
       - 'business: APPLIED 무파일 ->실제감사변경월만·동일/유지월추정0; 다중문제페이지/필터 ->total필터전체·다운로드전체·목표NULL차이사유정확'
       - 'side-effect: 조회반복 ->업무/감사불변; 문제다운로드DNLD실패 ->500/0바이트·정상UI-18/UI-08기록'
+      - 'happy: PART_SETTLEMENT partId/month 조회 ->해당파트월 카드/확정/취소만·기존scope 결과불변'
+      - 'validation: scope=PART_SETTLEMENT partId누락/중복·기존scope partId주입 ->400·다른파트월 이력혼입0'
+      - 'side-effect: 이력 GET ->감사/정산/원천쓰기0'
       x-request-body-not-applicable: GET은 명시 query/path만 사용·본문 없음.
       x-basic139-extension:
         description: BASIC-139 한정 B10/UI-18 목표·B11/UI-08 이관 확장. 기존 양식/필드/규칙/REQ/과거 evidence를 보존한다.
@@ -2779,6 +4489,10 @@ paths:
         - 'validation: 없는id404·미등록/중복query·severity=ALL/page0/size30 또는허용외scope400 ->DB불변'
         - 'business: APPLIED 무파일 ->실제감사변경월만·동일/유지월추정0; 다중문제페이지/필터 ->total필터전체·다운로드전체·목표NULL차이사유정확'
         - 'side-effect: 조회반복 ->업무/감사불변; 문제다운로드DNLD실패 ->500/0바이트·정상UI-18/UI-08기록'
+      x-source-locators:
+      - canonical_id: REQ-1717
+        document: SPEC-REQUEST.md
+        line: 258
   /api/excel/B2/template:
     get:
       operationId: getB2Template
@@ -3618,6 +5332,9 @@ paths:
       - REQ-947
       - REQ-1426
       - REQ-1427
+      - REQ-1723
+      - REQ-1724
+      - REQ-1725
       parameters: []
       responses:
         '200':
@@ -3673,6 +5390,12 @@ paths:
         NONE 기간저장400. 다른화면기존설정보존.
       - 'REQ-1426 (SPEC-REQUEST.md:286): COLS/UI-04 projectCost·UI-31 statusBoard/issues 전체order/hidden·프로젝트명/이슈제목 필수·기존2000자/revision이다'
       - 'REQ-1427 (SPEC-REQUEST.md:286): 미등록열/중복/필수숨김/잘못된순열400·공통PAGE_SIZE/DENSE/AMT_UNIT/PERIOD 재사용·UI-31기간없음·탭별필터페이지유지다'
+      - 'REQ-1723 (SPEC-REQUEST.md:264): PERIOD/UI-19·PAGE_SIZE/DENSE/AMT_UNIT을 재사용하고 정산표/추이에 임의 열숨김·순서를 추가하지 않는다.'
+      - 'REQ-1724 (SPEC-REQUEST.md:264): COLS/PREF_KEY UI-32·rateRenegotiations의 명시11열 order/hidden을 저장하고 name/projectName을
+        필수로 유지한다.'
+      - 'REQ-1725 (SPEC-REQUEST.md:264): 중복/미등록/필수숨김/잘못된순열은400이다.'
+      - BASIC-140 PERIOD/UI-19 YEAR_MONTH BASE~M·UI-32 NONE 기간저장400. PAGE_SIZE/DENSE/AMT_UNIT 기존키재사용. UI-19 고정회계열 COLS금지.
+        COLS/UI-32={rateRenegotiations:{order,hidden}}만허용·11열전체순열/name·projectName필수·중복/미등록/누락/필수숨김400. 다른화면/키 보존.
       x-required-tests:
       - 'happy: TB_SY_USER_PREF에 유효 COLS/UI-03 22열 순열이 있는 상태에서 GET preferences -> value.individualProfitability.order/hidden과 stored/revision이 저장값과 동일'
       - 'business: UI-03 PREF_VAL JSON이 손상된 상태에서 GET preferences -> 해당 항목 오류/revision 반환·다른 화면 설정 정상·손상행 자동삭제0건'
@@ -3683,6 +5406,7 @@ paths:
       - 'side-effect: 이번 확장대상 실제DB/유효요청 준비 -> getPreferences 기존성공결과/필드 유지·확장조건 검사·회계불변'
       - 'validation: UI-01 projects order누락/중복/미등록·id/name숨김 요청 ->400·기존UI-27/15/23/02/33설정불변'
       - 'happy: COLS/UI-01 11열순열과허용hidden 저장후조회 -> 동일구조/순서·기존PAGE_SIZE/DENSE/AMT_UNIT/PERIOD유지'
+      - 'happy: UI-32 저장설정 GET ->value/revision동일·설정조회 쓰기0'
       x-side-effects:
       - 조회 전용·DB 업무행/설정/이력 쓰기0건. 잘못된 데이터 자동수정/기본값 적재0건.
       x-open-questions:
@@ -3701,6 +5425,15 @@ paths:
       - canonical_id: REQ-1427
         document: SPEC-REQUEST.md
         line: 286
+      - canonical_id: REQ-1723
+        document: SPEC-REQUEST.md
+        line: 264
+      - canonical_id: REQ-1724
+        document: SPEC-REQUEST.md
+        line: 264
+      - canonical_id: REQ-1725
+        document: SPEC-REQUEST.md
+        line: 264
   /api/me/preferences/{type}/{key}:
     put:
       operationId: putPreference
@@ -3753,6 +5486,9 @@ paths:
       - REQ-947
       - REQ-1426
       - REQ-1427
+      - REQ-1723
+      - REQ-1724
+      - REQ-1725
       parameters:
       - name: type
         in: path
@@ -3853,6 +5589,12 @@ paths:
         NONE 기간저장400. 다른화면기존설정보존.
       - 'REQ-1426 (SPEC-REQUEST.md:286): COLS/UI-04 projectCost·UI-31 statusBoard/issues 전체order/hidden·프로젝트명/이슈제목 필수·기존2000자/revision이다'
       - 'REQ-1427 (SPEC-REQUEST.md:286): 미등록열/중복/필수숨김/잘못된순열400·공통PAGE_SIZE/DENSE/AMT_UNIT/PERIOD 재사용·UI-31기간없음·탭별필터페이지유지다'
+      - 'REQ-1723 (SPEC-REQUEST.md:264): PERIOD/UI-19·PAGE_SIZE/DENSE/AMT_UNIT을 재사용하고 정산표/추이에 임의 열숨김·순서를 추가하지 않는다.'
+      - 'REQ-1724 (SPEC-REQUEST.md:264): COLS/PREF_KEY UI-32·rateRenegotiations의 명시11열 order/hidden을 저장하고 name/projectName을
+        필수로 유지한다.'
+      - 'REQ-1725 (SPEC-REQUEST.md:264): 중복/미등록/필수숨김/잘못된순열은400이다.'
+      - BASIC-140 PERIOD/UI-19 YEAR_MONTH BASE~M·UI-32 NONE 기간저장400. PAGE_SIZE/DENSE/AMT_UNIT 기존키재사용. UI-19 고정회계열 COLS금지.
+        COLS/UI-32={rateRenegotiations:{order,hidden}}만허용·11열전체순열/name·projectName필수·중복/미등록/누락/필수숨김400. 다른화면/키 보존.
       x-side-effects:
       - TB_SY_USER_PREF의admin/type/key 한행만INSERT/UPDATE·실제변경시서버등록/수정필드기록. 최초기본값저장도행생성.
       - 다른설정행·UI-27 TB_SY_CHG_HIST·업무테이블변경0건. 서버성공후PAGE_SIZE/DENSE/열/기간관련열린목록동기화.
@@ -3902,6 +5644,11 @@ paths:
       - 'validation: projectName숨김/이슈title숨김/중복열/미등록/누락/JSON2001자 ->400 field=value·PREF_VAL불변'
       - 'business: 기존 COLS stale저장 ->409 STALE_WRITE·선행PREF_VAL유지; UI-31 PERIOD저장400'
       - 'side-effect: UI-04/31 COLS 저장 ->대상 TB_SY_USER_PREF만변경·다른화면/단계/메모/이슈/원가/급여불변'
+      - 'happy: UI-32 유효11열순열/hidden·기존revision 저장후 GET ->순서/hidden/revision동일·기존공통설정복원'
+      - 'auth: 임시관리자 본인설정만·userId/actor주입 ->400·타사용자불변·역할403없음'
+      - 'validation: UI-32 name/projectName숨김·중복/미등록/누락·UI-19 COLS·UI-32 PERIOD ->400·PREF_VAL불변'
+      - 'business: UI-32 stale revision ->409 STALE_WRITE·선행값유지'
+      - 'side-effect: UI-32 COLS 정상저장 ->해당 admin PREF키만변경·타화면/급여/단가/원가/사본 불변'
       x-open-questions:
       - OQ-003
       x-source-locators:
@@ -3920,6 +5667,15 @@ paths:
       - canonical_id: REQ-1427
         document: SPEC-REQUEST.md
         line: 286
+      - canonical_id: REQ-1723
+        document: SPEC-REQUEST.md
+        line: 264
+      - canonical_id: REQ-1724
+        document: SPEC-REQUEST.md
+        line: 264
+      - canonical_id: REQ-1725
+        document: SPEC-REQUEST.md
+        line: 264
     delete:
       operationId: deletePreference
       summary: 개별 설정 초기화
@@ -8899,6 +10655,14 @@ paths:
       - REQ-958
       - REQ-959
       - REQ-960
+      - REQ-1612
+      - REQ-1617
+      - REQ-1620
+      - REQ-1655
+      - REQ-1719
+      - REQ-1720
+      - REQ-1721
+      - REQ-1722
       parameters: []
       responses:
         '200':
@@ -8944,6 +10708,33 @@ paths:
                 $ref: '#/components/schemas/ApiError'
           x-error-codes:
           - INTERNAL_ERROR
+        '404':
+          description: BASIC-140 두view의 없는파트/프로젝트·기존빈결과는200.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: BASIC-140 두view의 원천계산 경합·선택월 상태변경. 업무사본 저장없음.
+          headers:
+            X-Request-Id:
+              description: 오류 requestId와 같은 추적값. SQL/스택 미노출.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - STATE_CONFLICT
       x-query-validation:
         allowed: []
         unknown: 허용외query400 UNKNOWN_FIELD; 전체 필터는 생략으로 표시한다.
@@ -9043,6 +10834,19 @@ paths:
         점검filters.month·올해만.
       - 청구번호/관리번호/사용자문자열 텍스트셀·금액/건수 숫자셀·=,+,-,@ 시작문자 수식실행0. 금액 선택단위0/3/6자리 비파괴·MM2자리·단위헤더·인증/계좌/무관정보/원본보관 추가없음.
       - BILLS/BILLING_CHECKS/RECEIVABLES 파일생성→TB_SY_ACCS_LOG DNLD/UI-13 서버admin/Clock/IP/종류·건수 commit→파일전송. 기록실패500/바이너리없음·업무금액불변. 기준값오류 다운로드/내년문맥정책 OQ-001/002/003 미승인.
+      - 'REQ-1612 (SPEC-REQUEST.md:34): ExcelExportService·AccessLogWriter·AssignmentExportService·PreferenceValidator를
+        확장하여 UI-19/32 다운로드·설정·기록을 연결한다.'
+      - 'REQ-1617 (SPEC-REQUEST.md:43): 미확정 월은 조회 시 계산하고 조회·시뮬레이션·다운로드로 사본·급여·단가를 저장하지 않는다.'
+      - 'REQ-1620 (SPEC-REQUEST.md:49): BigDecimal·원정수·DOWN과 분수 유지를 사용하며 API 금액/율은 십진 문자열, 페이지/건수는 정수이고 Number 업무계산은 금지한다.'
+      - 'REQ-1655 (SPEC-REQUEST.md:144): 조회/미리보기/확정/출력의 근거·경고·계산은 같아야 하며 금액 NUMERIC(15)·MM NUMERIC(6,2) 초과시 전체 확정을 취소한다.'
+      - 'REQ-1719 (SPEC-REQUEST.md:260): UI-19는 현재 이번달/추이 전체사람·같은행열/소계·상태/카드/근거와 파일정보를 출력하고0인원 카드/합계도 남긴다.'
+      - 'REQ-1720 (SPEC-REQUEST.md:260): UI-32는 현재필터/정렬/가정의 전체배정·요약·계산방법·기준월/필터/단위/근거를 출력한다.'
+      - 'REQ-1721 (SPEC-REQUEST.md:262): 금액/MM/율/건수 숫자셀·ID/관리번호 텍스트/앞0보존·수식시작문자 비실행·NULL빈셀/0숫자0·단위/음수 동일이다.'
+      - 'REQ-1722 (SPEC-REQUEST.md:262): 명시된 xlsx 파일명과 파일생성→DNLD commit→전송을 따르며 기록실패시 미전송·UI-19/32 로그를 남긴다.'
+      - BASIC-140 신규 view=SALES_PART_SETTLEMENTS/RATE_RENEGOTIATIONS 두 종류만 제한추가·기존 view/기간규약 불변. 정산 mode=MONTH/TREND·파트/month
+        필수·고정회계열·0인원 카드/합계 출력. 재협상은 같은필터/정렬/가정 전체와 요약/계산법·UI-32 열순서/숨김 반영. 두 view page/size/선택행/actor 금지400·순수계산·원천무쓰기.
+      - 'SPEC-REQUEST.md:260~262: 다운로드정보 처리자/생성시각/파트·기간 또는 기준월·필터/가정/단위/예정·미확인근거. 파일명 영업파트이익금_파트ID_YYYYMM_이번달또는추이.xlsx
+        / 단가재협상_YYYYMMDD.xlsx. 숫자셀 금액/MM/율/건수·ID/관리번호텍스트 앞0·사용자문자 =,+,-,@ 수식실행0·NULL빈셀/0숫자0·원/천원/백만원 최대0/3/6자리·음수부호.'
       requestBody:
         required: true
         description: 명시한 필수필드만 전송·서버소유필드400.
@@ -9055,6 +10859,7 @@ paths:
       - DEVELOPERS는UI-02·CANDIDATES는UI-33·기존CLIENTS/PARTS 화면은불변. 종류=개발자목록/외부인력후보·기록선commit 뒤전송.
       - ASSIGNMENTS DNLD/UI-12·PAYROLL DNLD/UI-02만 기록·업무본체/월행/급여/배분표 저장값불변.
       - UI-13 세view DNLD 접근기록만 추가·TB_BL_BILL/TB_BL_RCPT/TB_BL_DUN_HIST/배정/매출/마감snapshot 불변·필수기록실패 전송0.
+      - BASIC-140 두view에 한해 DNLD/UI-19 또는 UI-32만·처리자/IP/시각 서버소유·선commit후전송. 기록실패 파일미전송·업무원천/사본/가정값 저장0.
       x-state-transitions:
       - from: 해당다운로드접근기록미등록·파일생성완료
         event: DNLD1건저장commit
@@ -9071,6 +10876,12 @@ paths:
       - from: UI-13 DNLD실패
         event: 다운로드
         to: 500 ApiError·파일없음·임시정리
+      - from: UI-19/32 파일생성완료
+        event: DNLD 해당화면 commit
+        to: 기록영속 후 XLSX전송
+      - from: 생성/필수기록 실패
+        event: 다운로드
+        to: 500 ApiError·전송0·임시정리
       x-required-tests:
       - 'happy: PROJECTS 전체필터정렬/열설정 또는 B6 조회단계로 출력 -> 200 XLSX·페이지잘림0·원금선합산/선택단위0·3·6자리·MM2자리'
       - 'auth: 인증헤더 없는 임시관리자가 프로젝트목록 출력 -> 기존다운로드 권한유예 유지·401/403 없이 생성·DNLD 처리자 서버관리자'
@@ -9094,6 +10905,11 @@ paths:
       - 'validation: 미등록view/교차필터/page/size/작업열/중복열/식별필수열숨김·처리자주입 ->400 전송0'
       - 'business: DNLD기록실패 주입 ->500 ApiError·파일전송0·원금/캐시불변·잘못된DUN/MISS 처리정책은 미승인 유지'
       - 'side-effect: 전송전 DNLD/UI-13 commit1건·숫자/텍스트셀/단위헤더·수식문자무실행·DUN_HIST/청구/입금/매출불변'
+      - 'happy: 두view 복수페이지 전체필터·정산0인원/카드·추이·재협상m/k로 출력 ->200 XLSX·전체행/요약/근거/파일명/단위 일치'
+      - 'auth: 임시관리자 과거연도 조회다운로드 ->허용·actor/userId/타범위필드 주입400·역할403없음'
+      - 'validation: 두view 교차필터·page/size·미등록/중복/필수숨김열 ->400 파일전송0'
+      - 'business: 없는파트/프로젝트404·잘못된기간400·계산원천경합409, 미확인은 근거/빈셀·임의0사본 없음'
+      - 'side-effect: 생성후DNLD/UI-19또는UI-32 commit1건→전송; 기록실패500 전송0/임시정리·업무원천/정산사본 불변'
       x-file-response-rule: XLSX 바이트 응답 보존·JSON봉투 표현은 OQ-API-001 설계 제안.
       x-source-locators:
       - canonical_id: REQ-688
@@ -9123,6 +10939,30 @@ paths:
       - canonical_id: REQ-698
         document: SPEC-REQUEST.md
         line: 34
+      - canonical_id: REQ-1612
+        document: SPEC-REQUEST.md
+        line: 34
+      - canonical_id: REQ-1617
+        document: SPEC-REQUEST.md
+        line: 43
+      - canonical_id: REQ-1620
+        document: SPEC-REQUEST.md
+        line: 49
+      - canonical_id: REQ-1655
+        document: SPEC-REQUEST.md
+        line: 144
+      - canonical_id: REQ-1719
+        document: SPEC-REQUEST.md
+        line: 260
+      - canonical_id: REQ-1720
+        document: SPEC-REQUEST.md
+        line: 260
+      - canonical_id: REQ-1721
+        document: SPEC-REQUEST.md
+        line: 262
+      - canonical_id: REQ-1722
+        document: SPEC-REQUEST.md
+        line: 262
       x-open-questions:
       - OQ-001
       - OQ-002
@@ -35805,6 +37645,1040 @@ paths:
       - 'side-effect: 정상과 DNLD실패 주입 ->정상UI-09 DNLD commit 뒤 전송·실패500/0바이트·업무불변'
 components:
   schemas:
+    SettlementMonth:
+      type: string
+      pattern: ^\d{4}-(0[1-9]|1[0-2])$
+      description: API YYYY-MM. 서버 Asia/Seoul CASH_BASE_YM~현재월 M; 생략 조회는 M. year 별도 입력 금지.
+    SettlementMoney:
+      type:
+      - string
+      - 'null'
+      pattern: ^-?\d+$
+      description: BigDecimal 원정수 십진 문자열·DOWN(음수도0쪽). NULL=미확인, 명시0=0; 기간합계에 NUMERIC(15) 상한 적용 금지.
+    SettlementDecimal:
+      type:
+      - string
+      - 'null'
+      pattern: ^-?\d+(\.\d+)?$
+      description: 십진 문자열·율1자리 HALF_UP/MM2자리. 분자/분모 유지 후 마지막 나눗셈. float/double 금지.
+    SettlementRevision:
+      type: string
+      minLength: 1
+      description: RevisionService 불투명 토큰. WORK는 전체원천 PK순 식별자/저장값/REG·MOD, 무부모도 유효. CNFM/AUTO는 부모/상세/마감/파트 식별값; 원천급여
+        변경으로 취소토큰 변경 금지.
+    SettlementIssue:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+          description: 한국어 근거·미확인 대상. SQL/스택 없음.
+        field:
+          type:
+          - string
+          - 'null'
+        developerId:
+          type:
+          - string
+          - 'null'
+        assignmentId:
+          type:
+          - string
+          - 'null'
+        projectId:
+          type:
+          - string
+          - 'null'
+        month:
+          anyOf:
+          - $ref: '#/components/schemas/SettlementMonth'
+          - type: 'null'
+        source:
+          type: string
+          description: 급여/단가/기준/마감 사본 등 출처
+        blocking:
+          type: boolean
+      required:
+      - code
+      - message
+      - field
+      - developerId
+      - assignmentId
+      - projectId
+      - month
+      - source
+      - blocking
+      additionalProperties: false
+    SettlementStandard:
+      type: object
+      properties:
+        leaderId:
+          type:
+          - string
+          - 'null'
+        leaderName:
+          type:
+          - string
+          - 'null'
+        distributionRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        effectiveMonth:
+          anyOf:
+          - $ref: '#/components/schemas/SettlementMonth'
+          - type: 'null'
+        valid:
+          type: boolean
+      required:
+      - leaderId
+      - leaderName
+      - distributionRate
+      - salesExpenseAmount
+      - effectiveMonth
+      - valid
+      additionalProperties: false
+      description: 해당월 유효 한 행. 부재/겹침/범위 오류는 미확인; 고정40%/150만원 금지. 기존 확정금액 보존. 기준 표시자료 확장 보존 방식은 미승인 OQ-B140-002.
+    SettlementTab:
+      type: object
+      properties:
+        partId:
+          type: string
+          maxLength: 20
+        partName:
+          type: string
+        eligible:
+          type: boolean
+        historyOnly:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - WORK
+          - CNFM
+          - AUTO
+        standard:
+          $ref: '#/components/schemas/SettlementStandard'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - partId
+      - partName
+      - eligible
+      - historyOnly
+      - status
+      - standard
+      - issues
+      additionalProperties: false
+    SalesPartSettlementTabsResult:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        baseMonth:
+          $ref: '#/components/schemas/SettlementMonth'
+        currentMonth:
+          $ref: '#/components/schemas/SettlementMonth'
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementTab'
+        eligibleCount:
+          type: integer
+          minimum: 0
+        confirmedCount:
+          type: integer
+          minimum: 0
+        unconfirmedCount:
+          type: integer
+          minimum: 0
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - month
+      - baseMonth
+      - currentMonth
+      - parts
+      - eligibleCount
+      - confirmedCount
+      - unconfirmedCount
+      - issues
+      additionalProperties: false
+      description: PART_NM ASC/PART_ID ASC. HQ 제외. 월말 STOP/RESUME 판정·확정 이력탭 유지. 기준오류 대상 포함 여부 OQ-B140-003 미승인; 문제를 숨기지
+        않는다.
+    SettlementTotals:
+      type: object
+      properties:
+        personCount:
+          type: integer
+          minimum: 0
+        deficitPersonCount:
+          type: integer
+          minimum: 0
+        mm:
+          $ref: '#/components/schemas/SettlementDecimal'
+        unitPrice:
+          $ref: '#/components/schemas/SettlementMoney'
+        payAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        retirementAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        costAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        profitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        personProfitShareAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        cardAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        partProfitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+      required:
+      - personCount
+      - deficitPersonCount
+      - mm
+      - unitPrice
+      - payAmount
+      - salesExpenseAmount
+      - retirementAmount
+      - costAmount
+      - profitAmount
+      - personProfitShareAmount
+      - cardAmount
+      - partProfitAmount
+      additionalProperties: false
+    SettlementCalculationBasis:
+      type: object
+      properties:
+        paySource:
+          type: string
+          enum:
+          - START_MONTH_BASE
+          - UPLOADED_PAY
+          - VENDOR_SUPPLY
+          - ESTIMATED_BASE
+          - START_MONTH_MISSING_ZERO
+          - UNKNOWN
+          - SNAPSHOT_UNKNOWN
+        estimated:
+          type: boolean
+        firstMonthMissingPay:
+          type: boolean
+        firstInputDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        calendarDays:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+          maximum: 31
+        payableDays:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+          maximum: 31
+        basePayAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        distributionRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        tkSources:
+          type: array
+          items:
+            type: string
+            description: PLAN/CTRT/EST 또는 노동비×계약금액/예산 대체식 출처
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - paySource
+      - estimated
+      - firstMonthMissingPay
+      - firstInputDate
+      - calendarDays
+      - payableDays
+      - basePayAmount
+      - distributionRate
+      - tkSources
+      - warnings
+      additionalProperties: false
+      description: 조회/확정/출력의 같은 근거. 기존사본 결측은 추측하지 않는다. 물리 근거 보존범위 OQ-B140-002 승인 전 미정.
+    SalesPartSettlementRow:
+      type: object
+      properties:
+        developerId:
+          type: string
+        name:
+          type: string
+        managementNo:
+          type: string
+        employeeType:
+          type: string
+        projectNames:
+          type: array
+          items:
+            type: string
+        legacyProjectText:
+          type:
+          - string
+          - 'null'
+        mm:
+          $ref: '#/components/schemas/SettlementDecimal'
+        unitPrice:
+          $ref: '#/components/schemas/SettlementMoney'
+        payAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        salesExpenseAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        retirementAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        costAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        profitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        profitShareAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        remark:
+          type:
+          - string
+          - 'null'
+        basis:
+          $ref: '#/components/schemas/SettlementCalculationBasis'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - developerId
+      - name
+      - managementNo
+      - employeeType
+      - projectNames
+      - legacyProjectText
+      - mm
+      - unitPrice
+      - payAmount
+      - salesExpenseAmount
+      - retirementAmount
+      - costAmount
+      - profitAmount
+      - profitShareAmount
+      - remark
+      - basis
+      - issues
+      additionalProperties: false
+      description: 실제 DEV_ID별 1행. MM>0 비내부 집합·현재 사람소속; 프로젝트 파트로 이동 금지. 사본은 저장값 그대로, 프로젝트 기존 일반문자열도 표시.
+    SettlementPage:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        total:
+          type: integer
+          minimum: 0
+      required:
+      - page
+      - size
+      - total
+      additionalProperties: false
+      description: 사람/배정 수 total. 빈목록도0; 페이지 바깥 전체요약·합계는 유지.
+    SalesPartSettlementResult:
+      type: object
+      properties:
+        partId:
+          type: string
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        status:
+          type: string
+          enum:
+          - WORK
+          - CNFM
+          - AUTO
+        standard:
+          $ref: '#/components/schemas/SettlementStandard'
+        cardAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        revision:
+          $ref: '#/components/schemas/SettlementRevision'
+        confirmedBy:
+          type:
+          - string
+          - 'null'
+        confirmedByName:
+          type:
+          - string
+          - 'null'
+        confirmedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lastCancellationReason:
+          type:
+          - string
+          - 'null'
+        readOnly:
+          type: boolean
+        readOnlyReasons:
+          type: array
+          items:
+            type: string
+        canSaveCard:
+          type: boolean
+        canConfirm:
+          type: boolean
+        canCancel:
+          type: boolean
+        summary:
+          $ref: '#/components/schemas/SettlementTotals'
+        totals:
+          $ref: '#/components/schemas/SettlementTotals'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesPartSettlementRow'
+        pagination:
+          $ref: '#/components/schemas/SettlementPage'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - partId
+      - month
+      - status
+      - standard
+      - cardAmount
+      - revision
+      - confirmedBy
+      - confirmedByName
+      - confirmedAt
+      - lastCancellationReason
+      - readOnly
+      - readOnlyReasons
+      - canSaveCard
+      - canConfirm
+      - canCancel
+      - summary
+      - totals
+      - items
+      - pagination
+      - issues
+      additionalProperties: false
+      description: 요약/합계는 파트월 전체·페이지 무관. 저장 전 카드는 전체 인력합−초안카드로 미리보기, 별도 저장/확정 API 호출 없이 확인창 취소 시 무쓰기. 읽기 전용은 올해/미마감/상태·대상
+        근거를 반환하며 역할403 아님.
+    SettlementTrendCell:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        value:
+          $ref: '#/components/schemas/SettlementDecimal'
+        employeeType:
+          type:
+          - string
+          - 'null'
+        source:
+          type: string
+          enum:
+          - CNFM
+          - AUTO
+          - CALCULATED
+          - BEFORE_BASE
+          - NO_INPUT
+          - UNKNOWN
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - month
+      - value
+      - employeeType
+      - source
+      - issues
+      additionalProperties: false
+    SettlementTrendMetric:
+      type: object
+      properties:
+        metric:
+          type: string
+          enum:
+          - MM
+          - UNIT_PRICE
+          - COST
+          - PROFIT
+          - PROFIT_SHARE
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementTrendCell'
+        total:
+          $ref: '#/components/schemas/SettlementDecimal'
+        remark:
+          type:
+          - string
+          - 'null'
+      required:
+      - metric
+      - months
+      - total
+      - remark
+      additionalProperties: false
+      description: MM만2자리·금액 원정수 십진문자열. 정산MM>0 월만 개인합계. BASE이전/투입0월 null·합계제외. 기간합계 저장상한절단 없음.
+    SettlementTrendPerson:
+      type: object
+      properties:
+        developerId:
+          type: string
+        name:
+          type: string
+        managementNo:
+          type: string
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementTrendMetric'
+          minItems: 5
+          maxItems: 5
+      required:
+      - developerId
+      - name
+      - managementNo
+      - metrics
+      additionalProperties: false
+      description: 기간 정산MM>0 인력 합집합·사람단위 페이지, 사람당 각 metric 정확히1개씩5행.
+    SettlementTrendMonthTotal:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        personProfitShareAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        cardAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        partProfitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - month
+      - personProfitShareAmount
+      - cardAmount
+      - partProfitAmount
+      - issues
+      additionalProperties: false
+    SalesPartSettlementTrendResult:
+      type: object
+      properties:
+        partId:
+          type: string
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementMonth'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementTrendPerson'
+        pagination:
+          $ref: '#/components/schemas/SettlementPage'
+        monthlyTotals:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementTrendMonthTotal'
+        periodPartProfitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - partId
+      - month
+      - months
+      - items
+      - pagination
+      - monthlyTotals
+      - periodPartProfitAmount
+      - issues
+      additionalProperties: false
+      description: month에서 연도 판정·1월~기준월. 월별 사본/계산 독립. 전체 월합/기간합 페이지 불변, 카드 월1회 차감·문제월 NULL 전파.
+    SettlementCardInput:
+      type: string
+      description: trim 후 빈칸0. 일반 숫자 또는 정상 천단위 쉼표만 제거해0~999999999999999 원정수. 음수/소수/접미사/잘못된 쉼표/초과는400. 정규화 후 길이/BigDecimal
+        상한 재검사.
+      pattern: ^\s*(?:\d+|\d{1,3}(?:,\d{3})+)?\s*$
+    SaveSalesPartSettlementCardRequest:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        cardAmount:
+          $ref: '#/components/schemas/SettlementCardInput'
+        expectedRevision:
+          $ref: '#/components/schemas/SettlementRevision'
+      required:
+      - month
+      - cardAmount
+      - expectedRevision
+      additionalProperties: false
+      description: 필수3필드만. 처리자/상태/계산액/감사필드 주입400. path partId는 요청 대상이며 다른 사람/파트 범위를 조작하는 숨은 필드는400.
+    ConfirmSalesPartSettlementRequest:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        cardAmount:
+          $ref: '#/components/schemas/SettlementCardInput'
+        expectedRevision:
+          $ref: '#/components/schemas/SettlementRevision'
+      required:
+      - month
+      - cardAmount
+      - expectedRevision
+      additionalProperties: false
+      description: 필수3필드만. 처리자/상태/계산액/감사필드 주입400. path partId는 요청 대상이며 다른 사람/파트 범위를 조작하는 숨은 필드는400.
+    CancelSalesPartSettlementRequest:
+      type: object
+      properties:
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        reason:
+          type: string
+          minLength: 1
+          pattern: ^\s*(?:\S(?:[\s\S]{0,498}\S)?)\s*$
+          description: trim 후1~500자·자동절단 금지. 바깥 공백은 저장길이에 포함하지 않는다.
+        expectedRevision:
+          $ref: '#/components/schemas/SettlementRevision'
+      required:
+      - month
+      - reason
+      - expectedRevision
+      additionalProperties: false
+    SalesPartSettlementMutationResult:
+      type: object
+      properties:
+        changed:
+          type: boolean
+        partId:
+          type: string
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        status:
+          type: string
+          enum:
+          - WORK
+          - CNFM
+          - AUTO
+        cardAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        partProfitAmount:
+          $ref: '#/components/schemas/SettlementMoney'
+        confirmedBy:
+          type:
+          - string
+          - 'null'
+        confirmedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lastCancellationReason:
+          type:
+          - string
+          - 'null'
+        revision:
+          $ref: '#/components/schemas/SettlementRevision'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - changed
+      - partId
+      - month
+      - status
+      - cardAmount
+      - partProfitAmount
+      - confirmedBy
+      - confirmedAt
+      - lastCancellationReason
+      - revision
+      - issues
+      additionalProperties: false
+      description: 순수 결과 DTO·성공봉투 포함 안함. 동일 최신값 changed=false·이력/수정시각 유지. WORK 확정합/확정자/시각 null. 저장후 목록/상세/추이/요약 재조회,
+        자동재확정 금지.
+    RenegotiationIncreaseInput:
+      type: string
+      default: '5'
+      pattern: ^\s*(?:-?[0-9]+(?:\.[0-9]+)?)?\s*$
+      description: 초기5·빈칸0·수치0미만→0/50초과→50 서버/UI 보정 후 appliedIncreaseRate 반환. 범위내 소수2자리초과/문자/NaN은400·직전정상결과 유지. 범위보정
+        전 schema maximum/minimum을 두지 않는다.
+    RateRenegotiationRow:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+        developerId:
+          type: string
+        name:
+          type: string
+        managementNo:
+          type: string
+        employeeType:
+          type: string
+        projectId:
+          type: string
+        projectName:
+          type: string
+        renewalDate:
+          type: string
+          format: date
+        daysUntilRenewal:
+          type: integer
+          minimum: 0
+        planned:
+          type: boolean
+        contractMm:
+          $ref: '#/components/schemas/SettlementDecimal'
+        monthlyMm:
+          $ref: '#/components/schemas/SettlementDecimal'
+        unitPrice:
+          $ref: '#/components/schemas/SettlementMoney'
+        monthlyRevenue:
+          $ref: '#/components/schemas/SettlementMoney'
+        monthlyLaborCost:
+          $ref: '#/components/schemas/SettlementMoney'
+        marginRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        targetUnitPrice:
+          $ref: '#/components/schemas/SettlementMoney'
+        requiredIncreaseRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        annualGain:
+          $ref: '#/components/schemas/SettlementMoney'
+        targetAnnualGain:
+          $ref: '#/components/schemas/SettlementMoney'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - assignmentId
+      - developerId
+      - name
+      - managementNo
+      - employeeType
+      - projectId
+      - projectName
+      - renewalDate
+      - daysUntilRenewal
+      - planned
+      - contractMm
+      - monthlyMm
+      - unitPrice
+      - monthlyRevenue
+      - monthlyLaborCost
+      - marginRate
+      - targetUnitPrice
+      - requiredIncreaseRate
+      - annualGain
+      - targetAnnualGain
+      - issues
+      additionalProperties: false
+      description: ASGN_ID별 행. monthlyMm=m은 월율/목표단가 분모, contractMm=k는 표시MM/연12개월 가정. U=05 APLY_UPRC·R=05 SALES_AMT·C=동일
+        실제DEV/PROJ/ASGN의08 LABOR_ALLOC_AMT만. TK/경비/팀비/관리비 혼입 금지.
+    RateRenegotiationSummary:
+      type: object
+      properties:
+        personCount:
+          type: integer
+          minimum: 0
+        assignmentCount:
+          type: integer
+          minimum: 0
+        weightedMarginRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        annualGain:
+          $ref: '#/components/schemas/SettlementMoney'
+        targetAnnualGain:
+          $ref: '#/components/schemas/SettlementMoney'
+      required:
+      - personCount
+      - assignmentCount
+      - weightedMarginRate
+      - annualGain
+      - targetAnnualGain
+      additionalProperties: false
+      description: 전체 필터 DISTINCT DEV_ID·배정수·(ΣR−ΣC)/ΣR·배정별 DOWN 후 연합. 단순율평균 금지; 목표 미확인 시 목표합만 null. 하단은 annualGain만
+        표시.
+    RateRenegotiationsResult:
+      type: object
+      properties:
+        baseMonth:
+          $ref: '#/components/schemas/SettlementMonth'
+        calculatedAt:
+          type: string
+          format: date-time
+        appliedIncreaseRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        targetMarginRate:
+          $ref: '#/components/schemas/SettlementDecimal'
+        summary:
+          $ref: '#/components/schemas/RateRenegotiationSummary'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RateRenegotiationRow'
+        pagination:
+          $ref: '#/components/schemas/SettlementPage'
+        unevaluatedCount:
+          type: integer
+          minimum: 0
+        unevaluatedAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlementIssue'
+      required:
+      - baseMonth
+      - calculatedAt
+      - appliedIncreaseRate
+      - targetMarginRate
+      - summary
+      - items
+      - pagination
+      - unevaluatedCount
+      - unevaluatedAssignments
+      - issues
+      additionalProperties: false
+      description: 서버 Asia/Seoul M/D의 순수 조회/시뮬레이션. 원가·급여·단가·사본·가정 설정 저장0. 본문 T0은 유효·T100/기준미확인은 목표3항목만null이고 현재율/가정액
+        유지. T<0/T>100 추가정책은 OQ-B140-004 사용자 미확인으로 남긴다.
+    SalesPartSettlementExportFilters:
+      type: object
+      properties:
+        partId:
+          type: string
+          minLength: 1
+          maxLength: 20
+        month:
+          $ref: '#/components/schemas/SettlementMonth'
+        mode:
+          type: string
+          enum:
+          - MONTH
+          - TREND
+      required:
+      - partId
+      - month
+      - mode
+      additionalProperties: false
+    SalesPartSettlementExportRequest:
+      type: object
+      properties:
+        view:
+          type: string
+          enum:
+          - SALES_PART_SETTLEMENTS
+        filters:
+          $ref: '#/components/schemas/SalesPartSettlementExportFilters'
+        sort:
+          type: string
+          enum:
+          - name
+          - employeeType
+          - mm
+          - unitPrice
+          - payAmount
+          - costAmount
+          - profitAmount
+          - profitShareAmount
+          default: name
+        direction:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+        amountUnit:
+          type: string
+          enum:
+          - 원
+          - 천원
+          - 백만원
+          default: 천원
+      required:
+      - view
+      - filters
+      additionalProperties: false
+      description: 고정회계열 임의숨김/순서 없음·MONTH는상세정렬/TREND는이름ASC/DEV_ID ASC고정. 현재저장카드/사본/근거·전체결과 출력. page/size/선택/actor 금지.
+    RateRenegotiationsExportFilters:
+      type: object
+      properties:
+        renewalWindow:
+          type: string
+          enum:
+          - '92'
+          - '183'
+          - '366'
+          - ALL
+          default: '183'
+        marginBelow:
+          type: string
+          enum:
+          - '10'
+          - '15'
+          - '20'
+          - ALL
+          default: '15'
+        employeeType:
+          type: string
+          enum:
+          - FT
+          - CT
+          - FL
+          - OS
+        projectId:
+          type: string
+          minLength: 1
+          maxLength: 20
+        increaseRate:
+          $ref: '#/components/schemas/RenegotiationIncreaseInput'
+      required: []
+      additionalProperties: false
+      description: GET과 동일 기본183/15/5·직원/프로젝트전체. M서버결정·month/year/page/size 금지.
+    RateRenegotiationsExportRequest:
+      type: object
+      properties:
+        view:
+          type: string
+          enum:
+          - RATE_RENEGOTIATIONS
+        filters:
+          $ref: '#/components/schemas/RateRenegotiationsExportFilters'
+        sort:
+          type: string
+          enum:
+          - name
+          - projectName
+          - renewalDate
+          - contractMm
+          - unitPrice
+          - monthlyLaborCost
+          - marginRate
+          - targetUnitPrice
+          - requiredIncreaseRate
+          - annualGain
+          default: marginRate
+        direction:
+          type: string
+          enum:
+          - ASC
+          - DESC
+          default: ASC
+        columns:
+          type: array
+          items:
+            type: string
+            enum:
+            - name
+            - employeeType
+            - projectName
+            - renewalDate
+            - contractMm
+            - unitPrice
+            - monthlyLaborCost
+            - marginRate
+            - targetUnitPrice
+            - requiredIncreaseRate
+            - annualGain
+          minItems: 2
+          uniqueItems: true
+          allOf:
+          - contains:
+              const: name
+          - contains:
+              const: projectName
+        amountUnit:
+          type: string
+          enum:
+          - 원
+          - 천원
+          - 백만원
+          default: 천원
+      required:
+      - view
+      - filters
+      - columns
+      additionalProperties: false
+    RateRenegotiationsColumnView:
+      type: object
+      properties:
+        order:
+          type: array
+          items:
+            type: string
+            enum:
+            - name
+            - employeeType
+            - projectName
+            - renewalDate
+            - contractMm
+            - unitPrice
+            - monthlyLaborCost
+            - marginRate
+            - targetUnitPrice
+            - requiredIncreaseRate
+            - annualGain
+          minItems: 11
+          maxItems: 11
+          uniqueItems: true
+        hidden:
+          type: array
+          items:
+            type: string
+            enum:
+            - employeeType
+            - renewalDate
+            - contractMm
+            - unitPrice
+            - monthlyLaborCost
+            - marginRate
+            - targetUnitPrice
+            - requiredIncreaseRate
+            - annualGain
+          uniqueItems: true
+      required:
+      - order
+      - hidden
+      additionalProperties: false
     MonthlyCostIssue:
       type: object
       description: 사람/월·누락 원천·관련 화면과 원금액의 정상 응답 내 진단. 비즈니스 실패 HTTP 코드로 바꾸지 않는다.
@@ -38921,6 +41795,13 @@ components:
             - title
             - projectName
           maxSerializedLength: 2000
+        UI-32:
+          allowedTables:
+          - rateRenegotiations
+          requiredColumns:
+          - name
+          - projectName
+          maxSerializedLength: 2000
       x-related-requirements:
       - REQ-191
       - REQ-192
@@ -38930,6 +41811,9 @@ components:
       - REQ-717
       - REQ-878
       - REQ-947
+      - REQ-1723
+      - REQ-1724
+      - REQ-1725
       x-scope-description: UI-15의 COLS는 {clients:{order,hidden}}, UI-23은 {users:{order,hidden}}만 허용한다. 원래 UI-27 표 정의는
         그대로 보존. type/key별 검증은 기존 putPreference 서비스가 수행하며 새 설정 endpoint를 만들지 않는다. UI-02={developers:{order,hidden}},
         UI-33={candidates:{order,hidden}} 추가. 기존UI-27/15/23 유지.
@@ -38967,6 +41851,8 @@ components:
           $ref: '#/components/schemas/ProjectStatusBoardColumnView'
         issues:
           $ref: '#/components/schemas/ProjectIssuesColumnView'
+        rateRenegotiations:
+          $ref: '#/components/schemas/RateRenegotiationsColumnView'
       additionalProperties: false
       required: []
       description: UI-27의 표별 설정. 체크·작업버튼 제외. 다른 화면은 표 정의가 생긴 뒤만 허용한다. UI-12 assignments 표 정의를 추가하며 다른 화면 표 혼합은400. UI-13은
@@ -39077,6 +41963,10 @@ components:
         PERIOD/{screenId}: 화면등록유형YEAR/YEAR_MONTH/YEAR_CUM·연도/월일치·getPeriodContext허용범위·NONE400
         COLS/UI-12: assignments만·11열전체순열/숨김부분집합·projectName/developerName 숨김금지·미등록/중복400
         COLS/UI-03: individualProfitability만·22열 전체순열/선택숨김·name/revenue/totalCost/profit 필수·2000자·기존 revision
+        COLS/UI-32: rateRenegotiations만·명시11열전체순열/선택숨김·name/projectName필수·중복/미등록/누락/필수숨김400
+        PERIOD/UI-19: YEAR_MONTH·CASH_BASE_YM~서버M
+        PERIOD/UI-32: NONE·기간저장400
+        COLS/UI-19: 고정회계구조·열설정추가금지400
     PreferenceSaveResult:
       type: object
       properties:
@@ -41330,6 +44220,8 @@ components:
       - $ref: '#/components/schemas/BillsMasterExportRequest'
       - $ref: '#/components/schemas/BillingChecksMasterExportRequest'
       - $ref: '#/components/schemas/ReceivablesMasterExportRequest'
+      - $ref: '#/components/schemas/SalesPartSettlementExportRequest'
+      - $ref: '#/components/schemas/RateRenegotiationsExportRequest'
       description: 기존4개view 요청은 Legacy 정의를 정확히 보존. PROJECTS/PROJECT_DISTRIBUTION만분기추가·교차필터미허용. ASSIGNMENTS/PAYROLL은
         독립본문 분기만 추가·기존분기 불변. UI-13 BILLS/BILLING_CHECKS/RECEIVABLES 3독립분기만 추가·실제view enum 정의·기존8view그대로.
     ClientColumnView:
@@ -55903,6 +58795,137 @@ x-uncovered-requirements:
   status: non-functional
   evidence: 'SPEC-REQUEST.md:305 · 관련 빌드·계산/업로드/회귀·실제DB/미리보기 실행을 확인하고 미실행은 완료와 구분한다. 검증: 문서diff 검증을 제품 빌드/API/DB/UI합격으로
     보고하지 않는다. 정본 data-model/architecture/plan 및 실제 통합시험에서 확인할 제약이며 별도 HTTP 명령으로 노출하지 않는다. 제품 구현 완료를 의미하지 않는다.'
+- canonical_id: REQ-1598
+  status: non-functional
+  evidence: SPEC-REQUEST.md:15 · UI-19와 UI-32의 안내 화면을 기존 메뉴에서 실제 기능으로 대체한다. · 시안/기술/정밀도/문서/실행증거 제약. 설계 및 구현시험에서
+    검증하며 신규 endpoint를 추가하지 않는다.
+- canonical_id: REQ-1599
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:15 · 후속 월 마감이 재사용할 서비스를 제공하되 월 마감 실행/해제 화면과 배치는 만들지 않는다. · 명시 제외경계. 새 로그인/역할403·타업무쓰기·월마감실행/배치
+    API를 추가하지 않는다.
+- canonical_id: REQ-1600
+  status: non-functional
+  evidence: SPEC-REQUEST.md:17 · UI-19/UI-32 시안의 구성·상세·모달·상태·시각 규칙을 확인하되 가상값과 브라우저 배열을 실제 원천으로 쓰지 않는다. · 시안/기술/정밀도/문서/실행증거
+    제약. 설계 및 구현시험에서 검증하며 신규 endpoint를 추가하지 않는다.
+- canonical_id: REQ-1601
+  status: data-contract
+  evidence: SPEC-REQUEST.md:19 · 기존 마이그레이션·공통코드·기준값을 사용하고 전체 DDL/DML 재실행·초기값 재적재·예제 자동 삽입을 하지 않는다. · 정본 물리열·NULL·원천/허용쓰기
+    제약. data-model 패치와 persistence 시험의 대상이며 테이블 관리 API를 만들지 않는다.
+- canonical_id: REQ-1603
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:19 · 회사 손익·자금수지·청구·급여 원천을 바꾸지 않고 협상 상태·자동 인상·추천·엑셀 업로드를 추가하지 않는다. · 명시 제외경계. 새 로그인/역할403·타업무쓰기·월마감실행/배치
+    API를 추가하지 않는다.
+- canonical_id: REQ-1604
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:23 · dd0ff43fb4fd8ad8d752a37bb0faedc477e7bd2d는 확인 당시 main이며 구현 시작 시 병합된 최신 main 경로·DTO를
+    확인하고 선행 기능을 재생성하지 않는다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1605
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:27 · SalesPartnerProfitScreen.tsx·RateRenegotiationsScreen.tsx의 안내만 바꾸고 UI-19=YEAR_MONTH·UI-32=NONE을
+    유지한다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1606
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:28 · DataTable·FilterBar·Dialog·DetailDrawer·Feedback·format·useCommitRefresh를 재사용하고
+    추이는 행 정의를 주입하는 재무표로 구성한다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1607
+  status: ui-supporting
+  evidence: SPEC-REQUEST.md:29 · 행에서 실제 DEV_ID로 기존 DeveloperDrawer를 열며 별도 인력 편집기를 복제하지 않는다. · 기존 개발자/프로젝트/파트/배정
+    상세로 이동하는 프런트 연결. 아래 api-bindings의 기존 operationId 재사용이며 새 HTTP 명령을 만들지 않는다.
+- canonical_id: REQ-1608
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:30 · AssignmentMonthlyService의 Source/Month·월 MM·적용단가·보호월 해석을 재사용하고 일할/이력 해석을 복제하지 않는다.
+    · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1609
+  status: ui-supporting
+  evidence: SPEC-REQUEST.md:31 · AssignmentService·AssignmentActionsService·PayrollService를 연결하고 결과 수정은 기존 투입 변경으로
+    이동한다. · 기존 개발자/프로젝트/파트/배정 상세로 이동하는 프런트 연결. 아래 api-bindings의 기존 operationId 재사용이며 새 HTTP 명령을 만들지 않는다.
+- canonical_id: REQ-1610
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:32 · SalesPartService·PartStandardService·DeveloperService 원천을 쓰며 기준 변경과 확정을 동시성 보호하고
+    소속 변경 때 확정 사본을 보존한다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1611
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:33 · WriteCoordinator·RevisionService·ChangeHistoryWriter·PersistenceBoundary에 필요한 정산
+    범위만 추가하고 기존 CNFM/AUTO 기준 보호를 유지한다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지
+    않는다.
+- canonical_id: REQ-1613
+  status: non-functional
+  evidence: SPEC-REQUEST.md:36 · 기존 Java/Spring MVC/MyBatis/Flyway와 backend/src/main/java/com/sicost/ 구조를 유지하고 기능명
+    기반 이름을 사용한다. · 시안/기술/정밀도/문서/실행증거 제약. 설계 및 구현시험에서 검증하며 신규 endpoint를 추가하지 않는다.
+- canonical_id: REQ-1614
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:40 · 05 실제 인력·월 MM·적용단가·매출·급여 snapshot, 08 필터 없는 전체 원가·TK·완전성·마감 사본과 02 기준 이력을 사용한다.
+    · 실제 서비스·공통부품·잠금·선행 기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1628
+  status: data-contract
+  evidence: SPEC-REQUEST.md:68 · 원문 §3 읽기 테이블·PK·컬럼을 재사용하며 원천을 별도 정산 저장소로 복제하지 않는다. · 정본 물리열·NULL·원천/허용쓰기 제약. data-model
+    패치와 persistence 시험의 대상이며 테이블 관리 API를 만들지 않는다.
+- canonical_id: REQ-1629
+  status: data-contract
+  evidence: SPEC-REQUEST.md:88 · REAL_PAY_AMT·ALWNC_AMT·회사보험·RETIRE_RSV_AMT를 정산급여/퇴직금으로 쓰지 않고 MON_PAY.FIX_YN·정산
+    율/파트장 열을 가정하지 않으며 SQL 식별자는 따옴표 없이 쓴다. · 정본 물리열·NULL·원천/허용쓰기 제약. data-model 패치와 persistence 시험의 대상이며 테이블 관리 API를
+    만들지 않는다.
+- canonical_id: REQ-1633
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:98 · 기준 확인/수정은 기존 UI-15 영업 파트 상세로 연결하고 UI-19에서 기준을 수정하지 않는다. · 기존 개발자/프로젝트/파트/배정 상세로
+    이동하는 프런트 연결. 아래 api-bindings의 기존 operationId 재사용이며 새 HTTP 명령을 만들지 않는다.
+- canonical_id: REQ-1660
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:154 · 카드 초안에는 저장 전·예상합계를 표시하고 화면/월/파트/작업탭 이탈 시 저장·버리기·계속 편집을 확인한다. · 브라우저 초안·모달·탭·갱신/복구
+    상태. 해당 화면 시험으로 검증하며 별도 저장/이탈 API를 만들지 않는다.
+- canonical_id: REQ-1661
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:156 · 이번 달/기간 추이 탭·다운로드·상태별 확정/취소를 제공하며 올해 미마감 대상WORK에만 카드/확정, 올해 미마감CNFM/AUTO에만 취소를
+    표시한다. · 브라우저 초안·모달·탭·갱신/복구 상태. 해당 화면 시험으로 검증하며 별도 저장/이탈 API를 만들지 않는다.
+- canonical_id: REQ-1663
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:158 · 행/이름은 실제 개발자 상세·프로젝트 전체목록·비용/이익 도움말과 계산방법을 제공한다. · 기존 개발자/프로젝트/파트/배정 상세로 이동하는
+    프런트 연결. 아래 api-bindings의 기존 operationId 재사용이며 새 HTTP 명령을 만들지 않는다.
+- canonical_id: REQ-1667
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:170 · 확인창은 전체인원/적자/결측·경고/인력이익금/초안카드/최종합과 함께저장 문구를 보여주고 취소는 무변경·초안유지다. · 브라우저 초안·모달·탭·갱신/복구
+    상태. 해당 화면 시험으로 검증하며 별도 저장/이탈 API를 만들지 않는다.
+- canonical_id: REQ-1675
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:182 · 파트월/금액·현재원천 재계산 안내·필수사유 모달을 제공하고 CLOSE는 버튼숨김 및 서버409 CLOSED_MONTH다. · 브라우저 초안·모달·탭·갱신/복구
+    상태. 해당 화면 시험으로 검증하며 별도 저장/이탈 API를 만들지 않는다.
+- canonical_id: REQ-1680
+  status: ui-supporting
+  evidence: SPEC-REQUEST.md:190 · confirmForClose는 호출자 트랜잭션에서 WORK/무부모만 AUTO·같은시각/주체·기존카드 또는0으로 확정하며 기존CNFM/AUTO를
+    덮지 않는다. · confirmForClose는 후속 월마감 호출자 트랜잭션 내부 재사용 서비스이며 이번 UI/API에서 자동실행/공개 경로를 만들지 않는다. AUTO/롤백/기존CNFM보존은 내부
+    통합시험 대상이다.
+- canonical_id: REQ-1681
+  status: out-of-scope
+  evidence: SPEC-REQUEST.md:190 · UI/API가 confirmForClose를 자동실행하거나 이번 변경에서 마감 기록을 생성하지 않는다. · 명시 제외경계. 새 로그인/역할403·타업무쓰기·월마감실행/배치
+    API를 추가하지 않는다.
+- canonical_id: REQ-1688
+  status: ui-primary
+  evidence: SPEC-REQUEST.md:206 · 행/이름은 개발자 상세·프로젝트는 UI-01 상세·협상반영은 UI-12 해당배정 변경기록→단가변경을 안내한다. · 기존 개발자/프로젝트/파트/배정
+    상세로 이동하는 프런트 연결. 아래 api-bindings의 기존 operationId 재사용이며 새 HTTP 명령을 만들지 않는다.
+- canonical_id: REQ-1703
+  status: ui-supporting
+  evidence: SPEC-REQUEST.md:234 · 통신실패는현재조회 후수동재시도·자동재확정금지, 성공후2초내 목록/상세/추이/요약갱신·재조회만실패하면 저장됨안내와재조회만 제공한다. · 브라우저
+    초안·모달·탭·갱신/복구 상태. 해당 화면 시험으로 검증하며 별도 저장/이탈 API를 만들지 않는다.
+- canonical_id: REQ-1718
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:258 · PART_SCOPE/민감표시를 나중에 연결하도록 조회조건/표열을 분리하되 현재는 숨기지 않는다. · 실제 서비스·공통부품·잠금·선행 기능 발견/인계
+    제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1726
+  status: architecture-runtime
+  evidence: SPEC-REQUEST.md:266 · 요약/금액/5행표/카드/확정·사유모달/근거/배지를 실제공유·재협상은기존표/필터/상세 재사용·서버계산 순수함수/원천서비스 분리다. · 실제 서비스·공통부품·잠금·선행
+    기능 발견/인계 제약. 구현경로/통합시험에서 검증하며 이 원장행을 별도 HTTP API로 노출하지 않는다.
+- canonical_id: REQ-1727
+  status: non-functional
+  evidence: SPEC-REQUEST.md:266 · 경로/Props·입출력·잠금키·후속자동확정 계약을 저장소 문서에 남긴다. · 시안/기술/정밀도/문서/실행증거 제약. 설계 및 구현시험에서 검증하며
+    신규 endpoint를 추가하지 않는다.
+- canonical_id: REQ-1728
+  status: ui-supporting
+  evidence: SPEC-REQUEST.md:268 · 768px미만은정산단건카드/내부스크롤·요약세로·모달·추이고정이름열/가로스크롤이며 다운로드PC전용·직접진입도안내한다. · 반응형·단위/포매터·PC다운로드
+    안내 표시. 화면 시험 대상이며 별도 HTTP 계약은 없다.
+- canonical_id: REQ-1729
+  status: non-functional
+  evidence: SPEC-REQUEST.md:268 · 빌드/계산/확정/취소/동시성/회귀와 실제DB·미리보기를 정상입력부터 검증하고 미실행은 완료와 구분해 보고한다. · 시안/기술/정밀도/문서/실행증거
+    제약. 설계 및 구현시험에서 검증하며 신규 endpoint를 추가하지 않는다.
 x-requirement-accounting:
   registry_total: 156
   mapped_unique: 106
@@ -59087,3 +62110,193 @@ x-basic139-requirement-accounting:
   - REQ-1596
   - REQ-1597
   historical_evidence: 기존 x-uncovered-requirements/REQ/과거배치보존·이배치가 과거제외범위의 의미를 재정의하지 않는다.
+x-basic140-contract-status:
+  status: clarification-required
+  build_ready: false
+  implementation_tests: 미실행·문서구조/요구연결 검사만 별도 수행
+  scope: 신규7연산 및 기존 다운로드·설정GET/PUT·재무이력의 국소확장만. 기존196연산의 다른바이트/공통봉투/보안 정의 보존.
+  source_id: null
+  blocking_open_questions:
+  - OQ-B140-001
+  - OQ-B140-002
+  - OQ-B140-003
+  - OQ-B140-004
+  - OQ-B140-005
+  naming_proposals:
+  - SALES_PART_SETTLEMENTS/RATE_RENEGOTIATIONS 다운로드 view명과 MONTH/TREND는 요청의 역할을 바인딩한 내부명 제안이며 기존종류와 충돌 없음.
+x-basic140-open-questions:
+- id: OQ-B140-001
+  status: 추정 — 사용자 미확인·승인 전 미정
+  question: 선행 기능이 없거나 불완전한 경우 범위는?
+  unapproved_proposal: SPEC-REQUEST.md:300~301. 대체 계산하지 않고 선행 의존성으로 보고 구현/검증 보류.
+  resolution: null
+- id: OQ-B140-002
+  status: 추정 — 사용자 미확인·승인 전 미정
+  question: 확정 당시 근거/예정급여/경고 보존은?
+  unapproved_proposal: SPEC-REQUEST.md:302~303. 사본 보존범위 확장 제안·물리 확장 승인 전 미정; 기존 결측은 미확인.
+  resolution: null
+- id: OQ-B140-003
+  status: 추정 — 사용자 미확인·승인 전 미정
+  question: 기준 부재/겹침 파트의 대상 판정은?
+  unapproved_proposal: SPEC-REQUEST.md:304~305. 월말 사용중 일반파트를 문제대상으로 표시하고 확정차단 제안; 원문 유효기준 대상규칙과 확정전 미정.
+  resolution: null
+- id: OQ-B140-004
+  status: 추정 — 사용자 미확인·승인 전 미정
+  question: 목표율 범위밖 정책은?
+  unapproved_proposal: SPEC-REQUEST.md:306~307. 0≤T<100 목표계산 제안·그밖 목표만미확인; 음수정책 승인 전 미정.
+  resolution: null
+- id: OQ-B140-005
+  status: 추정 — 사용자 미확인·승인 전 미정
+  question: 월 변경 뒤 비대상 확정이력 선택 유지?
+  unapproved_proposal: SPEC-REQUEST.md:308~309. 읽기전용이력 선택유지 제안·대상/이력 모두없을때 첫탭.
+  resolution: null
+x-basic140-requirement-accounting:
+  registry_total: 132
+  mapped_requirement_ids:
+  - REQ-1602
+  - REQ-1612
+  - REQ-1615
+  - REQ-1616
+  - REQ-1617
+  - REQ-1618
+  - REQ-1619
+  - REQ-1620
+  - REQ-1621
+  - REQ-1622
+  - REQ-1623
+  - REQ-1624
+  - REQ-1625
+  - REQ-1626
+  - REQ-1627
+  - REQ-1630
+  - REQ-1631
+  - REQ-1632
+  - REQ-1634
+  - REQ-1635
+  - REQ-1636
+  - REQ-1637
+  - REQ-1638
+  - REQ-1639
+  - REQ-1640
+  - REQ-1641
+  - REQ-1642
+  - REQ-1643
+  - REQ-1644
+  - REQ-1645
+  - REQ-1646
+  - REQ-1647
+  - REQ-1648
+  - REQ-1649
+  - REQ-1650
+  - REQ-1651
+  - REQ-1652
+  - REQ-1653
+  - REQ-1654
+  - REQ-1655
+  - REQ-1656
+  - REQ-1657
+  - REQ-1658
+  - REQ-1659
+  - REQ-1662
+  - REQ-1664
+  - REQ-1665
+  - REQ-1666
+  - REQ-1668
+  - REQ-1669
+  - REQ-1670
+  - REQ-1671
+  - REQ-1672
+  - REQ-1673
+  - REQ-1674
+  - REQ-1676
+  - REQ-1677
+  - REQ-1678
+  - REQ-1679
+  - REQ-1682
+  - REQ-1683
+  - REQ-1684
+  - REQ-1685
+  - REQ-1686
+  - REQ-1687
+  - REQ-1689
+  - REQ-1690
+  - REQ-1691
+  - REQ-1692
+  - REQ-1693
+  - REQ-1694
+  - REQ-1695
+  - REQ-1696
+  - REQ-1697
+  - REQ-1698
+  - REQ-1699
+  - REQ-1700
+  - REQ-1701
+  - REQ-1702
+  - REQ-1704
+  - REQ-1705
+  - REQ-1706
+  - REQ-1707
+  - REQ-1708
+  - REQ-1709
+  - REQ-1710
+  - REQ-1711
+  - REQ-1712
+  - REQ-1713
+  - REQ-1714
+  - REQ-1715
+  - REQ-1716
+  - REQ-1717
+  - REQ-1719
+  - REQ-1720
+  - REQ-1721
+  - REQ-1722
+  - REQ-1723
+  - REQ-1724
+  - REQ-1725
+  uncovered_requirement_ids:
+  - REQ-1598
+  - REQ-1599
+  - REQ-1600
+  - REQ-1601
+  - REQ-1603
+  - REQ-1604
+  - REQ-1605
+  - REQ-1606
+  - REQ-1607
+  - REQ-1608
+  - REQ-1609
+  - REQ-1610
+  - REQ-1611
+  - REQ-1613
+  - REQ-1614
+  - REQ-1628
+  - REQ-1629
+  - REQ-1633
+  - REQ-1660
+  - REQ-1661
+  - REQ-1663
+  - REQ-1667
+  - REQ-1675
+  - REQ-1680
+  - REQ-1681
+  - REQ-1688
+  - REQ-1703
+  - REQ-1718
+  - REQ-1726
+  - REQ-1727
+  - REQ-1728
+  - REQ-1729
+  mapped_count: 100
+  uncovered_count: 32
+  operation_ids:
+  - getSalesPartSettlements
+  - getSalesPartSettlement
+  - getSalesPartSettlementTrend
+  - saveSalesPartSettlementCard
+  - createSalesPartSettlementConfirmation
+  - createSalesPartSettlementCancellation
+  - getRateRenegotiations
+  - createMasterDataExport
+  - getPreferences
+  - putPreference
+  - getFinancialHistory

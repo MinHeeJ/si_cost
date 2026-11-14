@@ -51,7 +51,7 @@ public class TurnkeyRevenueCalculation {
             } else {
                 for (var row : paid) {
                     String revenue = null;
-                    if (project.budget() == null || project.budget().signum() == 0) {
+                    if (project.budget() == null || project.budget().signum() <= 0) {
                         issues.add(issue(original, "턴키 예산 미확인: 프로젝트의 저장 예산을 확인해 주세요.", "TB_PJ_PROJ", project.budget()));
                     } else if (row.laborAllocated() != null && project.contractAmount() != null) {
                         revenue = checked(MonthlyCostCalculation.allocate(new BigDecimal(row.laborAllocated()),

@@ -1,0 +1,197 @@
+.settlement-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.settlement-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--divider);
+  overflow-x: auto;
+}
+.settlement-tabs button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 10px;
+  white-space: nowrap;
+}
+.settlement-tabs button[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  font-weight: 600;
+}
+.settlement-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.settlement-summary article,
+.settlement-card,
+.settlement-guide {
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 0;
+}
+.settlement-summary h2 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-sub);
+  margin: 0;
+}
+.settlement-summary strong {
+  display: block;
+  font-size: 24px;
+  line-height: 32px;
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.settlement-summary p,
+.settlement-card p {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.settlement-summary button {
+  height: auto;
+  font-size: 12px;
+  padding: 2px 6px;
+  margin-top: 8px;
+}
+.settlement-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+}
+.settlement-card p {
+  flex-basis: 100%;
+}
+.settlement-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.settlement-banner.info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.settlement-banner.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.settlement-banner.lock {
+  color: var(--lock);
+  background: var(--lock-bg);
+}
+.settlement-negative {
+  color: var(--bad);
+}
+.settlement-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.settlement-toolbar h2 {
+  color: var(--primary);
+  font-size: 14px;
+  border-bottom: 2px solid var(--primary);
+  padding: 10px;
+  margin: 0;
+}
+.settlement-toolbar label {
+  margin-left: auto;
+}
+.settlement-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 4px;
+  color: var(--text);
+}
+.settlement-screen .sicost-table-viewport {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.settlement-screen .sicost-table {
+  white-space: nowrap;
+  font-size: 13px;
+}
+.settlement-screen .sicost-table th,
+.settlement-screen .sicost-table td {
+  padding: 0 12px;
+  min-height: 40px;
+}
+.settlement-person {
+  display: block;
+  border: 0;
+  background: transparent;
+  height: auto;
+  padding: 2px 0;
+  text-align: left;
+  color: var(--text);
+}
+.settlement-person small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.settlement-remark {
+  max-width: 240px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.settlement-remark p {
+  margin: 4px 0;
+}
+.settlement-remark summary,
+.settlement-guide summary {
+  cursor: pointer;
+}
+.settlement-empty {
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-sub);
+}
+.settlement-trend-table thead th:first-child,
+.settlement-trend-table tbody th[rowspan] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.settlement-trend-table tbody th[rowspan] small {
+  display: block;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+@media (max-width: 1000px) {
+  .settlement-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .settlement-summary {
+    grid-template-columns: 1fr;
+  }
+  .settlement-summary strong {
+    font-size: 20px;
+  }
+}
+
+.settlement-actions { justify-content: flex-end; margin-top: 16px; }
+@media (max-width: 767px) { .settlement-download { display: none; } }
+[data-testid="settlement-command-panel"] > .settlement-toolbar { margin-top: 16px; }
+.settlement-toolbar[hidden] { display: none; }

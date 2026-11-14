@@ -37,6 +37,21 @@ export {
 export const getHealth = () => request<void>("/api/health");
 
 export {
+  getSalesPartSettlements,
+  getSalesPartSettlement,
+} from "../pages/salespartsettlements/salesPartSettlementsApi";
+export {
+  saveSalesPartSettlementCard,
+  createSalesPartSettlementConfirmation,
+  createSalesPartSettlementCancellation,
+  getSalesPartSettlementTrend,
+} from "../pages/salespartsettlementsops/settlementCommandsApi";
+export {
+  getRateRenegotiations,
+  downloadRenegotiations,
+} from "../pages/apiops/rateRenegotiationsApi";
+
+export {
   getProjectCosts,
   getProjectStatusBoard,
 } from "../pages/apiops/projectAnalysisApi";

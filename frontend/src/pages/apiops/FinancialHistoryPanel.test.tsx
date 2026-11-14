@@ -191,3 +191,12 @@ it("new period and post-commit refresh cancel stale reads and retain the open re
   rerender(<FinancialHistoryPanel month="2026-06" refreshKey={3} />);
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
 });
+
+it("settlement history sends exact part/month and offers only settlement scope", async () => {
+  fetcher.mockImplementation(async () => response(page([row])));
+  render(<FinancialHistoryPanel month="2026-11" initialScope="PART_SETTLEMENT" partId="PART-11" />);
+  await userEvent.click(screen.getByRole("button", {name: "변경 이력"}));
+  await screen.findByText("삭제 전 항목");
+  expect(String(fetcher.mock.lastCall?.[0])).toBe("/api/financial-history?month=2026-11&scope=PART_SETTLEMENT&page=1&size=50&partId=PART-11");
+  expect(screen.queryByRole("option", {name: "전역 카드"})).not.toBeInTheDocument();
+});

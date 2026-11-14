@@ -39,6 +39,7 @@ export function AssignmentDrawer({
   year,
   readonly,
   contractType,
+  initialTab = "info",
   onClose,
   onChange,
 }: {
@@ -46,13 +47,14 @@ export function AssignmentDrawer({
   year: number;
   readonly: boolean;
   contractType?: string;
+  initialTab?: "info" | "history";
   onClose(): void;
   onChange(row: api.Assignment): void;
 }) {
   const [row, setRow] = useState<api.Assignment>(),
     [months, setMonths] = useState<api.Page<api.Month>>(),
     [history, setHistory] = useState<api.Page<api.History>>(),
-    [tab, setTab] = useState("info"),
+    [tab, setTab] = useState(initialTab),
     [historyType, setHistoryType] = useState(""),
     [page, setPage] = useState(1),
     [error, setError] = useState<unknown>(),

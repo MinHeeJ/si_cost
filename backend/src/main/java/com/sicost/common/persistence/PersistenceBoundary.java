@@ -24,11 +24,12 @@ public class PersistenceBoundary implements Interceptor {
             "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
-            "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL");
+            "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL",
+            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL");
     private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
             "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT",
             "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON",
-            "TB_FI_ITEM", "TB_CO_PREV_ADJ", "TB_FI_LOAN", "TB_FI_XFER");
+            "TB_FI_ITEM", "TB_CO_PREV_ADJ", "TB_FI_LOAN", "TB_FI_XFER", "TB_CO_PART_SETL_DTL");
     private static final Set<String> APPEND_ONLY = Set.of("TB_SY_CHG_HIST", "TB_SY_ACCS_LOG", "TB_PJ_PROJ_CHG", "TB_PJ_ASGN_HIST");
     private static final Pattern TARGET = Pattern.compile("(?is)^\\s*(INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+(TB_[A-Z0-9_]+)\\b");
     private static final String ASSIGNMENT_VALUES = "INPUT_END_DT|CTRT_MM|BILL_UPRC|INPUT_TYPE_CD|EXT_PSBL_CD|EXT_CNT|EARLY_WTHDR_YN|ASGN_STAT_CD|MOD_USER_ID|MOD_DTTM";
@@ -56,6 +57,9 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         String tableName = match.group(2).toUpperCase(Locale.ROOT);
         String operation = match.group(1).toUpperCase(Locale.ROOT);
+        if (Set.of("TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL").contains(tableName)) {
+            requireSettlementWrite(tableName, operation, remainder);
+        }
         if (tableName.equals("TB_CO_MON_PL")) {
             String normalized = remainder.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
             String amounts = "SALES_AMT|SALES_COST_AMT|SGA_TOT_AMT|OPRT_PRFT_AMT|ALLOC_COST_AMT|IDLE_COST_AMT|DRCT_EXPS_AMT|GROSS_PRFT_AMT|SGA_INPUT_AMT|INDRCT_LABOR_AMT|RND_AMT|PREV_ADJ_AMT|NOPR_INCM_AMT|NOPR_EXPS_AMT|CORP_TAX_AMT|NET_PRFT_AMT";
@@ -149,6 +153,34 @@ public class PersistenceBoundary implements Interceptor {
         if (remainder.contains(";") || remainder.matches("(?is).*\\b(INSERT|UPDATE|DELETE|TRUNCATE|DROP|ALTER|CREATE)\\b.*")) {
             throw new IllegalStateException("단일 업무 쓰기만 허용합니다.");
         }
+    }
+    private static void requireSettlementWrite(String table, String operation, String remainder) {
+        boolean detail = table.equals("TB_CO_PART_SETL_DTL");
+        String keys = "PART_ID|SETL_YM" + (detail ? "|DEV_ID" : "");
+        String fields = detail ? "EMP_TYPE_CD|PROJ_NM_LIST|MM|UPRC_AMT|PAY_AMT|SALES_EXPS_AMT|RETIRE_AMT|COST_AMT|DIFF_AMT|PRFT_AMT|RMRK"
+            : "CORP_CARD_AMT|PART_PRFT_AMT|SETL_STAT_CD|CNFM_USER_ID|CNFM_DTTM|CNCL_RSN";
+        if (operation.startsWith("INSERT")) {
+            requireInsert(remainder, keys + "|" + fields + "|REG_USER_ID|REG_DTTM|MOD_USER_ID|MOD_DTTM");
+            var insert = Pattern.compile("(?is)^\\s*\\(([^)]+)\\)\\s+VALUES\\s*\\(([^)]+)\\)\\s*$").matcher(remainder);
+            if (!insert.matches()) throw new IllegalStateException("정산은 명시된 새 행만 등록할 수 있습니다.");
+            var names = Arrays.stream(insert.group(1).toUpperCase(Locale.ROOT).split(",")).map(String::strip).toList();
+            var values = insert.group(2).split(",", -1);
+            if (!names.containsAll(Arrays.asList(keys.split("\\|"))) || !names.contains("REG_USER_ID")
+                    || !names.contains("CORP_CARD_AMT") && !detail
+                    || !names.contains("SETL_STAT_CD") && !detail || names.size() != values.length
+                    || Arrays.stream(values).anyMatch(v -> !v.strip().matches("(?i)\\?|NULL|CURRENT_TIMESTAMP|'WORK'|'CNFM'|'AUTO'"))) {
+                throw new IllegalStateException("정산 식별자·상태·명시 카드액·등록자를 보존해야 합니다.");
+            }
+        } else if (operation.startsWith("DELETE") && detail) {
+            if (!remainder.matches("(?is)\\s+WHERE\\s+PART_ID\\s*=\\s*\\?\\s+AND\\s+SETL_YM\\s*=\\s*\\?\\s*")) {
+                throw new IllegalStateException("같은 파트월의 상세 전체집합만 교체할 수 있습니다.");
+            }
+        } else if (operation.equals("UPDATE") && !detail) {
+            if (!remainder.matches("(?is)\\s+SET\\s+" + assignments(fields + "|MOD_USER_ID|MOD_DTTM")
+                    + "\\s+WHERE\\s+PART_ID\\s*=\\s*\\?\\s+AND\\s+SETL_YM\\s*=\\s*\\?\\s*")) {
+                throw new IllegalStateException("정산 부모의 전체 키와 최초 등록값은 보존해야 합니다.");
+            }
+        } else throw new IllegalStateException("정산 부모 삭제와 상세 수정은 허용하지 않습니다.");
     }
     private static void requireProgressWrite(String table, String operation, String remainder) {
         String values = switch (table) {

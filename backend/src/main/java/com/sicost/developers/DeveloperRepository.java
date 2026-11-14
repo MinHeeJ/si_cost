@@ -29,6 +29,7 @@ public class DeveloperRepository {
     public List<com.sicost.profitability.MonthlyCostDtos.Price> historicalPrices(com.sicost.profitability.MonthlyCostDtos.Range range){return mapper.historicalPrices(range);}
     public List<com.sicost.profitability.MonthlyCostDtos.WorkState> historicalStates(com.sicost.profitability.MonthlyCostDtos.Range range){return mapper.historicalStates(range);}
     public String actor(){return users.userId();}
+    public void lockSettlementSources(String id,String nextPart){revisions.lockSettlementSources(id,nextPart);}
     public String revision(String id,boolean lock){return revisions.revision(id,lock);}
     public void lockNumber(String number){locks.lock("developers:management-number:"+number);}
     public <T>T write(Supplier<T> action){return writes.execute(s->action.get());}
@@ -36,5 +37,5 @@ public class DeveloperRepository {
     public void recalculate(Runnable action){recalculation.executeWithoutResult(s->action.run());}
     public Map<String,Object> required(String id,boolean lock){Map<String,Object> r=mapper.find(id,lock);if(r==null)throw new ApiException(404,"NOT_FOUND","개발자를 찾을 수 없습니다.");return new LinkedHashMap<>(r);}
     public record Snapshot(Map<String,Object> developer,List<Map<String,Object>> prices,List<Map<String,Object>> skills,List<Map<String,Object>> states) {}
-    public Snapshot snapshot(String id,boolean lock){Map<String,Object> r=required(id,lock);return new Snapshot(r,mapper.prices(id,lock),mapper.skills(id,lock),mapper.states(id,lock));}
+    public Snapshot snapshot(String id,boolean lock){if(lock)revisions.lockSettlementSources(id,null);Map<String,Object> r=required(id,lock);return new Snapshot(r,mapper.prices(id,lock),mapper.skills(id,lock),mapper.states(id,lock));}
 }

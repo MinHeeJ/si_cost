@@ -119,4 +119,13 @@ class FinancialReadContractTest {
     @Test void internalSqlFailureDoesNotLeak()throws Exception{
         when(mapper.sourceTotals(any())).thenThrow(new IllegalStateException("private SQL"));contributions().andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private SQL"))));
     }
+    @Test void settlementHistoryRequiresExactPartOnlyForItsOwnScope() throws Exception {
+        mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope","PART_SETTLEMENT").param("partId","PART-001"))
+            .andExpect(status().isOk());
+        verify(mapper).history(argThat(q->q.scope().equals("PART_SETTLEMENT")&&q.partId().equals("PART-001")));
+        for(String scope:List.of("MONTH","TAX","CARDS","BUSINESS_PLAN","HISTORICAL_PROFIT_LOSS"))
+            mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope",scope).param("partId","PART-001")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope","PART_SETTLEMENT")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope","PART_SETTLEMENT").param("partId","PART-001").param("uploadId","1")).andExpect(status().isBadRequest());
+    }
 }

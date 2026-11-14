@@ -239,13 +239,13 @@ export function SharedApplication({
     if (!byScreen(id)) return;
     if (
       !financialConfirmed &&
-      active === "UI-10" &&
+      ["UI-10", "UI-19"].includes(active) &&
       id !== active &&
       !window.dispatchEvent(
         new CustomEvent("sicost:screen-navigation-request", {
           cancelable: true,
           detail: {
-            screenId: "UI-10",
+            screenId: active,
             label: "다른 화면으로 이동",
             proceed: () => go(id, true),
           },
@@ -277,12 +277,12 @@ export function SharedApplication({
   const close = (id: string, financialConfirmed = false) => {
     if (
       !financialConfirmed &&
-      id === "UI-10" &&
+      ["UI-10", "UI-19"].includes(id) &&
       !window.dispatchEvent(
         new CustomEvent("sicost:screen-navigation-request", {
           cancelable: true,
           detail: {
-            screenId: "UI-10",
+            screenId: id,
             label: "작업 탭 닫기",
             proceed: () => close(id, true),
           },

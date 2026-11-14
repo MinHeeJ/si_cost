@@ -1261,7 +1261,109 @@ const financialCases: typeof cases = [
     call: () => api.getUploadIssues("999999999999", "ERR", 2, 20),
   },
 ];
+const settlementCases: typeof cases = [
+  {
+    name: "getSalesPartSettlements default",
+    path: "/api/sales-part-settlements",
+    method: "GET",
+    call: () => api.getSalesPartSettlements(),
+  },
+  {
+    name: "getSalesPartSettlements",
+    path: "/api/sales-part-settlements?month=2026-11",
+    method: "GET",
+    call: () => api.getSalesPartSettlements("2026-11"),
+  },
+  {
+    name: "getSalesPartSettlement",
+    path: "/api/sales-part-settlements/selected%2Fpart?month=2026-11&page=2&size=20&sort=profitAmount&direction=DESC",
+    method: "GET",
+    call: () =>
+      api.getSalesPartSettlement("selected/part", {
+        month: "2026-11",
+        page: 2,
+        size: 20,
+        sort: "profitAmount",
+        direction: "DESC",
+      }),
+  },
+  {
+    name: "getSalesPartSettlementTrend",
+    path: "/api/sales-part-settlements/selected%2Fpart/trend?month=2026-11&page=2&size=20",
+    method: "GET",
+    call: () =>
+      api.getSalesPartSettlementTrend("selected/part", {
+        month: "2026-11",
+        page: 2,
+        size: 20,
+      }),
+  },
+  {
+    name: "saveSalesPartSettlementCard",
+    path: "/api/sales-part-settlements/selected%2Fpart/card",
+    method: "PUT",
+    call: () =>
+      api.saveSalesPartSettlementCard("selected/part", {
+        month: "2026-11",
+        cardAmount: "0",
+        expectedRevision: "settlement-revision",
+      }),
+    body: {
+      month: "2026-11",
+      cardAmount: "0",
+      expectedRevision: "settlement-revision",
+    },
+  },
+  {
+    name: "createSalesPartSettlementConfirmation",
+    path: "/api/sales-part-settlements/selected%2Fpart/confirm",
+    method: "POST",
+    call: () =>
+      api.createSalesPartSettlementConfirmation("selected/part", {
+        month: "2026-11",
+        cardAmount: "999999999999999",
+        expectedRevision: "settlement-revision",
+      }),
+    body: {
+      month: "2026-11",
+      cardAmount: "999999999999999",
+      expectedRevision: "settlement-revision",
+    },
+  },
+  {
+    name: "createSalesPartSettlementCancellation",
+    path: "/api/sales-part-settlements/selected%2Fpart/cancel",
+    method: "POST",
+    call: () =>
+      api.createSalesPartSettlementCancellation("selected/part", {
+        month: "2026-11",
+        reason: "정산 취소",
+        expectedRevision: "settlement-revision",
+      }),
+    body: {
+      month: "2026-11",
+      reason: "정산 취소",
+      expectedRevision: "settlement-revision",
+    },
+  },
+  {
+    name: "getRateRenegotiations",
+    path: "/api/rate-renegotiations?renewalWindow=183&marginBelow=15&increaseRate=5&page=2&size=20&sort=annualGain&direction=DESC",
+    method: "GET",
+    call: () =>
+      api.getRateRenegotiations({
+        renewalWindow: "183",
+        marginBelow: "15",
+        increaseRate: "5",
+        page: 2,
+        size: 20,
+        sort: "annualGain",
+        direction: "DESC",
+      }),
+  },
+];
 cases.push(
+  ...settlementCases,
   ...projectCases,
   ...assignmentCases,
   ...billingCases,
@@ -1432,6 +1534,7 @@ describe("승인 API 등록", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
   it.each([
+    ...settlementCases,
     ...projectCases,
     ...assignmentCases,
     ...billingCases,

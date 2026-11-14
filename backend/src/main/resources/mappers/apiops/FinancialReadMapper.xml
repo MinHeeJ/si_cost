@@ -61,6 +61,12 @@
     )
     SELECT h.* FROM tb_sy_chg_hist h WHERE
     <choose>
+      <when test="scope == 'PART_SETTLEMENT'">
+        (h.trgt_tbl_nm='TB_CO_PART_SETL' AND h.trgt_key=#{partId} || ':' || #{period.databaseMonth})
+        OR (h.trgt_tbl_nm='TB_CO_PART_SETL_DTL' AND split_part(h.trgt_key,':',1)=#{partId}
+          AND split_part(h.trgt_key,':',2)=#{period.databaseMonth} AND split_part(h.trgt_key,':',3) != ''
+          AND array_length(string_to_array(h.trgt_key,':'),1)=3)
+      </when>
       <when test="scope == 'BUSINESS_PLAN'">
         h.trgt_tbl_nm='TB_FI_BIZ_PLAN' AND h.trgt_key ~ '^[0-9]{6}:ALL$'
         AND left(h.trgt_key,4)=#{period.year}

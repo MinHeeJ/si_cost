@@ -12,6 +12,7 @@ public class DeveloperActionsRepository {
     private final DeveloperAggregateRevision revisions;
     public DeveloperActionsRepository(DeveloperActionsMapper mapper,DeveloperAggregateRevision revisions) { this.mapper=mapper;this.revisions=revisions; }
     public Base required(String id,boolean lock) {
+        if(lock)revisions.lockSettlementSources(id,null);
         Base row=mapper.developer(id,lock);
         if(row==null) throw new ApiException(404,"NOT_FOUND","개발자를 찾을 수 없습니다.");
         return row;

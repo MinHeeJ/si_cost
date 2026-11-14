@@ -31,6 +31,7 @@ public class DeveloperService {
         catch(DuplicateKeyException e){if(input.managementNo()!=null&&mapper().managementExists(input.managementNo()))throw duplicate();throw e;}
     }
     private JsonNode createLocked(Save input) {
+        repository.lockSettlementSources(null,(String)input.values().get("partId"));
         String actor=repository.actor();Map<String,Object> row=new LinkedHashMap<>(input.values());validate(row,null);
         String number=input.managementNo()==null?ids.nextManagementNo():input.managementNo();repository.lockNumber(number);
         if(mapper().managementExists(number))throw duplicate();
@@ -47,6 +48,7 @@ public class DeveloperService {
     }
     public JsonNode update(String id,Save input){return repository.write(()->updateLocked(id,input));}
     private JsonNode updateLocked(String id,Save input) {
+        repository.lockSettlementSources(id,(String)input.values().get("partId"));
         String actor=repository.actor();var snapshot=repository.snapshot(id,true);Map<String,Object> old=snapshot.developer();
         revisions.requireExpected(input.expectedRevision(),repository.revision(id,true));
         Map<String,Object> row=new LinkedHashMap<>(old);row.putAll(input.values());validate(row,old);

@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { RateRenegotiationsScreen as RateRenegotiationsBody } from "../apiops/RateRenegotiationsScreen";
 export function RateRenegotiationsScreen() {
-  return <FollowUpScreen screenId="UI-32" />;
+  return (
+    <SharedScreenFrame screenId="UI-32">
+      <RateRenegotiationsBody />
+    </SharedScreenFrame>
+  );
 }

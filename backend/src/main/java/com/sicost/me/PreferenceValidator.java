@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class PreferenceValidator {
     public static final List<String> GLOBAL = List.of("FAV","RECENT","MENU_FOLD","PAGE_SIZE","DENSE","AMT_UNIT");
     private static final Map<String,List<String>> COLUMNS = Map.ofEntries(
+            Map.entry("rateRenegotiations",List.of("name","employeeType","projectName","renewalDate","contractMm","unitPrice","monthlyLaborCost","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain")),
             Map.entry("projectCost",List.of("projectName","contractType","status","originalContractAmount","contractAmount","planMm","actualMm","cumulativeRevenue","cumulativeCost","cumulativeProfit","cumulativeMargin","forecastMargin","monthlyMargin","targetMargin","targetGap","budgetAmount","budgetUsage","pricePerMm","costPerMm","profitPerMm","freeMm","freeLaborCost","alerts")),
             Map.entry("statusBoard",List.of("light","projectName","pm","currentStep","planProgress","actualProgress","costUsage","costProgressGap","openIssueCount","overdueIssueCount","lastUpdatedDate","elapsedDays")),
             Map.entry("issues",List.of("importance","title","projectName","action","registeredBy","dueDate","status","registeredAt","modifiedBy","modifiedAt")),
@@ -29,6 +30,7 @@ public class PreferenceValidator {
             Map.entry("candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source")),
             Map.entry("individualProfitability",List.of("name","companyName","position","employeeType","hireDate","utilization","mm","revenue","pay","allowance","companyInsurance","retirementReserve","personalCost","teamExpense","projectExpense","totalCost","profit","profitRate","selfInsurance","withholdingTax","incomeTax","netPay")));
     private static final Map<String,List<String>> REQUIRED = Map.ofEntries(
+            Map.entry("rateRenegotiations",List.of("name","projectName")),
             Map.entry("projectCost",List.of("projectName")),
             Map.entry("statusBoard",List.of("projectName")),
             Map.entry("issues",List.of("title","projectName")),
@@ -45,7 +47,7 @@ public class PreferenceValidator {
         if (GLOBAL.contains(type)) {if (!"*".equals(key)) throw InputValidator.invalid("key");}
         else if (Set.of("COLS","PERIOD").contains(type)) {
             if (!mapper.screens().contains(key)) throw InputValidator.invalid("key");
-            if (type.equals("COLS") && !Set.of("UI-01","UI-02","UI-03","UI-04","UI-15","UI-23","UI-27","UI-31","UI-33").contains(key)) throw InputValidator.invalid("key");
+            if (type.equals("COLS") && !Set.of("UI-01","UI-02","UI-03","UI-04","UI-15","UI-23","UI-27","UI-31","UI-32","UI-33").contains(key)) throw InputValidator.invalid("key");
             if (type.equals("PERIOD") && periodType(key).equals("NONE")) throw InputValidator.invalid("type");
         } else throw InputValidator.invalid("type");
     }
@@ -87,6 +89,7 @@ public class PreferenceValidator {
             case "UI-03" -> Set.of("individualProfitability");
             case "UI-04" -> Set.of("projectCost");
             case "UI-31" -> Set.of("statusBoard","issues");
+            case "UI-32" -> Set.of("rateRenegotiations");
             case "UI-15" -> Set.of("clients");
             case "UI-23" -> Set.of("users");
             case "UI-27" -> Set.of("codes","valueCodes","mappings","standards","history");
@@ -98,6 +101,7 @@ public class PreferenceValidator {
         fields(value,columnViews(key));
         if(key.equals("UI-04")&&!value.has("projectCost") || key.equals("UI-31")&&value.isEmpty())throw InputValidator.invalid("value");
         if(key.equals("UI-03")&&!value.has("individualProfitability"))throw InputValidator.invalid("value");
+        if(key.equals("UI-32")&&!value.has("rateRenegotiations"))throw InputValidator.invalid("value");
         value.fields().forEachRemaining(entry->{
             var view=entry.getValue();fields(view,Set.of("order","hidden"));
             var order=strings(view.get("order"),"value.order");var hidden=strings(view.get("hidden"),"value.hidden");

@@ -19,13 +19,25 @@ public class AccessLogWriter {
     public AccessLogWriter(AccessLogMapper mapper, CurrentUserProvider users, Clock clock) {
         this.mapper = mapper; this.users = users; this.clock = clock;
     }
-    public record Event(String action, String screenId, String targetId, String fileType, Long count) {}
+    public record Event(String action, String screenId, String targetId, String fileType, Long count, String filename) {
+        public Event(String action, String screenId, String targetId, String fileType, Long count) {
+            this(action, screenId, targetId, fileType, count, null);
+        }
+    }
     public record Entry(String userId, String action, String screenId, String description, String clientIp, LocalDateTime now) {}
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+        boolean settlement = Set.of("UI-19", "UI-32").contains(event.screenId());
+        if (settlement) {
+            String pattern = event.screenId().equals("UI-19")
+                ? "영업파트이익금_[A-Za-z0-9-]{1,20}_(?!0000)[0-9]{4}(0[1-9]|1[0-2])_(이번달|추이)\\.xlsx"
+                : "단가재협상_" + java.time.LocalDate.now(clock.withZone(TimeConfiguration.SEOUL)).format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + "\\.xlsx";
+            if (!"DNLD".equals(event.action()) || event.targetId() != null || event.count() == null
+                    || event.filename() == null || !event.filename().matches(pattern)) throw InputValidator.invalid("accessLog");
+        } else if (event.filename() != null) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-09") && (!"DNLD".equals(event.action()) || event.targetId() != null
                 || !"순이익표".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-08") && (!"DNLD".equals(event.action()) || event.count() == null
@@ -59,6 +71,8 @@ public class AccessLogWriter {
         }
         String kind = event.fileType();
         Set<String> kinds = switch (event.screenId()) {
+            case "UI-19" -> Set.of("영업파트이익금");
+            case "UI-32" -> Set.of("단가재협상");
             case "UI-07" -> Set.of("전체수익구조");
             case "UI-09" -> Set.of("순이익표");
             case "UI-08" -> Set.of("영업이익표", "이관손익_등록양식", "이관손익_업로드검사");
@@ -74,12 +88,12 @@ public class AccessLogWriter {
             case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");
         };
-        if (((people || event.screenId().equals("UI-01") || event.screenId().equals("UI-12")) && kind == null) || (kind != null && !kinds.contains(kind))) {
+        if (((settlement || people || event.screenId().equals("UI-01") || event.screenId().equals("UI-12")) && kind == null) || (kind != null && !kinds.contains(kind))) {
             throw InputValidator.invalid("fileType");
         }
         if (event.count() != null && event.count() < 0) throw InputValidator.invalid("count");
         String description = (target == null ? "" : target) + (kind == null ? "" : " " + kind)
-                + (event.count() == null ? "" : " " + event.count());
+                + (event.count() == null ? "" : " " + event.count()) + (settlement ? " " + event.filename() : "");
         InputValidator.text(description, 300, "targetDescription");
         String ip = request.getRemoteAddr();
         if (ip == null || ip.length() > 45 || !ip.matches("[0-9A-Fa-f:.%]+")) ip = null;

@@ -422,12 +422,14 @@ describe("공식 화면과 공통 틀", () => {
   });
   // 실제 업무 화면의 직접 진입·입력·재조회는 router.test.tsx가 확인한다.
   const implementedPeopleScreens = ["UI-02", "UI-12", "UI-13", "UI-33"];
-  // BASIC-139 replaces these follow-up placeholders with real financial screens.
+  // Financial and settlement screens replace their earlier follow-up placeholders.
   const financialScreenTestIds: Record<string, string> = {
     "UI-07": "profit-structure-screen",
     "UI-08": "operating-profit-screen",
     "UI-09": "net-profit-screen",
     "UI-18": "business-plan-performance",
+    "UI-19": "sales-part-settlement-screen",
+    "UI-32": "renegotiation-screen",
   };
   it.each(
     Object.keys(screenRegistry).filter(
@@ -451,7 +453,11 @@ describe("공식 화면과 공통 틀", () => {
     } else if (id === "UI-10") {
       expect(screen.getByTestId("financial-editor")).toBeInTheDocument();
     } else if (id === "UI-04" || id === "UI-31") {
-      expect(await screen.findByTestId(id === "UI-04" ? "project-cost-analysis" : "project-status-board")).toBeInTheDocument();
+      expect(
+        await screen.findByTestId(
+          id === "UI-04" ? "project-cost-analysis" : "project-status-board",
+        ),
+      ).toBeInTheDocument();
     } else if (financialScreenTestIds[id]) {
       expect(
         await screen.findByTestId(financialScreenTestIds[id]),

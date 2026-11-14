@@ -325,6 +325,57 @@ class PreferencesContractTest {
         save("PERIOD","UI-01",json.writeValueAsString(next),null);
         assertThat(preference("PERIOD","UI-03").path("value")).isEqualTo(json.readTree(current));
     }
+    @Test void renegotiationColumnsRoundTripAndResetWithoutChangingOtherPreferences() throws Exception {
+        save("DENSE","*","\"좁게\"",null);
+        save("COLS","UI-27",preference("COLS","UI-27").path("value").toString(),null);
+        var before=new HashMap<>(rows);
+        var defaults=preference("COLS","UI-32");
+        assertThat(defaults.path("stored").asBoolean()).isFalse();
+        assertThat(defaults.path("revision").isNull()).isTrue();
+        var value=defaults.path("value").deepCopy();
+        var view=(com.fasterxml.jackson.databind.node.ObjectNode)value.path("rateRenegotiations");
+        var order=new ArrayList<String>();view.path("order").forEach(n->order.add(n.asText()));
+        assertThat(order).containsExactly("name","employeeType","projectName","renewalDate","contractMm","unitPrice",
+            "monthlyLaborCost","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain");
+        Collections.reverse(order);view.set("order",json.valueToTree(order));
+        view.set("hidden",json.valueToTree(List.of("employeeType","annualGain")));
+        String revision=save("COLS","UI-32",value.toString(),null);
+        assertThat(preference("COLS","UI-32").path("value")).isEqualTo(value);
+        assertThat(save("COLS","UI-32",value.toString(),revision)).isEqualTo(revision);
+        verify(mapper,never()).update(any());
+        mvc.perform(delete("/api/me/preferences/COLS/UI-32").param("expectedRevision",revision)).andExpect(status().isNoContent());
+        assertThat(preference("COLS","UI-32").path("value")).isEqualTo(defaults.path("value"));
+        assertThat(rows).isEqualTo(before);
+    }
+    @ParameterizedTest @ValueSource(strings={"duplicate","unknown","missing","hiddenUnknown","hiddenDuplicate","name","projectName","wrongView","empty"})
+    void invalidRenegotiationColumnsPreserveStoredSettings(String rule) throws Exception {
+        var value=(com.fasterxml.jackson.databind.node.ObjectNode)preference("COLS","UI-32").path("value").deepCopy();
+        String revision=save("COLS","UI-32",value.toString(),null);
+        var before=new HashMap<>(rows);
+        var order=(com.fasterxml.jackson.databind.node.ArrayNode)value.path("rateRenegotiations").path("order");
+        var hidden=(com.fasterxml.jackson.databind.node.ArrayNode)value.path("rateRenegotiations").path("hidden");
+        switch(rule) {
+            case "duplicate" -> order.set(1,order.get(0));
+            case "unknown" -> order.set(1,json.valueToTree("notRegistered"));
+            case "missing" -> order.remove(1);
+            case "hiddenUnknown" -> hidden.add("actions");
+            case "hiddenDuplicate" -> {hidden.add("annualGain");hidden.add("annualGain");}
+            case "name","projectName" -> hidden.add(rule);
+            case "wrongView" -> value.set("projectCost",value.remove("rateRenegotiations"));
+            case "empty" -> value.removeAll();
+            default -> throw new IllegalArgumentException(rule);
+        }
+        mvc.perform(put("/api/me/preferences/COLS/UI-32").contentType("application/json")
+            .content(json.writeValueAsString(Map.of("value",value,"expectedRevision",revision))))
+            .andExpect(status().isBadRequest());
+        assertThat(rows).isEqualTo(before);
+        verify(mapper,never()).update(any());
+    }
+    @Test void settlementKeepsMonthPreferenceAndRenegotiationsHaveNoPeriod() throws Exception {
+        assertThat(preference("PERIOD","UI-19").path("value").path("type").asText()).isEqualTo("YEAR_MONTH");
+        invalid("COLS","UI-19","{}");
+        invalid("PERIOD","UI-32","{\"type\":\"YEAR_MONTH\",\"value\":\"2026-01\"}");
+    }
     private void invalid(String type,String key,String value) throws Exception {
         mvc.perform(put("/api/me/preferences/{type}/{key}",type,key).contentType("application/json").content("{\"value\":"+value+",\"expectedRevision\":null}"))
                 .andExpect(status().isBadRequest()); verify(mapper,never()).insert(any()); verify(mapper,never()).update(any());

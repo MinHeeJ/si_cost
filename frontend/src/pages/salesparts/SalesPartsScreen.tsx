@@ -124,6 +124,12 @@ export function SalesPartsScreen({
       if (version === detailGeneration.current) setDetailLoading(false);
     }
   }
+  useEffect(() => {
+    if (window.location.pathname !== "/UI-15") return;
+    const values = new URLSearchParams(window.location.search).getAll("partId");
+    if (values.length === 1 && values[0].length > 0 && values[0].length <= 20)
+      void open(values[0]);
+  }, []);
   function closeDetail() {
     detailGeneration.current++;
     setSelected(undefined);
@@ -280,23 +286,23 @@ export function SalesPartsScreen({
         onReset={() => apply(true)}
         extra={
           !mobile && (
-          <button
-            data-testid="sales-part-export-button"
-            type="button"
-            disabled={downloading}
-            onClick={async () => {
-              setDownloading(true);
-              try {
-                await api.downloadSalesParts(query, amountUnit);
-              } catch (reason) {
-                setError(reason);
-              } finally {
-                setDownloading(false);
-              }
-            }}
-          >
-            엑셀 다운로드
-          </button>
+            <button
+              data-testid="sales-part-export-button"
+              type="button"
+              disabled={downloading}
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  await api.downloadSalesParts(query, amountUnit);
+                } catch (reason) {
+                  setError(reason);
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+            >
+              엑셀 다운로드
+            </button>
           )
         }
       >
