@@ -148,4 +148,14 @@ class FinancialReadDatabaseTest {
         for(String field:List.of("scope","page","size"))mvc.perform(get("/api/financial-history").param("month","2080-07").param("scope","MONTH").param(field,field.equals("scope")?"ALL":field.equals("page")?"0":"30")).andExpect(status().isBadRequest());
         assertThat(snapshot()).isEqualTo(before);
     }
+    @Test void settlementHistoryDoesNotMixAdjacentPartsMonthsOrMalformedDetailKeys() {
+        String parent=audit("TB_CO_PART_SETL","PART-001:208007","UPD","CORP_CARD_AMT","0","5","2080-07-01");
+        String detail=audit("TB_CO_PART_SETL_DTL","PART-001:208007:DEV-001","DEL","PAY_AMT","10",null,"2080-07-02");
+        for(String key:List.of("PART-0010:208007","PART-001:208006","PART-001:208007:DEV:EXTRA","PART-001:208007:"))
+            audit(key.contains("DEV")||key.endsWith(":")?"TB_CO_PART_SETL_DTL":"TB_CO_PART_SETL",key,"UPD","PAY_AMT","0","5","2080-07-03");
+        var query=new LinkedMultiValueMap<String,String>();query.add("month","2080-07");query.add("scope","PART_SETTLEMENT");query.add("partId","PART-001");
+        var result=service.getFinancialHistory(FinancialReadInput.history(query));
+        assertThat(result.items()).extracting(HistoryEntry::historyId).containsExactly(detail,parent);
+        assertThat(result.total()).isEqualTo(2);
+    }
 }

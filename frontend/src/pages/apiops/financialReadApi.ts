@@ -5,7 +5,8 @@ export type FinancialHistoryScope =
   | "TAX"
   | "CARDS"
   | "BUSINESS_PLAN"
-  | "HISTORICAL_PROFIT_LOSS";
+  | "HISTORICAL_PROFIT_LOSS"
+  | "PART_SETTLEMENT";
 export type FinancialHistoryEntry = {
   historyId: string;
   targetTable: string;
@@ -59,9 +60,10 @@ export function getFinancialHistory(
   page = 1,
   size: 20 | 50 | 100 = 50,
   signal?: AbortSignal,
+  partId?: string,
 ) {
   return request<FinancialHistoryPage>(
-    `/api/financial-history?${new URLSearchParams({ month, scope, page: String(page), size: String(size) })}`,
+    `/api/financial-history?${new URLSearchParams({ month, scope, page: String(page), size: String(size), ...(scope === "PART_SETTLEMENT" && partId ? {partId} : {}) })}`,
     { signal },
   );
 }

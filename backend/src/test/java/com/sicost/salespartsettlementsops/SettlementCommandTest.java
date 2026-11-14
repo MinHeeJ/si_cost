@@ -167,4 +167,20 @@ class SettlementCommandTest {
         doThrow(new IllegalStateException("SQL secret")).when(history).append(any());
         mvc.perform(put("/api/sales-part-settlements/part/card").contentType("application/json").content(command("cardAmount","9"))).andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SQL"))));
     }
+    @Test void closeConfirmationUsesSameAmountsStoredCardAndCallerActor() {
+        service.confirmForClose("part","2026-07","close-actor");
+        verify(mapper).insertParent(argThat(p->p.status().equals("AUTO")&&p.card().intValueExact()==5&&p.profit().intValueExact()==30&&p.confirmedBy().equals("close-actor")));
+        verify(history,atLeastOnce()).appendSettlement(argThat(c->c.reason().equals("마감자동확정")),eq("close-actor"));
+        verifyNoInteractions(users);
+    }
+    @Test void closeConfirmationNeverRebuildsExistingSnapshot() {
+        result=result("CNFM","5",false,false,true,List.of());
+        assertThat(service.confirmForClose("part","2026-07","close-actor").changed()).isFalse();
+        verify(mapper,never()).insertParent(any());verify(mapper,never()).updateParent(any());verifyNoInteractions(history);
+    }
+    @Test void closeConfirmationPropagatesUnknownSourceFailureWithoutPartialSave() {
+        result=result("WORK","5",true,false,false,List.of());
+        assertThatThrownBy(()->service.confirmForClose("part","2026-07","close-actor")).isInstanceOf(com.sicost.common.api.ApiException.class);
+        verify(mapper,never()).insertParent(any());verifyNoInteractions(history);
+    }
 }

@@ -155,4 +155,14 @@ class SalesPartSettlementQueryTest {
         snapshot=new SalesPartSettlementRepository.Snapshot(s.sources(),s.parts(),s.standards(),s.history(),s.parents(),s.details(),s.firstInputs(),List.of(new RevisionRow("pay","changed without MOD_DTTM")));
         assertThat(service.getSalesPartSettlement("part",query("page","9")).revision()).isNotEqualTo(first.revision());
     }
+    @Test void closedZeroPersonSnapshotWithCardRemainsValid() {
+        var f=fixture("202607",0);var s=f.sources();
+        var closed=new Sources(s.period(),s.actor(),s.asOfDate(),s.people(),s.prices(),s.states(),s.payroll(),s.assignments(),s.projectMonths(),s.projects(),s.projectParts(),s.turnkey(),s.storedCosts(),s.standards(),s.parts(),List.of(new com.sicost.shared.SharedQueryDtos.CloseRow("202607","CLOSE")),s.allowanceCodes());
+        var parent=new Parent("part","202607",n("5"),n("-5"),"AUTO","actor","확정자",LocalDateTime.of(2026,7,31,0,0),null,"actor",null,null,null);
+        snapshot=new SalesPartSettlementRepository.Snapshot(closed,f.parts(),f.standards(),f.history(),List.of(parent),List.of(),List.of(),f.revisionSources());
+        var result=service.previewSettlement("part","2026-07");
+        assertThat(result.summary().partProfitAmount()).isEqualTo("-5");
+        assertThat(result.issues()).noneMatch(issue->issue.code().equals("CLOSED_SNAPSHOT_MISSING"));
+        assertThat(result.canCancel()).isFalse();
+    }
 }

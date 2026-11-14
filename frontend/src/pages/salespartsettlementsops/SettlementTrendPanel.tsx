@@ -1,3 +1,4 @@
+import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
 import { formatAmount, formatMm, type AmountUnit } from "../../shared/format";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -15,16 +16,22 @@ const labels = {
 export function SettlementTrendPanel({
   partId,
   month,
+  amountUnit,
+  onAmountUnitChange,
 }: {
   partId: string;
   month: string;
+  amountUnit?: AmountUnit;
+  onAmountUnitChange?(unit: AmountUnit): void;
 }) {
+  const shared = useSharedScreen("UI-19");
   const [data, setData] = useState<TrendResult>(),
     [error, setError] = useState<unknown>(),
     [page, setPage] = useState(1),
-    [size, setSize] = useState<20 | 50 | 100>(50),
+    [size, setSize] = useState<20 | 50 | 100>(shared.pageSize ?? 50),
     [retry, setRetry] = useState(0),
     [unit, setUnit] = useState<AmountUnit>("천원");
+  const displayUnit = amountUnit ?? unit;
   useEffect(() => {
     setPage(1);
   }, [partId, month]);
@@ -64,8 +71,8 @@ export function SettlementTrendPanel({
               추이 단위{" "}
               <select
                 data-testid="settlement-trend-unit"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as AmountUnit)}
+                value={displayUnit}
+                onChange={(e) => { const next = e.target.value as AmountUnit; if (onAmountUnitChange) onAmountUnitChange(next); else setUnit(next); }}
               >
                 <option>원</option>
                 <option>천원</option>
@@ -74,7 +81,7 @@ export function SettlementTrendPanel({
             </label>
           </div>
           <div className="sicost-table-viewport">
-            <table className="sicost-table settlement-trend-table">
+            <table className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}>
               <thead>
                 <tr>
                   <th>이름</th>
@@ -112,13 +119,13 @@ export function SettlementTrendPanel({
                         >
                           {metric.metric === "MM"
                             ? formatMm(cell.value)
-                            : formatAmount(cell.value, unit)}
+                            : formatAmount(cell.value, displayUnit)}
                         </td>
                       ))}
-                      <td>
+                      <td className={metric.total?.startsWith("-") ? "settlement-negative" : undefined}>
                         {metric.metric === "MM"
                           ? formatMm(metric.total)
-                          : formatAmount(metric.total, unit)}
+                          : formatAmount(metric.total, displayUnit)}
                       </td>
                       <td>{metric.remark ?? "–"}</td>
                     </tr>
@@ -138,12 +145,13 @@ export function SettlementTrendPanel({
                   {data.monthlyTotals.map((total) => (
                     <td
                       key={total.month}
+                      className={total.partProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}
                       title={`인력 이익금 ${total.personProfitShareAmount ?? "미확인"} · 카드 ${total.cardAmount ?? "미확인"}`}
                     >
-                      {formatAmount(total.partProfitAmount, unit)}
+                      {formatAmount(total.partProfitAmount, displayUnit)}
                     </td>
                   ))}
-                  <td>{formatAmount(data.periodPartProfitAmount, unit)}</td>
+                  <td className={data.periodPartProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}>{formatAmount(data.periodPartProfitAmount, displayUnit)}</td>
                   <td>카드는 월 1회 차감</td>
                 </tr>
               </tfoot>
@@ -180,8 +188,8 @@ export function SettlementTrendPanel({
                 data-testid="settlement-trend-size"
                 value={size}
                 onChange={(e) => {
-                  setSize(Number(e.target.value) as 20 | 50 | 100);
-                  setPage(1);
+                  const next = Number(e.target.value) as 20 | 50 | 100;
+                  void (shared.savePageSize?.(next) ?? Promise.resolve()).then(() => { setSize(next); setPage(1); }).catch(setError);
                 }}
               >
                 <option value={20}>20건씩</option>

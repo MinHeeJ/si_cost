@@ -27,20 +27,14 @@ export function AnalysisSummary({
   unit?: AnalysisUnit;
 }) {
   return (
-    <div className="project-analysis-summary" data-testid="analysis-summary">
+    <div className="project-analysis-summary">
       {fields.map(([key, label, money]) => (
         <section
           key={key}
           data-testid={`analysis-summary-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         >
           <span>{label}</span>
-          <strong
-            className={
-              String(summary[key] ?? "").startsWith("-")
-                ? "analysis-negative"
-                : undefined
-            }
-          >
+          <strong className={String(summary[key] ?? "").startsWith("-") ? "analysis-negative" : undefined}>
             {analysisDisplay(summary[key], money ? "amount" : "text", unit)}
           </strong>
         </section>
@@ -50,10 +44,7 @@ export function AnalysisSummary({
 }
 export function AnalysisCompleteness({ value }: { value: Completeness }) {
   return (
-    <div
-      className="project-analysis-basis"
-      data-testid={`analysis-completeness-${crypto.getRandomValues(new Uint32Array(4)).join("-")}`}
-    >
+    <div className="project-analysis-basis">
       <span>
         집계 {value.rangeStartMonth} ~ {value.rangeEndMonth}
       </span>
@@ -68,11 +59,7 @@ export function AnalysisCompleteness({ value }: { value: Completeness }) {
       )}
       {value.issues.length > 0 && (
         <details>
-          <summary
-            data-testid={`analysis-completeness-toggle-${crypto.getRandomValues(new Uint32Array(4)).join("-")}`}
-          >
-            미확인·추정 근거 {value.issues.length}건
-          </summary>
+          <summary>미확인·추정 근거 {value.issues.length}건</summary>
           <ul>
             {value.issues.map((issue, index) => (
               <li
@@ -96,10 +83,7 @@ export function AnalysisProgress({
   label: string;
 }) {
   return (
-    <div
-      className="project-analysis-progress"
-      data-testid={`analysis-progress-${crypto.getRandomValues(new Uint32Array(4)).join("-")}`}
-    >
+    <div className="project-analysis-progress">
       <span>
         {label} {analysisDisplay(value, "rate")}
       </span>
@@ -130,11 +114,7 @@ export function AnalysisFailure({
       />
       {error instanceof ApiError &&
         Object.entries(error.fieldMessages).map(([key, message]) => (
-          <p
-            role="alert"
-            key={key}
-            data-testid={`analysis-field-error-${crypto.getRandomValues(new Uint32Array(4)).join("-")}`}
-          >
+          <p role="alert" key={key}>
             {key}: {message}
           </p>
         ))}
@@ -195,26 +175,14 @@ export type AnalysisSlots = {
   onMonthChange?(month: string): void | Promise<void>;
 };
 
-export function analysisPageSize(preferred: 20 | 50 | 100) {
-  return window.innerWidth <= 767 ? 20 : preferred;
-}
+export function analysisPageSize(preferred:20|50|100) {return window.innerWidth<=767?20:preferred;}
 export function useAnalysisSettings() {
-  const active = useRef(false);
-  const [error, setError] = useState<unknown>(),
-    [pending, setPending] = useState(false);
-  async function run(action: () => void | Promise<void>) {
-    if (active.current) return;
-    active.current = true;
-    setPending(true);
-    setError(undefined);
-    try {
-      await action();
-    } catch (e) {
-      setError(e);
-    } finally {
-      active.current = false;
-      setPending(false);
-    }
+  const active=useRef(false);
+  const [error,setError]=useState<unknown>(),[pending,setPending]=useState(false);
+  async function run(action:()=>void|Promise<void>) {
+    if(active.current)return;
+    active.current=true;setPending(true);setError(undefined);
+    try {await action();}catch(e){setError(e);}finally{active.current=false;setPending(false);}
   }
-  return { error, pending, run, clear: () => setError(undefined) };
+  return {error,pending,run,clear:()=>setError(undefined)};
 }

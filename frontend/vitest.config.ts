@@ -8,8 +8,5 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/shared/testSetup.ts"],
     restoreMocks: true,
-    // Bound concurrent jsdom workers so container CPU limits do not cause UI timeouts.
-    maxWorkers: 2,
-    minWorkers: 1,
   },
 });

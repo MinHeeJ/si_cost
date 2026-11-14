@@ -15,6 +15,8 @@ public interface SettlementCommandMapper {
         BigDecimal cost, BigDecimal profit, BigDecimal share, String remark, String actor, LocalDateTime at) {}
     record Identity(String partId, String month) {}
     List<String> sourceKeys(@Param("month") String month);
+    @org.apache.ibatis.annotations.Update("LOCK TABLE TB_CL_CLOSE IN SHARE MODE")
+    void lockClose();
     int insertParent(ParentWrite value);
     int updateParent(ParentWrite value);
     int insertDetail(DetailWrite value);

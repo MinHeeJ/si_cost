@@ -28,6 +28,7 @@ public class SalesPartSettlementService {
     public TabsResult getSalesPartSettlements(SalesPartSettlementInput.Query query) {return tabs(repository.load(query.month(),false));}
     public TabsResult listEligibleParts(String month) {return getSalesPartSettlements(new SalesPartSettlementInput.Query(month,1,50,"name","ASC"));}
     public Result previewSettlement(String partId,String month) {return read(partId,new SalesPartSettlementInput.Query(month,1,100,"name","ASC"),false);}
+    public Result exportSettlement(String partId,SalesPartSettlementInput.Query query) { return read(partId,query,false); }
     public Result getSalesPartSettlement(String partId,SalesPartSettlementInput.Query query) {
         return read(partId,query,true);
     }
@@ -60,7 +61,6 @@ public class SalesPartSettlementService {
         if(!confirmed&&(closed||!tab.eligible()))totals=new Totals(0,0,null,null,null,null,null,null,null,null,card,null);
         if(confirmed&&(totals.personProfitShareAmount()==null||parent.partProfitAmount()==null||decimal(totals.personProfitShareAmount()).subtract(parent.cardAmount()).compareTo(parent.partProfitAmount())!=0))
             issues.add(issue("SNAPSHOT_MISMATCH","정산 사본 불일치", "partProfitAmount",null,month,"TB_CO_PART_SETL",false));
-        if(confirmed&&closed&&details.isEmpty())issues.add(issue("CLOSED_SNAPSHOT_MISSING","마감 정산 자료 미확인",null,null,month,"TB_CO_PART_SETL_DTL",true));
         issues.addAll(all.stream().flatMap(r->r.issues().stream()).toList());
         boolean editable=!closed&&!pastYear&&tab.eligible();
         if(confirmed)reasons.add("확정된 정산 사본입니다.");

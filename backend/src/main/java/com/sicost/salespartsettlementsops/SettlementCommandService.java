@@ -50,29 +50,42 @@ public class SettlementCommandService {
     public Mutation confirm(String partId, JsonNode body) { return execute(partId, body, "CONFIRM"); }
     @Transactional
     public Mutation cancel(String partId, JsonNode body) { return execute(partId, body, "CANCEL"); }
-    private Mutation execute(String partId, JsonNode body, String operation) {
+    /** Joins the caller's close transaction: any later close failure rolls all snapshots back. */
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Mutation confirmForClose(String partId, String month, String actor) {
+        com.sicost.common.validation.InputValidator.text(actor,30,"actor");
+        locks.lock(mapper.sourceKeys(DatabaseMonthCodec.toDatabase(month)));
+        Result before=reads.previewSettlement(partId,month);
+        var body=com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        body.put("month",month).put("cardAmount",before.cardAmount()).put("expectedRevision",before.revision());
+        return execute(partId,body,"AUTO",actor);
+    }
+    private Mutation execute(String partId, JsonNode body, String operation) { return execute(partId,body,operation,null); }
+    private Mutation execute(String partId, JsonNode body, String operation, String closeActor) {
+        boolean automatic=operation.equals("AUTO"), confirm=automatic||operation.equals("CONFIRM");
         var input=SettlementCommandInput.parse(body,operation.equals("CANCEL"));
         String month=DatabaseMonthCodec.toDatabase(input.month());
         locks.lock(mapper.sourceKeys(month));
+        mapper.lockClose();
         Result before=reads.previewSettlement(partId,input.month());
         revisions.requireExpected(input.expectedRevision(),before.revision());
         var stored=repository.load(input.month(),true);
         Parent parent=stored.parents().stream().filter(p->p.partId().equals(partId)).findFirst().orElse(null);
         if (stored.sources().protectedMonth(month)) throw conflict("CLOSED_MONTH","마감된 월은 변경할 수 없습니다.");
-        if (!input.month().substring(0,4).equals(String.valueOf(stored.sources().asOfDate().getYear())))
+        if (!automatic && !input.month().substring(0,4).equals(String.valueOf(stored.sources().asOfDate().getYear())))
             throw conflict("STATE_CONFLICT","과거 연도는 조회 전용입니다.");
         boolean confirmed=!before.status().equals("WORK");
-        if(operation.equals("CONFIRM") && confirmed) return mutation(false,before);
+        if(confirm && confirmed) return mutation(false,before);
         if(operation.equals("CANCEL") && !confirmed) throw conflict("STATE_CONFLICT","작업중인 정산은 확정 취소할 수 없습니다.");
         if(operation.equals("CARD") && (confirmed||!before.canSaveCard())) throw conflict("STATE_CONFLICT","카드를 저장할 수 없는 정산 상태입니다.");
-        if(operation.equals("CONFIRM") && !before.canConfirm()) throw conflict("STATE_CONFLICT","필수 금액·파트 기준·대상을 확인해 주세요.");
+        if(confirm && !before.canConfirm()) throw conflict("STATE_CONFLICT","필수 금액·파트 기준·대상을 확인해 주세요.");
         if(operation.equals("CARD") && new BigDecimal(before.cardAmount()).compareTo(input.cardAmount())==0) return mutation(false,before);
-        String actor=users.userId(); LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
-        boolean confirming=operation.equals("CONFIRM"), cancelling=operation.equals("CANCEL");
+        String actor=automatic?closeActor:users.userId(); LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
+        boolean confirming=confirm, cancelling=operation.equals("CANCEL");
         BigDecimal card=cancelling?new BigDecimal(before.cardAmount()):input.cardAmount();
         BigDecimal profit=confirming?number(before.summary().personProfitShareAmount(),"partProfitAmount").subtract(card):null;
         if(profit!=null) range(profit,15,0,"partProfitAmount",null);
-        var write=new ParentWrite(partId,month,card,profit,confirming?"CNFM":"WORK",confirming?actor:null,confirming?now:null,cancelling?input.reason():operation.equals("CARD")?before.lastCancellationReason():null,actor,now);
+        var write=new ParentWrite(partId,month,card,profit,confirming?(automatic?"AUTO":"CNFM"):"WORK",confirming?actor:null,confirming?now:null,cancelling?input.reason():operation.equals("CARD")?before.lastCancellationReason():null,actor,now);
         List<DetailWrite> details=new ArrayList<>();
         if(confirming) {
             Set<String> memberIds=new HashSet<>();
@@ -81,7 +94,7 @@ public class SettlementCommandService {
                 throw conflict("STATE_CONFLICT","다른 파트에 확정된 인력월이 있습니다. 다시 조회해 주세요.");
             for(Row row:before.items()) details.add(detail(write,row));
         }
-        List<Change> changes=new ArrayList<>();String reason=cancelling?input.reason():confirming?"수동확정":"카드저장";
+        List<Change> changes=new ArrayList<>();String reason=cancelling?input.reason():confirming?(automatic?"마감자동확정":"수동확정"):"카드저장";
         audit(changes,new AuditTarget("TB_CO_PART_SETL",partId+":"+month,parent==null?"NEW":"UPD",reason),parentFields(parent),parentFields(write));
         if(cancelling||confirming) {
             for(Detail old:stored.details().stream().filter(d->d.partId().equals(partId)).toList())
@@ -89,7 +102,7 @@ public class SettlementCommandService {
             for(DetailWrite row:details) audit(changes,new AuditTarget("TB_CO_PART_SETL_DTL",partId+":"+month+":"+row.developerId(),"NEW",reason),Map.of(),detailFields(row));
         }
         history.preflightSettlement(changes);
-        changes.forEach(history::append);
+        if(automatic)changes.forEach(c->history.appendSettlement(c,actor));else changes.forEach(history::append);
         if((parent==null?mapper.insertParent(write):mapper.updateParent(write))!=1) throw new IllegalStateException("정산 부모를 저장하지 못했습니다.");
         if(cancelling||confirming) mapper.deleteDetails(new Identity(partId,month));
         for(DetailWrite row:details) if(mapper.insertDetail(row)!=1) throw new IllegalStateException("정산 상세를 저장하지 못했습니다.");

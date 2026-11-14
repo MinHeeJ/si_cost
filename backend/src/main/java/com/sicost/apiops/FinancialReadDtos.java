@@ -8,7 +8,10 @@ import java.util.List;
 public final class FinancialReadDtos {
     private FinancialReadDtos() {}
     public record Period(String month,String databaseMonth,String year,String priorYear,LocalDate start,LocalDate end) {}
-    public record HistoryQuery(Period period,String scope,int page,int size,long offset,String uploadId) {
+    public record HistoryQuery(Period period,String scope,int page,int size,long offset,String uploadId,String partId) {
+        public HistoryQuery(Period period,String scope,int page,int size,long offset,String uploadId) {
+            this(period,scope,page,size,offset,uploadId,null);
+        }
         public HistoryQuery(Period period,String scope,int page,int size,long offset) {
             this(period,scope,page,size,offset,null);
         }

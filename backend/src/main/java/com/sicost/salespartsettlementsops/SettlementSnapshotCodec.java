@@ -13,7 +13,7 @@ public class SettlementSnapshotCodec {
     public SettlementSnapshotCodec(ObjectMapper json) { this.json = json; }
     public String projects(String developerId, List<String> names) {
         try {
-            String value = json.writeValueAsString(names.stream().sorted().toList());
+            String value = json.writeValueAsString(names);
             if (value.codePointCount(0, value.length()) > 1000)
                 throw new ApiException(409, "SNAPSHOT_TEXT_TOO_LONG", "프로젝트 목록이 1000자를 초과하여 전체 정산을 취소했습니다.", "PROJ_NM_LIST", Map.of("developerId", developerId, "field", "PROJ_NM_LIST"));
             return value;

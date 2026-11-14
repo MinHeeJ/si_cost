@@ -61,6 +61,12 @@ public class ChangeHistoryWriter {
         if (!PEOPLE.contains(change.tableName())) throw InputValidator.invalid("history");
         append(change, () -> "SYSTEM", false);
     }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendSettlement(Change change, String actor) {
+        preflightSettlement(List.of(change));
+        InputValidator.text(actor, 30, "actor");
+        append(change, () -> actor, false);
+    }
     private void append(Change change, Supplier<String> actor, boolean required) {
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
         boolean settlement = Set.of("TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL").contains(change.tableName());

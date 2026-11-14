@@ -55,6 +55,7 @@ test("실제 추이 API의 과거 인력·5행·전체 기간 합계를 표시�
   const trend = envelope.data as TrendResult;
   const panel = page.getByTestId("settlement-trend-panel");
   await expect(panel).toBeVisible();
+  await expect(page.locator(".settlement-toolbar[hidden]")).toBeHidden();
   await panel.getByTestId("settlement-trend-unit").selectOption("원");
   await expect(
     panel.locator("tfoot tr td").nth(trend.months.length),

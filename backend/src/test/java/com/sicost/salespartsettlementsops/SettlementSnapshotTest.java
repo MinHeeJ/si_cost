@@ -16,9 +16,9 @@ import static org.mockito.Mockito.*;
 class SettlementSnapshotTest {
     final JsonMapper json=JsonMapper.builder().findAndAddModules().build();
     final SettlementSnapshotCodec codec=new SettlementSnapshotCodec(json);
-    @Test void jsonPreservesCommaNamesAndSortsWithoutAddingMetadata() throws Exception {
+    @Test void jsonPreservesMmRankedCommaNamesWithoutAddingMetadata() throws Exception {
         var value=codec.projects("developer",List.of("나, 프로젝트","가 프로젝트"));
-        assertThat(json.readTree(value).get(1).textValue()).isEqualTo("나, 프로젝트");assertThat(json.readTree(value).size()).isEqualTo(2);
+        assertThat(json.readTree(value).get(0).textValue()).isEqualTo("나, 프로젝트");assertThat(json.readTree(value).size()).isEqualTo(2);
     }
     @Test void snapshotBoundaryCountsUnicodeCodepointsNotUtf16Units() {
         String value=codec.projects("developer",List.of("😀".repeat(996)));

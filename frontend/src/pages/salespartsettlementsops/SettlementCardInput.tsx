@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -27,6 +28,7 @@ export function SettlementCardInput({
   onView(trend: boolean): void;
   trend: boolean;
 }) {
+  const location = useLocation();
   const [current, setCurrent] = useState(data),
     [draft, setDraft] = useState(data.cardAmount ?? "0");
   const [modal, setModal] = useState<"confirm" | "cancel">(),
@@ -36,6 +38,7 @@ export function SettlementCardInput({
   const { pending, message, commit } = useCommitRefresh(
     "저장됐지만 다시 불러오지 못했습니다",
   );
+  useEffect(() => { setModal(undefined); }, [location.pathname]);
   const active = useRef(false);
   useEffect(() => {
     setCurrent(data);
@@ -153,7 +156,7 @@ export function SettlementCardInput({
   return (
     <div data-testid="settlement-command-panel">
       <div className="settlement-card">
-        <label>
+        {current.canSaveCard ? <label>
           법인카드 사용액{" "}
           <input
             data-testid="settlement-card-input"
@@ -163,7 +166,7 @@ export function SettlementCardInput({
             onChange={(event) => setDraft(event.target.value)}
             aria-invalid={Boolean(validation || fields.cardAmount)}
           />
-        </label>
+        </label> : <span>법인카드 사용액 {formatAmount(current.cardAmount, "원")}</span>}
         <span>원</span>
         {current.canSaveCard && (
           <button

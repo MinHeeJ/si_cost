@@ -8,6 +8,8 @@ import { saveDownload } from "../b7/b7Api";
 import { downloadAssignments } from "./assignmentDownloadsApi";
 
 export type StaffingAssignmentsProps = {
+  entryAssignmentId?: string;
+  entryHistory?: boolean;
   onDirtyChange?(dirty: boolean): void;
   renderActions?(context: AssignmentListActions): ReactNode;
 };
@@ -15,9 +17,13 @@ export type StaffingAssignmentsProps = {
 export function StaffingAssignmentsScreen({
   onDirtyChange,
   renderActions,
+  entryAssignmentId,
+  entryHistory,
 }: StaffingAssignmentsProps = {}) {
   return (
     <AssignmentWorkspace
+      entryAssignmentId={entryAssignmentId}
+      entryHistory={entryHistory}
       onDirtyChange={onDirtyChange}
       renderActions={(context) => (
         <>

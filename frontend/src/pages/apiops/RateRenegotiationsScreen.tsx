@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
 import { ApiError } from "../../shared/api";
-import { formatDateTime, type AmountUnit } from "../../shared/format";
+import { formatDateTime, formatRate, type AmountUnit } from "../../shared/format";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
+import { useSharedScreen } from "../shared/SharedScreenContext";
 import { usePreferences } from "../me/usePreferences";
 import type { ColumnView, ScreenColumnPreferences } from "../me/preferencesApi";
 import { ProfitabilityValue } from "../profitability/ProfitabilityValue";
@@ -49,7 +50,9 @@ const emptyView = (): ColumnView => ({
 export function RateRenegotiationsScreen({
   onPerson,
 }: { onPerson?(id: string): void } = {}) {
+  const location = useLocation();
   const preferences = usePreferences();
+  const shared = useSharedScreen("UI-32");
   const [query, setQuery] = useState(api.defaultRenegotiationQuery);
   const [draft, setDraft] = useState(api.defaultRenegotiationQuery);
   const [applied, setApplied] = useState(api.defaultRenegotiationQuery);
@@ -65,7 +68,14 @@ export function RateRenegotiationsScreen({
   const [person, setPerson] = useState<string>();
   const [dense, setDense] = useState(false),
     [unit, setUnit] = useState<AmountUnit>("천원");
+  const storedUnit = preferences.get("AMT_UNIT")?.value;
+  useEffect(() => {
+    if (storedUnit === "원" || storedUnit === "천원" || storedUnit === "백만원") setUnit(storedUnit);
+  }, [storedUnit]);
+  useEffect(() => { setDense(shared.dense ?? false); }, [shared.dense]);
+  useEffect(() => { if (shared.pageSize) setQuery(q => q.size === shared.pageSize ? q : {...q, size: shared.pageSize!, page: 1}); }, [shared.pageSize]);
   const [columnDraft, setColumnDraft] = useState<ColumnView>();
+  useEffect(() => { setPerson(undefined); setColumnDraft(undefined); }, [location.pathname]);
   const [exporting, setExporting] = useState(false),
     [exportError, setExportError] = useState("");
   const alive = useRef(true);
@@ -174,7 +184,7 @@ export function RateRenegotiationsScreen({
         id === "annualGain"
           ? `${data?.appliedIncreaseRate ?? applied.increaseRate}% 올리면 연 이익`
           : id === "targetUnitPrice"
-            ? `목표 단가 (${data?.targetMarginRate ?? "–"}%)`
+            ? `목표 단가 (${formatRate(data?.targetMarginRate)})`
             : definition.label;
       return {
         id,
@@ -200,7 +210,7 @@ export function RateRenegotiationsScreen({
                 type="button"
                 className="sicost-link"
                 data-testid={`renegotiation-person-${marker}`}
-                onClick={() => openPerson(row.developerId)}
+                onClick={(event) => { event.stopPropagation(); openPerson(row.developerId); }}
               >
                 {row.name}
                 <small className="renegotiation-sub">{row.managementNo}</small>
@@ -211,6 +221,7 @@ export function RateRenegotiationsScreen({
             return (
               <>
                 <Link
+                  onClick={(event) => event.stopPropagation()}
                   data-testid={`renegotiation-project-${marker}`}
                   to={`/UI-01?${new URLSearchParams({ projectId: row.projectId, tab: "basic" })}`}
                 >
@@ -218,6 +229,7 @@ export function RateRenegotiationsScreen({
                 </Link>
                 <Link
                   className="renegotiation-sub"
+                  onClick={(event) => event.stopPropagation()}
                   data-testid={`renegotiation-assignment-${marker}`}
                   to={`/UI-12?${new URLSearchParams({ assignmentId: row.assignmentId, tab: "history" })}`}
                 >
@@ -345,7 +357,7 @@ export function RateRenegotiationsScreen({
           <h2>목표 연 증가</h2>
           <strong>{amount(data?.summary.targetAnnualGain)}</strong>
           <small>
-            목표 이익률 {data?.targetMarginRate ?? "–"}% · {unit}
+            목표 이익률 {formatRate(data?.targetMarginRate)} · {unit}
           </small>
         </article>
       </div>
@@ -532,7 +544,7 @@ export function RateRenegotiationsScreen({
           data-testid="renegotiation-density"
           type="button"
           aria-pressed={dense}
-          onClick={() => setDense(!dense)}
+          onClick={() => { void preferences.put("DENSE", "*", dense ? "넓게" : "좁게").then(() => setDense(!dense)).catch(setError); }}
         >
           좁게 보기
         </button>
@@ -541,7 +553,7 @@ export function RateRenegotiationsScreen({
           <select
             data-testid="renegotiation-unit"
             value={unit}
-            onChange={(e) => setUnit(e.target.value as AmountUnit)}
+            onChange={(e) => { const value = e.target.value as AmountUnit; void preferences.put("AMT_UNIT", "*", value).then(() => setUnit(value)).catch(setError); }}
           >
             {["원", "천원", "백만원"].map((u) => (
               <option key={u}>{u}</option>
@@ -556,6 +568,7 @@ export function RateRenegotiationsScreen({
         rows={data?.items ?? []}
         columns={columns}
         rowKey={(r) => r.assignmentId}
+        onRowAction={(r) => openPerson(r.developerId)}
         testId="renegotiation-table"
         dense={dense}
         empty="조건에 맞는 재협상 대상이 없습니다"
@@ -566,9 +579,9 @@ export function RateRenegotiationsScreen({
         onPageChange={(page) =>
           submit({ ...applied, page }, applied.increaseRate)
         }
-        onSizeChange={(size) =>
-          submit({ ...applied, page: 1, size }, applied.increaseRate)
-        }
+        onSizeChange={(size) => {
+          void (shared.savePageSize?.(size) ?? Promise.resolve()).then(() => submit({ ...applied, page: 1, size }, applied.increaseRate)).catch(setError);
+        }}
         sort={{ id: applied.sort, direction: applied.direction }}
         onSortChange={(sort) =>
           submit(

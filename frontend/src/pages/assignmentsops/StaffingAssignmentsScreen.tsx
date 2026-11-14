@@ -38,12 +38,16 @@ export type AssignmentListActions = {
   refresh(): Promise<void>;
 };
 export type StaffingAssignmentsProps = {
+  entryAssignmentId?: string;
+  entryHistory?: boolean;
   onDirtyChange?(dirty: boolean): void;
   renderActions?(context: AssignmentListActions): ReactNode;
 };
 export function StaffingAssignmentsScreen({
   onDirtyChange,
   renderActions,
+  entryAssignmentId,
+  entryHistory,
 }: StaffingAssignmentsProps = {}) {
   const [context, setContext] = useState<PeriodContext>(),
     [year, setYear] = useState<number>(),
@@ -111,6 +115,8 @@ export function StaffingAssignmentsScreen({
           context={context}
           onDirtyChange={onDirtyChange}
           renderActions={renderActions}
+          entryAssignmentId={entryAssignmentId}
+          entryHistory={entryHistory}
         />
       ) : (
         <p role="status">배정 기간을 불러오는 중입니다.</p>
@@ -123,6 +129,8 @@ export function AssignmentsContent({
   context,
   onDirtyChange,
   renderActions,
+  entryAssignmentId,
+  entryHistory,
 }: StaffingAssignmentsProps & { year: number; context: PeriodContext }) {
   const [filters, setFilters] = useState<api.Filters>({ year }),
     [draft, setDraft] = useState({
@@ -158,6 +166,7 @@ export function AssignmentsContent({
     [leaving, setLeaving] = useState(false),
     [unit, setUnit] = useState("천원"),
     [dense, setDense] = useState(false);
+  useEffect(() => { if (entryAssignmentId) setDetail(entryAssignmentId); return () => { if (entryAssignmentId) setDetail(undefined); }; }, [entryAssignmentId]);
   const generation = useRef(0),
     proceed = useRef<() => void>();
   const readonly = year < Number(context.currentMonth.slice(0, 4));
@@ -615,6 +624,7 @@ export function AssignmentsContent({
         <AssignmentDrawer
           key={`${detail}-${detailVersion}`}
           id={detail}
+          initialTab={entryHistory && detail === entryAssignmentId ? "history" : "info"}
           year={year}
           readonly={readonly}
           contractType={

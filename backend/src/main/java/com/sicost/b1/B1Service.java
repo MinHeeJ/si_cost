@@ -31,6 +31,9 @@ public class B1Service implements UploadResultProvider {
     private final RevisionService revisions;
     private final PayrollMapper payroll;
     private final AggregateLockMapper locks;
+    private com.sicost.common.concurrent.SettlementSourceLocks settlementLocks;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void settlementLocks(com.sicost.common.concurrent.SettlementSourceLocks value) { this.settlementLocks=value; }
     private final Clock clock;
     private final TransactionTemplate transaction;
     public B1Service(B1Mapper mapper,B1Repository repository,B1ImportDefinition definition,CurrentUserProvider users,
@@ -81,7 +84,7 @@ public class B1Service implements UploadResultProvider {
         Set<String> numbers=new HashSet<>();parsed.rows().forEach(r->numbers.add(r.cells().get("관리번호").text()));
         Set<String> keys=new TreeSet<>();keys.add("PAY:"+month);keys.add("operating-standards:CASH_BASE_YM");keys.add("code-group:ALWNC");
         mapper.developers().stream().filter(d->numbers.contains(d.managementNo())).forEach(d->keys.add("DEV:"+d.id()));
-        mapper.members(month).forEach(d->keys.add("DEV:"+d.developerId()));keys.forEach(locks::lock);mapper.lockClose();
+        mapper.members(month).forEach(d->keys.add("DEV:"+d.developerId()));if(settlementLocks!=null)settlementLocks.lock(keys);else keys.forEach(locks::lock);mapper.lockClose();
         List<String> ids=keys.stream().filter(k->k.startsWith("DEV:")).map(k->k.substring(4)).toList();
         if(!ids.isEmpty())mapper.lockDevelopers(ids);
         // Re-read all business sources only after the reference and month locks.

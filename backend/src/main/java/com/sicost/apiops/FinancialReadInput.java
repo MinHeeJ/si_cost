@@ -9,7 +9,7 @@ import static com.sicost.apiops.FinancialReadDtos.*;
 public final class FinancialReadInput {
     private FinancialReadInput() {}
     public static void query(MultiValueMap<String,String> query,boolean history) {
-        Set<String> allowed=history?Set.of("month","scope","page","size","uploadId"):Set.of("month");
+        Set<String> allowed=history?Set.of("month","scope","page","size","uploadId","partId"):Set.of("month");
         query.forEach((key,values)->{
             if(!allowed.contains(key))throw new ApiException(400,"UNKNOWN_FIELD","허용되지 않은 입력 항목입니다.",key,null);
             if(values.size()!=1)throw invalid(key);
@@ -22,13 +22,17 @@ public final class FinancialReadInput {
     }
     public static HistoryQuery history(MultiValueMap<String,String> query) {
         query(query,true);Period period=period(query.getFirst("month"));String scope=query.getFirst("scope");
-        if(scope==null || !Set.of("MONTH","TAX","CARDS","BUSINESS_PLAN","HISTORICAL_PROFIT_LOSS").contains(scope))throw invalid("scope");
+        if(scope==null || !Set.of("MONTH","TAX","CARDS","BUSINESS_PLAN","HISTORICAL_PROFIT_LOSS","PART_SETTLEMENT").contains(scope))throw invalid("scope");
+        String partId=query.getFirst("partId");
+        if("PART_SETTLEMENT".equals(scope)) {
+            if(partId==null||partId.isBlank()||partId.length()>20||!partId.equals(partId.trim())||partId.contains(":"))throw invalid("partId");
+        } else if(query.containsKey("partId"))throw invalid("partId");
         String uploadId=query.getFirst("uploadId");
         if(uploadId!=null && (!Set.of("BUSINESS_PLAN","HISTORICAL_PROFIT_LOSS").contains(scope)
             || !uploadId.matches("[1-9][0-9]{0,11}")))throw invalid("uploadId");
         int page=integer(query.getFirst("page"),1,"page"),size=integer(query.getFirst("size"),50,"size");
         if(!Set.of(20,50,100).contains(size))throw invalid("size");
-        return new HistoryQuery(period,scope,page,size,((long)page-1)*size,uploadId);
+        return new HistoryQuery(period,scope,page,size,((long)page-1)*size,uploadId,partId);
     }
     private static int integer(String value,int fallback,String field) {
         if(value==null)return fallback;

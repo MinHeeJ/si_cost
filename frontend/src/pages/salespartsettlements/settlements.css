@@ -190,3 +190,8 @@
     font-size: 20px;
   }
 }
+
+.settlement-actions { justify-content: flex-end; margin-top: 16px; }
+@media (max-width: 767px) { .settlement-download { display: none; } }
+[data-testid="settlement-command-panel"] > .settlement-toolbar { margin-top: 16px; }
+.settlement-toolbar[hidden] { display: none; }

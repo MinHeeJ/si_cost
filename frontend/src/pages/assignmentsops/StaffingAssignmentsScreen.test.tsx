@@ -475,3 +475,10 @@ it("저장후 재조회 실패는 POST 재실행 없이 조회만 허용한다",
   await screen.findByText(/저장은 완료됐지만 목록을 다시 불러오지 못했습니다/);
   expect(api.changeAssignment).toHaveBeenCalledTimes(1);
 });
+
+it("UI-32 entry opens the selected assignment history while regular entry keeps the list", async () => {
+  render(<AssignmentsContent year={2026} context={context} entryAssignmentId={row.id} entryHistory />);
+  await screen.findByTestId("assignment-detail-drawer");
+  await waitFor(() => expect(api.getAssignment).toHaveBeenCalledWith(row.id, 2026));
+  expect(screen.getByTestId("assignment-history-tab")).toHaveAttribute("aria-selected", "true");
+});

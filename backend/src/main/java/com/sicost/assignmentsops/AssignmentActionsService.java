@@ -27,6 +27,9 @@ public class AssignmentActionsService {
     private final AssignmentActionsRepository repository;
     private final AssignmentMonthlyService months;
     private final AggregateLockMapper locks;
+    private com.sicost.common.concurrent.SettlementSourceLocks settlementLocks;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void settlementLocks(com.sicost.common.concurrent.SettlementSourceLocks value) { this.settlementLocks=value; }
     private final RevisionService revisions;
     private final CurrentUserProvider users;
     private final ChangeHistoryWriter audit;
@@ -48,7 +51,7 @@ public class AssignmentActionsService {
     private void present(Source row,int year) {
         if(!mapper().matchingIds(new Filter(year,null,null,null,null,true)).contains(row.id()))throw invalid("year");
     }
-    private void lock(Collection<String> keys) {keys.stream().distinct().sorted().forEach(locks::lock);months.mapper().lockClose();}
+    private void lock(Collection<String> keys) {if(settlementLocks!=null)settlementLocks.lock(keys);else keys.stream().distinct().sorted().forEach(locks::lock);months.mapper().lockClose();}
     private List<String> keys(Source row) {return List.of("ASGN:"+row.id(),"PROJECT:"+row.projectId(),"DEV:"+row.developerId(),"operating-standards:CASH_BASE_YM","operating-standards:MM_OVER");}
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Page<Month> getMonths(String id,int year,int page,int size) {

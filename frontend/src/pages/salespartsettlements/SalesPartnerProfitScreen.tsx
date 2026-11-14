@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -20,7 +20,9 @@ import "./settlements.css";
 export type SalesPartnerProfitScreenProps = {
   onPerson?(developerId: string): void;
   onPartStandard?(partId: string): void;
-  renderActions?(data: api.SettlementResult, refresh: () => void): ReactNode;
+  renderActions?(data: api.SettlementResult, refresh: () => void, query: api.SettlementQuery): ReactNode;
+  amountUnit?: AmountUnit;
+  onAmountUnitChange?(unit: AmountUnit): void;
   renderViews?(
     data: api.SettlementResult,
     query: api.SettlementQuery,
@@ -49,8 +51,11 @@ export function SalesPartnerProfitScreen({
   renderCard,
   guardNavigation,
   showMonthTable = true,
+  amountUnit,
+  onAmountUnitChange,
 }: SalesPartnerProfitScreenProps = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const shared = useSharedScreen("UI-19");
   const [query, setQuery] = useState<api.SettlementQuery>({
     ...defaultQuery,
@@ -65,6 +70,7 @@ export function SalesPartnerProfitScreen({
     [notice, setNotice] = useState("");
   const [unit, setUnit] = useState<AmountUnit>("천원"),
     [person, setPerson] = useState<string>();
+  useEffect(() => { setPerson(undefined); }, [location.pathname]);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const refresh = () => setReload((n) => n + 1);
@@ -173,11 +179,12 @@ export function SalesPartnerProfitScreen({
     setQuery((q) => ({ ...q, ...next, page: 1 }));
   const guarded = (proceed: () => void) =>
     guardNavigation ? guardNavigation(proceed) : proceed();
+  const displayUnit = amountUnit ?? unit;
   const amount = (value: string | null | undefined) => (
     <span
       className={value?.startsWith("-") ? "settlement-negative" : undefined}
     >
-      {formatAmount(value, unit)}
+      {formatAmount(value, displayUnit)}
     </span>
   );
   const moneyColumns = [
@@ -235,7 +242,7 @@ export function SalesPartnerProfitScreen({
     ...moneyColumns.map(
       ([id, label]): Column<api.SettlementRow> => ({
         id,
-        label,
+        label: <span title={id === "costAmount" ? "급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)" : id === "profitAmount" ? "단가 − 파트 비용" : undefined}>{label}</span>,
         align: "right",
         sortable: [
           "unitPrice",
@@ -437,7 +444,7 @@ export function SalesPartnerProfitScreen({
                 </p>
               </div>
             )}
-            {renderActions?.(data, refresh)}
+            {renderActions?.(data, refresh, query)}
             {data.issues
               .filter((issue) => !issue.developerId)
               .map((issue, i) => (
@@ -459,10 +466,12 @@ export function SalesPartnerProfitScreen({
                 단위{" "}
                 <select
                   data-testid="settlement-unit-select"
-                  value={unit}
-                  onChange={(event) =>
-                    setUnit(event.target.value as AmountUnit)
-                  }
+                  value={displayUnit}
+                  onChange={(event) => {
+                    const next = event.target.value as AmountUnit;
+                    if (onAmountUnitChange) onAmountUnitChange(next);
+                    else setUnit(next);
+                  }}
                 >
                   <option>원</option>
                   <option>천원</option>
@@ -481,6 +490,7 @@ export function SalesPartnerProfitScreen({
                 rowKey={(row) => row.developerId}
                 columns={columns}
                 loading={loading}
+                dense={shared.dense}
                 page={data.pagination.page}
                 size={query.size}
                 total={data.pagination.total}
@@ -511,6 +521,7 @@ export function SalesPartnerProfitScreen({
                     ? "마감 정산 자료 미확인"
                     : "이번 달 투입 인력이 없습니다."
                 }
+                emptyAction={<button type="button" onClick={() => guarded(() => apply(defaultQuery))}>조건 초기화</button>}
                 footer={{
                   label: "전체 합계",
                   render: (column) =>

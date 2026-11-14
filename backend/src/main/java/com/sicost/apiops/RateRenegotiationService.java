@@ -21,6 +21,7 @@ public class RateRenegotiationService {
     public Result getRateRenegotiations(RateRenegotiationInput.Query query) {
         return project(repository.load(), query, false);
     }
+    public Result export(RateRenegotiationInput.Query query) { return project(repository.load(),query,true); }
     public Result project(RateRenegotiationRepository.Snapshot snapshot, RateRenegotiationInput.Query q, boolean allRows) {
         Sources s = snapshot.sources();
         String month = java.time.YearMonth.from(s.asOfDate()).toString(), dbMonth = DatabaseMonthCodec.toDatabase(month);

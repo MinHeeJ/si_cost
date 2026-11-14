@@ -15,6 +15,7 @@ type Props = {
   refreshKey?: string | number;
   dense?: boolean;
   initialScope?: FinancialHistoryScope;
+  partId?: string;
 };
 const types: Record<
   FinancialHistoryEntry["changeType"],
@@ -117,6 +118,7 @@ function FinancialHistoryContent({
   refreshKey,
   dense,
   initialScope = "MONTH",
+  partId,
   onClose,
 }: Props & { onClose(): void }) {
   const [scope, setScope] = useState<FinancialHistoryScope>(initialScope);
@@ -131,7 +133,7 @@ function FinancialHistoryContent({
     setLoading(true);
     setError(undefined);
     setData(undefined);
-    void getFinancialHistory(month, scope, page, size, controller.signal)
+    void getFinancialHistory(month, scope, page, size, controller.signal, ...(partId ? [partId] : []))
       .then((result) => {
         if (!controller.signal.aborted) setData(result);
       })
@@ -142,7 +144,7 @@ function FinancialHistoryContent({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [month, scope, page, size, refreshKey, retry]);
+  }, [month, scope, page, size, refreshKey, retry, partId]);
   return (
     <div data-testid="financial-history-content">
       <div className="sicost-list-toolbar">
@@ -156,9 +158,11 @@ function FinancialHistoryContent({
               setPage(1);
             }}
           >
+            {initialScope === "PART_SETTLEMENT" ? <option value="PART_SETTLEMENT">선택 파트월 정산</option> : <>
             <option value="MONTH">선택월 원천</option>
             <option value="TAX">관련 세금</option>
             <option value="CARDS">전역 카드</option>
+            </>}
             {initialScope === "BUSINESS_PLAN" && (
               <option value="BUSINESS_PLAN">사업계획 목표</option>
             )}

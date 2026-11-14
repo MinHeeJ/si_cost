@@ -259,7 +259,8 @@ it("locked snapshot has read-only card and hides save/confirm/cancel when CLOSE"
     canConfirm: false,
     canCancel: false,
   });
-  expect(screen.getByLabelText("법인카드 사용액")).toHaveAttribute("readonly");
+  expect(screen.queryByRole("textbox", {name: "법인카드 사용액"})).not.toBeInTheDocument();
+  expect(screen.getByText("법인카드 사용액 5")).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "카드 저장" }),
   ).not.toBeInTheDocument();

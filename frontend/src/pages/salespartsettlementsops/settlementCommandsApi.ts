@@ -1,3 +1,5 @@
+import { downloadB7File, saveDownload } from "../b7/b7Api";
+import type { AmountUnit } from "../../shared/format";
 import { request } from "../../shared/api";
 import type {
   SettlementIssue,
@@ -108,4 +110,12 @@ export function parseSettlementCard(input: string): string {
   if (value > 999999999999999n)
     throw new Error("법인카드 사용액의 최대 금액을 초과했습니다.");
   return value.toString();
+}
+
+export async function downloadSettlement(partId: string, query: import("../salespartsettlements/salesPartSettlementsApi").SettlementQuery, mode: "MONTH" | "TREND", amountUnit: AmountUnit) {
+  saveDownload(await downloadB7File("/api/exports/master-data", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({view: "SALES_PART_SETTLEMENTS", filters: {partId, month: query.month, mode},
+      sort: mode === "TREND" ? "name" : query.sort, direction: mode === "TREND" ? "ASC" : query.direction, amountUnit}),
+  }));
 }
