@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.concurrent.SettlementSourceLockMapper">
+  <select id="partIds" resultType="string" useCache="false" flushCache="true">
+    SELECT DISTINCT p.PART_ID FROM TB_BS_PART p WHERE
+    <trim prefix="(" suffix=")" prefixOverrides="OR">
+      <if test="!partIds.isEmpty()">
+        OR p.PART_ID IN <foreach collection="partIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+      </if>
+      <if test="!developerIds.isEmpty()">
+        OR EXISTS (SELECT 1 FROM TB_HR_DEV d WHERE d.PART_ID=p.PART_ID AND d.DEV_ID IN
+          <foreach collection="developerIds" item="id" open="(" separator="," close=")">#{id}</foreach>)
+      </if>
+      <if test="!assignmentIds.isEmpty()">
+        OR EXISTS (SELECT 1 FROM TB_PJ_ASGN a JOIN TB_HR_DEV d ON d.DEV_ID=a.DEV_ID WHERE d.PART_ID=p.PART_ID AND a.ASGN_ID IN
+          <foreach collection="assignmentIds" item="id" open="(" separator="," close=")">#{id}</foreach>)
+      </if>
+      <if test="!projectIds.isEmpty()">
+        OR EXISTS (SELECT 1 FROM TB_PJ_ASGN a JOIN TB_HR_DEV d ON d.DEV_ID=a.DEV_ID WHERE d.PART_ID=p.PART_ID AND a.PROJ_ID IN
+          <foreach collection="projectIds" item="id" open="(" separator="," close=")">#{id}</foreach>)
+        OR EXISTS (SELECT 1 FROM TB_PJ_TK_DSTRB t JOIN TB_HR_DEV d ON d.DEV_ID=t.DEV_ID WHERE d.PART_ID=p.PART_ID AND t.PROJ_ID IN
+          <foreach collection="projectIds" item="id" open="(" separator="," close=")">#{id}</foreach>)
+      </if>
+      <if test="!payrollMonths.isEmpty()">
+        OR EXISTS (SELECT 1 FROM TB_HR_DEV d WHERE d.PART_ID=p.PART_ID)
+      </if>
+      <if test="partIds.isEmpty() and developerIds.isEmpty() and assignmentIds.isEmpty() and projectIds.isEmpty() and payrollMonths.isEmpty()">FALSE</if>
+    </trim>
+    ORDER BY p.PART_ID
+  </select>
+  <select id="lockParts" resultType="string" useCache="false" flushCache="true">
+    SELECT PART_ID FROM TB_BS_PART WHERE PART_ID IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY PART_ID FOR UPDATE
+  </select>
+  <select id="lockHeaders" resultType="string" useCache="false" flushCache="true">
+    SELECT PART_ID || ':' || SETL_YM FROM TB_CO_PART_SETL WHERE PART_ID IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY PART_ID,SETL_YM FOR UPDATE
+  </select>
+  <select id="lockStandards" resultType="string" useCache="false" flushCache="true">
+    SELECT PART_ID || ':' || APLY_BGN_YM FROM TB_BS_PART_STD WHERE PART_ID IN
+    <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    ORDER BY PART_ID,APLY_BGN_YM FOR UPDATE
+  </select>
+</mapper>

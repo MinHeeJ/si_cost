@@ -13,12 +13,19 @@ public class WriteCoordinator {
     private final AggregateLockMapper locks;
     private final RevisionService revisions;
     private final CommitInvalidation invalidation;
+    private final SettlementSourceLocks sourceLocks;
     public WriteCoordinator(PlatformTransactionManager manager, AggregateLockMapper locks,
                             RevisionService revisions, CommitInvalidation invalidation) {
+        this(manager, locks, revisions, invalidation, null);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public WriteCoordinator(PlatformTransactionManager manager, AggregateLockMapper locks,
+                            RevisionService revisions, CommitInvalidation invalidation, @org.springframework.lang.Nullable SettlementSourceLocks sourceLocks) {
         this.transactions = new TransactionTemplate(manager);
         this.locks = locks;
         this.revisions = revisions;
         this.invalidation = invalidation;
+        this.sourceLocks = sourceLocks;
     }
     public record WriteResult(boolean changed, String revision, String message) {}
 
@@ -27,7 +34,7 @@ public class WriteCoordinator {
         var keys = aggregateKeys.stream().distinct().sorted().toList();
         if (keys.isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
         return transactions.execute(status -> {
-            keys.forEach(locks::lock);
+            lock(keys);
             validateDomain.run();
             dataAndHistory.run();
             Object snapshot = storedSnapshot.get();
@@ -43,7 +50,7 @@ public class WriteCoordinator {
                               BooleanSupplier hasActualChanges, Runnable dataAndHistory) {
         if (aggregateKeys.isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
         return transactions.execute(status -> {
-            aggregateKeys.stream().distinct().sorted().forEach(locks::lock);
+            lock(aggregateKeys);
             // Supplier queries must lock and return the COMPLETE aggregate: all codes (including deleted),
             // or all effective-month rows, identifiers, values and both audit timestamps, in key order.
             String before = revisions.revision(lockedSnapshot.get());
@@ -58,5 +65,9 @@ public class WriteCoordinator {
             aggregateKeys.stream().distinct().sorted().forEach(invalidation::afterCommit);
             return new WriteResult(true, after, null);
         });
+    }
+    private void lock(Collection<String> keys) {
+        if (sourceLocks != null) sourceLocks.lock(keys);
+        else keys.stream().distinct().sorted().forEach(locks::lock);
     }
 }

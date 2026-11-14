@@ -45,30 +45,41 @@ public class ExcelExportService {
     @FunctionalInterface public interface Rows { void read(Consumer<List<Object>> sink); }
     public record Sheet(String name, List<Column> columns, Rows rows) {}
     public record Information(String label, Object value) {}
-    public record WorkbookData(List<Sheet> sheets, List<Information> information, long people, String year) {}
+    public record WorkbookData(List<Sheet> sheets, List<Information> information, long people, String year, String filename) {
+        public WorkbookData(List<Sheet> sheets, List<Information> information, long people, String year) {
+            this(sheets, information, people, year, null);
+        }
+    }
     @FunctionalInterface public interface WorkbookSource { WorkbookData read(); }
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09").contains(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
             String qualifierPattern = switch (specification.screenId()) {
                 case "UI-07" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])_(MONTH|QUARTER|YTD)";
-                case "UI-04", "UI-08", "UI-09" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])";
-                case "UI-31" -> "[0-9]{8}";
+                case "UI-04", "UI-08", "UI-09", "UI-19" -> "(?!0000)[0-9]{4}(0[1-9]|1[0-2])";
+                case "UI-31", "UI-32" -> "[0-9]{8}";
                 default -> "[0-9]{4}";
             };
             if (data.year() == null || !data.year().matches(qualifierPattern)) throw InputValidator.invalid("year");
+            boolean settlement = Set.of("UI-19", "UI-32").contains(specification.screenId());
+            if (settlement) {
+                String pattern = specification.screenId().equals("UI-19")
+                    ? "영업파트이익금_[A-Za-z0-9-]{1,20}_" + data.year() + "_(이번달|추이)\\.xlsx"
+                    : "단가재협상_" + java.time.LocalDate.now(clock.withZone(TimeConfiguration.SEOUL)).format(DateTimeFormatter.BASIC_ISO_DATE) + "\\.xlsx";
+                if (data.filename() == null || !data.filename().matches(pattern)) throw InputValidator.invalid("filename");
+            } else if (data.filename() != null) throw InputValidator.invalid("filename");
             for (Sheet sheet : data.sheets()) {
                 validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
                 SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), true);
                 sheet.rows().read(writer::append);
             }
-            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), data.information());
+            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), data.information(), data.filename());
         });
     }
-    private record Generated(long count, String qualifier, List<Information> information) {}
+    private record Generated(long count, String qualifier, List<Information> information, String filename) {}
     @FunctionalInterface private interface Writer { Generated write(SXSSFWorkbook workbook); }
 
     public Download generate(Specification specification, Rows rows, HttpServletRequest request) {
@@ -89,6 +100,7 @@ public class ExcelExportService {
         });
     }
     private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {
+        if (Set.of("UI-19", "UI-32").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         validate(specification);
         Path file = null;
         try {
@@ -175,7 +187,7 @@ public class ExcelExportService {
             });
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), generated.count()), request));
+            audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), generated.count(), generated.filename()), request));
             String prefix = switch (specification.kind()) {
                 case "개발자" -> "개발자목록";
                 case "개발자_등록양식" -> "B8_개발자양식";
@@ -185,7 +197,8 @@ public class ExcelExportService {
                 default -> specification.kind();
             };
             String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
-            return new Download(file, kind + (Set.of("UI-07", "UI-08", "UI-09").contains(specification.screenId()) ? "" : "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))) + ".xlsx");
+            String filename = generated.filename() == null ? kind + (Set.of("UI-07", "UI-08", "UI-09").contains(specification.screenId()) ? "" : "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))) + ".xlsx" : generated.filename();
+            return new Download(file, filename);
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
             if (e instanceof ApiException api) throw api;
@@ -194,6 +207,8 @@ public class ExcelExportService {
     }
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
+            case "UI-19" -> Set.of("영업파트이익금");
+            case "UI-32" -> Set.of("단가재협상");
             case "UI-07" -> Set.of("전체수익구조");
             case "UI-09" -> Set.of("순이익표");
             case "UI-03" -> Set.of("개인원가수익");

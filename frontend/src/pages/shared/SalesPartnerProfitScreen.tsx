@@ -1,4 +1,1 @@
-import { FollowUpScreen } from "./FollowUpScreen";
-export function SalesPartnerProfitScreen() {
-  return <FollowUpScreen screenId="UI-19" />;
-}
+export { SalesPartnerProfitScreen } from "../salespartsettlementsops/SalesPartnerProfitScreen";

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.salespartsettlements.SalesPartSettlementMapper">
+  <select id="parts" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$PartRow" useCache="false">
+    SELECT part_id AS "partId",part_nm AS "name",hq_yn AS "headquarters",use_yn AS "useYn",
+      reg_user_id AS "regUserId",reg_dttm AS "regDttm",mod_user_id AS "modUserId",mod_dttm AS "modDttm"
+    FROM tb_bs_part ORDER BY part_nm,part_id
+  </select>
+  <select id="standards" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$StandardRow" useCache="false">
+    SELECT s.part_id AS "partId",s.aply_bgn_ym AS "month",s.aply_end_ym AS "endMonth",
+      s.part_ldr_user_id AS "leaderId",u.user_nm AS "leaderName",s.prft_dstrb_rt AS "rate",s.sales_exps_amt AS "expense",
+      s.reg_user_id AS "regUserId",s.reg_dttm AS "regDttm",s.mod_user_id AS "modUserId",s.mod_dttm AS "modDttm"
+    FROM tb_bs_part_std s LEFT JOIN tb_sy_user u ON u.user_id=s.part_ldr_user_id ORDER BY s.part_id,s.aply_bgn_ym
+  </select>
+  <select id="useHistory" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$UseHistory" useCache="false">
+    SELECT trgt_key AS "partId",hist_id::text AS "histId",bfr_val AS "beforeValue",aft_val AS "afterValue",reg_dttm AS "at"
+    FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_BS_PART' AND chg_item_nm='USE_YN'
+    ORDER BY reg_dttm,hist_id
+  </select>
+  <select id="parents" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$Parent" useCache="false">
+    SELECT s.part_id AS "partId",s.setl_ym AS "month",s.corp_card_amt AS "cardAmount",s.part_prft_amt AS "partProfitAmount",
+      s.setl_stat_cd AS "status",s.cnfm_user_id AS "confirmedBy",u.user_nm AS "confirmedByName",s.cnfm_dttm AS "confirmedAt",
+      s.cncl_rsn AS "cancellationReason",s.reg_user_id AS "regUserId",s.reg_dttm AS "regDttm",s.mod_user_id AS "modUserId",s.mod_dttm AS "modDttm"
+    FROM tb_co_part_setl s LEFT JOIN tb_sy_user u ON u.user_id=s.cnfm_user_id WHERE s.setl_ym=#{month} ORDER BY s.part_id
+  </select>
+  <select id="details" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$Detail" useCache="false">
+    SELECT d.part_id AS "partId",d.setl_ym AS "month",d.dev_id AS "developerId",p.dev_nm AS "name",p.mng_no AS "managementNo",
+      d.emp_type_cd AS "employeeType",d.proj_nm_list AS "projectText",d.mm AS "mm",d.uprc_amt AS "unitPrice",d.pay_amt AS "pay",
+      d.sales_exps_amt AS "expense",d.retire_amt AS "retirement",d.cost_amt AS "cost",d.diff_amt AS "profit",d.prft_amt AS "share",d.rmrk AS "remark",
+      d.reg_user_id AS "regUserId",d.reg_dttm AS "regDttm",d.mod_user_id AS "modUserId",d.mod_dttm AS "modDttm"
+    FROM tb_co_part_setl_dtl d LEFT JOIN tb_hr_dev p ON p.dev_id=d.dev_id WHERE d.setl_ym=#{month} ORDER BY d.part_id,d.dev_id
+  </select>
+  <select id="firstInputs" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$FirstInput" useCache="false">
+    SELECT dev_id AS "developerId",min(input_bgn_dt) AS "date" FROM tb_pj_asgn WHERE asgn_stat_cd != 'CNCL' GROUP BY dev_id ORDER BY dev_id
+  </select>
+  <select id="revisionSources" resultType="com.sicost.salespartsettlements.SalesPartSettlementDtos$RevisionRow" useCache="false">
+    SELECT 'TB_HR_DEV' AS "source",(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY dev_id),'[]'::jsonb)::text FROM tb_hr_dev t) AS "storedRows"
+    UNION ALL SELECT 'TB_HR_DEV_PRC',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY dev_id,aply_bgn_ym),'[]'::jsonb)::text FROM tb_hr_dev_prc t)
+    UNION ALL SELECT 'TB_HR_DEV_STAT',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY dev_id,stat_sn),'[]'::jsonb)::text FROM tb_hr_dev_stat t)
+    UNION ALL SELECT 'TB_HR_MON_PAY',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY pay_ym,dev_id),'[]'::jsonb)::text FROM tb_hr_mon_pay t)
+    UNION ALL SELECT 'TB_PJ_ASGN',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY asgn_id),'[]'::jsonb)::text FROM tb_pj_asgn t)
+    UNION ALL SELECT 'TB_PJ_ASGN_HIST',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY asgn_id,hist_sn),'[]'::jsonb)::text FROM tb_pj_asgn_hist t)
+    UNION ALL SELECT 'TB_PJ_ASGN_MON',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY asgn_id,input_ym),'[]'::jsonb)::text FROM tb_pj_asgn_mon t)
+    UNION ALL SELECT 'TB_PJ_PROJ',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY proj_id),'[]'::jsonb)::text FROM tb_pj_proj t)
+    UNION ALL SELECT 'TB_PJ_TK_DSTRB',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY proj_id,dstrb_step_cd,row_sn,dstrb_ym),'[]'::jsonb)::text FROM tb_pj_tk_dstrb t)
+    UNION ALL SELECT 'TB_CO_MON_COST',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY cost_ym,dev_id,proj_id,asgn_id),'[]'::jsonb)::text FROM tb_co_mon_cost t)
+    UNION ALL SELECT 'TB_SY_OPER_STD',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY std_cd,aply_bgn_ym),'[]'::jsonb)::text FROM tb_sy_oper_std t)
+    UNION ALL SELECT 'TB_SY_CODE',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY code_grp_id,code),'[]'::jsonb)::text FROM tb_sy_code t WHERE code_grp_id='ALWNC')
+    UNION ALL SELECT 'TB_CL_CLOSE',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY close_ym),'[]'::jsonb)::text FROM tb_cl_close t WHERE close_ym=#{month})
+    UNION ALL SELECT 'CASH_BASE_YM',(SELECT coalesce(jsonb_agg(to_jsonb(t) ORDER BY aply_bgn_ym),'[]'::jsonb)::text FROM tb_sy_oper_std t WHERE std_cd='CASH_BASE_YM')
+    ORDER BY "source"
+  </select>
+</mapper>

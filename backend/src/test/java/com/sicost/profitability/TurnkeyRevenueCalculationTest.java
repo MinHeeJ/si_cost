@@ -86,7 +86,7 @@ class TurnkeyRevenueCalculationTest {
         assertThat(turnkey.comparison(s,s.projects().get(0)).items()).anyMatch(i->i.developerId().equals("contract-person")&&i.type().equals("NO_ASSIGNMENT"));
         assertThat(result.knownPersonalRevenue()).isNotEqualTo("999");
     }
-    @ParameterizedTest @NullSource @ValueSource(strings={"0"})
+    @ParameterizedTest @NullSource @ValueSource(strings={"0", "-1", "-999999999999999"})
     void missingBudgetKeepsKnownCostButRevenueAndProfitUnknown(String budget) {
         var result=calculate(tk(budget,assignment("a","1.00")));
         assertThat(result.rows()).singleElement().satisfies(r->{

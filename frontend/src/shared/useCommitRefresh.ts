@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 
 export const COMMITTED_REFRESH_FAILED =
   "저장은 완료됐지만 목록을 다시 불러오지 못했습니다. 다시 조회해 주세요.";
-export function useCommitRefresh() {
+export function useCommitRefresh(
+  committedRefreshFailed = COMMITTED_REFRESH_FAILED,
+) {
   const active = useRef(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function useCommitRefresh() {
         await refresh();
         if (!options.quiet) setMessage("저장했습니다.");
       } catch {
-        setMessage(COMMITTED_REFRESH_FAILED);
+        setMessage(committedRefreshFailed);
       }
     } catch (error) {
       setMessage(

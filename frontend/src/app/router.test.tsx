@@ -38,6 +38,8 @@ import * as analysis from "../pages/apiops/projectAnalysisApi";
 import * as costDetail from "../pages/costanalysis/projectCostApi";
 import * as progress from "../pages/progress/projectProgressApi";
 import * as issues from "../pages/issues/projectIssuesApi";
+import * as settlements from "../pages/salespartsettlements/salesPartSettlementsApi";
+import * as renegotiations from "../pages/apiops/rateRenegotiationsApi";
 import { financialEditorFixture } from "../pages/financialitems/financialFixtures";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
@@ -54,6 +56,12 @@ vi.mock("../pages/corporatetaxesops/corporateTaxApi", async (original) => ({
   createCorporateTaxDefaults: vi.fn(),
 }));
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/salespartsettlements/salesPartSettlementsApi");
+vi.mock("../pages/apiops/rateRenegotiationsApi", async (original) => ({
+  ...(await original<typeof import("../pages/apiops/rateRenegotiationsApi")>()),
+  getRateRenegotiations: vi.fn(),
+  downloadRenegotiations: vi.fn(),
+}));
 vi.mock("../pages/apiops/projectAnalysisApi", async (original) => ({
   ...(await original<typeof import("../pages/apiops/projectAnalysisApi")>()),
   getProjectCosts: vi.fn(),
@@ -289,6 +297,34 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(settlements.getSalesPartSettlements).mockResolvedValue({
+    month: context.currentMonth,
+    baseMonth: context.cashBaseMonth,
+    currentMonth: context.currentMonth,
+    parts: [],
+    eligibleCount: 0,
+    confirmedCount: 0,
+    unconfirmedCount: 0,
+    issues: [],
+  });
+  vi.mocked(renegotiations.getRateRenegotiations).mockResolvedValue({
+    baseMonth: context.currentMonth,
+    calculatedAt: "2026-11-10T09:00:00+09:00",
+    appliedIncreaseRate: "5",
+    targetMarginRate: null,
+    summary: {
+      personCount: 0,
+      assignmentCount: 0,
+      weightedMarginRate: null,
+      annualGain: "0",
+      targetAnnualGain: null,
+    },
+    items: [],
+    pagination: { page: 1, size: 50, total: 0 },
+    unevaluatedCount: 0,
+    unevaluatedAssignments: [],
+    issues: [],
+  });
   const completeness: analysis.Completeness = {
     costComplete: true,
     revenueComplete: true,
@@ -710,7 +746,9 @@ describe("공식 진입점 합성", () => {
       "진행 현황",
       "이슈",
     ])
-      expect(screen.getByRole("tab", { name: label === "이슈" ? /^이슈/ : label })).toBeVisible();
+      expect(
+        screen.getByRole("tab", { name: label === "이슈" ? /^이슈/ : label }),
+      ).toBeVisible();
     expect(screen.getByRole("tab", { name: "진행 현황" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -720,9 +758,9 @@ describe("공식 진입점 합성", () => {
     open("/UI-01?projectId=P-0042&tab=progress");
     await screen.findByText("진행 조회 실패");
     expect(screen.getByTestId("project-detail")).toBeVisible();
-    await userEvent.click(screen.getByRole("button", {name: "DB UI-16"}));
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
     expect(screen.getByTestId("project-detail")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", {name: /DB UI-01$/}));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
     expect(screen.getByTestId("project-detail")).toBeVisible();
   });
   it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
@@ -1207,6 +1245,26 @@ describe("공식 진입점 합성", () => {
             ? "조건에 맞는 프로젝트가 없습니다."
             : "조건에 맞는 진행 프로젝트가 없습니다.",
         );
+      } else if (id === "UI-19") {
+        expect(
+          await screen.findByTestId("sales-part-settlement-screen"),
+        ).toBeVisible();
+        await screen.findByText(
+          "정산 대상 영업 파트가 없습니다. 본사는 정산 대상이 아닙니다",
+        );
+        expect(settlements.getSalesPartSettlements).toHaveBeenCalledWith(
+          undefined,
+          expect.any(AbortSignal),
+        );
+        expect(screenRegistry[id].periodType).toBe("YEAR_MONTH");
+      } else if (id === "UI-32") {
+        expect(await screen.findByTestId("renegotiation-screen")).toBeVisible();
+        await screen.findByText("조건에 맞는 재협상 대상이 없습니다");
+        expect(renegotiations.getRateRenegotiations).toHaveBeenCalledWith(
+          renegotiations.defaultRenegotiationQuery(),
+          expect.any(AbortSignal),
+        );
+        expect(screenRegistry[id].periodType).toBe("NONE");
       } else if (id === "UI-02" || id === "UI-33") {
         expect(
           await screen.findByTestId(

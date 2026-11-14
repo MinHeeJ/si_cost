@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.RateRenegotiationMapper">
+  <select id="assignments" resultType="com.sicost.common.assignments.AssignmentMonthlyService$Source" useCache="false">
+    SELECT asgn_id AS "id",proj_id AS "projectId",dev_id AS "developerId",job_cd AS "jobCode",
+      input_bgn_dt AS "startDate",input_end_dt AS "endDate",ctrt_mm AS "contractMm",bill_uprc AS "price",
+      input_type_cd AS "inputType",ctrt_dev_id AS "contractDeveloperId",ext_psbl_cd AS "extensionPossibility",
+      ext_cnt::int AS "extensionCount",early_wthdr_yn AS "earlyWithdrawal",asgn_stat_cd AS "status"
+    FROM tb_pj_asgn ORDER BY asgn_id
+  </select>
+</mapper>

@@ -27,7 +27,8 @@ export type ScreenColumnPreferences = ColumnPreferences &
       | "projectCost"
       | "issues"
       | "statusBoard"
-      | "individualProfitability",
+      | "individualProfitability"
+      | "rateRenegotiations",
       ColumnView
     >
   >;
