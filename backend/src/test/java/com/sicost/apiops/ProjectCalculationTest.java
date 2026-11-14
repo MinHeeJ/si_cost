@@ -20,6 +20,16 @@ class ProjectCalculationTest {
         var source=new MonthlyLaborSource(person,month,"FT","DRCT","급여",labor,null,null,null,null,null,null,null,null,false);
         return new MonthlyPersonCost(person,month,List.of(row),source,new MonthlyCostCompleteness(labor!=null,true,false,true,List.of()),labor,revenue,"0.50",false,false);
     }
+    com.sicost.progress.ProjectProgressDtos.ProjectRow progressProject(Project p) {
+        return new com.sicost.progress.ProjectProgressDtos.ProjectRow(p.projectId(),p.name(),p.contractType(),p.status(),p.fromDate(),p.toDate(),p.budget(),p.fromDate().atStartOfDay(),null,null,false);
+    }
+    List<Stage> stages(Project p) {
+        var codes=com.sicost.progress.ProjectProgressCalculation.codes(p.contractType());
+        var weights=Set.of("TK","IN").contains(p.contractType())?List.of("5","15","20","35","15","5","5"):List.of("5","10","15","65","5");
+        var templates=new ArrayList<com.sicost.progress.ProjectProgressDtos.Template>();
+        for(int i=0;i<codes.size();i++)templates.add(new com.sicost.progress.ProjectProgressDtos.Template(codes.get(i),codes.get(i),weights.get(i),p.contractType(),"Y","N",i));
+        return com.sicost.progress.ProjectProgressCalculation.initialize(progressProject(p),templates).stream().map(r->new Stage(r.projectId(),r.stepSn(),r.stepCode(),r.stepName(),r.weight(),r.startDate(),r.endDate(),r.completedDate(),"admin","관리자",p.fromDate().atStartOfDay(),null,null,null)).toList();
+    }
     Snapshot snapshot(Project project,List<MonthlyPersonCost> people,List<ForecastMonth> future,List<Stage> stages,List<Memo> memos,List<Issue> issues) {
         var period=new ProfitabilityPeriod(2026,"202501","202501","202601",OffsetDateTime.parse("2026-01-31T00:00:00+09:00"),false);
         var sources=new Sources(period,"admin",LocalDate.of(2026,1,31),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(project),List.of(),List.of(),List.of(),
@@ -89,11 +99,14 @@ class ProjectCalculationTest {
         assertThat(row.get("openIssueCount")).isEqualTo(1);assertThat(row.get("overdueIssueCount")).isEqualTo(0);assertThat(row.get("updateWarning")).isEqualTo(false);assertThat(row.get("light")).isEqualTo("정상");
     }
     @Test void validStagesWeightedPlanAndRawCompletedDatesRetainedWhileInvalidUsesPeriodFallback() {
-        var project=project("TK");var stage=new Stage("project",1,"ONE","전체",n("100.00"),project.fromDate(),project.toDate(),null,"admin","관리자",project.fromDate().atStartOfDay(),null,null,null);
-        var snapshot=snapshot(project,List.of(),List.of(),List.of(stage),List.of(),List.of());
+        var project=project("TK");var stages=stages(project);
+        var snapshot=snapshot(project,List.of(),List.of(),stages,List.of(),List.of());
         var row=board.row(snapshot,project,costs.row(snapshot,project,selected),LocalDate.of(2026,1,31));assertThat(row.get("planBasis")).isEqualTo("단계 기준");
-        var bad=new Stage("project",1,"ONE","부분",n("30.00"),project.fromDate(),project.toDate(),null,"admin","관리자",project.fromDate().atStartOfDay(),null,null,null);
-        var invalid=snapshot(project,List.of(),List.of(),List.of(bad),List.of(),List.of());
-        var fallback=board.row(invalid,project,costs.row(invalid,project,selected),LocalDate.of(2026,1,31));assertThat(fallback.get("planProgress")).isEqualTo(row.get("planProgress"));assertThat(fallback.get("planBasis").toString()).contains("불완전");assertThat(invalid.stages()).containsExactly(bad);
+        var first=stages.get(0);var bad=new Stage(first.projectId(),first.stepSn(),first.stepCode(),first.stepName(),n("30.00"),first.startDate(),first.endDate(),null,"admin","관리자",project.fromDate().atStartOfDay(),null,null,null);
+        var invalidStages=new ArrayList<>(stages);invalidStages.set(0,bad);
+        var invalid=snapshot(project,List.of(),List.of(),invalidStages,List.of(),List.of());
+        var fallback=board.row(invalid,project,costs.row(invalid,project,selected),LocalDate.of(2026,1,31));
+        assertThat(fallback.get("planProgress")).isEqualTo(com.sicost.progress.ProjectProgressCalculation.plan(progressProject(project),List.of(),LocalDate.of(2026,1,31)));
+        assertThat(fallback.get("planBasis").toString()).contains("불완전");assertThat(invalid.stages()).containsExactlyElementsOf(invalidStages);
     }
 }

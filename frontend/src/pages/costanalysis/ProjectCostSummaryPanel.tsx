@@ -50,11 +50,11 @@ export function CostMetrics({
       </h3>
       <dl>
         <dt>누적 원가 ({unit})</dt>
-        <dd>{formatAmount(row.cumulativeCost, unit)}</dd>
+        <dd className={row.cumulativeCost?.startsWith("-") ? "cost-negative" : undefined}>{formatAmount(row.cumulativeCost, unit)}</dd>
         <dt>누적 매출참고 ({unit})</dt>
-        <dd>{formatAmount(row.cumulativeRevenue, unit)}</dd>
+        <dd className={row.cumulativeRevenue?.startsWith("-") ? "cost-negative" : undefined}>{formatAmount(row.cumulativeRevenue, unit)}</dd>
         <dt>누적 마진</dt>
-        <dd>
+        <dd className={row.cumulativeMargin?.startsWith("-") ? "cost-negative" : undefined}>
           {row.cumulativeMargin ?? "–"}
           {row.cumulativeMargin != null && "%"}
         </dd>

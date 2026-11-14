@@ -72,3 +72,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+.cost-cause-bars { display: grid; gap: 12px; margin: 16px 0; }
+.cost-cause-bars p { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 6px; }
+.cost-cause-track { height: 8px; border-radius: 4px; overflow: hidden; background: var(--divider); }
+.cost-cause-track span { display: block; height: 100%; background: var(--text-sub); }
+.cost-cause-bars[data-highlight="true"] .cost-cause-track span { background: var(--bad); }
+
+.cost-negative { color: var(--bad); }

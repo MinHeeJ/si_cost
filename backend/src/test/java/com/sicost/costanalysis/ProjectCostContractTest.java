@@ -62,6 +62,25 @@ class ProjectCostContractTest {
         snapshot=fixture("TK","PRE","800",n("1"),false);
         mvc.perform(get("/api/projects/project/cost-analysis")).andExpect(status().isOk()).andExpect(jsonPath("$.data.row.cumulativeCost").value("230")).andExpect(jsonPath("$.data.row.cumulativeRevenue").value("0")).andExpect(jsonPath("$.data.forecast").isEmpty()).andExpect(jsonPath("$.data.simulationDefaults.enabled").value(false));
     }
+    @Test void internalAndIncompleteFreeLaborAreUnknownRatherThanMisleadingZero() {
+        for(var fixture:List.of(fixture("IN","ING","800",n("1"),false),fixture("MO","ING","800",n("1"),true))) {
+            var result=calculation.detail(calculation.view(fixture));
+            assertThat(result.row().freeLaborCost()).isNull();
+        }
+    }
+    @Test void targetGapRoundsOnlyAfterSubtractingExactTarget() {
+        var original=fixture("MO","ING","800",n("1"),false);var source=original.sources();
+        var standards=new ArrayList<>(source.standards());standards.removeIf(x->x.code().equals("TGT_MRGN_RT"));standards.add(new Standard("TGT_MRGN_RT","202512",n("20.04")));
+        var revised=new Sources(source.period(),source.actor(),source.asOfDate(),source.people(),source.prices(),source.states(),source.payroll(),source.assignments(),source.projectMonths(),source.projects(),source.projectParts(),source.turnkey(),source.storedCosts(),standards,source.parts(),source.closes(),source.allowanceCodes());
+        var people=original.costs().items().stream().map(person -> {
+            if (!person.month().equals("202601")) return person;
+            var row=new StoredCost("202601","actual","project","assignment-202601",n("1"),n("0"),n("201"),n("100"),n("7"),n("3"),n("10"),"ALLOC","MO","HQ","N",null,null,null,null,"계약 원가","DEV","PAID").toRow();
+            return new MonthlyPersonCost(person.personId(),person.month(),List.of(row),person.laborSource(),person.completeness(),person.knownLaborAllocated(),"201",person.assignmentMm(),false,false);
+        }).toList();
+        var snapshot=new Snapshot(original.project(),revised,new MonthlyCostsData(revised.period(),people),original.expenses(),original.planMm(),original.actualProgress(),original.future(),original.jobs(),original.prices());
+        // (201-115)/201*100 - 20.04 = 22.746... -> 22.7; rounding margin first incorrectly yields 22.8.
+        assertThat(calculation.detail(calculation.view(snapshot)).row().targetGap()).isEqualTo("22.7");
+    }
     @Test void lostDetailRetainsHistory() throws Exception {snapshot=fixture("TK","LOSE","800",n("1"),false);mvc.perform(get("/api/projects/project/cost-analysis")).andExpect(status().isOk()).andExpect(jsonPath("$.data.sourceStatus").value("LOSE")).andExpect(jsonPath("$.data.row.cumulativeCost").value("230"));}
     @Test void internalHidesAllFinancialCellsExceptResearchCost() throws Exception {snapshot=fixture("IN","ING","800",n("1"),false);mvc.perform(get("/api/projects/project/cost-analysis")).andExpect(jsonPath("$.data.row.cumulativeRevenue").isEmpty()).andExpect(jsonPath("$.data.row.contractAmount").isEmpty()).andExpect(jsonPath("$.data.row.budgetUsage").isEmpty()).andExpect(jsonPath("$.data.row.cumulativeCost").value("230"));}
     @Test void missingProjectIs404WithoutResult() throws Exception {when(repository.load(eq("missing"),nullable(String.class))).thenThrow(new ApiException(404,"NOT_FOUND","프로젝트를 찾을 수 없습니다."));mvc.perform(get("/api/projects/missing/cost-analysis")).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND")).andExpect(jsonPath("$.data").doesNotExist());}

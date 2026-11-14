@@ -250,6 +250,7 @@ describe("프로젝트 원가 목록", () => {
     expect(screen.getByText("소진율 125.0%")).toBeInTheDocument();
     expect(screen.getByText("계획 없음")).toBeInTheDocument();
     expect(screen.getByText("예산 주의")).toHaveClass("sicost-tone-warn");
+    expect(screen.getByTestId("analysis-summary-cumulative-profit").querySelector("strong")).toHaveClass("analysis-negative");
   });
   it("formats per-MM amounts in the selected unit without scaling MM or rates", async () => {
     const data = costs();
@@ -327,6 +328,10 @@ describe("프로젝트 원가 목록", () => {
     });
     mount(<ProjectCostAnalysis />);
     await screen.findByText("조건에 맞는 프로젝트가 없습니다.");
+    const reset=screen.getByRole("button", {name: "조건 초기화"});
+    expect(reset.closest("td")).not.toBeNull();
+    fireEvent.click(reset);
+    await waitFor(() => expect(api.getProjectCosts).toHaveBeenLastCalledWith(expect.objectContaining({page: 1, size: 50}), expect.any(AbortSignal)));
   });
   it("opens selected real identity through the supplied detail and closes without losing month", async () => {
     mount(
@@ -437,5 +442,20 @@ describe("프로젝트 현황판", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
     await screen.findByText("조건에 맞는 진행 프로젝트가 없습니다.");
+    expect(screen.getByRole("button", {name: "조건 초기화"}).closest("td")).not.toBeNull();
   });
+});
+
+it("원가 단위와 페이지 크기는 공통 저장 콜백을 거친 후 조회에 반영한다", async () => {
+  const unit=vi.fn().mockResolvedValue(undefined),size=vi.fn().mockResolvedValue(undefined);
+  mount(<ProjectCostAnalysis amountUnit="백만원" pageSize={20} onAmountUnitChange={unit} onPageSizeChange={size} />);
+  await screen.findByTestId("project-cost-unit");
+  expect(screen.getByTestId("project-cost-unit")).toHaveValue("백만원");
+  fireEvent.change(screen.getByTestId("project-cost-unit"),{target:{value:"원"}});
+  await waitFor(()=>expect(unit).toHaveBeenCalledWith("원"));
+  await waitFor(()=>expect(screen.getByTestId("project-cost-unit")).toHaveValue("원"));
+  const pageSize=screen.getByRole("combobox",{name:"한 화면 건수"});
+  fireEvent.change(pageSize,{target:{value:"100"}});
+  await waitFor(()=>expect(size).toHaveBeenCalledWith(100));
+  await waitFor(()=>expect(api.getProjectCosts).toHaveBeenLastCalledWith(expect.objectContaining({size:100,page:1}),expect.any(AbortSignal)));
 });

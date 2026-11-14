@@ -51,6 +51,12 @@ class ProjectProgressContractTest {
     LocalDate today=LocalDate.of(2026,7,1);
     LocalDateTime created=LocalDateTime.of(2026,1,1,0,0);
     String root="/api/projects/P-0009/progress";
+    @Test void shortContractExplainsWhyThereAreNoStagesWithoutRequiringFailedInitialization() throws Exception {
+        project=new ProjectRow(project.projectId(),project.projectName(),project.contractType(),project.sourceStatus(),today,today.plusDays(2),project.budget(),project.registeredAt(),project.partId(),project.partName(),project.hq());
+        mvc.perform(get(root)).andExpect(status().isOk()).andExpect(jsonPath("$.data.steps").isEmpty())
+            .andExpect(jsonPath("$.data.initializationMessage").value("계약기간이 짧아 기본 단계 계획을 만들 수 없습니다"));
+        noWrites();
+    }
     @Test void issueWritesResolveTheProductionProgressView() {
         var beans=new org.springframework.beans.factory.support.StaticListableBeanFactory();
         beans.addBean("progress",progressView);

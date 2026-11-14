@@ -209,6 +209,7 @@ it("renders the cross-year monthly source and preserves a zero reference instead
 it("restores the causes tab, preserves negative remainder, and routes to project plans with context", async () => {
   panel("causes");
   await screen.findByTestId("cost-causes");
+  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute("data-highlight", "true");
   expect(screen.getByText(/나머지 −262/)).toBeInTheDocument();
   expect(
     screen.queryByText("위 세 가지로 설명되지 않습니다"),
@@ -229,6 +230,13 @@ it("shows positive unexplained and warning tone from the server only", async () 
   expect(await screen.findByText("위 세 가지로 설명되지 않습니다")).toHaveClass(
     "sicost-tone-bad",
   );
+});
+it("경보 없는 원인 막대는 서버의 참고 표시를 따라 회색으로 남는다", async () => {
+  vi.mocked(api.getProjectCostCauses).mockResolvedValue({...causes,highlight:false,message:"경보가 없는 프로젝트라 참고용"});
+  panel("causes");
+  await screen.findByTestId("cost-causes");
+  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute("data-highlight","false");
+  expect(screen.getByText("경보가 없는 프로젝트라 참고용")).toBeInTheDocument();
 });
 it("free support opens the assignment tab without changing month or project", async () => {
   panel("causes");

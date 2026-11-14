@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { DataTable, type Column } from "../../shared/DataTable";
+import { type Column } from "../../shared/DataTable";
+import { AnalysisTable as DataTable } from "./AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import {
@@ -15,6 +16,8 @@ import {
   AnalysisProgress,
   analysisDisplay,
   useAnalysisLoad,
+  useAnalysisSettings,
+  analysisPageSize,
   type AnalysisSlots,
 } from "./ProjectAnalysisParts";
 import "./projectAnalysis.css";
@@ -40,10 +43,11 @@ export function ProjectStatusBoard({
   renderExport,
   columnView,
   dense,
+  pageSize, onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState<api.AnalysisQuery>(
-    Object.fromEntries(
+    Object.assign(pageSize===undefined?{}:{size:analysisPageSize(pageSize)}, Object.fromEntries(
       [...params.entries()].filter(([key]) =>
         [
           "light",
@@ -56,7 +60,10 @@ export function ProjectStatusBoard({
         ].includes(key),
       ),
     ),
-  );
+  ));
+  const settings=useAnalysisSettings();
+  const previousSize=useRef(pageSize);
+  useEffect(()=>{if(previousSize.current!==pageSize){previousSize.current=pageSize;apply({...query,size:analysisPageSize(pageSize ?? 50),page:1});}},[pageSize]);
   const [draft, setDraft] = useState(query),
     [parts, setParts] = useState<PartOption[]>([]),
     [tab, setTab] = useState(
@@ -341,7 +348,7 @@ export function ProjectStatusBoard({
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
-        onReset={() => apply({ page: 1, size: 50 })}
+        onReset={() => apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })}
       >
         <label className="sicost-field">
           신호등
@@ -389,6 +396,7 @@ export function ProjectStatusBoard({
           </select>
         </label>
       </FilterBar>
+      <AnalysisFailure error={settings.error} retry={settings.clear} />
       <AnalysisFailure error={result.error} retry={result.retry} />
       {tab === "board" && (
         <div className="project-analysis-toolbar">
@@ -412,7 +420,8 @@ export function ProjectStatusBoard({
           page={result.data?.page ?? 1}
           size={result.data?.size ?? 50}
           onPageChange={(page) => apply({ ...query, page })}
-          onSizeChange={(size) => apply({ ...query, size, page: 1 })}
+          onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...query,size,page:1});});}}
+          sort={query.sort ? {id:String(query.sort),direction:query.direction === "DESC"?"DESC":"ASC"} : undefined}
           onSortChange={(id) =>
             apply({
               ...query,
@@ -425,6 +434,7 @@ export function ProjectStatusBoard({
             })
           }
           empty="조건에 맞는 진행 프로젝트가 없습니다."
+          emptyAction={<button type="button" onClick={() => apply({page: 1, size: analysisPageSize(pageSize ?? 50)})}>조건 초기화</button>}
         />
       </section>
       <section

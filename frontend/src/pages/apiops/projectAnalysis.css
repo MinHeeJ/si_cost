@@ -135,3 +135,13 @@
     grid-template-columns: 1fr;
   }
 }
+.analysis-mobile-list { display: grid; gap: 12px; min-width: 0; }
+.analysis-mobile-card { border: 1px solid var(--divider); border-radius: 8px; background: var(--surface); padding: 16px; }
+.analysis-mobile-card dl { display: grid; gap: 10px; margin: 0; }
+.analysis-mobile-card dl > div { display: flex; justify-content: space-between; gap: 16px; }
+.analysis-mobile-card dt { color: var(--text-sub); flex-shrink: 0; }
+.analysis-mobile-card dd { margin: 0; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.analysis-mobile-empty { padding: 24px; display: grid; gap: 16px; text-align: center; }
+@media (max-width: 767px) { .project-status-download { display: none; } }
+
+.analysis-negative { color: var(--bad); }

@@ -34,8 +34,10 @@ export type ProjectDetailRegistration = {
   costSummary?(context: ProjectDetailContext): ReactNode;
   progress?(context: ProjectDetailContext): ReactNode;
   issues?(context: ProjectDetailContext): ReactNode;
+  issuesTitle?(context: ProjectDetailContext): ReactNode;
 };
 type Props = {
+  active?: boolean;
   id: string;
   year: number;
   currentYear: number;
@@ -51,6 +53,7 @@ type Props = {
   registration?: ProjectDetailRegistration;
 };
 export function ProjectDetailPanel({
+  active = true,
   id,
   year,
   currentYear,
@@ -171,6 +174,7 @@ export function ProjectDetailPanel({
   return (
     <>
       <DetailDrawer
+        hidden={!active}
         title={p?.name ?? "프로젝트 상세"}
         subtitle={
           p
@@ -254,7 +258,7 @@ export function ProjectDetailPanel({
                   disabled={dirty && tab !== key}
                   onClick={() => setTab(key)}
                 >
-                  {label}
+                  {key === "issues" && context && registration?.issuesTitle ? registration.issuesTitle(context) : label}
                 </button>
               ))}
             </nav>

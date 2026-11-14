@@ -44,7 +44,7 @@ export function ProjectAnalysisDownload({
   useEffect(() => () => active.current?.abort(), []);
   const screenId = view === "statusBoard" ? "UI-31" : "UI-04";
   async function download() {
-    if (active.current) return;
+    if (window.innerWidth <= 767 || active.current) return;
     const controller = new AbortController();
     active.current = controller;
     setPending(true);

@@ -694,7 +694,7 @@ describe("공식 진입점 합성", () => {
     );
     expect(screen.queryByTestId("project-cost-detail")).not.toBeInTheDocument();
     expect(analysis.getProjectCosts).toHaveBeenCalledWith(
-      expect.objectContaining({ month: "2026-10", page: "2" }),
+      expect.objectContaining({ month: "2026-10", page: 2 }),
       expect.any(AbortSignal),
     );
   });
@@ -710,11 +710,20 @@ describe("공식 진입점 합성", () => {
       "진행 현황",
       "이슈",
     ])
-      expect(screen.getByRole("tab", { name: label })).toBeVisible();
+      expect(screen.getByRole("tab", { name: label === "이슈" ? /^이슈/ : label })).toBeVisible();
     expect(screen.getByRole("tab", { name: "진행 현황" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+  });
+  it("다른 화면으로 이동하면 프로젝트 상세 패널을 숨기고 복귀 시 유지한다", async () => {
+    open("/UI-01?projectId=P-0042&tab=progress");
+    await screen.findByText("진행 조회 실패");
+    expect(screen.getByTestId("project-detail")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", {name: "DB UI-16"}));
+    expect(screen.getByTestId("project-detail")).not.toBeVisible();
+    await userEvent.click(screen.getByRole("button", {name: /DB UI-01$/}));
+    expect(screen.getByTestId("project-detail")).toBeVisible();
   });
   it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
     open("/UI-01?projectId=P-0042&tab=issues");
@@ -725,7 +734,7 @@ describe("공식 진입점 합성", () => {
         expect.objectContaining({ status: "OPEN_ACTIVE" }),
       ),
     );
-    expect(screen.getByRole("tab", { name: "이슈" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: /^이슈/ })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -990,7 +999,7 @@ describe("공식 진입점 합성", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     open("/UI-01");
     await userEvent.click(await screen.findByTestId("project-create"));
-    const name = await screen.findByLabelText(/프로젝트명/);
+    const name = await screen.findByTestId("project-name");
     fireEvent.change(name, { target: { value: "보존 프로젝트" } });
     await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
     await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));

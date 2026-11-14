@@ -5,7 +5,8 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import { DataTable, type Column } from "../../shared/DataTable";
+import { type Column } from "../../shared/DataTable";
+import { AnalysisTable as DataTable } from "../apiops/AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import {
@@ -316,6 +317,7 @@ export function ProjectStatusIssuesPanel({
         rowKey={(row) => row.issueId}
         loading={result.loading}
         empty="조건에 맞는 이슈가 없습니다."
+        emptyAction={<button type="button" onClick={() => apply({status: "OPEN_ACTIVE", page: 1, size: 50})}>조건 초기화</button>}
         page={query.page}
         size={query.size}
         total={result.data?.total ?? 0}

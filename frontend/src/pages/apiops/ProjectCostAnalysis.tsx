@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { DataTable, type Column } from "../../shared/DataTable";
+import { type Column } from "../../shared/DataTable";
+import { AnalysisTable as DataTable } from "./AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
@@ -13,6 +14,8 @@ import {
   AnalysisProgress,
   analysisDisplay,
   useAnalysisLoad,
+  useAnalysisSettings,
+  analysisPageSize,
   type AnalysisSlots,
   type AnalysisUnit,
 } from "./ProjectAnalysisParts";
@@ -75,6 +78,7 @@ export function ProjectCostAnalysis({
   renderExport,
   columnView,
   dense,
+  pageSize, onPageSizeChange, amountUnit, onAmountUnitChange, initialMonth, onMonthChange,
 }: ProjectCostAnalysisProps = {}) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -105,13 +109,19 @@ export function ProjectCostAnalysis({
     }
   if (initial.alertOnly === "true" || initial.alertOnly === "false")
     query.alertOnly = initial.alertOnly === "true";
+  if(pageSize!==undefined)query.size ??= analysisPageSize(pageSize);
+  if(initialMonth!==undefined)query.month ??= initialMonth;
+  const settings = useAnalysisSettings();
+  const previousSize = useRef(pageSize);
+  useEffect(() => { if(previousSize.current !== pageSize) {previousSize.current=pageSize;apply({...query,size:analysisPageSize(pageSize ?? 50),page:1});} }, [pageSize]);
   const queryKey = api.analysisQuery(query);
   const [draft, setDraft] = useState(query),
     [context, setContext] = useState<PeriodContext>(),
-    [unit, setUnit] = useState<AnalysisUnit>("천원"),
+    [unit, setUnit] = useState<AnalysisUnit>(amountUnit ?? "천원"),
     [options, setOptions] = useState<
       { projectId: string; projectName: string }[]
     >([]);
+  useEffect(() => { if(amountUnit)setUnit(amountUnit); }, [amountUnit]);
   useEffect(() => {
     setDraft(query);
   }, [queryKey]);
@@ -248,7 +258,7 @@ export function ProjectCostAnalysis({
         label,
         sortable: sorts.has(id),
         align: "right",
-        render: (row) =>
+        render: (row) => (<span className={String(row[id] ?? "").startsWith("-") ? "analysis-negative" : undefined}>{
           id === "budgetUsage" ? (
             <>
               <AnalysisProgress label="소진율" value={row[id]} />
@@ -268,7 +278,7 @@ export function ProjectCostAnalysis({
                   : "amount",
               unit,
             )
-          ),
+          )}</span>),
       }),
     ),
     {
@@ -317,8 +327,7 @@ export function ProjectCostAnalysis({
           controlled={{
             month: month || context.currentMonth,
             currentMonth: context.currentMonth,
-            onChange: (value) =>
-              apply({ ...query, month: value, projectId: undefined, page: 1 }),
+            onChange: (value) => void settings.run(async () => { await onMonthChange?.(value); apply({ ...query, month: value, projectId: undefined, page: 1 }); }),
           }}
         />
       )}
@@ -329,7 +338,8 @@ export function ProjectCostAnalysis({
             aria-label="금액 단위"
             data-testid="project-cost-unit"
             value={unit}
-            onChange={(e) => setUnit(e.target.value as AnalysisUnit)}
+            disabled={settings.pending}
+            onChange={(e) => {const value=e.target.value as AnalysisUnit;if(!onAmountUnitChange){setUnit(value);return;}void settings.run(async()=>{await onAmountUnitChange?.(value);setUnit(value);});}}
           >
             {["원", "천원", "백만원"].map((value) => (
               <option key={value}>{value}</option>
@@ -355,7 +365,7 @@ export function ProjectCostAnalysis({
         searchTestId="project-cost-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
         onReset={() =>
-          apply({ month: context?.currentMonth, page: 1, size: 50 })
+          apply({ month: context?.currentMonth, page: 1, size: analysisPageSize(pageSize ?? 50) })
         }
       >
         <label className="sicost-field">
@@ -412,6 +422,7 @@ export function ProjectCostAnalysis({
           경보 있는 것만
         </label>
       </FilterBar>
+      <AnalysisFailure error={settings.error} retry={settings.clear} />
       <AnalysisFailure error={result.error} retry={result.retry} />
       <DataTable
         testId="project-cost-table"
@@ -424,7 +435,8 @@ export function ProjectCostAnalysis({
         page={result.data?.page ?? 1}
         size={result.data?.size ?? 50}
         onPageChange={(page) => apply({ ...query, page })}
-        onSizeChange={(size) => apply({ ...query, size, page: 1 })}
+        onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...query,size,page:1});});}}
+        sort={query.sort ? {id:String(query.sort),direction:query.direction === "DESC"?"DESC":"ASC"} : undefined}
         onSortChange={(id) =>
           apply({
             ...query,
@@ -435,6 +447,7 @@ export function ProjectCostAnalysis({
           })
         }
         empty="조건에 맞는 프로젝트가 없습니다."
+        emptyAction={<button type="button" onClick={() => apply({ month: context?.currentMonth, page: 1, size: analysisPageSize(pageSize ?? 50) })}>조건 초기화</button>}
       />
       {selected &&
         (renderDetail ? (

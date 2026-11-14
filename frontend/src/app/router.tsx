@@ -14,7 +14,7 @@ import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWork
 import { ProjectsWorkspace } from "../pages/projects/ProjectsWorkspace";
 import type { ProjectsRegistration } from "../pages/projects/ProjectsScreen";
 import type { ProjectDetailContext } from "../pages/projects/ProjectDetailPanel";
-import { getProject, type ProjectDetail } from "../pages/projects/projectsApi";
+import { PROJECTS_COMMITTED, getProject, type ProjectDetail } from "../pages/projects/projectsApi";
 import { ProjectPartDialog } from "../pages/parts/ProjectPartDialog";
 import { ProjectStatusPanel } from "../pages/projectsops/ProjectStatusPanel";
 import { ProjectCostAnalysisScreen } from "../pages/shared/ProjectCostAnalysisScreen";
@@ -640,7 +640,29 @@ function RegisteredDistributionUpload({
   );
 }
 
+function RegisteredProjectIssues({context}:{context:ProjectDetailContext}) {
+  const preferences=usePreferences();const size=preferences.get("PAGE_SIZE")?.value;
+  return <ProjectIssuesPanel projectId={context.detail.project.id} projectName={context.detail.project.name} year={context.year}
+    readOnly={context.readOnly||!["ING","PRE"].includes(context.detail.effectiveStatus)}
+    onChanged={context.onChanged} onDirtyChange={context.onDirtyChange}
+    pageSize={size===20||size===100?size:50} onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)} dense={preferences.get("DENSE")?.value === "좁게"} />;
+}
+
+function ProjectIssueTabTitle({ projectId }: { projectId: string }) {
+  const [count, setCount] = useState<number>();
+  useEffect(() => {
+    let live = true;
+    const load = () => { void import("../pages/issues/projectIssuesApi").then(api => api.getProjectIssues(projectId, { status: "OPEN_ACTIVE", page: 1, size: 20 })).then(data => { if (live) setCount(data.openCount); }).catch(() => { if (live) setCount(undefined); }); };
+    load();
+    const committed = (event: Event) => { if ((event as CustomEvent<{id: string}>).detail?.id === projectId) load(); };
+    window.addEventListener(PROJECTS_COMMITTED, committed);
+    return () => { live = false; window.removeEventListener(PROJECTS_COMMITTED, committed); };
+  }, [projectId]);
+  return <>이슈 ({count ?? "–"})</>;
+}
+
 const projectRegistration: ProjectsRegistration = {
+  issuesTitle: (context) => <ProjectIssueTabTitle projectId={context.detail.project.id} />,
   costSummary: (context) => (
     <ProjectCostSummaryPanel
       projectId={context.detail.project.id}
@@ -656,19 +678,7 @@ const projectRegistration: ProjectsRegistration = {
       onDirtyChange={context.onDirtyChange}
     />
   ),
-  issues: (context) => (
-    <ProjectIssuesPanel
-      projectId={context.detail.project.id}
-      projectName={context.detail.project.name}
-      year={context.year}
-      readOnly={
-        context.readOnly ||
-        !["ING", "PRE"].includes(context.detail.effectiveStatus)
-      }
-      onChanged={context.onChanged}
-      onDirtyChange={context.onDirtyChange}
-    />
-  ),
+  issues: (context) => <RegisteredProjectIssues context={context} />,
   partAction: (context) => <RegisteredProjectPart {...context} />,
   statusActions: (context) => (
     <ProjectStatusPanel
@@ -692,8 +702,10 @@ function RegisteredProjectsWorkspace({
   onDirtyChange(dirty: boolean): void;
 }) {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   return (
     <ProjectsWorkspace
+      active={location.pathname === "/UI-01"}
       onDirtyChange={onDirtyChange}
       registration={{
         ...projectRegistration,
@@ -775,6 +787,11 @@ function RegisteredProjectAnalysis({
   const preferences = usePreferences();
   const [columns, setColumns] = useState(false);
   const viewId = screenId === "UI-04" ? "projectCost" : "statusBoard";
+  const size=preferences.get("PAGE_SIZE")?.value;
+  const pageSize:20|50|100=size===20||size===100?size:50;
+  const storedUnit=preferences.get("AMT_UNIT")?.value;
+  const amountUnit=storedUnit==="원"||storedUnit==="백만원"?storedUnit:"천원";
+  const period=preferences.get("PERIOD","UI-04")?.value as {type?:string;value?:string}|undefined;
   const views = preferences.get("COLS", screenId)?.value as
     | ScreenColumnPreferences
     | undefined;
@@ -787,10 +804,17 @@ function RegisteredProjectAnalysis({
       열 설정
     </button>
   );
+  if (preferences.loading) return <p role="status">화면 설정을 불러오는 중입니다.</p>;
   return (
     <>
       {screenId === "UI-04" ? (
         <ProjectCostAnalysisScreen
+          pageSize={pageSize}
+          onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)}
+          amountUnit={amountUnit}
+          onAmountUnitChange={(value)=>preferences.put("AMT_UNIT","*",value)}
+          initialMonth={period?.type === "YEAR_MONTH" ? period.value : undefined}
+          onMonthChange={(value)=>preferences.put("PERIOD","UI-04",{type:"YEAR_MONTH",value})}
           columnView={views?.projectCost}
           dense={preferences.get("DENSE")?.value === "좁게"}
           renderColumns={renderColumns}
@@ -807,6 +831,8 @@ function RegisteredProjectAnalysis({
         />
       ) : (
         <ProjectStatusBoardScreen
+          pageSize={pageSize}
+          onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)}
           columnView={views?.statusBoard}
           dense={preferences.get("DENSE")?.value === "좁게"}
           renderColumns={renderColumns}

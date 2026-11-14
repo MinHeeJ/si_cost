@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import {
@@ -14,6 +15,7 @@ import {
 } from "./ProjectIssueDialog";
 import { ProjectIssueTable, type IssueColumnView } from "./ProjectIssueTable";
 import * as api from "./projectIssuesApi";
+import {useAnalysisSettings,analysisPageSize} from "../apiops/ProjectAnalysisParts";
 import "./issues.css";
 export type ProjectIssuesPanelProps = {
   projectId?: string;
@@ -25,6 +27,9 @@ export type ProjectIssuesPanelProps = {
   onDirtyChange?(dirty: boolean): void;
   columnView?: IssueColumnView;
   onColumnsChange?(): void;
+  pageSize?: 20|50|100;
+  onPageSizeChange?(size:20|50|100):void|Promise<void>;
+  dense?:boolean;
 };
 const defaults: api.IssueFilter = { status: "OPEN_ACTIVE", page: 1, size: 50 };
 export function ProjectIssuesPanel({
@@ -37,9 +42,13 @@ export function ProjectIssuesPanel({
   onDirtyChange,
   columnView,
   onColumnsChange,
+  pageSize=50, onPageSizeChange, dense,
 }: ProjectIssuesPanelProps) {
-  const [filter, setFilter] = useState<api.IssueFilter>(defaults),
-    [draft, setDraft] = useState<api.IssueFilter>(defaults);
+  const [filter, setFilter] = useState<api.IssueFilter>({...defaults,size:analysisPageSize(pageSize)}),
+    [draft, setDraft] = useState<api.IssueFilter>({...defaults,size:analysisPageSize(pageSize)});
+  const settings=useAnalysisSettings();
+  const previousSize=useRef(pageSize);
+  useEffect(()=>{if(previousSize.current!==pageSize){previousSize.current=pageSize;apply({...filter,size:analysisPageSize(pageSize),page:1});}},[pageSize]);
   const [data, setData] = useState<api.ProjectIssuesPage>();
   const [period, setPeriod] = useState<PeriodContext>();
   const [codes, setCodes] = useState<SharedCodeLookup[]>([]);
@@ -175,12 +184,13 @@ export function ProjectIssuesPanel({
           조회만 가능합니다.
         </p>
       )}
-      <form
-        className="issue-filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          apply({ ...draft, page: 1 });
-        }}
+      <FilterBar
+        testId="issues-filters"
+        resetTestId="issues-reset"
+        searchTestId="issues-search"
+        disabled={loading}
+        onSubmit={() => apply({ ...draft, page: 1 })}
+        onReset={() => apply({...defaults,size:analysisPageSize(pageSize)})}
       >
         <label className="sicost-field">
           상태
@@ -242,19 +252,9 @@ export function ProjectIssuesPanel({
             </select>
           </label>
         )}
-        <button
-          type="button"
-          data-testid="issues-reset"
-          disabled={loading}
-          onClick={() => apply(defaults)}
-        >
-          초기화
-        </button>
-        <button type="submit" data-testid="issues-search" disabled={loading}>
-          조회
-        </button>
-        <span>기준일 {data?.baseDate ?? "–"}</span>
-      </form>
+      </FilterBar>
+      <span className="cost-help">기준일 {data?.baseDate ?? "–"}</span>
+      {settings.error != null && <ErrorBanner message={settings.error instanceof Error ? settings.error.message : "설정을 저장하지 못했습니다."} onRetry={settings.clear} />}
       {message && (
         <p
           role="status"
@@ -290,7 +290,9 @@ export function ProjectIssuesPanel({
         </button>
       )}
       <ProjectIssueTable
+        onReset={() => apply({...defaults,size:analysisPageSize(pageSize)})}
         data={data}
+        dense={dense}
         loading={loading}
         board={board}
         readOnly={locked}
@@ -298,7 +300,7 @@ export function ProjectIssuesPanel({
           if (!refreshFailed) setEditing(r);
         }}
         onPageChange={(page) => apply({ ...filter, page })}
-        onSizeChange={(size) => apply({ ...filter, page: 1, size })}
+        onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...filter,page:1,size});});}}
         view={columnView}
         onColumnsChange={onColumnsChange}
       />

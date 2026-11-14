@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { projectAmount } from "../projects/projectFormat";
@@ -34,7 +34,7 @@ export function AnalysisSummary({
           data-testid={`analysis-summary-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         >
           <span>{label}</span>
-          <strong>
+          <strong className={String(summary[key] ?? "").startsWith("-") ? "analysis-negative" : undefined}>
             {analysisDisplay(summary[key], money ? "amount" : "text", unit)}
           </strong>
         </section>
@@ -167,4 +167,22 @@ export type AnalysisSlots = {
   renderColumns?(): ReactNode;
   columnView?: import("../me/preferencesApi").ColumnView;
   dense?: boolean;
+  pageSize?: 20 | 50 | 100;
+  onPageSizeChange?(size: 20 | 50 | 100): void | Promise<void>;
+  amountUnit?: AnalysisUnit;
+  onAmountUnitChange?(unit: AnalysisUnit): void | Promise<void>;
+  initialMonth?: string;
+  onMonthChange?(month: string): void | Promise<void>;
 };
+
+export function analysisPageSize(preferred:20|50|100) {return window.innerWidth<=767?20:preferred;}
+export function useAnalysisSettings() {
+  const active=useRef(false);
+  const [error,setError]=useState<unknown>(),[pending,setPending]=useState(false);
+  async function run(action:()=>void|Promise<void>) {
+    if(active.current)return;
+    active.current=true;setPending(true);setError(undefined);
+    try {await action();}catch(e){setError(e);}finally{active.current=false;setPending(false);}
+  }
+  return {error,pending,run,clear:()=>setError(undefined)};
+}

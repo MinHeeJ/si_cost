@@ -12,7 +12,8 @@ import static com.sicost.apiops.ProjectAnalysisDtos.*;
 @Component("projectListCostCalculation")
 public class ProjectCostCalculation {
     private final TurnkeyRevenueCalculation turnkey;
-    public ProjectCostCalculation(TurnkeyRevenueCalculation turnkey) {this.turnkey=turnkey;}
+    private final com.sicost.costanalysis.ProjectCostCalculation causes;
+    public ProjectCostCalculation(TurnkeyRevenueCalculation turnkey) {this.turnkey=turnkey;this.causes=new com.sicost.costanalysis.ProjectCostCalculation(turnkey);}
     public record Fraction(BigDecimal numerator,BigDecimal denominator) {
         public Fraction add(Fraction other) {return new Fraction(numerator.multiply(other.denominator).add(other.numerator.multiply(denominator)),denominator.multiply(other.denominator));}
         public Fraction subtract(BigDecimal value) {return new Fraction(numerator.subtract(value.multiply(denominator)),denominator);}
@@ -88,6 +89,8 @@ public class ProjectCostCalculation {
         BigDecimal price=internal||revenue==null||mm.signum()==0?null:revenue.divide(mm,0,RoundingMode.DOWN);
         BigDecimal unitCost=cost==null||mm.signum()==0?null:cost.divide(mm,0,RoundingMode.DOWN);
         var evidence=snapshot.evidence().stream().filter(e->id.equals(e.projectId())).findFirst().orElse(null);
+        String primaryCause=alerts.isEmpty()?null:primaryCause(snapshot,project,month,alerts.get(0).get("message").toString());
+        alerts.forEach(alert->alert.put("primaryCause",primaryCause));
         Completeness completeness=new Completeness(costComplete,internal||revenueComplete,people.stream().anyMatch(p->p.completeness().estimated()),List.copyOf(issues),
             costComplete&&(internal||revenueComplete)?0:1,apiMonth(from),month.toString(),before?apiMonth(sources.period().baseMonth()):null);
         return fields("projectId",id,"projectName",project.name(),"contractType",project.contractType(),"status",project.toDate().isBefore(month.atEndOfMonth())?"END":"ING",
@@ -97,7 +100,23 @@ public class ProjectCostCalculation {
             "monthlyMargin",rate(monthly),"targetMargin",internal||target==null?null:target.setScale(1,RoundingMode.HALF_UP).toPlainString(),"targetGap",rate(gap),
             "budgetAmount",internal?null:amount(budget),"budgetUsage",rate(usage),"pricePerMm",amount(price),"costPerMm",internal?null:amount(unitCost),
             "profitPerMm",price==null||unitCost==null?null:amount(price.subtract(unitCost)),"freeMm",free.setScale(2).toPlainString(),"freeLaborCost",internal?null:amount(freeCost),
-            "alertCount",alerts.size(),"alerts",List.copyOf(alerts),"budgetWarning",internal?null:budgetWarning,"primaryCause",alerts.isEmpty()?null:alerts.get(0).get("primaryCause"),"completeness",completeness);
+            "alertCount",alerts.size(),"alerts",List.copyOf(alerts),"budgetWarning",internal?null:budgetWarning,"primaryCause",primaryCause,"completeness",completeness);
+    }
+    private String primaryCause(Snapshot s,Project p,YearMonth month,String fallback) {
+        // Adapt the same read snapshot to the detail calculator; no extra repository reads.
+        var evidence=s.evidence().stream().filter(e->p.projectId().equals(e.projectId())).findFirst().orElse(null);
+        var project=new com.sicost.projects.ProjectDtos.Project(p.projectId(),p.name(),null,p.contractType(),p.status(),p.fromDate(),p.toDate(),null,null,null,
+            amount(evidence==null?null:evidence.originalAmount()),amount(p.contractAmount()),amount(p.budget()),amount(p.teamExpense()),amount(p.projectExpense()),null,null,null,null,null);
+        var expenses=s.expenses().stream().filter(e->p.projectId().equals(e.projectId())).map(e->new com.sicost.costanalysis.ProjectCostMapper.Expense(e.month(),e.amount())).toList();
+        var future=s.future().stream().filter(f->p.projectId().equals(f.projectId())).map(f->new com.sicost.costanalysis.ProjectCostRepository.FutureMonth(f.personId(),f.month(),f.mm())).toList();
+        BigDecimal actual=s.memos().stream().filter(m->p.projectId().equals(m.projectId())&&!m.writtenDate().isAfter(month.atEndOfMonth())&&m.actualProgress()!=null)
+            .max(Comparator.comparing(Memo::writtenDate).thenComparingInt(Memo::memoSn)).map(Memo::actualProgress).orElse(BigDecimal.ZERO);
+        var view=new com.sicost.costanalysis.ProjectCostRepository.Snapshot(project,s.sources(),s.costs(),expenses,evidence==null?null:evidence.planMm(),actual,future,Map.of(),s.sources().prices());
+        var values=causes.causes(causes.view(view));
+        if(values.items().stream().anyMatch(c->c.amount()==null))return "원인 미확인";
+        return values.items().stream().filter(c->new BigDecimal(c.amount()).signum()>0).findFirst().map(c->switch(c.kind()) {
+            case "EXCESS_MM" -> "투입이 계획보다 많음";case "OVER_UNIT_COST" -> "원가가 단가 기준을 넘음";default -> "무상지원";
+        }).orElse(values.showUnexplained()?"위 세 가지로 설명되지 않습니다":fallback);
     }
     private BigDecimal forecast(Snapshot snapshot,Project project,YearMonth selected,List<MissingReason> issues) {
         var byPerson=new TreeMap<String,List<ForecastMonth>>();snapshot.future().stream().filter(f->project.projectId().equals(f.projectId())&&f.mm().signum()>0)
@@ -105,7 +124,8 @@ public class ProjectCostCalculation {
         BigDecimal total=BigDecimal.ZERO;boolean complete=true;String end=selected.toString().replace("-","");
         for(var entry:byPerson.entrySet()) {
             String person=entry.getKey();BigDecimal mm=entry.getValue().stream().map(ForecastMonth::mm).reduce(BigDecimal.ZERO,BigDecimal::add);
-            var latest=snapshot.costs().items().stream().filter(p->person.equals(p.personId())&&p.month().compareTo(end)<=0&&p.completeness().costComplete()&&p.laborSource().laborCost()!=null)
+            var latest=snapshot.costs().items().stream().filter(p->person.equals(p.personId())&&p.month().compareTo(end)<=0&&p.completeness().costComplete()&&p.laborSource()!=null&&p.laborSource().laborCost()!=null)
+                .filter(p->Set.of("FT","CT").contains(p.laborSource().employeeType())||snapshot.sources().assignments().stream().anyMatch(a->person.equals(a.personId())&&end.equals(a.month())&&a.assignmentMm().signum()>0))
                 .max(Comparator.comparing(MonthlyPersonCost::month));
             Fraction unit=latest.map(p->new Fraction(new BigDecimal(p.laborSource().laborCost()),BigDecimal.ONE)).orElse(null);
             String first=entry.getValue().stream().map(ForecastMonth::month).min(String::compareTo).orElseThrow().replace("-","");
@@ -115,11 +135,12 @@ public class ProjectCostCalculation {
                 if(price.isPresent())unit=new Fraction(price.get().monthlyPay(),BigDecimal.ONE);
             }
             if(unit==null) {
-                BigDecimal remaining=turnkey.selected(snapshot.sources(),project.projectId()).stream().filter(c->person.equals(c.developerId())&&"DEV".equals(c.rowType())&&c.month().compareTo(end)>0)
+                Set<String> remainingMonths=new HashSet<>();entry.getValue().forEach(f->remainingMonths.add(f.month().replace("-","")));
+                BigDecimal remaining=turnkey.selected(snapshot.sources(),project.projectId()).stream().filter(c->person.equals(c.developerId())&&"DEV".equals(c.rowType())&&remainingMonths.contains(c.month()))
                     .map(c->c.amount()).reduce(BigDecimal.ZERO,BigDecimal::add);
-                boolean present=turnkey.selected(snapshot.sources(),project.projectId()).stream().anyMatch(c->person.equals(c.developerId())&&"DEV".equals(c.rowType())&&c.month().compareTo(end)>0);
+                boolean present=turnkey.selected(snapshot.sources(),project.projectId()).stream().anyMatch(c->person.equals(c.developerId())&&"DEV".equals(c.rowType())&&remainingMonths.contains(c.month()));
                 BigDecimal budget=project.budget(),v=project.contractAmount();
-                if(budget==null) {BigDecimal target=standard(snapshot.sources(),"TGT_MRGN_RT",end);if(target!=null&&target.signum()>=0&&target.compareTo(BigDecimal.valueOf(100))<=0&&v!=null)budget=v.multiply(BigDecimal.valueOf(100).subtract(target)).divide(BigDecimal.valueOf(100));}
+                if(budget==null) {BigDecimal target=standard(snapshot.sources(),"TGT_MRGN_RT",end);if(target!=null&&target.signum()>=0&&target.compareTo(BigDecimal.valueOf(100))<=0&&v!=null)budget=v.multiply(BigDecimal.valueOf(100).subtract(target)).divide(BigDecimal.valueOf(100),0,RoundingMode.DOWN);}
                 if(present&&budget!=null&&budget.signum()>0&&v!=null&&v.signum()>0)unit=new Fraction(remaining.multiply(budget),mm.multiply(v));
             }
             if(unit==null) {complete=false;issues.add(new MissingReason("UNIT_COST","단가 없음: 최근 완전한 월인건비·기본지급·배분 근거를 확인하세요.",selected.toString(),person,null,"forecastMargin"));}

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 
 @EnabledIfEnvironmentVariable(named="SICOST_TEST_DB_URL",matches=".+")
 class ProjectProgressPersistenceTest {
-    @Configuration @EnableTransactionManagement
+    @Configuration @EnableTransactionManagement(proxyTargetClass=true)
     static class Transactions {
         @Bean PlatformTransactionManager transactionManager(DataSource source){return new DataSourceTransactionManager(source);}
     }

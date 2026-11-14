@@ -14,8 +14,7 @@ public class ProjectStatusCalculation {
     public Map<String,Object> row(Snapshot snapshot,Project project,Map<String,Object> cost,LocalDate today) {
         String id=project.projectId();String month=YearMonth.from(today).toString();
         var stages=snapshot.stages().stream().filter(s->id.equals(s.projectId())).sorted(Comparator.comparingInt(Stage::stepSn)).toList();
-        var expected=snapshot.templates().stream().filter(t->t.contractTypes()!=null&&Arrays.asList(t.contractTypes().split(",")).contains(project.contractType())).map(StageTemplate::code).toList();
-        boolean valid=validStages(project,stages)&&!expected.isEmpty()&&stages.size()==expected.size();
+        boolean valid=validStages(project,stages);
         Fraction plan=new Fraction(BigDecimal.ZERO,BigDecimal.ONE);
         if(valid)for(var stage:stages)plan=plan.add(portion(stage.startDate(),stage.endDate(),today,stage.weight()));
         else plan=portion(project.fromDate(),project.toDate(),today,BigDecimal.valueOf(100));
@@ -65,7 +64,9 @@ public class ProjectStatusCalculation {
             "registeredBy",new Actor(s.registeredBy(),s.registeredName()),"registeredAt",s.registeredAt(),"modifiedBy",s.modifiedBy()==null?null:new Actor(s.modifiedBy(),s.modifiedName()),"modifiedAt",s.modifiedAt());
     }
     public static boolean validStages(Project project,List<Stage> stages) {
-        if(stages.isEmpty()||!stages.get(0).startDate().equals(project.fromDate())||!stages.get(stages.size()-1).endDate().equals(project.toDate()))return false;
+        if(stages.size()!=com.sicost.progress.ProjectProgressCalculation.codes(project.contractType()).size()
+            ||!new HashSet<>(stages.stream().map(Stage::stepCode).toList()).equals(new HashSet<>(com.sicost.progress.ProjectProgressCalculation.codes(project.contractType())))
+            ||!stages.get(0).startDate().equals(project.fromDate())||!stages.get(stages.size()-1).endDate().equals(project.toDate()))return false;
         BigDecimal total=BigDecimal.ZERO;Set<String> codes=new HashSet<>();
         for(int i=0;i<stages.size();i++) {
             Stage s=stages.get(i);if(s.weight().signum()<=0||s.endDate().isBefore(s.startDate())||!codes.add(s.stepCode()))return false;

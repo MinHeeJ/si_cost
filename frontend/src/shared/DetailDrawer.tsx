@@ -12,6 +12,7 @@ export type DetailDrawerProps = {
   children: ReactNode;
   /** 처리 중에는 닫지 못하게 막는다. */
   pending?: boolean;
+  hidden?: boolean;
   onClose(): void;
   /** 화면 시험이 부품을 찾는 이름. */
   testId?: string;
@@ -30,6 +31,7 @@ export function DetailDrawer({
   actions,
   children,
   pending = false,
+  hidden = false,
   onClose,
   testId = "detail-drawer",
   closeTestId = "detail-drawer-close",
@@ -37,12 +39,13 @@ export function DetailDrawer({
   const titleId = useId();
   const closeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
+    if (hidden) return;
     const previous = document.activeElement as HTMLElement | null;
     closeButton.current?.focus();
     return () => {
       previous?.focus?.();
     };
-  }, []);
+  }, [hidden]);
   const close = () => {
     if (!pending) onClose();
   };
@@ -50,11 +53,13 @@ export function DetailDrawer({
     <>
       <div
         className="sicost-drawer-scrim"
+        style={hidden ? { display: "none" } : undefined}
         data-testid={`${testId}-scrim`}
         onClick={close}
       />
       <aside
         className="sicost-drawer"
+        style={hidden ? { display: "none" } : undefined}
         role="dialog"
         aria-modal="true"
         aria-label={label}

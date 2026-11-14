@@ -82,7 +82,7 @@ class ProjectCostSummaryTest {
     }
     @Test void unknownsAreNullNotZeroAndKnownUnaffectedMetricsRemainReadable()throws Exception {
         add("missing","MO","ING",null,"100");add("research","IN","ING","7","0");
-        mvc.perform(get("/api/project-costs/summary")).andExpect(status().isOk()).andExpect(jsonPath("$.data.cumulativeProfit").isEmpty()).andExpect(jsonPath("$.data.cumulativeRevenue").isEmpty()).andExpect(jsonPath("$.data.researchCost").value("7")).andExpect(jsonPath("$.data.unknownCostCount").value(1)).andExpect(jsonPath("$.data.completeness.costComplete").value(false)).andExpect(jsonPath("$.data.completeness.issues[0].code").value("TB_CO_MON_COST"));
+        mvc.perform(get("/api/project-costs/summary")).andExpect(status().isOk()).andExpect(jsonPath("$.data.cumulativeProfit").isEmpty()).andExpect(jsonPath("$.data.cumulativeRevenue").value("100")).andExpect(jsonPath("$.data.unknownRevenueCount").value(0)).andExpect(jsonPath("$.data.researchCost").value("7")).andExpect(jsonPath("$.data.unknownCostCount").value(1)).andExpect(jsonPath("$.data.completeness.costComplete").value(false)).andExpect(jsonPath("$.data.completeness.issues[0].code").value("TB_CO_MON_COST"));
         mvc.perform(get("/api/project-costs/summary").param("alertOnly","true")).andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
     }
     @Test void crossYearCostsAndAdditionalExpenseCountExactlyOnce()throws Exception {

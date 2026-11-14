@@ -405,9 +405,11 @@ export function ProjectsScreen({
       data-screen-id="SCR-UI-01"
       hidden={!active}
     >
-      {form ? (
+      {form && (
         <ProjectForm
           key={form.detail?.project.id ?? "new"}
+          modal
+          visible={active}
           year={year}
           detail={form.detail}
           currentPartName={selected?.partName ?? undefined}
@@ -415,7 +417,8 @@ export function ProjectsScreen({
           onSaved={saved}
           onDirtyChange={childDirty}
         />
-      ) : distribution ? (
+      )}
+      {distribution ? (
         <>
           {mobile ? (
             <p>
@@ -711,6 +714,7 @@ export function ProjectsScreen({
       )}
       {selected && !form && !distribution && (
         <ProjectDetailPanel
+          active={active}
           key={selected.id}
           id={selected.id}
           year={year}

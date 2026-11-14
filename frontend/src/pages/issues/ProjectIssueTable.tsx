@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { DataTable, type Column } from "../../shared/DataTable";
+import { type Column } from "../../shared/DataTable";
+import { AnalysisTable as DataTable } from "../apiops/AnalysisTable";
+import "../apiops/projectAnalysis.css";
 import { StatusBadge } from "../../shared/Feedback";
 import type { ProjectIssue, ProjectIssuesPage } from "./projectIssuesApi";
 
@@ -42,6 +44,8 @@ export function ProjectIssueTable({
   onSizeChange,
   view,
   onColumnsChange,
+  onReset,
+  dense,
 }: {
   data?: ProjectIssuesPage;
   loading: boolean;
@@ -52,6 +56,8 @@ export function ProjectIssueTable({
   onSizeChange(size: 20 | 50 | 100): void;
   view?: IssueColumnView;
   onColumnsChange?(): void;
+  onReset?(): void;
+  dense?: boolean;
 }) {
   const columns: Column<ProjectIssue>[] = [
     {
@@ -156,8 +162,10 @@ export function ProjectIssueTable({
       rows={data?.items ?? []}
       rowKey={(r) => r.issueId}
       columns={visible}
+      dense={dense}
       loading={loading}
       empty="등록된 이슈가 없습니다."
+      emptyAction={onReset && <button type="button" onClick={onReset}>조건 초기화</button>}
       page={data?.page ?? 1}
       size={data?.size ?? 50}
       total={data?.total ?? 0}

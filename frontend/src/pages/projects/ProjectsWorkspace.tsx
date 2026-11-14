@@ -15,9 +15,11 @@ import { projectColumns } from "./projectFormat";
 import { ProjectsScreen, type ProjectsRegistration } from "./ProjectsScreen";
 
 export function ProjectsWorkspace({
+  active = true,
   onDirtyChange,
   registration,
 }: {
+  active?: boolean;
   onDirtyChange?(dirty: boolean): void;
   registration?: ProjectsRegistration;
 }) {
@@ -113,6 +115,7 @@ export function ProjectsWorkspace({
         <p role="status">프로젝트 기간과 설정을 불러오는 중입니다.</p>
       ) : (
         <ProjectsScreen
+          active={active}
           year={year}
           currentYear={currentYear}
           currentDate={context.currentDate}

@@ -64,7 +64,7 @@ public class ProjectProgressQueryService implements ProjectProgressView {
         var status=new Status(id,p.projectName(),p.contractType(),p.sourceStatus(),p.partId(),p.partName(),p.hq(),repository.pm(id),light,List.copyOf(reasons),
             "TK".equals(p.contractType())&&usage==null,plan.toPlainString(),actual.toPlainString(),decimal(usage),gap.toPlainString(),decimal(costGap),current,
             !steps.isEmpty()&&steps.stream().allMatch(s->s.completedDate()!=null),!steps.isEmpty(),basis,open,overdue,updated,elapsed,elapsed>14,today,YearMonth.from(today).toString(),cost.completeness());
-        String message=valid?null:raw.isEmpty()?"기본 단계가 없습니다. 기본 단계 초기화로 준비해 주세요.":"기존 단계 집합을 확인해 주세요. 원본 단계는 보존하며 기간 기준으로 계산합니다.";
+        String message=valid?null:raw.isEmpty()&&days(p.startDate(),p.endDate())<codes(p.contractType()).size()?"계약기간이 짧아 기본 단계 계획을 만들 수 없습니다":raw.isEmpty()?"기본 단계가 없습니다. 기본 단계 초기화로 준비해 주세요.":"기존 단계 집합을 확인해 주세요. 원본 단계는 보존하며 기간 기준으로 계산합니다.";
         return new Data(id,year,revisions.revision(id),!readOnly.isEmpty(),List.copyOf(readOnly),status,steps,memos,issues,message,NOTICE);
     }
     public HistoryPage getProjectProgressHistory(String id,HistoryQuery q) {
