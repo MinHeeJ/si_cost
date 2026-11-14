@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.structure.ProfitStructureMapper">
+  <select id="customers" resultType="com.sicost.structure.ProfitStructureDtos$ProjectCustomer">
+    SELECT p.proj_id AS "projectId",p.cust_clnt_id AS "customerId",c.clnt_nm AS "customerName"
+    FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id ORDER BY p.proj_id
+  </select>
+  <select id="bills" resultType="com.sicost.structure.ProfitStructureDtos$ProjectAmount">
+    SELECT to_char(b.bill_dt,'YYYY-MM') AS "month",b.proj_id AS "projectId",sum(b.sply_amt) AS "amount"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id
+    WHERE p.ctrt_type_cd='TK' AND b.cncl_yn='N' AND b.bill_dt &gt;= to_date(#{fromMonth},'YYYYMM')
+      AND b.bill_dt &lt; to_date(#{toMonth},'YYYYMM')+interval '1 month'
+    GROUP BY to_char(b.bill_dt,'YYYY-MM'),b.proj_id ORDER BY "month","projectId"
+  </select>
+  <select id="expenses" resultType="com.sicost.structure.ProfitStructureDtos$ProjectAmount">
+    SELECT substr(exps_ym,1,4)||'-'||substr(exps_ym,5,2) AS "month",proj_id AS "projectId",sum(exps_amt) AS "amount"
+    FROM tb_pj_drct_exps WHERE exps_ym BETWEEN #{fromMonth} AND #{toMonth}
+    GROUP BY exps_ym,proj_id ORDER BY "month","projectId"
+  </select>
+</mapper>

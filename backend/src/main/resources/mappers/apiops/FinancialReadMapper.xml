@@ -61,6 +61,16 @@
     )
     SELECT h.* FROM tb_sy_chg_hist h WHERE
     <choose>
+      <when test="scope == 'BUSINESS_PLAN'">
+        h.trgt_tbl_nm='TB_FI_BIZ_PLAN' AND h.trgt_key ~ '^[0-9]{6}:ALL$'
+        AND left(h.trgt_key,4)=#{period.year}
+        <if test="uploadId != null">AND split_part(h.chg_rsn,':',1)='BusinessPlanImport' AND split_part(h.chg_rsn,':',2)=#{uploadId}</if>
+      </when>
+      <when test="scope == 'HISTORICAL_PROFIT_LOSS'">
+        h.trgt_tbl_nm='TB_CO_MON_PL' AND h.trgt_key ~ '^[0-9]{6}$'
+        AND left(h.trgt_key,4)=#{period.year}
+        <if test="uploadId != null">AND split_part(h.chg_rsn,':',1)='HistoricalProfitLossImport' AND split_part(h.chg_rsn,':',2)=#{uploadId}</if>
+      </when>
       <when test="scope == 'CARDS'">h.trgt_tbl_nm='TB_FI_CARD'</when>
       <when test="scope == 'TAX'">
         (h.trgt_tbl_nm='TB_FI_TAX_PAY' AND EXISTS(SELECT 1 FROM tax_keys t WHERE h.trgt_key=t.tax_yr || ':' || t.pay_type_cd))

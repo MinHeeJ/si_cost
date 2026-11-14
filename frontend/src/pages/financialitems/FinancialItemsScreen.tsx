@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
@@ -21,16 +22,21 @@ import "./financial.css";
 
 export type FinancialItemsScreenProps = {
   onDirtyChange?(dirty: boolean): void;
+  openAdjustments?: boolean;
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
+  const location = useLocation();
+  const openAdjustments =
+    (location.state as { section?: string } | null)?.section === "adjustments";
   return (
     <SharedScreenFrame screenId="UI-10" periodBar={null}>
-      <FinancialItemsEditor {...props} />
+      <FinancialItemsEditor {...props} openAdjustments={openAdjustments} />
     </SharedScreenFrame>
   );
 }
 export function FinancialItemsEditor({
   onDirtyChange,
+  openAdjustments,
 }: FinancialItemsScreenProps) {
   const [month, setMonth] = useState<string>();
   const state = useFinancialEditor(month, onDirtyChange),
@@ -50,6 +56,29 @@ export function FinancialItemsEditor({
     [statusError, setStatusError] = useState<unknown>(),
     [statusRetry, setStatusRetry] = useState(0);
   const next = useRef(0);
+  const adjustmentOpened = useRef(false);
+  useEffect(() => {
+    if (
+      !openAdjustments ||
+      !editor ||
+      state.loading ||
+      adjustmentOpened.current
+    )
+      return;
+    if (
+      !editor.editable &&
+      editor.firstEditableMonth &&
+      month !== editor.firstEditableMonth
+    ) {
+      setMonth(editor.firstEditableMonth);
+      return;
+    }
+    adjustmentOpened.current = true;
+    setTab("financial");
+    document
+      .getElementById("financial-adjustments-section")
+      ?.scrollIntoView?.({ block: "start" });
+  }, [openAdjustments, editor, state.loading, month]);
   useEffect(() => {
     let live = true;
     void getSharedCodes("SGA_ITEM")

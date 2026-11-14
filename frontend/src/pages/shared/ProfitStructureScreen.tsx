@@ -1,4 +1,1 @@
-import { FollowUpScreen } from "./FollowUpScreen";
-export function ProfitStructureScreen() {
-  return <FollowUpScreen screenId="UI-07" />;
-}
+export { ProfitStructureScreen } from "../structure/ProfitStructureScreen";

@@ -25,7 +25,19 @@ public class AccessLogWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-09") && (!"DNLD".equals(event.action()) || event.targetId() != null
+                || !"순이익표".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-08") && (!"DNLD".equals(event.action()) || event.count() == null
+                || !(Set.of("영업이익표", "이관손익_등록양식").contains(event.fileType()) && event.targetId() == null
+                    || "이관손익_업로드검사".equals(event.fileType()) && event.targetId() != null
+                        && event.targetId().matches("[1-9][0-9]{0,11}")))) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-07") && (!"DNLD".equals(event.action()) || event.targetId() != null
+                || !"전체수익구조".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-18") && (!"DNLD".equals(event.action()) || event.count() == null
+                || !("사업계획_등록양식".equals(event.fileType()) && event.targetId() == null
+                    || "사업계획_업로드검사".equals(event.fileType()) && event.targetId() != null
+                        && event.targetId().matches("[1-9][0-9]{0,11}")))) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-04") && (!"DNLD".equals(event.action()) || event.targetId() != null
                 || !"프로젝트 원가".equals(event.fileType()) || event.count() == null)) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-31") && (!"DNLD".equals(event.action()) || event.targetId() != null
@@ -47,6 +59,9 @@ public class AccessLogWriter {
         }
         String kind = event.fileType();
         Set<String> kinds = switch (event.screenId()) {
+            case "UI-07" -> Set.of("전체수익구조");
+            case "UI-09" -> Set.of("순이익표");
+            case "UI-08" -> Set.of("영업이익표", "이관손익_등록양식", "이관손익_업로드검사");
             case "UI-03" -> Set.of("개인원가수익");
             case "UI-04" -> Set.of("프로젝트 원가");
             case "UI-31" -> Set.of("프로젝트현황");
@@ -54,6 +69,7 @@ public class AccessLogWriter {
             case "UI-12" -> Set.of("투입배정", "투입_신규양식", "투입_업로드검사");
             case "UI-13" -> Set.of("청구", "청구누락점검", "미수알림");
             case "UI-10" -> Set.of("재무_등록양식", "재무_업로드검사");
+            case "UI-18" -> Set.of("사업계획_등록양식", "사업계획_업로드검사");
             case "UI-33" -> Set.of("외부인력후보");
             case "UI-01" -> Set.of("프로젝트", "턴키배분표", "프로젝트_등록양식", "턴키배분표_등록양식", "프로젝트_업로드검사", "턴키배분표_업로드검사");
             default -> Set.of("거래처", "영업파트", "거래처_등록양식", "거래처_업로드검사");

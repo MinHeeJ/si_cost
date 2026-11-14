@@ -16,8 +16,10 @@ import {
 export function ScreenPeriodBar({
   screenId,
   controlled,
+  initialMonth,
 }: {
   screenId: string;
+  initialMonth?: string;
   controlled?: {
     month: string;
     currentMonth: string;
@@ -145,7 +147,20 @@ export function ScreenPeriodBar({
             ? cumulative(initial, ctx.currentMonth, ctx)
             : { type: type as "YEAR" | "YEAR_MONTH", value: initial };
         const valid = validStored(pref?.value, ctx);
-        setValue(valid ? (pref!.value as PeriodValue) : fallback);
+        const incoming: PeriodValue | undefined = initialMonth
+          ? {
+              type: "YEAR_CUM",
+              year: initialMonth.slice(0, 4),
+              month: initialMonth,
+            }
+          : undefined;
+        setValue(
+          incoming && validStored(incoming, ctx)
+            ? incoming
+            : valid
+              ? (pref!.value as PeriodValue)
+              : fallback,
+        );
         if (pref?.error) setError(pref.error.message);
         else if (pref?.stored && !valid)
           setError(
@@ -164,7 +179,7 @@ export function ScreenPeriodBar({
     return () => {
       live = false;
     };
-  }, [screenId, type, reload]);
+  }, [screenId, type, reload, initialMonth]);
   useEffect(() => {
     if (controlled || !context || !value || type === "NONE") return;
     window.dispatchEvent(
@@ -295,7 +310,15 @@ export function ScreenPeriodBar({
                 disabled={pending || unavailable}
                 onChange={(event) =>
                   void save(
-                    cumulative(event.target.value, value.month, context),
+                    cumulative(
+                      event.target.value,
+                      ["UI-07", "UI-08", "UI-09", "UI-18"].includes(screenId)
+                        ? event.target.value === thisYear
+                          ? context.currentMonth
+                          : `${event.target.value}-12`
+                        : value.month,
+                      context,
+                    ),
                   )
                 }
               >

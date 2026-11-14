@@ -1,0 +1,160 @@
+.business-plan-performance {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.business-plan-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.business-plan-toolbar span,
+.business-plan-context {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.business-plan-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.business-plan-toolbar select {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--surface);
+}
+.business-plan-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.business-plan-summary article {
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  min-width: 0;
+}
+.business-plan-summary p,
+.business-plan-summary small {
+  font-size: 13px;
+  color: var(--text-sub);
+  overflow-wrap: anywhere;
+}
+.business-plan-summary strong {
+  display: block;
+  font-size: 28px;
+  line-height: 38px;
+  margin: 8px 0;
+}
+.business-plan-warning {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.business-plan-chart {
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  background: var(--surface);
+  border-radius: 8px;
+}
+.business-plan-chart h2 {
+  margin-bottom: 12px;
+}
+.business-plan-chart svg {
+  width: 100%;
+  min-width: 780px;
+  min-height: 340px;
+}
+.business-plan-chart text {
+  fill: var(--text-sub);
+  font-size: 12px;
+}
+.business-plan-actual-key {
+  color: var(--primary);
+}
+.business-plan-target-key {
+  color: var(--warn);
+}
+.business-plan-actual-bar {
+  fill: var(--primary);
+}
+.business-plan-target-line {
+  stroke: var(--warn);
+  stroke-width: 2.5;
+  fill: none;
+}
+.business-plan-target-point {
+  fill: var(--warn);
+}
+.business-plan-grid {
+  stroke: var(--divider);
+}
+.business-plan-zero {
+  stroke: var(--border);
+}
+.business-plan-empty {
+  color: var(--text-sub);
+  text-align: center;
+  padding: 48px 16px;
+}
+.business-plan-scroll {
+  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.business-plan-table {
+  min-width: 1340px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--surface);
+}
+.business-plan-table td,
+.business-plan-table th {
+  height: 40px;
+  border-bottom: 1px solid var(--divider);
+  padding: 8px 12px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.business-plan-table thead th {
+  background: var(--head-bg);
+  font-weight: 600;
+  text-align: center;
+}
+.business-plan-table th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  min-width: 158px;
+}
+.business-plan-table thead th:first-child {
+  background: var(--head-bg);
+}
+.business-plan-adverse {
+  color: var(--bad);
+}
+.business-plan-performance > p[role="note"] {
+  font-size: 13px;
+  line-height: 1.6;
+}
+@media (max-width: 767px) {
+  .business-plan-summary {
+    grid-template-columns: 1fr;
+  }
+  .business-plan-summary article,
+  .business-plan-chart {
+    padding: 16px;
+  }
+}

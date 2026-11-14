@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.imports.BusinessPlanImportMapper">
+  <select id="targets" resultType="com.sicost.imports.BusinessPlanImportDtos$Stored">
+    SELECT plan_ym AS "month", sales_tgt_amt AS "sales", oprt_prft_tgt_amt AS "profit", upld_id::bigint AS "uploadId",
+      reg_user_id AS "regUserId", reg_dttm AS "regDttm", mod_user_id AS "modUserId", mod_dttm AS "modDttm"
+    FROM tb_fi_biz_plan WHERE substring(plan_ym,1,4)=lpad(CAST(#{year} AS text),4,'0') AND part_id='ALL' ORDER BY plan_ym
+  </select>
+  <select id="closes" resultType="com.sicost.imports.BusinessPlanImportDtos$Close">
+    SELECT close_ym AS "month", close_stat_cd AS "status" FROM tb_cl_close
+    WHERE substring(close_ym,1,4)=lpad(CAST(#{year} AS text),4,'0') ORDER BY close_ym
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT jsonb_build_object(
+      'targets',(SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY p.plan_ym,p.part_id),'[]'::jsonb) FROM tb_fi_biz_plan p WHERE substring(p.plan_ym,1,4)=lpad(CAST(#{year} AS text),4,'0') AND p.part_id='ALL'),
+      'closes',(SELECT coalesce(jsonb_agg(to_jsonb(c) ORDER BY c.close_ym),'[]'::jsonb) FROM tb_cl_close c WHERE substring(c.close_ym,1,4)=lpad(CAST(#{year} AS text),4,'0')),
+      'base',(SELECT coalesce(jsonb_agg(to_jsonb(b) ORDER BY b.aply_bgn_ym),'[]'::jsonb) FROM tb_sy_oper_std b WHERE b.std_cd='CASH_BASE_YM'))::text
+  </select>
+  <select id="cashBase" resultType="string">SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <update id="lockTimeout">SET LOCAL lock_timeout = '10s'</update>
+  <sql id="uploadColumns">upld_id::bigint AS "uploadId",form_type_cd AS "formType",scrn_id AS "screenId",file_nm AS "filename",file_size::bigint AS "size",trgt_ym AS "month",trgt_proj_id AS "projectId",trgt_dstrb_step_cd AS "step",reg_user_id AS "actor",upld_stat_cd AS "status",tot_row_cnt::int AS "totalRows",succ_cnt::int AS "successRows",warn_cnt::int AS "warningRows",err_cnt::int AS "errorRows",aply_dttm AS "appliedAt"</sql>
+  <select id="upload" resultType="com.sicost.imports.BusinessPlanImportDtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId}</select>
+  <select id="lockUpload" resultType="com.sicost.imports.BusinessPlanImportDtos$Upload">SELECT <include refid="uploadColumns"/> FROM tb_sy_upld WHERE upld_id=#{uploadId} FOR UPDATE</select>
+  <insert id="insertUpload" useGeneratedKeys="true" keyProperty="uploadId" keyColumn="upld_id">
+    INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,trgt_ym,trgt_proj_id,trgt_dstrb_step_cd,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id,reg_dttm)
+    VALUES('B10','UI-18',#{write.filename},#{write.size},#{write.month},NULL,NULL,#{write.summary.totalRows},#{write.summary.successRows},#{write.summary.warningRows},#{write.summary.errorRows},'CHECKED',#{write.actor},#{write.now})
+  </insert>
+  <update id="replaceSummary">UPDATE tb_sy_upld SET tot_row_cnt=#{summary.totalRows},succ_cnt=#{summary.successRows},warn_cnt=#{summary.warningRows},err_cnt=#{summary.errorRows},upld_stat_cd='CHECKED',mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'</update>
+  <delete id="deleteIssues">DELETE FROM tb_sy_upld_err WHERE upld_id=#{uploadId}</delete>
+  <insert id="insertIssue">INSERT INTO tb_sy_upld_err(upld_id,rslt_sn,rslt_type_cd,row_no,col_nm,input_val,rsn_cn,reg_user_id,reg_dttm) VALUES(#{uploadId},#{issue.sequence},#{issue.severity},#{issue.rowNumber},#{issue.columnName},#{issue.inputValue},#{issue.reason},#{actor},#{now})</insert>
+  <select id="issues" resultType="com.sicost.b7.B7Dtos$Issue">SELECT rslt_sn::int AS "sequence",rslt_type_cd AS "severity",row_no::int AS "rowNumber",coalesce(col_nm,'') AS "columnName",coalesce(input_val,'') AS "inputValue",rsn_cn AS "reason" FROM tb_sy_upld_err WHERE upld_id=#{uploadId} ORDER BY rslt_sn</select>
+  <select id="changedMonths" resultType="string">
+    SELECT DISTINCT substring(trgt_key,1,4)||'-'||substring(trgt_key,5,2) FROM tb_sy_chg_hist
+    WHERE trgt_tbl_nm='TB_FI_BIZ_PLAN' AND chg_type_cd IN ('NEW','UPD')
+      AND split_part(chg_rsn,':',1)='BusinessPlanImport' AND split_part(chg_rsn,':',2)=CAST(#{uploadId} AS text)
+    ORDER BY 1
+  </select>
+  <insert id="insertTarget">
+    INSERT INTO tb_fi_biz_plan(plan_ym,part_id,sales_tgt_amt,oprt_prft_tgt_amt,upld_id,reg_user_id,reg_dttm)
+    VALUES(#{month},'ALL',#{sales},#{profit},#{uploadId},#{actor},#{now})
+  </insert>
+  <update id="updateTarget">
+    UPDATE tb_fi_biz_plan SET sales_tgt_amt=#{sales},oprt_prft_tgt_amt=#{profit},upld_id=#{uploadId},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE plan_ym=#{month} AND part_id='ALL'
+  </update>
+  <update id="markApplied">UPDATE tb_sy_upld SET upld_stat_cd='APPLIED',aply_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE upld_id=#{uploadId} AND upld_stat_cd='CHECKED'</update>
+</mapper>

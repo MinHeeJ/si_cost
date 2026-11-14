@@ -710,7 +710,9 @@ describe("공식 진입점 합성", () => {
       "진행 현황",
       "이슈",
     ])
-      expect(screen.getByRole("tab", { name: label === "이슈" ? /^이슈/ : label })).toBeVisible();
+      expect(
+        screen.getByRole("tab", { name: label === "이슈" ? /^이슈/ : label }),
+      ).toBeVisible();
     expect(screen.getByRole("tab", { name: "진행 현황" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -720,9 +722,9 @@ describe("공식 진입점 합성", () => {
     open("/UI-01?projectId=P-0042&tab=progress");
     await screen.findByText("진행 조회 실패");
     expect(screen.getByTestId("project-detail")).toBeVisible();
-    await userEvent.click(screen.getByRole("button", {name: "DB UI-16"}));
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
     expect(screen.getByTestId("project-detail")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", {name: /DB UI-01$/}));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
     expect(screen.getByTestId("project-detail")).toBeVisible();
   });
   it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
@@ -1216,6 +1218,19 @@ describe("공식 진입점 합성", () => {
         expect(
           id === "UI-02" ? developers.getDevelopers : candidates.getCandidates,
         ).toHaveBeenCalled();
+      } else if (["UI-07", "UI-08", "UI-09", "UI-18"].includes(id)) {
+        const financialScreens: Record<string, string> = {
+          "UI-07": "profit-structure-screen",
+          "UI-08": "operating-profit-screen",
+          "UI-09": "net-profit-screen",
+          "UI-18": "business-plan-performance",
+        };
+        expect(await screen.findByTestId(financialScreens[id])).toBeVisible();
+        expect(
+          screen
+            .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
+            .some((node) => !node.closest("[hidden]")),
+        ).toBe(false);
       } else
         expect(
           screen

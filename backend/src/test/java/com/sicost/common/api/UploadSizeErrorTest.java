@@ -10,7 +10,9 @@ class UploadSizeErrorTest {
     private final ApiExceptionHandler handler = new ApiExceptionHandler();
 
     @ParameterizedTest
-    @ValueSource(strings={"/api/excel/B1/validate","/api/excel/B1/apply","/api/excel/B5/validate","/api/excel/B5/apply"})
+    @ValueSource(strings={"/api/excel/B1/validate","/api/excel/B1/apply","/api/excel/B5/validate","/api/excel/B5/apply",
+        "/api/business-plans/imports/validate","/api/business-plans/imports/apply",
+        "/api/profit-loss/migration/imports/validate","/api/profit-loss/migration/imports/apply"})
     void assignmentAndPayrollMultipartLimitsUseTheirContractError(String path) {
         var request = new MockHttpServletRequest("POST", path);
         request.setAttribute(RequestIdFilter.ATTRIBUTE, "upload-size-request");

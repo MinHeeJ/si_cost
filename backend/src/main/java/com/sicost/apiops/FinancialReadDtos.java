@@ -8,7 +8,11 @@ import java.util.List;
 public final class FinancialReadDtos {
     private FinancialReadDtos() {}
     public record Period(String month,String databaseMonth,String year,String priorYear,LocalDate start,LocalDate end) {}
-    public record HistoryQuery(Period period,String scope,int page,int size,long offset) {}
+    public record HistoryQuery(Period period,String scope,int page,int size,long offset,String uploadId) {
+        public HistoryQuery(Period period,String scope,int page,int size,long offset) {
+            this(period,scope,page,size,offset,null);
+        }
+    }
     public record SourceTotals(BigDecimal sgaAmount,BigDecimal sgaVatAmount,BigDecimal nonOperatingIncome,
         BigDecimal nonOperatingIncomeVat,BigDecimal nonOperatingExpense,BigDecimal nonOperatingExpenseVat,
         BigDecimal adjustmentProfit,BigDecimal cashFinancialExpense,BigDecimal cashMiscIncome,

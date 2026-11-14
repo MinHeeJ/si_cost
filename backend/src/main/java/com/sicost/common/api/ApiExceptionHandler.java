@@ -22,7 +22,9 @@ public class ApiExceptionHandler {
     }
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiError> uploadSize(org.springframework.web.multipart.MaxUploadSizeExceededException e, HttpServletRequest request) {
-        if (java.util.Set.of("/api/excel/B1/validate", "/api/excel/B1/apply", "/api/excel/B5/validate", "/api/excel/B5/apply").contains(request.getRequestURI()))
+        if (java.util.Set.of("/api/excel/B1/validate", "/api/excel/B1/apply", "/api/excel/B5/validate", "/api/excel/B5/apply",
+                "/api/business-plans/imports/validate", "/api/business-plans/imports/apply",
+                "/api/profit-loss/migration/imports/validate", "/api/profit-loss/migration/imports/apply").contains(request.getRequestURI()))
             return error(413, "PAYLOAD_TOO_LARGE", "파일은 10MiB 이하로 선택해 주세요.", "file", null, request);
         if (java.util.Set.of("/api/excel/B7/validate", "/api/excel/B7/apply", "/api/excel/B8/validate", "/api/excel/B8/apply",
                 "/api/excel/B9/validate", "/api/excel/B9/apply", "/api/excel/B6/validate", "/api/excel/B6/apply").contains(request.getRequestURI()))
