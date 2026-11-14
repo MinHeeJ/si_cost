@@ -55,6 +55,35 @@ class FinancialImportContractTest {
     List<ChangeHistoryEntry> audits;
     Upload upload;
     MockMultipartFile file;
+    @Test void literalValidationStoresCheckedOnlyAndRejectsActorInjection() throws Exception {
+        mvc.perform(post("/api/excel/B2/validate").param("month","2026-06").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B2/validate",200))
+            .andExpect(jsonPath("$.data.status").value("CHECKED"))
+            .andExpect(jsonPath("$.data.summary.successRows").value(1));
+        verify(mapper).insertUpload(any());clearInvocations(mapper,history);
+        mvc.perform(post("/api/excel/B2/validate").param("month","2026-06").param("actor","other").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B2/validate",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(history);verify(mapper,never()).insertUpload(any());noBusiness();
+    }
+    @Test void literalApplyCommitsUploadedRowsAndRejectsStaleRevision() throws Exception {
+        String revision=checked();
+        mvc.perform(post("/api/excel/B2/apply").param("month","2026-06").param("uploadId","19")
+            .param("expectedRevision",revision).with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B2/apply",200))
+            .andExpect(jsonPath("$.data.status").value("APPLIED"))
+            .andExpect(jsonPath("$.data.items[0].rowNumber").value(2));
+        verify(mapper).insertItem(any());verify(mapper).markApplied(any());verify(manager,atLeastOnce()).commit(any());
+        assertThat(audits).anyMatch(a->a.tableName().equals("TB_FI_ITEM")&&a.type().equals("NEW")&&a.userId().equals("admin"));
+    }
+    @Test void literalApplyStaleRevisionPreservesBusinessAndAudit() throws Exception {
+        String revision=checked();items.add(row(1,null,null));clearInvocations(history);
+        mvc.perform(post("/api/excel/B2/apply").param("month","2026-06").param("uploadId","19")
+            .param("expectedRevision",revision).with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B2/apply",409))
+            .andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        noBusiness();verifyNoInteractions(history);verify(mapper,never()).markApplied(any());
+    }
     @BeforeEach void setup()throws Exception {
         items=new ArrayList<>();metadata=new ArrayList<>();issues=new ArrayList<>();audits=new ArrayList<>();upload=null;file=FinancialWorkbook.valid();
         when(users.userId()).thenReturn("admin");when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","임시 관리자",List.of("ADMIN"),true));

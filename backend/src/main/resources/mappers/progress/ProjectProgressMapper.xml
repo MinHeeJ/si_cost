@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.progress.ProjectProgressMapper">
+  <select id="project" resultType="com.sicost.progress.ProjectProgressDtos$ProjectRow" useCache="false" flushCache="true">
+    SELECT p.PROJ_ID AS "projectId",p.PROJ_NM AS "projectName",p.CTRT_TYPE_CD AS "contractType",
+      p.PROJ_STAT_CD AS "sourceStatus",p.CTRT_BGN_DT AS "startDate",p.CTRT_END_DT AS "endDate",
+      p.BDGT_AMT AS "budget",p.REG_DTTM AS "registeredAt",r.PART_ID AS "partId",b.PART_NM AS "partName",
+      COALESCE(b.HQ_YN='Y',false) AS "hq"
+    FROM TB_PJ_PROJ p LEFT JOIN LATERAL (SELECT PART_ID FROM TB_PJ_PROJ_PART
+      WHERE PROJ_ID=p.PROJ_ID AND APLY_BGN_YM &lt;= to_char(#{today,jdbcType=DATE},'YYYYMM') ORDER BY APLY_BGN_YM DESC LIMIT 1) r ON true
+    LEFT JOIN TB_BS_PART b ON b.PART_ID=r.PART_ID WHERE p.PROJ_ID=#{id}
+  </select>
+  <sql id="auditColumns">
+    r.REG_USER_ID AS "registeredBy",COALESCE(u.USER_NM,r.REG_USER_ID) AS "registeredName",r.REG_DTTM AS "registeredAt",
+    r.MOD_USER_ID AS "modifiedBy",COALESCE(m.USER_NM,r.MOD_USER_ID) AS "modifiedName",r.MOD_DTTM AS "modifiedAt"
+  </sql>
+  <select id="steps" resultType="com.sicost.progress.ProjectProgressDtos$StepRow" useCache="false" flushCache="true">
+    SELECT r.PROJ_ID AS "projectId",r.STEP_SN AS "stepSn",r.PROJ_STEP_CD AS "stepCode",
+      COALESCE(c.CODE_NM,r.PROJ_STEP_CD) AS "stepName",r.STEP_WGHT_RT AS "weight",r.PLAN_BGN_DT AS "startDate",
+      r.PLAN_END_DT AS "endDate",r.CMPL_DT AS "completedDate",<include refid="auditColumns"/>
+    FROM TB_PJ_STEP r LEFT JOIN TB_SY_CODE c ON c.CODE_GRP_ID='PROJ_STEP' AND c.CODE=r.PROJ_STEP_CD
+    LEFT JOIN TB_SY_USER u ON u.USER_ID=r.REG_USER_ID LEFT JOIN TB_SY_USER m ON m.USER_ID=r.MOD_USER_ID
+    WHERE r.PROJ_ID=#{id} ORDER BY r.STEP_SN
+  </select>
+  <select id="memos" resultType="com.sicost.progress.ProjectProgressDtos$MemoRow" useCache="false" flushCache="true">
+    SELECT r.PROJ_ID AS "projectId",r.MEMO_SN AS "memoSn",r.WRT_DT AS "writtenDate",r.THIS_WEEK_CN AS "thisWeek",
+      r.NEXT_WEEK_CN AS "nextWeek",r.REQ_CN AS "request",r.ACTL_PRGRS_RT AS "actualProgress",<include refid="auditColumns"/>
+    FROM TB_PJ_WEEK_MEMO r LEFT JOIN TB_SY_USER u ON u.USER_ID=r.REG_USER_ID LEFT JOIN TB_SY_USER m ON m.USER_ID=r.MOD_USER_ID
+    WHERE r.PROJ_ID=#{id} ORDER BY r.WRT_DT DESC,r.MEMO_SN DESC
+  </select>
+  <select id="issues" resultType="com.sicost.progress.ProjectProgressDtos$IssueRow" useCache="false" flushCache="true">
+    SELECT r.ISSUE_ID AS "issueId",r.PROJ_ID AS "projectId",p.PROJ_NM AS "projectName",r.ISSUE_TTL AS "title",
+      r.IMPR_CD AS "importance",COALESCE(i.CODE_NM,r.IMPR_CD) AS "importanceName",r.DDLN_DT AS "dueDate",
+      r.ISSUE_STAT_CD AS "status",COALESCE(s.CODE_NM,r.ISSUE_STAT_CD) AS "statusName",r.ACTN_CN AS "action",<include refid="auditColumns"/>
+    FROM TB_PJ_ISSUE r JOIN TB_PJ_PROJ p ON p.PROJ_ID=r.PROJ_ID
+    LEFT JOIN TB_SY_CODE i ON i.CODE_GRP_ID='IMPR' AND i.CODE=r.IMPR_CD
+    LEFT JOIN TB_SY_CODE s ON s.CODE_GRP_ID='ISSUE_STAT' AND s.CODE=r.ISSUE_STAT_CD
+    LEFT JOIN TB_SY_USER u ON u.USER_ID=r.REG_USER_ID LEFT JOIN TB_SY_USER m ON m.USER_ID=r.MOD_USER_ID
+    WHERE r.PROJ_ID=#{id} ORDER BY CASE WHEN r.IMPR_CD='HIGH' THEN 0 ELSE 1 END,r.DDLN_DT,r.ISSUE_ID
+  </select>
+  <select id="pm" resultType="com.sicost.progress.ProjectProgressDtos$Actor" useCache="false">
+    SELECT DISTINCT s.USER_ID AS "userId",u.USER_NM AS "userName" FROM TB_SY_USER_SCOPE s JOIN TB_SY_USER u ON u.USER_ID=s.USER_ID
+    WHERE s.PROJ_ID=#{id} AND s.SCOPE_TYPE_CD='PROJ' ORDER BY s.USER_ID
+  </select>
+  <select id="templates" resultType="com.sicost.progress.ProjectProgressDtos$Template" useCache="false">
+    SELECT CODE AS "code",CODE_NM AS "name",ADD_VAL1 AS "weight",ADD_VAL2 AS "types",USE_YN AS "useYn",DEL_YN AS "delYn",SORT_ORD AS "sortOrder"
+    FROM TB_SY_CODE WHERE CODE_GRP_ID='PROJ_STEP' ORDER BY SORT_ORD,CODE
+  </select>
+  <select id="history" resultType="com.sicost.progress.ProjectProgressDtos$HistoryRow" useCache="false">
+    SELECT h.HIST_ID::text AS "historyId",h.TRGT_TBL_NM AS "targetTable",h.TRGT_KEY AS "targetKey",h.CHG_TYPE_CD AS "changeType",
+      h.CHG_ITEM_NM AS "itemName",h.BFR_VAL AS "before",h.AFT_VAL AS "after",h.CHG_RSN AS "reason",
+      h.REG_USER_ID AS "registeredBy",COALESCE(u.USER_NM,h.REG_USER_ID) AS "registeredName",h.REG_DTTM AS "registeredAt"
+    FROM TB_SY_CHG_HIST h LEFT JOIN TB_SY_USER u ON u.USER_ID=h.REG_USER_ID
+    WHERE ((h.TRGT_TBL_NM='TB_PJ_STEP' AND EXISTS(SELECT 1 FROM TB_PJ_STEP s WHERE s.PROJ_ID=#{id} AND h.TRGT_KEY=s.PROJ_ID||':'||s.STEP_SN::text))
+      OR (h.TRGT_TBL_NM='TB_PJ_WEEK_MEMO' AND EXISTS(SELECT 1 FROM TB_PJ_WEEK_MEMO m WHERE m.PROJ_ID=#{id} AND h.TRGT_KEY=m.PROJ_ID||':'||m.MEMO_SN::text))
+      OR (h.TRGT_TBL_NM='TB_PJ_ISSUE' AND EXISTS(SELECT 1 FROM TB_PJ_ISSUE i WHERE i.PROJ_ID=#{id} AND h.TRGT_KEY=i.ISSUE_ID::text)))
+      AND h.CHG_TYPE_CD IN ('NEW','UPD') ORDER BY h.REG_DTTM DESC,h.HIST_ID DESC
+  </select>
+  <select id="additionalExpense" resultType="java.math.BigDecimal" useCache="false">
+    SELECT COALESCE(sum(EXPS_AMT),0) FROM TB_PJ_DRCT_EXPS WHERE PROJ_ID=#{id} AND EXPS_YM &gt;= #{fromMonth} AND EXPS_YM &lt;= #{toMonth}
+  </select>
+  <insert id="insertStep">
+    INSERT INTO TB_PJ_STEP (PROJ_ID,STEP_SN,PROJ_STEP_CD,STEP_WGHT_RT,PLAN_BGN_DT,PLAN_END_DT,CMPL_DT,REG_USER_ID,REG_DTTM)
+    VALUES (#{row.projectId},#{row.stepSn},#{row.stepCode},#{row.weight},#{row.startDate},#{row.endDate},#{row.completedDate,jdbcType=DATE},#{actor},#{now})
+  </insert>
+  <update id="updateDates">
+    UPDATE TB_PJ_STEP SET PLAN_BGN_DT=#{row.startDate},PLAN_END_DT=#{row.endDate},MOD_USER_ID=#{actor},MOD_DTTM=#{now}
+    WHERE PROJ_ID=#{row.projectId} AND STEP_SN=#{row.stepSn}
+  </update>
+  <update id="complete">
+    UPDATE TB_PJ_STEP SET CMPL_DT=#{row.completedDate},MOD_USER_ID=#{actor},MOD_DTTM=#{now} WHERE PROJ_ID=#{row.projectId} AND STEP_SN=#{row.stepSn}
+  </update>
+  <insert id="insertMemo">
+    INSERT INTO TB_PJ_WEEK_MEMO (PROJ_ID,MEMO_SN,WRT_DT,THIS_WEEK_CN,NEXT_WEEK_CN,REQ_CN,ACTL_PRGRS_RT,REG_USER_ID,REG_DTTM)
+    VALUES (#{row.projectId},#{row.memoSn},#{row.writtenDate},#{row.thisWeek,jdbcType=VARCHAR},#{row.nextWeek,jdbcType=VARCHAR},#{row.request,jdbcType=VARCHAR},#{row.actualProgress,jdbcType=NUMERIC},#{actor},#{now})
+  </insert>
+  <update id="updateMemo">
+    UPDATE TB_PJ_WEEK_MEMO SET THIS_WEEK_CN=#{row.thisWeek,jdbcType=VARCHAR},NEXT_WEEK_CN=#{row.nextWeek,jdbcType=VARCHAR},REQ_CN=#{row.request,jdbcType=VARCHAR},
+      ACTL_PRGRS_RT=#{row.actualProgress,jdbcType=NUMERIC},MOD_USER_ID=#{actor},MOD_DTTM=#{now} WHERE PROJ_ID=#{row.projectId} AND MEMO_SN=#{row.memoSn}
+  </update>
+</mapper>

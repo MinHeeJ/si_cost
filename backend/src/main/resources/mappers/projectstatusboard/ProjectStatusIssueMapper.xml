@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.projectstatusboardops.ProjectStatusIssueMapper">
+  <select id="eligibleIssues" resultType="com.sicost.projectstatusboardops.ProjectStatusDtos$IssueSource" useCache="false">
+    SELECT i.ISSUE_ID::bigint AS "issueId",i.PROJ_ID AS "projectId",p.PROJ_NM AS "projectName",
+      i.ISSUE_TTL AS "title",i.IMPR_CD AS "importance",COALESCE(c.CODE_NM,i.IMPR_CD) AS "importanceName",
+      i.DDLN_DT AS "dueDate",i.ISSUE_STAT_CD AS "status",COALESCE(s.CODE_NM,i.ISSUE_STAT_CD) AS "statusName",
+      i.ACTN_CN AS "action",i.REG_USER_ID AS "registeredId",COALESCE(r.USER_NM,i.REG_USER_ID) AS "registeredName",
+      i.REG_DTTM AS "registeredAt",i.MOD_USER_ID AS "modifiedId",COALESCE(m.USER_NM,i.MOD_USER_ID) AS "modifiedName",i.MOD_DTTM AS "modifiedAt"
+    FROM TB_PJ_ISSUE i JOIN TB_PJ_PROJ p ON p.PROJ_ID=i.PROJ_ID
+    LEFT JOIN TB_SY_CODE c ON c.CODE_GRP_ID='IMPR' AND c.CODE=i.IMPR_CD
+    LEFT JOIN TB_SY_CODE s ON s.CODE_GRP_ID='ISSUE_STAT' AND s.CODE=i.ISSUE_STAT_CD
+    LEFT JOIN TB_SY_USER r ON r.USER_ID=i.REG_USER_ID LEFT JOIN TB_SY_USER m ON m.USER_ID=i.MOD_USER_ID
+    WHERE p.PROJ_STAT_CD IN ('ING','PRE') AND p.CTRT_END_DT &gt;= #{today}
+    ORDER BY CASE WHEN i.IMPR_CD='HIGH' THEN 0 ELSE 1 END,i.DDLN_DT,i.ISSUE_ID
+  </select>
+  <select id="projectStatus" resultType="string" useCache="false">
+    SELECT CASE WHEN PROJ_STAT_CD IN ('ING','PRE') AND CTRT_END_DT &gt;= #{today} THEN 'ELIGIBLE' ELSE 'EXCLUDED' END
+    FROM TB_PJ_PROJ WHERE PROJ_ID=#{projectId}
+  </select>
+</mapper>

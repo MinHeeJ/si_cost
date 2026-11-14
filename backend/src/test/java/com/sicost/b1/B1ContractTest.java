@@ -51,6 +51,31 @@ class B1ContractTest {
     MockMultipartFile file;
     String revision;
     Result result;
+    @Test void literalValidationHappyAndMissingMonthNeverApplyBusinessRows() throws Exception {
+        mvc.perform(post("/api/excel/B1/validate").param("month","2026-06").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B1/validate",200))
+            .andExpect(jsonPath("$.data.status").value("CHECKED"))
+            .andExpect(jsonPath("$.data.summary.successRows").value(1));
+        verify(repository).create(argThat(w->w.actor().equals("admin")),any(),any(),eq(revision));
+        mvc.perform(post("/api/excel/B1/validate").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B1/validate",400))
+            .andExpect(jsonPath("$.field").value("month"));
+        verify(repository,never()).apply(any(),any(),any(),any());
+    }
+    @Test void literalApplyCommitsAndStaleBusinessRevisionCannotApplyAgain() throws Exception {
+        mvc.perform(post("/api/excel/B1/apply").param("month","2026-06").param("uploadId","1")
+            .param("expectedRevision",revision).param("confirmFullReplacement","true").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B1/apply",200))
+            .andExpect(jsonPath("$.data.status").value("APPLIED"))
+            .andExpect(jsonPath("$.data.results[0].developerId").value("D-test"));
+        verify(repository).apply(any(),any(),eq("admin"),any());verify(transactions).commit(any());
+        clearInvocations(repository);when(payroll.snapshot(any())).thenReturn("concurrent-change");
+        mvc.perform(post("/api/excel/B1/apply").param("month","2026-06").param("uploadId","1")
+            .param("expectedRevision",revision).param("confirmFullReplacement","true").with(DurableOpenApi.multipart(file)))
+            .andExpect(DurableOpenApi.response("POST","/api/excel/B1/apply",409))
+            .andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        verify(repository,never()).apply(any(),any(),any(),any());verify(transactions).rollback(any());
+    }
     @BeforeEach void setup() throws Exception {
         file=B1Workbook.valid();revision=revisions.revision("empty-month");
         when(users.userId()).thenReturn("admin");when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),true));

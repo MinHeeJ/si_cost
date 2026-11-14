@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
+
 import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -20,14 +21,23 @@ export type ProjectDetailContext = {
   year: number;
   currentYear: number;
   readOnly: boolean;
+  currentDate: string;
+  amountUnit: "원" | "천원" | "백만원";
   onChanged(): Promise<void>;
   onDirtyChange?(dirty: boolean): void;
 };
 export type ProjectDetailRegistration = {
+  activeTab?: string;
+  onTabChange?(tab: string): void;
   partAction?(context: ProjectDetailContext): ReactNode;
   statusActions?(context: ProjectDetailContext): ReactNode;
+  costSummary?(context: ProjectDetailContext): ReactNode;
+  progress?(context: ProjectDetailContext): ReactNode;
+  issues?(context: ProjectDetailContext): ReactNode;
+  issuesTitle?(context: ProjectDetailContext): ReactNode;
 };
 type Props = {
+  active?: boolean;
   id: string;
   year: number;
   currentYear: number;
@@ -43,6 +53,7 @@ type Props = {
   registration?: ProjectDetailRegistration;
 };
 export function ProjectDetailPanel({
+  active = true,
   id,
   year,
   currentYear,
@@ -60,8 +71,23 @@ export function ProjectDetailPanel({
   const [detail, setDetail] = useState<api.ProjectDetail>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("basic"),
-    [cancelled, setCancelled] = useState(false),
+  const [localTab, setLocalTab] = useState("basic");
+  const requestedTab = registration?.activeTab ?? localTab;
+  const tab = [
+    "basic",
+    "plans",
+    "assignments",
+    "history",
+    ...(registration?.progress ? ["progress"] : []),
+    ...(registration?.issues ? ["issues"] : []),
+  ].includes(requestedTab)
+    ? requestedTab
+    : "basic";
+  const setTab = (value: string) => {
+    setLocalTab(value);
+    registration?.onTabChange?.(value);
+  };
+  const [cancelled, setCancelled] = useState(false),
     [budget, setBudget] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -120,6 +146,8 @@ export function ProjectDetailPanel({
     detail,
     year,
     currentYear,
+    currentDate,
+    amountUnit,
     readOnly: locked,
     onChanged: refresh,
     onDirtyChange: childDirty,
@@ -146,6 +174,7 @@ export function ProjectDetailPanel({
   return (
     <>
       <DetailDrawer
+        hidden={!active}
         title={p?.name ?? "프로젝트 상세"}
         subtitle={
           p
@@ -217,6 +246,8 @@ export function ProjectDetailPanel({
                 ["plans", "인원 계획"],
                 ["assignments", "투입 인력"],
                 ["history", "계약 변경 이력"],
+                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
+                ...(registration?.issues ? [["issues", "이슈"]] : []),
               ].map(([key, label]) => (
                 <button
                   type="button"
@@ -227,11 +258,15 @@ export function ProjectDetailPanel({
                   disabled={dirty && tab !== key}
                   onClick={() => setTab(key)}
                 >
-                  {label}
+                  {key === "issues" && context && registration?.issuesTitle ? registration.issuesTitle(context) : label}
                 </button>
               ))}
             </nav>
             <div role="tabpanel" data-testid={`project-panel-${tab}`}>
+              {tab === "progress" &&
+                context &&
+                registration?.progress?.(context)}
+              {tab === "issues" && context && registration?.issues?.(context)}
               {tab === "basic" && (
                 <>
                   <dl className="project-info">
@@ -358,9 +393,12 @@ export function ProjectDetailPanel({
                       <p>직접 경비 합계 {money(detail.directExpenseTotal)}</p>
                     </>
                   )}
-                  <p className="project-help">
-                    진행현황·이슈는 후속 기능에서 제공합니다.
-                  </p>
+                  {context && registration?.costSummary?.(context)}
+                  {!registration?.progress && !registration?.issues && (
+                    <p className="project-help">
+                      진행현황·이슈는 후속 기능에서 제공합니다.
+                    </p>
+                  )}
                 </>
               )}
               {tab === "plans" && (

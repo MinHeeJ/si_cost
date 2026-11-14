@@ -37,6 +37,42 @@ export {
 export const getHealth = () => request<void>("/api/health");
 
 export {
+  getProjectCosts,
+  getProjectStatusBoard,
+} from "../pages/apiops/projectAnalysisApi";
+export {
+  getProjectCostAnalysis,
+  getProjectCostMonths,
+  getProjectCostAssignments,
+  getProjectCostCauses,
+  createProjectCostSimulation,
+} from "../pages/costanalysis/projectCostApi";
+export {
+  getProjectCostSummary,
+  getProjectCostExport,
+} from "../pages/projectcostsops/projectCostExportApi";
+export {
+  getProjectStatusBoardSummary,
+  getProjectAnalysisDownload,
+} from "../pages/projectstatusboardops/projectStatusApi";
+export {
+  getProjectProgress,
+  getProjectProgressHistory,
+  createProjectProgressSteps,
+  createProjectStepDatesPreview,
+  saveProjectStepDates,
+  saveProjectStepCompletion,
+  createProjectWeekMemo,
+  putProjectWeekMemo,
+} from "../pages/progress/projectProgressApi";
+export {
+  getProjectIssues,
+  getProjectStatusIssues,
+  createProjectIssue,
+  putProjectIssue,
+} from "../pages/issues/projectIssuesApi";
+
+export {
   getBusinessUsers,
   getBusinessUser,
   createBusinessUser,

@@ -4,6 +4,7 @@ import {
   BrowserRouter,
   useLocation,
   useNavigate,
+  useSearchParams,
   useRoutes,
   type RouteObject,
 } from "react-router-dom";
@@ -13,9 +14,16 @@ import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWork
 import { ProjectsWorkspace } from "../pages/projects/ProjectsWorkspace";
 import type { ProjectsRegistration } from "../pages/projects/ProjectsScreen";
 import type { ProjectDetailContext } from "../pages/projects/ProjectDetailPanel";
-import { getProject, type ProjectDetail } from "../pages/projects/projectsApi";
+import { PROJECTS_COMMITTED, getProject, type ProjectDetail } from "../pages/projects/projectsApi";
 import { ProjectPartDialog } from "../pages/parts/ProjectPartDialog";
 import { ProjectStatusPanel } from "../pages/projectsops/ProjectStatusPanel";
+import { ProjectCostAnalysisScreen } from "../pages/shared/ProjectCostAnalysisScreen";
+import { ProjectStatusBoardScreen } from "../pages/shared/ProjectStatusBoardScreen";
+import { ProjectCostDetailPanel } from "../pages/costanalysis/ProjectCostDetailPanel";
+import { ProjectCostSummaryPanel } from "../pages/costanalysis/ProjectCostSummaryPanel";
+import { ProjectProgressPanel } from "../pages/progress/ProjectProgressPanel";
+import { ProjectIssuesPanel } from "../pages/issues/ProjectIssuesPanel";
+import { ProjectStatusIssuesPanel } from "../pages/issues/ProjectStatusIssuesPanel";
 import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
@@ -632,7 +640,45 @@ function RegisteredDistributionUpload({
   );
 }
 
+function RegisteredProjectIssues({context}:{context:ProjectDetailContext}) {
+  const preferences=usePreferences();const size=preferences.get("PAGE_SIZE")?.value;
+  return <ProjectIssuesPanel projectId={context.detail.project.id} projectName={context.detail.project.name} year={context.year}
+    readOnly={context.readOnly||!["ING","PRE"].includes(context.detail.effectiveStatus)}
+    onChanged={context.onChanged} onDirtyChange={context.onDirtyChange}
+    pageSize={size===20||size===100?size:50} onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)} dense={preferences.get("DENSE")?.value === "좁게"} />;
+}
+
+function ProjectIssueTabTitle({ projectId }: { projectId: string }) {
+  const [count, setCount] = useState<number>();
+  useEffect(() => {
+    let live = true;
+    const load = () => { void import("../pages/issues/projectIssuesApi").then(api => api.getProjectIssues(projectId, { status: "OPEN_ACTIVE", page: 1, size: 20 })).then(data => { if (live) setCount(data.openCount); }).catch(() => { if (live) setCount(undefined); }); };
+    load();
+    const committed = (event: Event) => { if ((event as CustomEvent<{id: string}>).detail?.id === projectId) load(); };
+    window.addEventListener(PROJECTS_COMMITTED, committed);
+    return () => { live = false; window.removeEventListener(PROJECTS_COMMITTED, committed); };
+  }, [projectId]);
+  return <>이슈 ({count ?? "–"})</>;
+}
+
 const projectRegistration: ProjectsRegistration = {
+  issuesTitle: (context) => <ProjectIssueTabTitle projectId={context.detail.project.id} />,
+  costSummary: (context) => (
+    <ProjectCostSummaryPanel
+      projectId={context.detail.project.id}
+      month={context.currentDate.slice(0, 7)}
+      amountUnit={context.amountUnit}
+    />
+  ),
+  progress: (context) => (
+    <ProjectProgressPanel
+      projectId={context.detail.project.id}
+      year={context.year}
+      onChanged={context.onChanged}
+      onDirtyChange={context.onDirtyChange}
+    />
+  ),
+  issues: (context) => <RegisteredProjectIssues context={context} />,
   partAction: (context) => <RegisteredProjectPart {...context} />,
   statusActions: (context) => (
     <ProjectStatusPanel
@@ -650,6 +696,167 @@ const projectRegistration: ProjectsRegistration = {
   ),
 };
 
+function RegisteredProjectsWorkspace({
+  onDirtyChange,
+}: {
+  onDirtyChange(dirty: boolean): void;
+}) {
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  return (
+    <ProjectsWorkspace
+      active={location.pathname === "/UI-01"}
+      onDirtyChange={onDirtyChange}
+      registration={{
+        ...projectRegistration,
+        selectedProjectId: params.get("projectId") ?? undefined,
+        activeTab: params.get("tab") ?? "basic",
+        onSelectProject: (id) => {
+          const next = new URLSearchParams(params);
+          if (id) {
+            next.set("projectId", id);
+            next.set("tab", "basic");
+          } else {
+            next.delete("projectId");
+            next.delete("tab");
+          }
+          setParams(next, { replace: true, preventScrollReset: true });
+        },
+        onTabChange: (tab) => {
+          const next = new URLSearchParams(params);
+          next.set("tab", tab);
+          setParams(next, { replace: true, preventScrollReset: true });
+        },
+      }}
+    />
+  );
+}
+
+const analysisColumns: Record<
+  "projectCost" | "statusBoard",
+  PreferenceColumn[]
+> = {
+  projectCost: [
+    ["projectName", "프로젝트"],
+    ["contractType", "유형"],
+    ["status", "상태"],
+    ["originalContractAmount", "원 계약금액"],
+    ["contractAmount", "현재 계약금액"],
+    ["planMm", "계획 MM"],
+    ["actualMm", "실제 MM"],
+    ["cumulativeRevenue", "누적 매출"],
+    ["cumulativeCost", "누적 원가"],
+    ["cumulativeProfit", "이익"],
+    ["cumulativeMargin", "누적 마진율"],
+    ["forecastMargin", "예상 최종 마진율"],
+    ["monthlyMargin", "월간 마진율"],
+    ["targetMargin", "목표 마진율"],
+    ["targetGap", "목표 대비"],
+    ["budgetAmount", "예산"],
+    ["budgetUsage", "예산 소진율"],
+    ["pricePerMm", "MM당 단가"],
+    ["costPerMm", "MM당 원가"],
+    ["profitPerMm", "MM당 이익"],
+    ["freeMm", "무상지원 MM"],
+    ["freeLaborCost", "무상 원가"],
+    ["alerts", "경보"],
+  ].map(([id, label]) => ({ id, label, required: id === "projectName" })),
+  statusBoard: [
+    ["light", "신호등"],
+    ["projectName", "프로젝트"],
+    ["pm", "PM"],
+    ["currentStep", "현재 단계"],
+    ["planProgress", "계획 진척률"],
+    ["actualProgress", "실적 진척률"],
+    ["costUsage", "원가 사용률"],
+    ["costProgressGap", "진척 대비 원가"],
+    ["openIssueCount", "열린 이슈"],
+    ["overdueIssueCount", "기한 지난 이슈"],
+    ["lastUpdatedDate", "마지막 업데이트"],
+    ["elapsedDays", "경과일"],
+  ].map(([id, label]) => ({ id, label, required: id === "projectName" })),
+};
+
+function RegisteredProjectAnalysis({
+  screenId,
+  onDirtyChange,
+}: {
+  screenId: "UI-04" | "UI-31";
+  onDirtyChange(dirty: boolean): void;
+}) {
+  const preferences = usePreferences();
+  const [columns, setColumns] = useState(false);
+  const viewId = screenId === "UI-04" ? "projectCost" : "statusBoard";
+  const size=preferences.get("PAGE_SIZE")?.value;
+  const pageSize:20|50|100=size===20||size===100?size:50;
+  const storedUnit=preferences.get("AMT_UNIT")?.value;
+  const amountUnit=storedUnit==="원"||storedUnit==="백만원"?storedUnit:"천원";
+  const period=preferences.get("PERIOD","UI-04")?.value as {type?:string;value?:string}|undefined;
+  const views = preferences.get("COLS", screenId)?.value as
+    | ScreenColumnPreferences
+    | undefined;
+  const renderColumns = () => (
+    <button
+      type="button"
+      data-testid={`project-${viewId === "projectCost" ? "cost" : "status"}-columns`}
+      onClick={() => setColumns(true)}
+    >
+      열 설정
+    </button>
+  );
+  if (preferences.loading) return <p role="status">화면 설정을 불러오는 중입니다.</p>;
+  return (
+    <>
+      {screenId === "UI-04" ? (
+        <ProjectCostAnalysisScreen
+          pageSize={pageSize}
+          onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)}
+          amountUnit={amountUnit}
+          onAmountUnitChange={(value)=>preferences.put("AMT_UNIT","*",value)}
+          initialMonth={period?.type === "YEAR_MONTH" ? period.value : undefined}
+          onMonthChange={(value)=>preferences.put("PERIOD","UI-04",{type:"YEAR_MONTH",value})}
+          columnView={views?.projectCost}
+          dense={preferences.get("DENSE")?.value === "좁게"}
+          renderColumns={renderColumns}
+          renderDetail={(projectId, month, onClose, amountUnit) => (
+            <ProjectCostDetailPanel
+              key={projectId}
+              projectId={projectId}
+              month={month || undefined}
+              amountUnit={amountUnit}
+              onClose={onClose}
+              onDirtyChange={onDirtyChange}
+            />
+          )}
+        />
+      ) : (
+        <ProjectStatusBoardScreen
+          pageSize={pageSize}
+          onPageSizeChange={(value)=>preferences.put("PAGE_SIZE","*",value)}
+          columnView={views?.statusBoard}
+          dense={preferences.get("DENSE")?.value === "좁게"}
+          renderColumns={renderColumns}
+          renderIssues={(_query, onChanged) => (
+            <ProjectStatusIssuesPanel
+              onChanged={onChanged}
+              onDirtyChange={onDirtyChange}
+            />
+          )}
+        />
+      )}
+      {columns && (
+        <ColumnPreferencesDialog
+          open
+          screenId={screenId}
+          viewId={viewId}
+          columns={analysisColumns[viewId]}
+          onClose={() => setColumns(false)}
+        />
+      )}
+    </>
+  );
+}
+
 function RegisteredApplication() {
   const preferences = usePreferences();
   const [codesDirty, setCodesDirty] = useState(false),
@@ -659,6 +866,8 @@ function RegisteredApplication() {
   const [developersDirty, setDevelopersDirty] = useState(false),
     [candidatesDirty, setCandidatesDirty] = useState(false);
   const [projectsDirty, setProjectsDirty] = useState(false);
+  const [costDirty, setCostDirty] = useState(false),
+    [boardDirty, setBoardDirty] = useState(false);
   const [assignmentsDirty, setAssignmentsDirty] = useState(false);
   const [billingDirty, setBillingDirty] = useState(false);
   const [financialDirty, setFinancialDirty] = useState(false);
@@ -727,22 +936,35 @@ function RegisteredApplication() {
                 ? candidatesDirty
                 : id === "UI-01"
                   ? projectsDirty
-                  : id === "UI-12"
-                    ? assignmentsDirty
-                    : id === "UI-13"
-                      ? billingDirty
-                      : id === "UI-10"
-                        ? financialDirty
-                        : id === "UI-23" && usersDirty
+                  : id === "UI-04"
+                    ? costDirty
+                    : id === "UI-31"
+                      ? boardDirty
+                      : id === "UI-12"
+                        ? assignmentsDirty
+                        : id === "UI-13"
+                          ? billingDirty
+                          : id === "UI-10"
+                            ? financialDirty
+                            : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-01": (
           <SharedScreenFrame screenId="UI-01">
-            <ProjectsWorkspace
-              onDirtyChange={onProjectsDirty}
-              registration={projectRegistration}
-            />
+            <RegisteredProjectsWorkspace onDirtyChange={onProjectsDirty} />
           </SharedScreenFrame>
+        ),
+        "UI-04": (
+          <RegisteredProjectAnalysis
+            screenId="UI-04"
+            onDirtyChange={setCostDirty}
+          />
+        ),
+        "UI-31": (
+          <RegisteredProjectAnalysis
+            screenId="UI-31"
+            onDirtyChange={setBoardDirty}
+          />
         ),
         "UI-02": (
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />

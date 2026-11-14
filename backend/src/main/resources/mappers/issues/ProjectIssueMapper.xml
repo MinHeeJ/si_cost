@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.issues.ProjectIssueMapper">
+  <select id="project" resultType="com.sicost.issues.ProjectIssueDtos$Project" useCache="false" flushCache="true">
+    SELECT PROJ_ID AS "projectId", PROJ_NM AS "projectName", PROJ_STAT_CD AS "status", CTRT_END_DT AS "endDate"
+    FROM TB_PJ_PROJ WHERE PROJ_ID=#{id}
+  </select>
+  <select id="issues" resultType="com.sicost.issues.ProjectIssueDtos$Row" useCache="false" flushCache="true">
+    SELECT i.ISSUE_ID AS "issueId", i.PROJ_ID AS "projectId", p.PROJ_NM AS "projectName",
+      i.ISSUE_TTL AS "title", i.IMPR_CD AS "importance", COALESCE(c.CODE_NM,i.IMPR_CD) AS "importanceName",
+      i.DDLN_DT AS "dueDate", i.ISSUE_STAT_CD AS "status", COALESCE(s.CODE_NM,i.ISSUE_STAT_CD) AS "statusName",
+      i.ACTN_CN AS "action", i.REG_USER_ID AS "regUserId", COALESCE(u.USER_NM,i.REG_USER_ID) AS "regUserName",
+      i.REG_DTTM AS "regDttm", i.MOD_USER_ID AS "modUserId", COALESCE(m.USER_NM,i.MOD_USER_ID) AS "modUserName",
+      i.MOD_DTTM AS "modDttm"
+    FROM TB_PJ_ISSUE i JOIN TB_PJ_PROJ p ON p.PROJ_ID=i.PROJ_ID
+    LEFT JOIN TB_SY_CODE c ON c.CODE_GRP_ID='IMPR' AND c.CODE=i.IMPR_CD
+    LEFT JOIN TB_SY_CODE s ON s.CODE_GRP_ID='ISSUE_STAT' AND s.CODE=i.ISSUE_STAT_CD
+    LEFT JOIN TB_SY_USER u ON u.USER_ID=i.REG_USER_ID
+    LEFT JOIN TB_SY_USER m ON m.USER_ID=i.MOD_USER_ID
+    WHERE i.PROJ_ID=#{id} ORDER BY i.ISSUE_ID
+  </select>
+  <select id="activeCode" resultType="boolean" useCache="false" flushCache="true">
+    SELECT EXISTS(SELECT 1 FROM TB_SY_CODE WHERE CODE_GRP_ID=#{group} AND CODE=#{code} AND USE_YN='Y' AND DEL_YN='N')
+  </select>
+  <insert id="insert" useGeneratedKeys="true" keyProperty="issueId" keyColumn="issue_id">
+    INSERT INTO TB_PJ_ISSUE (PROJ_ID,ISSUE_TTL,IMPR_CD,DDLN_DT,ISSUE_STAT_CD,ACTN_CN,REG_USER_ID,REG_DTTM)
+    VALUES (#{data.projectId},#{data.input.title},#{data.input.importance},#{data.input.dueDate},#{data.input.status},#{data.input.action},#{data.actor},#{data.now})
+  </insert>
+  <update id="update">
+    UPDATE TB_PJ_ISSUE SET ISSUE_TTL=#{input.title},IMPR_CD=#{input.importance},DDLN_DT=#{input.dueDate},
+      ISSUE_STAT_CD=#{input.status},ACTN_CN=#{input.action},MOD_USER_ID=#{actor},MOD_DTTM=#{now}
+    WHERE PROJ_ID=#{projectId} AND ISSUE_ID=#{issueId}
+  </update>
+</mapper>

@@ -209,7 +209,7 @@ async function formReady() {
 }
 async function fillNew() {
   await formReady();
-  fireEvent.change(screen.getByLabelText(/프로젝트명/), {
+  fireEvent.change(screen.getByTestId("project-name"), {
     target: { value: "새 프로젝트" },
   });
   await userEvent.selectOptions(screen.getByLabelText("계약유형"), "TK");
@@ -426,7 +426,7 @@ it("create validates before POST and focuses first invalid field", async () => {
   await formReady();
   await userEvent.click(screen.getByTestId("project-form-save"));
   expect(api.createProject).not.toHaveBeenCalled();
-  expect(screen.getByLabelText(/프로젝트명/)).toHaveFocus();
+  expect(screen.getByTestId("project-name")).toHaveFocus();
 });
 it("new create sends zero and initial identity only with exact year and clears dirty after success", async () => {
   const saved = vi.fn(),
@@ -603,12 +603,12 @@ it("server field error retains input and request id without automatic resubmit",
     />,
   );
   await formReady();
-  fireEvent.change(screen.getByLabelText(/프로젝트명/), {
+  fireEvent.change(screen.getByTestId("project-name"), {
     target: { value: "유지할 이름" },
   });
   await userEvent.click(screen.getByTestId("project-form-save"));
   await screen.findAllByText("이름 오류");
-  expect(screen.getByLabelText(/프로젝트명/)).toHaveValue("유지할 이름");
+  expect(screen.getByTestId("project-name")).toHaveValue("유지할 이름");
   expect(screen.getByText(/req-form/)).toBeInTheDocument();
   expect(api.putProject).toHaveBeenCalledOnce();
 });
@@ -637,12 +637,12 @@ it("dirty cancel keeps inputs on stay and leaves without API on discard", async 
   const close = vi.fn();
   render(<ProjectForm year={2026} onClose={close} onSaved={vi.fn()} />);
   await formReady();
-  fireEvent.change(screen.getByLabelText(/프로젝트명/), {
+  fireEvent.change(screen.getByTestId("project-name"), {
     target: { value: "작성 중" },
   });
   await userEvent.click(screen.getByTestId("project-form-cancel"));
   await userEvent.click(screen.getByRole("button", { name: "계속 작성" }));
-  expect(screen.getByLabelText(/프로젝트명/)).toHaveValue("작성 중");
+  expect(screen.getByTestId("project-name")).toHaveValue("작성 중");
   await userEvent.click(screen.getByTestId("project-form-cancel"));
   await userEvent.click(screen.getByRole("button", { name: "나가기" }));
   expect(close).toHaveBeenCalledOnce();
@@ -709,4 +709,22 @@ it("dirty child prevents close and tab switch until explicit discard", async () 
   await userEvent.click(screen.getByTestId("detail-drawer-close"));
   await userEvent.click(screen.getByRole("button", { name: "나가기" }));
   expect(close).toHaveBeenCalledOnce();
+});
+
+it("등록 모달 뒤 목록을 유지하고 Escape 취소에서 미저장 확인을 제공한다", async () => {
+  render(<ProjectsScreen {...props} />);
+  await screen.findByTestId("project-open-p-0042");
+  await userEvent.click(screen.getByTestId("project-create"));
+  const dialog=screen.getByRole("dialog", {name: "프로젝트 등록"});
+  expect(screen.getByTestId("project-open-p-0042")).toBeVisible();
+  expect(dialog).toContainElement(screen.getByTestId("project-form"));
+  await formReady();
+  fireEvent.change(screen.getByTestId("project-name"), {target: {value: "모달 초안"}});
+  fireEvent.keyDown(dialog, {key: "Escape"});
+  await userEvent.click(screen.getByRole("button", {name: "계속 작성"}));
+  expect(screen.getByTestId("project-name")).toHaveValue("모달 초안");
+  fireEvent.keyDown(dialog, {key: "Escape"});
+  await userEvent.click(screen.getByRole("button", {name: "나가기"}));
+  expect(screen.queryByTestId("project-form")).not.toBeInTheDocument();
+  expect(api.createProject).not.toHaveBeenCalled();
 });

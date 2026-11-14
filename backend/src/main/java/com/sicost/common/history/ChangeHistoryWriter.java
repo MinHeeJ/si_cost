@@ -27,6 +27,7 @@ public class ChangeHistoryWriter {
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
             "TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_SY_UPLD",
             "TB_PJ_ASGN", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
+            "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
             "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER");
     private static final Set<String> PEOPLE = Set.of("TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
@@ -60,6 +61,21 @@ public class ChangeHistoryWriter {
     }
     private void append(Change change, Supplier<String> actor, boolean required) {
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
+        if (Set.of("TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE").contains(change.tableName())) {
+            String fields = switch (change.tableName()) {
+                case "TB_PJ_STEP" -> "PROJ_STEP_CD|STEP_WGHT_RT|PLAN_BGN_DT|PLAN_END_DT|CMPL_DT";
+                case "TB_PJ_WEEK_MEMO" -> "THIS_WEEK_CN|NEXT_WEEK_CN|REQ_CN|ACTL_PRGRS_RT";
+                default -> "ISSUE_TTL|IMPR_CD|DDLN_DT|ISSUE_STAT_CD|ACTN_CN";
+            };
+            String key = change.tableName().equals("TB_PJ_ISSUE") ? "[1-9][0-9]{0,9}"
+                : "[^\\s:]{1,20}:" + (change.tableName().equals("TB_PJ_STEP") ? "[1-9][0-9]?" : "[1-9][0-9]{0,4}");
+            if (!Set.of("NEW", "UPD").contains(change.type()) || change.targetKey() == null
+                    || !change.targetKey().matches(key) || change.item() == null || !change.item().matches(fields)
+                    || (change.type().equals("UPD") && change.tableName().equals("TB_PJ_STEP")
+                        && Set.of("PROJ_STEP_CD", "STEP_WGHT_RT").contains(change.item()))) {
+                throw InputValidator.invalid("history");
+            }
+        }
         if (Set.of("TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON").contains(change.tableName())
                 && change.type().equals("DEL")) throw InputValidator.invalid("history");
         if (Set.of("TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_SY_UPLD", "TB_PJ_ASGN", "TB_BL_BILL", "TB_BL_RCPT").contains(change.tableName())

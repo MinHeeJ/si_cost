@@ -50,6 +50,19 @@ class BillContractTest {
     List<ReceiptStored> receipts;
     List<ChangeHistoryEntry> audits;
     Project project;
+    @Test void literalUpdateCommitsOnlyChangedInvoiceAndRejectsForgedActor() throws Exception {
+        create(draft()).andExpect(status().isCreated());clearInvocations(mapper,history,invalidation,manager);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/bills/B-202607-001").contentType("application/json").content(update().put("taxInvoiceNo","INV-LITERAL").toString()))
+            .andExpect(DurableOpenApi.response("PUT","/api/bills/{id}",200))
+            .andExpect(jsonPath("$.data.bill.taxInvoiceNo").value("INV-LITERAL"))
+            .andExpect(jsonPath("$.data.changed").value(true));
+        verify(mapper).update(any());verify(manager).commit(any());
+        assertThat(audits).filteredOn(a->a.type().equals("UPD")).extracting(ChangeHistoryEntry::item).containsExactly("TAX_INVC_NO");
+        clearInvocations(mapper,history,invalidation);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/bills/B-202607-001").contentType("application/json").content(update().put("modUserId","other").toString()))
+            .andExpect(DurableOpenApi.response("PUT","/api/bills/{id}",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));noWrites();
+    }
     @BeforeEach void setup() {
         bills=new ArrayList<>();receipts=new ArrayList<>();audits=new ArrayList<>();project=new Project("P-BILL","청구 시험","시험 고객","MO","ING",LocalDate.of(2027,12,31));
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","임시 관리자",List.of("ADMIN"),true));when(users.userId()).thenReturn("admin");

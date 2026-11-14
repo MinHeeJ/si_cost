@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.ProjectAnalysisMapper">
+  <select id="evidence" resultType="com.sicost.apiops.ProjectAnalysisDtos$ProjectEvidence" useCache="false">
+    SELECT p.PROJ_ID AS "projectId",p.ORGNL_CTRT_AMT AS "originalAmount",
+      (SELECT sum(PLAN_MM) FROM TB_PJ_MNPW_PLAN m WHERE m.PROJ_ID=p.PROJ_ID) AS "planMm",
+      p.REG_DTTM::date AS "registeredDate" FROM TB_PJ_PROJ p ORDER BY p.PROJ_ID
+  </select>
+  <select id="expenses" resultType="com.sicost.apiops.ProjectAnalysisDtos$Expense" useCache="false">
+    SELECT PROJ_ID AS "projectId",EXPS_YM AS "month",EXPS_AMT AS "amount"
+    FROM TB_PJ_DRCT_EXPS ORDER BY PROJ_ID,EXPS_YM,EXPS_SN
+  </select>
+  <select id="stages" resultType="com.sicost.apiops.ProjectAnalysisDtos$Stage" useCache="false">
+    SELECT s.PROJ_ID AS "projectId",s.STEP_SN::int AS "stepSn",s.PROJ_STEP_CD AS "stepCode",
+      COALESCE(c.CODE_NM,s.PROJ_STEP_CD) AS "stepName",s.STEP_WGHT_RT AS "weight",
+      s.PLAN_BGN_DT AS "startDate",s.PLAN_END_DT AS "endDate",s.CMPL_DT AS "completedDate",
+      s.REG_USER_ID AS "registeredBy",COALESCE(r.USER_NM,s.REG_USER_ID) AS "registeredName",
+      s.REG_DTTM AS "registeredAt",s.MOD_USER_ID AS "modifiedBy",
+      COALESCE(u.USER_NM,s.MOD_USER_ID) AS "modifiedName",s.MOD_DTTM AS "modifiedAt"
+    FROM TB_PJ_STEP s LEFT JOIN TB_SY_CODE c ON c.CODE_GRP_ID='PROJ_STEP' AND c.CODE=s.PROJ_STEP_CD
+    LEFT JOIN TB_SY_USER r ON r.USER_ID=s.REG_USER_ID LEFT JOIN TB_SY_USER u ON u.USER_ID=s.MOD_USER_ID
+    ORDER BY s.PROJ_ID,s.STEP_SN
+  </select>
+  <select id="memos" resultType="com.sicost.apiops.ProjectAnalysisDtos$Memo" useCache="false">
+    SELECT PROJ_ID AS "projectId",MEMO_SN::int AS "memoSn",WRT_DT AS "writtenDate",ACTL_PRGRS_RT AS "actualProgress"
+    FROM TB_PJ_WEEK_MEMO ORDER BY PROJ_ID,WRT_DT DESC,MEMO_SN DESC
+  </select>
+  <select id="issues" resultType="com.sicost.apiops.ProjectAnalysisDtos$Issue" useCache="false">
+    SELECT PROJ_ID AS "projectId",IMPR_CD AS "importance",DDLN_DT AS "dueDate",ISSUE_STAT_CD AS "status"
+    FROM TB_PJ_ISSUE ORDER BY ISSUE_ID
+  </select>
+  <select id="managers" resultType="com.sicost.apiops.ProjectAnalysisDtos$ProjectManager" useCache="false">
+    SELECT s.PROJ_ID AS "projectId",s.USER_ID AS "userId",COALESCE(u.USER_NM,s.USER_ID) AS "userName"
+    FROM TB_SY_USER_SCOPE s LEFT JOIN TB_SY_USER u ON u.USER_ID=s.USER_ID
+    WHERE s.SCOPE_TYPE_CD='PROJ' ORDER BY s.PROJ_ID,s.USER_ID,s.SCOPE_SN
+  </select>
+  <select id="assignmentIds" resultType="string" useCache="false">
+    SELECT ASGN_ID FROM TB_PJ_ASGN WHERE ASGN_STAT_CD='ACT' ORDER BY ASGN_ID
+  </select>
+  <select id="templates" resultType="com.sicost.apiops.ProjectAnalysisDtos$StageTemplate" useCache="false">
+    SELECT CODE AS "code",ADD_VAL2 AS "contractTypes" FROM TB_SY_CODE
+    WHERE CODE_GRP_ID='PROJ_STEP' AND USE_YN='Y' AND DEL_YN='N' ORDER BY SORT_ORD,CODE
+  </select>
+</mapper>

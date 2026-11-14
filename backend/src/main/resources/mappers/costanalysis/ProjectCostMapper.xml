@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.costanalysis.ProjectCostMapper">
+  <select id="expenses" resultType="com.sicost.costanalysis.ProjectCostMapper$Expense" useCache="false">
+    SELECT EXPS_YM AS "month", SUM(EXPS_AMT) AS "amount" FROM TB_PJ_DRCT_EXPS
+    WHERE PROJ_ID=#{id} GROUP BY EXPS_YM ORDER BY EXPS_YM
+  </select>
+  <select id="planMm" resultType="java.math.BigDecimal" useCache="false">
+    SELECT SUM(PLAN_MM) FROM TB_PJ_MNPW_PLAN WHERE PROJ_ID=#{id}
+  </select>
+  <select id="actualProgress" resultType="java.math.BigDecimal" useCache="false">
+    SELECT ACTL_PRGRS_RT FROM TB_PJ_WEEK_MEMO WHERE PROJ_ID=#{projectId} AND WRT_DT &lt;= #{baseDate}
+    AND ACTL_PRGRS_RT BETWEEN 0 AND 100 ORDER BY WRT_DT DESC,MEMO_SN DESC LIMIT 1
+  </select>
+  <select id="assignmentIds" resultType="string" useCache="false">
+    SELECT ASGN_ID FROM TB_PJ_ASGN WHERE PROJ_ID=#{id} ORDER BY ASGN_ID
+  </select>
+  <select id="prices" resultType="com.sicost.profitability.MonthlyCostDtos$Price" useCache="false">
+    SELECT DEV_ID AS "personId",APLY_BGN_YM AS "fromMonth",APLY_END_YM AS "toMonth",
+      MON_PAY_AMT AS "monthlyPay",MON_UPRC AS "monthlyRate" FROM TB_HR_DEV_PRC p
+    WHERE EXISTS (SELECT 1 FROM TB_PJ_ASGN a WHERE a.DEV_ID=p.DEV_ID AND a.PROJ_ID=#{id})
+    ORDER BY DEV_ID,APLY_BGN_YM
+  </select>
+  <select id="jobName" resultType="string" useCache="false">
+    SELECT CODE_NM FROM TB_SY_CODE WHERE CODE_GRP_ID='JOB' AND CODE=#{code}
+  </select>
+</mapper>

@@ -1,0 +1,18 @@
+.project-status-download {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.project-status-download button {
+  white-space: nowrap;
+}
+.project-status-download .sicost-banner {
+  flex-basis: 100%;
+}
+@media (max-width: 767px) {
+  .project-status-download,
+  [data-testid="individual-cost-download"] {
+    display: none;
+  }
+}

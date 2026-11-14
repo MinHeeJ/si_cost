@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ProjectRegistrationService {
+public class ProjectRegistrationService implements org.springframework.context.ApplicationEventPublisherAware {
+    private org.springframework.context.ApplicationEventPublisher events;
+    @Override public void setApplicationEventPublisher(org.springframework.context.ApplicationEventPublisher publisher) { this.events=publisher; }
     public static final String CREATION_LOCK = "PROJECT:CREATE";
     public record Project(String name, String customerId, String contractType, String status,
                           LocalDate startDate, LocalDate endDate, String partId, String workplace,
@@ -48,6 +50,7 @@ public class ProjectRegistrationService {
         one(mapper.insertProject(write));
         one(mapper.insertInitialPart(write));
         one(mapper.insertContract(write));
+        if (events!=null) events.publishEvent(new ProjectLifecycle.Registered(id));
     }
     private void one(int count) { if (count != 1) throw new IllegalStateException("프로젝트 등록 결과를 저장하지 못했습니다."); }
 }

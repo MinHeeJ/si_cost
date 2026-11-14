@@ -18,7 +18,9 @@ import static com.sicost.projects.ProjectDtos.*;
 import static com.sicost.projects.ProjectRules.*;
 
 @Service
-public class ProjectService {
+public class ProjectService implements org.springframework.context.ApplicationEventPublisherAware {
+    private org.springframework.context.ApplicationEventPublisher events;
+    @Override public void setApplicationEventPublisher(org.springframework.context.ApplicationEventPublisher publisher) { this.events=publisher; }
     private final ProjectRepository repository;
     private final WriteCoordinator writes;
     private final ProjectRegistrationService registration;
@@ -78,6 +80,8 @@ public class ProjectService {
             int greatest=repository.greatestHistorySn(id);
             if ((long)greatest+changes.size()>99999) ProjectInputPolicy.nextSerial(99999);
         },()->!changes.isEmpty(),()-> {
+            if (events!=null && (!before[0].startDate().equals(after[0].startDate()) || !before[0].endDate().equals(after[0].endDate())))
+                events.publishEvent(new com.sicost.common.projects.ProjectLifecycle.PeriodChanged(id,after[0].startDate(),after[0].endDate()));
             repository.update(new Mutation(after[0],actor,now));
             if (move[0]!=null) repository.moveInitialPart(move[0]);
             int sn=repository.greatestHistorySn(id);

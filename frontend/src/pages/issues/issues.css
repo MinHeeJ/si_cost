@@ -1,0 +1,71 @@
+.project-issues,
+.issue-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.issue-toolbar,
+.issue-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.issue-toolbar {
+  justify-content: space-between;
+}
+.issue-filters {
+  padding: 16px;
+  border: 1px solid var(--divider);
+  background: var(--surface);
+  border-radius: 8px;
+  align-items: end;
+}
+.issue-form-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.issue-form textarea {
+  padding: 10px;
+  min-height: 100px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: inherit;
+}
+.issue-form textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.issue-overdue {
+  color: var(--bad);
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.issue-link {
+  border: 0;
+  padding: 0;
+  height: auto;
+  color: var(--primary);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+}
+.project-issues td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.project-issues td[data-column="title"],
+.project-issues td[data-column="action"] {
+  min-width: 140px;
+  max-width: 320px;
+}
+@media (max-width: 640px) {
+  .issue-form-pair {
+    grid-template-columns: 1fr;
+  }
+  .issue-filters > label {
+    flex: 1 1 120px;
+  }
+}

@@ -62,3 +62,15 @@ describe("DetailDrawer", () => {
     expect(screen.getByRole("dialog", { name: "제목" })).toBeInTheDocument();
   });
 });
+
+it("숨김 옵션은 패널과 배경을 함께 숨기고 내부 입력을 보존한다", () => {
+  const onClose=vi.fn();
+  const {rerender}=render(<DetailDrawer title="작업 상세" hidden={false} onClose={onClose}><input aria-label="초안" defaultValue="보존" /></DetailDrawer>);
+  const input=screen.getByRole("textbox",{name:"초안"});
+  rerender(<DetailDrawer title="작업 상세" hidden onClose={onClose}><input aria-label="초안" defaultValue="보존" /></DetailDrawer>);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.getByTestId("detail-drawer-scrim")).not.toBeVisible();
+  rerender(<DetailDrawer title="작업 상세" onClose={onClose}><input aria-label="초안" defaultValue="보존" /></DetailDrawer>);
+  expect(screen.getByRole("textbox",{name:"초안"})).toBe(input);
+  expect(input).toHaveValue("보존");
+});

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -20,6 +21,8 @@ import * as api from "./projectsApi";
 
 type Props = {
   year: number;
+  modal?: boolean;
+  visible?: boolean;
   detail?: api.ProjectDetail;
   currentPartName?: string;
   onClose(): void;
@@ -28,6 +31,8 @@ type Props = {
 };
 export function ProjectForm({
   year,
+  modal = false,
+  visible = true,
   detail,
   currentPartName,
   onClose,
@@ -177,6 +182,14 @@ export function ProjectForm({
       else onClose();
     }
   };
+  useEffect(() => {
+    if (!modal || !visible || leaving) return;
+    const previous=document.activeElement as HTMLElement | null;
+    node.current?.querySelector<HTMLInputElement>("input")?.focus();
+    const escape=(event: KeyboardEvent) => { if(event.key === "Escape") { event.preventDefault(); close(); } };
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("keydown", escape); previous?.focus?.(); };
+  }, [modal, visible, leaving, dirty, pending]);
   async function refresh(result: api.SaveProjectResult) {
     try {
       await onSaved(result);
@@ -297,7 +310,7 @@ export function ProjectForm({
       error={fields[key]}
     />
   );
-  return (
+  const content = (
     <FormPage
       title={p ? "프로젝트 수정" : "프로젝트 등록"}
       actions={
@@ -534,4 +547,11 @@ export function ProjectForm({
       </Dialog>
     </FormPage>
   );
+  return modal ? createPortal(
+    <div className="sicost-scrim" style={visible ? undefined : {display: "none"}}>
+      <div className="sicost-dialog sicost-dialog-wide" role="dialog" aria-modal="true" aria-label={p ? "프로젝트 수정" : "프로젝트 등록"}>
+        <div className="sicost-dialog-body">{content}</div>
+      </div>
+    </div>, document.body,
+  ) : content;
 }

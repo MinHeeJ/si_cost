@@ -24,6 +24,9 @@ export type ScreenColumnPreferences = ColumnPreferences &
       | "developers"
       | "candidates"
       | "projects"
+      | "projectCost"
+      | "issues"
+      | "statusBoard"
       | "individualProfitability",
       ColumnView
     >
