@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.StaffingReadMapper">
+  <select id="candidates" resultType="com.sicost.apiops.StaffingReadDtos$CandidateSource">
+    SELECT t.tent_id::text AS "id",t.opp_id AS "opportunityId",p.proj_id AS "projectId",p.proj_nm AS "projectName",
+      t.dev_id AS "developerId",d.dev_nm AS "developerName",n.job_cd AS "jobCode",
+      greatest(p.ctrt_bgn_dt,to_date(t.bgn_ym||'01','YYYYMMDD')) AS "startDate",p.ctrt_end_dt AS "endDate",
+      n.mon_mm AS "contractMm",CASE WHEN p.ctrt_type_cd IN ('MO','DP') THEN pr.mon_uprc ELSE NULL END AS "billingUnitPrice"
+    FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id
+    JOIN tb_sl_opp_need n ON n.opp_id=t.opp_id AND n.need_sn=t.need_sn
+    JOIN tb_pj_proj p ON p.proj_id=o.proj_id JOIN tb_hr_dev d ON d.dev_id=t.dev_id
+    LEFT JOIN LATERAL (SELECT mon_uprc FROM tb_hr_dev_prc WHERE dev_id=t.dev_id AND aply_bgn_ym &lt;= #{month}
+      AND (aply_end_ym IS NULL OR aply_end_ym &gt;= #{month}) ORDER BY aply_bgn_ym DESC LIMIT 1) pr ON true
+    WHERE t.tent_stat_cd='CNVT' ORDER BY t.tent_id
+  </select>
+  <select id="people" resultType="com.sicost.apiops.StaffingReadDtos$Person">
+    SELECT dev_id AS "id",dev_nm AS "name",job_cd AS "jobCode",grade_cd AS "gradeCode",emp_type_cd AS "employeeType",
+      use_yn AS "useYn",drct_cls_cd AS "directClass",jncmp_dt AS "joinDate",retire_dt AS "retireDate"
+    FROM tb_hr_dev WHERE emp_type_cd IN ('FT','CT','FL','OS') ORDER BY dev_id
+  </select>
+  <select id="tentatives" resultType="com.sicost.apiops.StaffingReadDtos$TentativeSource">
+    SELECT t.tent_id::text AS "id",t.opp_id AS "opportunityId",t.need_sn::int AS "needSn",t.dev_id AS "developerId",
+      t.bgn_ym AS "startMonth",t.tent_stat_cd AS "status",t.src_scrn_id AS "sourceScreenId",t.proc_dttm AS "processedAt",
+      to_char(to_date(n.bgn_ym||'01','YYYYMMDD')+(n.prd_mcnt::int-1)*interval '1 month','YYYYMM') AS "endMonth",o.win_prbl_rt AS "probability"
+    FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id
+    JOIN tb_sl_opp_need n ON n.opp_id=t.opp_id AND n.need_sn=t.need_sn
+    WHERE t.tent_stat_cd='ACT' AND o.opp_stat_cd='ING' ORDER BY t.tent_id
+  </select>
+</mapper>

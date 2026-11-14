@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.candidatesops.CandidateMatchingMapper">
+  <select id="candidate" resultType="com.sicost.candidatesops.CandidateMatchingDtos$Candidate">
+    SELECT c.cand_id AS "id", c.job_cd AS "jobCode", c.grade_cd AS "gradeCode",
+      c.emp_type_cd AS "employeeType", c.hope_uprc AS "desiredRate", c.input_psbl_dt AS "availableDate",
+      c.cntc_stat_cd AS "contactStatus", g.sort_ord::integer AS "gradeOrder"
+    FROM tb_hr_cand c LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=c.grade_cd
+      AND g.use_yn='Y' AND g.del_yn='N'
+    WHERE c.cand_id=#{id}
+  </select>
+  <select id="needs" resultType="com.sicost.candidatesops.CandidateMatchingDtos$Need">
+    SELECT o.opp_id AS "opportunityId", o.opp_nm AS "name", n.need_sn::integer AS "needSn",
+      o.win_prbl_rt AS "probability", n.job_cd AS "jobCode", n.grade_cd AS "gradeCode",
+      n.bgn_ym AS "startMonth", n.prd_mcnt::integer AS "months", n.expct_uprc AS "expectedRate",
+      j.add_val2 AS "defaultRate", g.sort_ord::integer AS "gradeOrder"
+    FROM tb_sl_opp o JOIN tb_sl_opp_need n ON n.opp_id=o.opp_id
+    LEFT JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=n.job_cd AND j.use_yn='Y' AND j.del_yn='N'
+    LEFT JOIN tb_sy_code g ON g.code_grp_id='GRADE' AND g.code=n.grade_cd AND g.use_yn='Y' AND g.del_yn='N'
+    WHERE o.opp_stat_cd='ING' AND n.job_cd=#{jobCode}
+    ORDER BY o.opp_id,n.need_sn
+  </select>
+  <select id="allowances" resultType="com.sicost.candidatesops.CandidateMatchingDtos$CodeValue">
+    SELECT code AS "code", code_val AS "value" FROM tb_sy_code
+    WHERE code_grp_id='ALWNC' AND code IN ('TEAM_FEE','PEXP_FEE') AND use_yn='Y' AND del_yn='N'
+  </select>
+  <select id="standard" resultType="java.math.BigDecimal">
+    SELECT std_val FROM tb_sy_oper_std WHERE std_cd=#{code} AND aply_bgn_ym &lt;= #{month}
+    ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="counts" resultType="com.sicost.candidatesops.CandidateMatchingDtos$Counts">
+    SELECT count(*) FILTER (WHERE input_psbl_dt &lt;= #{until})::integer AS "available", count(*)::integer AS "active"
+    FROM tb_hr_cand WHERE job_cd=#{jobCode} AND cntc_stat_cd NOT IN ('HOLD','CTRT')
+  </select>
+  <select id="jobs" resultType="com.sicost.candidatesops.CandidateMatchingDtos$JobOrder">
+    SELECT code AS "jobCode", sort_ord::integer AS "sortOrder" FROM tb_sy_code WHERE code_grp_id='JOB'
+    ORDER BY sort_ord,code
+  </select>
+</mapper>

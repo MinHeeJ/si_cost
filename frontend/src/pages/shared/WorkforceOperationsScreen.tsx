@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { WorkforceOperationsScreen as OperationsBody } from "../apiops/WorkforceOperationsScreen";
 export function WorkforceOperationsScreen() {
-  return <FollowUpScreen screenId="UI-28" />;
+  return (
+    <SharedScreenFrame screenId="UI-28">
+      <OperationsBody />
+    </SharedScreenFrame>
+  );
 }

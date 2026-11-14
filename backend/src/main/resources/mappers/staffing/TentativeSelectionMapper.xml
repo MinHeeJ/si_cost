@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.TentativeSelectionMapper">
+  <select id="need" resultType="com.sicost.apiops.TentativeSelectionDtos$Need" useCache="false" flushCache="true">
+    SELECT n.opp_id AS "opportunityId",n.need_sn::int AS "needSn",n.bgn_ym AS "startMonth",n.prd_mcnt::int AS "months",n.need_cnt::int AS "count",o.opp_stat_cd AS "status"
+    FROM tb_sl_opp_need n JOIN tb_sl_opp o ON o.opp_id=n.opp_id WHERE n.opp_id=#{opportunityId} AND n.need_sn=#{needSn}
+  </select>
+  <select id="active" resultType="com.sicost.apiops.TentativeSelectionDtos$Active" useCache="false" flushCache="true">
+    SELECT tent_id::text AS "id",opp_id AS "opportunityId",need_sn::int AS "needSn",dev_id AS "developerId",bgn_ym AS "startMonth",tent_stat_cd AS "status"
+    FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='ACT' ORDER BY tent_id
+  </select>
+  <select id="lockDeveloper" resultType="string">SELECT dev_id FROM tb_hr_dev WHERE dev_id=#{developerId} FOR UPDATE</select>
+  <select id="lockOpportunity" resultType="string">SELECT opp_id FROM tb_sl_opp WHERE opp_id=#{opportunityId} FOR UPDATE</select>
+  <select id="eligible" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_hr_dev WHERE dev_id=#{developerId} AND use_yn='Y' AND drct_cls_cd='DRCT' AND emp_type_cd IN ('FT','CT','FL','OS'))</select>
+  <select id="count" resultType="int">SELECT count(*)::int FROM tb_sl_tent_asgn WHERE opp_id=#{opportunityId} AND need_sn=#{needSn} AND tent_stat_cd='ACT'</select>
+  <select id="nextId" resultType="string">SELECT nextval('SQ_TB_SL_TENT_ASGN')::text</select>
+  <insert id="insert">INSERT INTO tb_sl_tent_asgn(tent_id,opp_id,need_sn,dev_id,bgn_ym,tent_stat_cd,src_scrn_id,proc_dttm,reg_user_id,reg_dttm) VALUES(CAST(#{id} AS numeric),#{opportunityId},#{needSn},#{developerId},#{startMonth},'ACT',#{sourceScreenId},NULL,#{actor},#{now})</insert>
+  <update id="release">UPDATE tb_sl_tent_asgn SET tent_stat_cd='REL',proc_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now} WHERE tent_id=CAST(#{id} AS numeric) AND opp_id=#{opportunityId} AND tent_stat_cd='ACT'</update>
+  <update id="touch">UPDATE tb_sl_opp SET mod_user_id=#{actor},mod_dttm=#{now} WHERE opp_id=#{opportunityId}</update>
+  <select id="assignmentIds" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE dev_id=#{developerId} AND asgn_stat_cd='ACT' ORDER BY asgn_id</select>
+</mapper>

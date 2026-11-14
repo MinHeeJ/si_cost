@@ -49,6 +49,7 @@ export type CandidateFilters = {
   employeeType?: string;
   contactStatus?: string;
   availability?: string;
+  availableUntil?: string;
   page: number;
   size: 20 | 50 | 100;
   sort?: string;

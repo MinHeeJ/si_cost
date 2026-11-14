@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.assignmentcandidatesops.AssignmentCandidateMapper">
+  <select id="origin" resultType="com.sicost.assignmentcandidatesops.AssignmentCandidateDtos$Origin" useCache="false" flushCache="true">
+    SELECT t.tent_id::text AS "id",t.opp_id AS "opportunityId",o.proj_id AS "projectId",
+      t.dev_id AS "developerId",n.job_cd AS "jobCode",t.tent_stat_cd AS "status",
+      d.use_yn AS "developerUseYn",p.proj_stat_cd AS "projectStatus",p.ctrt_end_dt AS "projectEndDate",t.proc_dttm AS "processedAt"
+    FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id
+    JOIN tb_sl_opp_need n ON n.opp_id=t.opp_id AND n.need_sn=t.need_sn
+    JOIN tb_hr_dev d ON d.dev_id=t.dev_id LEFT JOIN tb_pj_proj p ON p.proj_id=o.proj_id
+    WHERE t.tent_id=CAST(#{id} AS numeric)
+  </select>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    <include refid="com.sicost.salesopportunitiesops.SalesCommandMapper.opportunitySnapshot"/>
+  </select>
+  <select id="confirmedAssignment" resultType="string" useCache="false">
+    SELECT h.aft_val FROM tb_sy_chg_hist h
+    JOIN tb_sy_chg_hist s ON s.trgt_tbl_nm=h.trgt_tbl_nm AND s.trgt_key=h.trgt_key
+      AND s.chg_item_nm='sourceTentId' AND s.aft_val=#{id}
+    JOIN tb_pj_asgn a ON a.asgn_id=h.aft_val
+    WHERE h.trgt_tbl_nm='TB_SL_TENT_ASGN' AND h.trgt_key=#{id} AND h.chg_item_nm='assignmentId'
+    ORDER BY h.hist_id LIMIT 1
+  </select>
+  <select id="lockOpportunity" resultType="string">SELECT opp_id FROM tb_sl_opp WHERE opp_id=#{id} FOR UPDATE</select>
+  <select id="lockTentative" resultType="string">SELECT tent_id::text FROM tb_sl_tent_asgn WHERE tent_id=CAST(#{id} AS numeric) FOR UPDATE</select>
+  <update id="transition">
+    UPDATE tb_sl_tent_asgn SET tent_stat_cd=#{status},proc_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tent_id=CAST(#{id} AS numeric) AND opp_id=#{opportunityId} AND tent_stat_cd='CNVT'
+  </update>
+  <update id="touchOpportunity">
+    UPDATE tb_sl_opp SET mod_user_id=#{actor},mod_dttm=#{now} WHERE opp_id=#{opportunityId}
+  </update>
+</mapper>

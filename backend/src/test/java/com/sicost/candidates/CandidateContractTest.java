@@ -85,6 +85,20 @@ class CandidateContractTest {
     void invalidListQueryCannotWrite(String value) throws Exception {var p=value.split("=",-1);mvc.perform(get("/api/candidates").param(p[0],p[1])).andExpect(status().isBadRequest());verifyNoInteractions(mapper,history);}
     @Test void detailRejectsPaginationAndMissingCandidateIs404() throws Exception {mvc.perform(get("/api/candidates/{id}",id).param("page","1")).andExpect(status().isBadRequest());mvc.perform(get("/api/candidates/CAND-999999")).andExpect(status().isNotFound());}
     @Test void nextMonthUsesMonthEndAndCountUsesIdenticalSelection() throws Exception {mvc.perform(get("/api/candidates").param("availability","NEXT_MONTH").param("gradeCode","MD").param("page","2").param("size","20")).andExpect(status().isOk());var selection=new CandidateInput.Selection(CandidateInput.query(Map.of("availability","NEXT_MONTH","gradeCode","MD","page","2","size","20")),LocalDate.parse("2026-07-31"),20);verify(mapper).list(selection);verify(mapper).count(selection);}
+    @Test void shortageDateBoundIsPassedToBothListAndCount() throws Exception {
+        mvc.perform(get("/api/candidates").param("jobCode","DEV").param("availableUntil","2026-07-16")).andExpect(status().isOk());
+        var selection=new CandidateInput.Selection(CandidateInput.query(Map.of("jobCode","DEV","availableUntil","2026-07-16")),LocalDate.parse("2026-07-16"),0);
+        verify(mapper).list(selection);verify(mapper).count(selection);verifyNoInteractions(history);
+    }
+    @Test void explicitDateBoundCannotWidenAvailabilityPreset() throws Exception {
+        mvc.perform(get("/api/candidates").param("availability","NEXT_MONTH").param("availableUntil","2026-08-31")).andExpect(status().isOk());
+        verify(mapper).list(argThat(s->s.through().equals(LocalDate.parse("2026-07-31"))));
+    }
+    @ParameterizedTest @ValueSource(strings={"2026-02-30","2026-13-01","0000-01-01","2026-7-1",""})
+    void invalidAvailabilityDateIsRejectedBeforeQuery(String value) throws Exception {
+        mvc.perform(get("/api/candidates").param("availableUntil",value)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("availableUntil"));
+        verifyNoInteractions(mapper,history);
+    }
     @ParameterizedTest @ValueSource(strings={"0","-1","1.1","1e3","1000000000000000"}) void invalidRate(String rate) throws Exception {reject(body().put("desiredRate",rate),"desiredRate");}
     @Test void invalidPhone() throws Exception {reject(body().put("phone","1234"),"phone");}
     @Test void emailRejectsWhitespaceButAcceptsLetterS() throws Exception {reject(body().put("email","s @test.com").put("consent",true),"email");mvc.perform(post("/api/candidates").contentType("application/json").content(body().put("email","s@test.com").put("consent",true).toString())).andExpect(status().isCreated());}

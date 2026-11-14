@@ -1,0 +1,43 @@
+.staffing-comparison {
+  display: grid;
+  gap: 16px;
+}
+.staffing-comparison-note {
+  margin: 16px 0;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.staffing-comparison .sicost-filterbar label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.staffing-comparison select {
+  min-height: 36px;
+  min-width: 150px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+}
+.staffing-comparison-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+}
+.staffing-comparison-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 767px) {
+  .staffing-comparison-download {
+    display: none;
+  }
+  .staffing-comparison .sicost-filterbar label {
+    flex-wrap: wrap;
+  }
+}

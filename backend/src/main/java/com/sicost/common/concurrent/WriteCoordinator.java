@@ -28,6 +28,26 @@ public class WriteCoordinator {
         this.sourceLocks = sourceLocks;
     }
     public record WriteResult(boolean changed, String revision, String message) {}
+    public record GuardedWrite(Collection<String> aggregateKeys, String expectedRevision,
+        Supplier<?> lockedSnapshot, Runnable beforeRevision, Runnable validateDomain,
+        BooleanSupplier hasActualChanges, Runnable dataAndHistory) {}
+
+    public WriteResult writeGuarded(GuardedWrite command) {
+        if (command.aggregateKeys().isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
+        return transactions.execute(status -> {
+            lock(command.aggregateKeys());
+            command.beforeRevision().run();
+            String before = revisions.revision(command.lockedSnapshot().get());
+            revisions.requireExpected(command.expectedRevision(), before);
+            command.validateDomain().run();
+            if (!command.hasActualChanges().getAsBoolean()) return new WriteResult(false, before, "바뀐 내용이 없습니다.");
+            command.dataAndHistory().run();
+            String after = revisions.revision(command.lockedSnapshot().get());
+            if (before.equals(after)) throw new IllegalStateException("실제 변경이 저장되지 않았습니다.");
+            command.aggregateKeys().stream().distinct().sorted().forEach(invalidation::afterCommit);
+            return new WriteResult(true, after, null);
+        });
+    }
 
     public WriteResult create(Collection<String> aggregateKeys, Supplier<?> storedSnapshot,
                               Runnable validateDomain, Runnable dataAndHistory) {

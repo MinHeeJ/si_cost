@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.salesopportunitiesops.SalesCommandMapper">
+  <select id="find" resultType="com.sicost.salesopportunitiesops.SalesCommandDtos$Opportunity" useCache="false" flushCache="true">
+    SELECT opp_id AS id,opp_nm AS name,cust_clnt_id AS "customerId",part_id AS "partId",sales_step_cd AS stage,
+      win_prbl_rt AS probability,prbl_manual_yn AS "manualProbability",expct_amt AS amount,
+      substring(bgn_plan_ym,1,4)||'-'||substring(bgn_plan_ym,5,2) AS "startMonth",ctrt_type_cd AS "contractType",
+      expct_prd_mcnt::int AS months,work_plc_addr AS workplace,rmrk AS memo,opp_stat_cd AS status,
+      expct_prft_rt AS "profitRate",aprv_stat_cd AS "approvalStatus",aprv_prft_rt AS "approvedProfitRate",
+      rslt_dt AS "resultDate",lose_rsn_cd AS "lossReasonCode",lose_memo AS "lossMemo",proj_id AS "projectId",reg_user_id AS "registeredBy"
+    FROM tb_sl_opp WHERE opp_id=#{id}
+  </select>
+  <select id="needs" resultType="com.sicost.salesopportunitiesops.SalesCommandDtos$DraftNeed" useCache="false" flushCache="true">
+    SELECT need_sn::int AS "needSn",job_cd AS "jobCode",grade_cd AS "gradeCode",need_cnt::int AS count,
+      substring(bgn_ym,1,4)||'-'||substring(bgn_ym,5,2) AS "startMonth",prd_mcnt::int AS months,
+      mon_mm::text AS "monthlyMm",expct_uprc::text AS "expectedRate" FROM tb_sl_opp_need WHERE opp_id=#{id} ORDER BY need_sn
+  </select>
+  <select id="tentatives" resultType="com.sicost.salesopportunitiesops.SalesCommandDtos$Tentative" useCache="false" flushCache="true">
+    SELECT tent_id::text AS id,dev_id AS "developerId",tent_stat_cd AS status,proc_dttm AS "processedAt"
+    FROM tb_sl_tent_asgn WHERE opp_id=#{id} ORDER BY tent_id
+  </select>
+  <sql id="opportunitySnapshot">
+    SELECT jsonb_build_object(
+      'opportunity',(SELECT to_jsonb(o) FROM tb_sl_opp o WHERE o.opp_id=#{id}),
+      'needs',(SELECT jsonb_agg(to_jsonb(n) ORDER BY n.need_sn) FROM tb_sl_opp_need n WHERE n.opp_id=#{id}),
+      'tentatives',(SELECT jsonb_agg(to_jsonb(t) ORDER BY t.tent_id) FROM tb_sl_tent_asgn t WHERE t.opp_id=#{id}),
+      'approvals',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.hist_sn) FROM tb_sl_aprv_hist a WHERE a.opp_id=#{id}),
+      'codes',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.code_grp_id,c.code) FROM tb_sy_code c),
+      'groups',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.code_grp_id) FROM tb_sy_code_grp c),
+      'standards',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.std_cd,s.aply_bgn_ym) FROM tb_sy_oper_std s),
+      'developers',(SELECT jsonb_agg(to_jsonb(d) ORDER BY d.dev_id) FROM tb_hr_dev d),
+      'prices',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.dev_id,p.aply_bgn_ym) FROM tb_hr_dev_prc p),
+      'states',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.dev_id,s.stat_sn) FROM tb_hr_dev_stat s),
+      'payroll',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.pay_ym,p.dev_id) FROM tb_hr_mon_pay p),
+      'projects',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.proj_id) FROM tb_pj_proj p),
+      'parts',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.proj_id,p.aply_bgn_ym) FROM tb_pj_proj_part p),
+      'partStandards',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.part_id,p.aply_bgn_ym) FROM tb_bs_part_std p),
+      'assignments',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.asgn_id) FROM tb_pj_asgn a),
+      'history',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.asgn_id,a.hist_sn) FROM tb_pj_asgn_hist a),
+      'months',(SELECT jsonb_agg(to_jsonb(m) ORDER BY m.asgn_id,m.input_ym) FROM tb_pj_asgn_mon m),
+      'costs',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.cost_ym,c.dev_id,c.proj_id,c.asgn_id) FROM tb_co_mon_cost c),
+      'turnkey',(SELECT jsonb_agg(to_jsonb(t) ORDER BY t.proj_id,t.dstrb_step_cd,t.row_sn,t.dstrb_ym) FROM tb_pj_tk_dstrb t),
+      'closes',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.close_ym) FROM tb_cl_close c)
+    )::text
+  </sql>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    <include refid="opportunitySnapshot"/>
+  </select>
+  <select id="latestPayrollMonth" resultType="string">SELECT max(pay_ym) FROM tb_hr_mon_pay WHERE pay_ym&lt;=#{month}</select>
+  <select id="standards" resultType="com.sicost.salesopportunitiesops.SalesCommandDtos$Standard">
+    SELECT DISTINCT ON (std_cd) std_cd AS code,std_val AS value FROM tb_sy_oper_std WHERE aply_bgn_ym&lt;=#{month} ORDER BY std_cd,aply_bgn_ym DESC
+  </select>
+  <select id="codes" resultType="com.sicost.salesopportunitiesops.SalesCommandDtos$Code">
+    SELECT c.code_grp_id AS "group",c.code,c.add_val2 AS "defaultRate" FROM tb_sy_code c
+    JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y' ORDER BY c.code_grp_id,c.code
+  </select>
+  <select id="sourceLockKeys" resultType="string" useCache="false" flushCache="true">
+    SELECT key FROM (
+      SELECT 'DEV:'||dev_id AS key FROM tb_hr_dev UNION SELECT 'ASGN:'||asgn_id FROM tb_pj_asgn
+      UNION SELECT 'PROJECT:'||proj_id FROM tb_pj_proj UNION SELECT 'PAY:'||pay_ym FROM tb_hr_mon_pay
+      UNION SELECT 'PART:'||part_id FROM tb_bs_part
+      UNION SELECT 'code-group:'||code_grp_id FROM tb_sy_code_grp
+      UNION SELECT 'operating-standards:'||std_cd FROM tb_sy_oper_std
+    ) s ORDER BY key
+  </select>
+  <select id="lockOpportunity" resultType="string" useCache="false" flushCache="true">SELECT opp_id FROM tb_sl_opp WHERE opp_id=#{id} FOR UPDATE</select>
+  <update id="update">
+    UPDATE tb_sl_opp SET sales_step_cd=#{value.stage},win_prbl_rt=#{value.probability},prbl_manual_yn=#{value.manualProbability},
+      opp_stat_cd=#{value.status},expct_prft_rt=#{value.profitRate},aprv_stat_cd=#{value.approvalStatus},aprv_prft_rt=#{value.approvedProfitRate},
+      rslt_dt=#{value.resultDate},lose_rsn_cd=#{value.lossReasonCode},lose_memo=#{value.lossMemo},proj_id=#{value.projectId},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE opp_id=#{value.id}
+  </update>
+  <update id="transitionTentative">
+    UPDATE tb_sl_tent_asgn SET tent_stat_cd=#{status},proc_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tent_id=CAST(#{id} AS numeric) AND opp_id=#{opportunityId} AND tent_stat_cd='ACT'
+  </update>
+  <select id="greatestHistorySn" resultType="int">SELECT COALESCE(max(hist_sn),0)::int FROM tb_sl_aprv_hist WHERE opp_id=#{id}</select>
+  <insert id="approvalEvent">
+    INSERT INTO tb_sl_aprv_hist(opp_id,hist_sn,aprv_act_cd,prft_rt,act_rsn,reg_user_id,reg_dttm)
+    VALUES(#{id},#{serial},#{action},#{profitRate},#{reason},#{actor},#{now})
+  </insert>
+  <insert id="notification">
+    INSERT INTO tb_sy_noti(rcvr_user_id,noti_type_cd,noti_cn,link_scrn_id,link_key,send_mthd_cd,read_yn,read_dttm,noti_dttm,reg_user_id,reg_dttm)
+    VALUES(#{recipient},'QUOTE_REJ',#{content},'UI-29',#{id},'SYS','N',NULL,#{now},#{actor},#{now})
+  </insert>
+  <insert id="insertOpportunityPlan">
+    INSERT INTO tb_pj_mnpw_plan(proj_id,job_cd,plan_mm,src_cd,reg_user_id,reg_dttm)
+    VALUES(#{projectId},#{jobCode},#{planMm},'OPP',#{actor},#{now})
+  </insert>
+  <select id="activeLossReason" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+      WHERE c.code_grp_id='LOSE_RSN' AND c.code=#{code} AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y')
+  </select>
+</mapper>

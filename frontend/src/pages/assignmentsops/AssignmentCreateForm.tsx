@@ -17,12 +17,18 @@ export function AssignmentCreateForm({
   onClose,
   onSaved,
   onDirtyChange,
+  initialValues,
+  submitAssignment,
+  onCandidateSaved,
 }: {
   year: number;
   today: string;
   onClose(): void;
   onSaved(value: api.Assignment): Promise<void>;
   onDirtyChange?(dirty: boolean): void;
+  initialValues?: api.Create;
+  submitAssignment?(value: api.Create): Promise<{ assignmentId: string }>;
+  onCandidateSaved?(id: string): Promise<void>;
 }) {
   const [form, setForm] = useState<api.Create>({
     year,
@@ -35,6 +41,7 @@ export function AssignmentCreateForm({
     billingUnitPrice: "",
     inputType: "NEW",
     contractDeveloperId: null,
+    ...initialValues,
   });
   const [projects, setProjects] = useState<api.ProjectOption[]>([]),
     [developers, setDevelopers] = useState<api.DeveloperOption[]>([]),
@@ -51,7 +58,9 @@ export function AssignmentCreateForm({
     [memo, setMemo] = useState(""),
     [leaving, setLeaving] = useState(false),
     [stale, setStale] = useState(false);
-  const { pending, message, commit } = useCommitRefresh();
+  const { pending, message, commit } = useCommitRefresh(
+    submitAssignment ? "저장됐지만 다시 불러오지 못했습니다" : undefined,
+  );
   const generation = useRef(0);
   const project = projects.find((p) => p.id === form.projectId);
   const paid =
@@ -152,9 +161,16 @@ export function AssignmentCreateForm({
     setError(undefined);
     setFields({});
     let saved: api.Assignment | undefined;
+    let savedId: string | undefined;
     try {
       await commit(
         async () => {
+          if (submitAssignment) {
+            savedId = (await submitAssignment(payload())).assignmentId;
+            setPreview(undefined);
+            onClose();
+            return;
+          }
           const s = checkedSub ?? sub;
           const result = s
             ? await api.substitute(
@@ -181,6 +197,7 @@ export function AssignmentCreateForm({
         },
         async () => {
           if (saved) await onSaved(saved);
+          if (savedId) await onCandidateSaved?.(savedId);
         },
       );
     } catch (e) {
@@ -233,16 +250,19 @@ export function AssignmentCreateForm({
       <Dialog
         open
         wide
-        title="신규 배정"
+        title={submitAssignment ? "신규 배정 (수주 후보)" : "신규 배정"}
         pending={pending}
         confirmLabel="저장"
         onConfirm={inspect}
         onCancel={() => setLeaving(true)}
       >
-        <div data-testid="assignment-create-form" className="assignment-create-grid">
+        <div
+          data-testid="assignment-create-form"
+          className="assignment-create-grid"
+        >
           <p className="assignment-create-wide">
-            {year}년 · 신규 등록만 가능합니다. 프로젝트·인력·직무·투입일은
-            저장 후 직접 수정하지 않습니다.
+            {year}년 · 신규 등록만 가능합니다. 프로젝트·인력·직무·투입일은 저장
+            후 직접 수정하지 않습니다.
           </p>
           <div className="assignment-create-wide">
             <AssignmentError error={error} />
@@ -260,7 +280,11 @@ export function AssignmentCreateForm({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    document.querySelector<HTMLButtonElement>('[data-testid="assignment-project-query"]')?.click();
+                    document
+                      .querySelector<HTMLButtonElement>(
+                        '[data-testid="assignment-project-query"]',
+                      )
+                      ?.click();
                   }
                 }}
                 value={projectSearch}
@@ -284,6 +308,7 @@ export function AssignmentCreateForm({
             프로젝트 *
             <select
               data-testid="assignment-project"
+              disabled={Boolean(submitAssignment)}
               value={form.projectId}
               onChange={(e) => {
                 const p = projects.find((v) => v.id === e.target.value);
@@ -317,7 +342,11 @@ export function AssignmentCreateForm({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    document.querySelector<HTMLButtonElement>('[data-testid="assignment-developer-query"]')?.click();
+                    document
+                      .querySelector<HTMLButtonElement>(
+                        '[data-testid="assignment-developer-query"]',
+                      )
+                      ?.click();
                   }
                 }}
                 value={developerSearch}
@@ -341,6 +370,7 @@ export function AssignmentCreateForm({
             실제 투입자 *
             <select
               data-testid="assignment-developer"
+              disabled={Boolean(submitAssignment)}
               value={form.developerId}
               onChange={(e) => update("developerId", e.target.value)}
             >
@@ -363,6 +393,7 @@ export function AssignmentCreateForm({
             직무 *
             <select
               data-testid="assignment-job"
+              disabled={Boolean(submitAssignment)}
               value={form.jobCode}
               onChange={(e) => update("jobCode", e.target.value)}
             >
@@ -382,6 +413,7 @@ export function AssignmentCreateForm({
             투입구분 *
             <select
               data-testid="assignment-kind"
+              disabled={Boolean(submitAssignment)}
               value={form.inputType}
               onChange={(e) => update("inputType", e.target.value)}
             >

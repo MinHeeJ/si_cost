@@ -28,6 +28,7 @@ import { AssignmentDrawer, kindName, unitPriceNote } from "./AssignmentDrawer";
 import * as api from "./assignmentActionsApi";
 import "./assignments.css";
 import { B5Actions } from "../b5/B5UploadDialog";
+import { AssignmentCandidatesPanel } from "../assignmentcandidatesops/AssignmentCandidatesPanel";
 
 export type AssignmentListActions = {
   year: number;
@@ -166,7 +167,12 @@ export function AssignmentsContent({
     [leaving, setLeaving] = useState(false),
     [unit, setUnit] = useState("천원"),
     [dense, setDense] = useState(false);
-  useEffect(() => { if (entryAssignmentId) setDetail(entryAssignmentId); return () => { if (entryAssignmentId) setDetail(undefined); }; }, [entryAssignmentId]);
+  useEffect(() => {
+    if (entryAssignmentId) setDetail(entryAssignmentId);
+    return () => {
+      if (entryAssignmentId) setDetail(undefined);
+    };
+  }, [entryAssignmentId]);
   const generation = useRef(0),
     proceed = useRef<() => void>();
   const readonly = year < Number(context.currentMonth.slice(0, 4));
@@ -378,6 +384,16 @@ export function AssignmentsContent({
   }
   return (
     <div data-testid="assignments-content" className="assignments-content">
+      <AssignmentCandidatesPanel
+        year={year}
+        today={context.currentDate}
+        readOnly={readonly}
+        onDirtyChange={onDirtyChange}
+        onChanged={refreshed}
+        onConfirmed={async (id) => {
+          setDetail(id);
+        }}
+      />
       <div className="assignment-head">
         <div className="assignment-head-actions">
           <B5Actions
@@ -624,12 +640,15 @@ export function AssignmentsContent({
         <AssignmentDrawer
           key={`${detail}-${detailVersion}`}
           id={detail}
-          initialTab={entryHistory && detail === entryAssignmentId ? "history" : "info"}
+          initialTab={
+            entryHistory && detail === entryAssignmentId ? "history" : "info"
+          }
           year={year}
           readonly={readonly}
           contractType={
             projects.find(
-              (p) => p.id === data?.items.find((r) => r.id === detail)?.projectId,
+              (p) =>
+                p.id === data?.items.find((r) => r.id === detail)?.projectId,
             )?.contractType
           }
           onClose={() => setDetail(undefined)}

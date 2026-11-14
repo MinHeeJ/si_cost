@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.forecast.SalesForecastMapper">
+  <select id="projects" resultType="com.sicost.forecast.SalesForecastSources$Project">
+    SELECT p.proj_id AS "id",p.proj_nm AS "name",p.ctrt_type_cd AS "type",p.proj_stat_cd AS "status",
+      p.ctrt_bgn_dt AS "startDate",p.ctrt_end_dt AS "endDate",p.ctrt_amt AS "amount",
+      COALESCE(b.billed,0) AS "billed",p.opp_id AS "opportunityId"
+    FROM tb_pj_proj p LEFT JOIN (
+      SELECT proj_id,sum(sply_amt) AS billed FROM tb_bl_bill WHERE cncl_yn='N' GROUP BY proj_id
+    ) b ON b.proj_id=p.proj_id ORDER BY p.proj_id
+  </select>
+  <select id="opportunities" resultType="com.sicost.forecast.SalesForecastSources$Opportunity">
+    SELECT opp_id AS "id",opp_nm AS "name",ctrt_type_cd AS "type",opp_stat_cd AS "status",
+      bgn_plan_ym AS "startMonth",expct_prd_mcnt::int AS "months",expct_amt AS "amount",
+      win_prbl_rt AS "probability",proj_id AS "projectId" FROM tb_sl_opp ORDER BY opp_id
+  </select>
+  <select id="needs" resultType="com.sicost.forecast.SalesForecastSources$Need">
+    SELECT n.opp_id AS "opportunityId",n.need_sn::int AS "needSn",n.job_cd AS "jobCode",n.bgn_ym AS "startMonth",
+      n.prd_mcnt::int AS "months",n.need_cnt::int AS "count",n.mon_mm AS "monthlyMm"
+    FROM tb_sl_opp_need n ORDER BY n.opp_id,n.need_sn
+  </select>
+  <select id="plans" resultType="com.sicost.forecast.SalesForecastSources$Plan">
+    SELECT proj_id AS "projectId",job_cd AS "jobCode",plan_mm AS "mm" FROM tb_pj_mnpw_plan ORDER BY proj_id,job_cd
+  </select>
+  <select id="people" resultType="com.sicost.forecast.SalesForecastSources$Person">
+    SELECT dev_id AS "id",job_cd AS "jobCode",use_yn AS "useYn",drct_cls_cd AS "directClass",
+      jncmp_dt AS "joinDate",retire_dt AS "retireDate" FROM tb_hr_dev ORDER BY dev_id
+  </select>
+  <select id="leaves" resultType="com.sicost.forecast.SalesForecastSources$Leave">
+    SELECT dev_id AS "developerId",bgn_dt AS "startDate",end_dt AS "endDate"
+    FROM tb_hr_dev_stat WHERE work_stat_cd='LEAVE' ORDER BY dev_id,bgn_dt
+  </select>
+  <select id="candidates" resultType="com.sicost.forecast.SalesForecastSources$Candidate">
+    SELECT job_cd AS "jobCode",input_psbl_dt AS "availableDate" FROM tb_hr_cand
+    WHERE cntc_stat_cd NOT IN ('HOLD','CTRT') ORDER BY cand_id
+  </select>
+  <select id="standards" resultType="com.sicost.forecast.SalesForecastSources$Standard">
+    SELECT DISTINCT ON (std_cd) std_cd AS "code",std_val AS "value" FROM tb_sy_oper_std
+    WHERE aply_bgn_ym &lt;= #{month} ORDER BY std_cd,aply_bgn_ym DESC
+  </select>
+  <select id="jobs" resultType="com.sicost.forecast.SalesForecastSources$Job">
+    SELECT code AS "code",sort_ord::int AS "sortOrder" FROM tb_sy_code
+    WHERE code_grp_id='JOB' ORDER BY sort_ord,code
+  </select>
+  <select id="assignmentIds" resultType="string">
+    SELECT asgn_id FROM tb_pj_asgn WHERE asgn_stat_cd='ACT' ORDER BY asgn_id
+  </select>
+</mapper>

@@ -31,7 +31,7 @@ public class ChangeHistoryWriter {
             "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
             "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL",
-            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL");
+            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL", "TB_SL_TENT_ASGN", "TB_SL_OPP", "TB_SL_OPP_NEED", "TB_SL_APRV_HIST", "TB_SY_NOTI");
     private static final Set<String> PEOPLE = Set.of("TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC");
     private static final Set<String> TYPES = Set.of("NEW", "UPD", "STOP", "RESUME", "DEL");
@@ -49,6 +49,13 @@ public class ChangeHistoryWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Change change) {
         append(change, users::userId, false);
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendSales(Change change) {
+        boolean childDelete = Set.of("TB_SL_OPP_NEED", "TB_SL_TENT_ASGN").contains(change.tableName()) && "DEL".equals(change.type());
+        if (!Set.of("TB_SL_OPP", "TB_SL_OPP_NEED", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_SL_TENT_ASGN", "TB_PJ_PROJ", "TB_PJ_MNPW_PLAN").contains(change.tableName())
+                || (!Set.of("NEW", "UPD").contains(change.type()) && !childDelete)) throw InputValidator.invalid("history");
+        append(change, users::userId, true);
     }
     @Transactional(propagation = Propagation.MANDATORY)
     public void appendRequired(Change change) {
@@ -69,6 +76,20 @@ public class ChangeHistoryWriter {
     }
     private void append(Change change, Supplier<String> actor, boolean required) {
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
+        if (Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI").contains(change.tableName())
+                && (!Set.of("NEW", "UPD").contains(change.type())
+                    || (!change.tableName().equals("TB_SL_OPP") && !change.type().equals("NEW")))) throw InputValidator.invalid("history");
+        boolean candidate = "TB_SL_TENT_ASGN".equals(change.tableName());
+        boolean salesChild = required && candidate && Set.of("NEW", "UPD", "DEL").contains(change.type())
+            && change.targetKey() != null && change.targetKey().matches("[1-9][0-9]{0,9}")
+            && change.item() != null && change.item().matches("TENT_ID|OPP_ID|NEED_SN|DEV_ID|BGN_YM|TENT_STAT_CD|SRC_SCRN_ID|PROC_DTTM|REG_USER_ID|REG_DTTM|MOD_USER_ID|MOD_DTTM");
+        if (candidate && !salesChild && (!Set.of("NEW", "UPD").contains(change.type()) || change.targetKey() == null
+                || !change.targetKey().matches("[1-9][0-9]{0,9}")
+                || !("NEW".equals(change.type())
+                    ? Set.of("OPP_ID", "NEED_SN", "DEV_ID", "BGN_YM", "TENT_STAT_CD", "SRC_SCRN_ID")
+                    : Set.of("TENT_STAT_CD", "PROC_DTTM", "sourceTentId", "assignmentId")).contains(change.item()))) {
+            throw InputValidator.invalid("history");
+        }
         boolean settlement = Set.of("TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL").contains(change.tableName());
         if (settlement) preflightSettlement(List.of(change));
         if ("TB_CO_MON_PL".equals(change.tableName()) && (!Set.of("NEW", "UPD").contains(change.type())
@@ -117,7 +138,7 @@ public class ChangeHistoryWriter {
         int written = mapper.insert(new ChangeHistoryEntry(change.tableName(), change.targetKey(), change.type(), change.item(),
                 privateContact ? maskedContact(change.before()) : change.before(),
                 privateContact ? maskedContact(change.after()) : change.after(), change.reason(), actor.get(), LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL)));
-        if ((settlement || Set.of("TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
+        if ((required || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
             throw new IllegalStateException("목표 필드 감사를 저장하지 못했습니다.");
         }
     }

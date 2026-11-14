@@ -29,6 +29,8 @@ public class CandidateQueryService {
         for(String key:List.of("jobCode","gradeCode"))if(query.filters().containsKey(key)&&repository.mapper().code(key.equals("jobCode")?"JOB":"GRADE",query.filters().get(key))==null)throw InputValidator.invalid(key);
         String availability=query.filters().get("availability");
         LocalDate through=availability==null?null:YearMonth.from(today()).plusMonths(availability.equals("NEXT_MONTH")?1:3).atEndOfMonth();
+        String availableUntil=query.filters().get("availableUntil");
+        if(availableUntil!=null){LocalDate upper=LocalDate.parse(availableUntil);if(through==null||upper.isBefore(through))through=upper;}
         Selection selection=new Selection(query,through,(long)(query.page()-1)*query.size());
         List<JsonNode> items=repository.mapper().list(selection).stream().map(row->view(row,false)).toList();
         return tree(Map.of("items",items,"total",repository.mapper().count(selection),"page",query.page(),"size",query.size()));
