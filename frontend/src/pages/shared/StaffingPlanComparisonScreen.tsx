@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { StaffingPlanComparisonScreen as ComparisonBody } from "../staffingplancomparisonops/StaffingPlanComparisonScreen";
 export function StaffingPlanComparisonScreen() {
-  return <FollowUpScreen screenId="UI-11" />;
+  return (
+    <SharedScreenFrame screenId="UI-11">
+      <ComparisonBody />
+    </SharedScreenFrame>
+  );
 }

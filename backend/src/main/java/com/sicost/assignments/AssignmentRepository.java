@@ -19,6 +19,9 @@ public class AssignmentRepository {
     private final MasterIdService ids;
     private final ChangeHistoryWriter audit;
     private final CommitInvalidation invalidation;
+    private SettlementSourceLocks sourceLocks;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setSourceLocks(SettlementSourceLocks sourceLocks) { this.sourceLocks=sourceLocks; }
     public AssignmentRepository(AssignmentActionsRepository assignments,AssignmentMapper mapper,AggregateLockMapper locks,
                                 MasterIdService ids,ChangeHistoryWriter audit,CommitInvalidation invalidation) {
         this.assignments=assignments;this.mapper=mapper;this.locks=locks;this.ids=ids;this.audit=audit;this.invalidation=invalidation;
@@ -33,7 +36,7 @@ public class AssignmentRepository {
             "operating-standards:CASH_BASE_YM","operating-standards:MM_OVER","code-group:JOB","code-group:INPUT_TYPE"));
         if(input.contractDeveloperId()!=null)keys.add("DEV:"+input.contractDeveloperId());
         AssignmentMonthlyService.range(input.startDate(),input.endDate()).forEach(m->keys.add("PAY:"+AssignmentMonthlyService.db(m)));
-        keys.forEach(locks::lock);
+        if(sourceLocks!=null)sourceLocks.lock(keys);else keys.forEach(locks::lock);
         List<String> developers=new ArrayList<>(List.of(input.developerId()));
         if(input.contractDeveloperId()!=null)developers.add(input.contractDeveloperId());
         mapper.lockDevelopers(developers.stream().distinct().sorted().toList());

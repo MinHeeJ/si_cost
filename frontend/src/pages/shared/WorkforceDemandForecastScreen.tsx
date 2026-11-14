@@ -1,4 +1,1 @@
-import { FollowUpScreen } from "./FollowUpScreen";
-export function WorkforceDemandForecastScreen() {
-  return <FollowUpScreen screenId="UI-17" />;
-}
+export { WorkforceDemandForecastScreen } from "../workforceforecastsops/WorkforceDemandForecastScreen";

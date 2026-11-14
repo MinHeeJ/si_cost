@@ -54,7 +54,7 @@ public class ExcelExportService {
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32").contains(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
             String qualifierPattern = switch (specification.screenId()) {
@@ -207,6 +207,10 @@ public class ExcelExportService {
     }
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
+            case "UI-28" -> Set.of("인력운영달력", "인력운영수요공급");
+            case "UI-17" -> Set.of("인력수요예측");
+            case "UI-11" -> Set.of("계획대비투입");
+            case "UI-29" -> Set.of("영업예측");
             case "UI-19" -> Set.of("영업파트이익금");
             case "UI-32" -> Set.of("단가재협상");
             case "UI-07" -> Set.of("전체수익구조");

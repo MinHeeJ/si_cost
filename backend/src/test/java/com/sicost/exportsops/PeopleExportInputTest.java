@@ -63,4 +63,16 @@ class PeopleExportInputTest {
         assertThat(PeopleExportInput.parse(body("{\"view\":\"CANDIDATES\",\"filters\":{},\"columns\":" + JSON.writeValueAsString(PeopleExportInput.CANDIDATE_COLUMNS) + "}")).columns())
             .isEqualTo(List.copyOf(PeopleExportInput.CANDIDATE_COLUMNS));
     }
+    @Test void optionalCandidateCutoffAndActiveFilterPreserveExistingFields() throws Exception {
+        var input = PeopleExportInput.parse(body("""
+            {"view":"CANDIDATES","filters":{"jobCode":"BE","availableUntil":"2026-07-31","activeOnly":true},
+             "sort":"desiredRate","direction":"DESC","columns":["name","desiredRate"]}
+            """));
+        assertThat(input.filters()).containsExactlyInAnyOrderEntriesOf(Map.of("jobCode","BE","availableUntil","2026-07-31","activeOnly","true"));
+        var query = com.sicost.candidates.CandidateInput.query(input.filters());
+        assertThat(query.filters()).isEqualTo(input.filters());
+        assertThatThrownBy(() -> com.sicost.candidates.CandidateInput.query(Map.of("activeOnly","yes"))).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> com.sicost.candidates.CandidateInput.query(Map.of("availableUntil","2026-02-30"))).isInstanceOf(ApiException.class);
+    }
+
 }

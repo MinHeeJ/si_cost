@@ -22,7 +22,16 @@ public class ProjectRegistrationService implements org.springframework.context.A
     public record Project(String name, String customerId, String contractType, String status,
                           LocalDate startDate, LocalDate endDate, String partId, String workplace,
                           BigDecimal estimateAmount, BigDecimal contractAmount, BigDecimal budgetAmount,
-                          String budgetManual, BigDecimal teamExpenseAmount, BigDecimal projectExpenseAmount, String feature) {}
+                          String budgetManual, BigDecimal teamExpenseAmount, BigDecimal projectExpenseAmount, String feature,
+                          String opportunityId) {
+        public Project(String name, String customerId, String contractType, String status,
+                       LocalDate startDate, LocalDate endDate, String partId, String workplace,
+                       BigDecimal estimateAmount, BigDecimal contractAmount, BigDecimal budgetAmount,
+                       String budgetManual, BigDecimal teamExpenseAmount, BigDecimal projectExpenseAmount, String feature) {
+            this(name, customerId, contractType, status, startDate, endDate, partId, workplace,
+                estimateAmount, contractAmount, budgetAmount, budgetManual, teamExpenseAmount, projectExpenseAmount, feature, null);
+        }
+    }
     public record Write(String id, Project project, String actor, LocalDateTime now, String startMonth) {}
     private final ProjectRegistrationMapper mapper;
     public ProjectRegistrationService(ProjectRegistrationMapper mapper) { this.mapper = mapper; }

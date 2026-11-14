@@ -1,0 +1,139 @@
+.workforce-calendar {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.workforce-calendar [role="tablist"],
+.workforce-calendar-toolbar,
+.workforce-calendar nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.workforce-calendar [role="tablist"] {
+  border-bottom: 1px solid var(--divider);
+}
+.workforce-calendar [role="tab"] {
+  border: 0;
+  border-radius: 0;
+  padding: 12px 20px;
+  background: transparent;
+}
+.workforce-calendar [role="tab"][aria-selected="true"] {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+.workforce-calendar [hidden] {
+  display: none;
+}
+.workforce-calendar-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.workforce-calendar-summary > * {
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  text-align: left;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  text-decoration: none;
+}
+.workforce-calendar-table {
+  min-width: 1440px;
+}
+.workforce-calendar-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 115px;
+  background: var(--surface);
+}
+.workforce-calendar-table th:nth-child(2),
+.workforce-calendar-table tbody td:nth-child(2) {
+  position: sticky;
+  left: 115px;
+  z-index: 1;
+  min-width: 100px;
+  background: var(--surface);
+}
+.workforce-calendar-table thead th {
+  background: var(--head-bg);
+}
+.workforce-calendar-table td {
+  padding: 5px 8px;
+  min-width: 100px;
+}
+.workforce-calendar-cell {
+  position: relative;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.workforce-calendar-cell > button {
+  background: transparent;
+  border: 0;
+  width: 100%;
+  min-height: 30px;
+  font-size: 11px;
+  color: inherit;
+  padding: 4px;
+}
+.workforce-calendar-assigned {
+  background: #dbeafe;
+}
+.workforce-calendar-tentative {
+  color: var(--primary);
+  border: 1px dashed var(--primary);
+}
+.workforce-calendar-ending {
+  background: #fef3c7;
+}
+.workforce-calendar-retired,
+.workforce-calendar-leave {
+  background: var(--border);
+  color: var(--text-sub);
+}
+.workforce-calendar-before_join,
+.workforce-calendar-past_empty {
+  color: var(--text-dis);
+}
+.workforce-calendar-available {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.workforce-calendar-over {
+  box-shadow: inset 0 0 0 1px var(--bad);
+  color: var(--bad);
+}
+.workforce-calendar-help {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 5;
+  width: 260px;
+  padding: 12px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  background: var(--surface);
+  color: var(--text);
+  white-space: normal;
+  text-align: left;
+}
+@media (max-width: 767px) {
+  .workforce-calendar-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workforce-calendar-summary > * {
+    padding: 12px;
+  }
+  .workforce-calendar-download {
+    display: none;
+  }
+}
+
+.workforce-calendar-summary > button { height: auto; }

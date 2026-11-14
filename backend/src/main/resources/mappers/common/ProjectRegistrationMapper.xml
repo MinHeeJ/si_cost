@@ -4,10 +4,10 @@
   <select id="existingIds" resultType="string">SELECT proj_id FROM tb_pj_proj ORDER BY proj_id</select>
   <insert id="insertProject">
     INSERT INTO tb_pj_proj(proj_id,proj_nm,cust_clnt_id,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,
-      work_plc_addr,est_amt,orgnl_ctrt_amt,ctrt_amt,bdgt_amt,bdgt_manual_yn,team_exps_amt,proj_exps_amt,feature_cn,reg_user_id,reg_dttm)
+      work_plc_addr,est_amt,orgnl_ctrt_amt,ctrt_amt,bdgt_amt,bdgt_manual_yn,team_exps_amt,proj_exps_amt,feature_cn,opp_id,reg_user_id,reg_dttm)
     VALUES(#{id},#{project.name},#{project.customerId},#{project.contractType},#{project.status},#{project.startDate},#{project.endDate},
       #{project.workplace},#{project.estimateAmount},#{project.contractAmount},#{project.contractAmount},#{project.budgetAmount},
-      #{project.budgetManual},#{project.teamExpenseAmount},#{project.projectExpenseAmount},#{project.feature},#{actor},#{now})
+      #{project.budgetManual},#{project.teamExpenseAmount},#{project.projectExpenseAmount},#{project.feature},#{project.opportunityId},#{actor},#{now})
   </insert>
   <insert id="insertInitialPart">
     INSERT INTO tb_pj_proj_part(proj_id,aply_bgn_ym,part_id,chg_rsn,reg_user_id,reg_dttm)

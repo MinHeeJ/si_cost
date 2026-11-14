@@ -1,0 +1,45 @@
+.candidate-matching-panel {
+  min-width: 0;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.candidate-matching-panel > header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.candidate-matching-panel h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.candidate-matching-panel header > span,
+.candidate-matching-help {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.candidate-matching-panel a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.candidate-matching-panel a:hover {
+  text-decoration: underline;
+}
+.candidate-position-below {
+  color: var(--bad);
+  font-weight: 600;
+}
+.candidate-shortage-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 767px) {
+  .candidate-matching-panel {
+    padding: 16px;
+  }
+}

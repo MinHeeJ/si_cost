@@ -7,6 +7,25 @@ import * as api from "./peopleClient";
 import { ApiError, request } from "../../shared/api";
 import { getCandidateSummary } from "../candidatesops/candidateSummaryApi";
 import { getCandidateContacts } from "../contacts/peopleClient";
+vi.mock("../candidatesops/candidateMatchingApi", async (original) => ({
+  ...(await original<typeof import("../candidatesops/candidateMatchingApi")>()),
+  getCandidateShortages: async () => ({
+    data: {
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+      from: "2027-01",
+      months: 6,
+      includeUnfilled: false,
+    },
+    issues: [],
+  }),
+  getCandidatePositions: async (id: string) => ({
+    data: { candidateId: id, items: [], total: 0, limit: 4 },
+    issues: [],
+  }),
+}));
 vi.mock("./peopleClient", () => ({
   getCandidates: vi.fn(),
   getCandidate: vi.fn(),
@@ -321,7 +340,11 @@ it("filter and sort changes reset page and preserve approved query shape", async
   });
   render(<CandidatesScreen />);
   await screen.findByTestId("candidate-name-cand-900001");
-  await userEvent.click(screen.getByRole("button", { name: "다음 페이지" }));
+  await userEvent.click(
+    within(screen.getByTestId("data-table")).getByRole("button", {
+      name: "다음 페이지",
+    }),
+  );
   await waitFor(() =>
     expect(api.getCandidates).toHaveBeenLastCalledWith(
       { page: 2, size: 50 },
@@ -390,7 +413,14 @@ it("HOLD does not get overdue warning while active candidates do", async () => {
   });
   render(<CandidatesScreen />);
   await screen.findByText("보류 후보");
-  const rows = screen.getAllByRole("row");
+  const rows = within(screen.getByTestId("data-table")).getAllByRole("row");
   expect(within(rows[1]).getByText("46일 전")).toBeInTheDocument();
   expect(within(rows[2]).queryByText("46일 전")).not.toBeInTheDocument();
+});
+
+it("예측에서 전달한 주직무 필터는 첫 진입에 적용하고 초기화로 해제한다", async () => {
+  render(<CandidatesScreen entryJob={{ key: "forecast-entry", jobCode: "BE" }} />);
+  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith(expect.objectContaining({ jobCode: "BE", page: 1 }), expect.any(AbortSignal)));
+  await userEvent.click(screen.getByTestId("candidate-reset"));
+  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith({ page: 1, size: 50 }, expect.any(AbortSignal)));
 });

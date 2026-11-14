@@ -15,6 +15,7 @@
       <if test="query.filters.gradeCode != null">AND c.grade_cd=#{query.filters.gradeCode}</if>
       <if test="query.filters.employeeType != null">AND c.emp_type_cd=#{query.filters.employeeType}</if>
       <if test="query.filters.contactStatus != null">AND c.cntc_stat_cd=#{query.filters.contactStatus}</if>
+      <if test="query.filters.activeOnly == 'true'">AND c.cntc_stat_cd NOT IN ('HOLD','CTRT')</if>
       <if test="through != null">AND c.input_psbl_dt&lt;=#{through}</if>
     </where>
   </sql>

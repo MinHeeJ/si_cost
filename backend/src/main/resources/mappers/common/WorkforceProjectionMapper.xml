@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.workforce.WorkforceProjectionMapper">
+  <select id="people" resultType="com.sicost.common.workforce.WorkforceProjectionDtos$Person">
+    SELECT dev_id AS "id",job_cd AS "jobCode",jncmp_dt AS "joinDate",retire_dt AS "retireDate"
+    FROM tb_hr_dev WHERE use_yn='Y' AND drct_cls_cd='DRCT' ORDER BY dev_id
+  </select>
+  <select id="leaves" resultType="com.sicost.common.workforce.WorkforceProjectionDtos$Leave">
+    SELECT dev_id AS "developerId",bgn_dt AS "startDate",end_dt AS "endDate"
+    FROM tb_hr_dev_stat WHERE work_stat_cd='LEAVE' ORDER BY dev_id,stat_sn
+  </select>
+  <select id="assignments" resultType="com.sicost.common.workforce.WorkforceProjectionDtos$Assignment">
+    SELECT a.asgn_id AS "id",p.proj_stat_cd AS "projectStatus",p.ctrt_type_cd AS "contractType"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.asgn_stat_cd='ACT' ORDER BY a.asgn_id
+  </select>
+  <select id="opportunityDemand" resultType="com.sicost.common.workforce.WorkforceProjectionDtos$Demand">
+    SELECT n.job_cd AS "jobCode",n.bgn_ym AS "startMonth",n.prd_mcnt::integer AS "months",
+      n.need_cnt::integer AS "count",n.mon_mm AS "monthlyMm",o.win_prbl_rt AS "probability"
+    FROM tb_sl_opp_need n JOIN tb_sl_opp o ON o.opp_id=n.opp_id WHERE o.opp_stat_cd='ING'
+    ORDER BY o.opp_id,n.need_sn
+  </select>
+  <select id="standards" resultType="com.sicost.common.workforce.WorkforceProjectionDtos$Standard">
+    SELECT DISTINCT ON (std_cd) std_cd AS "code",std_val AS "value" FROM tb_sy_oper_std
+    WHERE aply_bgn_ym &lt;= #{month} ORDER BY std_cd,aply_bgn_ym DESC
+  </select>
+</mapper>

@@ -1,0 +1,172 @@
+.sales-forecast {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.sales-forecast-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sales-forecast-toolbar h2 {
+  margin-right: auto;
+}
+.sales-forecast-toolbar .sicost-field {
+  flex-direction: row;
+  align-items: center;
+}
+.sales-forecast-toolbar select {
+  height: 28px;
+}
+.sales-forecast-badge {
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 3px 6px;
+}
+.sales-forecast-muted {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.sales-forecast-banner,
+.sales-forecast-warning,
+.sales-forecast-error {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.sales-forecast-banner {
+  background: var(--info-bg);
+  color: var(--info);
+}
+.sales-forecast-warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.sales-forecast-error {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+.sales-forecast-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.sales-forecast-summary article,
+.sales-forecast-card {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 20px 24px;
+  min-width: 0;
+}
+.sales-forecast-summary p {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.sales-forecast-summary strong {
+  display: block;
+  font-size: 24px;
+  line-height: 32px;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.sales-forecast-summary small {
+  font-size: 12px;
+}
+.sales-forecast-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.sales-forecast-card h2 {
+  margin-bottom: 12px;
+}
+.sales-forecast-card small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-sub);
+}
+.sales-forecast-card svg {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+  fill: var(--text-sub);
+}
+.sales-forecast-total {
+  background: var(--head-bg);
+  font-weight: 600;
+}
+.sales-forecast-short {
+  color: var(--bad);
+  background: var(--bad-bg);
+  text-align: right !important;
+}
+.sales-forecast-surplus {
+  color: var(--warn);
+  background: var(--warn-bg);
+  text-align: right !important;
+}
+.sales-forecast-balanced {
+  text-align: right !important;
+}
+.sales-forecast-unknown {
+  color: var(--text-sub);
+  background: var(--lock-bg);
+}
+.sales-forecast-now {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.sales-forecast-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-sub);
+}
+.sales-forecast-legend-primary {
+  color: var(--primary);
+}
+.sales-forecast-legend-info {
+  color: var(--info);
+}
+.sales-forecast-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sales-forecast-download [role="alert"] {
+  color: var(--bad);
+}
+.sales-forecast-download [role="status"] {
+  color: var(--ok);
+}
+.sales-forecast details p {
+  margin-top: 12px;
+}
+@media (max-width: 1100px) {
+  .sales-forecast-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  .sales-forecast-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sales-forecast-summary article,
+  .sales-forecast-card {
+    padding: 16px;
+  }
+  .sales-forecast-summary strong {
+    font-size: 20px;
+  }
+  .sales-forecast-download button {
+    display: none;
+  }
+}

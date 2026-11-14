@@ -1,0 +1,94 @@
+.sales-opportunity-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.sales-opportunity-form form {
+  display: grid;
+  gap: 20px;
+}
+.sales-opportunity-form fieldset {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 20px 24px;
+  min-width: 0;
+}
+.sales-opportunity-form legend {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+.sales-opportunity-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+.sales-opportunity-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+}
+.sales-opportunity-fields input,
+.sales-opportunity-fields select,
+.sales-opportunity-fields textarea {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 10px;
+}
+.sales-opportunity-form .sicost-table {
+  min-width: 1120px;
+}
+.sales-opportunity-form .sicost-table input,
+.sales-opportunity-form .sicost-table select {
+  max-width: 130px;
+  min-height: 32px;
+}
+.sales-opportunity-form .sicost-table td {
+  vertical-align: top;
+  padding: 8px 12px;
+}
+.sales-opportunity-field-error {
+  color: var(--bad);
+  display: block;
+  overflow-wrap: anywhere;
+}
+.sales-opportunity-overdue,
+.sales-command-card p.sales-opportunity-overdue {
+  color: var(--bad);
+}
+.sales-opportunity-highlight {
+  outline: 2px solid var(--primary);
+  background: var(--primary-bg);
+}
+.sales-opportunity-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+}
+@media (max-width: 767px) {
+  .sales-opportunity-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sales-opportunity-form fieldset {
+    padding: 16px;
+  }
+}
+
+.sicost-scrim.sales-opportunity-scrim { z-index: 55; }
+.sicost-dialog.sales-opportunity-dialog {
+  width: min(1400px, 100%);
+  overflow: auto;
+  padding: 24px;
+}

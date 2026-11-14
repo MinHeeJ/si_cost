@@ -85,6 +85,20 @@ class CandidateContractTest {
     void invalidListQueryCannotWrite(String value) throws Exception {var p=value.split("=",-1);mvc.perform(get("/api/candidates").param(p[0],p[1])).andExpect(status().isBadRequest());verifyNoInteractions(mapper,history);}
     @Test void detailRejectsPaginationAndMissingCandidateIs404() throws Exception {mvc.perform(get("/api/candidates/{id}",id).param("page","1")).andExpect(status().isBadRequest());mvc.perform(get("/api/candidates/CAND-999999")).andExpect(status().isNotFound());}
     @Test void nextMonthUsesMonthEndAndCountUsesIdenticalSelection() throws Exception {mvc.perform(get("/api/candidates").param("availability","NEXT_MONTH").param("gradeCode","MD").param("page","2").param("size","20")).andExpect(status().isOk());var selection=new CandidateInput.Selection(CandidateInput.query(Map.of("availability","NEXT_MONTH","gradeCode","MD","page","2","size","20")),LocalDate.parse("2026-07-31"),20);verify(mapper).list(selection);verify(mapper).count(selection);}
+    @Test void shortageDateBoundIsPassedToBothListAndCount() throws Exception {
+        mvc.perform(get("/api/candidates").param("jobCode","DEV").param("availableUntil","2026-07-16")).andExpect(status().isOk());
+        var selection=new CandidateInput.Selection(CandidateInput.query(Map.of("jobCode","DEV","availableUntil","2026-07-16")),LocalDate.parse("2026-07-16"),0);
+        verify(mapper).list(selection);verify(mapper).count(selection);verifyNoInteractions(history);
+    }
+    @Test void explicitDateBoundCannotWidenAvailabilityPreset() throws Exception {
+        mvc.perform(get("/api/candidates").param("availability","NEXT_MONTH").param("availableUntil","2026-08-31")).andExpect(status().isOk());
+        verify(mapper).list(argThat(s->s.through().equals(LocalDate.parse("2026-07-31"))));
+    }
+    @ParameterizedTest @ValueSource(strings={"2026-02-30","2026-13-01","0000-01-01","2026-7-1",""})
+    void invalidAvailabilityDateIsRejectedBeforeQuery(String value) throws Exception {
+        mvc.perform(get("/api/candidates").param("availableUntil",value)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("availableUntil"));
+        verifyNoInteractions(mapper,history);
+    }
     @ParameterizedTest @ValueSource(strings={"0","-1","1.1","1e3","1000000000000000"}) void invalidRate(String rate) throws Exception {reject(body().put("desiredRate",rate),"desiredRate");}
     @Test void invalidPhone() throws Exception {reject(body().put("phone","1234"),"phone");}
     @Test void emailRejectsWhitespaceButAcceptsLetterS() throws Exception {reject(body().put("email","s @test.com").put("consent",true),"email");mvc.perform(post("/api/candidates").contentType("application/json").content(body().put("email","s@test.com").put("consent",true).toString())).andExpect(status().isCreated());}
@@ -106,4 +120,14 @@ class CandidateContractTest {
     @Test void explicitFalseWithoutContactsClearsMetadata() throws Exception {old.put("consent",true);old.put("consentDate",LocalDate.parse("2026-01-01"));old.put("consentUserId","original");mvc.perform(put("/api/candidates/{id}",id).contentType("application/json").content(edit().toString())).andExpect(status().isOk());verify(mapper).update(argThat(r->r.get("consentDate")==null&&r.get("consentUserId")==null));}
     @Test void staleCannotWriteEvenNoOp() throws Exception {mvc.perform(put("/api/candidates/{id}",id).contentType("application/json").content(edit().put("expectedRevision","old").toString())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));verify(mapper,never()).update(any());verifyNoInteractions(history);verify(manager).rollback(any());}
     @Test void historyFailureRollsBackAndDoesNotLeakPersonalValues() throws Exception {doThrow(new org.springframework.dao.DataIntegrityViolationException("SQL private")).when(history).insert(any());var response=mvc.perform(post("/api/candidates").header("X-Request-Id","candidate-request").contentType("application/json").content(body().toString())).andExpect(status().isInternalServerError()).andExpect(jsonPath("$.requestId").value("candidate-request")).andReturn().getResponse();assertThat(response.getContentAsString()).doesNotContain("SQL","private","후보");verify(manager).rollback(any());}
+    @Test void activeOnlyIsOptionalValidatedAndPassedToBothListAndCount() throws Exception {
+        mvc.perform(get("/api/candidates").param("activeOnly", "true").param("availableUntil", "2026-07-31"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1));
+        verify(mapper).list(argThat(s -> s.query().filters().get("activeOnly").equals("true") && s.through().equals(LocalDate.of(2026,7,31))));
+        verify(mapper).count(argThat(s -> s.query().filters().get("activeOnly").equals("true")));
+        mvc.perform(get("/api/candidates").param("activeOnly", "yes"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("activeOnly"));
+        verifyNoInteractions(history);
+    }
+
 }

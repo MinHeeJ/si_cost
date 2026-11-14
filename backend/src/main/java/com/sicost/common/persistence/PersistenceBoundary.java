@@ -25,18 +25,24 @@ public class PersistenceBoundary implements Interceptor {
             "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN", "TB_PJ_ASGN_MON", "TB_PJ_ASGN_HIST", "TB_CO_MON_COST", "TB_HR_MON_PAY", "TB_BL_BILL", "TB_BL_RCPT",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
             "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL",
-            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL");
+            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL", "TB_SL_OPP", "TB_SL_TENT_ASGN", "TB_SL_APRV_HIST", "TB_SY_NOTI");
     private static final Set<String> DELETABLE = Set.of("TB_SY_CODE_MAP", "TB_SY_USER_PREF", "TB_SY_USER_ROLE", "TB_SY_UPLD_ERR",
             "TB_HR_DEV_SKILL", "TB_HR_CAND_SKILL", "TB_HR_DEV_STAT",
             "TB_PJ_PROJ_PART", "TB_PJ_TK_DSTRB", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_PJ_ASGN_MON",
             "TB_FI_ITEM", "TB_CO_PREV_ADJ", "TB_FI_LOAN", "TB_FI_XFER", "TB_CO_PART_SETL_DTL");
-    private static final Set<String> APPEND_ONLY = Set.of("TB_SY_CHG_HIST", "TB_SY_ACCS_LOG", "TB_PJ_PROJ_CHG", "TB_PJ_ASGN_HIST");
+    private static final Set<String> APPEND_ONLY = Set.of("TB_SY_CHG_HIST", "TB_SY_ACCS_LOG", "TB_PJ_PROJ_CHG", "TB_PJ_ASGN_HIST", "TB_SL_APRV_HIST", "TB_SY_NOTI");
     private static final Pattern TARGET = Pattern.compile("(?is)^\\s*(INSERT\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+(TB_[A-Z0-9_]+)\\b");
     private static final String ASSIGNMENT_VALUES = "INPUT_END_DT|CTRT_MM|BILL_UPRC|INPUT_TYPE_CD|EXT_PSBL_CD|EXT_CNT|EARLY_WTHDR_YN|ASGN_STAT_CD|MOD_USER_ID|MOD_DTTM";
     private static final String PAYROLL_VALUES = "PAY_AMT|ALWNC_AMT|INSR_CMPNY_AMT|INSR_SELF_AMT|RETIRE_RSV_AMT|INCM_TAX_AMT|WTHLD_TAX_AMT|REAL_PAY_AMT|VNDR_SPLY_AMT|EMP_TYPE_CD|DRCT_CLS_CD|UPLD_ID|MOD_USER_ID|MOD_DTTM";
     private static final String PAYROLL_KEY = "PAY_YM\\s*=\\s*\\?\\s+AND\\s+DEV_ID\\s*=\\s*\\?";
     private static final String CORRECTION = "(?is)\\s+SET\\s+CRCT_YN\\s*=\\s*'Y'\\s+WHERE\\s+ASGN_ID\\s*=\\s*\\?\\s+AND\\s+HIST_SN\\s*=\\s*\\?\\s+AND\\s+CRCT_YN\\s*=\\s*'N'\\s*";
     public static void requireAllowed(String sql) {
+        if (SalesOpportunityPersistence.allowed(sql)) return;
+        String candidateSql = sql.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        if (candidateSql.equals("INSERTINTOTB_SL_TENT_ASGN(TENT_ID,OPP_ID,NEED_SN,DEV_ID,BGN_YM,TENT_STAT_CD,SRC_SCRN_ID,PROC_DTTM,REG_USER_ID,REG_DTTM)VALUES(CAST(?ASNUMERIC),?,?,?,?,'ACT',?,NULL,?,?)")) return;
+        if (candidateSql.equals("UPDATETB_SL_TENT_ASGNSETTENT_STAT_CD=?,PROC_DTTM=?,MOD_USER_ID=?,MOD_DTTM=?WHERETENT_ID=CAST(?ASNUMERIC)ANDOPP_ID=?ANDTENT_STAT_CD='CNVT'")
+                || candidateSql.equals("UPDATETB_SL_TENT_ASGNSETTENT_STAT_CD='REL',PROC_DTTM=?,MOD_USER_ID=?,MOD_DTTM=?WHERETENT_ID=CAST(?ASNUMERIC)ANDOPP_ID=?ANDTENT_STAT_CD='ACT'")
+                || candidateSql.equals("UPDATETB_SL_OPPSETMOD_USER_ID=?,MOD_DTTM=?WHEREOPP_ID=?")) return;
         if (sql.strip().equalsIgnoreCase("SET LOCAL lock_timeout = '10s'")) return;
         // Group creation serializes duplicate-name checks and sort allocation before its INSERT.
         if (sql.strip().equalsIgnoreCase("LOCK TABLE tb_sy_code_grp IN SHARE ROW EXCLUSIVE MODE")) return;
@@ -57,6 +63,18 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         String tableName = match.group(2).toUpperCase(Locale.ROOT);
         String operation = match.group(1).toUpperCase(Locale.ROOT);
+        if (tableName.equals("TB_SL_OPP") && (!operation.equals("UPDATE") || !remainder.matches("(?is)\\s+SET\\s+"
+                + assignments("SALES_STEP_CD|WIN_PRBL_RT|PRBL_MANUAL_YN|OPP_STAT_CD|EXPCT_PRFT_RT|APRV_STAT_CD|APRV_PRFT_RT|RSLT_DT|LOSE_RSN_CD|LOSE_MEMO|PROJ_ID|MOD_USER_ID|MOD_DTTM")
+                + "\\s+WHERE\\s+OPP_ID\\s*=\\s*\\?\\s*"))) throw new IllegalStateException("지정 기회의 업무 상태만 변경할 수 있습니다.");
+        if (tableName.equals("TB_SL_TENT_ASGN") && !remainder.replaceAll("\\s+", "").toUpperCase(Locale.ROOT).equals(
+                "SETTENT_STAT_CD=?,PROC_DTTM=?,MOD_USER_ID=?,MOD_DTTM=?WHERETENT_ID=CAST(?ASNUMERIC)ANDOPP_ID=?ANDTENT_STAT_CD='ACT'")) {
+            throw new IllegalStateException("진행 가배정의 지정 상태 변경만 허용합니다.");
+        }
+        if (tableName.equals("TB_SL_APRV_HIST")) requireInsert(remainder,"OPP_ID|HIST_SN|APRV_ACT_CD|PRFT_RT|ACT_RSN|REG_USER_ID|REG_DTTM");
+        if (tableName.equals("TB_SY_NOTI") && !remainder.replaceAll("\\s+", "").toUpperCase(Locale.ROOT).equals(
+                "(RCVR_USER_ID,NOTI_TYPE_CD,NOTI_CN,LINK_SCRN_ID,LINK_KEY,SEND_MTHD_CD,READ_YN,READ_DTTM,NOTI_DTTM,REG_USER_ID,REG_DTTM)VALUES(?,'QUOTE_REJ',?,'UI-29',?,'SYS','N',NULL,?,?,?)")) {
+            throw new IllegalStateException("견적 반려 시스템 알림만 추가할 수 있습니다.");
+        }
         if (Set.of("TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL").contains(tableName)) {
             requireSettlementWrite(tableName, operation, remainder);
         }

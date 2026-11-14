@@ -430,6 +430,11 @@ describe("공식 화면과 공통 틀", () => {
     "UI-18": "business-plan-performance",
     "UI-19": "sales-part-settlement-screen",
     "UI-32": "renegotiation-screen",
+    // Sales pipeline and workforce operations screens replace their placeholders.
+    "UI-11": "staffing-comparison-screen",
+    "UI-17": "workforce-forecast-screen",
+    "UI-28": "workforce-operations-screen",
+    "UI-29": "sales-pipeline-screen",
   };
   it.each(
     Object.keys(screenRegistry).filter(

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.tentativeassignmentsops.TentativeAssignmentMapper">
+  <select id="state" resultType="com.sicost.tentativeassignmentsops.TentativeAssignmentDtos$State" useCache="false" flushCache="true">
+    SELECT t.tent_id::text AS "id", t.opp_id AS "opportunityId", t.dev_id AS "developerId",
+      t.tent_stat_cd AS "status", o.opp_stat_cd AS "opportunityStatus", t.proc_dttm AS "processedAt"
+    FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id
+    WHERE t.tent_id=CAST(#{id} AS numeric)
+  </select>
+  <select id="activeIds" resultType="string" useCache="false" flushCache="true">
+    SELECT tent_id::text FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='ACT' ORDER BY tent_id
+  </select>
+  <update id="release">
+    UPDATE tb_sl_tent_asgn SET tent_stat_cd='REL',proc_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now}
+    WHERE tent_id=CAST(#{id} AS numeric) AND opp_id=#{opportunityId} AND tent_stat_cd='ACT'
+  </update>
+  <update id="touchOpportunity">
+    UPDATE tb_sl_opp SET mod_user_id=#{actor},mod_dttm=#{now} WHERE opp_id=#{opportunityId}
+  </update>
+</mapper>

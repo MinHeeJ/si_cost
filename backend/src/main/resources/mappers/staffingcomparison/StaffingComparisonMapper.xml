@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.staffingplancomparisonops.StaffingComparisonMapper">
+  <select id="projects" resultType="com.sicost.staffingplancomparisonops.StaffingComparisonDtos$Project">
+    SELECT proj_id AS "id",proj_nm AS "name",ctrt_bgn_dt AS "startDate",ctrt_end_dt AS "endDate",
+      proj_stat_cd AS "status",ctrt_type_cd AS "contractType"
+    FROM tb_pj_proj
+    WHERE ctrt_bgn_dt &lt;= make_date(#{year},12,31) AND ctrt_end_dt &gt;= make_date(#{year},1,1)
+    <if test="projectId != null">AND proj_id=#{projectId}</if>
+    ORDER BY proj_id
+  </select>
+  <select id="plans" resultType="com.sicost.staffingplancomparisonops.StaffingComparisonDtos$Plan">
+    SELECT proj_id AS "projectId",job_cd AS "jobCode",plan_mm AS "planMm"
+    FROM tb_pj_mnpw_plan WHERE proj_id=#{projectId} ORDER BY job_cd
+  </select>
+  <select id="assignmentIds" resultType="string">
+    SELECT asgn_id FROM tb_pj_asgn WHERE proj_id=#{projectId} AND asgn_stat_cd='ACT' ORDER BY asgn_id
+  </select>
+</mapper>

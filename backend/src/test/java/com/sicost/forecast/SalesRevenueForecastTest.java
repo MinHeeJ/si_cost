@@ -1,0 +1,100 @@
+package com.sicost.forecast;
+
+import com.sicost.common.assignments.AssignmentMonthlyService.Month;
+import java.time.*;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import static com.sicost.forecast.SalesForecastSources.*;
+import static com.sicost.forecast.SalesForecastFixture.*;
+import static org.assertj.core.api.Assertions.*;
+
+class SalesRevenueForecastTest {
+    final SalesWorkforceProjectionService people=new SalesWorkforceProjectionService();
+    final SalesRevenueForecastService service=new SalesRevenueForecastService(null,people,null,Clock.systemUTC());
+    @Test void tkKeepsOriginalDenominatorOutsideSixMonthWindow() {
+        var result=service.calculate(snapshot(List.of(project("P","TK","ING","2027-03-31","100","0")),List.of()),DAY);
+        assertThat(result.revenueMonths()).extracting(SalesForecastDtos.RevenueMonth::projectRevenue).containsExactly("12","12","12","12","12","12");
+        assertThat(result.summary().sixMonthRevenue()).isEqualTo("72");
+    }
+    @Test void tkRemainderBelongsToLastContractMonth() {
+        var result=service.calculate(snapshot(List.of(project("P","TK","ING","2026-10-31","150","50")),List.of()),DAY);
+        assertThat(result.revenueMonths()).extracting(SalesForecastDtos.RevenueMonth::projectRevenue).containsExactly("33","33","34","0","0","0");
+    }
+    @Test void overbilledTkNeverBecomesNegative() {
+        assertThat(service.calculate(snapshot(List.of(project("P","TK","ING","2026-10-31","100","150")),List.of()),DAY).summary().sixMonthRevenue()).isEqualTo("0");
+    }
+    @Test void futureContractStartRestrictsTkWindowAndDenominator() {
+        var original=project("P","TK","ING","2026-12-31","100","0");
+        var p=new Project(original.id(),original.name(),original.type(),original.status(),LocalDate.of(2026,10,15),original.endDate(),original.amount(),original.billed(),null);
+        assertThat(service.calculate(snapshot(List.of(p),List.of()),DAY).revenueMonths()).extracting(SalesForecastDtos.RevenueMonth::projectRevenue).containsExactly("0","0","33","33","34","0");
+    }
+    @ParameterizedTest @ValueSource(strings={"PRE","IN","LOSE","END"}) void nonIngProjectsHaveNoRevenue(String status) {
+        assertThat(service.calculate(snapshot(List.of(project("P","TK",status,"2026-10-31","100","0")),List.of()),DAY).revenueSources()).isEmpty();
+    }
+    @Test void internalAndExpiredProjectsAreNotRevenueSources() {
+        assertThat(service.calculate(snapshot(List.of(project("P","IN","ING","2026-10-31","100","0"),project("Q","TK","ING","2026-07-14","100","0")),List.of()),DAY).revenueSources()).isEmpty();
+    }
+    @Test void opportunityDivisionIsExactUntilFinalWonDownAndNullDurationComputesSix() {
+        var result=service.calculate(snapshot(List.of(),List.of(opportunity("O","ING","202608",3,"100","99.99"),opportunity("Q","ING","202608",null,"100","50"))),DAY);
+        assertThat(result.revenueMonths().get(0).opportunityRevenue()).isEqualTo("41");
+        assertThat(result.revenueMonths().get(0).allWonRevenue()).isEqualTo("49");
+        assertThat(result.revenueMonths().get(3).opportunityRevenue()).isEqualTo("8");
+    }
+    @ParameterizedTest @ValueSource(strings={"WIN","LOSE","STOP"}) void closedOpportunitiesDoNotDuplicateRevenue(String status) {
+        assertThat(service.calculate(snapshot(List.of(),List.of(opportunity("O",status,"202608",3,"100","100"))),DAY).revenueSources()).isEmpty();
+    }
+    @Test void existingProjectLinkAlsoSuppressesStaleIngOpportunity() {
+        var base=project("P","TK","ING","2026-10-31","100","0");
+        var linked=new Project(base.id(),base.name(),base.type(),base.status(),base.startDate(),base.endDate(),base.amount(),base.billed(),"O");
+        assertThat(service.calculate(snapshot(List.of(linked),List.of(opportunity("O","ING","202608",3,"100","100"))),DAY).revenueSources()).allMatch(r -> r.sourceType().equals("PROJECT"));
+    }
+    @ParameterizedTest @ValueSource(strings={"MO","DP"}) void monthlyRevenueUsesPaidPreviewThroughWithdrawalWithoutExtension(String type) {
+        var p=project("P",type,"ING","2026-12-31","0","0");
+        var a=new Assignment(source("A","NEW","2026-08-15","H"),List.of(new Month("2026-08","P","D",15,"1.00","0.48","100","48","N")));
+        var free=new Assignment(source("F","FREE","2026-08-31",null),List.of(new Month("2026-08","P","D",31,"1.00","1.00","0","999","N")));
+        var s=snapshot(List.of(p),List.of());s=new Snapshot(s.projects(),s.opportunities(),s.needs(),s.plans(),s.people(),s.leaves(),s.candidates(),s.standards(),s.jobs(),List.of(a,free));
+        assertThat(service.calculate(s,DAY).revenueMonths()).extracting(SalesForecastDtos.RevenueMonth::projectRevenue).containsExactly("48","0","0","0","0","0");
+    }
+    @Test void demandUsesNeedsOwnMonthsAndAverageHalfUpOne() {
+        var s=workforce(List.of(new Need("O",1,"BE","202608",1,1,n("1.00"))),List.of(),List.of(),List.of(),List.of());
+        var r=service.calculate(s,DAY);
+        assertThat(r.workforce().totals()).extracting(SalesForecastDtos.WorkforceMonth::demand).containsExactly("0.5","0.0","0.0","0.0","0.0","0.0");
+        assertThat(r.summary().averageDemand()).isEqualTo("0.1");
+    }
+    @Test void anyDayLeaveExcludesSupplyButJoinAndRetireMonthsRemainEligible() {
+        var s=workforce(List.of(),List.of(),List.of(new Person("D","BE","Y","DRCT",LocalDate.of(2026,8,30),LocalDate.of(2026,10,1))),
+            List.of(new Leave("D",LocalDate.of(2026,9,15),LocalDate.of(2026,9,15))),List.of());
+        assertThat(people.calculate(s,DAY,YearMonth.of(2026,8),6,true).totals()).extracting(SalesForecastDtos.WorkforceMonth::supply).containsExactly("1.0","0.0","1.0","0.0","0.0","0.0");
+    }
+    @Test void extensionUsesDbProbabilityAfterEndAndClampsOverassignmentAtPersonLevel() {
+        var a=new Assignment(source("A","NEW","2026-08-31","H"),List.of(new Month("2026-08","P","D",31,"1.00","1.20","100","120","N")));
+        var s=workforce(List.of(),List.of(),List.of(new Person("D","BE","Y","DRCT",null,null)),List.of(),List.of(a));
+        assertThat(people.calculate(s,DAY,YearMonth.of(2026,8),6,true).totals()).extracting(SalesForecastDtos.WorkforceMonth::supply).containsExactly("0.0","0.2","0.2","0.2","0.2","0.2");
+    }
+    @Test void missingExtensionIsNullNotZeroAndUnaffectedDemandSurvives() {
+        var base=workforce(List.of(),List.of(),List.of(new Person("D","BE","Y","DRCT",null,null)),List.of(),List.of(new Assignment(source("A","NEW","2026-08-31","H"),List.of())));
+        var standards=new HashMap<>(base.standards());standards.remove("EXT_PRBL_H");
+        var s=new Snapshot(base.projects(),base.opportunities(),base.needs(),base.plans(),base.people(),base.leaves(),base.candidates(),standards,base.jobs(),base.assignments());
+        var r=service.calculate(s,DAY);assertThat(r.summary().averageSupply()).isNull();assertThat(r.workforce().totals().get(0).supply()).isEqualTo("1.0");
+        assertThat(r.workforce().totals().get(1).supply()).isNull();assertThat(r.workforce().totals().get(1).demand()).isEqualTo("0.0");
+        assertThat(r.workforce().issues()).extracting(SalesForecastDtos.Issue::field).contains("EXT_PRBL_H");
+    }
+    @Test void unfilledUsesWholeContractGapAndOriginalRemainingMonthsWithOptionalExclusion() {
+        var s=workforce(List.of(),List.of(new Plan("P","BE",n("4"))),List.of(),List.of(),List.of());
+        assertThat(people.calculate(s,DAY,YearMonth.of(2026,8),6,true).totals()).extracting(SalesForecastDtos.WorkforceMonth::unfilledDemand).containsOnly("0.5");
+        assertThat(people.calculate(s,DAY,YearMonth.of(2026,8),6,false).totals()).extracting(SalesForecastDtos.WorkforceMonth::demand).containsOnly("0.0");
+    }
+    @Test void exactShortageBoundaryIsNeutralAndDoesNotSuggestHiring() {
+        var s=workforce(List.of(new Need("O",1,"BE","202608",6,1,n("0.80"))),List.of(),List.of(),List.of(),List.of());
+        var result=people.calculate(s,DAY,YearMonth.of(2026,8),6,true);
+        assertThat(result.totals()).extracting(SalesForecastDtos.WorkforceMonth::status).containsOnly("BALANCED");assertThat(result.hiring()).isEmpty();
+        assertThat(result.maximumShortage()).isEqualTo("0.4");assertThat(result.mostShortageJobCode()).isEqualTo("BE");
+    }
+    @Test void hiringUsesFirstStrictShortageLeadAndCandidateCounts() {
+        var s=workforce(List.of(new Need("O",1,"BE","202608",6,1,n("1.00"))),List.of(),List.of(),List.of(),List.of());
+        var h=people.calculate(s,DAY,YearMonth.of(2026,8),6,true).hiring().get(0);
+        assertThat(h.firstShortageMonth()).isEqualTo("2026-08");assertThat(h.recommendedStartMonth()).isEqualTo("2026-06");assertThat(h.startNow()).isTrue();assertThat(h.candidateCount()).isEqualTo(1);
+    }
+}

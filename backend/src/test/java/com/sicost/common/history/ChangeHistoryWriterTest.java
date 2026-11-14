@@ -206,4 +206,15 @@ class ChangeHistoryWriterTest {
         assertThatThrownBy(() -> writer.append(new ChangeHistoryWriter.Change("TB_HR_MON_PAY","202601:DEV-000001","UPD","ALWNC_AMT","0","1",null)))
             .isInstanceOf(IllegalStateException.class);
     }
+    @Test void salesInsertCountGuardDoesNotChangeExistingTaxAuditBehavior() {
+        when(users.userId()).thenReturn("admin");
+        assertThatCode(()->writer.appendRequired(new ChangeHistoryWriter.Change("TB_FI_TAX_PAY","2026:CNFM","UPD","PAY_AMT","0","1",null)))
+            .doesNotThrowAnyException();
+        verify(mapper).insert(any());
+    }
+    @Test void salesProjectAuditStillRequiresOneInsertedRow() {
+        when(users.userId()).thenReturn("admin");
+        assertThatThrownBy(()->writer.appendSales(new ChangeHistoryWriter.Change("TB_PJ_PROJ","P-0001","NEW","PROJ_NM",null,"영업 수주",null)))
+            .isInstanceOf(IllegalStateException.class);
+    }
 }

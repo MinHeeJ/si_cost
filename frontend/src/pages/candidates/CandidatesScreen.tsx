@@ -5,6 +5,13 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { CandidateSummaryPanel } from "../candidatesops/CandidateSummaryPanel";
+import { CandidateShortagesPanel } from "../candidatesops/CandidateShortagesPanel";
+import { CandidatePositionsPanel } from "../candidatesops/CandidatePositionsPanel";
+import {
+  getShortageCandidates,
+  shortageCandidateFilters,
+  type CandidateShortageContext,
+} from "../candidatesops/candidateMatchingApi";
 import {
   CandidateContactsPanel,
   CandidateContactStatusBadge,
@@ -16,6 +23,7 @@ import * as api from "./peopleClient";
 import "./candidates.css";
 
 export type CandidatesScreenProps = {
+  entryJob?: { key: string; jobCode: string };
   active?: boolean;
   dense?: boolean;
   pageSize?: 20 | 50 | 100;
@@ -46,6 +54,7 @@ const initialFilters = {
   availability: "",
 };
 export function CandidatesScreen({
+  entryJob,
   active = true,
   dense = false,
   pageSize = 50,
@@ -63,9 +72,19 @@ export function CandidatesScreen({
       page: 1,
       size: mobile ? 20 : pageSize,
     });
+  const consumedEntry = useRef<string>();
+  useEffect(() => {
+    if (!active || !entryJob || consumedEntry.current === entryJob.key) return;
+    consumedEntry.current = entryJob.key;
+    setShortageContext(undefined);
+    setDraft({ ...initialFilters, jobCode: entryJob.jobCode });
+    setFilters((previous) => ({ page: 1, size: previous.size, jobCode: entryJob.jobCode }));
+  }, [active, entryJob?.key, entryJob?.jobCode]);
   const [data, setData] = useState<api.CandidatesPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
+  const [shortageContext, setShortageContext] =
+    useState<CandidateShortageContext>();
   const [codes, setCodes] = useState<Record<string, api.CandidateCode[]>>({}),
     [today, setToday] = useState("");
   const [version, setVersion] = useState(0),
@@ -86,6 +105,12 @@ export function CandidatesScreen({
     [highlight, setHighlight] = useState<string>();
   const [actionError, setActionError] = useState<unknown>(),
     [downloading, setDownloading] = useState(false);
+  useEffect(() => {
+    const refresh = () => setVersion((v) => v + 1);
+    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed"];
+    events.forEach((name) => window.addEventListener(name, refresh));
+    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+  }, []);
   const sequence = useRef(0),
     scroll = useRef(0),
     nextForm = useRef(0),
@@ -134,7 +159,9 @@ export function CandidatesScreen({
       setLoading(true);
       setError(undefined);
       try {
-        const page = await api.getCandidates(filters, signal);
+        const page = shortageContext
+          ? await getShortageCandidates(filters, shortageContext, signal)
+          : await api.getCandidates(filters, signal);
         if (sequence.current === token && !signal?.aborted)
           setData((previous) =>
             mobile && filters.page > 1
@@ -156,7 +183,7 @@ export function CandidatesScreen({
         if (sequence.current === token && !signal?.aborted) setLoading(false);
       }
     },
-    [filters, mobile],
+    [filters, mobile, shortageContext],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -202,6 +229,7 @@ export function CandidatesScreen({
     setSelected(undefined);
     setDetail(undefined);
     if (created) {
+      setShortageContext(undefined);
       setDraft(initialFilters);
       setFilters({ page: 1, size: mobile ? 20 : filters.size });
     }
@@ -244,6 +272,12 @@ export function CandidatesScreen({
   }
   function apply(reset = false) {
     const values = reset ? initialFilters : draft;
+    if (
+      reset ||
+      values.jobCode !== shortageContext?.jobCode ||
+      values.availability
+    )
+      setShortageContext(undefined);
     if (reset) setDraft(initialFilters);
     setHighlight(undefined);
     setFilters({
@@ -401,6 +435,35 @@ export function CandidatesScreen({
         </button>
       </header>
       <CandidateSummaryPanel refreshKey={version} active={active} />
+      <CandidateShortagesPanel
+        refreshKey={version}
+        active={active}
+        jobLabel={(code) => label("JOB", code)}
+        onView={(row) => {
+          setShortageContext({
+            jobCode: row.jobCode,
+            availableUntil: row.availableUntil,
+          });
+          setDraft({ ...initialFilters, jobCode: row.jobCode });
+          setHighlight(undefined);
+          setFilters({ jobCode: row.jobCode, page: 1, size: filters.size });
+        }}
+      />
+      {shortageContext && (
+        <div
+          className="candidate-shortage-context sicost-banner sicost-tone-info"
+          data-testid="candidate-shortage-context"
+        >
+          {label("JOB", shortageContext.jobCode)} ·{" "}
+          {shortageContext.availableUntil}까지 가능 · 보류·계약 완료 제외
+          <button
+            data-testid="candidate-shortage-reset"
+            onClick={() => apply(true)}
+          >
+            초기화
+          </button>
+        </div>
+      )}
       {lookupError != null && (
         <ErrorBanner
           message="필터 코드와 서버 날짜를 불러오지 못했습니다."
@@ -485,13 +548,15 @@ export function CandidatesScreen({
           {!mobile && (
             <button
               data-testid="candidate-export"
-              disabled={downloading || Boolean(committed)}
+              disabled={
+                downloading || Boolean(committed)
+              }
               onClick={async () => {
                 setDownloading(true);
                 setActionError(undefined);
                 try {
                   await api.downloadCandidates(
-                    filters,
+                    shortageContext ? shortageCandidateFilters(filters, shortageContext) : filters,
                     visible.map((c) => c.id),
                     amountUnit,
                   );
@@ -737,6 +802,15 @@ export function CandidatesScreen({
                       </span>
                     ))}
                   </div>
+                  <CandidatePositionsPanel
+                    candidate={detail}
+                    active={tab === "기본 정보"}
+                    refreshKey={version}
+                    amountUnit={amountUnit}
+                    label={(group, code) =>
+                      code == null ? "–" : label(group, code)
+                    }
+                  />
                 </section>
                 <CandidateContactsPanel
                   candidate={detail}

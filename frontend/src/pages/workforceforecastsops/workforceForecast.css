@@ -1,0 +1,130 @@
+.workforce-forecast {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.workforce-forecast-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.workforce-forecast-toolbar > p {
+  margin-right: auto;
+}
+.workforce-forecast-toolbar label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.workforce-forecast-toolbar select {
+  height: 28px;
+}
+.workforce-forecast-info {
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+.workforce-forecast-muted {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.workforce-forecast-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.workforce-forecast-summary article,
+.workforce-forecast-card {
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  min-width: 0;
+}
+.workforce-forecast-summary p {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.workforce-forecast-summary strong {
+  display: block;
+  font-size: 24px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.workforce-forecast-card h2 {
+  margin-bottom: 12px;
+}
+.workforce-forecast-card svg {
+  width: 100%;
+  display: block;
+  font: inherit;
+  font-size: 12px;
+  fill: var(--text-sub);
+}
+.workforce-forecast-card small {
+  display: block;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.workforce-forecast-card p {
+  margin-top: 12px;
+}
+.workforce-forecast-short {
+  color: var(--bad);
+  background: var(--bad-bg);
+  text-align: right !important;
+}
+.workforce-forecast-surplus {
+  color: var(--warn);
+  background: var(--warn-bg);
+  text-align: right !important;
+}
+.workforce-forecast-balanced {
+  text-align: right !important;
+}
+.workforce-forecast-unknown {
+  color: var(--text-sub);
+  background: var(--lock-bg);
+  text-align: right !important;
+}
+.workforce-forecast-warning,
+.workforce-forecast-error {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.workforce-forecast-warning {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.workforce-forecast-error {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+.workforce-forecast-empty {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-sub);
+}
+.workforce-forecast-available {
+  color: var(--primary);
+}
+.workforce-forecast-needed {
+  color: var(--warn);
+}
+@media (max-width: 767px) {
+  .workforce-forecast-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workforce-forecast-summary article,
+  .workforce-forecast-card {
+    padding: 16px;
+  }
+  .workforce-forecast [data-testid="workforce-download"] {
+    display: none;
+  }
+}
