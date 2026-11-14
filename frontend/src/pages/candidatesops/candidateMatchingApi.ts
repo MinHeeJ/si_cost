@@ -100,44 +100,17 @@ export async function getShortageCandidates(
   context: CandidateShortageContext,
   signal?: AbortSignal,
 ): Promise<CandidatesPage> {
-  // Apply the approved date bound on the server; retain active-status filtering across all pages.
-  const first = await getCandidates(
-    {
-      ...filters,
-      jobCode: context.jobCode,
-      availability: undefined,
-      availableUntil: context.availableUntil,
-      page: 1,
-      size: 100,
-    },
-    signal,
-  );
-  const rows = [...first.items];
-  for (let page = 2; (page - 1) * 100 < first.total; page++) {
-    if (signal?.aborted) throw new DOMException("조회 취소", "AbortError");
-    const next = await getCandidates(
-      {
-        ...filters,
-        jobCode: context.jobCode,
-        availability: undefined,
-        availableUntil: context.availableUntil,
-        page,
-        size: 100,
-      },
-      signal,
-    );
-    rows.push(...next.items);
-  }
-  const matching = rows.filter(
-    (row) =>
-      row.availableDate <= context.availableUntil &&
-      !["HOLD", "CTRT"].includes(row.contactStatus),
-  );
-  const offset = (filters.page - 1) * filters.size;
+  return getCandidates(shortageCandidateFilters(filters, context), signal);
+}
+export function shortageCandidateFilters(
+  filters: CandidateFilters,
+  context: CandidateShortageContext,
+): CandidateFilters {
   return {
-    items: matching.slice(offset, offset + filters.size),
-    total: matching.length,
-    page: filters.page,
-    size: filters.size,
+    ...filters,
+    jobCode: context.jobCode,
+    availability: undefined,
+    availableUntil: context.availableUntil,
+    activeOnly: true,
   };
 }

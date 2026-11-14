@@ -36,6 +36,7 @@ class SalesForecastDatabaseTest {
         var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);configuration.addMapper(SalesForecastMapper.class);configuration.setLocalCacheScope(org.apache.ibatis.session.LocalCacheScope.STATEMENT);configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(Objects.requireNonNull(factory.getObject()));context=new AnnotationConfigApplicationContext();
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules());
         context.registerBean(DataSource.class,()->db.source);
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(SalesForecastMapper.class,()->session.getMapper(SalesForecastMapper.class));
@@ -47,6 +48,7 @@ class SalesForecastDatabaseTest {
             ExcelExportService.class,SalesForecastRepository.class,SalesWorkforceProjectionService.class,SalesRevenueForecastService.class,SalesForecastExportService.class);
         context.refresh();
         String key=UUID.randomUUID().toString().replace("-","").substring(0,12);project="P"+key;opportunity="O"+key;bill="B"+key;
+        sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,reg_user_id) VALUES ('C-export','CUST','다운로드 시험 고객','1234567890','admin')");
         sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id) SELECT ?,?,clnt_id,'HQ','FIND',50,600,'208008','WIN','WAIT','admin' FROM tb_bs_clnt ORDER BY clnt_id LIMIT 1",opportunity,opportunity);
         sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,team_exps_amt,proj_exps_amt,opp_id,reg_user_id) VALUES (?,?,'TK','ING','2080-07-01','2080-10-31',150,0,0,?,'admin')",project,project,opportunity);
         sql.update("UPDATE tb_sl_opp SET proj_id=? WHERE opp_id=?",project,opportunity);

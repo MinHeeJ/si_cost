@@ -559,6 +559,9 @@ function PeopleWorkspace({
       ) : (
         <CandidatesScreen
           {...props}
+          entryJob={typeof (location.state as { jobCode?: unknown } | null)?.jobCode === "string"
+            ? { key: location.key, jobCode: (location.state as { jobCode: string }).jobCode }
+            : undefined}
           amountUnit={unit === "원" || unit === "백만원" ? unit : "천원"}
         />
       )}

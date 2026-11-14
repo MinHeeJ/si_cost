@@ -206,6 +206,8 @@ it("renders successful empty data and no fabricated people", async () => {
   });
   mount();
   await screen.findByText("조회된 인력이 없습니다.");
+  await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, remainingOnly: false }), expect.any(AbortSignal)));
   expect(
     screen.queryByRole("button", { name: "개발자" }),
   ).not.toBeInTheDocument();
@@ -302,4 +304,18 @@ it("distinguishes precontract, concurrent and over-one cues", () => {
   render(<WorkforceCalendarCell cell={c} />);
   expect(screen.getByRole("button")).toHaveTextContent("⚠ 미계약");
   expect(screen.getByRole("button")).toHaveTextContent("2건 · 1.0 초과");
+});
+
+it("name header toggles server sorting, resets the page and exports the same ordering", async () => {
+  vi.mocked(api.getWorkforceOperations).mockResolvedValue({ ...result(), total: 55 });
+  render(<MemoryRouter><WorkforceOperationsScreen /></MemoryRouter>);
+  await screen.findByRole("button", { name: "이름 ↕" });
+  await userEvent.click(screen.getByTestId("calendar-next"));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }), expect.any(AbortSignal)));
+  await userEvent.click(await screen.findByRole("button", { name: "이름 ↕" }));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort: "name", direction: "ASC" }), expect.any(AbortSignal)));
+  await userEvent.click(screen.getByRole("button", { name: "이름 ↑" }));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort: "name", direction: "DESC" }), expect.any(AbortSignal)));
+  await userEvent.click(screen.getByTestId("calendar-download"));
+  expect(api.downloadWorkforceCalendar).toHaveBeenCalledWith(expect.objectContaining({ sort: "name", direction: "DESC" }));
 });

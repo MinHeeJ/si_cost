@@ -135,9 +135,10 @@ export function getSalesOpportunities(
   status: "ING" | "WIN" | "LOSE" | "STOP",
   includeStopped = false,
   page = 1,
+  ordering?: { sort: "amount" | "resultDate"; direction: "ASC" | "DESC" },
 ) {
   return request<OpportunityPage>(
-    `/api/sales-opportunities?status=${status}&includeStopped=${includeStopped}&page=${page}&size=50`,
+    `/api/sales-opportunities?status=${status}&includeStopped=${includeStopped}&page=${page}&size=50${ordering ? `&sort=${ordering.sort}&direction=${ordering.direction}` : ""}`,
   );
 }
 export const createSalesOpportunityQuotePreview = (needs: Need[]) =>

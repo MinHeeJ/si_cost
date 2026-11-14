@@ -328,9 +328,10 @@ export function WorkforceForecastPanel({
             </article>
           </div>
           {data.totals.length === 0 ? (
-            <p className="workforce-forecast-empty">
-              선택 기간에 예측 자료가 없습니다.
-            </p>
+            <div className="workforce-forecast-empty">
+              <p>선택 기간에 예측 자료가 없습니다.</p>
+              <button type="button" onClick={() => setReload((n) => n + 1)}>조건 초기화</button>
+            </div>
           ) : (
             <>
               <WorkforceBars data={data} />

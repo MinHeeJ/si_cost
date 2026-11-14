@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import {
   fireEvent,
   render,
@@ -282,4 +283,12 @@ it("source option failure is not silently replaced with sample projects", async 
   expect(
     within(screen.getByLabelText("프로젝트")).getAllByRole("option"),
   ).toHaveLength(1);
+});
+
+it("계획대비 빈 상태 안에 조건 초기화 동작을 제공한다", async () => {
+  vi.mocked(api.getStaffingComparison).mockResolvedValue({ items: [], total: 0, page: 1, size: 50, year: 2026, totals: { planMm: "0", actualMm: "0", differenceMm: "0" } });
+  content();
+  await screen.findByText("조회된 자료가 없습니다.");
+  await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
+  expect(api.getStaffingComparison).toHaveBeenCalled();
 });

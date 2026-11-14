@@ -46,78 +46,22 @@ it("uses approved relative GET paths and preserves unknown-source issues in meta
     "/api/candidates/shortages?page=1&size=50&sort=jobCode&direction=DESC",
   );
 });
-it("sends the exact month-end bound and retains active-status filtering before local paging", async () => {
-  const base = {
-    id: "C-1",
-    name: "후보",
-    employeeType: "FL",
-    companyName: null,
-    job: "개발",
-    grade: "중급",
-    skills: [],
-    homeAddress: null,
-    desiredRate: "750000",
-    availableDate: "2027-06-30",
-    contactStatus: "DONE" as const,
-    lastContactDate: null,
-    source: "사이트",
-    revision: "r",
-  };
-  vi.mocked(people.getCandidates)
-    .mockResolvedValueOnce({
-      items: [
-        { ...base, id: "C-next", availableDate: "2027-07-01" },
-        { ...base, id: "C-hold", contactStatus: "HOLD" },
-        { ...base, id: "C-contract", contactStatus: "CTRT" },
-        base,
-      ],
-      total: 101,
-      page: 1,
-      size: 100,
-    })
-    .mockResolvedValueOnce({
-      items: [{ ...base, id: "C-last" }],
-      total: 101,
-      page: 2,
-      size: 100,
-    });
+it("uses the same server cutoff, active filter, ordering and pagination as export", async () => {
+  const page = { items: [], total: 0, page: 3, size: 20 as const };
+  vi.mocked(people.getCandidates).mockResolvedValue(page);
   const result = await getShortageCandidates(
-    { page: 1, size: 20, availability: "NEXT_MONTH" },
+    { page: 3, size: 20, availability: "NEXT_MONTH", sort: "desiredRate", direction: "DESC" },
     { jobCode: "DEV", availableUntil: "2027-06-30" },
   );
-  expect(result.total).toBe(2);
-  expect(result.items.map((row) => row.id)).toEqual(["C-1", "C-last"]);
-  expect(people.getCandidates).toHaveBeenNthCalledWith(
-    1,
-    {
-      page: 1,
-      size: 100,
-      jobCode: "DEV",
-      availability: undefined,
-      availableUntil: "2027-06-30",
-    },
-    undefined,
-  );
-  expect(people.getCandidates).toHaveBeenNthCalledWith(
-    2,
-    {
-      page: 2,
-      size: 100,
-      jobCode: "DEV",
-      availability: undefined,
-      availableUntil: "2027-06-30",
-    },
-    undefined,
-  );
+  expect(result).toBe(page);
+  expect(people.getCandidates).toHaveBeenCalledTimes(1);
+  expect(people.getCandidates).toHaveBeenCalledWith({
+    page: 3, size: 20, jobCode: "DEV", availability: undefined,
+    availableUntil: "2027-06-30", activeOnly: true, sort: "desiredRate", direction: "DESC",
+  }, undefined);
 });
-it("a failed later page fails the whole view rather than reporting a partial count", async () => {
-  vi.mocked(people.getCandidates)
-    .mockResolvedValueOnce({ items: [], total: 101, page: 1, size: 100 })
-    .mockRejectedValueOnce(new Error("두 번째 페이지 실패"));
-  await expect(
-    getShortageCandidates(
-      { page: 1, size: 50 },
-      { jobCode: "DEV", availableUntil: "2027-06-30" },
-    ),
-  ).rejects.toThrow("두 번째 페이지 실패");
+it("propagates a server error without returning partial results", async () => {
+  vi.mocked(people.getCandidates).mockRejectedValue(new Error("조회 실패"));
+  await expect(getShortageCandidates({ page: 1, size: 50 },
+    { jobCode: "DEV", availableUntil: "2027-06-30" })).rejects.toThrow("조회 실패");
 });

@@ -219,6 +219,8 @@ it("keeps loading separate from a successful empty list", async () => {
   expect(screen.getByTestId("workforce-shortage-card")).toHaveTextContent(
     "부족 없음",
   );
+  await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
+  expect(api.getWorkforceForecasts).toHaveBeenCalledTimes(2);
 });
 it("failed request exposes request ID and retries only the read", async () => {
   vi.mocked(api.getWorkforceForecasts).mockRejectedValueOnce(

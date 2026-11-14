@@ -182,7 +182,8 @@ it.each(["HOLD", "CTRT"])(
     expect(
       await screen.findByText("조건에 맞는 자리가 없습니다."),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "조건 초기화" })).toHaveAttribute("type", "button");
   },
 );
 it("positions fail visibly and retry without mutating candidate", async () => {
@@ -263,4 +264,12 @@ it("inactive retained regions do not fetch and become fresh on activation", asyn
   );
   await screen.findByRole("link", { name: "실제 기회명" });
   await screen.findByText("2 / 3명");
+});
+
+it("부족 직무 빈 상태 안에서 조건을 초기화할 수 있다", async () => {
+  vi.mocked(api.getCandidateShortages).mockResolvedValue({ data: { from: "2027-01", months: 6, includeUnfilled: false, items: [], total: 0, page: 1, size: 50 }, issues: [] });
+  render(<CandidateShortagesPanel onView={vi.fn()} />);
+  await screen.findByText("부족 직무가 없습니다.");
+  await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
+  expect(api.getCandidateShortages).toHaveBeenCalledTimes(2);
 });

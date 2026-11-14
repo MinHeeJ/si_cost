@@ -17,14 +17,21 @@ public final class SalesCommandInput {
     public static void noQuery(Map<String,String> query) { if(!query.isEmpty())throw new ApiException(400,"UNKNOWN_FIELD","허용되지 않은 조회 조건입니다.",query.keySet().iterator().next(),null); }
     static String text(JsonNode b,String key,int max,boolean required) {
         JsonNode n=b.get(key);if(n==null||n.isNull()){if(required)throw invalid(key);return null;}
-        if(!n.isTextual())throw invalid(key);String s=n.textValue();
-        if(s.codePointCount(0,s.length())>max||(required&&s.isBlank()))throw invalid(key);return s;
+        if(!n.isTextual())throw invalid(key);String s=n.textValue().trim();
+        if(s.codePointCount(0,s.length())>max||(required&&s.isBlank()))throw invalid(key);return s.isEmpty()&&!required?null:s;
     }
     static String revision(JsonNode b) {return text(b,"expectedRevision",2000,true);}
     static String choice(JsonNode b,String key,Set<String> values) {String s=text(b,key,20,true);if(!values.contains(s))throw invalid(key);return s;}
     static Boolean bool(JsonNode b,String key) {JsonNode n=b.get(key);if(n==null)return null;if(!n.isBoolean())throw invalid(key);return n.booleanValue();}
     static Integer integer(JsonNode b,String key) {JsonNode n=b.get(key);if(n==null)return null;if(!n.isIntegralNumber()||!n.canConvertToInt()||n.intValue()<1||n.intValue()>999)throw invalid(key);return n.intValue();}
-    static String decimal(JsonNode b,String key,String regex) {String s=text(b,key,30,false);if(b.has(key)&&s==null)throw invalid(key);if(s!=null&&!s.matches(regex))throw invalid(key);return s;}
+    static String decimal(JsonNode b,String key,String regex) {String s=text(b,key,30,false);if(b.has(key)&&s==null)throw invalid(key);return normalizedNumber(s,key,regex);}
+    private static String normalizedNumber(String value,String key,String regex) {
+        if(value==null)return null;
+        if(!value.matches("(?:[0-9]+|[1-9][0-9]{0,2}(?:,[0-9]{3})+)(?:\\.[0-9]+)?"))throw invalid(key);
+        String normalized=value.replace(",","");
+        if(!normalized.matches(regex))throw invalid(key);
+        return normalized;
+    }
     public static Preview preview(JsonNode b) {
         fields(b,Set.of("needs"));if(!b.has("needs")||!b.get("needs").isArray()||b.get("needs").size()>999)throw invalid("needs");
         var rows=new ArrayList<DraftNeed>();for(JsonNode row:b.get("needs"))rows.add(need(row));return new Preview(List.copyOf(rows));
@@ -36,7 +43,7 @@ public final class SalesCommandInput {
         if(grade!=null&&grade.isEmpty())throw invalid("gradeCode");
         if(b.has("startMonth")){if(month==null)throw invalid("startMonth");month(month);}
         Integer months=integer(b,"months");if(month!=null&&months!=null&&YearMonth.parse(month).plusMonths(months-1).getYear()>9999)throw invalid("months");
-        String rate=text(b,"expectedRate",15,false);if(rate!=null&&!rate.matches("[1-9][0-9]{0,14}"))throw invalid("expectedRate");
+        String rate=normalizedNumber(text(b,"expectedRate",30,false),"expectedRate","[1-9][0-9]{0,14}");
         return new DraftNeed(integer(b,"needSn"),job,grade,integer(b,"count"),month,months,
             decimal(b,"monthlyMm","(?:0\\.(?:0[1-9]|[1-9][0-9]?)|1(?:\\.0{1,2})?)"),rate);
     }
@@ -53,7 +60,7 @@ public final class SalesCommandInput {
     static LocalDate date(JsonNode b,String key){String s=text(b,key,10,true);try{if(!s.matches("(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}"))throw invalid(key);return LocalDate.parse(s);}catch(DateTimeException e){throw invalid(key);}}
     public static Win win(JsonNode b){
         fields(b,Set.of("expectedRevision","contractAmount","contractType","startDate","endDate","projectStatus"));
-        String amount=text(b,"contractAmount",15,true);if(!amount.matches("[1-9][0-9]{0,14}"))throw invalid("contractAmount");
+        String amount=normalizedNumber(text(b,"contractAmount",30,true),"contractAmount","[1-9][0-9]{0,14}");
         LocalDate start=date(b,"startDate"),end=date(b,"endDate");if(!end.isAfter(start))throw invalid("endDate");
         return new Win(revision(b),amount,choice(b,"contractType",Set.of("TK","MO","DP")),start,end,choice(b,"projectStatus",Set.of("ING","PRE")));
     }

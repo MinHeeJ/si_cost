@@ -45,7 +45,7 @@ public final class CandidateInput {
     public static String id(String id){if(id==null||!id.matches("CAND-[0-9]{6,15}"))throw InputValidator.invalid("id");return id;}
     public static void allowQuery(Map<String,String> query,Set<String> allowed){query.keySet().forEach(k->{if(!allowed.contains(k))throw unknown(k);});}
     public static Query query(Map<String,String> input) {
-        allowQuery(input,Set.of("jobCode","gradeCode","employeeType","contactStatus","availability","availableUntil","page","size","sort","direction"));
+        allowQuery(input,Set.of("jobCode","gradeCode","employeeType","contactStatus","availability","availableUntil","activeOnly","page","size","sort","direction"));
         Map<String,String> filters=new HashMap<>();
         for(String key:List.of("jobCode","gradeCode","employeeType","contactStatus","availability"))if(input.containsKey(key))filters.put(key,InputValidator.text(input.get(key),20,key));
         if(input.containsKey("availableUntil"))filters.put("availableUntil",PeopleInputPolicy.date(input.get("availableUntil"),"availableUntil").toString());
@@ -53,6 +53,7 @@ public final class CandidateInput {
         if(filters.containsKey("employeeType"))MasterDataValidator.enumValue(filters.get("employeeType"),Set.of("FL","OS"),"employeeType");
         if(filters.containsKey("contactStatus"))MasterDataValidator.enumValue(filters.get("contactStatus"),Set.of("BEFORE","DONE","ITVW","HOLD","CTRT"),"contactStatus");
         if(filters.containsKey("availability"))MasterDataValidator.enumValue(filters.get("availability"),Set.of("NEXT_MONTH","THREE_MONTHS"),"availability");
+        if(input.containsKey("activeOnly")){MasterDataValidator.enumValue(input.get("activeOnly"),Set.of("true","false"),"activeOnly");filters.put("activeOnly",input.get("activeOnly"));}
         String sort=input.get("sort"),direction=input.getOrDefault("direction","ASC");
         if(sort!=null&&!SORTS.contains(sort))throw InputValidator.invalid("sort");
         if(!Set.of("ASC","DESC").contains(direction))throw InputValidator.invalid("direction");

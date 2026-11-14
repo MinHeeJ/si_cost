@@ -42,6 +42,7 @@ export function SalesQuotePanel({
       <div className="sales-command-toolbar">
         <h2>견적 이익 점검</h2>
         <button
+          type="button"
           data-testid="quote-preview-button"
           onClick={() => void preview()}
           disabled={pending}

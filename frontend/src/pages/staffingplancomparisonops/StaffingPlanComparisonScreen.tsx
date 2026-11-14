@@ -309,6 +309,7 @@ export function StaffingComparisonContent({
           rowKey={(r) => `${r.projectId}-${r.jobCode}`}
           loading={loading}
           empty="조회된 자료가 없습니다."
+          emptyAction={<button type="button" onClick={reset}>조건 초기화</button>}
           dense={dense}
           page={page}
           size={size}

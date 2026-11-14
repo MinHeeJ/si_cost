@@ -54,16 +54,24 @@ public class SalesOpportunityService {
     public record ApprovalState(BigDecimal rate,String status,BigDecimal approved,String event) {}
     public static ApprovalState approval(Stored old,Quote q,boolean contentChanged){
         BigDecimal rate=q.storedProfitRate()==null?null:new BigDecimal(q.storedProfitRate());if(rate!=null&&rate.abs().compareTo(new BigDecimal("99999.99"))>0)throw SalesOpportunityInput.invalid("profitRate");
-        if(old!=null&&!contentChanged&&Objects.equals(str(old.profitRate()),str(rate)))return new ApprovalState(rate,old.approvalStatus(),old.approvedProfitRate(),null);
+        if(old!=null&&old.approvalStatus().equals("REJ")&&!contentChanged&&Objects.equals(str(old.profitRate()),str(rate)))return new ApprovalState(rate,old.approvalStatus(),old.approvedProfitRate(),null);
         boolean low=rate==null||q.approvalThreshold()==null||new BigDecimal(q.revenue()).subtract(new BigDecimal(q.cost())).multiply(new BigDecimal("100")).compareTo(new BigDecimal(q.revenue()).multiply(new BigDecimal(q.approvalThreshold())))<0;
         if(old!=null&&old.approvalStatus().equals("OK")&&rate!=null&&old.approvedProfitRate()!=null&&q.reapprovalGap()!=null&&rate.subtract(old.approvedProfitRate()).abs().compareTo(new BigDecimal(q.reapprovalGap()))<=0)return new ApprovalState(rate,"OK",old.approvedProfitRate(),null);
         String status=low?"WAIT":"NONE",event=null;
         if(rate!=null&&status.equals("WAIT")&&(old==null||!old.approvalStatus().equals("WAIT")||old.profitRate()==null))event="REQ";
-        if(rate!=null&&old!=null&&status.equals("NONE")&&Set.of("WAIT","OK").contains(old.approvalStatus()))event="AUTO_REL";
+        if(rate!=null&&old!=null&&status.equals("NONE")&&Set.of("WAIT","OK","REJ").contains(old.approvalStatus()))event="AUTO_REL";
         return new ApprovalState(rate,status,null,event);
     }
     private Save normalized(Stored old,List<DraftNeed> needs){return new Save(old.name(),old.customerId(),old.partId(),old.stage(),str(old.probability()),old.manualProbability().equals("Y"),str(old.amount()),old.startMonth(),old.contractType(),old.months(),old.nextTask(),old.nextDue(),old.workplace(),old.memo(),normalize(needs),null,null);}
     private List<DraftNeed> normalize(List<DraftNeed> rows){return rows.stream().map(n->new DraftNeed(n.needSn(),n.jobCode(),n.gradeCode(),n.count(),n.startMonth(),n.months(),str(new BigDecimal(n.monthlyMm())),n.expectedRate()==null?null:str(new BigDecimal(n.expectedRate())))).sorted(Comparator.comparing(DraftNeed::needSn)).toList();}
+    private Save defaultProbability(Save input,QuoteSources source) {
+        if(input.manualProbability())return input;
+        String code="STEP_PRBL_"+(List.of("FIND","PROP","NEGO","PRE").indexOf(input.stage())+1);
+        BigDecimal probability=SalesQuoteCalculation.standard(source,code,false);
+        if(probability==null)throw new ApiException(409,"SOURCE_CONFLICT","단계 기본 확률 기준을 확인해 주세요.","probability",null);
+        return new Save(input.name(),input.customerId(),input.partId(),input.stage(),str(probability),false,input.amount(),input.startMonth(),
+            input.contractType(),input.months(),input.nextTask(),input.nextDue(),input.workplace(),input.memo(),input.needs(),input.tentativeSelections(),input.expectedRevision());
+    }
     private Save clean(Save i,List<DraftNeed> needs){return new Save(i.name(),i.customerId(),i.partId(),i.stage(),i.probability(),i.manualProbability(),i.amount(),i.startMonth(),i.contractType(),i.months(),i.nextTask(),i.nextDue(),i.workplace(),i.memo(),normalize(needs),null,null);}
     private void validate(Save input,Stored old,QuoteSources source){
         if((old==null||!old.customerId().equals(input.customerId()))&&!mapper().customer(input.customerId()))throw SalesOpportunityInput.invalid("customerId");
@@ -84,21 +92,21 @@ public class SalesOpportunityService {
     @Transactional public SaveResult update(String id,Save input){return save(id,input);}
     private SaveResult save(String suppliedId,Save input){
         String actor=users.userId();String id=suppliedId==null?repository.allocate():suppliedId;boolean create=suppliedId==null;
-        List<String> keys=repository.keys(id);Stored[] old=new Stored[1];List<DraftNeed> rows=new ArrayList<>();List<StoredTent> changes=new ArrayList<>();List<Selection>[] selected=new List[]{null};ApprovalState[] state=new ApprovalState[1];Quote[] quote=new Quote[1];boolean[] changed={true};var warnings=new ArrayList<String>();LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
+        Save[] effective={input};List<String> keys=repository.keys(id);Stored[] old=new Stored[1];List<DraftNeed> rows=new ArrayList<>();List<StoredTent> changes=new ArrayList<>();List<Selection>[] selected=new List[]{null};ApprovalState[] state=new ApprovalState[1];Quote[] quote=new Quote[1];boolean[] changed={true};var warnings=new ArrayList<String>();LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
         Runnable validate=()->{
             if(!create){commands.lockOpportunity(id);old[0]=repository.required(id);if(!old[0].status().equals("ING"))throw new ApiException(409,"INVALID_STATE","종료 기회의 필요 인력은 수정할 수 없습니다.");}
             if(!keys.equals(repository.keys(id)))throw new ApiException(409,"STALE_WRITE","관련 자료가 변경되었습니다. 다시 조회해 주세요.");
-            QuoteSources source=commands.quoteSources(current());validate(input,old[0],source);int max=create?0:mapper().greatestNeedSn(id);
+            QuoteSources source=commands.quoteSources(current());validate(input,old[0],source);effective[0]=defaultProbability(input,source);int max=create?0:mapper().greatestNeedSn(id);
             for(DraftNeed n:input.needs()){Integer sn=n.needSn();if(sn==null){if(++max>999)throw new ApiException(409,"ID_EXHAUSTED","필요 인력 순번을 모두 사용했습니다.");sn=max;}rows.add(new DraftNeed(sn,n.jobCode(),n.gradeCode(),n.count(),n.startMonth(),n.months(),n.monthlyMm(),n.expectedRate()));}
             selected[0]=tentatives.resolve(input.tentativeSelections(),rows);List<StoredTent> existing=create?Collections.emptyList():mapper().tentatives(id);changes.addAll(tentatives.changes(existing,rows,selected[0],now));
             for(StoredTent t:existing)if(Set.of("CNVT","DONE").contains(t.status())&&rows.stream().noneMatch(n->n.needSn()==t.needSn()))throw new ApiException(409,"INVALID_STATE","전환·확정 가배정은 삭제할 수 없습니다.");
-            boolean content=create||!clean(input,rows).equals(normalized(old[0],commands.needs(id)));
+            boolean content=create||!clean(effective[0],rows).equals(normalized(old[0],commands.needs(id)));
             quote[0]=quotes.calculate(rows,source);state[0]=approval(old[0],quote[0],content);
             if((create||!old[0].stage().equals(input.stage()))&&Set.of("NEGO","PRE").contains(input.stage())&&(state[0].rate()==null||!Set.of("NONE","OK").contains(state[0].status())))throw new ApiException(409,"INVALID_STATE","견적 원가와 승인을 확인한 후 협상 단계로 이동해 주세요.");
             changed[0]=content||!changes.isEmpty()||tentatives.additions(selected[0],existing)||!Objects.equals(str(old[0]==null?null:old[0].profitRate()),str(state[0].rate()))||old[0]!=null&&!old[0].approvalStatus().equals(state[0].status());
         };
         Runnable persist=()->{
-            List<Field> before=create?Collections.emptyList():mapper().fields(id);Write write=new Write(id,input,state[0].rate(),state[0].status(),state[0].approved(),actor,now);
+            List<Field> before=create?Collections.emptyList():mapper().fields(id);Write write=new Write(id,effective[0],state[0].rate(),state[0].status(),state[0].approved(),actor,now);
             repository.one(create?mapper().insert(write):mapper().update(write));
             for(StoredTent t:changes)repository.one(mapper().updateTentative(new TentWrite(t,actor,now)));
             repository.auditDelta(before,mapper().fields(id));before=mapper().fields(id);

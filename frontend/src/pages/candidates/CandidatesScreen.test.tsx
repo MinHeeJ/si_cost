@@ -417,3 +417,10 @@ it("HOLD does not get overdue warning while active candidates do", async () => {
   expect(within(rows[1]).getByText("46일 전")).toBeInTheDocument();
   expect(within(rows[2]).queryByText("46일 전")).not.toBeInTheDocument();
 });
+
+it("예측에서 전달한 주직무 필터는 첫 진입에 적용하고 초기화로 해제한다", async () => {
+  render(<CandidatesScreen entryJob={{ key: "forecast-entry", jobCode: "BE" }} />);
+  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith(expect.objectContaining({ jobCode: "BE", page: 1 }), expect.any(AbortSignal)));
+  await userEvent.click(screen.getByTestId("candidate-reset"));
+  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith({ page: 1, size: 50 }, expect.any(AbortSignal)));
+});

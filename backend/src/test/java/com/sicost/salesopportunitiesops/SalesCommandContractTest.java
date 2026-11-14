@@ -146,4 +146,11 @@ class SalesCommandContractTest {
         var captor=org.mockito.ArgumentCaptor.forClass(ProjectRegistrationService.Project.class);verify(registration).register(eq("P-0001"),captor.capture(),eq("admin"),any());assertThat(captor.getValue().opportunityId()).isEqualTo(row.id());
         var plan=org.mockito.ArgumentCaptor.forClass(Plan.class);verify(mapper).insertOpportunityPlan(plan.capture());assertThat(plan.getValue().planMm()).isEqualByComparingTo("1.00");
     }
+    @Test void changedThresholdWithSameStoredRateRequiresSaveBeforeApproval() throws Exception {
+        numericCost("9000000");row=withRate("10.00","WAIT");
+        standards.removeIf(s->s.code().equals("QUOTE_APRV_RT"));
+        standards.add(new Standard("QUOTE_APRV_RT",new BigDecimal("10")));
+        request("approval",body().put("action","OK"),409);
+        noWrites();
+    }
 }

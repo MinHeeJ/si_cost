@@ -51,7 +51,8 @@ public class SalesCommandService {
     public boolean quoteChanged(Opportunity old,Quote q){
         BigDecimal rate=q.storedProfitRate()==null?null:new BigDecimal(q.storedProfitRate());
         if(!decimalEqual(old.profitRate(),rate))return true;
-        return "NONE".equals(old.approvalStatus())&&Set.of("APPROVAL_REQUIRED","LOSS","UNKNOWN").contains(q.judgement());
+        return "NONE".equals(old.approvalStatus())&&Set.of("APPROVAL_REQUIRED","LOSS","UNKNOWN").contains(q.judgement())
+            || "WAIT".equals(old.approvalStatus())&&Set.of("BELOW_TARGET","MET").contains(q.judgement());
     }
     private boolean decimalEqual(BigDecimal a,BigDecimal b){return a==null?b==null:b!=null&&a.compareTo(b)==0;}
     public void requireOpen(Opportunity o){if(!o.status().equals("ING"))throw state("진행 기회만 처리할 수 있습니다.");}

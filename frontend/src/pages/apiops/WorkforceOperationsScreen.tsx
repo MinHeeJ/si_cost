@@ -153,6 +153,7 @@ export function WorkforceCalendar({
     remainingOnly: false,
   });
   const [filter, setFilter] = useState(draft);
+  const [ordering, setOrdering] = useState<{ sort?: string; direction?: "ASC" | "DESC" }>({});
   const [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<api.CalendarPage>();
@@ -168,6 +169,7 @@ export function WorkforceCalendar({
   const [notice, setNotice] = useState("");
   const query: api.CalendarFilter = {
     year,
+    ...ordering,
     jobCode: filter.jobCode || undefined,
     gradeCode: filter.gradeCode || undefined,
     employeeType: filter.employeeType || undefined,
@@ -216,7 +218,7 @@ export function WorkforceCalendar({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [year, filter, page, size, reload]);
+  }, [year, filter, page, size, reload, ordering]);
   useEffect(() => {
     const refresh = () => setReload((n) => n + 1);
     events.forEach((e) => window.addEventListener(e, refresh));
@@ -231,6 +233,7 @@ export function WorkforceCalendar({
     };
     setDraft(empty);
     setFilter(empty);
+    setOrdering({});
     setPage(1);
   };
   const lookup = (key: string, code: string) =>
@@ -372,7 +375,9 @@ export function WorkforceCalendar({
             <table className="sicost-table workforce-calendar-table">
               <thead>
                 <tr>
-                  <th>이름</th>
+                  <th aria-sort={ordering.sort === "name" ? ordering.direction === "DESC" ? "descending" : "ascending" : "none"}>
+                    <button type="button" onClick={() => { setPage(1); setOrdering({ sort: "name", direction: ordering.sort === "name" && ordering.direction === "ASC" ? "DESC" : "ASC" }); }}>이름 {ordering.sort === "name" ? ordering.direction === "DESC" ? "↓" : "↑" : "↕"}</button>
+                  </th>
                   <th>직무</th>
                   {Array.from({ length: 12 }, (_, i) => (
                     <th key={i}>{i + 1}월</th>
@@ -406,7 +411,7 @@ export function WorkforceCalendar({
                 ))}
                 {!data.items.length && (
                   <tr>
-                    <td colSpan={14}>조회된 인력이 없습니다.</td>
+                    <td colSpan={14}><p>조회된 인력이 없습니다.</p><button type="button" onClick={reset}>조건 초기화</button></td>
                   </tr>
                 )}
               </tbody>

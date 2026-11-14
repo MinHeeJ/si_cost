@@ -135,3 +135,5 @@
     display: none;
   }
 }
+
+.workforce-calendar-summary > button { height: auto; }

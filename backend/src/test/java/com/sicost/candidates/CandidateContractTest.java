@@ -120,4 +120,14 @@ class CandidateContractTest {
     @Test void explicitFalseWithoutContactsClearsMetadata() throws Exception {old.put("consent",true);old.put("consentDate",LocalDate.parse("2026-01-01"));old.put("consentUserId","original");mvc.perform(put("/api/candidates/{id}",id).contentType("application/json").content(edit().toString())).andExpect(status().isOk());verify(mapper).update(argThat(r->r.get("consentDate")==null&&r.get("consentUserId")==null));}
     @Test void staleCannotWriteEvenNoOp() throws Exception {mvc.perform(put("/api/candidates/{id}",id).contentType("application/json").content(edit().put("expectedRevision","old").toString())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));verify(mapper,never()).update(any());verifyNoInteractions(history);verify(manager).rollback(any());}
     @Test void historyFailureRollsBackAndDoesNotLeakPersonalValues() throws Exception {doThrow(new org.springframework.dao.DataIntegrityViolationException("SQL private")).when(history).insert(any());var response=mvc.perform(post("/api/candidates").header("X-Request-Id","candidate-request").contentType("application/json").content(body().toString())).andExpect(status().isInternalServerError()).andExpect(jsonPath("$.requestId").value("candidate-request")).andReturn().getResponse();assertThat(response.getContentAsString()).doesNotContain("SQL","private","후보");verify(manager).rollback(any());}
+    @Test void activeOnlyIsOptionalValidatedAndPassedToBothListAndCount() throws Exception {
+        mvc.perform(get("/api/candidates").param("activeOnly", "true").param("availableUntil", "2026-07-31"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1));
+        verify(mapper).list(argThat(s -> s.query().filters().get("activeOnly").equals("true") && s.through().equals(LocalDate.of(2026,7,31))));
+        verify(mapper).count(argThat(s -> s.query().filters().get("activeOnly").equals("true")));
+        mvc.perform(get("/api/candidates").param("activeOnly", "yes"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("activeOnly"));
+        verifyNoInteractions(history);
+    }
+
 }

@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { formatAmount, formatFixedDecimal } from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
@@ -43,13 +45,20 @@ export function SalesPipelinePanel() {
   const [tab, setTab] = useState<"ING" | "CLOSED" | "FORECAST">("ING"),
     [result, setResult] = useState<"WIN" | "LOSE" | "STOP">("WIN"),
     [includeStopped, setIncludeStopped] = useState(false);
+  const [ordering, setOrdering] = useState<{ sort: "amount" | "resultDate"; direction: "ASC" | "DESC" }>();
   const [page, setPage] = useState(1),
     [data, setData] = useState<api.OpportunityPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const [selectedId, setSelectedId] = useState<string | undefined>(
-    (location.state as { opportunityId?: string } | null)?.opportunityId,
+    (location.state as { opportunityId?: string } | null)?.opportunityId ??
+      new URLSearchParams(location.search).get("opportunityId") ?? undefined,
   );
+  useEffect(() => {
+    const id = (location.state as { opportunityId?: string } | null)?.opportunityId
+      ?? new URLSearchParams(location.search).get("opportunityId");
+    if (id) { setSelectedId(id); setDetailTab("기본 정보"); }
+  }, [location.key, location.search]);
   const [detail, setDetail] = useState<api.Opportunity>(),
     [detailError, setDetailError] = useState<unknown>(),
     [detailTab, setDetailTab] = useState("기본 정보"),
@@ -67,6 +76,7 @@ export function SalesPipelinePanel() {
         tab === "ING" ? "ING" : result,
         includeStopped,
         page,
+        tab === "CLOSED" ? ordering : undefined,
       )
       .then((v) => {
         if (live) setData(v);
@@ -80,7 +90,7 @@ export function SalesPipelinePanel() {
     return () => {
       live = false;
     };
-  }, [tab, result, includeStopped, page, generation]);
+  }, [tab, result, includeStopped, page, generation, ordering]);
   useEffect(() => {
     let live = true;
     setDetail((previous) =>
@@ -107,6 +117,8 @@ export function SalesPipelinePanel() {
       "sicost:staffing-committed",
       "sicost:assignments-committed",
       "sicost:payroll-committed",
+      "sicost:developers-committed",
+      "sicost:codegroups-committed",
       "sicost:operating-standards-committed",
     ];
     names.forEach((name) => window.addEventListener(name, changed));
@@ -119,6 +131,7 @@ export function SalesPipelinePanel() {
         tab === "ING" ? "ING" : result,
         includeStopped,
         page,
+        tab === "CLOSED" ? ordering : undefined,
       ),
       selectedId
         ? api.getSalesOpportunity(selectedId)
@@ -160,14 +173,6 @@ export function SalesPipelinePanel() {
     setHighlight(result.opportunityId);
     setEditing(undefined);
   }
-  if (editing)
-    return (
-      <SalesOpportunityForm
-        detail={editing === "new" ? undefined : editing}
-        onClose={() => setEditing(undefined)}
-        onSaved={saved}
-      />
-    );
   return (
     <section
       className="sales-command-screen"
@@ -175,8 +180,18 @@ export function SalesPipelinePanel() {
       data-screen-id="SCR-UI-29"
       aria-busy={loading}
     >
+      {editing && (
+        <OpportunityModal>
+          <SalesOpportunityForm
+            detail={editing === "new" ? undefined : editing}
+            onClose={() => setEditing(undefined)}
+            onSaved={saved}
+          />
+        </OpportunityModal>
+      )}
       <div className="sales-command-toolbar">
         <button
+          className="sicost-primary"
           data-testid="pipeline-create-button"
           onClick={() => setEditing("new")}
         >
@@ -210,8 +225,10 @@ export function SalesPipelinePanel() {
         <SalesForecastPanel />
       ) : (
         <>
-          <div className="sales-command-toolbar">
-            <button
+          <FilterBar onSubmit={() => setGeneration((v) => v + 1)} onReset={() => {
+            setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1);
+          }}>
+            <button type="button"
               data-testid="pipeline-retry-button"
               disabled={loading}
               onClick={() => setGeneration((v) => v + 1)}
@@ -251,7 +268,7 @@ export function SalesPipelinePanel() {
                 </label>
               </>
             )}
-          </div>
+          </FilterBar>
           {loading && <p role="status">영업 기회를 불러오는 중입니다.</p>}
           {error != null && <SalesCommandError error={error} />}
           {data && (
@@ -260,17 +277,15 @@ export function SalesPipelinePanel() {
                 <div>
                   <dt>진행 기회</dt>
                   <dd>{data.summary.opportunityCount}건</dd>
+                  <p>14일 초과 미갱신 {data.summary.staleCount}건</p>
                 </div>
                 <div>
-                  <dt>14일 초과 미갱신</dt>
-                  <dd>{data.summary.staleCount}건</dd>
+                  <dt>예상 금액 합계</dt>
+                  <dd>{formatAmount(data.summary.amount, "천원")} 천원</dd>
                 </div>
                 <div>
-                  <dt>예상액 / 확률반영액</dt>
-                  <dd>
-                    {formatAmount(data.summary.amount, "천원")} /{" "}
-                    {formatAmount(data.summary.weightedAmount, "천원")} 천원
-                  </dd>
+                  <dt>확률 반영 금액</dt>
+                  <dd>{formatAmount(data.summary.weightedAmount, "천원")} 천원</dd>
                 </div>
                 <div>
                   <dt>확률 반영 필요 인력</dt>
@@ -302,7 +317,7 @@ export function SalesPipelinePanel() {
                         ))}
                       {!loading &&
                         data.items.every((o) => o.stage !== stage) && (
-                          <p className="sales-command-empty">기회 없음</p>
+                          <div className="sales-command-empty"><p>기회 없음</p><button type="button" onClick={() => { setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
                         )}
                       {data.items
                         .filter((o) => o.stage === stage)
@@ -395,8 +410,13 @@ export function SalesPipelinePanel() {
                         <th>기회명</th>
                         <th>고객</th>
                         <th>결과</th>
-                        <th>예상액 (천원)</th>
-                        <th>결과일</th>
+                        {([['amount', '예상액 (천원)'], ['resultDate', '결과일']] as const).map(([key, title]) => {
+                          const selected = ordering?.sort === key || !ordering && key === "resultDate";
+                          const direction = ordering?.direction ?? "DESC";
+                          return <th key={key} aria-sort={selected ? direction === "ASC" ? "ascending" : "descending" : "none"}>
+                            <button type="button" onClick={() => { setPage(1); setOrdering({ sort: key, direction: selected && direction === "ASC" ? "DESC" : "ASC" }); }}>{title} {selected ? direction === "ASC" ? "↑" : "↓" : "↕"}</button>
+                          </th>;
+                        })}
                         <th>프로젝트 / 실주 사유</th>
                       </tr>
                     </thead>
@@ -436,7 +456,7 @@ export function SalesPipelinePanel() {
                     </tbody>
                   </table>
                   {data.items.length === 0 && (
-                    <p className="sales-command-empty">종료 기회 없음</p>
+                    <div className="sales-command-empty"><p>종료 기회 없음</p><button type="button" onClick={() => { setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
                   )}
                 </div>
               )}
@@ -595,4 +615,38 @@ function isStale(opportunity: api.Opportunity, today?: string) {
   const threshold = new Date(`${today}T00:00:00Z`);
   threshold.setUTCDate(threshold.getUTCDate() - 14);
   return timestamp.slice(0, 10) < threshold.toISOString().slice(0, 10);
+}
+
+function OpportunityModal({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    return () => previous?.focus();
+  }, []);
+  return createPortal(
+    <div className="sicost-scrim sales-opportunity-scrim">
+      <div ref={ref} role="dialog" aria-modal="true" aria-label="영업 기회 입력"
+        tabIndex={-1} className="sicost-dialog sales-opportunity-dialog"
+        onKeyDown={(event) => {
+          if (!ref.current?.contains(event.target as Node)) return;
+          if (event.key === "Escape") {
+            event.preventDefault();
+            ref.current?.querySelector<HTMLButtonElement>('[data-testid="opportunity-form-back"]')?.click();
+          }
+          if (event.key === "Tab") {
+            const nodes = [...(ref.current?.querySelectorAll<HTMLElement>(
+              'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]',
+            ) ?? [])].filter((node) => node.getClientRects().length > 0);
+            const first = nodes[0], last = nodes[nodes.length - 1];
+            if (!first) { event.preventDefault(); ref.current?.focus(); }
+            else if (event.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
+              event.preventDefault(); last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault(); first.focus();
+            }
+          }
+        }}>{children}</div>
+    </div>, document.body,
+  );
 }

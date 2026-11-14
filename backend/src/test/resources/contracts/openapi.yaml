@@ -13388,6 +13388,13 @@ paths:
         schema:
           $ref: '#/components/schemas/SalesDate'
         description: '선택적 가능일 상한(포함): availableDate<=YYYY-MM-DD. 부족직무 첫부족월말, 과거가능일 포함. availability와 함께 지정하면 교집합, 미지정 기존동작.'
+      - name: activeOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: 선택적 활성 후보 필터. true이면 HOLD/CTRT 제외, DONE 포함. 생략/false는 기존 집합 유지.
       x-business-rules:
       - 'REQ-391: 기존 CurrentUserProvider와 임시 관리자 admin을 사용하고 모든 입력·조회를 허용하되 실제 중복·참조·마감·상태 검사를 적용한다. 로컬 또는 접근 제한된 사설 개발·검증 환경에서 실행한다.'
       - 'REQ-399: TB_HR_CAND의 PK는 CAND_ID, id/name은 CAND_ID/CAND_NM이며 상세 필드는 7.1을 따른다. TB_HR_CAND_SKILL의 PK는 CAND_ID,SKILL_NM이며 이름 VARCHAR(50)·순서 NUMERIC(3)을
@@ -13418,6 +13425,7 @@ paths:
         - sort
         - direction
         - availableUntil
+        - activeOnly
         unknown: 허용외 query/시스템·처리자 필드400 UNKNOWN_FIELD. 필수·타입·정렬·달력일 오류400.
       x-aiops-query-role:
         role: 조회
@@ -13439,6 +13447,7 @@ paths:
         - sort
         - direction
         - availableUntil
+        - activeOnly
         description: 공통 성공봉투의 실제 DTO 위치.
       x-request-body-not-applicable: GET은 명시 path/query만 사용한다.
       responses:
@@ -42662,6 +42671,20 @@ paths:
           type: boolean
           default: false
         description: 남는MM있는사람 필터; 수요공급탭에 전파0
+      - name: sort
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [lastWithdrawalDate, name, developerId]
+        description: 달력 목록과 동일한 전체 정렬. 생략 시 기존 마지막철수일ASC(배정없음 먼저)→이름/DEV_ID. 수요공급에는 미적용.
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [ASC, DESC]
+        description: 달력 목록과 동일, 기본 ASC.
       - name: amountUnit
         in: query
         required: false
@@ -42693,6 +42716,8 @@ paths:
         - remainingOnly
         - amountUnit
         - tab
+        - sort
+        - direction
         unknown: 허용외 query400 UNKNOWN_FIELD. year/from/months·실제 달력일·enum·page/size/sort 위반400. server actor 주입400.
       x-request-body-not-applicable: 'GET: 명시 path/query만 사용, body 없음.'
       responses:
@@ -53511,6 +53536,12 @@ components:
           enum:
           - NEXT_MONTH
           - THREE_MONTHS
+        availableUntil:
+          $ref: '#/components/schemas/SalesDate'
+        activeOnly:
+          type: boolean
+          default: false
+          description: true이면 HOLD/CTRT 제외, DONE 포함. 생략/false는 기존 집합 유지.
       additionalProperties: false
       required: []
       description: 전체는생략. NEXT_MONTH 다음달말·THREE_MONTHS 현재월+3개월말까지(과거가능일포함). q는 원문 필터에 없어 추가하지 않는다.

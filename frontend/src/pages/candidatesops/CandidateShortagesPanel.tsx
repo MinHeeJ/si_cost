@@ -134,6 +134,7 @@ export function CandidateShortagesPanel({
               columns={columns}
               rowKey={(row) => row.jobCode}
               empty="부족 직무가 없습니다."
+              emptyAction={<button type="button" onClick={() => setQuery({ page: 1, size: 50 })}>조건 초기화</button>}
               page={query.page}
               size={query.size}
               total={result.data.total}

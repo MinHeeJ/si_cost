@@ -198,6 +198,7 @@ it("loading is distinct from an empty forecast", async () => {
   expect(
     screen.getByText("채용 검토가 필요한 직무가 없습니다."),
   ).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "조건 초기화" })).toHaveLength(2);
 });
 it("failed reads expose request id, retry only the GET, and recover", async () => {
   vi.mocked(api.getSalesOpportunityForecast).mockRejectedValueOnce(
@@ -324,4 +325,11 @@ it("does not transmit twice while file generation is pending", async () => {
     });
   });
   expect(screen.getByRole("status")).toHaveTextContent("다운로드했습니다.");
+});
+
+it.each(["sicost:sales-committed", "sicost:bills-committed", "sicost:assignments-committed"])("원천 변경 %s 뒤 예측을 재조회한다", async (name) => {
+  mount(); await screen.findByTestId("forecast-revenue-card");
+  const before = vi.mocked(api.getSalesOpportunityForecast).mock.calls.length;
+  act(() => window.dispatchEvent(new Event(name)));
+  await waitFor(() => expect(api.getSalesOpportunityForecast).toHaveBeenCalledTimes(before + 1));
 });

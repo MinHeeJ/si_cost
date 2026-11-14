@@ -13,7 +13,7 @@ public final class WorkforceOperationsExportInput {
     public record Query(int year, String tab, String amountUnit, MultiValueMap<String,String> calendarFilters) {}
 
     public static Query parse(MultiValueMap<String,String> values, String body, Clock clock) {
-        StaffingQueryInput.validate(values, Set.of("year", "jobCode", "gradeCode", "employeeType", "remainingOnly", "amountUnit", "tab"), body);
+        StaffingQueryInput.validate(values, Set.of("year", "jobCode", "gradeCode", "employeeType", "remainingOnly", "amountUnit", "tab", "sort", "direction"), body);
         String tab = StaffingQueryInput.choice(values, "tab", Set.of("CALENDAR", "SUPPLY_DEMAND"), null);
         if (tab == null) throw StaffingQueryInput.invalid("tab", "VALIDATION_ERROR");
         int current = LocalDate.now(clock.withZone(TimeConfiguration.SEOUL)).getYear();
@@ -23,10 +23,11 @@ public final class WorkforceOperationsExportInput {
         StaffingQueryInput.text(values, "gradeCode", 10);
         StaffingQueryInput.choice(values, "employeeType", Set.of("FT", "CT", "FL", "OS"), null);
         StaffingQueryInput.choice(values, "remainingOnly", Set.of("true", "false"), "false");
+        StaffingQueryInput.paging(values, Set.of("lastWithdrawalDate", "name", "developerId"), "lastWithdrawalDate");
         String unit = StaffingQueryInput.choice(values, "amountUnit", Set.of("WON", "THOUSAND", "MILLION"), "THOUSAND");
         var filters = new LinkedMultiValueMap<String,String>();
         filters.set("year", Integer.toString(year));
-        for (String field : Set.of("jobCode", "gradeCode", "employeeType", "remainingOnly")) {
+        for (String field : Set.of("jobCode", "gradeCode", "employeeType", "remainingOnly", "sort", "direction")) {
             if (values.containsKey(field)) filters.set(field, values.getFirst(field));
         }
         return new Query(year, tab, unit, filters);

@@ -49,6 +49,12 @@ export function SalesForecastPanel() {
       live = false;
     };
   }, [revision]);
+  useEffect(() => {
+    const refresh = () => setRevision((v) => v + 1);
+    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:projects-committed", "sicost:project-plans-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed", "sicost:bills-committed", "sicost:payroll-committed"];
+    events.forEach((name) => window.addEventListener(name, refresh));
+    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+  }, []);
   const unit = unitNames[amountUnit];
   const money = (value: string | null | undefined) => formatAmount(value, unit);
   const people = (value: string | null | undefined) =>
@@ -185,9 +191,10 @@ export function SalesForecastPanel() {
               월별 매출 <small>단위: {unit}</small>
             </h2>
             {identities.length === 0 && (
-              <p className="sales-forecast-empty">
-                예측 대상 프로젝트·기회가 없습니다.
-              </p>
+              <div className="sales-forecast-empty">
+                <p>예측 대상 프로젝트·기회가 없습니다.</p>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+              </div>
             )}
             <div className="sicost-table-viewport">
               <table className="sicost-table">
@@ -295,11 +302,12 @@ export function SalesForecastPanel() {
           <section className="sales-forecast-card">
             <h2>채용·외부인력 검토</h2>
             {data.workforce.hiring.length === 0 ? (
-              <p className="sales-forecast-empty">
-                {data.workforce.issues.length
+              <div className="sales-forecast-empty">
+                <p>{data.workforce.issues.length
                   ? "미확인 기준과 원천을 확인해 주세요."
-                  : "채용 검토가 필요한 직무가 없습니다."}
-              </p>
+                  : "채용 검토가 필요한 직무가 없습니다."}</p>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+              </div>
             ) : (
               <div className="sicost-table-viewport">
                 <table className="sicost-table">

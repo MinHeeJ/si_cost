@@ -274,3 +274,8 @@ it("developer picker loads real direct active list and empty state; selection is
   );
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
 });
+
+it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
+  mount(); await ready();
+  expect(screen.getByTestId("opportunity-form-save")).toHaveClass("sicost-primary");
+});

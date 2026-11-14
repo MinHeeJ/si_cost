@@ -92,8 +92,6 @@ export async function downloadWorkforceCalendar(
   const q = params(tab === "CALENDAR" ? filter : { year: filter.year });
   q.delete("page");
   q.delete("size");
-  q.delete("sort");
-  q.delete("direction");
   q.set("tab", tab);
   q.set("amountUnit", amountUnit);
   const response = await fetch(`/api/workforce-operations/export?${q}`, {

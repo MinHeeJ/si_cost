@@ -55,11 +55,11 @@ public class WorkforceCalendarService {
             people.put(person.id(),person);rows.add(new CalendarPerson(person.id(),person.name(),person.jobCode(),person.gradeCode(),person.employeeType(),last,List.copyOf(cells)));
         }
         Comparator<CalendarPerson> order=switch(paging.sort()){
-            case "name"->Comparator.comparing(CalendarPerson::name);case "developerId"->Comparator.comparing(CalendarPerson::developerId);
+            case "name"->Comparator.comparing(CalendarPerson::name,Comparator.nullsLast("DESC".equals(paging.direction())?Comparator.<String>reverseOrder():Comparator.<String>naturalOrder()));case "developerId"->Comparator.comparing(CalendarPerson::developerId);
             default->Comparator.comparing(CalendarPerson::lastWithdrawalDate,"ASC".equals(paging.direction())?Comparator.nullsFirst(Comparator.naturalOrder()):Comparator.nullsLast(Comparator.reverseOrder()));
         };
-        if(!paging.sort().equals("lastWithdrawalDate")&&paging.direction().equals("DESC"))order=order.reversed();
-        rows.sort(order.thenComparing(CalendarPerson::name).thenComparing(CalendarPerson::developerId));
+        if(paging.sort().equals("developerId")&&paging.direction().equals("DESC"))order=order.reversed();
+        rows.sort(paging.sort().equals("lastWithdrawalDate") ? order.thenComparing(CalendarPerson::name).thenComparing(CalendarPerson::developerId) : order.thenComparing(CalendarPerson::developerId));
         var totals=new ArrayList<MonthTotal>();
         for(int m=1;m<=12;m++){
             YearMonth month=YearMonth.of(year,m);if(month.isBefore(current)){totals.add(new MonthTotal(month.toString(),null,null));continue;}

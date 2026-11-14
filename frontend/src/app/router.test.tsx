@@ -1274,6 +1274,15 @@ describe("공식 진입점 합성", () => {
         expect(
           id === "UI-02" ? developers.getDevelopers : candidates.getCandidates,
         ).toHaveBeenCalled();
+      } else if (["UI-11", "UI-17", "UI-28", "UI-29"].includes(id)) {
+        const screens: Record<string, string> = {
+          "UI-11": "staffing-comparison-screen",
+          "UI-17": "workforce-forecast-screen",
+          "UI-28": "workforce-operations-screen",
+          "UI-29": "sales-pipeline-screen",
+        };
+        expect(await screen.findByTestId(screens[id])).toBeVisible();
+        expect(screen.queryAllByText("이 화면은 다음 단계에서 만듭니다.").some((node) => !node.closest("[hidden]"))).toBe(false);
       } else if (["UI-07", "UI-08", "UI-09", "UI-18"].includes(id)) {
         const financialScreens: Record<string, string> = {
           "UI-07": "profit-structure-screen",

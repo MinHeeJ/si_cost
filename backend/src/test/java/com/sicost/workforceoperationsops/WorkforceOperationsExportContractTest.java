@@ -113,6 +113,30 @@ class WorkforceOperationsExportContractTest {
         }
         verify(calendar, times(2)).people();
     }
+    @ParameterizedTest @ValueSource(strings={"ASC", "DESC"})
+    void nameOrderIsGlobalWithPkTiesAndIdenticalInEveryListPageAndWorkbook(String direction) throws Exception {
+        var people = new ArrayList<StaffingReadDtos.Person>();
+        for(int i=55;i>=1;i--)people.add(person(String.format("D-%03d",i),i%3==0?null:i%3==1?"가":"나","DEV"));
+        when(calendar.people()).thenReturn(people);
+        var expected = new ArrayList<String>();
+        int[] groups=direction.equals("ASC")?new int[]{1,2,0}:new int[]{2,1,0};
+        for(int group:groups)for(int i=1;i<=55;i++)if(i%3==group)expected.add(String.format("D-%03d",i));
+        var actual=new ArrayList<String>();
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        for(int page=1;page<=3;page++) {
+            var response=mvc.perform(get("/api/workforce-operations").param("sort","name").param("direction",direction)
+                .param("page",Integer.toString(page)).param("size","20")).andExpect(status().isOk()).andReturn().getResponse();
+            json.readTree(response.getContentAsString()).path("data").path("items").forEach(r->actual.add(r.path("developerId").asText()));
+        }
+        assertThat(actual).containsExactlyElementsOf(expected);
+        var response=mvc.perform(download("CALENDAR").param("sort","name").param("direction",direction))
+            .andExpect(status().isOk()).andReturn().getResponse();
+        try(var book=workbook(response)) {
+            var sheet=book.getSheet("인력 운영 달력");var exported=new ArrayList<String>();
+            for(int i=1;i<=sheet.getLastRowNum();i++)exported.add(sheet.getRow(i).getCell(0).getStringCellValue());
+            assertThat(exported).containsExactlyElementsOf(expected);
+        }
+    }
     @Test void emptyFilterProducesValidEmptyWorkbookNotNotFound() throws Exception {
         var response = mvc.perform(download("CALENDAR").param("jobCode", "ABSENT"))
             .andExpect(status().isOk()).andReturn().getResponse();
@@ -156,7 +180,7 @@ class WorkforceOperationsExportContractTest {
         var response = mvc.perform(download("SUPPLY_DEMAND")).andExpect(status().isOk()).andReturn().getResponse();
         try (var book = workbook(response)) { assertThat(book.getSheet("미확인").getLastRowNum()).isEqualTo(3); }
     }
-    @ParameterizedTest @ValueSource(strings={"actor", "page", "size", "sort", "direction", "from", "months", "includeUnfilled"})
+    @ParameterizedTest @ValueSource(strings={"actor", "page", "size", "from", "months", "includeUnfilled"})
     void unknownQueryIsRejectedBeforeReads(String field) throws Exception {
         mvc.perform(download("CALENDAR").param(field, "bad")).andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false)).andExpect(jsonPath("$.meta").isMap())
@@ -164,7 +188,7 @@ class WorkforceOperationsExportContractTest {
             .andExpect(jsonPath("$.details.violations[0].field").value(field)).andExpect(jsonPath("$.requestId").isNotEmpty());
         verifyNoInteractions(calendar, forecasts, monthly, audit);
     }
-    @ParameterizedTest @CsvSource({"year,0", "year,10000", "year,2028", "year,2026.0", "year,2026-01", "employeeType,BAD", "remainingOnly,yes", "amountUnit,won", "gradeCode,TOOLONGCODE1", "jobCode,TOOLONGCODE1"})
+    @ParameterizedTest @CsvSource({"year,0", "year,10000", "year,2028", "year,2026.0", "year,2026-01", "employeeType,BAD", "remainingOnly,yes", "amountUnit,won", "gradeCode,TOOLONGCODE1", "jobCode,TOOLONGCODE1", "sort,bad", "direction,bad"})
     void invalidFiltersReturnFieldErrors(String key, String value) throws Exception {
         mvc.perform(download("CALENDAR").param(key, value)).andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.field").value(key)).andExpect(jsonPath("$.message").isNotEmpty());

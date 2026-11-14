@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
-import { formatAmount } from "../../shared/format";
+import { formatAmount, formatDecimal } from "../../shared/format";
 import { SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 
@@ -33,6 +33,21 @@ function initialWin(o: api.Opportunity): api.WinInput {
     endDate: end.toISOString().slice(0, 10),
     projectStatus: "ING",
   };
+}
+function positiveWon(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!/^(?:[1-9][0-9]*|[1-9][0-9]{0,2}(?:,[0-9]{3})+)$/.test(trimmed)) return;
+  const digits = trimmed.replaceAll(",", "");
+  return digits.length <= 15 ? digits : undefined;
+}
+function quotePlans(quote: api.Quote) {
+  const jobs = new Map<string, bigint>();
+  for (const row of quote.rows) {
+    if (!row.jobCode || row.quantityMm == null || !/^\d+(?:\.\d{1,2})?$/.test(row.quantityMm)) return;
+    const [whole, fraction = ""] = row.quantityMm.split(".");
+    jobs.set(row.jobCode, (jobs.get(row.jobCode) ?? 0n) + BigInt(whole + fraction.padEnd(2, "0")));
+  }
+  return [...jobs].map(([job, value]) => ({ job, mm: `${value / 100n}.${String(value % 100n).padStart(2, "0")}` }));
 }
 export function SalesOpportunityActions({
   opportunity: o,
@@ -78,6 +93,10 @@ export function SalesOpportunityActions({
       live = false;
     };
   }, [action]);
+  const plans = quotePlans(o.quote);
+  const contractAmount = positiveWon(win.contractAmount);
+  const difference = contractAmount && o.quote.revenue != null && /^\d+$/.test(o.quote.revenue)
+    ? (BigInt(contractAmount) - BigInt(o.quote.revenue)).toString() : null;
   const editable = o.status === "ING";
   const quoteKnown =
     o.quote.storedProfitRate != null &&
@@ -114,7 +133,7 @@ export function SalesOpportunityActions({
         errors.memo = "메모는 500자 이하로 입력해 주세요.";
     }
     if (action === "win") {
-      if (!/^[1-9][0-9]{0,14}$/.test(win.contractAmount))
+      if (!contractAmount)
         errors.contractAmount = "양수 원정수 15자리 이하로 입력해 주세요.";
       if (!win.startDate) errors.startDate = "시작일을 입력해 주세요.";
       if (!win.endDate || win.endDate <= win.startDate)
@@ -131,7 +150,7 @@ export function SalesOpportunityActions({
         return api.createSalesOpportunityLoss(o, reasonCode, memo || null);
       if (action === "stop") return api.saveSalesOpportunityStop(o);
       if (action === "resume") return api.saveSalesOpportunityResume(o);
-      const result = await api.createSalesOpportunityWin(o, win);
+      const result = await api.createSalesOpportunityWin(o, { ...win, contractAmount: contractAmount! });
       setProjectId(result.projectId);
       return result;
     });
@@ -496,10 +515,12 @@ export function SalesOpportunityActions({
                   }
                   명 → 배정 후보 (실제 배정은 UI-12에서 확정)
                 </p>
-                <p>
-                  직무별 합계와 계약금액 차이는 서버의 검증 결과가 기준입니다.
-                  계약기간으로 계획을 임의 안분하지 않습니다.
-                </p>
+                <div data-testid="win-plan-totals">
+                  <h4>직무별 계획 합계</h4>
+                  {plans?.map((p) => <p key={p.job}>{p.job}: {formatDecimal(p.mm)} MM</p>) ?? "–"}
+                </div>
+                <p data-testid="win-amount-difference">최종 계약금액 − 견적매출: {formatAmount(difference, "원")} 원</p>
+                <p>서버 견적의 수량을 합산합니다. 계약기간으로 계획을 임의 안분하지 않습니다.</p>
               </>
             )}
           </div>

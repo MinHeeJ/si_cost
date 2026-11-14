@@ -831,6 +831,7 @@ export function SalesOpportunityForm({
             </button>
             <button
               type="submit"
+              className="sicost-primary"
               data-testid="opportunity-form-save"
               disabled={pending || loading || !!lookupError || !!committed}
             >

@@ -9,6 +9,7 @@ import { CandidateShortagesPanel } from "../candidatesops/CandidateShortagesPane
 import { CandidatePositionsPanel } from "../candidatesops/CandidatePositionsPanel";
 import {
   getShortageCandidates,
+  shortageCandidateFilters,
   type CandidateShortageContext,
 } from "../candidatesops/candidateMatchingApi";
 import {
@@ -22,6 +23,7 @@ import * as api from "./peopleClient";
 import "./candidates.css";
 
 export type CandidatesScreenProps = {
+  entryJob?: { key: string; jobCode: string };
   active?: boolean;
   dense?: boolean;
   pageSize?: 20 | 50 | 100;
@@ -52,6 +54,7 @@ const initialFilters = {
   availability: "",
 };
 export function CandidatesScreen({
+  entryJob,
   active = true,
   dense = false,
   pageSize = 50,
@@ -69,6 +72,14 @@ export function CandidatesScreen({
       page: 1,
       size: mobile ? 20 : pageSize,
     });
+  const consumedEntry = useRef<string>();
+  useEffect(() => {
+    if (!active || !entryJob || consumedEntry.current === entryJob.key) return;
+    consumedEntry.current = entryJob.key;
+    setShortageContext(undefined);
+    setDraft({ ...initialFilters, jobCode: entryJob.jobCode });
+    setFilters((previous) => ({ page: 1, size: previous.size, jobCode: entryJob.jobCode }));
+  }, [active, entryJob?.key, entryJob?.jobCode]);
   const [data, setData] = useState<api.CandidatesPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -94,6 +105,12 @@ export function CandidatesScreen({
     [highlight, setHighlight] = useState<string>();
   const [actionError, setActionError] = useState<unknown>(),
     [downloading, setDownloading] = useState(false);
+  useEffect(() => {
+    const refresh = () => setVersion((v) => v + 1);
+    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed"];
+    events.forEach((name) => window.addEventListener(name, refresh));
+    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+  }, []);
   const sequence = useRef(0),
     scroll = useRef(0),
     nextForm = useRef(0),
@@ -532,19 +549,14 @@ export function CandidatesScreen({
             <button
               data-testid="candidate-export"
               disabled={
-                downloading || Boolean(committed) || Boolean(shortageContext)
-              }
-              title={
-                shortageContext
-                  ? "정확한 가능일 조건은 목록에만 적용됩니다. 초기화 후 다운로드해 주세요."
-                  : undefined
+                downloading || Boolean(committed)
               }
               onClick={async () => {
                 setDownloading(true);
                 setActionError(undefined);
                 try {
                   await api.downloadCandidates(
-                    filters,
+                    shortageContext ? shortageCandidateFilters(filters, shortageContext) : filters,
                     visible.map((c) => c.id),
                     amountUnit,
                   );

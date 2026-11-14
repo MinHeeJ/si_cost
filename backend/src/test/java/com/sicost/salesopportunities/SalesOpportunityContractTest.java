@@ -79,4 +79,63 @@ class SalesOpportunityContractTest {
     @Test void numericThresholdUsesExactFractionAndAppendsOneRealRequest()throws Exception{sources=new QuoteSources("2026-07","2026-06",sources.standards(),sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("8500000"))));mvc.perform(post("/api/sales-opportunities").contentType("application/json").content(body().toString())).andExpect(status().isOk());assertThat(stored.approvalStatus()).isEqualTo("NONE");verify(commands,never()).approval(any());}
     @Test void lowNumericQuoteAppendsRealRateRequest()throws Exception{sources=new QuoteSources("2026-07","2026-06",sources.standards(),sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("9000000"))));mvc.perform(post("/api/sales-opportunities").contentType("application/json").content(body().toString())).andExpect(status().isOk());assertThat(stored.profitRate()).isEqualByComparingTo("10");verify(commands).approval(argThat(e->e.action().equals("REQ")&&e.profitRate().compareTo(new BigDecimal("10"))==0));}
     @Test void auditFailureRollsBackTransaction()throws Exception{when(audit.insert(any())).thenReturn(0);mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().put("name","변경").toString())).andExpect(status().isInternalServerError());verify(manager,atLeastOnce()).rollback(any());}
+    @Test void rejectedQuoteEditedAboveThresholdAppendsAutoRelease() throws Exception {
+        stored=row(SalesOpportunityInput.save(body(),false),"ING",new BigDecimal("10"),"REJ",null);
+        sources=new QuoteSources("2026-07","2026-06",sources.standards(),sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("8000000"))));
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().put("name","수정 견적").toString()))
+            .andExpect(status().isOk());
+        assertThat(stored.approvalStatus()).isEqualTo("NONE");
+        verify(commands).approval(argThat(e->e.action().equals("AUTO_REL") && e.profitRate().compareTo(new BigDecimal("20"))==0));
+    }
+    @Test void rejectedQuoteEditedBelowThresholdRequestsAgain() throws Exception {
+        stored=row(SalesOpportunityInput.save(body(),false),"ING",new BigDecimal("10"),"REJ",null);
+        sources=new QuoteSources("2026-07","2026-06",sources.standards(),sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("9000000"))));
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().put("name","수정 견적").toString()))
+            .andExpect(status().isOk());
+        assertThat(stored.approvalStatus()).isEqualTo("WAIT");
+        verify(commands).approval(argThat(e->e.action().equals("REQ")));
+    }
+    @Test void sameContentReevaluatesChangedApprovalThresholdAtUnchangedStoredRate() throws Exception {
+        stored=row(SalesOpportunityInput.save(body(),false),"ING",new BigDecimal("20"),"NONE",null);
+        var standards=sources.standards().stream().map(s->s.code().equals("QUOTE_APRV_RT")?new Standard(s.code(),new BigDecimal("21")):s).toList();
+        sources=new QuoteSources("2026-07","2026-06",standards,sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("8000000"))));
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true));
+        assertThat(stored.approvalStatus()).isEqualTo("WAIT");
+        verify(commands).approval(argThat(e->e.action().equals("REQ")));
+    }
+    @Test void sameContentReleasesWaitAtNewExactApprovalBoundary() throws Exception {
+        stored=row(SalesOpportunityInput.save(body(),false),"ING",new BigDecimal("10"),"WAIT",null);
+        var standards=sources.standards().stream().map(s->s.code().equals("QUOTE_APRV_RT")?new Standard(s.code(),new BigDecimal("10")):s).toList();
+        sources=new QuoteSources("2026-07","2026-06",standards,sources.codes(),List.of(new PersonCost("D-a","BE","MD",new BigDecimal("9000000"))));
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true));
+        assertThat(stored.approvalStatus()).isEqualTo("NONE");
+        verify(commands).approval(argThat(e->e.action().equals("AUTO_REL")));
+    }
+    @Test void createWithDefaultProbabilityUsesCurrentStageStandard() throws Exception {
+        var standards=new ArrayList<>(sources.standards());standards.add(new Standard("STEP_PRBL_2",new BigDecimal("30")));
+        sources=new QuoteSources(sources.month(),sources.costMonth(),standards,sources.codes(),sources.people());
+        mvc.perform(post("/api/sales-opportunities").contentType("application/json")
+            .content(body().put("stage","PROP").put("manualProbability",false).put("probability","10").toString()))
+            .andExpect(status().isOk());
+        assertThat(stored.probability()).isEqualByComparingTo("30");
+        assertThat(stored.manualProbability()).isEqualTo("N");
+    }
+    @Test void stageEditThroughSaveUsesDefaultWithoutOverwritingExplicitManualProbability() throws Exception {
+        var standards=new ArrayList<>(sources.standards());standards.add(new Standard("STEP_PRBL_2",new BigDecimal("30")));
+        sources=new QuoteSources(sources.month(),sources.costMonth(),standards,sources.codes(),sources.people());
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json")
+            .content(edit().put("stage","PROP").put("manualProbability",false).put("probability","10").toString()))
+            .andExpect(status().isOk());
+        assertThat(stored.probability()).isEqualByComparingTo("30");
+        assertThat(stored.manualProbability()).isEqualTo("N");
+    }
+    @Test void manualProbabilityEqualToDefaultRetainsManualFlag() throws Exception {
+        mvc.perform(post("/api/sales-opportunities").contentType("application/json")
+            .content(body().put("stage","PROP").put("manualProbability",true).put("probability","30").toString()))
+            .andExpect(status().isOk());
+        assertThat(stored.probability()).isEqualByComparingTo("30");
+        assertThat(stored.manualProbability()).isEqualTo("Y");
+    }
 }

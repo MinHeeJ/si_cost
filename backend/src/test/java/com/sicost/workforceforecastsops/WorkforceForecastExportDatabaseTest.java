@@ -49,6 +49,7 @@ class WorkforceForecastExportDatabaseTest {
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session = new SqlSessionTemplate(Objects.requireNonNull(factory.getObject()));
         context = new AnnotationConfigApplicationContext();
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules());
         context.registerBean(DataSource.class, () -> db.source);
         context.registerBean(Clock.class, () -> Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"), ZoneId.of("Asia/Seoul")));
         context.registerBean(SalesForecastMapper.class, () -> session.getMapper(SalesForecastMapper.class));
@@ -64,6 +65,7 @@ class WorkforceForecastExportDatabaseTest {
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String id = "O" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
         String job = sql.queryForObject("SELECT code FROM tb_sy_code WHERE code_grp_id='JOB' AND use_yn='Y' AND del_yn='N' ORDER BY sort_ord,code LIMIT 1", String.class);
+        sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,reg_user_id) VALUES ('C-export','CUST','다운로드 시험 고객','1234567890','admin')");
         sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id) SELECT ?,?,clnt_id,'HQ','FIND',50,600,'208007','ING','WAIT','admin' FROM tb_bs_clnt ORDER BY clnt_id LIMIT 1", id, id);
         sql.update("INSERT INTO tb_sl_opp_need(opp_id,need_sn,job_cd,need_cnt,bgn_ym,prd_mcnt,mon_mm,reg_user_id) VALUES (?,1,?,3,'208007',18,0.5,'admin')", id, job);
     }

@@ -138,7 +138,7 @@ public class ChangeHistoryWriter {
         int written = mapper.insert(new ChangeHistoryEntry(change.tableName(), change.targetKey(), change.type(), change.item(),
                 privateContact ? maskedContact(change.before()) : change.before(),
                 privateContact ? maskedContact(change.after()) : change.after(), change.reason(), actor.get(), LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL)));
-        if ((required || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
+        if (((required && !"TB_FI_TAX_PAY".equals(change.tableName())) || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
             throw new IllegalStateException("목표 필드 감사를 저장하지 못했습니다.");
         }
     }

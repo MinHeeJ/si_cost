@@ -54,6 +54,7 @@ class WorkforceOperationsExportDatabaseTest {
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session = new SqlSessionTemplate(Objects.requireNonNull(factory.getObject()));
         context = new AnnotationConfigApplicationContext();
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules());
         context.registerBean(DataSource.class, () -> db.source);
         context.registerBean(Clock.class, () -> Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"), ZoneId.of("Asia/Seoul")));
         context.registerBean(StaffingReadMapper.class, () -> session.getMapper(StaffingReadMapper.class));

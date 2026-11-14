@@ -77,10 +77,6 @@
   background: var(--surface);
   border-top: 1px solid var(--divider);
 }
-.sales-opportunity-footer button[type="submit"] {
-  background: var(--primary);
-  color: var(--on-primary);
-}
 @media (max-width: 767px) {
   .sales-opportunity-fields {
     grid-template-columns: minmax(0, 1fr);
@@ -88,4 +84,11 @@
   .sales-opportunity-form fieldset {
     padding: 16px;
   }
+}
+
+.sicost-scrim.sales-opportunity-scrim { z-index: 55; }
+.sicost-dialog.sales-opportunity-dialog {
+  width: min(1400px, 100%);
+  overflow: auto;
+  padding: 24px;
 }

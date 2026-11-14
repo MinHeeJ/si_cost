@@ -44,7 +44,7 @@ class CandidateMatchingDatabaseTest {
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);
-        json=JsonMapper.builder().findAndAddModules().build();context.registerBean(ObjectMapper.class,()->json);
+        json=JsonMapper.builder().findAndAddModules().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();context.registerBean(ObjectMapper.class,()->json);
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2026-11-30T16:00:00Z"),ZoneOffset.UTC));
         context.registerBean(CandidateMatchingMapper.class,()->session.getMapper(CandidateMatchingMapper.class));
         context.registerBean(SalesForecastMapper.class,()->session.getMapper(SalesForecastMapper.class));
@@ -57,6 +57,7 @@ class CandidateMatchingDatabaseTest {
         mvc=MockMvcBuilders.standaloneSetup(new CandidateMatchingController(context.getBean(CandidateMatchingService.class)))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter())
             .setMessageConverters(new MappingJackson2HttpMessageConverter(json)).build();
+        db.sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,reg_user_id) VALUES ('C-match','CUST','후보 시험 고객','1234567890','admin')");
         job=code("JOB");grade=code("GRADE");source=code("CAND_SRC");
     }
     @AfterEach void close() { if(context!=null)context.close(); }

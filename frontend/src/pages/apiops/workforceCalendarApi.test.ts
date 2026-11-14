@@ -1,3 +1,4 @@
+import { Blob as NodeBlob } from "node:buffer";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
@@ -10,7 +11,7 @@ const mime =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const filename = "인력운영달력_2026_20261012_090000.xlsx";
 function response() {
-  return new Response(new Blob(["xlsx"]), {
+  return new Response("xlsx", {
     headers: {
       "Content-Type": mime,
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
@@ -21,7 +22,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-it("downloads all applied calendar filters without list pagination or sorting", async () => {
+it("downloads all applied calendar filters with list sorting and without pagination", async () => {
   const fetcher = vi.fn().mockResolvedValue(response());
   vi.stubGlobal("fetch", fetcher);
   await downloadWorkforceCalendar({
@@ -36,12 +37,13 @@ it("downloads all applied calendar filters without list pagination or sorting", 
     direction: "DESC",
   });
   expect(fetcher.mock.calls[0][0]).toBe(
-    "/api/workforce-operations/export?year=2026&jobCode=DEV&gradeCode=HIGH&employeeType=FT&remainingOnly=true&tab=CALENDAR&amountUnit=THOUSAND",
+    "/api/workforce-operations/export?year=2026&jobCode=DEV&gradeCode=HIGH&employeeType=FT&remainingOnly=true&sort=name&direction=DESC&tab=CALENDAR&amountUnit=THOUSAND",
   );
   expect(saveMasterDataDownload).toHaveBeenCalledWith({
     filename,
-    blob: expect.any(Blob),
+    blob: expect.any(NodeBlob),
   });
+  expect(vi.mocked(saveMasterDataDownload).mock.calls[0][0].blob.size).toBe(4);
 });
 it("supply uses its selected unit but excludes all calendar filters", async () => {
   const fetcher = vi.fn().mockResolvedValue(response());
