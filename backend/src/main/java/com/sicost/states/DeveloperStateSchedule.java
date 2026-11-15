@@ -11,8 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 public class DeveloperStateSchedule {
     private final DeveloperStateService service;
     public DeveloperStateSchedule(DeveloperStateService service){this.service=service;}
-    @EventListener(ApplicationReadyEvent.class)
     public void startup(){service.recalculateAll();}
-    @Scheduled(cron="0 0 0 * * *",zone="Asia/Seoul")
     public void midnight(){service.recalculateAll();}
 }

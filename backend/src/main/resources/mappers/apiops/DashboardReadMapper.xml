@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.DashboardReadMapper">
+  <select id="receivables" resultType="com.sicost.apiops.DashboardDtos$ReceivableTotals">
+    WITH balances AS (
+      SELECT b.pay_due_dt,b.tot_amt-COALESCE(r.amount,0) AS balance FROM tb_bl_bill b
+      LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+      WHERE b.cncl_yn='N'
+    ) SELECT COALESCE(sum(balance),0) AS "balance",count(*) FILTER (WHERE pay_due_dt &lt; #{today})::int AS "overdueCount",
+      COALESCE(sum(balance) FILTER (WHERE pay_due_dt &lt; #{today}),0) AS "overdueAmount"
+    FROM balances WHERE balance>0
+  </select>
+  <select id="taxes" resultType="com.sicost.apiops.DashboardDtos$TaxDue">
+    SELECT count(*)::int AS "count" FROM tb_fi_tax_pay WHERE pay_yn='N' AND pay_due_dt &lt; #{today}
+  </select>
+</mapper>

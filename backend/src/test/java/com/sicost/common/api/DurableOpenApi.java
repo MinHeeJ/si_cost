@@ -42,6 +42,7 @@ public final class DurableOpenApi {
     private static Map<?, ?> load() {
         var options = new LoaderOptions();
         options.setMaxAliasesForCollections(10000);
+        options.setCodePointLimit(8 * 1024 * 1024);
         options.setAllowDuplicateKeys(false);
         try (var input = new ClassPathResource("contracts/openapi.yaml").getInputStream()) {
             return new Yaml(new SafeConstructor(options)).load(input);

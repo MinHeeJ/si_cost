@@ -10,8 +10,6 @@ import org.springframework.scheduling.annotation.*;
 public class DeveloperStatusSchedule {
     private final DeveloperStatusRecalculationService states;
     public DeveloperStatusSchedule(DeveloperStatusRecalculationService states) { this.states=states; }
-    @EventListener(ApplicationReadyEvent.class)
     public void started() { states.refresh(); }
-    @Scheduled(cron="0 0 0 * * *",zone="Asia/Seoul")
     public void midnight() { states.refresh(); }
 }

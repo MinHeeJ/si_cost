@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.ActivityReadMapper">
+  <sql id="recipient">rcvr_user_id=#{userId} AND send_mthd_cd IN ('SYS','BOTH')</sql>
+  <select id="notifications" resultType="com.sicost.notificationsops.NotificationDtos$StoredNotification">
+    SELECT noti_id AS "id",noti_type_cd AS "typeCode",noti_cn AS "content",send_mthd_cd AS "sendMethodCode",
+      read_yn='Y' AS "read",read_dttm AS "readAt",noti_dttm AS "notifiedAt",
+      CASE WHEN link_scrn_id ~ '^UI-[0-9]{2}$' AND EXISTS
+        (SELECT 1 FROM tb_sy_menu m WHERE m.scrn_id=n.link_scrn_id AND m.use_yn='Y')
+        THEN link_scrn_id END AS "screenId",link_key AS "linkKey"
+    FROM tb_sy_noti n WHERE <include refid="recipient"/>
+    ORDER BY noti_dttm DESC,noti_id DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="notificationCount" resultType="long">SELECT count(*) FROM tb_sy_noti WHERE <include refid="recipient"/></select>
+  <sql id="jobs"><where><if test="jobCode != null">job_cd=#{jobCode}</if></where></sql>
+  <select id="automationRuns" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Stored">
+    SELECT job_cd AS "jobCode",run_dt AS "runDate",state_cd AS "state",last_step::int AS "lastStep",
+      start_dttm AS "startedAt",end_dttm AS "endedAt",error_cn AS "errorMessage"
+    FROM tb_sy_automation_run <include refid="jobs"/>
+    ORDER BY run_dt DESC,job_cd ASC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="automationCount" resultType="long">SELECT count(*) FROM tb_sy_automation_run <include refid="jobs"/></select>
+</mapper>

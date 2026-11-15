@@ -198,6 +198,13 @@ async function choose() {
     expect(screen.getByRole("button", { name: "등록" })).not.toBeDisabled(),
   );
 }
+it("알림이 선택한 실제 청구번호로 기존 상세를 연다", async () => {
+  render(<BillsScreen initialBillId={bill.id} />);
+  await waitFor(() => expect(api.getBill).toHaveBeenCalledWith(bill.id, 2026));
+  expect(
+    await screen.findByRole("button", { name: bill.id }),
+  ).toBeInTheDocument();
+});
 it("목록은 13개 열·이월·취소 원금과 전체필터 합계를 보인다", async () => {
   vi.mocked(api.getBills).mockResolvedValue({
     ...page,
@@ -262,10 +269,10 @@ it("선택 바는 행을 고른 때만 나타나고 일괄 입금·조회전체 
   await userEvent.click(screen.getAllByRole("checkbox")[1]);
   const bar = screen.getByTestId("bill-selection-bar");
   expect(bar).toHaveTextContent("선택 1건");
-  expect(
-    within(bar).getByRole("button", { name: "일괄 입금" }),
-  ).toBeEnabled();
-  await userEvent.click(within(bar).getByRole("button", { name: "조회전체 선택" }));
+  expect(within(bar).getByRole("button", { name: "일괄 입금" })).toBeEnabled();
+  await userEvent.click(
+    within(bar).getByRole("button", { name: "조회전체 선택" }),
+  );
   expect(bar).toHaveTextContent("조회된 전체 40건 선택");
   expect(
     within(bar).queryByRole("button", { name: "조회전체 선택" }),
@@ -318,7 +325,9 @@ it("빠른 청구가 안 되는 청구는 사유를 마우스 없이도 보여 �
   });
   render(<BillsScreen />);
   await screen.findByRole("button", { name: bill.id });
-  const reason = screen.getByTestId(`bill-quick-reason-${bill.id.toLowerCase()}`);
+  const reason = screen.getByTestId(
+    `bill-quick-reason-${bill.id.toLowerCase()}`,
+  );
   expect(reason).toHaveTextContent("계약 종료월(2026-12)을 넘습니다.");
   expect(
     screen.queryByRole("button", { name: "고쳐서 청구" }),
@@ -703,24 +712,56 @@ it("저장성공 뒤 조회 실패는 재저장하지 않는다", async () => {
 });
 it("uses close-check month and checks tab without overwriting saved period", async () => {
   render(<BillsScreen initialMonth="2026-05" initialSection="checks" />);
-  await waitFor(() => expect(api.getBills).toHaveBeenCalledWith(expect.objectContaining({ year: 2026, month: "2026-05" })));
-  expect(screen.getByTestId("billing-checks-tab")).toHaveAttribute("aria-selected", "true");
-  expect(reviews.getBillingChecks).toHaveBeenCalledWith(expect.objectContaining({ month: "2026-05" }), expect.any(AbortSignal));
+  await waitFor(() =>
+    expect(api.getBills).toHaveBeenCalledWith(
+      expect.objectContaining({ year: 2026, month: "2026-05" }),
+    ),
+  );
+  expect(screen.getByTestId("billing-checks-tab")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  expect(reviews.getBillingChecks).toHaveBeenCalledWith(
+    expect.objectContaining({ month: "2026-05" }),
+    expect.any(AbortSignal),
+  );
   expect(shared.putSharedPreference).not.toHaveBeenCalled();
 });
 
 it("번호누락 이동 조건은 화면과 다운로드에 유지되고 초기화 가능하다", async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["x"]), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=test.xlsx" } }));
-  vi.stubGlobal("fetch", fetchMock); URL.createObjectURL = vi.fn(() => "blob:x"); URL.revokeObjectURL = vi.fn();
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(new Blob(["x"]), {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": "attachment; filename=test.xlsx",
+      },
+    }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  URL.createObjectURL = vi.fn(() => "blob:x");
+  URL.revokeObjectURL = vi.fn();
   render(<BillsScreen initialMonth="2026-05" initialMissingInvoiceNo />);
   await screen.findByRole("button", { name: bill.id });
   expect(screen.getByTestId("bill-month-filter")).toHaveValue("2026-05");
   expect(screen.getByTestId("bill-missing-invoice-filter")).toHaveValue("true");
-  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(expect.objectContaining({ month: "2026-05", missingInvoiceNo: true })));
+  await waitFor(() =>
+    expect(api.getBills).toHaveBeenLastCalledWith(
+      expect.objectContaining({ month: "2026-05", missingInvoiceNo: true }),
+    ),
+  );
   await userEvent.click(screen.getByTestId("billing-review-download-bills"));
   await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-  expect(JSON.parse(fetchMock.mock.calls[0][1].body).filters).toMatchObject({ month: "2026-05", missingInvoiceNo: true });
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).filters).toMatchObject({
+    month: "2026-05",
+    missingInvoiceNo: true,
+  });
   await userEvent.click(screen.getByTestId("bill-reset"));
-  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(expect.not.objectContaining({ missingInvoiceNo: true })));
+  await waitFor(() =>
+    expect(api.getBills).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ missingInvoiceNo: true }),
+    ),
+  );
   expect(screen.getByTestId("bill-missing-invoice-filter")).toHaveValue("");
 });

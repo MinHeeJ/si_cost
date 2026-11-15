@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Predicate;
+import com.sicost.common.notifications.NotificationRecipients;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import static com.sicost.apiops.BillingReviewDtos.*;
@@ -31,12 +31,14 @@ public class ReceivableService {
         String month=DatabaseMonthCodec.toDatabase(YearMonth.from(today).toString());
         List<BigDecimal> thresholds=thresholds(month);
         List<RecipientRole> roles=repository.roles();List<RecipientScope> scopes=repository.scopes();
+        Set<String> pendingDeliveries=new HashSet<>(repository.pendingDeliveryBillIds());
         List<Receivable> items=new ArrayList<>();Map<String,List<RecipientGroup>> groups=new HashMap<>();
         for(OverdueBill bill:repository.overdue(today)) {
             if(!bill.dueDate().isBefore(today)||bill.unpaidAmount().signum()<=0)continue;
             Dunning dunning=dunning(bill.dueDate(),today,thresholds);
             var recipients=groups.computeIfAbsent(bill.projectId(),id->recipients(id,repository.part(id,month),roles,scopes));
-            items.add(new Receivable(bill.billId(),bill.projectId(),bill.projectName(),BillingCheckService.decimal(bill.unpaidAmount()),bill.dueDate(),dunning,recipients,repository.history(bill.billId()),"발송 기능 연결 예정"));
+            String sendNotice=dunning.step()==0?"알림 대상 아님":pendingDeliveries.contains(bill.billId())?"전달 처리 중":recipients.get(dunning.step()-1).recipients().isEmpty()?"수신자 미지정":"다시알림 가능";
+            items.add(new Receivable(bill.billId(),bill.projectId(),bill.projectName(),BillingCheckService.decimal(bill.unpaidAmount()),bill.dueDate(),dunning,recipients,repository.history(bill.billId()),sendNotice));
         }
         items.sort(Comparator.comparingInt((Receivable r)->r.dunning().elapsedDays()).reversed().thenComparing(Receivable::dueDate).thenComparing(Receivable::billId));
         List<StepCard> cards=new ArrayList<>();
@@ -59,27 +61,11 @@ public class ReceivableService {
         return new Dunning(elapsed,step,step==3?null:step+1,step==3?null:due.plusDays(thresholds.get(step).setScale(0,RoundingMode.CEILING).longValueExact()),step==3);
     }
     static List<RecipientGroup> recipients(String projectId,ProjectPart part,List<RecipientRole> roles,List<RecipientScope> scopes) {
-        Map<String,Recipient> selected=new TreeMap<>();List<String> reasons=new ArrayList<>();List<RecipientGroup> result=new ArrayList<>();
-        add(selected,reasons,roles,r->r.role().equals("PM")&&scopes.stream().anyMatch(s->s.userId().equals(r.userId())&&"PROJ".equals(s.type())&&projectId.equals(s.projectId())),"프로젝트 PM 미지정");
-        result.add(group(1,selected,reasons));
-        if(part==null||part.partId()==null) {
-            add(selected,reasons,roles,r->r.role().equals("EXEC"),"영업파트 미지정 · EXEC 대체 수신자 미지정");
-        } else if(part.headquarters()) {
-            Predicate<RecipientRole> hq=r->r.role().equals("SALES_LDR")&&scopes.stream().anyMatch(s->s.userId().equals(r.userId())&&"PART".equals(s.type())&&part.partId().equals(s.partId()));
-            if(roles.stream().anyMatch(hq))add(selected,reasons,roles,hq,"HQ SALES_LDR 미지정");
-            else add(selected,reasons,roles,r->r.role().equals("EXEC"),"HQ SALES_LDR 없음 · EXEC 대체 수신자 미지정");
-        } else add(selected,reasons,roles,r->r.role().equals("SALES_LDR")&&Objects.equals(part.leaderId(),r.userId()),"영업파트 SALES_LDR 미지정");
-        result.add(group(2,selected,reasons));
-        add(selected,reasons,roles,r->r.role().equals("EXEC"),"EXEC 미지정");
-        add(selected,reasons,roles,r->r.role().equals("FIN"),"FIN 미지정");
-        result.add(group(3,selected,reasons));return List.copyOf(result);
+        return NotificationRecipients.dunning(projectId,
+            part==null?null:new NotificationRecipients.Part(part.partId(),part.headquarters(),part.leaderId()),
+            roles.stream().map(r->new NotificationRecipients.Role(r.userId(),r.name(),null,r.role())).toList(),
+            scopes.stream().map(s->new NotificationRecipients.Scope(s.userId(),s.type(),s.partId(),s.projectId())).toList())
+            .stream().map(g->new RecipientGroup(g.step(),g.recipients().stream()
+                .map(r->new Recipient(r.userId(),r.name(),r.qualifications())).toList(),g.unassignedReasons())).toList();
     }
-    private static void add(Map<String,Recipient> selected,List<String> reasons,List<RecipientRole> roles,Predicate<RecipientRole> eligible,String missing) {
-        List<RecipientRole> found=roles.stream().filter(eligible).toList();if(found.isEmpty())reasons.add(missing);
-        for(RecipientRole row:found) {
-            var old=selected.get(row.userId());Set<String> merged=new TreeSet<>();if(old!=null)merged.addAll(old.roles());merged.add(row.role());
-            selected.put(row.userId(),new Recipient(row.userId(),row.name(),List.copyOf(merged)));
-        }
-    }
-    private static RecipientGroup group(int step,Map<String,Recipient> selected,List<String> reasons) {return new RecipientGroup(step,List.copyOf(selected.values()),List.copyOf(reasons));}
 }

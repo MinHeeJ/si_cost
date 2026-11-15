@@ -26,6 +26,7 @@ import {
 vi.mock("./individualProfitabilityApi", async (original) => ({
   ...(await original<typeof import("./individualProfitabilityApi")>()),
   getIndividualProfitability: vi.fn(),
+  getIndividualProfitabilityPerson: vi.fn(),
 }));
 vi.mock("../shared/sharedApi");
 vi.mock("../clientsops/clientActionsApi");
@@ -224,6 +225,63 @@ beforeEach(() => {
   });
 });
 describe("개인 기간 조회 본문", () => {
+  it("모두 펼치기는 현재 페이지 사람만 같은 문맥으로 조회하고 모두 접기는 서버 호출 없이 합계를 유지한다", async () => {
+    vi.mocked(api.getIndividualProfitability).mockResolvedValue({
+      ...response([person("page-a"), person("page-b")]),
+      total: 60,
+    });
+    vi.mocked(api.getIndividualProfitabilityPerson).mockImplementation(
+      async (id) => ({
+        person: person(id),
+        context: response().context,
+        months: [],
+        issues: [],
+        calculationBasis: [],
+      }),
+    );
+    mount();
+    await screen.findByText("인력 page-a (관리-page-a)");
+    await userEvent.click(screen.getByTestId("profitability-expand-page"));
+    await waitFor(() =>
+      expect(api.getIndividualProfitabilityPerson).toHaveBeenCalledTimes(2),
+    );
+    const calls = vi.mocked(api.getIndividualProfitabilityPerson).mock.calls;
+    expect(calls.map(([id]) => id).sort()).toEqual(["page-a", "page-b"]);
+    expect(calls[0][1]).toEqual(calls[1][1]);
+    await userEvent.click(screen.getByTestId("profitability-collapse-all"));
+    expect(
+      screen.queryByText("월별 원본 원장 · 월평균 전 금액"),
+    ).not.toBeInTheDocument();
+    expect(api.getIndividualProfitabilityPerson).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText("필터 전체 합계")).toBeInTheDocument();
+  });
+  it("모두 펼침에서 실패한 사람만 오류를 보이고 다른 사람 원장은 유지한다", async () => {
+    vi.mocked(api.getIndividualProfitability).mockResolvedValue(
+      response([person("page-a"), person("page-b")]),
+    );
+    vi.mocked(api.getIndividualProfitabilityPerson).mockImplementation(
+      async (id) => {
+        if (id === "page-b") throw new Error("선택 인력 원장 조회 실패");
+        return {
+          person: person(id),
+          context: response().context,
+          months: [],
+          issues: [],
+          calculationBasis: [],
+        };
+      },
+    );
+    mount();
+    await screen.findByText("인력 page-a (관리-page-a)");
+    await userEvent.click(screen.getByTestId("profitability-expand-page"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "선택 인력 원장 조회 실패",
+    );
+    expect(screen.getAllByText("월별 원본 원장 · 월평균 전 금액")).toHaveLength(
+      2,
+    );
+    expect(api.getIndividualProfitabilityPerson).toHaveBeenCalledTimes(2);
+  });
   it("공개 응답의 nullable 표시명·관리번호·직무·등급을 유지하고 DEV_ID로 상세를 연다", async () => {
     const data = response();
     data.items[0].name = null;
@@ -254,11 +312,21 @@ describe("개인 기간 조회 본문", () => {
     await screen.findByText("인력 owned (관리-owned)");
     const form = screen.getByTestId("profitability-filters");
     expect(form).toHaveClass("sicost-filterbar");
-    expect(screen.getByRole("textbox", { name: "이름 검색" }).closest("label")).toHaveClass("sicost-field");
+    expect(
+      screen.getByRole("textbox", { name: "이름 검색" }).closest("label"),
+    ).toHaveClass("sicost-field");
     const actions = form.querySelector(".sicost-filterbar-actions")!;
-    expect(within(actions as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["초기화", "조회"]);
-    expect(screen.getByTestId("profitability-search-button")).toHaveClass("sicost-primary");
-    vi.mocked(api.getIndividualProfitability).mockImplementation(() => new Promise(() => {}));
+    expect(
+      within(actions as HTMLElement)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["초기화", "조회"]);
+    expect(screen.getByTestId("profitability-search-button")).toHaveClass(
+      "sicost-primary",
+    );
+    vi.mocked(api.getIndividualProfitability).mockImplementation(
+      () => new Promise(() => {}),
+    );
     await userEvent.click(screen.getByTestId("profitability-search-button"));
     expect(screen.getByTestId("profitability-search-button")).toBeDisabled();
     expect(screen.getByTestId("profitability-reset-button")).toBeDisabled();
@@ -267,12 +335,24 @@ describe("개인 기간 조회 본문", () => {
     window.innerWidth = 390;
     vi.mocked(api.getIndividualProfitability).mockResolvedValue(response([]));
     mount();
-    const reset = await screen.findByTestId("profitability-mobile-empty-reset-button");
-    expect(reset.closest('[data-testid="profitability-mobile-cards"]')).not.toBeNull();
-    const callsBeforeReset = vi.mocked(api.getIndividualProfitability).mock.calls.length;
+    const reset = await screen.findByTestId(
+      "profitability-mobile-empty-reset-button",
+    );
+    expect(
+      reset.closest('[data-testid="profitability-mobile-cards"]'),
+    ).not.toBeNull();
+    const callsBeforeReset = vi.mocked(api.getIndividualProfitability).mock
+      .calls.length;
     await userEvent.click(reset);
-    await waitFor(() => expect(api.getIndividualProfitability).toHaveBeenCalledTimes(callsBeforeReset + 1));
-    expect(api.getIndividualProfitability).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, size: 20, includeTurnkey: true }), expect.any(AbortSignal));
+    await waitFor(() =>
+      expect(api.getIndividualProfitability).toHaveBeenCalledTimes(
+        callsBeforeReset + 1,
+      ),
+    );
+    expect(api.getIndividualProfitability).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, size: 20, includeTurnkey: true }),
+      expect.any(AbortSignal),
+    );
   });
   it("등록 진입점은 실제 내보내기·계산안내와 서버 근거를 조립하고 응답 변경을 그대로 표시한다", async () => {
     const first = response();
@@ -387,7 +467,10 @@ describe("개인 기간 조회 본문", () => {
       expect.objectContaining({ view: "MONTHLY_AVERAGE" }),
       expect.any(AbortSignal),
     );
-    expect(screen.getByRole("button", { name: "월 평균" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "월 평균" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
   it("18개 기본열·4개 숨김열·누계급여 제목과 서버 전체합계/요약을 렌더링한다", async () => {
     mount();

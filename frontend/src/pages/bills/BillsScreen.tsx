@@ -42,6 +42,7 @@ export type BillsActionsContext = {
   refresh(): Promise<void>;
 };
 export type BillsScreenProps = {
+  initialBillId?: string;
   initialMonth?: string;
   initialSection?: string;
   initialMissingInvoiceNo?: boolean;
@@ -73,7 +74,9 @@ export function BillsScreen(props: BillsScreenProps = {}) {
         setYear(
           (old) =>
             old ??
-            (props.initialMonth ? Number(props.initialMonth.slice(0, 4)) : undefined) ??
+            (props.initialMonth
+              ? Number(props.initialMonth.slice(0, 4))
+              : undefined) ??
             (pref?.type === "YEAR" && /^\d{4}$/.test(pref.value ?? "")
               ? Math.max(min, Math.min(Number(pref?.value), current + 1))
               : current),
@@ -158,6 +161,7 @@ function BillsContent({
   initialMonth,
   initialSection,
   initialMissingInvoiceNo,
+  initialBillId,
 }: BillsScreenProps & {
   period: PeriodContext;
   year: number;
@@ -172,7 +176,11 @@ function BillsContent({
     () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
   );
   const [mobileRows, setMobileRows] = useState<api.Bill[]>([]);
-  const [tab, setTab] = useState<"list" | "checks" | "receivables">(initialSection === "checks" || initialSection === "receivables" ? initialSection : "list");
+  const [tab, setTab] = useState<"list" | "checks" | "receivables">(
+    initialSection === "checks" || initialSection === "receivables"
+      ? initialSection
+      : "list",
+  );
   const [checkCount, setCheckCount] = useState<number>();
   const [receivableCount, setReceivableCount] = useState<number>();
   const [query, setQuery] = useState<api.Query>({
@@ -191,9 +199,12 @@ function BillsContent({
     [summaryLoading, setSummaryLoading] = useState(true);
   const [selected, setSelectedKeys] = useState<Key[]>([]),
     [allMatching, setAllMatching] = useState(false),
-    [detailId, setDetailId] = useState<string>(),
+    [detailId, setDetailId] = useState<string | undefined>(initialBillId),
     [form, setForm] = useState<{ bill?: api.Bill; initial?: api.CreateBill }>(),
     [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    if (initialBillId) setDetailId(initialBillId);
+  }, [initialBillId]);
   const [message, setMessage] = useState(""),
     [actionError, setActionError] = useState<unknown>(),
     [pending, setPending] = useState(false);
@@ -717,8 +728,15 @@ function BillsContent({
           />
           <label>
             계산서 번호
-            <select data-testid="bill-missing-invoice-filter" value={query.missingInvoiceNo ? "true" : ""}
-              onChange={(e) => conditions({ missingInvoiceNo: e.target.value === "true" || undefined })}>
+            <select
+              data-testid="bill-missing-invoice-filter"
+              value={query.missingInvoiceNo ? "true" : ""}
+              onChange={(e) =>
+                conditions({
+                  missingInvoiceNo: e.target.value === "true" || undefined,
+                })
+              }
+            >
               <option value="">전체</option>
               <option value="true">번호누락만</option>
             </select>
@@ -782,7 +800,10 @@ function BillsContent({
         {message && <p role="status">{message}</p>}
         <div className="bill-list-actions">
           {selected.length > 0 || allMatching ? (
-            <span className="bill-selection-bar" data-testid="bill-selection-bar">
+            <span
+              className="bill-selection-bar"
+              data-testid="bill-selection-bar"
+            >
               <strong>
                 {allMatching
                   ? `조회된 전체 ${data?.total ?? 0}건 선택`

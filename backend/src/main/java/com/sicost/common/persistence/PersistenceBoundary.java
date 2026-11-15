@@ -40,6 +40,10 @@ public class PersistenceBoundary implements Interceptor {
     private static final String PAYROLL_KEY = "PAY_YM\\s*=\\s*\\?\\s+AND\\s+DEV_ID\\s*=\\s*\\?";
     private static final String CORRECTION = "(?is)\\s+SET\\s+CRCT_YN\\s*=\\s*'Y'\\s+WHERE\\s+ASGN_ID\\s*=\\s*\\?\\s+AND\\s+HIST_SN\\s*=\\s*\\?\\s+AND\\s+CRCT_YN\\s*=\\s*'N'\\s*";
     public static void requireAllowed(String sql) {
+        if (AutomationDeliveryPersistence.supports(sql)) {
+            AutomationDeliveryPersistence.requireAllowed(sql);
+            return;
+        }
         if (RecommendationPersistence.allowed(sql)) return;
         if (RecommendationLogPersistence.allowed(sql)) return;
         if (SalesOpportunityPersistence.allowed(sql)) return;

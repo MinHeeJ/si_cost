@@ -39,6 +39,17 @@ public class CashFlowService {
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Result calculateCashFlow(Query query){return annual(query).result();}
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public List<Month> calculateContiguousRange(YearMonth from,int count) {
+        if(count<1||count>3||from.isBefore(repository.base()))throw period("month");
+        Map<Integer,Result> years=new HashMap<>();List<Month> result=new ArrayList<>();
+        for(int i=0;i<count;i++) {
+            YearMonth month=from.plusMonths(i);
+            Result year=years.computeIfAbsent(month.getYear(),y->annual(new Query(y,Unit.WON),null,true).result());
+            result.add(year.months().stream().filter(m->m.month().equals(month.toString())).findFirst().orElseThrow());
+        }
+        return List.copyOf(result);
+    }
     public record CloseImpact(Month before,Month after) {}
     /** Same ledger and source snapshot as the annual screen; the CLOSE is hypothetical only. */
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
@@ -54,9 +65,12 @@ public class CashFlowService {
         return annual(query,null);
     }
     private Annual annual(Query query,String closingMonth) {
+        return annual(query,closingMonth,false);
+    }
+    private Annual annual(Query query,String closingMonth,boolean internalRange) {
         users.currentUser();LocalDate today=today();int year=query.year()==null?today.getYear():query.year();
         YearMonth base=repository.base();
-        if(year<base.getYear()||year>today.getYear())throw period("year");
+        if(year<base.getYear()||year>(internalRange?today.getYear()+1:today.getYear()))throw period("year");
         var snapshot=repository.load(year);YearMonth current=YearMonth.from(today);
         if(closingMonth!=null) {
             String db=closingMonth.replace("-","");

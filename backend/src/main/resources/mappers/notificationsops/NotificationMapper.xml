@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.notificationsops.NotificationMapper">
+  <select id="unreadCount" resultType="long">
+    SELECT count(*) FROM tb_sy_noti
+    WHERE rcvr_user_id=#{userId} AND read_yn='N' AND send_mthd_cd IN ('SYS','BOTH')
+  </select>
+  <select id="receivableCount" resultType="long">
+    SELECT count(*) FROM tb_bl_bill b
+    LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+    WHERE b.cncl_yn='N' AND b.tot_amt-COALESCE(r.amount,0)&gt;0
+  </select>
+  <select id="currentMonthUnclosed" resultType="boolean">
+    SELECT NOT EXISTS (SELECT 1 FROM tb_cl_close WHERE close_ym=#{month} AND close_stat_cd='CLOSE')
+  </select>
+  <select id="lock" resultType="com.sicost.notificationsops.NotificationDtos$StoredNotification">
+    SELECT noti_id AS "id",noti_type_cd AS "typeCode",noti_cn AS "content",send_mthd_cd AS "sendMethodCode",
+      read_yn='Y' AS "read",read_dttm AS "readAt",noti_dttm AS "notifiedAt",link_scrn_id AS "screenId",link_key AS "linkKey"
+    FROM tb_sy_noti WHERE rcvr_user_id=#{userId} AND noti_id=#{id} AND send_mthd_cd IN ('SYS','BOTH') FOR UPDATE
+  </select>
+  <update id="markRead">
+    UPDATE tb_sy_noti SET read_yn='Y',read_dttm=#{readAt},mod_user_id=#{userId},mod_dttm=#{modifiedAt}
+    WHERE rcvr_user_id=#{userId} AND noti_id=#{id} AND read_yn='N' AND send_mthd_cd IN ('SYS','BOTH')
+  </update>
+  <update id="markAllRead">
+    UPDATE tb_sy_noti SET read_yn='Y',read_dttm=#{cutoffAt},mod_user_id=#{userId},mod_dttm=#{cutoffAt}
+    WHERE rcvr_user_id=#{userId} AND read_yn='N' AND send_mthd_cd IN ('SYS','BOTH') AND noti_dttm &lt;= #{cutoffAt}
+  </update>
+  <select id="registeredScreen" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM tb_sy_menu WHERE scrn_id=#{screenId} AND use_yn='Y')
+  </select>
+</mapper>

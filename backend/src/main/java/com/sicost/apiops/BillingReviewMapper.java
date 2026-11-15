@@ -15,6 +15,7 @@ public interface BillingReviewMapper {
     String checkSnapshot(CheckKey key);
     String billSnapshot(@Param("id") String id);
     List<OverdueBill> overdue(@Param("today") LocalDate today);
+    List<String> pendingDeliveryBillIds();
     List<DunningHistory> sentHistory(@Param("id") String id);
     List<RecipientRole> eligibleRoles();
     List<RecipientScope> recipientScopes();

@@ -1,0 +1,49 @@
+.dunning-delivery {
+  font-size: 13px;
+  min-width: 0;
+}
+.dunning-preview-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+.dunning-preview-fields div {
+  min-width: 0;
+}
+.dunning-preview-fields dt {
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+.dunning-preview-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.dunning-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dunning-round {
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.dunning-round summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.dunning-empty {
+  padding: 48px 16px;
+  color: var(--text-sub);
+  text-align: center;
+}
+.dunning-delivery td {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .dunning-preview-fields {
+    grid-template-columns: 1fr;
+  }
+}

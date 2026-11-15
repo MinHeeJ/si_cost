@@ -30,7 +30,6 @@ public class DeveloperStateService {
     private LocalDateTime now(){return LocalDateTime.ofInstant(clock.instant(),ZoneId.of("Asia/Seoul"));}
     public States get(String id) {
         DeveloperStateInput.id(id);
-        recalculate(id,false);
         return repository.read(()->{
             repository.actor();Developer developer=required(id);List<Stored> rows=mapper().states(id);Calendar calendar=calendar();
             List<State> views=rows.stream().sorted(Comparator.comparing(Stored::startDate).thenComparingInt(Stored::sn).reversed())
@@ -208,13 +207,9 @@ public class DeveloperStateService {
     private void one(int affected){if(affected!=1)throw new IllegalStateException("근무 상태를 저장하지 못했습니다.");}
     private void derive(String id,Developer old,List<Stored> rows,List<Assignment> assignments,LocalDate retire,boolean resume,String actor) {
         LocalDate date=today();boolean system=actor.equals("SYSTEM");
-        String status;
-        if(retire!=null && retire.isBefore(date))status="RETIRE";
-        else if(rows.stream().anyMatch(r->r.state().equals("LEAVE") && covers(r,date)))status="LEAVE";
-        else {
-            LocalDate finalEnd=assignments.stream().filter(a->!a.startDate().isAfter(date) && !a.endDate().isBefore(date)).map(Assignment::endDate).max(LocalDate::compareTo).orElse(null);
-            status=finalEnd==null?"IDLE":!finalEnd.isAfter(YearMonth.from(date).plusMonths(2).atEndOfMonth())?"WTHDR":"INPUT";
-        }
+        String status=com.sicost.common.validation.DeveloperWorkStatus.calculate(retire,
+            rows.stream().filter(r->r.state().equals("LEAVE")).map(r->new com.sicost.common.validation.DeveloperWorkStatus.Leave(r.startDate(),r.endDate())).toList(),
+            assignments.stream().map(a->new com.sicost.common.validation.DeveloperWorkStatus.Assignment(a.startDate(),a.endDate())).toList(),date);
         String use=status.equals("RETIRE")?"N":resume?"Y":old.useYn();
         if(Objects.equals(old.retireDate(),retire) && old.status().equals(status) && old.useYn().equals(use))return;
         one(mapper().updateDeveloper(new DeveloperMutation(id,retire,status,use,actor,now())));

@@ -4,7 +4,9 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { ReceivablesPanel } from "./ReceivablesPanel";
 import * as api from "./billingReviewApi";
+import * as delivery from "../receivablesops/dunningDeliveryApi";
 vi.mock("./billingReviewApi");
+vi.mock("../receivablesops/dunningDeliveryApi");
 const row: api.Receivable = {
   billId: "selected-bill",
   projectId: "selected-project",
@@ -54,6 +56,32 @@ const result: api.ReceivablesPage = {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getReceivables).mockResolvedValue(result);
+  vi.mocked(delivery.getReceivableDeliveryPreview).mockResolvedValue({
+    billId: row.billId,
+    projectId: row.projectId,
+    projectName: row.projectName,
+    unpaidAmount: row.unpaidAmount,
+    dueDate: row.dueDate,
+    currentStep: 1,
+    recipients: [],
+    unassignedReasons: [],
+    sendMethodCode: "BOTH",
+    mailConfigured: false,
+    inProgress: false,
+    canRemind: false,
+    unavailableReasons: ["수신자 미지정"],
+    revision: "selected-preview",
+    observedAt: "2026-01-01T09:00:00+09:00",
+  });
+  vi.mocked(delivery.getReceivableDeliveries).mockResolvedValue({
+    billId: row.billId,
+    rounds: [],
+    page: 1,
+    size: 50,
+    total: 0,
+    hasMore: false,
+    observedAt: "2026-01-01T09:00:00+09:00",
+  });
 });
 function draw(year = 2026) {
   const detail = vi.fn(),
@@ -194,4 +222,40 @@ it.each([2025, 2027])("%s 연도에서는 조회를 하지 않는다", (year) =>
     screen.getByText("미수 알림은 올해만 제공합니다."),
   ).toBeInTheDocument();
   expect(api.getReceivables).not.toHaveBeenCalled();
+});
+
+it("목록 행의 다시알림은 선택한 청구를 미리보기만 하고 취소는 명령을 보내지 않는다", async () => {
+  draw();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "다시알림" }),
+  );
+  await screen.findByText("수신자 미지정");
+  expect(delivery.getReceivableDeliveryPreview).toHaveBeenCalledWith(
+    row.billId,
+    expect.any(AbortSignal),
+  );
+  expect(
+    screen.getByRole("button", { name: "확인 후 다시알림" }),
+  ).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "취소" }));
+  expect(delivery.createReceivableReminder).not.toHaveBeenCalled();
+});
+
+it("목록 행의 전달상태는 선택한 청구만 읽고 빈 회차도 성공으로 합성하지 않는다", async () => {
+  draw();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "전달상태" }),
+  );
+  await waitFor(() =>
+    expect(delivery.getReceivableDeliveries).toHaveBeenCalledWith(
+      row.billId,
+      1,
+      50,
+      expect.any(AbortSignal),
+    ),
+  );
+  expect(
+    await screen.findByTestId("delivery-status-panel"),
+  ).toBeInTheDocument();
+  expect(delivery.createReceivableReminder).not.toHaveBeenCalled();
 });

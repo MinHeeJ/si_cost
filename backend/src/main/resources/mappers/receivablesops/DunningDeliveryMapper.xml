@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.receivablesops.DunningDeliveryMapper">
+  <select id="bill" resultType="com.sicost.receivablesops.DunningDeliveryDtos$BillSource">
+    SELECT b.bill_id AS "billId",b.proj_id AS "projectId",p.proj_nm AS "projectName",
+      b.tot_amt-COALESCE((SELECT sum(r.rcpt_amt) FROM tb_bl_rcpt r WHERE r.bill_id=b.bill_id AND r.cncl_yn='N'),0) AS "unpaidAmount",
+      b.pay_due_dt AS "dueDate",b.cncl_yn='Y' AS "cancelled"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id WHERE b.bill_id=#{billId}
+  </select>
+  <select id="lockBill" resultType="string">SELECT bill_id FROM tb_bl_bill WHERE bill_id=#{billId} FOR UPDATE</select>
+  <select id="interrupted" resultType="com.sicost.receivablesops.DunningDeliveryDtos$DeliveryWork">
+    SELECT DISTINCT bill_id AS "billId",event_key AS "eventKey" FROM tb_sy_delivery_task WHERE state_cd='SENDING' AND noti_type_cd='DUN' ORDER BY bill_id,event_key
+  </select>
+  <select id="automaticPending" resultType="com.sicost.receivablesops.DunningDeliveryDtos$DeliveryWork">
+    SELECT DISTINCT bill_id AS "billId",event_key AS "eventKey" FROM tb_sy_delivery_task WHERE state_cd='PENDING' AND event_key LIKE 'DUN:A:%' ORDER BY bill_id,event_key
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT jsonb_build_object('bill',to_jsonb(b),
+      'receipts',(SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.rcpt_id),'[]'::jsonb) FROM tb_bl_rcpt r WHERE r.bill_id=b.bill_id),
+      'project',(SELECT to_jsonb(p) FROM tb_pj_proj p WHERE p.proj_id=b.proj_id),
+      'standards',(SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY s.std_cd,s.aply_bgn_ym),'[]'::jsonb) FROM tb_sy_oper_std s WHERE s.std_cd IN ('DUN_D1','DUN_D2','DUN_D3')),
+      'parts',(SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.proj_id,p.aply_bgn_ym),'[]'::jsonb) FROM tb_pj_proj_part p WHERE p.proj_id=b.proj_id),
+      'partRows',(SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.part_id),'[]'::jsonb) FROM tb_bs_part p),
+      'leaders',(SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.part_id,p.aply_bgn_ym),'[]'::jsonb) FROM tb_bs_part_std p),
+      'users',(SELECT COALESCE(jsonb_agg(jsonb_build_object('id',u.user_id,'name',u.user_nm,'email',u.email_addr,'status',u.user_stat_cd,
+        'reg',u.reg_dttm,'mod',u.mod_dttm,'regBy',u.reg_user_id,'modBy',u.mod_user_id) ORDER BY u.user_id),'[]'::jsonb) FROM tb_sy_user u),
+      'roles',(SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.role_id),'[]'::jsonb) FROM tb_sy_role r),
+      'userRoles',(SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.user_id,r.role_id),'[]'::jsonb) FROM tb_sy_user_role r),
+      'scopes',(SELECT COALESCE(jsonb_agg(to_jsonb(s) ORDER BY s.user_id,s.scope_sn),'[]'::jsonb) FROM tb_sy_user_scope s),
+      'tasks',(SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.task_id),'[]'::jsonb) FROM tb_sy_delivery_task t WHERE t.bill_id=b.bill_id),
+      'history',(SELECT COALESCE(jsonb_agg(to_jsonb(h) ORDER BY h.dun_sn),'[]'::jsonb) FROM tb_bl_dun_hist h WHERE h.bill_id=b.bill_id))::text
+    FROM tb_bl_bill b WHERE b.bill_id=#{billId}
+  </select>
+  <select id="rounds" resultType="com.sicost.receivablesops.DunningDeliveryDtos$RoundSource">
+    SELECT COALESCE(t.event_key,'') AS "eventKey",COALESCE(t.dun_sn,h.dun_sn)::int AS "reservedSn",
+      COALESCE(t.dun_step,h.dun_step)::int AS "step",COALESCE(t.resend_yn,h.resend_yn)='Y' AS "resend"
+    FROM (SELECT DISTINCT event_key,dun_sn,dun_step,resend_yn FROM tb_sy_delivery_task WHERE bill_id=#{billId}) t
+    FULL JOIN (SELECT * FROM tb_bl_dun_hist WHERE bill_id=#{billId}) h ON h.dun_sn=t.dun_sn ORDER BY COALESCE(t.dun_sn,h.dun_sn)
+  </select>
+  <select id="tasks" resultType="com.sicost.receivablesops.DunningDeliveryDtos$TaskSource">
+    SELECT task_id::text AS "taskId",event_key AS "eventKey",bill_id AS "billId",dun_sn::int AS "reservedSn",dun_step::int AS "step",resend_yn='Y' AS "resend",
+      rcvr_user_id AS "userId",rcvr_nm AS "userName",mail_to AS "emailAddress",channel_cd AS "channelCode",state_cd AS "state",noti_id::text AS "notificationId",
+      message_id AS "messageId",sent_dttm AS "sentAt",error_cd AS "errorCode",error_cn AS "errorMessage",mail_subject AS "subject",mail_body AS "body",reg_dttm AS "registeredAt",
+      mod_user_id AS "modifiedBy",mod_dttm AS "modifiedAt"
+    FROM tb_sy_delivery_task WHERE bill_id=#{billId} ORDER BY dun_sn,rcvr_user_id,channel_cd
+  </select>
+  <select id="histories" resultType="com.sicost.receivablesops.DunningDeliveryDtos$DeliveryHistory">
+    SELECT dun_sn::int AS "sn",dun_step::int AS "step",send_dt AS "sendDate",rcvr_desc AS "receiverDescription",send_mthd_cd AS "sendMethodCode",resend_yn='Y' AS "resend"
+    FROM tb_bl_dun_hist WHERE bill_id=#{billId} ORDER BY dun_sn
+  </select>
+  <select id="nextSerial" resultType="int">
+    SELECT COALESCE(max(sn),0)::int+1 FROM (SELECT dun_sn AS sn FROM tb_bl_dun_hist WHERE bill_id=#{billId}
+      UNION ALL SELECT dun_sn FROM tb_sy_delivery_task WHERE bill_id=#{billId}) s
+  </select>
+  <insert id="insertMail">
+    INSERT INTO tb_sy_delivery_task (task_id,event_key,rcvr_user_id,rcvr_nm,channel_cd,state_cd,noti_type_cd,noti_cn,link_scrn_id,link_key,
+      mail_to,mail_subject,mail_body,message_id,bill_id,dun_step,dun_sn,resend_yn,error_cd,error_cn,reg_user_id,reg_dttm)
+    VALUES (CAST(#{taskId} AS uuid),#{eventKey},#{userId},#{userName},'MAIL',#{state},'DUN',#{content},'UI-13',#{billId},
+      #{emailAddress},#{subject},#{body},#{messageId},#{billId},#{step},#{serial},'Y',#{errorCode},#{errorMessage},'SYSTEM',#{at})
+  </insert>
+  <update id="transition">
+    UPDATE tb_sy_delivery_task SET state_cd=#{state},message_id=#{messageId},sent_dttm=#{sentAt},error_cd=#{errorCode},error_cn=#{errorMessage},mod_user_id='SYSTEM',mod_dttm=#{at}
+    WHERE task_id=CAST(#{taskId} AS uuid) AND state_cd=#{expectedState}
+  </update>
+  <insert id="insertHistory">
+    INSERT INTO tb_bl_dun_hist (bill_id,dun_sn,dun_step,send_dt,rcvr_desc,send_mthd_cd,resend_yn,reg_user_id,reg_dttm)
+    VALUES (#{billId},#{sn},#{step},#{sendDate},#{receiverDescription},#{sendMethodCode},#{resend},'SYSTEM',#{at})
+  </insert>
+</mapper>

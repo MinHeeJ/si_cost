@@ -37,6 +37,27 @@ export {
 export const getHealth = () => request<void>("/api/health");
 
 export {
+  getDashboard,
+  getDashboardExport,
+} from "../pages/dashboardops/dashboardApi";
+export {
+  getNotifications,
+  getNotificationUnreadCount,
+  saveNotificationRead,
+  saveNotificationsReadAll,
+} from "../pages/notificationsops/notificationsApi";
+export {
+  getReceivableDeliveryPreview,
+  getReceivableDeliveries,
+  createReceivableReminder,
+} from "../pages/receivablesops/dunningDeliveryApi";
+export {
+  getAutomationRuns,
+  createAutomationRunToday,
+} from "../pages/automationrunsops/automationRunsApi";
+export { getMyProfile } from "../pages/meops/profileApi";
+
+export {
   getCashFlow,
   getCashFlowSources,
   getCashFlowExport,

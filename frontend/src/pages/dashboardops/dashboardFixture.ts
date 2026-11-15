@@ -1,0 +1,143 @@
+import type {
+  DashboardBasis,
+  DashboardData,
+  DashboardMetric,
+} from "./dashboardApi";
+export function dashboardFixture(): DashboardData {
+  const basis: DashboardBasis = {
+    basisMonth: "2026-07",
+    basisDate: "2026-07-15",
+    sourceService: "회사 손익",
+    observedAt: "2026-07-15T09:00:00+09:00",
+    status: "AVAILABLE",
+    reasons: [],
+  };
+  const link = { screenId: "UI-08", linkKey: null };
+  const metric = (
+    metricCode: DashboardMetric["metricCode"],
+  ): DashboardMetric => ({
+    metricCode,
+    value: metricCode === "UTILIZATION" ? "0.0" : "-1001",
+    unit: metricCode === "UTILIZATION" ? "PERCENT" : "KRW",
+    previousValue: "0",
+    difference: "-1001",
+    changeRate: null,
+    targetValue: null,
+    achievementRate: null,
+    profitRate: null,
+    targetGapPercentagePoints: null,
+    idlePersonCount: 0,
+    overdueCount: 2,
+    overdueAmount: "1001",
+    basis,
+    link,
+  });
+  return {
+    selectedMonth: "2026-07",
+    today: "2026-07-15",
+    currentMonth: "2026-07",
+    cashBaseMonth: "2026-01",
+    lastClosedMonth: "2026-06",
+    selectedMonthCloseStatus: "WORK",
+    provisional: true,
+    observedAt: basis.observedAt,
+    scope: "ALL",
+    metrics: (
+      [
+        "SALES",
+        "OPERATING_PROFIT",
+        "YTD_OPERATING_PROFIT",
+        "UTILIZATION",
+        "RECEIVABLE",
+      ] as const
+    ).map(metric),
+    actionsBasis: basis,
+    actions: [
+      {
+        actionCode: "OVERDUE_RECEIVABLE",
+        count: 2,
+        urgent: true,
+        amount: "1001",
+        personCount: null,
+        months: [],
+        withoutNextAssignmentCount: null,
+        recommendedPlacementCount: null,
+        reason: "납기 다음날부터 연체",
+        basis,
+        link: { screenId: "UI-13", linkKey: "overdue" },
+      },
+    ],
+    actionTypeCount: 1,
+    urgentActionTypeCount: 1,
+    closeProgress: {
+      basis,
+      closeStatus: "WORK",
+      passedCheckCount: 3,
+      totalCheckCount: 6,
+      remainingChecks: [
+        {
+          checkCode: "MM_OVER",
+          status: "WARN",
+          count: 1,
+          reason: "MM 초과 확인",
+        },
+      ],
+      snapshot: false,
+      link: { screenId: "UI-14", linkKey: "2026-07" },
+    },
+    projectAlertsBasis: basis,
+    projectAlerts: [
+      {
+        projectId: "00001",
+        projectName: "검토 프로젝트",
+        contractTypeCode: "MO",
+        alertType: "BUDGET_EXCEEDED",
+        reason: "예산 100% 도달",
+        marginRate: "-1.2",
+        budgetConsumptionRate: "100.0",
+        basis,
+        link: { screenId: "UI-04", linkKey: "00001" },
+      },
+    ],
+    salesCostTrendBasis: basis,
+    salesCostTrend: Array.from({ length: 12 }, (_, i) => ({
+      month: `2026-${String(i + 1).padStart(2, "0")}`,
+      salesAmount: i < 7 ? "1001" : null,
+      salesCostAmount: i < 7 ? "0" : null,
+      salesTargetAmount: "2000",
+    })),
+    supplyBasis: basis,
+    supplyForecast: Array.from({ length: 6 }, (_, i) => ({
+      month: i < 5 ? `2026-${String(i + 8).padStart(2, "0")}` : "2027-01",
+      requiredPersons: "2.0",
+      availablePersons: "0.0",
+      differencePersons: "-2.0",
+    })),
+    salesPartsBasis: basis,
+    salesParts: [
+      {
+        partId: "00002",
+        partName: "미지정",
+        salesAmount: "0",
+        projectCostAmount: "1001",
+        contributionMarginRate: null,
+      },
+    ],
+    salesPartExplanation: "회사 비용 임의 안분 없음",
+    pipeline: {
+      basis,
+      opportunityCount: 0,
+      weightedExpectedAmount: "0",
+      startingSoon: [],
+    },
+    cashBasis: basis,
+    cashForecast: ["2026-12", "2027-01", "2027-02"].map((month) => ({
+      month,
+      closingBalance: null,
+      minimumCashAmount: "0",
+      shortage: null,
+      unconfirmedReasons: ["급여 원천 미확인"],
+      link: { screenId: "UI-21", linkKey: month },
+    })),
+  };
+}
