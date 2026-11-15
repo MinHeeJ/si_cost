@@ -20,7 +20,8 @@ class FinancialCashContributionTest {
     @Test void noSourcesIsValidCashZeroEvenWhenMonthlyAllocationIsUnknown() {
         var result=contributions(snapshot(),month,unknownAllocation());
         assertThat(result.get("cashTaxPayment")).isEqualTo("0");assertThat(result.get("cashCardExpense")).isEqualTo("0");
-        assertThat(result.get("corporateTaxAllocation")).isNull();assertThat(result.get("verified")).isEqualTo(true);
+        assertThat(result.get("verified")).isEqualTo(false);assertThat(result.get("cashIssues")).isEqualTo(List.of());
+        assertThat(result.get("corporateTaxAllocation")).isNull();assertThat(result.get("cashVerified")).isEqualTo(true);
     }
     @Test void nonOperatingIncomeWithoutIoDateUsesFinancialMonthOnceWithVat() {
         var source=snapshot();source.withArray("items").addObject().put("fin_cls_cd","NOPR_IN").put("fin_ym","202607").put("amt","-100").put("vat_amt","10").putNull("io_dt");
@@ -38,18 +39,18 @@ class FinancialCashContributionTest {
         source.withArray("taxPayments").addObject().put("tax_yr","2026").put("pay_type_cd","MID").put("pay_yn","N").put("pay_due_dt","2026-07-31").put("pay_amt","100");
         source.withArray("taxPayments").addObject().put("tax_yr","2025").put("pay_type_cd","CNFM").put("pay_yn","Y").put("pay_due_dt","2026-03-31").put("pay_dt","2026-07-10").put("pay_amt","50");
         var result=contributions(source,month,unknownAllocation(),Set.of(month));
-        assertThat(result.get("cashTaxPayment")).isEqualTo("50");assertThat(result.get("verified")).isEqualTo(true);
+        assertThat(result.get("cashTaxPayment")).isEqualTo("50");assertThat(result.get("cashVerified")).isEqualTo(true);
     }
     @Test void closedUnknownPlDoesNotInvalidateActualCash() {
         var source=snapshot();source.withArray("taxPayments").addObject().put("pay_yn","N").put("pay_due_dt","2026-07-31").put("pay_type_cd","CNFM").putNull("pay_amt");
         var allocation=allocate("2026",null,List.of(new TaxMonth(month,"CLOSE",null,"Y","N")));
         var result=contributions(source,month,allocation);
-        assertThat(allocation.verified()).isFalse();assertThat(result.get("cashTaxPayment")).isEqualTo("0");assertThat(result.get("verified")).isEqualTo(true);
+        assertThat(allocation.verified()).isFalse();assertThat(result.get("cashTaxPayment")).isEqualTo("0");assertThat(result.get("cashVerified")).isEqualTo(true);
     }
     @Test void openUnknownFinalTaxIsNullNotZero() {
         var source=snapshot();source.withArray("taxPayments").addObject().put("tax_yr","2026").put("pay_type_cd","CNFM").put("pay_yn","N").put("pay_due_dt","2026-07-31").putNull("pay_amt");
         var result=contributions(source,month,unknownAllocation());
-        assertThat(result.get("cashTaxPayment")).isNull();assertThat(result.get("verified")).isEqualTo(false);
+        assertThat(result.get("cashTaxPayment")).isNull();assertThat(result.get("cashVerified")).isEqualTo(false);
     }
     @Test void paidTaxWithUnknownAmountIsNeverEstimatedFromAnnual() {
         var source=snapshot();source.withArray("taxes").addObject().put("tax_yr","2026").put("est_tax_amt","100");
@@ -59,9 +60,9 @@ class FinancialCashContributionTest {
     @Test void cardDetailsWithoutParentAreUnknownAndExplicitCashZeroIsValid() {
         var source=snapshot();source.withArray("cardPayments").addObject().put("pay_amt","100");
         var unknown=contributions(source,month,unknownAllocation());
-        assertThat(unknown.get("cashCardExpense")).isNull();assertThat(unknown.get("verified")).isEqualTo(false);
+        assertThat(unknown.get("cashCardExpense")).isNull();assertThat(unknown.get("cashVerified")).isEqualTo(false);
         source.withArray("cardMonths").addObject().put("cash_amt","0").put("card_sum_amt","100");
-        var zero=contributions(source,month,unknownAllocation());assertThat(zero.get("cashCardExpense")).isEqualTo("0");assertThat(zero.get("verified")).isEqualTo(true);
+        var zero=contributions(source,month,unknownAllocation());assertThat(zero.get("cashCardExpense")).isEqualTo("0");assertThat(zero.get("cashVerified")).isEqualTo(true);
     }
     @Test void cardParentIsCountedOnceAndNullOverrideRemainsUnknown() {
         var source=snapshot();source.withArray("cardPayments").addObject().put("pay_amt","100");

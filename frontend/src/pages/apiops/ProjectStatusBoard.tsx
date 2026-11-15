@@ -43,36 +43,27 @@ export function ProjectStatusBoard({
   renderExport,
   columnView,
   dense,
-  pageSize,
-  onPageSizeChange,
+  pageSize, onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState<api.AnalysisQuery>(
-    Object.assign(
-      pageSize === undefined ? {} : { size: analysisPageSize(pageSize) },
-      Object.fromEntries(
-        [...params.entries()].filter(([key]) =>
-          [
-            "light",
-            "contractType",
-            "partId",
-            "page",
-            "size",
-            "sort",
-            "direction",
-          ].includes(key),
-        ),
+    Object.assign(pageSize===undefined?{}:{size:analysisPageSize(pageSize)}, Object.fromEntries(
+      [...params.entries()].filter(([key]) =>
+        [
+          "light",
+          "contractType",
+          "partId",
+          "page",
+          "size",
+          "sort",
+          "direction",
+        ].includes(key),
       ),
     ),
-  );
-  const settings = useAnalysisSettings();
-  const previousSize = useRef(pageSize);
-  useEffect(() => {
-    if (previousSize.current !== pageSize) {
-      previousSize.current = pageSize;
-      apply({ ...query, size: analysisPageSize(pageSize ?? 50), page: 1 });
-    }
-  }, [pageSize]);
+  ));
+  const settings=useAnalysisSettings();
+  const previousSize=useRef(pageSize);
+  useEffect(()=>{if(previousSize.current!==pageSize){previousSize.current=pageSize;apply({...query,size:analysisPageSize(pageSize ?? 50),page:1});}},[pageSize]);
   const [draft, setDraft] = useState(query),
     [parts, setParts] = useState<PartOption[]>([]),
     [tab, setTab] = useState(
@@ -140,7 +131,6 @@ export function ProjectStatusBoard({
           <ul className="project-analysis-reasons">
             {row.reasons.map((reason, index) => (
               <li
-                data-testid={`status-reason-${row.projectId.toLowerCase()}-${index}`}
                 key={`${reason.kind}-${index}`}
                 title={`${reason.formula} · 기준 ${reason.threshold}`}
               >
@@ -358,9 +348,7 @@ export function ProjectStatusBoard({
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
-        onReset={() =>
-          apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
-        }
+        onReset={() => apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })}
       >
         <label className="sicost-field">
           신호등
@@ -371,12 +359,7 @@ export function ProjectStatusBoard({
           >
             <option value="">전체</option>
             {["위험", "주의", "정상"].map((light) => (
-              <option
-                data-testid={`status-light-option-${["위험", "주의", "정상"].indexOf(light)}`}
-                key={light}
-              >
-                {light}
-              </option>
+              <option key={light}>{light}</option>
             ))}
           </select>
         </label>
@@ -437,20 +420,8 @@ export function ProjectStatusBoard({
           page={result.data?.page ?? 1}
           size={result.data?.size ?? 50}
           onPageChange={(page) => apply({ ...query, page })}
-          onSizeChange={(size) => {
-            void settings.run(async () => {
-              if (window.innerWidth > 767) await onPageSizeChange?.(size);
-              apply({ ...query, size, page: 1 });
-            });
-          }}
-          sort={
-            query.sort
-              ? {
-                  id: String(query.sort),
-                  direction: query.direction === "DESC" ? "DESC" : "ASC",
-                }
-              : undefined
-          }
+          onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...query,size,page:1});});}}
+          sort={query.sort ? {id:String(query.sort),direction:query.direction === "DESC"?"DESC":"ASC"} : undefined}
           onSortChange={(id) =>
             apply({
               ...query,
@@ -463,16 +434,7 @@ export function ProjectStatusBoard({
             })
           }
           empty="조건에 맞는 진행 프로젝트가 없습니다."
-          emptyAction={
-            <button
-              type="button"
-              onClick={() =>
-                apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
-              }
-            >
-              조건 초기화
-            </button>
-          }
+          emptyAction={<button type="button" onClick={() => apply({page: 1, size: analysisPageSize(pageSize ?? 50)})}>조건 초기화</button>}
         />
       </section>
       <section

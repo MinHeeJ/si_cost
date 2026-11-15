@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   FinancialItemsEditor,
@@ -86,4 +86,19 @@ it("uses one-time financial source month without saving destination PERIOD", asy
         String(url).includes("preferences") || options?.method === "PUT",
     ),
   ).toBe(false);
+});
+
+function EntryButtons() {
+  const navigate = useNavigate();
+  return <><button onClick={() => navigate("/UI-13", { state: { fromMonthClose: true, month: "2026-05" } })}>다른 화면</button><button onClick={() => navigate("/UI-10", { state: { fromCashFlow: true, month: "2026-03" } })}>재무 다시</button><FinancialItemsScreen /></>;
+}
+it("retains a cached financial tab when another screen receives month context, then applies reentry context", async () => {
+  render(<MemoryRouter initialEntries={[{ pathname: "/UI-10", state: { fromCashFlow: true, month: "2026-02" } }]}><EntryButtons /></MemoryRouter>);
+  await screen.findByTestId("financial-items-panel");
+  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
+  await userEvent.click(screen.getByRole("button", { name: "다른 화면" }));
+  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
+  await userEvent.click(screen.getByRole("button", { name: "재무 다시" }));
+  await waitFor(() => expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-03"));
+  expect(fetcher.mock.calls.some(([url]) => String(url).includes("preferences"))).toBe(false);
 });

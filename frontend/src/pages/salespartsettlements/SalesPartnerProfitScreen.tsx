@@ -56,13 +56,19 @@ export function SalesPartnerProfitScreen({
 }: SalesPartnerProfitScreenProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
+  const incoming = location.state as { fromMonthClose?: boolean; month?: string; partId?: string } | null;
+  const entry = useRef<{ key: string; month?: string; partId?: string }>();
+  if (location.pathname === "/UI-19" && incoming?.fromMonthClose && entry.current?.key !== location.key)
+    entry.current = { key: location.key, month: incoming.month, partId: incoming.partId };
+  const entryMonth = entry.current?.month;
   const shared = useSharedScreen("UI-19");
   const [query, setQuery] = useState<api.SettlementQuery>({
     ...defaultQuery,
+    ...(entryMonth ? { month: entryMonth } : {}),
     size: shared.pageSize ?? 50,
   });
   const [tabs, setTabs] = useState<api.SettlementTabsResult>();
-  const [selected, setSelected] = useState<string>();
+  const [selected, setSelected] = useState<string | undefined>(entry.current?.partId);
   const [data, setData] = useState<api.SettlementResult>();
   const [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -71,6 +77,11 @@ export function SalesPartnerProfitScreen({
   const [unit, setUnit] = useState<AmountUnit>("천원"),
     [person, setPerson] = useState<string>();
   useEffect(() => { setPerson(undefined); }, [location.pathname]);
+  useEffect(() => {
+    if (!entryMonth) return;
+    setQuery(q => ({ ...q, month: entryMonth, page: 1 }));
+    setSelected(entry.current?.partId || undefined);
+  }, [entry.current?.key, entryMonth]);
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const refresh = () => setReload((n) => n + 1);
@@ -308,7 +319,7 @@ export function SalesPartnerProfitScreen({
   return (
     <SharedScreenFrame
       screenId="UI-19"
-      periodBar={<ScreenPeriodBar screenId="UI-19" />}
+      periodBar={<ScreenPeriodBar screenId="UI-19" initialMonth={entryMonth} />}
     >
       <div
         className="settlement-screen"

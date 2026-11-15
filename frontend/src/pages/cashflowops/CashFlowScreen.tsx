@@ -124,6 +124,7 @@ export function CashFlowScreen({
     return () => abort.abort();
   }, [year, unit, refresh]);
   function choose(value: CashSelection | undefined) {
+    setNotice("");
     setSelection(value);
     navigate(location.pathname, {
       replace: true,
@@ -283,7 +284,7 @@ export function CashFlowScreen({
             }
           />
         )}
-        {notice && (
+        {notice && !selection && (
           <p role="status" className="operating-banner">
             {notice}
           </p>
@@ -326,6 +327,7 @@ export function CashFlowScreen({
                   label: `${Number(m.month.slice(5))}월`,
                   status: m.status,
                   sourceMonth: m.month,
+                  shortage: m.shortage,
                 })),
                 ...displayed.periodTotals.map((p) => ({
                   key: p.period,
@@ -382,6 +384,7 @@ export function CashFlowScreen({
             {selection && (
               <SourceBreakdown
                 selection={selection}
+                notice={notice}
                 unit={unit}
                 refresh={refresh}
                 onChange={choose}

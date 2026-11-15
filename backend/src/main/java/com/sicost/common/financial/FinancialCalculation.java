@@ -82,7 +82,11 @@ public final class FinancialCalculation {
         List<String> warnings=new ArrayList<>(allocation.warnings());if(!known)warnings.add("납부 예상액을 확인할 수 없습니다.");
         if(!cardKnown){result.put("cashCardExpense",null);warnings.add("카드 명세의 현금 합계 원천을 확인할 수 없습니다.");}
         result.put("month",month);result.put("corporateTaxAllocation",allocation.months().stream().filter(m->m.month().equals(month)).map(AllocationMonth::amount).filter(Objects::nonNull).findFirst().orElse(null));
-        result.put("cashTaxPayment",known?money(cashTax):null);result.put("verified",known&&cardKnown);result.put("warnings",warnings);return result;
+        result.put("cashTaxPayment",known?money(cashTax):null);result.put("verified",allocation.verified()&&known&&cardKnown);result.put("cashVerified",known&&cardKnown);
+        var cashIssues=new ArrayList<com.sicost.cashflowops.CashFlowDtos.Issue>();
+        if(!known)cashIssues.add(new com.sicost.cashflowops.CashFlowDtos.Issue("SOURCE_UNKNOWN","납부 예상액을 확인할 수 없습니다.",month,"TB_FI_TAX_PAY",null,"amount"));
+        if(!cardKnown)cashIssues.add(new com.sicost.cashflowops.CashFlowDtos.Issue("SOURCE_UNKNOWN","카드 명세의 현금 합계 원천을 확인할 수 없습니다.",month,"TB_FI_CARD_MON",null,"cashAmount"));
+        result.put("cashIssues",List.copyOf(cashIssues));result.put("warnings",warnings);return result;
     }
     private static void add(Map<String,BigDecimal> values,String key,BigDecimal amount){values.put(key,values.get(key).add(amount));}
     public static String text(JsonNode row,String key){return row.path(key).isNull()||row.path(key).isMissingNode()?null:row.path(key).asText();}

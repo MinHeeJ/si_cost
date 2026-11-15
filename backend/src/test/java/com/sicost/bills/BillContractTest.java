@@ -201,4 +201,24 @@ class BillContractTest {
         detail(s.id()).andExpect(jsonPath("$.data.bill.status").value("CNCL")).andExpect(jsonPath("$.data.bill.totalAmount").value("111")).andExpect(jsonPath("$.data.bill.unpaidAmount").value("0"));
         put(update()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_BILL_STATE"));
     }
+
+    @ParameterizedTest @ValueSource(strings={"", "TRUE", "1", "null", "yes"})
+    void missingInvoiceFlagHasStrictBooleanValidation(String flag) throws Exception {
+        mvc.perform(get("/api/bills").param("year","2026").param("missingInvoiceNo",flag))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("missingInvoiceNo"))
+            .andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(jsonPath("$.details.violations").isArray());noWrites();
+    }
+    @Test void missingInvoiceIncludesNullEmptyWhitespaceExcludesCancelledAndPagesAfterFiltering() throws Exception {
+        for(int i=1;i<=55;i++){
+            String invoice=i%4==0?"   ":i%4==1?null:i%4==2?"":"\u2003";
+            bills.add(stored(new Write("B-202607-"+String.format("%03d",i),project.id(),i,"202607",new Editable(BigDecimal.TEN,BigDecimal.TEN,LocalDate.of(2026,7,1),LocalDate.of(2026,8,1),invoice),BigDecimal.ONE,new BigDecimal("11"),BigDecimal.ZERO,"admin",LocalDateTime.of(2026,7,1,0,0)),null));
+        }
+        Stored ordinary=stored(new Write("B-202607-056",project.id(),56,"202607",new Editable(BigDecimal.TEN,BigDecimal.TEN,LocalDate.of(2026,7,1),LocalDate.of(2026,8,1),"INV"),BigDecimal.ONE,new BigDecimal("11"),BigDecimal.ZERO,"admin",LocalDateTime.of(2026,7,1,0,0)),null);bills.add(ordinary);
+        var cancelled=json.valueToTree(bills.get(0));((ObjectNode)cancelled).put("id","B-202607-057").put("cancelled",true);bills.add(json.treeToValue(cancelled,Stored.class));
+        mvc.perform(get("/api/bills").param("year","2026")).andExpect(jsonPath("$.data.total").value(57));
+        mvc.perform(get("/api/bills").param("year","2026").param("missingInvoiceNo","false")).andExpect(jsonPath("$.data.total").value(57));
+        mvc.perform(get("/api/bills").param("year","2026").param("missingInvoiceNo","true").param("page","2"))
+            .andExpect(jsonPath("$.data.total").value(55)).andExpect(jsonPath("$.data.items.length()").value(5)).andExpect(jsonPath("$.data.totals.totalAmount").value("605"));noWrites();
+    }
+
 }

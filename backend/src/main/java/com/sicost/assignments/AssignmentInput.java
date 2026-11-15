@@ -14,15 +14,21 @@ public final class AssignmentInput {
         return AssignmentActionsInput.integer(query.get("year"),"year",0);
     }
     public static Query list(Map<String,String> q) {
-        AssignmentActionsInput.query(q,Set.of("year","projectId","jobCode","warning","q","includeCancelled","page","size","sort","direction"));
+        AssignmentActionsInput.query(q,Set.of("year","month","projectId","jobCode","warning","q","includeCancelled","page","size","sort","direction"));
         String warning=AssignmentActionsInput.warning(q.get("warning"));
         String cancelled=q.getOrDefault("includeCancelled","false");
         if(!Set.of("true","false").contains(cancelled))throw invalid("includeCancelled");
         String sort=q.get("sort");
         if(sort!=null&&!Set.of("projectName","developerName","jobName","startDate","endDate","billingUnitPrice","contractMm","yearMm","extensionPossibility","inputType").contains(sort))throw invalid("sort");
         String direction=q.getOrDefault("direction","ASC");if(!Set.of("ASC","DESC").contains(direction))throw invalid("direction");
-        Filter filter=new Filter(year(q),optional(q,"projectId",20),optional(q,"jobCode",10),warning,optionalText(q.get("q"),100,"q"),Boolean.parseBoolean(cancelled));
+        Filter filter=new Filter(year(q),optional(q,"projectId",20),optional(q,"jobCode",10),warning,optionalText(q.get("q"),100,"q"),Boolean.parseBoolean(cancelled),month(q.get("month"),year(q)));
         return new Query(filter,AssignmentActionsInput.page(q),AssignmentActionsInput.size(q),sort,direction);
+    }
+    public static String month(String value,int year) {
+        if(value==null)return null;
+        java.time.YearMonth parsed=com.sicost.common.validation.ProjectInputPolicy.month(value,"month");
+        if(parsed.getYear()!=year)throw invalid("month");
+        return parsed.toString();
     }
     private static String optional(Map<String,String> q,String field,int max) {return q.containsKey(field)?text(q.get(field),max,field):null;}
 }

@@ -39,7 +39,7 @@ public class BillService {
     public List<Bill> listAll(Query query) {return matching(query);}
     private List<Bill> matching(Query query) {
         users.currentUser();ProjectInputPolicy.year(query.year(),repository.cashBase(),clock);
-        return repository.list(new Filter(query,today().getYear(),today())).stream().map(b->view(repository.snapshot(b.id()),query.year())).sorted(ordering(query)).toList();
+        return repository.list(new Filter(query,today().getYear(),today())).stream().filter(b->!query.missingInvoiceNo()||!b.cancelled()&&(b.taxInvoiceNo()==null||b.taxInvoiceNo().isBlank())).map(b->view(repository.snapshot(b.id()),query.year())).sorted(ordering(query)).toList();
     }
     private Totals totals(List<Bill> all) {
         List<Bill> effective=all.stream().filter(b->!b.cancelled()).toList();

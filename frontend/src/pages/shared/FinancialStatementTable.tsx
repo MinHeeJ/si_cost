@@ -71,6 +71,7 @@ export function CashFlowStatementTable({
     label: string;
     status?: string;
     sourceMonth?: string;
+    shortage?: boolean;
   }[];
   rows: {
     key: string;
@@ -89,7 +90,7 @@ export function CashFlowStatementTable({
           <tr>
             <th scope="col">항목</th>
             {columns.map((c) => (
-              <th scope="col" key={c.key}>
+              <th scope="col" key={c.key} className={c.status === "PLANNED" ? "cash-planned" : undefined}>
                 {c.label}
                 {c.status && (
                   <StatusBadge
@@ -125,6 +126,7 @@ export function CashFlowStatementTable({
               {row.values.map((value, i) => (
                 <td
                   key={columns[i].key}
+                  className={[columns[i].status === "PLANNED" ? "cash-planned" : "", row.key === "balance" && columns[i].shortage ? "cash-shortage" : ""].filter(Boolean).join(" ") || undefined}
                   data-financial-negative={value?.startsWith("-")}
                 >
                   {row.section ? (
@@ -242,21 +244,14 @@ export function FinancialStatementTable({
                   {row.isRate ? formatRate(value) : formatAmount(value, unit)}
                 </td>
               ))}
-              <td
-                className="operating-cumulative"
-                data-financial-negative={row.cumulativeValue?.startsWith("-")}
-              >
+              <td className="operating-cumulative" data-financial-negative={row.cumulativeValue?.startsWith("-")}>
                 {row.isRate
                   ? formatRate(row.cumulativeValue)
                   : formatAmount(row.cumulativeValue, unit)}
               </td>
               {showPreviousYear && (
                 <>
-                  <td
-                    data-financial-negative={row.previousYearCumulativeValue?.startsWith(
-                      "-",
-                    )}
-                  >
+                  <td data-financial-negative={row.previousYearCumulativeValue?.startsWith("-")}>
                     {row.isRate
                       ? formatRate(row.previousYearCumulativeValue)
                       : formatAmount(row.previousYearCumulativeValue, unit)}

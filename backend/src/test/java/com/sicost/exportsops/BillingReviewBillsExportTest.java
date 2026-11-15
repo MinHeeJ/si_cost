@@ -98,4 +98,11 @@ class BillingReviewBillsExportTest {
         assertThat(rejected(body("{\"year\":2026}", "\"page\":2")).field()).isEqualTo("page");
         verifyNoInteractions(bills);
     }
+
+    @Test void missingInvoiceFilterIsPassedToSharedUnpagedList() throws Exception {
+        when(bills.listAll(any())).thenReturn(List.of());
+        service.create(body("{\"year\":2026,\"month\":\"2026-01\",\"missingInvoiceNo\":true}",""),null);
+        verify(bills).listAll(new BillDtos.Query(2026,null,"2026-01",null,true,1,50,null,"DESC",true));
+    }
+
 }

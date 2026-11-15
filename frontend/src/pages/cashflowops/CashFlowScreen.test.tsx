@@ -144,13 +144,16 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     screen.queryByRole("button", { name: "저장" }),
   ).not.toBeInTheDocument();
 });
-it("opens a NULL leaf in the lower panel, shows reference and unknown evidence and closes without writes", async () => {
+it("opens a NULL leaf in the right detail drawer, shows reference and unknown evidence and closes without writes", async () => {
   ready();
   const button = await screen.findByRole("button", {
     name: "11월 정규직 급여 계산근거",
   });
   await userEvent.click(button);
   const panel = await screen.findByTestId("cash-source-panel");
+  expect(panel).toHaveRole("dialog");
+  expect(panel).toHaveClass("sicost-drawer");
+  expect(screen.getByRole("table", { name: "자금수지표" })).toBeInTheDocument();
   await within(panel).findByText("필수 급여 미확인", { exact: false });
   expect(
     within(panel).getByText("202610:001", { exact: false }),
@@ -358,4 +361,32 @@ it("shows annual API failures with request id and explicit read retry", async ()
   ready();
   expect(await screen.findByRole("alert")).toHaveTextContent("period-trace");
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
+});
+it("marks planned columns and only server shortage closing balances, preserving zero and NULL", async () => {
+  data.months[10].shortage = true;
+  data.months[10].closingBalance = "-1";
+  data.months[11].closingBalance = "0";
+  ready();
+  await screen.findByRole("table", { name: "자금수지표" });
+  const cells = within(screen.getByTestId("cash-row-balance")).getAllByRole("cell");
+  expect(cells[10]).toHaveClass("cash-shortage", "cash-planned");
+  expect(cells[10]).toHaveTextContent("−0.001");
+  expect(cells[11]).not.toHaveClass("cash-shortage");
+  expect(cells[11]).toHaveTextContent("0");
+  expect(cells[0]).toHaveTextContent("–");
+});
+
+it("renders BASE-before months as unavailable without calculation-source actions", async () => {
+  data.baseMonth = "2026-06";
+  for (const month of data.months.slice(0, 5)) {
+    month.status = "BEFORE_BASE";
+    month.openingBalance = null;
+    month.closingBalance = null;
+    month.items = month.items.map(item => ({ ...item, amount: null }));
+  }
+  ready();
+  await screen.findByRole("table", { name: "자금수지표" });
+  expect(screen.queryByTestId("cash-source-cash-sales-2026-05")).not.toBeInTheDocument();
+  expect(screen.getByTestId("cash-source-cash-sales-2026-06")).toBeInTheDocument();
+  expect(within(screen.getByTestId("cash-row-opening")).getAllByRole("cell")[0]).toHaveTextContent("–");
 });

@@ -1,5 +1,5 @@
 import "../pages/shared/financialDisplay.css";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBanner } from "../shared/Feedback";
 import {
   BrowserRouter,
@@ -441,6 +441,18 @@ function BusinessPartnersWorkspace({
       )}
     </>
   );
+}
+
+function CloseLinkedAssignments({ onDirtyChange }: { onDirtyChange(dirty: boolean): void }) {
+  const location = useLocation();
+  const incoming = location.state as { fromMonthClose?: boolean; month?: string; filter?: string } | null;
+  const entry = useRef<{ key: string; month?: string; filter?: string }>();
+  if (location.pathname === "/UI-12" && incoming?.fromMonthClose && entry.current?.key !== location.key)
+    entry.current = { key: location.key, month: incoming.month, filter: incoming.filter };
+  const month = entry.current?.month;
+  return <SharedScreenFrame key={entry.current?.key} screenId="UI-12" initialMonth={month}>
+    <StaffingAssignmentsScreen onDirtyChange={onDirtyChange} initialMonth={month} initialWarning={month && entry.current?.filter === "MM_OVER" ? "MM_OVER" : undefined} />
+  </SharedScreenFrame>;
 }
 
 function RegisteredUsersWorkspace({
@@ -976,40 +988,15 @@ function RegisteredWorkforceRecommendations() {
   const preferences = usePreferences();
   const [unitError, setUnitError] = useState("");
   const storedUnit = preferences.get("AMT_UNIT")?.value;
-  const amountUnit =
-    storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
+  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
       {unitError && <ErrorBanner message={unitError} />}
-      <label className="sicost-field">
-        금액 단위
-        <select
-          data-testid="workforce-recommendations-amount-unit"
-          aria-label="추천 금액 단위"
-          value={amountUnit}
-          disabled={preferences.pending}
-          onChange={(e) => {
-            setUnitError("");
-            void preferences
-              .put("AMT_UNIT", "*", e.target.value)
-              .catch((e: unknown) =>
-                setUnitError(
-                  e instanceof Error
-                    ? e.message
-                    : "금액 단위를 저장하지 못했습니다.",
-                ),
-              );
-          }}
-        >
-          {["원", "천원", "백만원"].map((unit) => (
-            <option
-              data-testid={`workforce-recommendations-amount-unit-option-${["원", "천원", "백만원"].indexOf(unit)}`}
-              key={unit}
-            >
-              {unit}
-            </option>
-          ))}
+      <label className="sicost-field">금액 단위
+        <select aria-label="추천 금액 단위" value={amountUnit} disabled={preferences.pending}
+          onChange={(e) => { setUnitError(""); void preferences.put("AMT_UNIT", "*", e.target.value).catch((e: unknown) => setUnitError(e instanceof Error ? e.message : "금액 단위를 저장하지 못했습니다.")); }}>
+          {["원", "천원", "백만원"].map((unit) => <option key={unit}>{unit}</option>)}
         </select>
       </label>
       <WorkforceRecommendationsScreen
@@ -1165,9 +1152,7 @@ function RegisteredApplication() {
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
         ),
         "UI-12": (
-          <SharedScreenFrame screenId="UI-12">
-            <StaffingAssignmentsScreen onDirtyChange={onAssignmentsDirty} />
-          </SharedScreenFrame>
+          <CloseLinkedAssignments onDirtyChange={onAssignmentsDirty} />
         ),
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
         "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,

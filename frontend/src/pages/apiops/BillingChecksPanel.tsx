@@ -16,6 +16,7 @@ import { BillingReviewDownloadButton } from "./BillingReviewDownloadButton";
 import "./billingReview.css";
 
 type Props = {
+  initialMonth?: string;
   year: number;
   currentYear: number;
   amountUnit?: ReviewAmountUnit;
@@ -37,13 +38,14 @@ export function BillingChecksPanel(props: Props) {
   return <BillingChecksContent key={props.year} {...props} />;
 }
 function BillingChecksContent({
+  initialMonth,
   amountUnit = "천원",
   refreshKey,
   onRemedy,
   onBillDetail,
   onCount,
 }: Props) {
-  const [month, setMonth] = useState<string>(),
+  const [month, setMonth] = useState<string | undefined>(initialMonth),
     [page, setPage] = useState(1),
     [size, setSize] = useState<ReviewPageSize>(50);
   const [data, setData] = useState<BillingChecksPage>(),

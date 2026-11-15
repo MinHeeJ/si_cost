@@ -8,6 +8,8 @@ import { saveDownload } from "../b7/b7Api";
 import { downloadAssignments } from "./assignmentDownloadsApi";
 
 export type StaffingAssignmentsProps = {
+  initialMonth?: string;
+  initialWarning?: string;
   entryAssignmentId?: string;
   entryHistory?: boolean;
   onDirtyChange?(dirty: boolean): void;
@@ -19,11 +21,15 @@ export function StaffingAssignmentsScreen({
   renderActions,
   entryAssignmentId,
   entryHistory,
+  initialMonth,
+  initialWarning,
 }: StaffingAssignmentsProps = {}) {
   return (
     <AssignmentWorkspace
       entryAssignmentId={entryAssignmentId}
       entryHistory={entryHistory}
+      initialMonth={initialMonth}
+      initialWarning={initialWarning}
       onDirtyChange={onDirtyChange}
       renderActions={(context) => (
         <>

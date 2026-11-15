@@ -601,3 +601,14 @@ describe("변경 이력", () => {
     await screen.findByText("조회된 변경 이력이 없습니다.");
   });
 });
+it.each(["UI-12", "UI-13", "UI-19"])("%s one-time close month is read without saving PERIOD", async (screenId) => {
+  const changed = vi.fn();
+  window.addEventListener("sicost:screen-period-changed", changed);
+  try {
+    render(<ScreenPeriodBar screenId={screenId} initialMonth="2026-05" />);
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+    const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
+    expect(detail.value).toEqual(screenId === "UI-19" ? { type: "YEAR_MONTH", value: "2026-05" } : { type: "YEAR", value: "2026" });
+    expect(api.putSharedPreference).not.toHaveBeenCalled();
+  } finally { window.removeEventListener("sicost:screen-period-changed", changed); }
+});

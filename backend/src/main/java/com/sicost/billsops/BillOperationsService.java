@@ -60,6 +60,7 @@ public class BillOperationsService {
         return new BillSelection(List.copyOf(items),items.size(),List.copyOf(excluded),excluded.size(),!items.isEmpty());
     }
     private boolean inPopulation(StoredBill bill,SelectionQuery q) {
+        if(q.missingInvoiceNo()&&(cancelled(bill)||(bill.invoice()!=null&&!bill.invoice().isBlank())))return false;
         if(q.projectId()!=null&&!q.projectId().equals(bill.projectId()))return false;
         if(q.month()!=null)return q.month().equals(api(bill.month()))&&(billYear(bill)==q.year()||
             q.year()==estimates.today().getYear()&&q.includeCarryover()&&billYear(bill)<q.year()&&!cancelled(bill)&&unpaid(bill).signum()>0);

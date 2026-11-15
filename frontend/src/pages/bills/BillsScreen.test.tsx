@@ -701,3 +701,26 @@ it("저장성공 뒤 조회 실패는 재저장하지 않는다", async () => {
   await screen.findByText(/저장됐지만 다시 불러오지 못했습니다/);
   expect(api.createBill).toHaveBeenCalledTimes(1);
 });
+it("uses close-check month and checks tab without overwriting saved period", async () => {
+  render(<BillsScreen initialMonth="2026-05" initialSection="checks" />);
+  await waitFor(() => expect(api.getBills).toHaveBeenCalledWith(expect.objectContaining({ year: 2026, month: "2026-05" })));
+  expect(screen.getByTestId("billing-checks-tab")).toHaveAttribute("aria-selected", "true");
+  expect(reviews.getBillingChecks).toHaveBeenCalledWith(expect.objectContaining({ month: "2026-05" }), expect.any(AbortSignal));
+  expect(shared.putSharedPreference).not.toHaveBeenCalled();
+});
+
+it("번호누락 이동 조건은 화면과 다운로드에 유지되고 초기화 가능하다", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["x"]), { status: 200, headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": "attachment; filename=test.xlsx" } }));
+  vi.stubGlobal("fetch", fetchMock); URL.createObjectURL = vi.fn(() => "blob:x"); URL.revokeObjectURL = vi.fn();
+  render(<BillsScreen initialMonth="2026-05" initialMissingInvoiceNo />);
+  await screen.findByRole("button", { name: bill.id });
+  expect(screen.getByTestId("bill-month-filter")).toHaveValue("2026-05");
+  expect(screen.getByTestId("bill-missing-invoice-filter")).toHaveValue("true");
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(expect.objectContaining({ month: "2026-05", missingInvoiceNo: true })));
+  await userEvent.click(screen.getByTestId("billing-review-download-bills"));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).filters).toMatchObject({ month: "2026-05", missingInvoiceNo: true });
+  await userEvent.click(screen.getByTestId("bill-reset"));
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(expect.not.objectContaining({ missingInvoiceNo: true })));
+  expect(screen.getByTestId("bill-missing-invoice-filter")).toHaveValue("");
+});

@@ -42,6 +42,9 @@ export type BillsActionsContext = {
   refresh(): Promise<void>;
 };
 export type BillsScreenProps = {
+  initialMonth?: string;
+  initialSection?: string;
+  initialMissingInvoiceNo?: boolean;
   onDirtyChange?(dirty: boolean): void;
   renderActions?(context: BillsActionsContext): ReactNode;
   renderTabs?(context: BillsActionsContext): ReactNode;
@@ -70,6 +73,7 @@ export function BillsScreen(props: BillsScreenProps = {}) {
         setYear(
           (old) =>
             old ??
+            (props.initialMonth ? Number(props.initialMonth.slice(0, 4)) : undefined) ??
             (pref?.type === "YEAR" && /^\d{4}$/.test(pref.value ?? "")
               ? Math.max(min, Math.min(Number(pref?.value), current + 1))
               : current),
@@ -151,6 +155,9 @@ function BillsContent({
   renderTabs,
   renderDetailActions,
   renderReceiptActions,
+  initialMonth,
+  initialSection,
+  initialMissingInvoiceNo,
 }: BillsScreenProps & {
   period: PeriodContext;
   year: number;
@@ -165,11 +172,13 @@ function BillsContent({
     () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
   );
   const [mobileRows, setMobileRows] = useState<api.Bill[]>([]);
-  const [tab, setTab] = useState<"list" | "checks" | "receivables">("list");
+  const [tab, setTab] = useState<"list" | "checks" | "receivables">(initialSection === "checks" || initialSection === "receivables" ? initialSection : "list");
   const [checkCount, setCheckCount] = useState<number>();
   const [receivableCount, setReceivableCount] = useState<number>();
   const [query, setQuery] = useState<api.Query>({
     year,
+    ...(initialMonth?.startsWith(`${year}-`) ? { month: initialMonth } : {}),
+    ...(initialMissingInvoiceNo ? { missingInvoiceNo: true } : {}),
     includeCarryover: year === currentYear,
     page: 1,
     size: mobile ? 20 : initialSize,
@@ -628,6 +637,7 @@ function BillsContent({
             </nav>
             <div hidden={tab !== "checks"}>
               <BillingChecksPanel
+                initialMonth={initialMonth}
                 year={year}
                 currentYear={currentYear}
                 amountUnit={unit}
@@ -705,6 +715,14 @@ function BillsContent({
             value={query.month ?? ""}
             onChange={(e) => conditions({ month: e.target.value || undefined })}
           />
+          <label>
+            계산서 번호
+            <select data-testid="bill-missing-invoice-filter" value={query.missingInvoiceNo ? "true" : ""}
+              onChange={(e) => conditions({ missingInvoiceNo: e.target.value === "true" || undefined })}>
+              <option value="">전체</option>
+              <option value="true">번호누락만</option>
+            </select>
+          </label>
           <label htmlFor="bill-project-filter">프로젝트</label>
           <input
             id="bill-project-filter"
@@ -788,6 +806,7 @@ function BillsContent({
                     includeCarryover: query.includeCarryover,
                     status: query.status,
                     month: query.month,
+                    missingInvoiceNo: query.missingInvoiceNo,
                     projectId: query.projectId,
                     sort: query.sort,
                     direction: query.direction,
@@ -834,6 +853,7 @@ function BillsContent({
                   year,
                   status: query.status,
                   month: query.month,
+                  missingInvoiceNo: query.missingInvoiceNo,
                   projectId: query.projectId,
                   includeCarryover: query.includeCarryover,
                 },

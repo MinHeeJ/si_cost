@@ -16,7 +16,10 @@ export function BalanceTrendChart({
   const span = high - low || 1n;
   const y = (value: string) =>
     250 - Number(((BigInt(value) - low) * 22000n) / span) / 100;
-  const x = (i: number) => 80 + i * 72;
+  const ticks = [0, 1, 2, 3, 4].map(i => String(low + (span * BigInt(i)) / 4n));
+  // Reserve room for the full decimal labels, including negative balances.
+  const left = Math.max(80, ...ticks.map(value => formatAmount(value, "백만원").length * 9 + 20));
+  const x = (i: number) => left + i * (900 - left) / 11;
   return (
     <section className="cash-chart" aria-label="월말 잔액 흐름">
       <div className="operating-toolbar">
@@ -28,25 +31,24 @@ export function BalanceTrendChart({
         role="img"
         aria-label="실적 실선, 예정 점선, 미확인 잔액은 선을 연결하지 않습니다."
       >
-        {[0, 1, 2, 3, 4].map((i) => {
-          const value = low + (span * BigInt(i)) / 4n;
+        {ticks.map((value, i) => {
           return (
             <g key={i}>
               <line
-                x1="80"
+                x1={left}
                 x2="900"
                 y1={y(String(value))}
                 y2={y(String(value))}
                 className="cash-grid"
               />
-              <text x="68" y={y(String(value)) + 5} textAnchor="end">
+              <text x={left - 12} y={y(String(value)) + 5} textAnchor="end">
                 {formatAmount(String(value), "백만원")}
               </text>
             </g>
           );
         })}
         <line
-          x1="80"
+          x1={left}
           x2="900"
           y1={y(minimum)}
           y2={y(minimum)}

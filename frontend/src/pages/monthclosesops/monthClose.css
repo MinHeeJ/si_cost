@@ -115,3 +115,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.month-close-adjustments { overflow-x: auto; }
+.month-close-adjustments table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+.month-close-adjustments th:nth-child(-n + 4),
+.month-close-adjustments td:nth-child(-n + 4) { white-space: nowrap; overflow-wrap: normal; }
+.month-close-adjustments th:last-child,
+.month-close-adjustments td:last-child { min-width: 240px; }

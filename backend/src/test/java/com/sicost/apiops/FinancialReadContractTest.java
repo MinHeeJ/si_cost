@@ -126,12 +126,12 @@ class FinancialReadContractTest {
     }
     @Test void nullClosedCopyNeverBecomesZeroAndDoesNotInvalidateKnownCash()throws Exception{
         var months=months();months.set(0,new TaxMonth("202601","CLOSE",null));when(mapper.taxMonths(any())).thenReturn(months);
-        contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue())).andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(true));
+        contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue())).andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(false)).andExpect(jsonPath("$.data.cashVerified").value(true)).andExpect(jsonPath("$.data.cashIssues").isEmpty());
     }
     @Test void missingAnnualDoesNotNullifyKnownActualCash()throws Exception{
         when(mapper.estimatedTax(any())).thenReturn(null);
         contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue()))
-            .andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(true));
+            .andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(false)).andExpect(jsonPath("$.data.cashVerified").value(true)).andExpect(jsonPath("$.data.cashIssues").isEmpty());
     }
     @Test void unknownCardParentIsNotRepresentedAsCashZero()throws Exception{
         var t=totals();when(mapper.sourceTotals(any())).thenReturn(new SourceTotals(t.sgaAmount(),t.sgaVatAmount(),t.nonOperatingIncome(),t.nonOperatingIncomeVat(),t.nonOperatingExpense(),t.nonOperatingExpenseVat(),t.adjustmentProfit(),t.cashFinancialExpense(),t.cashMiscIncome(),null,t.cashTransferExpense(),t.cashUnpaidLabor(),t.transferTotal(),t.cashLoanIn(),t.cashLoanOut(),t.cashTaxPayment()));

@@ -29,16 +29,18 @@ export type FinancialItemsScreenProps = {
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const location = useLocation();
-  const incoming = location.state as {
-    section?: string;
-    month?: string;
-    targetMonth?: string;
-  } | null;
+  type Entry = { section?: string; month?: string; targetMonth?: string };
+  const savedEntry = useRef<{ key: string; value: Entry }>();
+  const routeEntry = location.state as Entry | null;
+  if (location.pathname === "/UI-10" && routeEntry?.month && savedEntry.current?.key !== location.key)
+    savedEntry.current = { key: location.key, value: routeEntry };
+  const incoming = location.pathname === "/UI-10" ? routeEntry ?? savedEntry.current?.value : savedEntry.current?.value;
   const section = incoming?.section;
   const openAdjustments = section === "adjustments";
   return (
     <SharedScreenFrame screenId="UI-10" periodBar={null}>
       <FinancialItemsEditor
+        key={savedEntry.current?.key}
         {...props}
         initialMonth={incoming?.month ?? props.initialMonth}
         initialAdjustmentTargetMonth={

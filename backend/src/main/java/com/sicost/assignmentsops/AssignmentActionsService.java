@@ -80,7 +80,7 @@ public class AssignmentActionsService {
         if(f.warning()==null)return true;Source row=repository.required(id);Project project=repository.project(row.projectId());
         if("UNCONTRACTED".equals(f.warning()))return "PRE".equals(effective(project));
         return warnings(row,project,storedValues(row)).stream().anyMatch(w->w.code().equals(f.warning())
-            && (w.months().isEmpty()||w.months().stream().anyMatch(m->m.startsWith(f.year()+"-"))));
+            && (w.months().isEmpty()||w.months().stream().anyMatch(m->f.month()==null?m.startsWith(f.year()+"-"):m.equals(f.month()))));
     }
     private List<Month> storedValues(Source row) {var h=months.mapper().histories(row.id());return months.mapper().months(row.id()).stream().map(m->months.view(row,m,h)).toList();}
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ,noRollbackFor=ApiException.class)

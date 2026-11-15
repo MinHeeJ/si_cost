@@ -246,6 +246,7 @@ export function ReopenDialog({
           모든 후속조정 {preview.adjustmentCount}건 · {preview.adjustmentAmount}
           원 · 적용월 {preview.adjustmentMonths.join(", ") || "없음"}
         </p>
+        <div className="month-close-adjustments">
         <table aria-label="후속조정">
           <thead>
             <tr>
@@ -269,6 +270,7 @@ export function ReopenDialog({
             ))}
           </tbody>
         </table>
+        </div>
         <p>
           기존 조정은 자동 삭제·상계하지 않습니다. UI-10에서 중복 보정 여부를
           확인하세요.
@@ -443,7 +445,7 @@ export function MonthCloseScreen() {
   };
   const link = (check: api.CloseCheck) => {
     if (!check.linkScreenId || !context) return;
-    if (check.linkMonth.slice(0, 4) !== context.currentMonth.slice(0, 4)) {
+    if (["SETL", "BILL_MISS"].includes(check.code) && check.linkMonth.slice(0, 4) !== context.currentMonth.slice(0, 4)) {
       setError(
         "해당 업무 화면의 과거 연도는 조회 전용입니다. 기존 화면의 기간 범위를 확인해 주세요.",
       );
@@ -452,6 +454,7 @@ export function MonthCloseScreen() {
     navigate(`/${check.linkScreenId}`, {
       state: {
         month: check.linkMonth,
+        fromMonthClose: true,
         filter: check.linkFilter,
         partId: check.code === "SETL" ? check.linkFilter : undefined,
         section: check.code === "BILL_MISS" ? "checks" : undefined,
@@ -601,9 +604,10 @@ export function MonthCloseScreen() {
             <section className="month-close-card">
               <h2>{month.slice(0, 4)}년 마감 이력</h2>
               {data.history.items.length === 0 ? (
-                <p className="month-close-empty">
-                  선택연도 마감 이력이 없습니다.
-                </p>
+                <div className="month-close-empty">
+                  <p>선택연도 마감 이력이 없습니다.</p>
+                  <button type="button" onClick={() => window.dispatchEvent(new Event("sicost:month-close-reset-period"))}>조건 초기화</button>
+                </div>
               ) : (
                 <div className="month-close-table">
                   <table aria-label="마감 이력">

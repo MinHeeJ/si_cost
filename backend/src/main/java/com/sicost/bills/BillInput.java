@@ -27,7 +27,7 @@ public final class BillInput {
     }
     public static int detailQuery(Map<String,String> q) {query(q,Set.of("year"));return integer(q.get("year"),"year");}
     public static Query list(Map<String,String> q) {
-        query(q,Set.of("year","status","month","projectId","includeCarryover","page","size","sort","direction"));
+        query(q,Set.of("year","status","month","projectId","includeCarryover","missingInvoiceNo","page","size","sort","direction"));
         int year=integer(q.get("year"),"year"),page=q.containsKey("page")?integer(q.get("page"),"page"):1,size=q.containsKey("size")?integer(q.get("size"),"size"):50;
         if(page<1)throw invalid("page");if(!Set.of(20,50,100).contains(size))throw invalid("size");
         String status=q.get("status"),month=q.get("month"),project=q.get("projectId"),sort=q.get("sort"),direction=q.getOrDefault("direction","DESC");
@@ -36,7 +36,8 @@ public final class BillInput {
         if(project!=null)project=ProjectInputPolicy.text(project,20,"projectId");
         if(sort!=null&&!SORTS.contains(sort))throw invalid("sort");if(!Set.of("ASC","DESC").contains(direction))throw invalid("direction");
         String carry=q.getOrDefault("includeCarryover","true");if(!Set.of("true","false").contains(carry))throw invalid("includeCarryover");
-        return new Query(year,status,month,project,Boolean.parseBoolean(carry),page,size,sort,direction);
+        String missing=q.getOrDefault("missingInvoiceNo","false");if(!Set.of("true","false").contains(missing))throw invalid("missingInvoiceNo");
+        return new Query(year,status,month,project,Boolean.parseBoolean(carry),page,size,sort,direction,Boolean.parseBoolean(missing));
     }
     public static CreateBillRequest create(JsonNode b) {
         allow(b,Set.of("year","projectId","billingMonth","supplyAmount","vatRate","billingDate","dueDate","taxInvoiceNo","confirmDuplicate","duplicateToken","checkContext","copyContext"));

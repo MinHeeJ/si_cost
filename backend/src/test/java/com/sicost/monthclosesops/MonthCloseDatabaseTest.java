@@ -90,7 +90,8 @@ class MonthCloseDatabaseTest {
     }
     @Test void requiredAccessFailureRollsBackCopiesAutoChecksAndHistory()throws Exception {
         String revision=revision();Map<String,String> before=state();
-        doThrow(new IllegalStateException("private SQL must not leak")).when(access).appendMonthClose(any(),anyString(),any(),any());
+        AccessLogWriter target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(access);
+        doThrow(new IllegalStateException("private SQL must not leak")).when(target).appendMonthClose(any(),anyString(),any(),any());
         var response=mvc.perform(post("/api/month-closes/"+month+"/close").contentType("application/json").content(json.writeValueAsString(Map.of("expectedRevision",revision,"operationId",UUID.randomUUID().toString(),"acceptWarnings",true))))
             .andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andReturn().getResponse();
         assertThat(response.getContentAsString()).doesNotContain("private SQL");assertThat(state()).isEqualTo(before);

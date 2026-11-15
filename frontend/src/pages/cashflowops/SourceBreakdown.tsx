@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { formatAmount, type AmountUnit } from "../../shared/format";
@@ -22,6 +23,7 @@ export function SourceBreakdown({
   onChange,
   onClose,
   onSource,
+  notice,
 }: {
   selection: CashSelection;
   unit: AmountUnit;
@@ -29,15 +31,12 @@ export function SourceBreakdown({
   onChange(value: CashSelection): void;
   onClose(): void;
   onSource(source: CashSource): void;
+  notice?: string;
 }) {
   const [data, setData] = useState<CashSourcesPage>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true),
     [retry, setRetry] = useState(0);
-  const panel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    panel.current?.focus();
-  }, [selection.month, selection.item]);
   useEffect(() => {
     const abort = new AbortController();
     setLoading(true);
@@ -69,21 +68,14 @@ export function SourceBreakdown({
     retry,
   ]);
   return (
-    <section
-      className="cash-source-panel"
-      ref={panel}
-      tabIndex={-1}
-      aria-label="계산근거"
-      data-testid="cash-source-panel"
+    <DetailDrawer
+      title={`${selection.month} ${cashLabels[selection.item]} 계산근거`}
+      testId="cash-source-panel"
+      closeTestId="cash-source-close"
+      onClose={onClose}
     >
-      <div className="operating-toolbar">
-        <h2>
-          {selection.month} {cashLabels[selection.item]} 계산근거
-        </h2>
-        <button data-testid="cash-source-close" onClick={onClose}>
-          근거 닫기
-        </button>
-      </div>
+      <div className="cash-source-panel operating-profit">
+      {notice && <p role="status" className="operating-banner">{notice}</p>}
       {loading && <p role="status">원천을 불러오는 중입니다.</p>}
       {error != null && (
         <ErrorBanner
@@ -105,7 +97,7 @@ export function SourceBreakdown({
             무관합니다.
           </p>
           {data.items.length === 0 ? (
-            <div className="operating-empty">조회된 원천이 없습니다.</div>
+            <div className="operating-empty">조회된 원천이 없습니다.<button type="button" onClick={onClose}>조건 초기화</button></div>
           ) : (
             <div className="operating-table-scroll">
               <table aria-label="현금 원천">
@@ -229,6 +221,7 @@ export function SourceBreakdown({
           </div>
         </>
       )}
-    </section>
+      </div>
+    </DetailDrawer>
   );
 }

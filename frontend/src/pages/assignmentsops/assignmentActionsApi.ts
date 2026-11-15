@@ -54,6 +54,7 @@ export type Selection = {
 };
 export type Filters = {
   year: number;
+  month?: string;
   projectId?: string;
   jobCode?: string;
   warning?: string;
