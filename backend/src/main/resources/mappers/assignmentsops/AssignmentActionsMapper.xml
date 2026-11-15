@@ -22,6 +22,12 @@
       OR EXISTS(SELECT 1 FROM tb_pj_asgn_mon m WHERE m.asgn_id=a.asgn_id AND left(m.input_ym,4)=CAST(#{year} AS text)
         AND (m.fix_yn='Y' OR m.input_ym &lt; (SELECT std_val::bigint::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1)
           OR EXISTS(SELECT 1 FROM tb_cl_close c WHERE c.close_ym=m.input_ym AND c.close_stat_cd='CLOSE'))))
+    <if test="month != null">
+      AND ((a.input_bgn_dt &lt; (to_date(#{month},'YYYY-MM') + interval '1 month') AND a.input_end_dt &gt;= to_date(#{month},'YYYY-MM'))
+        OR EXISTS(SELECT 1 FROM tb_pj_asgn_mon m WHERE m.asgn_id=a.asgn_id AND m.input_ym=replace(#{month},'-','')
+          AND (m.fix_yn='Y' OR m.input_ym &lt; (SELECT std_val::bigint::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1)
+            OR EXISTS(SELECT 1 FROM tb_cl_close c WHERE c.close_ym=m.input_ym AND c.close_stat_cd='CLOSE'))))
+    </if>
     <if test="!includeCancelled">AND a.asgn_stat_cd!='CNCL'</if>
     <if test="projectId != null">AND a.proj_id=#{projectId}</if>
     <if test="jobCode != null">AND a.job_cd=#{jobCode}</if>

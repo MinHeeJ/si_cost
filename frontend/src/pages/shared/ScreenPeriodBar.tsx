@@ -36,17 +36,40 @@ export function ScreenPeriodBar({
   const [pending, setPending] = useState(false),
     [loading, setLoading] = useState(true),
     [reload, setReload] = useState(0);
+  const [closeRefresh, setCloseRefresh] = useState(0);
   const saving = useRef(false),
     closeRead = useRef(0);
   const applyPeriod = useRef<(next: PeriodValue) => void>(() => {});
   useEffect(() => {
-    if (!["UI-07", "UI-08", "UI-09", "UI-18"].includes(screenId) || !context) return;
+    const refresh = () => setCloseRefresh((n) => n + 1);
+    window.addEventListener("sicost:month-close-committed", refresh);
+    return () =>
+      window.removeEventListener("sicost:month-close-committed", refresh);
+  }, []);
+  useEffect(() => {
+    if (!["UI-07", "UI-08", "UI-09", "UI-18"].includes(screenId) || !context)
+      return;
     const reset = (event: Event) => {
-      if ((event as CustomEvent<{ screenId: string }>).detail?.screenId !== screenId) return;
-      applyPeriod.current({ type: "YEAR_CUM", year: context.currentMonth.slice(0, 4), month: context.currentMonth });
+      if (
+        (event as CustomEvent<{ screenId: string }>).detail?.screenId !==
+        screenId
+      )
+        return;
+      applyPeriod.current({
+        type: "YEAR_CUM",
+        year: context.currentMonth.slice(0, 4),
+        month: context.currentMonth,
+      });
     };
     window.addEventListener("sicost:company-profit-reset-period", reset);
-    return () => window.removeEventListener("sicost:company-profit-reset-period", reset);
+    return () =>
+      window.removeEventListener("sicost:company-profit-reset-period", reset);
+  }, [screenId, context]);
+  useEffect(() => {
+    if (screenId !== "UI-14" || !context) return;
+    const reset = () => applyPeriod.current({ type: "YEAR_MONTH", value: context.currentMonth });
+    window.addEventListener("sicost:month-close-reset-period", reset);
+    return () => window.removeEventListener("sicost:month-close-reset-period", reset);
   }, [screenId, context]);
   useEffect(() => {
     if (screenId !== "UI-03" || !context) return;
@@ -81,7 +104,7 @@ export function ScreenPeriodBar({
               ? String(Number(startYear) - 1)
               : startYear,
           max:
-            type === "YEAR" && screenId !== "UI-03"
+            type === "YEAR" && !["UI-03", "UI-21"].includes(screenId)
               ? String(Number(currentYear) + 1)
               : currentYear,
         };
@@ -156,11 +179,11 @@ export function ScreenPeriodBar({
             ? cumulative(initial, ctx.currentMonth, ctx)
             : { type: type as "YEAR" | "YEAR_MONTH", value: initial };
         const valid = validStored(pref?.value, ctx);
-        const incoming: PeriodValue | undefined = initialMonth
+        const incoming: PeriodValue | undefined = initialMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth)
           ? {
-              type: "YEAR_CUM",
-              year: initialMonth.slice(0, 4),
-              month: initialMonth,
+              ...(type === "YEAR_CUM"
+                ? { type: "YEAR_CUM" as const, year: initialMonth.slice(0, 4), month: initialMonth }
+                : { type: type as "YEAR" | "YEAR_MONTH", value: type === "YEAR" ? initialMonth.slice(0, 4) : initialMonth }),
             }
           : undefined;
         setValue(
@@ -196,6 +219,9 @@ export function ScreenPeriodBar({
         detail: { screenId, value, context },
       }),
     );
+  }, [context, value, type]);
+  useEffect(() => {
+    if (controlled || !context || !value || type === "NONE") return;
     const read = ++closeRead.current;
     if (value.type === "YEAR") {
       setStatus("");
@@ -215,7 +241,7 @@ export function ScreenPeriodBar({
     return () => {
       closeRead.current++;
     };
-  }, [context, value, type]);
+  }, [context, value, type, closeRefresh]);
   if (controlled)
     return (
       <section

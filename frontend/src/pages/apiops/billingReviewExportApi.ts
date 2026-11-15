@@ -26,6 +26,7 @@ export const billColumns = [
   "dunning",
 ] as const;
 export type BillExportFilters = {
+  missingInvoiceNo?: boolean;
   year: number;
   status?: string;
   month?: string;

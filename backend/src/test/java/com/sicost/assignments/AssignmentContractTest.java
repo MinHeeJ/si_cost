@@ -149,4 +149,23 @@ class AssignmentContractTest {
         existing("A-101",null);when(mapper.candidates(any())).thenReturn(List.of(new CandidateSource("D-102","계약상","M-102","A-101",day.plusMonths(1))));postBody(create().put("inputType","SUB").put("contractDeveloperId","D-102"),400);noWrites();postBody(create().put("inputType","SUB").put("contractDeveloperId","D-102").put("billingUnitPrice","150"),201);
     }
     @Test void auditFailureRollsBackAndDoesNotExposeSql() throws Exception {doThrow(new IllegalStateException("private SQL password")).when(audit).insert(any());mvc.perform(post("/api/assignments").contentType("application/json").content(create().toString())).andExpect(status().isInternalServerError()).andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private SQL"))));verify(manager,atLeastOnce()).rollback(any());verifyNoInteractions(invalidation);}
+
+    @ParameterizedTest @ValueSource(strings={"", "2026-1", "2026-00", "2026-13", "2026-02-01", "2025-12", "abc"})
+    void selectedMonthRejectsMalformedOrDifferentYear(String month) throws Exception {
+        mvc.perform(get("/api/assignments").param("year","2026").param("month",month))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("month"))
+            .andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(jsonPath("$.details").doesNotExist());noWrites();
+    }
+    @Test void selectedWarningMonthFiltersBeforePagingAndListAllUsesIdenticalRows() throws Exception {
+        for(int i=0;i<55;i++){String id="A-"+i;existing(id,"100");monthlyRows.put(id,List.of(new StoredMonth("202601",31,new BigDecimal("1.01"),BigDecimal.TEN,BigDecimal.TEN,"N")));}
+        existing("A-DEC","100");monthlyRows.put("A-DEC",List.of(new StoredMonth("202612",31,new BigDecimal("1.01"),BigDecimal.TEN,BigDecimal.TEN,"Y")));
+        mvc.perform(get("/api/assignments").param("year","2026").param("warning","MM_OVER")).andExpect(jsonPath("$.data.total").value(56));
+        mvc.perform(get("/api/assignments").param("year","2026").param("warning","MM_OVER").param("month","2026-01").param("page","2"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(55)).andExpect(jsonPath("$.data.items.length()").value(5));
+        mvc.perform(get("/api/assignments").param("year","2026").param("warning","MM_OVER").param("month","2026-12"))
+            .andExpect(jsonPath("$.data.total").value(1)).andExpect(jsonPath("$.data.items[0].id").value("A-DEC"));
+        mvc.perform(get("/api/assignments").param("year","2026").param("warning","MM_OVER").param("month","2026-02")).andExpect(jsonPath("$.data.total").value(0));
+        verify(mapper).matchingIds(new Filter(2026,null,null,"MM_OVER",null,false,"2026-12"));noWrites();
+    }
+
 }

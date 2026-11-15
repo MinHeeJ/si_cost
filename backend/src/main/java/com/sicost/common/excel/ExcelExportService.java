@@ -54,7 +54,7 @@ public class ExcelExportService {
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05").contains(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05", "UI-21").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
             String qualifierPattern = switch (specification.screenId()) {
@@ -73,7 +73,7 @@ public class ExcelExportService {
             } else if (data.filename() != null) throw InputValidator.invalid("filename");
             for (Sheet sheet : data.sheets()) {
                 validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
-                SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), true);
+                SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), !"UI-21".equals(specification.screenId()));
                 sheet.rows().read(writer::append);
             }
             return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), data.information(), data.filename());
@@ -207,6 +207,7 @@ public class ExcelExportService {
     }
     private void validate(Specification specification) {
         Set<String> kinds = switch (specification.screenId()) {
+            case "UI-21" -> Set.of("자금수지표");
             case "UI-05" -> Set.of("철수리스트");
             case "UI-28" -> Set.of("인력운영달력", "인력운영수요공급");
             case "UI-17" -> Set.of("인력수요예측");

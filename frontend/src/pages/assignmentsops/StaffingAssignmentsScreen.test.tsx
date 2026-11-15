@@ -504,3 +504,20 @@ it("EXTP는 사유·적용일·미리보기 없이 메타정보 변경만 한 �
   expect(api.preview).not.toHaveBeenCalled();
   expect(api.changeAssignment).toHaveBeenCalledWith(row.id, { year: 2026, expectedRevision: row.revision, type: "EXTP", extensionPossibility: null });
 });
+it("uses close-check year and MM warning without changing saved period", async () => {
+  render(<StaffingAssignmentsScreen initialMonth="2026-05" initialWarning="MM_OVER" />);
+  await waitFor(() => expect(api.getAssignments).toHaveBeenCalledWith(expect.objectContaining({ year: 2026, month: "2026-05", warning: "MM_OVER" })));
+  expect(shared.putSharedPreference).not.toHaveBeenCalled();
+});
+
+it("마감 선택월을 조회·전체선택에 유지하고 초기화하면 연간 전체로 돌아간다", async () => {
+  render(<StaffingAssignmentsScreen initialMonth="2026-05" initialWarning="MM_OVER" />);
+  await screen.findByText(row.projectName);
+  expect(screen.getByTestId("assignments-month-filter")).toHaveValue("2026-05");
+  fireEvent.change(screen.getByTestId("assignments-search"), { target: { value: "담당" } });
+  await userEvent.click(screen.getByTestId("assignments-query"));
+  await waitFor(() => expect(api.getAssignments).toHaveBeenLastCalledWith(expect.objectContaining({ month: "2026-05", warning: "MM_OVER", q: "담당" })));
+  await userEvent.click(screen.getByTestId("assignments-reset"));
+  await waitFor(() => expect(api.getAssignments).toHaveBeenLastCalledWith(expect.not.objectContaining({ month: expect.anything() })));
+  expect(screen.getByTestId("assignments-month-filter")).toHaveValue("");
+});

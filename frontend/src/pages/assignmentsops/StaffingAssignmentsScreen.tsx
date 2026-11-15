@@ -39,6 +39,8 @@ export type AssignmentListActions = {
   refresh(): Promise<void>;
 };
 export type StaffingAssignmentsProps = {
+  initialMonth?: string;
+  initialWarning?: string;
   entryAssignmentId?: string;
   entryHistory?: boolean;
   onDirtyChange?(dirty: boolean): void;
@@ -49,6 +51,8 @@ export function StaffingAssignmentsScreen({
   renderActions,
   entryAssignmentId,
   entryHistory,
+  initialMonth,
+  initialWarning,
 }: StaffingAssignmentsProps = {}) {
   const [context, setContext] = useState<PeriodContext>(),
     [year, setYear] = useState<number>(),
@@ -66,6 +70,7 @@ export function StaffingAssignmentsScreen({
         setYear(
           (old) =>
             old ??
+            (initialMonth ? Number(initialMonth.slice(0, 4)) : undefined) ??
             (pref?.type === "YEAR" && pref.value
               ? Math.max(
                   Number(c.cashBaseMonth.slice(0, 4)),
@@ -118,6 +123,8 @@ export function StaffingAssignmentsScreen({
           renderActions={renderActions}
           entryAssignmentId={entryAssignmentId}
           entryHistory={entryHistory}
+          initialMonth={initialMonth}
+          initialWarning={initialWarning}
         />
       ) : (
         <p role="status">배정 기간을 불러오는 중입니다.</p>
@@ -132,12 +139,15 @@ export function AssignmentsContent({
   renderActions,
   entryAssignmentId,
   entryHistory,
+  initialMonth,
+  initialWarning,
 }: StaffingAssignmentsProps & { year: number; context: PeriodContext }) {
-  const [filters, setFilters] = useState<api.Filters>({ year }),
+  const [filters, setFilters] = useState<api.Filters>({ year, ...(initialMonth?.startsWith(`${year}-`) ? { month: initialMonth } : {}), ...(initialWarning ? { warning: initialWarning } : {}) }),
     [draft, setDraft] = useState({
       projectId: "",
       jobCode: "",
-      warning: "",
+      warning: initialWarning ?? "",
+      month: initialMonth?.startsWith(`${year}-`) ? initialMonth : "",
       q: "",
       includeCancelled: false,
     }),
@@ -375,6 +385,7 @@ export function AssignmentsContent({
       projectId: "",
       jobCode: "",
       warning: "",
+      month: "",
       q: "",
       includeCancelled: false,
     });
@@ -435,6 +446,7 @@ export function AssignmentsContent({
             projectId: draft.projectId || undefined,
             jobCode: draft.jobCode || undefined,
             warning: draft.warning || undefined,
+            month: draft.month || undefined,
             q: draft.q.trim() || undefined,
             includeCancelled: draft.includeCancelled,
           });
@@ -482,6 +494,12 @@ export function AssignmentsContent({
               </option>
             ))}
           </select>
+        </label>
+        <label className="sicost-field">
+          선택월
+          <input type="month" data-testid="assignments-month-filter" value={draft.month}
+            min={`${year}-01`} max={`${year}-12`}
+            onChange={(e) => setDraft((v) => ({ ...v, month: e.target.value }))} />
         </label>
         <label className="sicost-field">
           경고

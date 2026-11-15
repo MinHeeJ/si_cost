@@ -60,6 +60,106 @@ const status = (kind: string) =>
           : "미확인";
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+export function CashFlowStatementTable({
+  columns,
+  rows,
+  unit,
+  onSource,
+}: {
+  columns: {
+    key: string;
+    label: string;
+    status?: string;
+    sourceMonth?: string;
+    shortage?: boolean;
+  }[];
+  rows: {
+    key: string;
+    label: string;
+    values: (string | null)[];
+    sourceItem?: string;
+    section?: boolean;
+  }[];
+  unit: AmountUnit;
+  onSource(month: string, item: string, trigger: HTMLButtonElement): void;
+}) {
+  return (
+    <div className="operating-table-scroll">
+      <table aria-label="자금수지표">
+        <thead>
+          <tr>
+            <th scope="col">항목</th>
+            {columns.map((c) => (
+              <th scope="col" key={c.key} className={c.status === "PLANNED" ? "cash-planned" : undefined}>
+                {c.label}
+                {c.status && (
+                  <StatusBadge
+                    tone={
+                      c.status === "ACTUAL"
+                        ? "lock"
+                        : c.status === "BEFORE_BASE"
+                          ? "neutral"
+                          : "info"
+                    }
+                  >
+                    {c.status === "ACTUAL"
+                      ? "실적"
+                      : c.status === "BEFORE_BASE"
+                        ? "운영 시작 전"
+                        : "예정"}
+                  </StatusBadge>
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.key}
+              className={
+                row.sourceItem ? "operating-detail" : "operating-total"
+              }
+              data-testid={`cash-row-${row.key.toLowerCase().replaceAll("_", "-")}`}
+            >
+              <th scope="row">{row.label}</th>
+              {row.values.map((value, i) => (
+                <td
+                  key={columns[i].key}
+                  className={[columns[i].status === "PLANNED" ? "cash-planned" : "", row.key === "balance" && columns[i].shortage ? "cash-shortage" : ""].filter(Boolean).join(" ") || undefined}
+                  data-financial-negative={value?.startsWith("-")}
+                >
+                  {row.section ? (
+                    ""
+                  ) : row.sourceItem &&
+                    columns[i].sourceMonth &&
+                    columns[i].status !== "BEFORE_BASE" ? (
+                    <button
+                      type="button"
+                      data-testid={`cash-source-${row.key.toLowerCase().replaceAll("_", "-")}-${columns[i].key}`}
+                      aria-label={`${columns[i].label} ${row.label} 계산근거`}
+                      onClick={(e) =>
+                        onSource(
+                          columns[i].sourceMonth!,
+                          row.sourceItem!,
+                          e.currentTarget,
+                        )
+                      }
+                    >
+                      {formatAmount(value, unit)}
+                    </button>
+                  ) : (
+                    formatAmount(value, unit)
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 export function FinancialStatementTable({
   months,
   rows,

@@ -28,7 +28,7 @@ public final class FinancialReadDtos {
         String adjustmentProfit,String cashFinancialExpense,String cashMiscIncome,String cashCardExpense,
         String cashTransferExpense,String cashUnpaidLabor,String transferTotal,String cashLoanIn,
         String cashLoanOut,String cashLoanNet,String month,String corporateTaxAllocation,String cashTaxPayment,
-        boolean verified,List<String> warnings) {}
+        boolean verified,List<String> warnings,boolean cashVerified,List<com.sicost.cashflowops.CashFlowDtos.Issue> cashIssues) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record HistoryEntry(String historyId,String targetTable,String targetKey,String changeType,
         String field,String beforeValue,String afterValue,String reason,String userId,String occurredAt) {}

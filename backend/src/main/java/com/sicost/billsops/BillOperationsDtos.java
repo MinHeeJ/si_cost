@@ -33,7 +33,9 @@ public final class BillOperationsDtos {
     public record BillSelection(List<BillSelectionItem> items,int total,List<BillSelectionExcluded> excluded,int excludedCount,boolean canSave) {}
     public record SummaryQuery(int year,boolean includeCarryover) {}
     public record SelectionQuery(int year,String status,String month,String projectId,boolean includeCarryover,
-        String sort,String direction,List<String> ids,List<String> excludeIds) {}
+        String sort,String direction,List<String> ids,List<String> excludeIds,boolean missingInvoiceNo) {
+        public SelectionQuery(int year,String status,String month,String projectId,boolean includeCarryover,String sort,String direction,List<String> ids,List<String> excludeIds) {this(year,status,month,projectId,includeCarryover,sort,direction,ids,excludeIds,false);}
+    }
     public record MutationRequest(Integer year,String expectedRevision,String reason) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record BillCopyDraft(String sourceBillId,String expectedRevision,int year,String projectId,String billingMonth,

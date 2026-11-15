@@ -5,4 +5,5 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface ChangeHistoryMapper {
     int insert(ChangeHistoryEntry entry);
+    java.util.List<ChangeHistoryEntry> monthCloseEntries(ChangeHistoryEntry entry);
 }

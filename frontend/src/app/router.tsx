@@ -1,5 +1,5 @@
 import "../pages/shared/financialDisplay.css";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBanner } from "../shared/Feedback";
 import {
   BrowserRouter,
@@ -41,6 +41,7 @@ import { ProfitStructureScreen } from "../pages/shared/ProfitStructureScreen";
 import { OperatingProfitScreen } from "../pages/shared/OperatingProfitScreen";
 import { NetProfitScreen } from "../pages/shared/NetProfitScreen";
 import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerformanceScreen";
+import { CashFlowScreen } from "../pages/shared/CashFlowScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { WorkforceRecommendationsScreen } from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
@@ -132,7 +133,7 @@ const tableColumns: Record<View, PreferenceColumn[]> = {
 function RegisteredCompanyProfit({
   screenId,
 }: {
-  screenId: "UI-07" | "UI-08" | "UI-09" | "UI-18";
+  screenId: "UI-07" | "UI-08" | "UI-09" | "UI-18" | "UI-21";
 }) {
   const preferences = usePreferences();
   const [error, setError] = useState("");
@@ -144,6 +145,7 @@ function RegisteredCompanyProfit({
     "UI-08": OperatingProfitScreen,
     "UI-09": NetProfitScreen,
     "UI-18": BusinessPlanPerformanceScreen,
+    "UI-21": CashFlowScreen,
   }[screenId];
   return (
     <>
@@ -439,6 +441,18 @@ function BusinessPartnersWorkspace({
       )}
     </>
   );
+}
+
+function CloseLinkedAssignments({ onDirtyChange }: { onDirtyChange(dirty: boolean): void }) {
+  const location = useLocation();
+  const incoming = location.state as { fromMonthClose?: boolean; month?: string; filter?: string } | null;
+  const entry = useRef<{ key: string; month?: string; filter?: string }>();
+  if (location.pathname === "/UI-12" && incoming?.fromMonthClose && entry.current?.key !== location.key)
+    entry.current = { key: location.key, month: incoming.month, filter: incoming.filter };
+  const month = entry.current?.month;
+  return <SharedScreenFrame key={entry.current?.key} screenId="UI-12" initialMonth={month}>
+    <StaffingAssignmentsScreen onDirtyChange={onDirtyChange} initialMonth={month} initialWarning={month && entry.current?.filter === "MM_OVER" ? "MM_OVER" : undefined} />
+  </SharedScreenFrame>;
 }
 
 function RegisteredUsersWorkspace({
@@ -1138,9 +1152,7 @@ function RegisteredApplication() {
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
         ),
         "UI-12": (
-          <SharedScreenFrame screenId="UI-12">
-            <StaffingAssignmentsScreen onDirtyChange={onAssignmentsDirty} />
-          </SharedScreenFrame>
+          <CloseLinkedAssignments onDirtyChange={onAssignmentsDirty} />
         ),
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
         "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
@@ -1151,6 +1163,7 @@ function RegisteredApplication() {
         "UI-08": <RegisteredCompanyProfit screenId="UI-08" />,
         "UI-09": <RegisteredCompanyProfit screenId="UI-09" />,
         "UI-18": <RegisteredCompanyProfit screenId="UI-18" />,
+        "UI-21": <RegisteredCompanyProfit screenId="UI-21" />,
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),

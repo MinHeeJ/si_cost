@@ -12,7 +12,8 @@
         COALESCE(sum(vat_amt) FILTER(WHERE fin_ym=#{databaseMonth} AND fin_cls_cd='NOPR_OUT'),0) AS expense_vat,
         COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd IN ('SGA','NOPR_OUT') AND
           ((io_dt BETWEEN #{start} AND #{end}) OR (io_dt IS NULL AND fin_ym=#{databaseMonth}))),0) AS cash_expense,
-        COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd='NOPR_IN' AND io_dt BETWEEN #{start} AND #{end}),0) AS cash_income
+        COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd='NOPR_IN' AND
+          ((io_dt BETWEEN #{start} AND #{end}) OR (io_dt IS NULL AND fin_ym=#{databaseMonth}))),0) AS cash_income
       FROM tb_fi_item WHERE fin_ym=#{databaseMonth} OR io_dt BETWEEN #{start} AND #{end}
     ), transfers AS (
       SELECT COALESCE(sum(amt) FILTER(WHERE xfer_cls_cd='EXP'),0) AS expense,
@@ -30,13 +31,16 @@
       FROM tb_fi_tax_pay p LEFT JOIN tb_fi_corp_tax t ON t.tax_yr=p.tax_yr
       LEFT JOIN tb_fi_tax_pay mid ON mid.tax_yr=p.tax_yr AND mid.pay_type_cd='MID'
       WHERE (p.pay_yn='Y' AND p.pay_dt BETWEEN #{start} AND #{end})
-        OR (p.pay_yn='N' AND p.pay_due_dt BETWEEN #{start} AND #{end})
+        OR (p.pay_yn='N' AND p.pay_due_dt BETWEEN #{start} AND #{end}
+          AND NOT EXISTS (SELECT 1 FROM tb_cl_close c WHERE c.close_ym=#{databaseMonth} AND c.close_stat_cd='CLOSE'))
     )
     SELECT i.sga AS "sgaAmount",i.sga_vat AS "sgaVatAmount",i.income AS "nonOperatingIncome",
       i.income_vat AS "nonOperatingIncomeVat",i.expense AS "nonOperatingExpense",i.expense_vat AS "nonOperatingExpenseVat",
       (SELECT COALESCE(sum(adj_amt),0) FROM tb_co_prev_adj WHERE aply_ym=#{databaseMonth}) AS "adjustmentProfit",
       i.cash_expense AS "cashFinancialExpense",i.cash_income AS "cashMiscIncome",
-      (SELECT COALESCE(sum(cash_amt),0) FROM tb_fi_card_mon WHERE pay_ym=#{databaseMonth}) AS "cashCardExpense",
+      (SELECT CASE WHEN count(*)=0 AND EXISTS (SELECT 1 FROM tb_fi_card_pay WHERE pay_ym=#{databaseMonth}) THEN NULL
+        WHEN count(*) FILTER (WHERE cash_amt IS NULL)>0 THEN NULL ELSE COALESCE(sum(cash_amt),0) END
+        FROM tb_fi_card_mon WHERE pay_ym=#{databaseMonth}) AS "cashCardExpense",
       x.expense AS "cashTransferExpense",x.labor AS "cashUnpaidLabor",x.total AS "transferTotal",
       l.incoming AS "cashLoanIn",l.outgoing AS "cashLoanOut",
       (SELECT CASE WHEN count(*) FILTER(WHERE amount IS NULL)>0 THEN NULL ELSE COALESCE(sum(amount),0) END FROM payments) AS "cashTaxPayment"

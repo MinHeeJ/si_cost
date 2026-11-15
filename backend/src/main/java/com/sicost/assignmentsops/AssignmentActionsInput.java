@@ -76,10 +76,10 @@ public final class AssignmentActionsInput {
         for(JsonNode v:n.get(field)){if(!v.isTextual())throw invalid(field);String id=text(v.textValue(),20,field);if(values.contains(id))throw invalid(field);values.add(id);}return List.copyOf(values);
     }
     public static Filter filter(JsonNode n) {
-        object(n,Set.of("year","projectId","jobCode","warning","q","includeCancelled"));
+        object(n,Set.of("year","month","projectId","jobCode","warning","q","includeCancelled"));
         if(n.has("includeCancelled")&&!n.get("includeCancelled").isBoolean())throw invalid("includeCancelled");
         return new Filter(year(n),optionalText(string(n,"projectId",false),20,"projectId"),optionalText(string(n,"jobCode",false),10,"jobCode"),
-            warning(string(n,"warning",false)),optionalText(string(n,"q",false),100,"q"),n.path("includeCancelled").asBoolean(false));
+            warning(string(n,"warning",false)),optionalText(string(n,"q",false),100,"q"),n.path("includeCancelled").asBoolean(false),com.sicost.assignments.AssignmentInput.month(string(n,"month",false),year(n)));
     }
     public static SelectRequest selection(JsonNode n) {
         object(n,Set.of("year","scope","filters","ids","excludedIds"));Filter f=filter(n.get("filters"));int year=year(n);if(f.year()!=year)throw invalid("filters.year");

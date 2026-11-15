@@ -28,7 +28,7 @@ public class AssignmentExportService {
     public static final List<String> COLUMNS = List.of("warnings", "projectName", "developerName", "jobName", "startDate", "endDate",
         "billingUnitPrice", "contractMm", "yearMm", "extensionPossibility", "inputType");
     private static final Set<String> FIELDS = Set.of("view", "filters", "sort", "direction", "columns", "amountUnit");
-    private static final Set<String> FILTERS = Set.of("year", "projectId", "jobCode", "warning", "q", "includeCancelled");
+    private static final Set<String> FILTERS = Set.of("year", "month", "projectId", "jobCode", "warning", "q", "includeCancelled");
     private final AssignmentService assignments;
     private final AssignmentRepository repository;
     private final ExcelExportService excel;
@@ -50,10 +50,10 @@ public class AssignmentExportService {
         filterNode.fieldNames().forEachRemaining(field -> {
             if (!FILTERS.contains(field)) throw MasterDataExportInput.unknown("filters." + field);
             JsonNode value = filterNode.get(field);
-            if (value.isNull()) return;
+            if (value.isNull()) {if (field.equals("month")) throw InputValidator.invalid("month"); return;}
             if (!value.isTextual() && !value.isBoolean() && !value.isInt()) throw InputValidator.invalid("filters." + field);
             String text = value.asText();
-            if (!text.isBlank()) query.put(field, text);
+            if (!text.isBlank() || field.equals("month")) query.put(field, text);
         });
         String sort = text(body, "sort"), direction = text(body, "direction"), unit = text(body, "amountUnit");
         if (sort != null) query.put("sort", sort);

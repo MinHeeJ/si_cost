@@ -15,11 +15,13 @@ export function ErrorBanner({
   requestId,
   onRetry,
   pending = false,
+  retryTestId,
 }: {
   message: string;
   requestId?: string;
   onRetry?: () => void;
   pending?: boolean;
+  retryTestId?: string;
 }) {
   return (
     <div role="alert" className="sicost-banner sicost-tone-bad">
@@ -28,7 +30,12 @@ export function ErrorBanner({
         {requestId && <small> 문의 번호: {requestId}</small>}
       </span>
       {onRetry && (
-        <button type="button" disabled={pending} onClick={onRetry}>
+        <button
+          type="button"
+          data-testid={retryTestId}
+          disabled={pending}
+          onClick={onRetry}
+        >
           다시 조회
         </button>
       )}

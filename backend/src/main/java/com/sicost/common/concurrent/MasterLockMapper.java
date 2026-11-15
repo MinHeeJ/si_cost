@@ -6,4 +6,5 @@ import org.apache.ibatis.annotations.Mapper;
 public interface MasterLockMapper {
     void lockClose();
     void lockSettlement();
+    boolean isClosed(@org.apache.ibatis.annotations.Param("month") String month);
 }

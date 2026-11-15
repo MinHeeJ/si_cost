@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.monthclosesops.MonthCloseMapper">
+  <select id="rows" resultType="string" useCache="false" flushCache="true">
+    SELECT to_jsonb(t)::text FROM ${table} t ORDER BY to_jsonb(t)::text
+    <if test="lock">FOR SHARE</if>
+  </select>
+  <insert id="insert">
+    INSERT INTO ${table} (
+      <foreach collection="keys" index="column" item="value" separator=",">${column}</foreach>,
+      <foreach collection="values" index="column" item="value" separator=",">${column}</foreach>
+    ) VALUES (
+      <foreach collection="keys" item="value" separator=",">#{value}</foreach>,
+      <foreach collection="values" index="column" item="value" separator=",">
+        <choose>
+          <when test="column == 'FIX_YN'">'Y'</when>
+          <when test="column == 'MIGR_YN'">'N'</when>
+          <otherwise>#{value}</otherwise>
+        </choose>
+      </foreach>
+    )
+  </insert>
+  <update id="update">
+    UPDATE ${table} SET
+    <foreach collection="values" index="column" item="value" separator=",">
+      ${column} = <choose><when test="column == 'FIX_YN'">'Y'</when><otherwise>#{value}</otherwise></choose>
+    </foreach>
+    WHERE <foreach collection="keys" index="column" item="value" separator=" AND ">${column} = #{value}</foreach>
+    <if test="table == 'TB_PJ_ASGN_MON' or table == 'TB_CO_MON_COST' or table == 'TB_CO_MON_PL'">AND FIX_YN = 'N'</if>
+    <if test="table == 'TB_CO_MON_PL'">AND MIGR_YN = 'N'</if>
+  </update>
+  <delete id="delete">
+    DELETE FROM ${table} WHERE <foreach collection="keys" index="column" item="value" separator=" AND ">${column} = #{value}</foreach>
+    AND FIX_YN = 'N'
+    <if test="table == 'TB_CO_MON_PL'">AND MIGR_YN = 'N'</if>
+  </delete>
+  <update id="release">
+    UPDATE ${table} SET FIX_YN = 'N', MOD_USER_ID = #{values.MOD_USER_ID}, MOD_DTTM = #{values.MOD_DTTM}
+    WHERE <foreach collection="keys" index="column" item="value" separator=" AND ">${column} = #{value}</foreach>
+    AND FIX_YN = 'Y'
+    <if test="table == 'TB_CO_MON_PL'">AND MIGR_YN = 'N'</if>
+    AND EXISTS (SELECT 1 FROM TB_SY_CHG_HIST H WHERE H.TRGT_TBL_NM = '${table}' AND H.TRGT_KEY = #{targetKey}
+      AND H.CHG_ITEM_NM = 'FIX_YN' AND H.BFR_VAL = 'N' AND H.AFT_VAL = 'Y' AND H.CHG_RSN = #{owner})
+  </update>
+</mapper>

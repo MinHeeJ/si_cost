@@ -24,14 +24,33 @@ export type FinancialItemsScreenProps = {
   onDirtyChange?(dirty: boolean): void;
   openAdjustments?: boolean;
   openTax?: boolean;
+  initialMonth?: string;
+  initialAdjustmentTargetMonth?: string;
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const location = useLocation();
-  const section = (location.state as { section?: string } | null)?.section;
+  type Entry = { section?: string; month?: string; targetMonth?: string };
+  const savedEntry = useRef<{ key: string; value: Entry }>();
+  const routeEntry = location.state as Entry | null;
+  if (location.pathname === "/UI-10" && routeEntry?.month && savedEntry.current?.key !== location.key)
+    savedEntry.current = { key: location.key, value: routeEntry };
+  const incoming = location.pathname === "/UI-10" ? routeEntry ?? savedEntry.current?.value : savedEntry.current?.value;
+  const section = incoming?.section;
   const openAdjustments = section === "adjustments";
   return (
     <SharedScreenFrame screenId="UI-10" periodBar={null}>
-      <FinancialItemsEditor {...props} openAdjustments={openAdjustments} openTax={section === "tax"} />
+      <FinancialItemsEditor
+        key={savedEntry.current?.key}
+        {...props}
+        initialMonth={incoming?.month ?? props.initialMonth}
+        initialAdjustmentTargetMonth={
+          openAdjustments
+            ? incoming?.targetMonth
+            : props.initialAdjustmentTargetMonth
+        }
+        openAdjustments={openAdjustments}
+        openTax={section === "tax"}
+      />
     </SharedScreenFrame>
   );
 }
@@ -39,8 +58,10 @@ export function FinancialItemsEditor({
   onDirtyChange,
   openAdjustments,
   openTax,
+  initialMonth,
+  initialAdjustmentTargetMonth,
 }: FinancialItemsScreenProps) {
-  const [month, setMonth] = useState<string>();
+  const [month, setMonth] = useState<string | undefined>(initialMonth);
   const state = useFinancialEditor(month, onDirtyChange),
     { editor, draft } = state;
   const guard = useFinancialNavigationGuard(
@@ -68,6 +89,7 @@ export function FinancialItemsEditor({
     )
       return;
     if (
+      !initialMonth &&
       !editor.editable &&
       editor.firstEditableMonth &&
       month !== editor.firstEditableMonth
@@ -78,9 +100,11 @@ export function FinancialItemsEditor({
     adjustmentOpened.current = true;
     setTab("financial");
     document
-      .getElementById(openTax ? "financial-tax-section" : "financial-adjustments-section")
+      .getElementById(
+        openTax ? "financial-tax-section" : "financial-adjustments-section",
+      )
       ?.scrollIntoView?.({ block: "start" });
-  }, [openAdjustments, openTax, editor, state.loading, month]);
+  }, [openAdjustments, openTax, initialMonth, editor, state.loading, month]);
   useEffect(() => {
     let live = true;
     void getSharedCodes("SGA_ITEM")
@@ -233,7 +257,13 @@ export function FinancialItemsEditor({
           }
         : collection === "adjustments"
           ? {
-              targetMonth: editor.adjustmentTargetMonths[0] ?? null,
+              targetMonth:
+                initialAdjustmentTargetMonth &&
+                editor.adjustmentTargetMonths.includes(
+                  initialAdjustmentTargetMonth,
+                )
+                  ? initialAdjustmentTargetMonth
+                  : (editor.adjustmentTargetMonths[0] ?? null),
               itemCode: "ETC",
               amount: "",
               reason: "",

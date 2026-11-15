@@ -3,4 +3,7 @@
 <mapper namespace="com.sicost.common.concurrent.MasterLockMapper">
   <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
   <update id="lockSettlement">LOCK TABLE tb_co_part_setl IN SHARE MODE</update>
+  <select id="isClosed" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM tb_cl_close WHERE close_ym = #{month} AND close_stat_cd = 'CLOSE')
+  </select>
 </mapper>

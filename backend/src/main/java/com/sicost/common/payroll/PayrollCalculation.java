@@ -18,6 +18,11 @@ public final class PayrollCalculation {
         BigDecimal realPay, BigDecimal vendorSupply, String employeeType, String directClass) {}
 
     public static Values calculate(Classification person, Amounts input, Map<String, BigDecimal> rates) {
+        return calculate(person, input, rates, new BigDecimal("3.3"));
+    }
+    public static Values calculate(Classification person, Amounts input, Map<String, BigDecimal> rates, BigDecimal withholdingRate) {
+        if (withholdingRate == null || withholdingRate.signum() < 0 || withholdingRate.compareTo(new BigDecimal("100")) > 0)
+            throw new IllegalArgumentException("유효 원천세율을 확인해 주세요.");
         String type = person.employeeType();
         if (type == null || !Set.of("FT", "CT", "FL", "OS").contains(type))
             throw new IllegalArgumentException("직원구분은 FT/CT/FL/OS여야 합니다.");
@@ -34,7 +39,7 @@ public final class PayrollCalculation {
                 ? down(pay.multiply(rate(rates, "INS_RATE")).movePointLeft(2)) : amount(input.companyInsurance());
             if (type.equals("FT")) retire = down(pay.add(allowance).multiply(rate(rates, "SEV_RATE")).movePointLeft(2));
         }
-        BigDecimal withholding = type.equals("FT") ? zero : down(pay.add(allowance).multiply(new BigDecimal("0.033")));
+        BigDecimal withholding = type.equals("FT") ? zero : down(pay.add(allowance).multiply(withholdingRate).movePointLeft(2));
         BigDecimal net = pay.add(allowance).subtract(self).subtract(withholding).subtract(income);
         for (BigDecimal value : new BigDecimal[]{pay, allowance, company, self, retire, income, withholding, net}) amount(value);
         return new Values(pay, allowance, company, self, retire, income, withholding, net, zero, type, person.directClass());

@@ -13,7 +13,9 @@ public final class AssignmentActionsDtos {
     public record Page<T>(List<T> items,long total,int page,int size) {}
     public record Item(String id,String expectedRevision) {}
     public record Selection(List<Item> items,int total,List<String> protectedMonths) {}
-    public record Filter(int year,String projectId,String jobCode,String warning,String q,boolean includeCancelled) {}
+    public record Filter(int year,String projectId,String jobCode,String warning,String q,boolean includeCancelled,String month) {
+        public Filter(int year,String projectId,String jobCode,String warning,String q,boolean includeCancelled) {this(year,projectId,jobCode,warning,q,includeCancelled,null);}
+    }
     public record SelectRequest(int year,String scope,Filter filters,List<String> ids,List<String> excludedIds) {}
     public record Bulk(int year,String type,List<Item> items,String extensionPossibility,String reasonCode,String memo) {}
     public record BulkItem(String id,String outcome,String revision,ApiError error,List<String> protectedMonths) {}

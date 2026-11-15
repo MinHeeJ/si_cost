@@ -25,12 +25,20 @@ public class FinancialReadService {
         validate(period);SourceTotals totals=repository.totals(period);List<String> warnings=new ArrayList<>();
         String allocation=allocation(period,repository.estimatedTax(period),repository.taxMonths(period),warnings);
         if(totals.cashTaxPayment()==null)warnings.add("납부 예상액을 확인할 수 없습니다.");
+        if(totals.cashCardExpense()==null)warnings.add("카드 명세의 현금 합계 원천을 확인할 수 없습니다.");
         return new Contributions(money(totals.sgaAmount()),money(totals.sgaVatAmount()),money(totals.nonOperatingIncome()),
             money(totals.nonOperatingIncomeVat()),money(totals.nonOperatingExpense()),money(totals.nonOperatingExpenseVat()),
             money(totals.adjustmentProfit()),money(totals.cashFinancialExpense()),money(totals.cashMiscIncome()),
             money(totals.cashCardExpense()),money(totals.cashTransferExpense()),money(totals.cashUnpaidLabor()),money(totals.transferTotal()),
             money(totals.cashLoanIn()),money(totals.cashLoanOut()),money(totals.cashLoanIn().subtract(totals.cashLoanOut())),
-            period.month(),allocation,money(totals.cashTaxPayment()),warnings.isEmpty(),List.copyOf(warnings));
+            period.month(),allocation,money(totals.cashTaxPayment()),warnings.isEmpty(),List.copyOf(warnings),totals.cashTaxPayment()!=null&&totals.cashCardExpense()!=null,
+            cashIssues(period,totals));
+    }
+    private static List<com.sicost.cashflowops.CashFlowDtos.Issue> cashIssues(Period period,SourceTotals totals) {
+        var issues=new ArrayList<com.sicost.cashflowops.CashFlowDtos.Issue>();
+        if(totals.cashTaxPayment()==null)issues.add(new com.sicost.cashflowops.CashFlowDtos.Issue("SOURCE_UNKNOWN","납부 예상액을 확인할 수 없습니다.",period.month(),"TB_FI_TAX_PAY",null,"amount"));
+        if(totals.cashCardExpense()==null)issues.add(new com.sicost.cashflowops.CashFlowDtos.Issue("SOURCE_UNKNOWN","카드 명세의 현금 합계 원천을 확인할 수 없습니다.",period.month(),"TB_FI_CARD_MON",null,"cashAmount"));
+        return List.copyOf(issues);
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public HistoryPage getFinancialHistory(HistoryQuery query){validate(query.period());return repository.history(query);}

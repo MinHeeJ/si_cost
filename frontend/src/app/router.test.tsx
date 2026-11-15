@@ -33,6 +33,8 @@ import * as distribution from "../pages/distribution/distributionApi";
 import * as assignments from "../pages/assignmentsops/assignmentActionsApi";
 import * as bills from "../pages/bills/billsApi";
 import * as financial from "../pages/financialitems/financialApi";
+import * as cashFlow from "../pages/cashflowops/cashFlowApi";
+import * as monthClose from "../pages/monthclosesops/monthCloseApi";
 import * as corporateTax from "../pages/corporatetaxesops/corporateTaxApi";
 import * as analysis from "../pages/apiops/projectAnalysisApi";
 import * as costDetail from "../pages/costanalysis/projectCostApi";
@@ -59,6 +61,14 @@ vi.mock("../pages/corporatetaxesops/corporateTaxApi", async (original) => ({
   createCorporateTaxDefaults: vi.fn(),
 }));
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/cashflowops/cashFlowApi", async (original) => ({
+  ...(await original<typeof import("../pages/cashflowops/cashFlowApi")>()),
+  getCashFlow: vi.fn(),
+}));
+vi.mock("../pages/monthclosesops/monthCloseApi", async (original) => ({
+  ...(await original<typeof import("../pages/monthclosesops/monthCloseApi")>()),
+  getMonthCloses: vi.fn(),
+}));
 vi.mock("../pages/workforcerecommendationsops/recommendationBrowseApi");
 vi.mock("../pages/candidates/recommendationActionsApi", async (original) => ({
   ...(await original<
@@ -401,6 +411,12 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(cashFlow.getCashFlow).mockRejectedValue(
+    new Error("자금수지 원천 조회 실패"),
+  );
+  vi.mocked(monthClose.getMonthCloses).mockRejectedValue(
+    new Error("월 마감 원천 조회 실패"),
+  );
   vi.mocked(
     recommendations.getWorkforceRecommendationTargets,
   ).mockResolvedValue({
@@ -1567,6 +1583,26 @@ describe("공식 진입점 합성", () => {
           recommendations.requestTargetRecommendation,
         ).toHaveBeenCalledOnce();
         expect(screenRegistry[id].periodType).toBe("NONE");
+      } else if (id === "UI-21" || id === "UI-14") {
+        expect(
+          await screen.findByTestId(
+            id === "UI-21" ? "cash-flow-screen" : "month-close-screen",
+          ),
+        ).toBeVisible();
+        await screen.findByText(
+          id === "UI-21" ? "자금수지 원천 조회 실패" : "월 마감 원천 조회 실패",
+        );
+        expect(
+          id === "UI-21" ? cashFlow.getCashFlow : monthClose.getMonthCloses,
+        ).toHaveBeenCalled();
+        expect(screenRegistry[id].periodType).toBe(
+          id === "UI-21" ? "YEAR" : "YEAR_MONTH",
+        );
+        expect(
+          screen
+            .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
+            .some((node) => !node.closest("[hidden]")),
+        ).toBe(false);
       } else if (["UI-11", "UI-17", "UI-28", "UI-29"].includes(id)) {
         const screens: Record<string, string> = {
           "UI-11": "staffing-comparison-screen",

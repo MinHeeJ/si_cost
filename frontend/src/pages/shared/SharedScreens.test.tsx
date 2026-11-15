@@ -232,6 +232,27 @@ describe("controlled 기간 선택", () => {
       screen.queryByRole("option", { name: "2026년 12월" }),
     ).not.toBeInTheDocument();
   });
+  it("마감 commit은 기간 설정을 쓰거나 변경 이벤트를 재발행하지 않고 배지를 갱신한다", async () => {
+    render(<ScreenPeriodBar screenId="UI-14" />);
+    await screen.findByText("작업중");
+    const changed = vi.fn();
+    window.addEventListener("sicost:screen-period-changed", changed);
+    try {
+      vi.mocked(api.getMonthClose).mockResolvedValue({
+        items: [{ month: context.currentMonth, status: "마감" }],
+      });
+      fireEvent(window, new CustomEvent("sicost:month-close-committed"));
+      await screen.findByText("마감");
+      expect(api.getMonthClose).toHaveBeenLastCalledWith(
+        context.currentMonth,
+        context.currentMonth,
+      );
+      expect(api.putSharedPreference).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("sicost:screen-period-changed", changed);
+    }
+  });
   it.each(["UI-07", "UI-08", "UI-09"])(
     "%s 누계는 시작연도 이전 한 해를 허용하고 월을 새 연도로 제한한다",
     async (screenId) => {
@@ -430,6 +451,8 @@ describe("공식 화면과 공통 틀", () => {
     "UI-18": "business-plan-performance",
     "UI-19": "sales-part-settlement-screen",
     "UI-32": "renegotiation-screen",
+    "UI-21": "cash-flow-screen",
+    "UI-14": "month-close-screen",
     // Sales pipeline and workforce operations screens replace their placeholders.
     "UI-11": "staffing-comparison-screen",
     "UI-17": "workforce-forecast-screen",
@@ -577,4 +600,15 @@ describe("변경 이력", () => {
     await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
     await screen.findByText("조회된 변경 이력이 없습니다.");
   });
+});
+it.each(["UI-12", "UI-13", "UI-19"])("%s one-time close month is read without saving PERIOD", async (screenId) => {
+  const changed = vi.fn();
+  window.addEventListener("sicost:screen-period-changed", changed);
+  try {
+    render(<ScreenPeriodBar screenId={screenId} initialMonth="2026-05" />);
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+    const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
+    expect(detail.value).toEqual(screenId === "UI-19" ? { type: "YEAR_MONTH", value: "2026-05" } : { type: "YEAR", value: "2026" });
+    expect(api.putSharedPreference).not.toHaveBeenCalled();
+  } finally { window.removeEventListener("sicost:screen-period-changed", changed); }
 });

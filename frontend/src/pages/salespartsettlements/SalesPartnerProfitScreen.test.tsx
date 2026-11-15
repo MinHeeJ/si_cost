@@ -301,3 +301,8 @@ it("shows failed request with GET-only retry and clears stale detail", async () 
   await userEvent.click(within(screen.getByRole("alert")).getByRole("button"));
   await screen.findByText("61명");
 });
+it("opens close-check month and specified unconfirmed part", async () => {
+  render(<MemoryRouter initialEntries={[{ pathname: "/UI-19", state: { fromMonthClose: true, month: "2026-05", partId: "two" } }]}><SalesPartnerProfitScreen /></MemoryRouter>);
+  await waitFor(() => expect(api.getSalesPartSettlements).toHaveBeenCalledWith("2026-05", expect.any(AbortSignal)));
+  await waitFor(() => expect(api.getSalesPartSettlement).toHaveBeenCalledWith("two", expect.anything(), expect.any(AbortSignal)));
+});

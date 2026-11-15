@@ -81,6 +81,7 @@ export type Filters = {
   month?: string;
   projectId?: string;
   includeCarryover: boolean;
+  missingInvoiceNo?: boolean;
 };
 export type Sort =
   | "id"

@@ -1,6 +1,7 @@
 import { request } from "../../shared/api";
 
 export type ReceiptBatchFilters = {
+  missingInvoiceNo?: boolean;
   year: number;
   status?: "UNPAID" | "PAID" | "LATE" | "CNCL";
   month?: string;

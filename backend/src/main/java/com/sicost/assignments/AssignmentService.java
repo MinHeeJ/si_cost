@@ -39,7 +39,7 @@ public class AssignmentService {
         users.currentUser();ProjectInputPolicy.year(query.filters().year(),monthly.cashBase(),clock);
         return repository.ids(query.filters()).stream().map(id->actions.saved(id,query.filters().year(),false).assignment())
             .filter(row->query.filters().warning()==null||row.warnings().stream().anyMatch(w->w.code().equals(query.filters().warning())
-                && (w.months().isEmpty()||w.months().stream().anyMatch(m->m.startsWith(query.filters().year()+"-")))))
+                && (w.months().isEmpty()||w.months().stream().anyMatch(m->query.filters().month()==null?m.startsWith(query.filters().year()+"-"):m.equals(query.filters().month())))))
             .sorted(order(query)).toList();
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)

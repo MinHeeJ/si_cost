@@ -26,8 +26,31 @@ public class AccessLogWriter {
     }
     public record Entry(String userId, String action, String screenId, String description, String clientIp, LocalDateTime now) {}
 
+    public record MonthCloseEvent(String action, String month, int historySequence) {}
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendMonthClose(MonthCloseEvent event, String actor, LocalDateTime at, HttpServletRequest request) {
+        if (event == null || !Set.of("CLOSE","UNCLOSE").contains(event.action())
+                || event.month() == null || !event.month().matches("(?!0000)[0-9]{4}(0[1-9]|1[0-2])")
+                || event.historySequence()<1 || event.historySequence()>99999 || at == null) throw InputValidator.invalid("accessLog");
+        InputValidator.text(actor,30,"actor");
+        String ip=request.getRemoteAddr();
+        if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
+        if(mapper.insert(new Entry(actor,event.action(),"UI-14",event.month()+":"+event.historySequence(),ip,at))!=1)
+            throw new IllegalStateException("마감 접근기록을 저장하지 못했습니다.");
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
+        if ("UI-21".equals(event.screenId())) {
+            if (!"DNLD".equals(event.action()) || event.targetId()!=null || !"자금수지표".equals(event.fileType())
+                    || event.count()==null || event.count()<0 || event.filename()!=null) throw InputValidator.invalid("accessLog");
+            String ip=request.getRemoteAddr();
+            if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
+            if(mapper.insert(new Entry(users.userId(),"DNLD","UI-21","자금수지표 "+event.count(),ip,
+                    LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL)))!=1)
+                throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
+            return;
+        }
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
                 || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05").contains(event.screenId())) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-05") && (!"DNLD".equals(event.action()) || event.targetId()!=null
