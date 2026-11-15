@@ -7,4 +7,13 @@
     VALUES (#{tableName}, #{targetKey}, #{type}, #{item}, #{before}, #{after},
       #{reason}, #{userId}, #{occurredAt})
   </insert>
+  <select id="monthCloseEntries" resultType="com.sicost.common.history.ChangeHistoryEntry">
+    SELECT trgt_tbl_nm AS "tableName", trgt_key AS "targetKey", chg_type_cd AS "type",
+      chg_item_nm AS "item", bfr_val AS "before", aft_val AS "after", chg_rsn AS "reason",
+      reg_user_id AS "userId", reg_dttm AS "occurredAt"
+    FROM tb_sy_chg_hist WHERE trgt_tbl_nm = #{tableName} AND trgt_key = #{targetKey}
+      AND chg_item_nm = #{item}
+      <choose><when test="reason != null">AND chg_rsn = #{reason}</when><otherwise>AND chg_rsn IS NULL</otherwise></choose>
+    ORDER BY hist_id
+  </select>
 </mapper>

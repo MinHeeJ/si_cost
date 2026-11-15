@@ -60,14 +60,28 @@ public class SettlementCommandService {
         body.put("month",month).put("cardAmount",before.cardAmount()).put("expectedRevision",before.revision());
         return execute(partId,body,"AUTO",actor);
     }
+    public record CloseContext(String partId,String month,String actor,LocalDateTime at) {}
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Mutation confirmForClose(CloseContext context) {
+        String partId=context.partId(),month=context.month(),actor=context.actor();
+        com.sicost.common.validation.InputValidator.text(actor,30,"actor");
+        locks.lock(mapper.sourceKeys(DatabaseMonthCodec.toDatabase(month)));
+        Result before=reads.previewForClose(partId,month);
+        var body=com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+        body.put("month",month).put("cardAmount",before.cardAmount()).put("expectedRevision",before.revision());
+        return execute(partId,body,"AUTO",actor,context.at());
+    }
     private Mutation execute(String partId, JsonNode body, String operation) { return execute(partId,body,operation,null); }
     private Mutation execute(String partId, JsonNode body, String operation, String closeActor) {
+        return execute(partId,body,operation,closeActor,null);
+    }
+    private Mutation execute(String partId, JsonNode body, String operation, String closeActor,LocalDateTime closeAt) {
         boolean automatic=operation.equals("AUTO"), confirm=automatic||operation.equals("CONFIRM");
         var input=SettlementCommandInput.parse(body,operation.equals("CANCEL"));
         String month=DatabaseMonthCodec.toDatabase(input.month());
         locks.lock(mapper.sourceKeys(month));
         mapper.lockClose();
-        Result before=reads.previewSettlement(partId,input.month());
+        Result before=automatic&&closeAt!=null?reads.previewForClose(partId,input.month()):reads.previewSettlement(partId,input.month());
         revisions.requireExpected(input.expectedRevision(),before.revision());
         var stored=repository.load(input.month(),true);
         Parent parent=stored.parents().stream().filter(p->p.partId().equals(partId)).findFirst().orElse(null);
@@ -80,7 +94,7 @@ public class SettlementCommandService {
         if(operation.equals("CARD") && (confirmed||!before.canSaveCard())) throw conflict("STATE_CONFLICT","카드를 저장할 수 없는 정산 상태입니다.");
         if(confirm && !before.canConfirm()) throw conflict("STATE_CONFLICT","필수 금액·파트 기준·대상을 확인해 주세요.");
         if(operation.equals("CARD") && new BigDecimal(before.cardAmount()).compareTo(input.cardAmount())==0) return mutation(false,before);
-        String actor=automatic?closeActor:users.userId(); LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
+        String actor=automatic?closeActor:users.userId(); LocalDateTime now=closeAt!=null?closeAt:LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL);
         boolean confirming=confirm, cancelling=operation.equals("CANCEL");
         BigDecimal card=cancelling?new BigDecimal(before.cardAmount()):input.cardAmount();
         BigDecimal profit=confirming?number(before.summary().personProfitShareAmount(),"partProfitAmount").subtract(card):null;
@@ -102,12 +116,13 @@ public class SettlementCommandService {
             for(DetailWrite row:details) audit(changes,new AuditTarget("TB_CO_PART_SETL_DTL",partId+":"+month+":"+row.developerId(),"NEW",reason),Map.of(),detailFields(row));
         }
         history.preflightSettlement(changes);
-        if(automatic)changes.forEach(c->history.appendSettlement(c,actor));else changes.forEach(history::append);
+        if(automatic&&closeAt!=null)changes.forEach(c->history.appendSettlement(c,actor,now));
+        else if(automatic)changes.forEach(c->history.appendSettlement(c,actor));else changes.forEach(history::append);
         if((parent==null?mapper.insertParent(write):mapper.updateParent(write))!=1) throw new IllegalStateException("정산 부모를 저장하지 못했습니다.");
         if(cancelling||confirming) mapper.deleteDetails(new Identity(partId,month));
         for(DetailWrite row:details) if(mapper.insertDetail(row)!=1) throw new IllegalStateException("정산 상세를 저장하지 못했습니다.");
         invalidation.afterCommit("settlements");
-        return mutation(true,reads.previewSettlement(partId,input.month()));
+        return mutation(true,automatic&&closeAt!=null?reads.previewForClose(partId,input.month()):reads.previewSettlement(partId,input.month()));
     }
     private DetailWrite detail(ParentWrite parent, Row row) {
         String projects=codec.projects(row.developerId(),row.projectNames());

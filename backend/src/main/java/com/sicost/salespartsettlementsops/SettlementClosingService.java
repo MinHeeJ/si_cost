@@ -16,9 +16,13 @@ public class SettlementClosingService {
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public TabsResult listEligibleParts(String month) { return reads.listEligibleParts(month); }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
-    public Result previewSettlement(String partId,String month) { return reads.previewSettlement(partId,month); }
+    public Result previewSettlement(String partId,String month) { return reads.previewForClose(partId,month); }
     @Transactional(propagation=Propagation.MANDATORY)
     public SettlementCommandService.Mutation confirmForClose(String partId,String month,String actor) {
         return commands.confirmForClose(partId,month,actor);
+    }
+    @Transactional(propagation=Propagation.MANDATORY)
+    public SettlementCommandService.Mutation confirmForClose(SettlementCommandService.CloseContext context) {
+        return commands.confirmForClose(context);
     }
 }

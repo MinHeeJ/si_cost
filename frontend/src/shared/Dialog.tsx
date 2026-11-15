@@ -12,6 +12,11 @@ export type DialogProps = {
   confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
+  testId?: string;
+  confirmTestId?: string;
+  cancelTestId?: string;
+  confirmActionId?: string;
+  cancelActionId?: string;
 };
 const FOCUSABLE =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
@@ -26,6 +31,11 @@ export function Dialog({
   confirmDisabled = false,
   cancelLabel = "취소",
   wide,
+  testId,
+  confirmTestId,
+  cancelTestId,
+  confirmActionId,
+  cancelActionId,
 }: DialogProps) {
   const ref = useRef<HTMLFormElement>(null);
   const inFlight = useRef(false);
@@ -93,6 +103,7 @@ export function Dialog({
     >
       <form
         ref={ref}
+        data-testid={testId}
         className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}`}
         role="dialog"
         aria-modal="true"
@@ -118,6 +129,8 @@ export function Dialog({
         <footer>
           <button
             type="button"
+            data-testid={cancelTestId}
+            data-action-id={cancelActionId}
             disabled={pending}
             onClick={() => {
               if (!inFlight.current) onCancel();
@@ -127,6 +140,8 @@ export function Dialog({
           </button>
           <button
             type="submit"
+            data-testid={confirmTestId}
+            data-action-id={confirmActionId}
             data-confirm
             className="sicost-primary"
             disabled={pending || confirmDisabled}

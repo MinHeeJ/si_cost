@@ -47,6 +47,20 @@ public class ChangeHistoryWriter {
     public record MappingSnapshot(String sourceText, String groupId, String code, String codeName) {}
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public void appendMonthClose(Change change, String actor, LocalDateTime at) {
+        MonthCloseHistoryPolicy.requireAllowed(change);
+        InputValidator.text(actor, 30, "actor");
+        if (at == null) throw InputValidator.invalid("occurredAt");
+        check(change.targetKey(),100); check(change.item(),50);
+        check(change.before(),500); check(change.after(),500); check(change.reason(),500);
+        var entry = new ChangeHistoryEntry(change.tableName(),change.targetKey(),change.type(),change.item(),
+            change.before(),change.after(),change.reason(),actor,at.truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        if (mapper.insert(entry) != 1) throw new IllegalStateException("마감 감사를 저장하지 못했습니다.");
+        var stored = mapper.monthCloseEntries(entry);
+        if (stored.size() != 1 || !entry.equals(stored.get(0))) throw new IllegalStateException("마감 감사 저장값을 확인하지 못했습니다.");
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void append(Change change) {
         if ("TB_SL_RCMD_LOG".equals(change.tableName())) {
             RecommendationHistoryPolicy.requireAllowed(change);
@@ -97,6 +111,15 @@ public class ChangeHistoryWriter {
         preflightSettlement(List.of(change));
         InputValidator.text(actor, 30, "actor");
         append(change, () -> actor, false);
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendSettlement(Change change,String actor,LocalDateTime at) {
+        preflightSettlement(List.of(change));
+        InputValidator.text(actor,30,"actor");
+        if(at==null)throw InputValidator.invalid("occurredAt");
+        if(Objects.equals(change.before(),change.after()))return;
+        if(mapper.insert(new ChangeHistoryEntry(change.tableName(),change.targetKey(),change.type(),change.item(),
+            change.before(),change.after(),change.reason(),actor,at))!=1)throw new IllegalStateException("정산 감사를 저장하지 못했습니다.");
     }
     private void append(Change change, Supplier<String> actor, boolean required) {
         if ("TB_SL_RCMD_LOG".equals(change.tableName()) && !required) throw InputValidator.invalid("history");

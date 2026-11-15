@@ -28,11 +28,15 @@ public class SalesPartSettlementService {
     public TabsResult getSalesPartSettlements(SalesPartSettlementInput.Query query) {return tabs(repository.load(query.month(),false));}
     public TabsResult listEligibleParts(String month) {return getSalesPartSettlements(new SalesPartSettlementInput.Query(month,1,50,"name","ASC"));}
     public Result previewSettlement(String partId,String month) {return read(partId,new SalesPartSettlementInput.Query(month,1,100,"name","ASC"),false);}
+    public Result previewForClose(String partId,String month) {return read(partId,new SalesPartSettlementInput.Query(month,1,100,"name","ASC"),false,true);}
     public Result exportSettlement(String partId,SalesPartSettlementInput.Query query) { return read(partId,query,false); }
     public Result getSalesPartSettlement(String partId,SalesPartSettlementInput.Query query) {
         return read(partId,query,true);
     }
     private Result read(String partId,SalesPartSettlementInput.Query query,boolean paginate) {
+        return read(partId,query,paginate,false);
+    }
+    private Result read(String partId,SalesPartSettlementInput.Query query,boolean paginate,boolean management) {
         ProjectInputPolicy.text(partId,20,"partId");
         Snapshot snapshot=repository.load(query.month(),true);
         TabsResult tabs=tabs(snapshot);String month=tabs.month();String db=DatabaseMonthCodec.toDatabase(month);
@@ -62,7 +66,7 @@ public class SalesPartSettlementService {
         if(confirmed&&(totals.personProfitShareAmount()==null||parent.partProfitAmount()==null||decimal(totals.personProfitShareAmount()).subtract(parent.cardAmount()).compareTo(parent.partProfitAmount())!=0))
             issues.add(issue("SNAPSHOT_MISMATCH","정산 사본 불일치", "partProfitAmount",null,month,"TB_CO_PART_SETL",false));
         issues.addAll(all.stream().flatMap(r->r.issues().stream()).toList());
-        boolean editable=!closed&&!pastYear&&tab.eligible();
+        boolean editable=!closed&&(!pastYear||management)&&tab.eligible();
         if(confirmed)reasons.add("확정된 정산 사본입니다.");
         String revision=revision(snapshot,partId,confirmed);
         List<Row> sorted=all.stream().sorted(comparator(query)).toList();

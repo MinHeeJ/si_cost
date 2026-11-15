@@ -232,6 +232,27 @@ describe("controlled 기간 선택", () => {
       screen.queryByRole("option", { name: "2026년 12월" }),
     ).not.toBeInTheDocument();
   });
+  it("마감 commit은 기간 설정을 쓰거나 변경 이벤트를 재발행하지 않고 배지를 갱신한다", async () => {
+    render(<ScreenPeriodBar screenId="UI-14" />);
+    await screen.findByText("작업중");
+    const changed = vi.fn();
+    window.addEventListener("sicost:screen-period-changed", changed);
+    try {
+      vi.mocked(api.getMonthClose).mockResolvedValue({
+        items: [{ month: context.currentMonth, status: "마감" }],
+      });
+      fireEvent(window, new CustomEvent("sicost:month-close-committed"));
+      await screen.findByText("마감");
+      expect(api.getMonthClose).toHaveBeenLastCalledWith(
+        context.currentMonth,
+        context.currentMonth,
+      );
+      expect(api.putSharedPreference).not.toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("sicost:screen-period-changed", changed);
+    }
+  });
   it.each(["UI-07", "UI-08", "UI-09"])(
     "%s 누계는 시작연도 이전 한 해를 허용하고 월을 새 연도로 제한한다",
     async (screenId) => {
@@ -430,6 +451,8 @@ describe("공식 화면과 공통 틀", () => {
     "UI-18": "business-plan-performance",
     "UI-19": "sales-part-settlement-screen",
     "UI-32": "renegotiation-screen",
+    "UI-21": "cash-flow-screen",
+    "UI-14": "month-close-screen",
     // Sales pipeline and workforce operations screens replace their placeholders.
     "UI-11": "staffing-comparison-screen",
     "UI-17": "workforce-forecast-screen",

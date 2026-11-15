@@ -30,4 +30,18 @@ public class RevisionService {
             throw new ApiException(409, "STALE_WRITE", "다른 사용자가 변경했습니다. 다시 조회한 뒤 저장해 주세요.");
         }
     }
+    public record SourceRow(String table, String primaryKey, java.util.Map<String,Object> storedValues) {}
+    /** Callers supply all physical values including REG/MOD, not a page or calculated subtotal. */
+    public String revisionRows(java.util.Collection<SourceRow> completeStoredSnapshot) {
+        var keys = new java.util.HashSet<java.util.List<String>>();
+        for (var row : completeStoredSnapshot) {
+            if (row == null || row.table() == null || row.primaryKey() == null || row.storedValues() == null
+                    || row.table().isBlank() || row.primaryKey().isBlank()
+                    || !keys.add(java.util.List.of(row.table(),row.primaryKey()))) {
+                throw new IllegalArgumentException("전체 원천의 테이블과 고유키가 필요합니다.");
+            }
+        }
+        return revision(completeStoredSnapshot.stream().sorted(java.util.Comparator.comparing(SourceRow::table)
+            .thenComparing(SourceRow::primaryKey)).toList());
+    }
 }

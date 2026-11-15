@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.cashflowops.CashFlowMapper">
+  <select id="receipts" resultType="string" useCache="false">
+    SELECT jsonb_build_object(
+      'receipts',COALESCE((SELECT jsonb_agg(to_jsonb(r) ORDER BY r.rcpt_id) FROM tb_bl_rcpt r
+        JOIN tb_bl_bill b ON b.bill_id=r.bill_id WHERE r.cncl_yn='N' AND b.cncl_yn='N'
+        AND to_char(r.rcpt_dt,'YYYY-MM')=#{month}),'[]'::jsonb),
+      'bills',COALESCE((SELECT jsonb_agg(jsonb_build_object('bill_id',b.bill_id,'bill_ym',b.bill_ym,
+        'pay_due_dt',b.pay_due_dt,'unpaid',GREATEST(0,b.tot_amt-COALESCE((SELECT sum(r.rcpt_amt)
+          FROM tb_bl_rcpt r WHERE r.bill_id=b.bill_id AND r.cncl_yn='N'),0))) ORDER BY b.bill_id)
+        FROM tb_bl_bill b WHERE b.cncl_yn='N' AND to_char(b.pay_due_dt,'YYYY-MM')=#{month}),'[]'::jsonb)
+    )::text
+  </select>
+</mapper>

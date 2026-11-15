@@ -14,6 +14,9 @@ public class WriteCoordinator {
     private final RevisionService revisions;
     private final CommitInvalidation invalidation;
     private final SettlementSourceLocks sourceLocks;
+    private MonthCloseBoundary boundary;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setMonthCloseBoundary(MonthCloseBoundary boundary) { this.boundary = boundary; }
     public WriteCoordinator(PlatformTransactionManager manager, AggregateLockMapper locks,
                             RevisionService revisions, CommitInvalidation invalidation) {
         this(manager, locks, revisions, invalidation, null);
@@ -86,7 +89,19 @@ public class WriteCoordinator {
             return new WriteResult(true, after, null);
         });
     }
+    /** One caller-owned transaction for checks, close or reopen, with no SHARE promotion. */
+    public <T> T exclusive(Collection<String> aggregateKeys, Supplier<T> command) {
+        var keys = aggregateKeys.stream().distinct().sorted().toList();
+        if (keys.isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
+        return transactions.execute(status -> {
+            if (boundary == null) throw new IllegalStateException("마감 경계가 구성되지 않았습니다.");
+            boundary.exclusive();
+            lock(keys);
+            return command.get();
+        });
+    }
     private void lock(Collection<String> keys) {
+        if (boundary != null) boundary.shared();
         if (sourceLocks != null) sourceLocks.lock(keys);
         else keys.stream().distinct().sorted().forEach(locks::lock);
     }

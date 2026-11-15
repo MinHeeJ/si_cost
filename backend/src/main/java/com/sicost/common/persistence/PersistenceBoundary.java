@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 @Component
 @Intercepts(@Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}))
 public class PersistenceBoundary implements Interceptor {
+    private com.sicost.common.concurrent.MonthCloseBoundary closeBoundary;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setMonthCloseBoundary(com.sicost.common.concurrent.MonthCloseBoundary boundary) { this.closeBoundary=boundary; }
     private static final Set<String> WRITABLE = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP",
             "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST", "TB_SY_USER", "TB_SY_USER_ROLE",
             "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG",
@@ -249,6 +252,13 @@ public class PersistenceBoundary implements Interceptor {
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         MappedStatement statement = (MappedStatement) invocation.getArgs()[0];
+        var bound = statement.getBoundSql(invocation.getArgs()[1]);
+        if ((statement.getId().startsWith("com.sicost.monthclose.MonthCloseMapper.")
+                || statement.getId().startsWith("com.sicost.monthclosesops.MonthCloseMapper.")) && MonthClosePersistence.supports(bound.getSql())) {
+            if (closeBoundary == null || !closeBoundary.exclusiveHeld()) throw new IllegalStateException("마감 배타 경계가 필요합니다.");
+            MonthClosePersistence.requireScope(bound,invocation.getArgs()[1]);
+            return invocation.proceed();
+        }
         if (statement.getBoundSql(invocation.getArgs()[1]).getSql().matches("(?is).*\\b(?:INTO|UPDATE)\\s+TB_CO_MON_PL\\b.*")) {
             var value = org.apache.ibatis.reflection.SystemMetaObject.forObject(invocation.getArgs()[1]);
             String month = (String) value.getValue("month"), base = (String) value.getValue("base");

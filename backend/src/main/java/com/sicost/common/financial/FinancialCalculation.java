@@ -35,6 +35,11 @@ public final class FinancialCalculation {
         return new Allocation(year,money(annual),money(closed),money(remaining),open.size(),List.copyOf(result),!missing&&annual!=null,List.copyOf(warnings));
     }
     public static Map<String,Object> contributions(JsonNode snapshot,String month,Allocation allocation) {
+        Set<String> closedMonths=new HashSet<>();
+        allocation.months().stream().filter(m->"CLOSE".equals(m.closeStatus())).forEach(m->closedMonths.add(m.month()));
+        return contributions(snapshot,month,allocation,closedMonths);
+    }
+    public static Map<String,Object> contributions(JsonNode snapshot,String month,Allocation allocation,Set<String> closedMonths) {
         Map<String,BigDecimal> totals=new LinkedHashMap<>();
         for(String key:List.of("sgaAmount","sgaVatAmount","nonOperatingIncome","nonOperatingIncomeVat","nonOperatingExpense","nonOperatingExpenseVat","adjustmentProfit","cashFinancialExpense","cashMiscIncome","cashCardExpense","cashTransferExpense","cashUnpaidLabor","transferTotal","cashLoanIn","cashLoanOut","cashLoanNet"))totals.put(key,BigDecimal.ZERO);
         for(JsonNode row:snapshot.path("items")) {
@@ -45,22 +50,29 @@ public final class FinancialCalculation {
             }
             String date=text(row,"io_dt"),cashMonth=date==null?apiMonth(text(row,"fin_ym")):date.substring(0,7);
             if(month.equals(cashMonth)&&!cls.equals("NOPR_IN"))add(totals,"cashFinancialExpense",amount.add(vat));
-            if(date!=null&&month.equals(cashMonth)&&cls.equals("NOPR_IN"))add(totals,"cashMiscIncome",amount.add(vat));
+            if(month.equals(cashMonth)&&cls.equals("NOPR_IN"))add(totals,"cashMiscIncome",amount.add(vat));
         }
         for(JsonNode r:snapshot.path("adjustments"))add(totals,"adjustmentProfit",number(r,"adj_amt"));
-        for(JsonNode r:snapshot.path("cardMonths"))add(totals,"cashCardExpense",number(r,"cash_amt"));
+        boolean cardKnown=true;
+        if(snapshot.path("cardMonths").isEmpty()&&!snapshot.path("cardPayments").isEmpty())cardKnown=false;
+        for(JsonNode r:snapshot.path("cardMonths")) {
+            BigDecimal amount=nullableNumber(r,"cash_amt");
+            if(amount==null)cardKnown=false;else add(totals,"cashCardExpense",amount);
+        }
         for(JsonNode r:snapshot.path("transfers")){BigDecimal amount=number(r,"amt");add(totals,"transferTotal",amount);add(totals,"EXP".equals(text(r,"xfer_cls_cd"))?"cashTransferExpense":"cashUnpaidLabor",amount);}
         for(JsonNode r:snapshot.path("loans"))add(totals,"IN".equals(text(r,"io_cd"))?"cashLoanIn":"cashLoanOut",number(r,"amt"));
         totals.put("cashLoanNet",totals.get("cashLoanIn").subtract(totals.get("cashLoanOut")));
         BigDecimal cashTax=BigDecimal.ZERO;boolean known=true;
         for(JsonNode r:snapshot.path("taxPayments")) {
-            String date=text(r,"Y".equals(text(r,"pay_yn"))?"pay_dt":"pay_due_dt");
+            boolean paid="Y".equals(text(r,"pay_yn"));
+            String date=text(r,paid?"pay_dt":"pay_due_dt");
             if(date==null||!date.startsWith(month))continue;
+            if(!paid&&closedMonths.contains(month))continue;
             BigDecimal amount=nullableNumber(r,"pay_amt");
-            if(amount==null&&"MID".equals(text(r,"pay_type_cd")))amount=BigDecimal.ZERO;
-            if(amount==null) {
+            if(!paid&&amount==null&&"MID".equals(text(r,"pay_type_cd")))amount=BigDecimal.ZERO;
+            if(!paid&&amount==null) {
                 BigDecimal annual=null,mid=BigDecimal.ZERO;
-                for(JsonNode t:snapshot.path("taxes"))if(Objects.equals(text(t,"tax_yr"),text(r,"tax_yr")))annual=number(t,"est_tax_amt");
+                for(JsonNode t:snapshot.path("taxes"))if(Objects.equals(text(t,"tax_yr"),text(r,"tax_yr")))annual=nullableNumber(t,"est_tax_amt");
                 for(JsonNode t:snapshot.path("taxPayments"))if(Objects.equals(text(t,"tax_yr"),text(r,"tax_yr"))&&"MID".equals(text(t,"pay_type_cd")))mid=number(t,"pay_amt");
                 if(annual!=null)amount=annual.subtract(mid).max(BigDecimal.ZERO);
             }
@@ -68,8 +80,9 @@ public final class FinancialCalculation {
         }
         Map<String,Object> result=new LinkedHashMap<>();totals.forEach((k,v)->result.put(k,money(v)));
         List<String> warnings=new ArrayList<>(allocation.warnings());if(!known)warnings.add("납부 예상액을 확인할 수 없습니다.");
+        if(!cardKnown){result.put("cashCardExpense",null);warnings.add("카드 명세의 현금 합계 원천을 확인할 수 없습니다.");}
         result.put("month",month);result.put("corporateTaxAllocation",allocation.months().stream().filter(m->m.month().equals(month)).map(AllocationMonth::amount).filter(Objects::nonNull).findFirst().orElse(null));
-        result.put("cashTaxPayment",known?money(cashTax):null);result.put("verified",allocation.verified()&&known);result.put("warnings",warnings);return result;
+        result.put("cashTaxPayment",known?money(cashTax):null);result.put("verified",known&&cardKnown);result.put("warnings",warnings);return result;
     }
     private static void add(Map<String,BigDecimal> values,String key,BigDecimal amount){values.put(key,values.get(key).add(amount));}
     public static String text(JsonNode row,String key){return row.path(key).isNull()||row.path(key).isMissingNode()?null:row.path(key).asText();}

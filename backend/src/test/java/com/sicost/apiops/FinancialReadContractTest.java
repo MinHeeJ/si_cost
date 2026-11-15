@@ -124,9 +124,19 @@ class FinancialReadContractTest {
         months.set(6,new TaxMonth("202607","WORK",null));months.set(11,new TaxMonth("202612","CLOSE",n("2000000")));
         contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value("-2000000"));
     }
-    @Test void nullClosedCopyNeverBecomesZero()throws Exception{
+    @Test void nullClosedCopyNeverBecomesZeroAndDoesNotInvalidateKnownCash()throws Exception{
         var months=months();months.set(0,new TaxMonth("202601","CLOSE",null));when(mapper.taxMonths(any())).thenReturn(months);
-        contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue())).andExpect(jsonPath("$.data.verified").value(false));
+        contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue())).andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(true));
+    }
+    @Test void missingAnnualDoesNotNullifyKnownActualCash()throws Exception{
+        when(mapper.estimatedTax(any())).thenReturn(null);
+        contributions().andExpect(jsonPath("$.data.corporateTaxAllocation").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(true));
+    }
+    @Test void unknownCardParentIsNotRepresentedAsCashZero()throws Exception{
+        var t=totals();when(mapper.sourceTotals(any())).thenReturn(new SourceTotals(t.sgaAmount(),t.sgaVatAmount(),t.nonOperatingIncome(),t.nonOperatingIncomeVat(),t.nonOperatingExpense(),t.nonOperatingExpenseVat(),t.adjustmentProfit(),t.cashFinancialExpense(),t.cashMiscIncome(),null,t.cashTransferExpense(),t.cashUnpaidLabor(),t.transferTotal(),t.cashLoanIn(),t.cashLoanOut(),t.cashTaxPayment()));
+        contributions().andExpect(jsonPath("$.data.cashCardExpense").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.verified").value(false));
     }
     @Test void internalSqlFailureDoesNotLeak()throws Exception{
         when(mapper.sourceTotals(any())).thenThrow(new IllegalStateException("private SQL"));contributions().andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private SQL"))));

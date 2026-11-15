@@ -75,12 +75,12 @@ class FinancialReadDatabaseTest {
             .andExpect(jsonPath("$.data.cashLoanOut").value("23")).andExpect(jsonPath("$.data.cashLoanNet").value("-4"))
             .andExpect(jsonPath("$.data.cashTaxPayment").value("29"));
     }
-    @Test void cashAttributionIncludesOtherFinancialMonthsAndUndatedIncomeIsNotCash(){
+    @Test void cashAttributionIncludesOtherFinancialMonthsAndUndatedIncomeUsesSourceMonth(){
         item("208006",1,"SGA","31","4","2080-07-02");item("208007",1,"NOPR_IN","100","10",null);
         item("208007",2,"SGA","80","8","2080-08-01");item("208007",3,"NOPR_IN","7","1","2080-07-02");
         var result=service.getFinancialContributions(period("2080-07"));
         assertThat(result.sgaAmount()).isEqualTo("80");assertThat(result.nonOperatingIncome()).isEqualTo("107");
-        assertThat(result.cashFinancialExpense()).isEqualTo("35");assertThat(result.cashMiscIncome()).isEqualTo("8");
+        assertThat(result.cashFinancialExpense()).isEqualTo("35");assertThat(result.cashMiscIncome()).isEqualTo("118");
     }
     @Test void confirmedPaymentsUseOnlyActualDateAndAmountWhilePendingUsesDisplayedEstimate(){
         annual("2079","100");payment("2079","MID","2079-08-31","30","2079-08-31","Y");

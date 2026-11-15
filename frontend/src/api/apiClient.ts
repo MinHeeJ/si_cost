@@ -37,6 +37,20 @@ export {
 export const getHealth = () => request<void>("/api/health");
 
 export {
+  getCashFlow,
+  getCashFlowSources,
+  getCashFlowExport,
+} from "../pages/cashflowops/cashFlowApi";
+export {
+  getMonthCloses,
+  saveMonthCloseChecks,
+  createMonthClosePreview,
+  saveMonthClose,
+  createMonthCloseReopenPreview,
+  saveMonthCloseReopen,
+} from "../pages/monthclosesops/monthCloseApi";
+
+export {
   getWorkforceRecommendationTargets,
   getWorkforceRecommendationHistory,
   getRecommendationHistorySnapshot as getWorkforceRecommendation,

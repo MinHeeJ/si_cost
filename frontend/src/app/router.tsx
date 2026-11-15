@@ -41,6 +41,7 @@ import { ProfitStructureScreen } from "../pages/shared/ProfitStructureScreen";
 import { OperatingProfitScreen } from "../pages/shared/OperatingProfitScreen";
 import { NetProfitScreen } from "../pages/shared/NetProfitScreen";
 import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerformanceScreen";
+import { CashFlowScreen } from "../pages/shared/CashFlowScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { WorkforceRecommendationsScreen } from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
@@ -132,7 +133,7 @@ const tableColumns: Record<View, PreferenceColumn[]> = {
 function RegisteredCompanyProfit({
   screenId,
 }: {
-  screenId: "UI-07" | "UI-08" | "UI-09" | "UI-18";
+  screenId: "UI-07" | "UI-08" | "UI-09" | "UI-18" | "UI-21";
 }) {
   const preferences = usePreferences();
   const [error, setError] = useState("");
@@ -144,6 +145,7 @@ function RegisteredCompanyProfit({
     "UI-08": OperatingProfitScreen,
     "UI-09": NetProfitScreen,
     "UI-18": BusinessPlanPerformanceScreen,
+    "UI-21": CashFlowScreen,
   }[screenId];
   return (
     <>
@@ -974,15 +976,40 @@ function RegisteredWorkforceRecommendations() {
   const preferences = usePreferences();
   const [unitError, setUnitError] = useState("");
   const storedUnit = preferences.get("AMT_UNIT")?.value;
-  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
+  const amountUnit =
+    storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
       {unitError && <ErrorBanner message={unitError} />}
-      <label className="sicost-field">금액 단위
-        <select aria-label="추천 금액 단위" value={amountUnit} disabled={preferences.pending}
-          onChange={(e) => { setUnitError(""); void preferences.put("AMT_UNIT", "*", e.target.value).catch((e: unknown) => setUnitError(e instanceof Error ? e.message : "금액 단위를 저장하지 못했습니다.")); }}>
-          {["원", "천원", "백만원"].map((unit) => <option key={unit}>{unit}</option>)}
+      <label className="sicost-field">
+        금액 단위
+        <select
+          data-testid="workforce-recommendations-amount-unit"
+          aria-label="추천 금액 단위"
+          value={amountUnit}
+          disabled={preferences.pending}
+          onChange={(e) => {
+            setUnitError("");
+            void preferences
+              .put("AMT_UNIT", "*", e.target.value)
+              .catch((e: unknown) =>
+                setUnitError(
+                  e instanceof Error
+                    ? e.message
+                    : "금액 단위를 저장하지 못했습니다.",
+                ),
+              );
+          }}
+        >
+          {["원", "천원", "백만원"].map((unit) => (
+            <option
+              data-testid={`workforce-recommendations-amount-unit-option-${["원", "천원", "백만원"].indexOf(unit)}`}
+              key={unit}
+            >
+              {unit}
+            </option>
+          ))}
         </select>
       </label>
       <WorkforceRecommendationsScreen
@@ -1151,6 +1178,7 @@ function RegisteredApplication() {
         "UI-08": <RegisteredCompanyProfit screenId="UI-08" />,
         "UI-09": <RegisteredCompanyProfit screenId="UI-09" />,
         "UI-18": <RegisteredCompanyProfit screenId="UI-18" />,
+        "UI-21": <RegisteredCompanyProfit screenId="UI-21" />,
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),
