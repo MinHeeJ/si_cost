@@ -15,9 +15,13 @@ import com.sicost.common.persistence.PersistenceBoundary;
 import com.sicost.shared.SharedQueriesMapper;
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.*;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mybatis.spring.*;
 import org.springframework.context.annotation.*;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -93,4 +97,120 @@ class FinancialDatabaseTest {
     @Test void nullClosedTaxSnapshotBlocksAnnualChange(){seedTax();sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208006','CLOSE','admin')");var audits=history();assertThatThrownBy(()->save(body().put("estimatedTax","21"))).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("PERIOD_READ_ONLY"));assertThat(history()).isEqualTo(audits);assertThat(sql.queryForObject("SELECT est_tax_amt FROM tb_fi_corp_tax WHERE tax_yr='2080'",String.class)).isEqualTo("20");}
     @Test void readDraftIsNotPersistedAndFebruaryClampsLeapDay(){sql.update("INSERT INTO tb_fi_item(fin_ym,item_sn,fin_cls_cd,item_nm,amt,vat_amt,io_dt,rpt_yn,reg_user_id) VALUES ('208001',1,'SGA','반복',1,0,'2080-01-31','Y','admin')");var before=items();JsonNode result=json.valueToTree(service.getFinancialItems("2080-02"));assertThat(result.path("automaticDrafts").get(0).path("ioDate").asText()).isEqualTo("2080-02-29");assertThat(items()).isEqualTo(before);assertThat(history()).isEmpty();}
     @Test void explicitDeleteAuditsBeforeValueAndBoundedMonth(){ObjectNode body=body();body.putObject("items").putArray("add").add(item());save(body);ObjectNode deletion=body();deletion.putObject("items").putArray("deleteIds").add("1");save(deletion);assertThat(items()).isEmpty();assertThat(history()).anySatisfy(h->{assertThat(h.get("chg_type_cd")).isEqualTo("DEL");assertThat(h.get("chg_item_nm")).isEqualTo("AMT");assertThat(h.get("bfr_val")).isEqualTo("10");assertThat(h.get("aft_val")).isNull();});}
+
+    ObjectNode sequenceRow(FinancialDtos.Kind kind,String month,String code,String amount){
+        ObjectNode row=json.createObjectNode().put("amount",amount);
+        switch(kind){
+            case TRANSFERS -> row.put("date",month+"-15").put("classCode",code).put("itemName","이체 "+amount);
+            case LOANS -> row.put("date",month+"-15").put("direction",code);
+            case ADJUSTMENTS -> row.put("targetMonth","2080-05").put("itemCode",code).put("reason","차액 "+amount);
+            default -> throw new IllegalArgumentException(kind.name());
+        }
+        return row;
+    }
+    String sequence(FinancialDtos.Kind kind){
+        return switch(kind){
+            case TRANSFERS -> "sq_tb_fi_xfer";
+            case LOANS -> "sq_tb_fi_loan";
+            case ADJUSTMENTS -> "sq_tb_co_prev_adj";
+            default -> throw new IllegalArgumentException(kind.name());
+        };
+    }
+    void closeAdjustmentTarget(){
+        sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208005','CLOSE','admin')");
+    }
+    List<String> savedIds(FinancialDtos.Kind kind){
+        return sql.queryForList("SELECT "+kind.idColumn+"::text FROM "+kind.table+" ORDER BY "+kind.idColumn,String.class);
+    }
+    @ParameterizedTest
+    @CsvSource({"TRANSFERS,2,EXP","TRANSFERS,3,EXP","TRANSFERS,2,SPCL","TRANSFERS,3,SPCL",
+        "LOANS,2,IN","LOANS,3,OUT","ADJUSTMENTS,2,COST","ADJUSTMENTS,3,SGA"})
+    void sameKindAdditionsReceiveFreshSequenceIds(FinancialDtos.Kind kind,int count,String code)throws Exception{
+        if(kind==FinancialDtos.Kind.ADJUSTMENTS)closeAdjustmentTarget();
+        ObjectNode request=body();var additions=request.putObject(kind.collection()).putArray("add");
+        for(int i=1;i<=count;i++)additions.add(sequenceRow(kind,"2080-07",code,Integer.toString(i)));
+        mvc.perform(put("/api/financial-items").contentType("application/json").content(request.toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true));
+        List<String> expected=java.util.stream.IntStream.rangeClosed(1,count).mapToObj(Integer::toString).toList();
+        assertThat(savedIds(kind)).containsExactlyElementsOf(expected);
+        assertThat(sql.queryForObject("SELECT last_value FROM "+sequence(kind),Integer.class)).isEqualTo(count);
+        JsonNode editor=json.valueToTree(service.getFinancialItems("2080-07"));
+        assertThat(editor.path(kind.collection())).hasSize(count);
+        for(int i=0;i<count;i++){
+            assertThat(editor.path(kind.collection()).get(i).path(kind.id).isTextual()).isTrue();
+            assertThat(editor.path(kind.collection()).get(i).path(kind.id).asText()).isEqualTo(expected.get(i));
+            assertThat(editor.path(kind.collection()).get(i).path("amount").asText()).isEqualTo(expected.get(i));
+        }
+        assertThat(history().stream().filter(h->h.get("trgt_tbl_nm").equals(kind.table))
+            .map(h->h.get("trgt_key")).distinct().toList()).containsExactlyElementsOf(expected);
+    }
+    @Test void mixedTransferClassesShareOneSequence()throws Exception{
+        ObjectNode request=body();var additions=request.putObject("transfers").putArray("add");
+        additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,"2080-07","EXP","10"));
+        additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,"2080-07","SPCL","20"));
+        mvc.perform(put("/api/financial-items").contentType("application/json").content(request.toString())).andExpect(status().isOk());
+        assertThat(savedIds(FinancialDtos.Kind.TRANSFERS)).containsExactly("1","2");
+        assertThat(sql.queryForList("SELECT xfer_cls_cd FROM tb_fi_xfer ORDER BY xfer_sn",String.class)).containsExactly("EXP","SPCL");
+    }
+    @Test void mixedKindsEachUseTheirOwnSequence(){
+        closeAdjustmentTarget();ObjectNode request=body();request.putObject("items").putArray("add").add(item());
+        for(var kind:List.of(FinancialDtos.Kind.ADJUSTMENTS,FinancialDtos.Kind.TRANSFERS,FinancialDtos.Kind.LOANS)){
+            String code=kind==FinancialDtos.Kind.ADJUSTMENTS?"COST":kind==FinancialDtos.Kind.TRANSFERS?"EXP":"IN";
+            var additions=request.putObject(kind.collection()).putArray("add");
+            additions.add(sequenceRow(kind,"2080-07",code,"10")).add(sequenceRow(kind,"2080-07",code,"20"));
+        }
+        assertThat(save(request).changed()).isTrue();assertThat(items()).hasSize(1);
+        for(var kind:List.of(FinancialDtos.Kind.ADJUSTMENTS,FinancialDtos.Kind.TRANSFERS,FinancialDtos.Kind.LOANS)){
+            assertThat(savedIds(kind)).containsExactly("1","2");
+            assertThat(sql.queryForObject("SELECT last_value FROM "+sequence(kind),Integer.class)).isEqualTo(2);
+        }
+    }
+    @Test void secondRowFailureRollsBackBusinessAndHistoryButSequenceIdsAreNotReused(){
+        sql.execute("ALTER TABLE tb_fi_xfer ADD CONSTRAINT reject_second_transfer CHECK (amt <> 13)");
+        ObjectNode request=body();request.putObject("items").putArray("add").add(item());
+        var additions=request.putObject("transfers").putArray("add");
+        additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,"2080-07","EXP","10"));
+        additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,"2080-07","SPCL","13"));
+        assertThatThrownBy(()->save(request)).hasStackTraceContaining("reject_second_transfer");
+        assertThat(items()).isEmpty();assertThat(savedIds(FinancialDtos.Kind.TRANSFERS)).isEmpty();assertThat(history()).isEmpty();
+        assertThat(sql.queryForObject("SELECT last_value FROM sq_tb_fi_xfer",Integer.class)).isEqualTo(2);
+        ((ObjectNode)additions.get(1)).put("amount","20");
+        assertThat(save(request).changed()).isTrue();
+        assertThat(savedIds(FinancialDtos.Kind.TRANSFERS)).containsExactly("3","4");assertThat(items()).hasSize(1);
+    }
+    @Test void concurrentRequestsInDifferentMonthsAllocateDistinctIds()throws Exception{
+        ObjectNode july=body();ObjectNode june=json.createObjectNode().put("month","2080-06")
+            .put("expectedRevision",service.getFinancialItems("2080-06").get("revision").toString());
+        for(ObjectNode request:List.of(june,july)){
+            String month=request.path("month").asText();var additions=request.putObject("transfers").putArray("add");
+            additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,month,"EXP","10"));
+            additions.add(sequenceRow(FinancialDtos.Kind.TRANSFERS,month,"SPCL","20"));
+        }
+        ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch ready=new CountDownLatch(2),start=new CountDownLatch(1);
+        try{
+            List<Future<FinancialDtos.Commit>> results=new ArrayList<>();
+            for(ObjectNode request:List.of(june,july))results.add(pool.submit(()->{
+                ready.countDown();if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("start timeout");return save(request);
+            }));
+            assertThat(ready.await(10,TimeUnit.SECONDS)).isTrue();start.countDown();
+            for(var result:results)assertThat(result.get(20,TimeUnit.SECONDS).changed()).isTrue();
+        }finally{start.countDown();pool.shutdownNow();assertThat(pool.awaitTermination(10,TimeUnit.SECONDS)).isTrue();}
+        assertThat(savedIds(FinancialDtos.Kind.TRANSFERS)).containsExactly("1","2","3","4");
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_fi_xfer WHERE xfer_dt >= '2080-06-01' AND xfer_dt < '2080-07-01'",Integer.class)).isEqualTo(2);
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_fi_xfer WHERE xfer_dt >= '2080-07-01' AND xfer_dt < '2080-08-01'",Integer.class)).isEqualTo(2);
+        assertThat(history().stream().filter(h->h.get("trgt_tbl_nm").equals("TB_FI_XFER"))
+            .map(h->h.get("trgt_key")).distinct().toList()).hasSize(4);
+    }
+    @ParameterizedTest
+    @EnumSource(value=FinancialDtos.Kind.class,names={"ADJUSTMENTS","TRANSFERS","LOANS"})
+    void singleAdditionPreservesExistingSequenceAndIdFormat(FinancialDtos.Kind kind){
+        if(kind==FinancialDtos.Kind.ADJUSTMENTS)closeAdjustmentTarget();
+        sql.execute("SELECT setval('"+sequence(kind)+"',42,true)");
+        ObjectNode request=body();String code=kind==FinancialDtos.Kind.ADJUSTMENTS?"COST":kind==FinancialDtos.Kind.TRANSFERS?"EXP":"IN";
+        request.putObject(kind.collection()).putArray("add").add(sequenceRow(kind,"2080-07",code,"10"));
+        assertThat(save(request).changed()).isTrue();assertThat(savedIds(kind)).containsExactly("43");
+        JsonNode id=json.valueToTree(service.getFinancialItems("2080-07")).path(kind.collection()).get(0).path(kind.id);
+        assertThat(id.isTextual()).isTrue();assertThat(id.asText()).isEqualTo("43");
+        assertThat(sql.queryForObject("SELECT last_value FROM "+sequence(kind),Integer.class)).isEqualTo(43);
+    }
 }

@@ -15,7 +15,7 @@
   </select>
   <select id="closedMonths" resultType="string">SELECT close_ym FROM tb_cl_close WHERE close_stat_cd='CLOSE' ORDER BY close_ym DESC</select>
   <select id="code" resultType="string">SELECT use_yn FROM tb_sy_code WHERE code_grp_id=#{group} AND code=#{code} AND del_yn='N'</select>
-  <select id="nextId" resultType="string">
+  <select id="nextId" resultType="string" useCache="false" flushCache="true">
     <choose>
       <when test="kind.name() == 'ADJUSTMENTS'">SELECT nextval('sq_tb_co_prev_adj')::text</when>
       <when test="kind.name() == 'TRANSFERS'">SELECT nextval('sq_tb_fi_xfer')::text</when>
