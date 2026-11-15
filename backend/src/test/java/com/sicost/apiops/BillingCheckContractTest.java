@@ -55,6 +55,12 @@ class BillingCheckContractTest {
         when(mapper.checkSnapshot(any())).thenReturn("stored-sources");when(mapper.billSnapshot(anyString())).thenReturn("bill-and-all-receipts");
     }
     CheckBill bill(String id,String amount) {return new CheckBill(id,LocalDate.of(2026,7,1),new BigDecimal(amount),new BigDecimal("10"),BigDecimal.ZERO);}
+    @Test void billingChecksAuthRejectsForgedActorBeforeReadingOrWriting() throws Exception {
+        mvc.perform(get("/api/billing-checks").param("month","2026-07").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/billing-checks",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,users,audit);
+    }
     @Test void publicSnapshotReusesMonthlyCalculationAndProducesExactCardsSourcesAndPreview() throws Exception {
         bills.add(bill("B1","10"));bills.add(bill("B2","15"));
         mvc.perform(get("/api/billing-checks").param("month","2026-07")).andExpect(status().isOk()).andExpect(header().exists("X-Request-Id"))

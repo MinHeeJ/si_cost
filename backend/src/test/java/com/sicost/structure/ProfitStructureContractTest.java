@@ -59,6 +59,10 @@ class ProfitStructureContractTest {
         when(costs.loadYear(any())).thenReturn(originals);when(costs.calculate(any())).thenReturn(new MonthlyCostsData(originals.period(),List.of()));
     }
     static BigDecimal n(String value) {return value==null?null:new BigDecimal(value);}
+    @Test void structureExportValidationRejectsUnitBeforeFileOrDownloadAudit() throws Exception {
+        mvc.perform(get("/api/profit-loss/structure/export").param("year","2026").param("month","2026-07").param("aggregation","MONTH").param("amountUnit","bad"))
+            .andExpect(DurableOpenApi.response("GET","/api/profit-loss/structure/export",400));verifyNoInteractions(financial,logs);
+    }
     org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request(String path,String month,String aggregation) {return get(path).param("year",month.substring(0,4)).param("month",month).param("aggregation",aggregation);}
     ResultActions read(String month,String aggregation)throws Exception {return mvc.perform(request("/api/profit-loss/structure",month,aggregation));}
     @Test void publicReadFourCardsAndAllViewsShareLastBucketWithoutMasking()throws Exception {
@@ -93,7 +97,7 @@ class ProfitStructureContractTest {
     @Test void ytdHasOnlyPreviousYearComparisons()throws Exception {read("2026-07","YTD").andExpect(jsonPath("$.data.summary[0].previous").value(nullValue())).andExpect(jsonPath("$.data.buckets[6].comparisons[0].comparisonMonths.length()").value(7));}
     @Test void repeatedReadHasNoAuditWritesAndOneSourceReadPerYear()throws Exception {read("2026-07","MONTH");read("2026-07","MONTH");verify(costs,times(2)).loadYear(2026);verifyNoInteractions(logs);verify(manager,atLeastOnce()).getTransaction(argThat(d->d.isReadOnly()&&d.getIsolationLevel()==TransactionDefinition.ISOLATION_REPEATABLE_READ));}
     @Test void publicExportCreatesRealNumericXlsxThenCommitsDownloadLog()throws Exception {
-        var response=mvc.perform(request("/api/profit-loss/structure/export","2026-07","MONTH").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
+        var response=mvc.perform(get("/api/profit-loss/structure/export").param("year","2026").param("month","2026-07").param("aggregation","MONTH").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
         assertThat(response.getHeader("Content-Disposition")).contains("202607_MONTH.xlsx");
         try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
             assertThat(workbook.getSheet("기간별 손익·참고선").getRow(1).getCell(7).getNumericCellValue()).isEqualTo(1000);

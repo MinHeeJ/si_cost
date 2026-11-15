@@ -25402,6 +25402,13 @@ paths:
       - REQ-730
       - REQ-737
       - REQ-738
+      - REQ-2152
+      - REQ-2153
+      - REQ-2154
+      - REQ-2204
+      - REQ-2206
+      - REQ-2207
+      - REQ-2209
       parameters: []
       responses:
         '201':
@@ -25523,9 +25530,24 @@ paths:
       - 'REQ-795 (SPEC-REQUEST.md L229): CASH_BASE_YM이전/CLOSE/기존FIX=Y 중하나면 보호하고 일수/MM/단가/매출/FIX/시각을 바꾸지 않는다.'
       - 'REQ-796 (SPEC-REQUEST.md L231): 전기간보호도 배정원천/이력만 저장·월자료없음안내, INPUT/B5는소급/걸침WARN만·일반변경/대체철수 사유필수다.'
       - 'REQ-837 (SPEC-REQUEST.md L320): /api/assignments 목록등록/상세/months/history/changes/corrections/bulk/선택조회/대체미리보기확정을제공·year/revision/서버필드검사한다.'
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지. 공통
+        서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - 결과/조건/배점/순위/이유는 불변. 사용자선택4필드만 NULL→ASGN/TENT/EXCL 조건부1회갱신. 동일 성공 요청은 기존 연결 결과·중복업무/감사0, 다른 선택409 ACTION_ALREADY_TAKEN.
+        동일성 확인은 원래 성공 payload와 연결감사로 검증하며 이미 성공한 재요청은 후속 revision 변화만으로 중복 생성하지 않는다.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - 'BASIC-142: optional recommendationRef=(rcmdId,rank)·일반배정생략/NULL. 같은추천DEV/프로젝트 저장성공만 ASGN·서버주체/시각·실제ASGN_ID/최종폼입력
+        감사를 본체/INPUT/월행과같은tx. 폼열기/취소/다른DEV저장은 원카드ASGN기록0. 다른DEV/프로젝트로 바꾼 폼은 참조를 제거하며, 남겨전송한 불일치참조는 해당일반배정만저장·원카드선택무변경.
+        원추천조건/순위/점수불변.'
+      - 'BASIC-142: 참조존재시 저장된target/candidate 전체snapshot revision과 잠금후 최신범위 비교·400형식/404회차없음/409 STALE_WRITE·참조성공재전송은이미연결된배정결과·중복본체/INPUT/월행/감사0.
+        동일payload재요청만기존결과·다른최종선택409 ACTION_ALREADY_TAKEN. 필수추천감사실패도본체포함rollback.'
+      - 'BASIC-142: 카드 폼기본값은 시작max(추천월1일,계약시작일)·종료계약종료일·월MM1.00·NEW·MO/DP 해당시작월유효기본단가. 가용0.50을MM0.50으로자동확정0. 기존기간/마감/입퇴사/휴직/단가검증유지·사람이JOB/날짜/MM/단가변경가능·최종입력감사.'
       x-side-effects:
       - TB_PJ_ASGN/INPUT1행/미보호ASGN_MON/공통 NEW감사 원자생성. ASGN_ID 숫자max다음·취소/삭제후 재사용없음·20자한도·HIST_SN99999 소진409. 기존개발자 상태/가격/프로젝트파트/배분표
         불변.
+      - 'BASIC-142: 추천선택ASGN/선택4필드전후/실제ASGN_ID연결감사를 신규배정 본체/INPUT/미보호월행과동일tx. 추천사본불변·다른DEV저장시원선택변경0.'
       x-state-transitions:
       - from: 미등록·참조유효
         event: 신규저장
@@ -25533,6 +25555,15 @@ paths:
       - from: 중복/잠금후 자격변경
         event: 신규저장
         to: 409 또는 입력거부·원자롤백
+      - from: 프로젝트 AI선택NULL·같은DEV/PROJ·최신
+        event: 기존배정POST recommendationRef 저장성공
+        to: 실제배정+INPUT+월행+ASGN선택+연결감사동일tx
+      - from: 동일참조/동일성공payload
+        event: 재요청
+        to: 연결된기존배정결과·중복업무/감사0
+      - from: 추천선택/감사실패
+        event: 실제저장
+        to: 본체/INPUT/월행/추천선택/감사전체rollback
       x-required-tests:
       - 'auth: 신규배정 본문에 REG_USER_ID를 주입 ->400·TB_PJ_ASGN/INPUT/월행생성0; 유효요청201의 REG_USER_ID는 CurrentUserProvider값이다;
         실제 역할별 허용/거부는 후속 승인정책 전까지 미검증이며 임의403을 만들지 않는다.'
@@ -25540,6 +25571,12 @@ paths:
       - 'validation: 계약MM0.001·0/1.01·유상단가0·계약기간초과/중지 JOB/서버상태 주입 →400·본체/이력/월행0건 증가'
       - 'business: 동일6키 ACT 중복/과거year/DEV중지 동시저장 →409/거부·후행 본체/월행/감사0·단순겹침은 WARN 후 저장 허용'
       - 'side-effect: FIX/CLOSE/이관월 걸침 신규 →본체/INPUT만 원자추가·보호행 ID/일수/MM/매출/시각 동일·03/04 집계 재조회에 미보호 새MM·PART_ID/배분표 불변'
+      - 'auth: 임시관리자·인증헤더없는 recommendationRef 유효저장 →201 또는동일참조기존결과·CurrentUserProvider 처리자; ACT_USER_ID주입 →400·본체/선택불변·역할403없음'
+      - 'happy: 같은카드DEV/PROJ·폼JOB/MM수정저장 →성공·최종입력감사/ASGN선택/ASGN_ID연결·원추천조건불변'
+      - 'validation: recommendationRef rank0/6·rcmdId13자리·미등록속성 →400 field·본체/선택/감사0'
+      - 'business: 같은참조재요청 →기존ASGN_ID·중복본체/INPUT/월행/감사0; 제외/다른선택 →409 ACTION_ALREADY_TAKEN; 가격/월행변경 →409 STALE_WRITE;
+        다른DEV폼저장 →일반배정만·원선택NULL'
+      - 'side-effect: 추천선택필수감사실패 →본체/INPUT/월행/추천선택 전부rollback·급여/마감사본불변'
       x-query-validation:
         allowed: []
         unknown: 미등록 query400·SQL/스택 미노출
@@ -26307,6 +26344,11 @@ paths:
       - REQ-796
       - REQ-837
       - REQ-699
+      - REQ-2170
+      - REQ-2171
+      - REQ-2172
+      - REQ-2173
+      - REQ-2201
       parameters:
       - name: id
         in: path
@@ -26430,7 +26472,7 @@ paths:
       - 'REQ-772 (SPEC-REQUEST.md L188): 바꾼날과 H/M/L/NULL을 받고 현재와 다른 연장가능성을 즉시 저장하며 미정복귀 가능이다.'
       - 'REQ-773 (SPEC-REQUEST.md L189): NEW↔ADD만 배정전체 즉시적용·종료일불변·SUB/FREE 관련전환 거부한다.'
       - 'REQ-774 (SPEC-REQUEST.md L191): 일자형은 시작이상·월형은 시작월~종료월, 일자<오늘/월<이번달 소급·소급/보호영향만 사유필수다.'
-      - 'REQ-775 (SPEC-REQUEST.md L193): UPRC/RATE/EXTP/KIND 동일유효값400 SAME_VALUE·이력없음, typed값은 해당유형만 저장하고 플래그/처리자/횟수는
+      - 'REQ-775 (SPEC-REQUEST.md L193): UPRC/RATE/KIND 동일유효값400 SAME_VALUE·EXTP 동일값200 changed=false·이력없음, typed값은 해당유형만 저장하고 플래그/처리자/횟수는
         서버결정이다.'
       - 'REQ-776 (SPEC-REQUEST.md L195): 원정수/MM2자리/ISO/코드로 전후 저장·EXT/EARLY 종료일·CNCL 기간→취소·신규일반 CRCT=N/대상NULL이다.'
       - 'REQ-788 (SPEC-REQUEST.md L217): 이력없는 기존배정은 현재본체값으로 최초INPUT을1회 보완후 다음변경·다른 기존이력 추정수정금지다.'
@@ -26444,25 +26486,46 @@ paths:
       - 'REQ-795 (SPEC-REQUEST.md L229): CASH_BASE_YM이전/CLOSE/기존FIX=Y 중하나면 보호하고 일수/MM/단가/매출/FIX/시각을 바꾸지 않는다.'
       - 'REQ-796 (SPEC-REQUEST.md L231): 전기간보호도 배정원천/이력만 저장·월자료없음안내, INPUT/B5는소급/걸침WARN만·일반변경/대체철수 사유필수다.'
       - 'REQ-837 (SPEC-REQUEST.md L320): /api/assignments 목록등록/상세/months/history/changes/corrections/bulk/선택조회/대체미리보기확정을제공·year/revision/서버필드검사한다.'
+      - 올해/내년 year·유효ACT·철수전·프로젝트실주아님만 EXTP. 지난year/완료/취소/실주는409. expectedRevision 잠금후 전체행과 비교·stale409. 같은값은200 changed=false·시각/revision/이력불변.
+      - EXTP는 별도 메타분기·사유입력없이 EXT_PSBL_CD/MOD만 갱신. 적용일max(D,INPUT_BGN_DT), BFR_VAL/AFT_VAL=H/M/L/NULL, ASGN_HIST EXTP1건+공통감사1건
+        원자저장. 사유/메모/새단가/새MM=NULL·RTRO_YN/CLOSE_CROSS_YN=N·CRCT_YN=N·정정대상NULL.
+      - 보호월이 있어도 사유요구/차단/월동기화 제외. ASGN_MON/급여/매출/원가/마감사본/철수일/EXT_CNT 불변·과거/실주/경합 차단은 유지. 미정은NULL·문자열NULL/새코드 금지. commit후
+        UI-05/12/17/28/29 공통예측 갱신·실패는마지막저장값 복원.
+      - 'BASIC-142 우선: 아래 선행규칙 중 소급/보호월사유·월자료동기화·동일값400·최초INPUT보완은 EXTP에는 적용하지 않는다. 다른 변경유형 정책은 보존한다.'
       x-side-effects:
       - 허용유형별 본체/typed 이력1행/미보호월행/필수감사 원자저장. 동일 EARLY 종료/Y는 changed=false·이력/시각불변. 보호월/최초INPUT typed값 불변.
+      - EXTP는 EXT_PSBL_CD/MOD·EXTP1/공통감사1만 원자변경, ASGN_MON/INPUT보완/급여/원가/마감/철수일/EXT_CNT 불변·같은값 changed=false·감사/시각0.
       x-state-transitions:
       - from: ACT·프로젝트LOSE아님·revision일치
-        event: EXT/EARLY/UPRC/RATE/EXTP/KIND
+        event: EXT/EARLY/UPRC/RATE/KIND
         to: 유형별 최종값·이력/미보호월행 갱신
-      - from: 같은유효값 UPRC/RATE/EXTP/KIND
+      - from: 같은유효값 UPRC/RATE/KIND
         event: 변경기록
         to: 400 SAME_VALUE·이력0
       - from: CNCL/LOSE/stale
         event: 일반변경
         to: 거부·전체불변
+      - from: 올해/내년·ACT·철수전·일치revision
+        event: 다른H/M/L/NULL 저장
+        to: EXT/MOD·EXTP1/감사1 원자변경·월행불변
+      - from: 같은값·일치revision
+        event: 저장
+        to: 200 changed=false·시각/이력불변
+      - from: 과거/완료/취소/실주/stale
+        event: 저장
+        to: 409 무변경
       x-required-tests:
       - 'auth: 변경기록에 RTRO_YN/CRCT_YN/처리자를 주입 ->400·본체와 ASGN_HIST불변; 유효변경의 플래그와 처리자는 서버가 결정한다; 실제 역할별 허용/거부는 후속 승인정책
         전까지 미검증이며 임의403을 만들지 않는다.'
       - 'happy: ACT의 RATE를 다른 명시MM으로 변경 →상세/해당월 이후 월내역/NEW_CTRT_MM 재조회 일치·현재월 소급N'
-      - 'validation: UPRC/RATE/EXTP/KIND 동일유효값·MM3자리·메모201자·typed/플래그 주입 →400 SAME_VALUE/입력오류·이력0'
+      - 'validation: UPRC/RATE/KIND 동일유효값·MM3자리·메모201자·typed/플래그 주입 →400 SAME_VALUE/입력오류·이력0'
       - 'business: LOSE/CNCL 일반변경·stale·EXT999초과 →409·본체/월행/감사불변; 첫 EARLY N→Y는변경/두번째 동일은changed=false'
       - 'side-effect: 소급UPRC 사유포함 저장 →INPUT 최초단가/보호월/원정정행 불변·미보호월만 typed유효값 매출·03/04 재조회 최신'
+      - 'happy: EXTP·유효ACT·철수전·보호월존재·사유없이NULL저장 →200·EXTP1/감사1·월행불변·같은값 changed=false'
+      - 'auth: 임시관리자 EXTP유효 →200·서버처리자; REG_USER_ID/RTRO_YN주입 →400·본체/이력불변·역할403없음'
+      - 'validation: EXTP문자열NULL/빈코드/사유/메모/임의적용일 주입 →400·이력0'
+      - 'business: EXTP과거year/철수완료/CNCL/LOSE/stale →409·전체불변; EXTP같은값 →200 changed=false·이력/MOD불변'
+      - 'side-effect: EXTP필수감사실패 →EXT/MOD/EXTP rollback; 성공해도ASGN_MON/INPUT/급여/원가/마감/철수일/EXT_CNT 동일'
       x-query-validation:
         allowed: []
         unknown: 미등록 query400·SQL/스택 미노출
@@ -42942,6 +43005,1628 @@ paths:
       - 'validation: 허용외 query actor 또는 from/months/year/page/enum의 명시 경계 위반 -> 400·ApiError success=false/meta/code/message/field/details/requestId·업무변경0'
       - 'business: 같은 조건 snapshot에서 영업 예측 다운로드 실행 -> UI-29 예측의 월별 매출·수요공급·채용표를 다운로드한다.'
       - 'side-effect: 독립 파일생성 fixture와 DNLD 저장실패 주입 -> 파일미전송; 성공시 TB_SY_ACCS_LOG DNLD commit 뒤만 binary 전송·업무쓰기0'
+  /api/workforce-recommendations/targets:
+    get:
+      operationId: getWorkforceRecommendationTargets
+      summary: 추천 진행 대상·자리·기본조건 조회
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2113
+      - REQ-2114
+      - REQ-2115
+      - REQ-2117
+      - REQ-2122
+      - REQ-2193
+      - REQ-2194
+      parameters: []
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationTargetsData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - ING 기회 먼저·이름/ID순, 이어 유효ING 비내부 프로젝트. 프로젝트 PRE/LOSE/END/IN 및 기회 WIN/LOSE/STOP 제외. 비페이지 전체조회는 기본 첫대상/현재자리 전환을
+        위한 선택목록이므로 page/size 미지원400.
+      - NEED는 NEED_SN순, 계획 JOB는 SORT_ORD/CODE순. 첫 유효대상과 기본등급SR·기회시작월/프로젝트계약시작월을 제공. 대상수주후 생성프로젝트가 선택가능한지 함께 확인할 수
+        있도록 projectIdAfterWin 반환. GET은 회차를 생성하지 않는다.
+      - 'REQ-2113 (SPEC-REQUEST.md L112): 대상·직무·시작월·요청등급은 필수, JR/MD/SR/EX 최초SR이며 ING 기회/유효ING 비내부 프로젝트만 선택한다.'
+      - 'REQ-2114 (SPEC-REQUEST.md L112): 기회 먼저·이름/ID순·최초첫대상, 화면수명 마지막대상 유지·재진입 첫진행대상 초기화다.'
+      - 'REQ-2115 (SPEC-REQUEST.md L114): 기회 첫 NEED JOB/프로젝트 첫계획 JOB·없으면 활성JOB 첫값, NEED_SN/코드순 정렬과 시작월 기본을 적용한다.'
+      - 'REQ-2117 (SPEC-REQUEST.md L116): 기회에만 직무 오른쪽 필수 가배정자리, 행번호·직무·인원·시작월 표시와 NEED_SN 저장을 제공한다.'
+      - 'REQ-2122 (SPEC-REQUEST.md L120): 전환실패는 옛카드로 새대상 배정 금지·오류/재시도, 수주후 진행프로젝트 또는 첫진행대상, 닫힌대상은 첫진행대상으로 바꾼다.'
+      - 'REQ-2194 (SPEC-REQUEST.md L278): GET /api/workforce-recommendations/targets는대상/필요행/기본값/revision을업무쓰기없이반환한다.'
+      x-side-effects:
+      - 업무쓰기0·추천로그/선택/원천/감사 변경0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효조회 →200·전체범위 반환; 역할403/민감값가림 추가 없음.'
+      - 'happy: ING 기회2/ING 외부프로젝트1 →200·기회먼저 이름/ID순·기본값/NEED/revision 반환'
+      - 'validation: page=1 또는 알수없는 query →400 field·조회원천 불변'
+      - 'business: 진행대상0 →200 items=[]·firstTargetId=NULL·회차0'
+      - 'side-effect: 대상조회 반복 →SQ/RCMD_LOG/급여/기준/감사 행수와시각 불변'
+  /api/workforce-recommendations:
+    post:
+      operationId: createWorkforceRecommendation
+      summary: 8항목 규칙 인력 추천·회차 기록
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2072
+      - REQ-2073
+      - REQ-2074
+      - REQ-2075
+      - REQ-2076
+      - REQ-2077
+      - REQ-2078
+      - REQ-2079
+      - REQ-2080
+      - REQ-2081
+      - REQ-2082
+      - REQ-2083
+      - REQ-2084
+      - REQ-2085
+      - REQ-2086
+      - REQ-2123
+      - REQ-2124
+      - REQ-2127
+      - REQ-2128
+      - REQ-2129
+      - REQ-2130
+      - REQ-2131
+      - REQ-2132
+      - REQ-2133
+      - REQ-2134
+      - REQ-2135
+      - REQ-2136
+      - REQ-2137
+      - REQ-2138
+      - REQ-2139
+      - REQ-2140
+      - REQ-2141
+      - REQ-2142
+      - REQ-2143
+      - REQ-2144
+      - REQ-2145
+      - REQ-2146
+      - REQ-2147
+      - REQ-2148
+      - REQ-2149
+      - REQ-2150
+      - REQ-2151
+      - REQ-2190
+      - REQ-2192
+      - REQ-2193
+      - REQ-2195
+      - REQ-2205
+      - REQ-2207
+      - REQ-2208
+      parameters: []
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 원천/기준/후보는 같은 DB snapshot. 상위최대5행은 한 트랜잭션·결과0이면 rcmdId=NULL/빈배열/제외집계·가짜 DEV/0순위/결과행 생성0. 기존 SQ_TB_SL_RCMD_LOG만
+        사용·NUMERIC(12) 소진409 ID_EXHAUSTED. SCORE_DTL compact 정확JSON500자/RCMD_RSN300자 초과 전체실패·무절단.
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지.
+        공통 서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - 결과/조건/배점/순위/이유는 불변. 사용자선택4필드만 NULL→ASGN/TENT/EXCL 조건부1회갱신. 동일 성공 요청은 기존 연결 결과·중복업무/감사0, 다른 선택409 ACTION_ALREADY_TAKEN.
+        동일성 확인은 원래 성공 payload와 연결감사로 검증하며 이미 성공한 재요청은 후속 revision 변화만으로 중복 생성하지 않는다.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - 상위 총점DESC→환산가용점수DESC→관리번호 문자열ASC→DEV_ID ASC, 최대5명. 후보는 CAND 아닌 DEV·활성직접. 이 요청에 필수값/현재기회 자리 누락400. 프로젝트 시작월<계약시작월은
+        올려 적용하고 종료월 뒤400. 과거월 추천 허용하나 실제저장은 별도 기간/마감 보호.
+      - B=[25,20,15,10,5,5,10,10], M유효 AI_SCORE_* W각0~100/소수≤4/합100. 누락/오류409 INVALID_STANDARD·관련기준 사유, 임의기본적재/정규화0.
+        s=b×W/B 정확최대6자리·W0이면0·총점만HALF_UP1(합). 비용원천 미확인은 비용항목만0·후보유지·실제0과구별.
+      - JOB/스킬/고객/등급/성과/비용/가용/근무지 산식은 아래 REQ-2137~2151을 개별 적용. 외부 AI키 없이 동일입력 동일점수·실제근거 한문장·RCMD_RSN300자 내 정해진 문장
+        구성. 개인정보 금지 입력은 허용하지 않는다.
+      - 'REQ-2072 (SPEC-REQUEST.md L58): TB_SL_RCMD_LOG PK=(RCMD_ID,RANK_ORD), 한 회차 최종최대5행·순위1~5·기존 SQ_TB_SL_RCMD_LOG를
+        재초기화 없이 사용한다.'
+      - 'REQ-2073 (SPEC-REQUEST.md L58): 0명/0곳이면 결과행 없이 rcmdId=NULL·빈배열·제외집계/안내를 반환하며 가짜 DEV_ID/0순위 행을 만들지 않는다.'
+      - 'REQ-2074 (SPEC-REQUEST.md L63): RCMD_TYPE_CD는 AI=UI-30 사람, NEXT=UI-05 자리다.'
+      - 'REQ-2075 (SPEC-REQUEST.md L64): AI는 OPP_ID/PROJ_ID 중 선택 대상 한쪽만 저장하고 NEXT는 추천 자리 OPP_ID만 저장하며 원 철수 프로젝트는 근거/감사로
+        남긴다.'
+      - 'REQ-2076 (SPEC-REQUEST.md L65): 기회 대상 NEED_SN은 추천 당시 선택 자리, NEXT는 해당 카드 자리이며 프로젝트는NULL이다.'
+      - 'REQ-2077 (SPEC-REQUEST.md L66): JOB_CD/BGN_YM은 AI 적용 직무/시작월, NEXT 자리직무/실제 가배정 예정월이다.'
+      - 'REQ-2078 (SPEC-REQUEST.md L67): REQ_GRADE_CD는 AI 선택등급, NEXT 자리등급이며 빈 자리등급은MD다.'
+      - 'REQ-2079 (SPEC-REQUEST.md L68): DEV_ID는 AI 카드 인력, NEXT 추천대상 철수 인력이다.'
+      - 'REQ-2080 (SPEC-REQUEST.md L69): TOT_SCORE NUMERIC(5,1)은 회차의0~100 총점이다.'
+      - 'REQ-2081 (SPEC-REQUEST.md L70): SCORE_DTL VARCHAR(500)에 버전 JSON과 산식/배점/점수/주요근거 사본을 저장한다.'
+      - 'REQ-2082 (SPEC-REQUEST.md L71): RCMD_RSN VARCHAR(300)은 실제 근거에 맞는 정해진 짧은 한 문장이며 초과 문자열을 잘라 저장하지 않는다.'
+      - 'REQ-2083 (SPEC-REQUEST.md L72): USER_ACT_CD는 실제배정 성공 ASGN·가배정 성공 TENT·제외 EXCL, 추천만 했으면NULL이다.'
+      - 'REQ-2084 (SPEC-REQUEST.md L73): EXCL이면 활성 RCMD_EXCL 코드 필수이며 그 밖 RCMD_EXCL_CD는NULL이다.'
+      - 'REQ-2085 (SPEC-REQUEST.md L74): ACT_USER_ID/ACT_DTTM은 선택 성공 때만, REG_USER_ID/REG_DTTM은 실행 때 기록하며 추천 로그에 MOD_*를
+        추가하지 않는다.'
+      - 'REQ-2086 (SPEC-REQUEST.md L77): 결과/조건/배점/순위/이유는 생성 후 변경하지 않는다.'
+      - 'REQ-2123 (SPEC-REQUEST.md L124): 총점DESC·가용점수DESC·관리번호문자열ASC·DEV_ID ASC로 최대5명, 신원/직무/등급/직원구분·8항목막대·근거·다른ACT칩을
+        표시한다.'
+      - 'REQ-2124 (SPEC-REQUEST.md L124): 0명은 빈결과/사유별건수·0배점막대0과0/0·NaN/무한대 없음·추천 참고 안내문을 표시한다.'
+      - 'REQ-2127 (SPEC-REQUEST.md L132): USE_YN=Y·DRCT_CLS_CD=DRCT 등록 DEV만 후보로 한다.'
+      - 'REQ-2128 (SPEC-REQUEST.md L134): 현재휴직 또는 시작월 하루라도 유효 LEAVE와 겹치면 제외·END NULL은 계속이다.'
+      - 'REQ-2129 (SPEC-REQUEST.md L135): RETIRE_DT 존재 또는 RETIRE 상태는 예정일과 무관하게 제외, 입사일이 시작월말 뒤도 제외한다.'
+      - 'REQ-2130 (SPEC-REQUEST.md L136): 시작월 전체유효 실제 MM합1.00 이상 제외·취소제외·가배정 미합산·05 보호월/유효이력 재사용이다.'
+      - 'REQ-2131 (SPEC-REQUEST.md L137): 대상 자체 CTRT_TYPE_CD=DP이면 FL/OS 제외·기회 유형NULL을DP로 간주하지 않는다.'
+      - 'REQ-2132 (SPEC-REQUEST.md L138): 선택기회 ACT인력은 제외, 다른기회 ACT는 후보로 남기고 이동칩/안내다.'
+      - 'REQ-2133 (SPEC-REQUEST.md L139): 동일대상+적용JOB+DEV의 유효EXCL은 시작월/등급/NEED 변경에도 후보 제외다.'
+      - 'REQ-2134 (SPEC-REQUEST.md L141): 사람별 사유 복수를 허용하고 전체후보수와 사유별수합을 구분, 임시관리자 개인진단을 제공하되 제외자를 점수카드에 섞지 않는다.'
+      - 'REQ-2135 (SPEC-REQUEST.md L145): B=(25,20,15,10,5,5,10,10), M 유효 AI_SCORE 8키 W는 각0~100/소수4·합정확100, 누락/오류는
+        추천실패·임의정규화/재적재 없음이다.'
+      - 'REQ-2136 (SPEC-REQUEST.md L147): s=b×W/B 최대6자리 원값·W0이면s0·총점만HALF_UP1(Σs)·저장총점/환산가용으로 순위, NEXT는 영향없다.'
+      - 'REQ-2137 (SPEC-REQUEST.md L149): 요청JOB ADD_VAL1의 후보주JOB 포함만 관련직무이며 trim/중복/무효제거·대칭/보조확장 없음이다.'
+      - 'REQ-2138 (SPEC-REQUEST.md L149): 활성SKILL ADD_VAL1에 요청JOB가 있는 CODE_NM집합과 보유SKILL_NM을 NFKC/trim/소문자 정확비교·중복제거,
+        특징은 정규화부분포함이다.'
+      - 'REQ-2139 (SPEC-REQUEST.md L151): JR/MD/SR/EX SORT_ORD 거리·미상은index=-1 인접처리 금지, 시작일≤D 실제유효배정 고객ID/비어있지않은 업종으로
+        경험판정한다.'
+      - 'REQ-2140 (SPEC-REQUEST.md L157): 주/보조JOB 일치25·요청관련목록 후보주JOB12·그밖3 중 높은 하나다.'
+      - 'REQ-2141 (SPEC-REQUEST.md L158): HALF_UP0(16×H/N)+특징보유스킬언급4·최대20, N0은비율0·특징4별도다.'
+      - 'REQ-2142 (SPEC-REQUEST.md L159): 같은고객경험15·없고같은업종9·그밖6이다.'
+      - 'REQ-2143 (SPEC-REQUEST.md L160): 일치10·한단계5·그밖/후보NULL2다.'
+      - 'REQ-2144 (SPEC-REQUEST.md L161): D 전 완료유효배정 n/e/h로 HALF_UP0(5×e/n)−2h를0~5 제한·n0은3이다.'
+      - 'REQ-2145 (SPEC-REQUEST.md L162): HALF_UP0(5−(L/U−0.6)×10)을1~5 제한·미확인/단가≤0만 항목0이다.'
+      - 'REQ-2146 (SPEC-REQUEST.md L163): 대기/전체최종종료월이 시작월 전10·그밖 관련투입 낮음6·나머지2다.'
+      - 'REQ-2147 (SPEC-REQUEST.md L164): 대상미입력5·정상화 시도같음10·다름/판별불가6·재택문자만10금지다.'
+      - 'REQ-2148 (SPEC-REQUEST.md L166): 동일 완료유효집합 n/e/h·취소/무효제외·EXT_CNT>0인 배정1회·유효EARLY HR 배정중복1회·05정정해석을 사용한다.'
+      - 'REQ-2149 (SPEC-REQUEST.md L168): L은M의08 개인인건비/미업로드예정/마감사본인건비합, U는추천시작월 유효 MON_UPRC이며 FT/CT/FL/OS 구성과금지비용을
+        준수한다.'
+      - 'REQ-2150 (SPEC-REQUEST.md L170): D 실제겹침없는 대기, 진행전체최종종료월, 시작월걸친최종종료건 EXT_PSBL·동률 L외혼합2, 미래확정은MM판정에 포함한다.'
+      - 'REQ-2151 (SPEC-REQUEST.md L172): 프로젝트 WORK_PLC_ADDR/FEATURE_CN·기회 WORK_PLC_ADDR/RMRK, 개발자 HOME_AREA_CD→시도·없으면
+        HOME_ADDR 앞부분을 기존03 정규화로 읽는다.'
+      - 'REQ-2190 (SPEC-REQUEST.md L266): v1·b/w/s8개고정순서와e j/sk/cu/g/p/a/l·m/c/u/f를명시구조로보존하며이름/스킬전문/긴주소복제금지다.'
+      - 'REQ-2192 (SPEC-REQUEST.md L270): 정확십진JSON/순서버전DTO·최대범위500자확인·초과전체추천실패·무절단/무누락·현재원천재계산금지·선택연결필드감사다.'
+      - 'REQ-2195 (SPEC-REQUEST.md L279): POST /api/workforce-recommendations는대상유형/ID/JOB/시작월/REQ_GRADE/기회NEED를검증하고제외/AI상위5/기록을실행한다.'
+      - 'REQ-2205 (SPEC-REQUEST.md L290): 원천/기준/후보같은DB snapshot·최종상위한tx·실패부분순위0이다.'
+      - 'REQ-2207 (SPEC-REQUEST.md L292): 추천/기회/NEED/DEV/이전새기회/ASGN/마감공통잠금순서·EXCL과저장동일범위·ACT1/정원/최종1/배정중복보호·공통서비스같은tx·감사실패rollback이다.'
+      - 'REQ-2208 (SPEC-REQUEST.md L294): 조건수정·GET·다운로드는업무원천불변·추천POST로그/선택·EXTP외급여/단가/매출/원가/정산/마감사본쓰기금지다.'
+      x-side-effects:
+      - TB_SL_RCMD_LOG 최종1~5행만 원자 INSERT·(RCMD_ID,RANK_ORD), REG서버주체/시각·MOD열 없음. AI 선택대상 한쪽 OPP/PROJ·원 NEED/JOB/BGN/GRADE/DEV/TOT_SCORE/SCORE_DTL/이유
+        사본 불변. 선택4필드 NULL. 그외 업무원천쓰기0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효요청 → 성공 응답·전체범위 사용; 본문에 REG_USER_ID/ACT_USER_ID/처리자/시각 주입 →400 field와 한국어사유·업무/이력/감사0건
+        증가; 역할403 미구현.'
+      - 'happy: 동일 BigDecimal 원천·유효 배점 →200 최대5명·총점/가용동률/관리번호문자열/DEV순 일치·8항목 s=b×W/B·저장 v1 사본 재조회 일치'
+      - 'validation: 기회 needSn 누락/인덱스0/등급XX/2026-13/BASE미만/점수주입 →400 field·추천결과행0'
+      - 'business: 휴직/RETIRE_DT/실제MM1.00/DP FL·OS/동일기회ACT/유효EXCL →각사유 집계·중첩수분리·제외카드0; W누락/합99 →409 명확기준오류·기본재적재0'
+      - 'business: 결과0 →200 rcmdId=NULL/candidates=[]·가짜 DEV/0순위/결과행0; ID소진 또는 사본501자 →409·전순위0'
+      - 'side-effect: 3위 저장/필수기록 실패 →전회차rollback·1/2위도0·급여/단가/원가/마감사본 전후일치; W변경후 과거상세 →저장당시값불변'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkforceRecommendationRequest'
+      x-state-transitions:
+      - from: 동일DB snapshot·유효기준/조건
+        event: 추천 실행
+        to: 최대5행 AI회차·선택NULL
+      - from: 적격0명
+        event: 추천 실행
+        to: 200 빈배열·rcmdId=NULL·결과행0
+      - from: 사본길이/시퀀스/기준/필수기록 오류
+        event: 추천 저장
+        to: 실패·일부순위0·원천불변
+  /api/workforce-recommendations/history:
+    get:
+      operationId: getWorkforceRecommendationHistory
+      summary: 추천 회차 필터·페이지 조회
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2069
+      - REQ-2070
+      - REQ-2126
+      - REQ-2193
+      - REQ-2196
+      parameters:
+      - name: targetType
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - OPPORTUNITY
+          - PROJECT
+      - name: targetId
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+      - name: job
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 10
+      - name: recommendationType
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - AI
+          - NEXT
+      - name: page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        description: 생략 시 기존 기본 정렬. 지정 시 전체 집합 정렬·NULL 뒤·동률 PK ASC.
+        schema:
+          type: string
+          enum:
+          - rcmdId
+          - recommendationType
+          - targetId
+          - jobCode
+          - startMonth
+          - requestedGradeCode
+          - executedAt
+          - executedBy
+          - candidateCount
+      - name: direction
+        in: query
+        required: false
+        description: sort 지정 시 방향. 생략 시 ASC.
+        schema:
+          type: string
+          enum: [ASC, DESC]
+          default: ASC
+      x-query-validation:
+        allowed:
+        - targetType
+        - targetId
+        - job
+        - recommendationType
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationHistoryData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - page≥1·size20/50/100 기본50·필터전체 totalCount. executedAt DESC→rcmdId 수치DESC. targetType/targetId는 함께 지정하거나 둘다
+        생략. job 필터는 저장 코드와 비교·삭제된 코드의 과거도 조회가능·형식/길이만 검증. 회차 중복은 RCMD_ID로 제거.
+      - 'REQ-2069 (SPEC-REQUEST.md L48): 표는 수치정렬·NULL뒤·동률PK, 페이지20/50/100 기본50·필터전체합을 사용한다.'
+      - 'REQ-2126 (SPEC-REQUEST.md L126): 대상/직무 회차·실행시각/조건·당시순위/항목/배점·최종선택/사용자/시각을 저장사본으로 조회하고 대상/직무 없는 과거도 보존한다.'
+      - 'REQ-2196 (SPEC-REQUEST.md L280): GET /api/workforce-recommendations/history는회차/필터를조회한다.'
+      x-side-effects:
+      - 업무쓰기0·추천로그/선택/원천/감사 변경0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효조회 →200·전체범위 반환; 역할403/민감값가림 추가 없음.'
+      - 'happy: 대상/직무필터·size20 →일치 회차20이하·전체totalCount·실행시각/RCMD_ID수치역순'
+      - 'validation: page0/size10/대상짝누락 →400 field·한국어사유'
+      - 'business: 대상/직무삭제 후 →과거회차 조건/ID보존·빈검색은200 items=[]'
+      - 'side-effect: 페이지반복 조회 →추천로그/선택/시퀀스 변화0'
+  /api/workforce-recommendations/{rcmdId}:
+    get:
+      operationId: getWorkforceRecommendation
+      summary: 저장된 추천 사본·최종선택 상세
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2086
+      - REQ-2126
+      - REQ-2190
+      - REQ-2191
+      - REQ-2192
+      - REQ-2193
+      - REQ-2197
+      parameters:
+      - name: rcmdId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 조회는 저장된 조건·배점·점수/순위·v1근거·선택/서버사용자/시각·연결감사만 읽는다. 현재 급여/주소/기준/삭제NEED로 재계산/삭제하지 않는다.
+      - 'REQ-2086 (SPEC-REQUEST.md L77): 결과/조건/배점/순위/이유는 생성 후 변경하지 않는다.'
+      - 'REQ-2126 (SPEC-REQUEST.md L126): 대상/직무 회차·실행시각/조건·당시순위/항목/배점·최종선택/사용자/시각을 저장사본으로 조회하고 대상/직무 없는 과거도 보존한다.'
+      - 'REQ-2190 (SPEC-REQUEST.md L266): v1·b/w/s8개고정순서와e j/sk/cu/g/p/a/l·m/c/u/f를명시구조로보존하며이름/스킬전문/긴주소복제금지다.'
+      - 'REQ-2191 (SPEC-REQUEST.md L268): v1·b/s5개·w40/20/25/10/5·e aid/end/st/gap/wait/left/g/cu/pr을보존한다.'
+      - 'REQ-2192 (SPEC-REQUEST.md L270): 정확십진JSON/순서버전DTO·최대범위500자확인·초과전체추천실패·무절단/무누락·현재원천재계산금지·선택연결필드감사다.'
+      - 'REQ-2197 (SPEC-REQUEST.md L280): GET /api/workforce-recommendations/{rcmdId}는저장사본/선택결과를조회한다.'
+      x-side-effects:
+      - 업무쓰기0·추천로그/선택/원천/감사 변경0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효조회 →200·전체범위 반환; 역할403/민감값가림 추가 없음.'
+      - 'happy: 회차 생성 뒤 배점/급여변경 →200·당시 b/w/s/조건/순위/최종선택 재조회일치'
+      - 'validation: rcmdId=0/13자리 →400 field=rcmdId'
+      - 'business: 없는 정상형식 회차 →404 NOT_FOUND; 현재NEED삭제된 기존회차 →200 원본보존'
+      - 'side-effect: 상세조회 →로그/사본/선택/기준/감사 불변'
+  /api/workforce-recommendations/{rcmdId}/candidates/{rank}/exclude:
+    post:
+      operationId: createWorkforceRecommendationExclusion
+      summary: AI 후보 최종 제외·지속 적용
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2087
+      - REQ-2088
+      - REQ-2089
+      - REQ-2120
+      - REQ-2133
+      - REQ-2160
+      - REQ-2161
+      - REQ-2162
+      - REQ-2193
+      - REQ-2198
+      - REQ-2206
+      - REQ-2207
+      - REQ-2209
+      parameters:
+      - name: rcmdId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+      - name: rank
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 5
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationActionData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 원천/기준/후보는 같은 DB snapshot. 상위최대5행은 한 트랜잭션·결과0이면 rcmdId=NULL/빈배열/제외집계·가짜 DEV/0순위/결과행 생성0. 기존 SQ_TB_SL_RCMD_LOG만
+        사용·NUMERIC(12) 소진409 ID_EXHAUSTED. SCORE_DTL compact 정확JSON500자/RCMD_RSN300자 초과 전체실패·무절단.
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지.
+        공통 서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - 결과/조건/배점/순위/이유는 불변. 사용자선택4필드만 NULL→ASGN/TENT/EXCL 조건부1회갱신. 동일 성공 요청은 기존 연결 결과·중복업무/감사0, 다른 선택409 ACTION_ALREADY_TAKEN.
+        동일성 확인은 원래 성공 payload와 연결감사로 검증하며 이미 성공한 재요청은 후속 revision 변화만으로 중복 생성하지 않는다.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - AI 회차만 제외. 대상+적용JOB+DEV의 유효EXCL을 사용자무관 다음추천에 적용·월/등급/NEED변경으로 해제불가. 대상닫힘까지이며 STOP재사용 감사이전EXCL은 새진행회차 비적용·수주프로젝트
+        별개. 삭제/미선택복구API 없음. 남은 카드 순위/점수 재작성0.
+      - 'REQ-2087 (SPEC-REQUEST.md L77): 사용자 선택 네 필드만 미선택에서 한 번 최종선택으로 조건부 갱신하고 다른 선택은409 ACTION_ALREADY_TAKEN이다.'
+      - 'REQ-2088 (SPEC-REQUEST.md L77): 선택 네 필드의 전후값을 공통 감사에 남긴다.'
+      - 'REQ-2089 (SPEC-REQUEST.md L77): 동일 성공 요청은 연결된 기존 결과를 반환하고 중복 업무/감사를 만들지 않으며 기록삭제로 제외를 해제하지 않는다.'
+      - 'REQ-2120 (SPEC-REQUEST.md L118): 자리만 바꾸면 점수불변·TENT는 현재자리, ASGN/EXCL은 카드 적용조건을 쓴다.'
+      - 'REQ-2133 (SPEC-REQUEST.md L139): 동일대상+적용JOB+DEV의 유효EXCL은 시작월/등급/NEED 변경에도 후보 제외다.'
+      - 'REQ-2160 (SPEC-REQUEST.md L196): 활성RCMD_EXCL SCHD/HOPE/CUST/ETC 필수·확정EXCL/사유/서버선택/감사·카드제거·취소무변경이다.'
+      - 'REQ-2161 (SPEC-REQUEST.md L196): 같은대상+적용JOB+DEV는사용자무관제외·다른대상/직무는비적용·남은카드당시순위점수불변·재추천새상위5다.'
+      - 'REQ-2162 (SPEC-REQUEST.md L198): 대상닫힘까지제외·로그보존·STOP재사용감사이전EXCL은새진행회차비적용·수주프로젝트별개·삭제/미선택복구버튼없음이다.'
+      - 'REQ-2198 (SPEC-REQUEST.md L281): POST /api/workforce-recommendations/{rcmdId}/candidates/{rank}/exclude에사유/expectedRevision을검증해EXCL선택한다.'
+      - 'REQ-2206 (SPEC-REQUEST.md L290): 선택때대상/사람/자리/MM/상태/제외/경고최신검사·관련전체행REG/MOD/이력급여가격스킬기준TENT월행마감revision·페이지밖포함·변경409
+        STALE_WRITE다.'
+      - 'REQ-2207 (SPEC-REQUEST.md L292): 추천/기회/NEED/DEV/이전새기회/ASGN/마감공통잠금순서·EXCL과저장동일범위·ACT1/정원/최종1/배정중복보호·공통서비스같은tx·감사실패rollback이다.'
+      - 'REQ-2209 (SPEC-REQUEST.md L294): commit뒤05/12/17/28/29/30기존무효화·저장후조회실패는저장됐지만다시불러오지못했습니다/재조회만·업무자동재실행없음이다.'
+      x-side-effects:
+      - 기존추천행 사용자선택4필드만 EXCL/활성사유/서버주체/시각 조건부갱신·전후공통감사 같은tx. 결과/조건/점수/이유/타후보순위 불변·급여/원가등 업무쓰기0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효요청 → 성공 응답·전체범위 사용; 본문에 REG_USER_ID/ACT_USER_ID/처리자/시각 주입 →400 field와 한국어사유·업무/이력/감사0건
+        증가; 역할403 미구현.'
+      - 'happy: 활성SCHD·일치revision →200 EXCL·다음 동일대상/JOB추천에서 동일DEV없음·월/등급/NEED변경해도 제외'
+      - 'validation: 사유누락/비활성/길이초과/NEXT회차/처리자주입 →400 field·선택NULL·감사0'
+      - 'business: EXCL 동일요청 재전송 →기존결과 changed=false·감사증가0; TENT된행제외 →409 ACTION_ALREADY_TAKEN·기존선택보존; stale→409 STALE_WRITE'
+      - 'side-effect: 감사실패 →EXCL rollback·다음추천 후보복원; 제외성공 →남은당시순위/사본 동일·STOP재사용후 옛제외만 비적용'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkforceRecommendationExclusionRequest'
+      x-state-transitions:
+      - from: AI·선택NULL·최신
+        event: 활성사유 제외
+        to: EXCL·선택4필드/감사 원자갱신
+      - from: 동일EXCL 성공
+        event: 같은요청
+        to: 기존결과·추가감사0
+      - from: ASGN/TENT/다른EXCL 또는 stale
+        event: 제외
+        to: 409·무변경
+  /api/workforce-recommendations/{rcmdId}/candidates/{rank}/tentative-assignment:
+    post:
+      operationId: createWorkforceRecommendationTentativeAssignment
+      summary: AI/NEXT 공통 가배정·이동 최종선택
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2087
+      - REQ-2088
+      - REQ-2089
+      - REQ-2112
+      - REQ-2118
+      - REQ-2120
+      - REQ-2155
+      - REQ-2156
+      - REQ-2157
+      - REQ-2158
+      - REQ-2159
+      - REQ-2175
+      - REQ-2177
+      - REQ-2187
+      - REQ-2188
+      - REQ-2193
+      - REQ-2199
+      - REQ-2204
+      - REQ-2206
+      - REQ-2207
+      - REQ-2209
+      parameters:
+      - name: rcmdId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+      - name: rank
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 5
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationActionData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백; 확인 필요 경고는 details.workforceRecommendationWarnings[].code/message로
+            공개한다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 원천/기준/후보는 같은 DB snapshot. 상위최대5행은 한 트랜잭션·결과0이면 rcmdId=NULL/빈배열/제외집계·가짜 DEV/0순위/결과행 생성0. 기존 SQ_TB_SL_RCMD_LOG만
+        사용·NUMERIC(12) 소진409 ID_EXHAUSTED. SCORE_DTL compact 정확JSON500자/RCMD_RSN300자 초과 전체실패·무절단.
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지.
+        공통 서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - 결과/조건/배점/순위/이유는 불변. 사용자선택4필드만 NULL→ASGN/TENT/EXCL 조건부1회갱신. 동일 성공 요청은 기존 연결 결과·중복업무/감사0, 다른 선택409 ACTION_ALREADY_TAKEN.
+        동일성 확인은 원래 성공 payload와 연결감사로 검증하며 이미 성공한 재요청은 후속 revision 변화만으로 중복 생성하지 않는다.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - AI는 기회카드DEV/현재선택 NEED_SN 사용·시작=max(적용월,현재진행전체최종종료월+1,선택NEED시작), 현재투입없으면중간항제외. NEXT는 카드 OPP/NEED/DEV·시작=max(철수다음월,NEED시작)·최신철수일/다음배정/자리
+        재검사. SRC_SCRN_ID는 RCMD_TYPE별 UI-30/UI-05를 서버결정. 프로젝트AI TENT는400.
+      - 최신ING/자리존재·자리끝/정원·DP/인력/기간 자격 검사. 자리끝뒤409, 삭제NEED409 INVALID_STATE·과거로그보존. OPP_ID+NEED_SN 모든직무 ACT를 정원계산.
+        자기같은자리ACT는 기존결과·다른자리/기회ACT는 최신이동경고 확인 후 REL→새ACT·확인누락409와 최신경고details. 다른직무경고는 확인후 허용·추천JOB/사본불변. 슬롯경합후포화409
+        SLOT_FULL·다른사람강제해제0.
+      - NEXT 신규는SOON/H아님/다음없음, 기존ACT바꾸기는 철수전 H/LATER허용·과거year/철수완료/확정실제/CNVT는409. 시작월MM포화는12공통가배정 경고, NEXT 공급예약/임의인원차감
+        없음. 실제배정 자동생성0. 공통 ACT→CNVT→DONE/DROP은12계약 그대로.
+      - 'REQ-2087 (SPEC-REQUEST.md L77): 사용자 선택 네 필드만 미선택에서 한 번 최종선택으로 조건부 갱신하고 다른 선택은409 ACTION_ALREADY_TAKEN이다.'
+      - 'REQ-2088 (SPEC-REQUEST.md L77): 선택 네 필드의 전후값을 공통 감사에 남긴다.'
+      - 'REQ-2089 (SPEC-REQUEST.md L77): 동일 성공 요청은 연결된 기존 결과를 반환하고 중복 업무/감사를 만들지 않으며 기록삭제로 제외를 해제하지 않는다.'
+      - 'REQ-2112 (SPEC-REQUEST.md L106): 추천 로그는 NEED 직접FK 없이 보존하며 현재 없는 자리 저장은409다. TENT의 기존 NEED FK를 준수한다.'
+      - 'REQ-2118 (SPEC-REQUEST.md L116): 관련/다른직무 사람은 경고 확인 후 허용하고 자리 JOB 차이로 추천조건을 몰래 변경하지 않는다.'
+      - 'REQ-2120 (SPEC-REQUEST.md L118): 자리만 바꾸면 점수불변·TENT는 현재자리, ASGN/EXCL은 카드 적용조건을 쓴다.'
+      - 'REQ-2155 (SPEC-REQUEST.md L186): 현재NEED_SN/카드DEV·시작max(적용월,진행전체마지막종료월+1,NEED시작), 현재투입없으면중간항없음·자리끝뒤409다.'
+      - 'REQ-2156 (SPEC-REQUEST.md L188): OPP_ID+NEED_SN의 모든직무 ACT인원<NEED_CNT·같은사람같은자리ACT는기존결과·막판포화409 SLOT_FULL이다.'
+      - 'REQ-2157 (SPEC-REQUEST.md L188): 다른기회/자리 ACT는 이동경고확인 후 REL→새ACT를 원자처리한다.'
+      - 'REQ-2158 (SPEC-REQUEST.md L190): SRC_SCRN_ID=UI-30·두기회MOD·TENT·추천선택/주체/시각·새TENT_ID/최종NEED 감사 한tx·원로그불변이다.'
+      - 'REQ-2159 (SPEC-REQUEST.md L192): 성공후 UI-29자리/상세·UI-28점선·UI-05다음배정에 반영·수주후CNVT/확정DONE/빼기DROP은12공통서비스이며 실제배정자동생성없다.'
+      - 'REQ-2175 (SPEC-REQUEST.md L234): 신규SOON/H아님/다음없음·기존ACT교체는철수전H/LATER허용·과거연도/철수완료/실제확정/CNVT교체불가다.'
+      - 'REQ-2177 (SPEC-REQUEST.md L238): 신규ACT<NEED_CNT·자기기존ACT제외계수/가배정됨비활성·다른JOB ACT도인원·DP FL/OS제외·시작월휴직입퇴사재검사·실제MM포화는12경고다.'
+      - 'REQ-2187 (SPEC-REQUEST.md L258): 카드OPP/NEED/DEV·시작max(철수다음월,자리시작)·SRC_UI-05·현재조건재검사·TENT/이전REL/두기회MOD/추천선택감사한tx다.'
+      - 'REQ-2188 (SPEC-REQUEST.md L260): 같은카드자리재요청기존결과/중복ACT감사0·다른자리성공REL/새ACT·ASGN자동생성0·05/28/29/12경로동일이다.'
+      - 'REQ-2199 (SPEC-REQUEST.md L282): POST /api/workforce-recommendations/{rcmdId}/candidates/{rank}/tentative-assignment는현재NEED/경고확인/대상후보revision으로공통서비스호출한다.'
+      - 'REQ-2204 (SPEC-REQUEST.md L288): 실제배정은기존POST에optional recommendationRef만확장·NEXT도공통행동API·출처/시작월은RCMD_TYPE서버분기·점수/작업자/시각클라이언트덮기금지다.'
+      - 'REQ-2206 (SPEC-REQUEST.md L290): 선택때대상/사람/자리/MM/상태/제외/경고최신검사·관련전체행REG/MOD/이력급여가격스킬기준TENT월행마감revision·페이지밖포함·변경409
+        STALE_WRITE다.'
+      - 'REQ-2207 (SPEC-REQUEST.md L292): 추천/기회/NEED/DEV/이전새기회/ASGN/마감공통잠금순서·EXCL과저장동일범위·ACT1/정원/최종1/배정중복보호·공통서비스같은tx·감사실패rollback이다.'
+      - 'REQ-2209 (SPEC-REQUEST.md L294): commit뒤05/12/17/28/29/30기존무효화·저장후조회실패는저장됐지만다시불러오지못했습니다/재조회만·업무자동재실행없음이다.'
+      x-side-effects:
+      - 12 TentativeAssignment 공통상태전환에서 TENT생성·이전REL·양기회MOD_DTTM/revision·추천TENT선택/작업자/시각·선택4필드전후/새TENT_ID/최종자리키감사를
+        한tx. 원추천NEED/점수불변. 취소/실패 기존ACT/선택 모두불변·실제ASGN 생성0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효요청 → 성공 응답·전체범위 사용; 본문에 REG_USER_ID/ACT_USER_ID/처리자/시각 주입 →400 field와 한국어사유·업무/이력/감사0건
+        증가; 역할403 미구현.'
+      - 'happy: AI현재NEED가 원추천NEED와다르고 경고확인 →200 현재자리ACT·UI-30출처·원로그NEED불변; NEXT →철수다음월/NEEDmax·UI-05출처·같은공통서비스'
+      - 'validation: needSn/targetRevision/candidateRevision 누락·rank0/6·점수/출처주입 →400 field·ACT/선택/감사0'
+      - 'business: 마지막1자리 동시2인 →한명성공/다른409 SLOT_FULL·ACT정원준수; 실제MM/급여/페이지밖월행변경후 →409 STALE_WRITE; 삭제NEED/기간불가/미확인경고
+        →409 무변경'
+      - 'business: 같은카드자리 재요청 →기존TENT/감사0증가; 다른최종선택 →409 ACTION_ALREADY_TAKEN; NEXT확정/CNVT/철수완료 교체 →409·기존배정불변'
+      - 'side-effect: 다른ACT이동중 새TENT/감사실패 →REL도rollback·옛ACT유지·두기회시각/추천선택불변; 성공 →REL1/ACT1·UI-05/28/29/12 연결·실제ASGN0'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkforceRecommendationTentativeAssignmentRequest'
+      x-state-transitions:
+      - from: 선택NULL·ING/NEED/인력최신·정원여유·경고확인
+        event: 가배정
+        to: TENT선택·공통ACT1·양기회/감사동일tx
+      - from: 다른자리ACT
+        event: 이동확인·신규성공
+        to: 이전REL·새ACT·추천TENT
+      - from: 같은성공요청/같은자리ACT
+        event: 재요청
+        to: 기존연결결과·ACT/감사중복0
+      - from: stale/포화/다른최종선택/필수감사실패
+        event: 가배정
+        to: 실패·옛ACT/선택/감사무변경
+  /api/withdrawals:
+    get:
+      operationId: getWithdrawals
+      summary: 철수 배정별 목록·전체합·올해 안내
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2069
+      - REQ-2070
+      - REQ-2163
+      - REQ-2164
+      - REQ-2165
+      - REQ-2166
+      - REQ-2167
+      - REQ-2168
+      - REQ-2169
+      - REQ-2193
+      - REQ-2200
+      - REQ-2208
+      parameters:
+      - name: year
+        in: query
+        required: false
+        description: 기본Y·BASE연도~Y+1
+        schema:
+          type: integer
+          description: Asia/Seoul Y 기본·CASH_BASE_YM 연도~Y+1. 지난 연도 조회 전용.
+      - name: period
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - ALL
+          - SOON
+          - LATER
+          - PAST
+          default: ALL
+      - name: extension
+        in: query
+        required: false
+        description: UNSET=NULL·ALL과 구별·빈문자400
+        schema:
+          type: string
+          enum:
+          - ALL
+          - H
+          - M
+          - L
+          - UNSET
+          default: ALL
+      - name: job
+        in: query
+        required: false
+        description: 활성 JOB 필터·미등록400
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 10
+      - name: page
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: size
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+          default: 50
+      - name: sort
+        in: query
+        required: false
+        description: 생략 시 기존 기본 정렬. 지정 시 전체 집합 정렬·NULL 뒤·동률 PK ASC.
+        schema:
+          type: string
+          enum:
+          - name
+          - project
+          - job
+          - date
+          - days
+          - history
+          - extension
+          - next
+      - name: direction
+        in: query
+        required: false
+        description: sort 지정 시 방향. 생략 시 ASC.
+        schema:
+          type: string
+          enum: [ASC, DESC]
+          default: ASC
+      x-query-validation:
+        allowed:
+        - year
+        - period
+        - extension
+        - job
+        - page
+        - size
+        - sort
+        - direction
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WithdrawalsData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 선택year에 INPUT_END_DT가 속한 취소제외 ASGN_ID별 행. 사용중지 인력/종료프로젝트 과거보존. 기본철수일ASC→관리번호문자열ASC→ASGN_ID ASC. 표수치는 수치정렬/NULL뒤/동률PK·기본
+        size50·전체합 필터기준.
+      - 기간ALL/SOON/LATER/PAST·연장ALL/H/M/L/UNSET. SOON=D≤철수일≤M+2월말, LATER=철수월>M+2, PAST=철수일<D. 90일대체 금지. 남은일수는 LocalDate일수.
+        과거year 조회허용·변경버튼자격false.
+      - 다음배정 미래실제ACT→CNVT→진행기회ACT 우선/그룹내가까운시작순·복수전부 반환. DONE실제·DROP/REL제외·철수완료 –. SOON/H아님/다음없음만 새추천, 기존ACT바꾸기는철수전
+        H/LATER도가능·확정/CNVT 해제금지.
+      - 올해 A/B/C 안내는 DEV중복제거·목록필터/페이지독립·연도경계포함 D~M+2말 전체. n곳/C는 같은NEXT순수계산기·로그0. H/LATER/과거 새추천버튼없음·맞는자리0은 명시안내.
+      - 'REQ-2069 (SPEC-REQUEST.md L48): 표는 수치정렬·NULL뒤·동률PK, 페이지20/50/100 기본50·필터전체합을 사용한다.'
+      - 'REQ-2163 (SPEC-REQUEST.md L204): 선택연도 INPUT_END_DT 취소제외 ASGN_ID행·사용중지인력/종료프로젝트 과거보존·연도/기간/EXT/JOB·조회/초기화·기본전체·철수일/관리번호/ASGN_ID순이다.'
+      - 'REQ-2164 (SPEC-REQUEST.md L206): 기간ALL/SOON/LATER/PAST·연장ALL/H/M/L/UNSET 기본ALL·UNSET은NULL이며빈문자열로ALL과합치지않는다.'
+      - 'REQ-2165 (SPEC-REQUEST.md L208): SOON은D~M+2말포함·LATER철수월>M+2·PAST철수일<D·LocalDate일수·0~30빨강31~60주황61이상회색음수완료다.'
+      - 'REQ-2166 (SPEC-REQUEST.md L210): 이름/프로젝트/JOB/철수일/일수/연장n회·조기이력/EXT선택/다음배정·행 UI-12상세·이름/프로젝트기존상세·버튼이벤트분리다.'
+      - 'REQ-2167 (SPEC-REQUEST.md L212): 다른미래ACT실제→CNVT→진행기회ACT 순·확정/배정후보/가배정표시·가까운시작순복수도움말/링크·DONE실제·DROP/REL제외·철수완료
+        –다.'
+      - 'REQ-2168 (SPEC-REQUEST.md L214): 다음배정없고SOON/H아님은추천n곳·0은맞는자리없음·H/LATER/과거새추천없음·기존ACT바꾸기는철수전허용·확정/CNVT해제금지다.'
+      - 'REQ-2169 (SPEC-REQUEST.md L216): A/B/C는DEV중복제거·SOON 전체/다음없음H아님/자리≥1·목록필터페이지무관·연도경계포함·조회로그0이다.'
+      - 'REQ-2200 (SPEC-REQUEST.md L283): GET /api/withdrawals는year/period/extension/job/page/size·필터전체합/올해안내/다음배정/n곳을무쓰기조회한다.'
+      - 'REQ-2208 (SPEC-REQUEST.md L294): 조건수정·GET·다운로드는업무원천불변·추천POST로그/선택·EXTP외급여/단가/매출/원가/정산/마감사본쓰기금지다.'
+      x-side-effects:
+      - 업무쓰기0·추천로그/선택/원천/감사 변경0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효조회 →200·전체범위 반환; 역할403/민감값가림 추가 없음.'
+      - 'happy: 동일인2배정·year/EXT/JOB필터·size20 →ASGN별행·필터전체totalCount·A/B/C는DEV중복1명'
+      - 'validation: period=90D/extension빈값/size10/page0/범위밖year →400 field·UNSET만NULL조회'
+      - 'business: D/월+2말/다음달초/어제 경계 →SOON/LATER/PAST정확·연도경계 A/B/C포함·과거조회허용·쓰기자격false'
+      - 'side-effect: 목록/n곳/C/페이지 반복 →RCMD_LOG/시퀀스/선택/급여/원가/감사 불변'
+  /api/withdrawals/{assignmentId}/extension-possibility:
+    post:
+      operationId: saveWithdrawalExtensionPossibility
+      summary: 연장 가능성 EXTP 메타정보 저장
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2170
+      - REQ-2171
+      - REQ-2172
+      - REQ-2173
+      - REQ-2193
+      - REQ-2201
+      - REQ-2206
+      - REQ-2207
+      - REQ-2209
+      parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WithdrawalExtensionPossibilityData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 올해/내년 year·유효ACT·철수전·프로젝트실주아님만 EXTP. 지난year/완료/취소/실주는409. expectedRevision 잠금후 전체행과 비교·stale409. 같은값은200 changed=false·시각/revision/이력불변.
+      - EXTP는 별도 메타분기·사유입력없이 EXT_PSBL_CD/MOD만 갱신. 적용일max(D,INPUT_BGN_DT), BFR_VAL/AFT_VAL=H/M/L/NULL, ASGN_HIST EXTP1건+공통감사1건
+        원자저장. 사유/메모/새단가/새MM=NULL·RTRO_YN/CLOSE_CROSS_YN=N·CRCT_YN=N·정정대상NULL.
+      - 보호월이 있어도 사유요구/차단/월동기화 제외. ASGN_MON/급여/매출/원가/마감사본/철수일/EXT_CNT 불변·과거/실주/경합 차단은 유지. 미정은NULL·문자열NULL/새코드 금지. commit후
+        UI-05/12/17/28/29 공통예측 갱신·실패는마지막저장값 복원.
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지.
+        공통 서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - 'REQ-2170 (SPEC-REQUEST.md L220): 올해/내년 유효ACT·철수전 H/M/L/NULL 즉시선택, 과거연도/철수완료/취소/실주는readonly·실제연장변경새기능없다.'
+      - 'REQ-2171 (SPEC-REQUEST.md L222): expectedRevision·사유없이 EXT_PSBL_CD/MOD만갱신·EXTP1/감사1 한tx·적용max(D,시작일)·전후H/M/L/NULL·나머지명시NULL/N/정정아님이다.'
+      - 'REQ-2172 (SPEC-REQUEST.md L224): EXTP 별도메타분기로보호월사유/차단/월동기화제외·과거/실주/경합차단유지·ASGN_MON/급여/원가/마감/철수일/EXT_CNT불변이다.'
+      - 'REQ-2173 (SPEC-REQUEST.md L226): 성공목록/안내/UI-12이력/상세/UI-28/17/29예측갱신·실패마지막저장값복원·미정은NULL이며문자열NULL/새코드금지다.'
+      - 'REQ-2201 (SPEC-REQUEST.md L284): POST /api/withdrawals/{assignmentId}/extension-possibility는year/H/M/L/NULL/expectedRevision으로EXTP메타분기호출한다.'
+      - 'REQ-2206 (SPEC-REQUEST.md L290): 선택때대상/사람/자리/MM/상태/제외/경고최신검사·관련전체행REG/MOD/이력급여가격스킬기준TENT월행마감revision·페이지밖포함·변경409
+        STALE_WRITE다.'
+      - 'REQ-2207 (SPEC-REQUEST.md L292): 추천/기회/NEED/DEV/이전새기회/ASGN/마감공통잠금순서·EXCL과저장동일범위·ACT1/정원/최종1/배정중복보호·공통서비스같은tx·감사실패rollback이다.'
+      - 'REQ-2209 (SPEC-REQUEST.md L294): commit뒤05/12/17/28/29/30기존무효화·저장후조회실패는저장됐지만다시불러오지못했습니다/재조회만·업무자동재실행없음이다.'
+      x-side-effects:
+      - EXT_PSBL_CD/MOD + EXTP1/공통감사1만 원자변경. ASGN_MON/INPUT보완/급여/단가/원가/마감/철수일/EXT_CNT 갱신0. 같은값은 모든시각/이력/감사불변.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효요청 → 성공 응답·전체범위 사용; 본문에 REG_USER_ID/ACT_USER_ID/처리자/시각 주입 →400 field와 한국어사유·업무/이력/감사0건
+        증가; 역할403 미구현.'
+      - 'happy: 올해철수전ACT·CLOSE/FIX월존재·사유없이 H→NULL →200 changed=true·EXT NULL·EXTP1/감사1·적용max(D,시작)'
+      - 'validation: extensionPossibility누락/문자열NULL/빈문자/사유/메모/새MM/처리자주입 →400 field·전체불변'
+      - 'business: 동일NULL재요청 →200 changed=false·MOD/이력/revision불변; 과거year/철수완료/CNCL/LOSE/stale →409·전체불변'
+      - 'side-effect: EXTP성공전후 월행/급여/원가/마감사본/철수일/EXT_CNT 동일·UI-05/12이력/17/28/29 예측재조회 최신; 감사실패 →EXT/MOD/EXTP rollback'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveWithdrawalExtensionPossibilityRequest'
+      x-state-transitions:
+      - from: 올해/내년·ACT·철수전·일치revision
+        event: 다른H/M/L/NULL 저장
+        to: EXT/MOD·EXTP1/감사1 원자변경·월행불변
+      - from: 같은값·일치revision
+        event: 저장
+        to: 200 changed=false·시각/이력불변
+      - from: 과거/완료/취소/실주/stale
+        event: 저장
+        to: 409 무변경
+  /api/withdrawals/{assignmentId}/next-positions:
+    post:
+      operationId: createNextPositionRecommendation
+      summary: 철수 인력 다음 자리 5항목 추천·회차
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2174
+      - REQ-2175
+      - REQ-2176
+      - REQ-2177
+      - REQ-2178
+      - REQ-2179
+      - REQ-2180
+      - REQ-2181
+      - REQ-2182
+      - REQ-2183
+      - REQ-2184
+      - REQ-2185
+      - REQ-2186
+      - REQ-2191
+      - REQ-2192
+      - REQ-2193
+      - REQ-2202
+      - REQ-2205
+      - REQ-2207
+      - REQ-2208
+      parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+      x-query-validation:
+        allowed: []
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 실제 조회 또는 원자 commit 결과·data 필수
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ApiResponse'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/WorkforceRecommendationData'
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 원천/기준/후보는 같은 DB snapshot. 상위최대5행은 한 트랜잭션·결과0이면 rcmdId=NULL/빈배열/제외집계·가짜 DEV/0순위/결과행 생성0. 기존 SQ_TB_SL_RCMD_LOG만
+        사용·NUMERIC(12) 소진409 ID_EXHAUSTED. SCORE_DTL compact 정확JSON500자/RCMD_RSN300자 초과 전체실패·무절단.
+      - 추천행/기회/NEED/DEV/이전새기회/ASGN/마감 잠금은 기존 공통 정렬순서. 동일대상+JOB+DEV의 제외/추천/저장은 동일범위. ACT 사람당1건·자리정원·최종선택1회·실제배정중복 방지.
+        공통 서비스는 외부 선택 트랜잭션에 참여·중간commit 금지·필수감사 실패 전체롤백.
+      - 행동시 대상/사람/자리/실제MM/기회상태/유효EXCL/경고를 최신검사. target/candidate/expectedRevision은 관련 전체행 REG/MOD/이력/급여/가격/스킬/기준/TENT/월행/마감과
+        페이지밖까지 포함. 잠금후 불일치409 STALE_WRITE·재조회/다시추천 안내·기존점수로 다른사람 몰래 저장 금지.
+      - 결과/조건/배점/순위/이유는 불변. 사용자선택4필드만 NULL→ASGN/TENT/EXCL 조건부1회갱신. 동일 성공 요청은 기존 연결 결과·중복업무/감사0, 다른 선택409 ACTION_ALREADY_TAKEN.
+        동일성 확인은 원래 성공 payload와 연결감사로 검증하며 이미 성공한 재요청은 후속 revision 변화만으로 중복 생성하지 않는다.
+      - commit후 기존 무효화 이벤트로 UI-05/12/17/28/29/30 갱신. 저장후 재조회만 실패시 저장됐지만 다시 불러오지 못했습니다·재조회만 제공·업무자동 재실행0. 급여/단가/매출/원가/정산/마감사본은
+        이 추천 기능에서 수정하지 않는다.
+      - 실제패널열기/명시다시추천만 NEXT회차. GET n곳/C는같은순수계산기·재그리기/성공알림은 새POST없음. 대상USE Y/DRCT/퇴사예정/현재휴직아님·현재철수행/다음배정상태 서버재검사.
+      - 신규SOON/H아님/다음없음, 기존ACT바꾸기는철수전 H/LATER허용. 과거year/철수완료/실제확정/CNVT는409. ING NEED 중 자리주JOB=인력주JOB 또는 자리JOB ADD_VAL1에
+        주JOB포함·보조만일치제외. from철수다음월·자리끝≥from·gap=max(0,자리시작−from) 개월0~3·실제시작max(from,자리시작).
+      - ACT정원은 모든JOB포함 OPP+NEED. 자기ACT는 빼서 가배정됨비활성카드 유지·신규ACT<정원. DP FL/OS제외·예정시작월 입퇴사/휴직재검사·실제MM포화는12경고만·공급예약0.
+      - '고정5항목: 주JOB40/방향관련20/그외제외; 등급같음20/거리1은10/그외NULL0·자리빈등급MD; gap0/1/2/3=25/15/8/3; 원철수프로젝트고객ID같음10/다름0; WIN_PRBL_RT≥60은5/그외0.
+        AI_SCORE/보조JOB/스킬/지역 혼입금지. 합DESC→자리원시작월ASC→OPP_ID/NEED_SN수치ASC 최대5.'
+      - SCORE_DTL v1 NEXT b/s5개·w=[40,20,25,10,5], 원aid/end/st/gap/wait/left/g/cu/pr 사본. JOB/BGN/REQ_GRADE는 카드자리/실제시작/비교등급.
+        원철수프로젝트는근거/감사·OPP_ID만카드기회 저장. wait=max(0,실제시작월1일−철수일−1). 부족안내는12 Forecast M+1~6/includeUnfilled=true/주JOB
+        수요−공급>SHORT_PERSON 월만.
+      - 'REQ-2174 (SPEC-REQUEST.md L232): ASGN_ID/인력/원프로젝트/철수일/스킬/EXT/대기시작으로패널열고USE Y·DRCT·퇴사예정/현재휴직아님·현재행/다음배정서버검사다.'
+      - 'REQ-2175 (SPEC-REQUEST.md L234): 신규SOON/H아님/다음없음·기존ACT교체는철수전H/LATER허용·과거연도/철수완료/실제확정/CNVT교체불가다.'
+      - 'REQ-2176 (SPEC-REQUEST.md L236): ING NEED·자리JOB=주JOB 또는자리JOB관련목록주JOB·보조만일치제외·from철수다음월·자리끝≥from·gap0~3·시작max(from,자리시작)이다.'
+      - 'REQ-2177 (SPEC-REQUEST.md L238): 신규ACT<NEED_CNT·자기기존ACT제외계수/가배정됨비활성·다른JOB ACT도인원·DP FL/OS제외·시작월휴직입퇴사재검사·실제MM포화는12경고다.'
+      - 'REQ-2178 (SPEC-REQUEST.md L242): 주JOB일치40·방향관련20·그밖제외이며보조JOB만일치40금지다.'
+      - 'REQ-2179 (SPEC-REQUEST.md L243): 자리등급빈값MD·인력등급일치20·거리1은10·그밖/NULL0이다.'
+      - 'REQ-2180 (SPEC-REQUEST.md L244): gap0/1/2/3에25/15/8/3을준다.'
+      - 'REQ-2181 (SPEC-REQUEST.md L245): 철수행프로젝트고객ID와기회고객ID같으면10·그밖0이다.'
+      - 'REQ-2182 (SPEC-REQUEST.md L246): 저장WIN_PRBL_RT≥60이면5·그밖0이다.'
+      - 'REQ-2183 (SPEC-REQUEST.md L248): 고정5항목합DESC→자리시작월ASC→OPP_ID/NEED_SN 최대5·이유칩/득점/기회확률단계/자리직무등급시작잔여고객/가배정·등급사본이다.'
+      - 'REQ-2184 (SPEC-REQUEST.md L250): 대기=max(0,실제시작예정월1일−철수일−1)·0바로투입·양수n일이다.'
+      - 'REQ-2185 (SPEC-REQUEST.md L252): 12 Forecast M+1~M+6/includeUnfilled=true/주JOB에서수요−공급>SHORT_PERSON인월/부족명수·충족월없으면경고없음이다.'
+      - 'REQ-2186 (SPEC-REQUEST.md L256): 실제패널추천과명시다시추천만회차저장·목록n곳/C는같은순수계산기무기록·재그리기/성공알림중복0이다.'
+      - 'REQ-2191 (SPEC-REQUEST.md L268): v1·b/s5개·w40/20/25/10/5·e aid/end/st/gap/wait/left/g/cu/pr을보존한다.'
+      - 'REQ-2192 (SPEC-REQUEST.md L270): 정확십진JSON/순서버전DTO·최대범위500자확인·초과전체추천실패·무절단/무누락·현재원천재계산금지·선택연결필드감사다.'
+      - 'REQ-2202 (SPEC-REQUEST.md L285): POST /api/withdrawals/{assignmentId}/next-positions는NEXT를계산/기록하며목록GET과기록여부를분리한다.'
+      - 'REQ-2205 (SPEC-REQUEST.md L290): 원천/기준/후보같은DB snapshot·최종상위한tx·실패부분순위0이다.'
+      - 'REQ-2207 (SPEC-REQUEST.md L292): 추천/기회/NEED/DEV/이전새기회/ASGN/마감공통잠금순서·EXCL과저장동일범위·ACT1/정원/최종1/배정중복보호·공통서비스같은tx·감사실패rollback이다.'
+      - 'REQ-2208 (SPEC-REQUEST.md L294): 조건수정·GET·다운로드는업무원천불변·추천POST로그/선택·EXTP외급여/단가/매출/원가/정산/마감사본쓰기금지다.'
+      x-side-effects:
+      - NEXT 최종최대5행만 RCMD_LOG 원자저장·선택NULL. TENT/실제배정/공급/기회 수정0. 0곳은rcmdId=NULL·빈배열·결과행0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효요청 → 성공 응답·전체범위 사용; 본문에 REG_USER_ID/ACT_USER_ID/처리자/시각 주입 →400 field와 한국어사유·업무/이력/감사0건
+        증가; 역할403 미구현.'
+      - 'happy: 주JOB/관련JOB·gap0/1/2/3·확률59.9/60 →정확5항목·원고객판정·고정배점·순위/당시등급v1일치·부족월 공통예측일치'
+      - 'validation: year/expectedRevision 누락·존재하지않는ID/서버점수주입 →400/404 구분·회차0'
+      - 'business: 과거year/철수완료/확정실제/CNVT신규교체 →409; 기존ACT바꾸기 H/LATER철수전 →허용; gap4/자리끝<from/DP FL/OS →후보제외·0곳200 rcmdId=NULL'
+      - 'side-effect: 허용 철수행 NEXT POST1회 뒤 목록 GET 반복 → TB_SL_RCMD_LOG NEXT 회차1개·GET 추가0; 필수기록실패/사본501자 → 전순위rollback·TENT/기회/공급/급여/마감불변'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNextPositionRecommendationRequest'
+      x-state-transitions:
+      - from: 신규SOON/H아님/다음없음 또는 철수전기존ACT바꾸기
+        event: 패널추천POST
+        to: NEXT최대5행·최종선택NULL
+      - from: 맞는자리0
+        event: 추천POST
+        to: 200 rcmdId=NULL·빈배열·로그0
+      - from: 과거/확정/CNVT/철수완료/원천경합
+        event: 추천POST
+        to: 409·전부불변
+  /api/withdrawals/export:
+    get:
+      operationId: getWithdrawalExport
+      summary: 철수 필터 전체 엑셀 다운로드
+      security: []
+      x-source-id: null
+      x-related-requirements:
+      - REQ-2049
+      - REQ-2051
+      - REQ-2065
+      - REQ-2066
+      - REQ-2070
+      - REQ-2193
+      - REQ-2203
+      - REQ-2208
+      - REQ-2210
+      - REQ-2211
+      parameters:
+      - name: year
+        in: query
+        required: false
+        description: 기본Y·BASE연도~Y+1
+        schema:
+          type: integer
+          description: Asia/Seoul Y 기본·CASH_BASE_YM 연도~Y+1. 지난 연도 조회 전용.
+      - name: period
+        in: query
+        required: false
+        description: ''
+        schema:
+          type: string
+          enum:
+          - ALL
+          - SOON
+          - LATER
+          - PAST
+          default: ALL
+      - name: extension
+        in: query
+        required: false
+        description: UNSET=NULL·ALL과 구별·빈문자400
+        schema:
+          type: string
+          enum:
+          - ALL
+          - H
+          - M
+          - L
+          - UNSET
+          default: ALL
+      - name: job
+        in: query
+        required: false
+        description: 활성 JOB 필터·미등록400
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 10
+      - name: sort
+        in: query
+        required: false
+        description: 생략 시 기존 기본 정렬. 지정 시 전체 집합 정렬·NULL 뒤·동률 PK ASC.
+        schema:
+          type: string
+          enum:
+          - name
+          - project
+          - job
+          - date
+          - days
+          - history
+          - extension
+          - next
+      - name: direction
+        in: query
+        required: false
+        description: sort 지정 시 방향. 생략 시 ASC.
+        schema:
+          type: string
+          enum: [ASC, DESC]
+          default: ASC
+      x-query-validation:
+        allowed:
+        - year
+        - period
+        - extension
+        - job
+        - sort
+        - direction
+        unknown: 미등록 query400·빈값/허용외값400·field/한국어사유
+      responses:
+        '200':
+          description: 파일 생성과 DNLD기록 commit 후 전체 필터 행 전송
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 안전한 파일명 attachment·전체 필터 XLSX
+            X-Request-Id:
+              schema:
+                type: string
+        '400':
+          description: 필수/코드/ID/연월/길이/미등록필드·field 한국어사유
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INVALID_INPUT
+        '404':
+          description: 대상/회차/배정 없음·빈추천200과 구별
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - NOT_FOUND
+        '409':
+          description: 최신상태/마감/경합/원천기준 오류·원자롤백
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - STALE_WRITE
+          - ACTION_ALREADY_TAKEN
+          - SLOT_FULL
+          - READ_ONLY_YEAR
+          - ID_EXHAUSTED
+          - SCORE_DETAIL_TOO_LONG
+          - INVALID_STATE
+          - INVALID_STANDARD
+        '500':
+          description: 서버/필수감사/기록실패·SQL/스택 미노출
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          x-error-codes:
+          - INTERNAL_ERROR
+      x-business-rules:
+      - 임시 관리자 전체범위·security=[] 유지. 기존 bearerAuth 정의 보존·신규 보안스킴/역할403/실제 로그인 정책 추가 없음. CurrentUserProvider/서울 Clock만
+        처리자/시각 생성.
+      - 미등록 JSON/query/서버필드·점수/총점/주체/시각/출처 주입400·field/details/requestId 및 한국어사유. 문자열 trim 후 필수/길이/활성코드·실제 ID/달력연월
+        검증·절단저장 없음. 없음404·상태/마감/경합409·내부500·SQL/스택 비노출.
+      - Asia/Seoul D/M/Y·기존 CASH_BASE_YM. API YYYY-MM·DB YYYYMM·ISO날짜·서울일시. 일반 ID/금액/MM/율/점수 문자열·건수/순위/페이지/연도 정수.
+        SCORE_DTL의 명시 숫자만 정확 십진 JSON 숫자. 금액 NULL/0/음수 구별·비파괴 표시단위·BigDecimal.
+      - 선택year(기본Y)/현재필터 전체행·화면페이지무관·목록과동일순서/기간/EXT/JOB 의미. page/size 미지원400. 표시열·다음배정·연장/조기철수·기준일 포함·임시열숨김/열순서 없음·PC전용UI.
+      - 기존ExcelExportService 파일생성완료→TB_SY_ACCS_LOG DNLD기록 commit→파일전송. 기록실패500·파일미전송. 업무원천 변경0·다운로드는추천로그생성0.
+      - 날짜/남은일수/건수는 실제엑셀타입. 관리번호/ID/사용자 문자열은 text 앞0보존·=,+,-,@ 시작 수식실행방지. 실제숫자 음수는 숫자그대로·공격문자열로오인변환0.
+      - 'REQ-2203 (SPEC-REQUEST.md L286): GET /api/withdrawals/export는현재연도/필터전체를다운로드한다.'
+      - 'REQ-2208 (SPEC-REQUEST.md L294): 조건수정·GET·다운로드는업무원천불변·추천POST로그/선택·EXTP외급여/단가/매출/원가/정산/마감사본쓰기금지다.'
+      - 'REQ-2210 (SPEC-REQUEST.md L298): 현재연도/필터전체행·표시열/다음배정/연장조기/기준일을출력·임시열숨김/열순서설정없음이다.'
+      - 'REQ-2211 (SPEC-REQUEST.md L298): 파일완료→DNLD commit→전송·기록실패미전송·날짜/일수/건수실제타입·관리번호/ID/사용자text앞0/수식방지·실제음수숫자보존이다.'
+      x-side-effects:
+      - 업무자료/추천행 불변·서버사용자/시각 DNLD접근기록1건만 허용·파일생성/필수기록실패 전송0.
+      x-required-tests:
+      - 'auth: 임시관리자·인증헤더 없는 유효조회 →200·전체범위 반환; 역할403/민감값가림 추가 없음.'
+      - 'happy: size50넘는필터결과 →200 binary XLSX·전체필터행/다음배정/연장조기/기준일포함·Content-Disposition 일치'
+      - 'validation: year범위밖/period오류/page주입 →400 ApiError·파일전송0'
+      - 'business: 과거year 조회출력 →허용·행선택쓰기0; 필터0행 →헤더/기준일만파일·추천로그0'
+      - 'side-effect: DNLD실패 →500 ApiError·binary0바이트; 문자열001/=수식/+/-/@는text·앞0유지·진짜음수일수는numeric·업무/급여/원가/마감불변'
 components:
   schemas:
     SalesDecimal:
@@ -48781,6 +50466,12 @@ components:
           $ref: '#/components/schemas/BillingErrorContext'
         progress:
           $ref: '#/components/schemas/ProjectProgressErrorContext'
+        workforceRecommendationWarnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationWarning'
+          minItems: 1
+          description: 가배정 확인 필요409에서만 제공. 취소/미확인 때 업무 무변경, 확인된 code만 confirmedWarnings로 제출한다.
       additionalProperties: false
       required: []
       description: 참조 유형/건수·필드별 오류의 구조화 제안. 내부 명명은 OQ-003 승인 대기. SQL·스택·비밀값은 없다. BASIC-132 참조 차단 프로젝트/기간/건수는 projects/referenceCount로
@@ -57792,6 +59483,10 @@ components:
             maxLength: 20
             minLength: 1
           - type: 'null'
+        recommendationRef:
+          anyOf:
+          - $ref: '#/components/schemas/WorkforceRecommendationRef'
+          - type: 'null'
       required:
       - year
       - projectId
@@ -57918,21 +59613,17 @@ components:
       properties:
         year: *id009_b134_1
         expectedRevision: *id010_b134_1
-        reasonCode: *id005_b134_1
-        memo: *id011_b134_1
         type:
           const: EXTP
           type: string
-        applyDate: *id002_b134_1
         extensionPossibility: *id013_b134_1
       required:
       - year
       - expectedRevision
       - type
-      - applyDate
       - extensionPossibility
       additionalProperties: false
-      description: 소급/보호월 영향이면 reasonCode 필수. 서버 typed값·플래그·처리자/횟수 주입400.
+      description: EXTP 메타전용. 사유/메모/적용일은 받지 않으며 적용일=max(D,INPUT_BGN_DT)는 서버결정. 보호월 사유/차단/월동기화 제외·같은값200 changed=false. 서버 typed값/플래그/처리자 주입400.
     AssignmentKindChangeRequest:
       type: object
       properties:
@@ -61800,6 +63491,1502 @@ components:
       - file
       - uploadId
       - expectedRevision
+    WorkforceRecommendationRef:
+      type: object
+      properties:
+        rcmdId:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 5
+      required:
+      - rcmdId
+      - rank
+      additionalProperties: false
+      description: 기존 createAssignment의 선택 참조. 일반배정은 생략/NULL. 최신 원천 비교는 저장된 회차 revision과 서버 재계산 revision으로 수행한다.
+    WorkforceRecommendationNeed:
+      type: object
+      properties:
+        needSn:
+          type: string
+          pattern: ^[1-9][0-9]{0,2}$
+          maxLength: 3
+          description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        gradeCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 10
+          - type: 'null'
+        needCount:
+          type: integer
+          minimum: 0
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        periodMonths:
+          type: integer
+          minimum: 1
+        monthlyMm:
+          type: string
+          pattern: ^-?[0-9]+(?:\.[0-9]+)?$
+          description: 정확 십진 문자열·BigDecimal. float/double/브라우저 Number 업무 계산 금지.
+        activeCount:
+          type: integer
+          minimum: 0
+        remainingCount:
+          type: integer
+          minimum: 0
+        revision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - needSn
+      - jobCode
+      - gradeCode
+      - needCount
+      - startMonth
+      - periodMonths
+      - monthlyMm
+      - activeCount
+      - remainingCount
+      - revision
+      additionalProperties: false
+    WorkforceRecommendationDefaults:
+      type: object
+      properties:
+        jobCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 10
+          - type: 'null'
+        startMonth:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+            description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+          - type: 'null'
+        requestedGradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        needSn:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,2}$
+            maxLength: 3
+            description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+          - type: 'null'
+      required:
+      - jobCode
+      - startMonth
+      - requestedGradeCode
+      - needSn
+      additionalProperties: false
+      description: 최초등급SR. NEED_SN 첫직무/계획 SORT_ORD,CODE 첫직무/활성JOB 첫값. 시작월은 기회예정월 또는 계약시작월.
+    WorkforceRecommendationTarget:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - OPPORTUNITY
+          - PROJECT
+        targetId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        name:
+          type: string
+          minLength: 1
+        contractTypeCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 10
+          - type: 'null'
+        projectIdAfterWin:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        contractStartDate:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+        contractEndDate:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+        needs:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationNeed'
+        defaults:
+          $ref: '#/components/schemas/WorkforceRecommendationDefaults'
+        revision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - targetType
+      - targetId
+      - name
+      - contractTypeCode
+      - projectIdAfterWin
+      - contractStartDate
+      - contractEndDate
+      - needs
+      - defaults
+      - revision
+      additionalProperties: false
+    WorkforceRecommendationTargetsData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationTarget'
+        firstTargetId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        serverDate:
+          type: string
+          format: date
+        currentMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        baseMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        revision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - items
+      - firstTargetId
+      - serverDate
+      - currentMonth
+      - baseMonth
+      - revision
+      additionalProperties: false
+      description: 진행대상 전체·기회 먼저 이름/ID순. 화면 첫대상 결정과 현재 NEED 전환에 전체집합이 필요하여 비페이지. 빈집합은 items=[]·firstTargetId=NULL.
+    WorkforceRecommendationCondition:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - OPPORTUNITY
+          - PROJECT
+        targetId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        requestedGradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        needSn:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,2}$
+            maxLength: 3
+            description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+          - type: 'null'
+      required:
+      - targetType
+      - targetId
+      - jobCode
+      - startMonth
+      - requestedGradeCode
+      - needSn
+      additionalProperties: false
+      description: 생성 당시 적용조건 불변. 프로젝트 needSn=NULL, 기회는 실제 NEED_SN. 프로젝트 시작월이 계약시작 전이면 올리고 종료월 뒤는400 startMonth.
+    CreateWorkforceRecommendationRequest:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - OPPORTUNITY
+          - PROJECT
+        targetId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        requestedGradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        needSn:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,2}$
+            maxLength: 3
+            description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+          - type: 'null'
+      required:
+      - targetType
+      - targetId
+      - jobCode
+      - startMonth
+      - requestedGradeCode
+      additionalProperties: false
+      description: 활성 JOB/등급·유효대상·기회 NEED 존재 검증. 과거월 조회추천 허용. 클라이언트 점수/작업자/시각/출처 필드400. 프로젝트 needSn 생략/NULL, 기회는 필수.
+      allOf:
+      - if:
+          properties:
+            targetType:
+              const: OPPORTUNITY
+          required:
+          - targetType
+        then:
+          required:
+          - needSn
+          properties:
+            needSn:
+              type: string
+              pattern: ^[1-9][0-9]{0,2}$
+              maxLength: 3
+              description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+        else:
+          properties:
+            needSn:
+              type: 'null'
+    WorkforceRecommendationScoreItem:
+      type: object
+      properties:
+        itemCode:
+          type: string
+          enum:
+          - JOB
+          - SKILL
+          - CUST
+          - GRADE
+          - PERF
+          - COST
+          - AVAIL
+          - LOC
+          - GAP
+          - PROB
+        baseScore:
+          type: string
+          pattern: ^(?:100(?:\.0{1,6})?|(?:[0-9]|[1-9][0-9])(?:\.[0-9]{1,6})?)$
+          description: 0~100 십진 문자열, 항목 최대6자리·뒤0 제거. 총점만 합계 HALF_UP1.
+        weight:
+          type: string
+          pattern: ^(?:100(?:\.0{1,6})?|(?:[0-9]|[1-9][0-9])(?:\.[0-9]{1,6})?)$
+          description: 0~100 십진 문자열, 항목 최대6자리·뒤0 제거. 총점만 합계 HALF_UP1.
+        score:
+          type: string
+          pattern: ^(?:100(?:\.0{1,6})?|(?:[0-9]|[1-9][0-9])(?:\.[0-9]{1,6})?)$
+          description: 0~100 십진 문자열, 항목 최대6자리·뒤0 제거. 총점만 합계 HALF_UP1.
+        basis:
+          type: string
+          maxLength: 300
+      required:
+      - itemCode
+      - baseScore
+      - weight
+      - score
+      - basis
+      additionalProperties: false
+      description: 서버 생성·당시 배점. weight=0이면score=0, 막대0/0·NaN/무한대 없음.
+    WorkforceRecommendationDeveloper:
+      type: object
+      properties:
+        developerId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        name:
+          type: string
+        managementNumber:
+          type: string
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        subJobCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 10
+          - type: 'null'
+        gradeCode:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 10
+          - type: 'null'
+        employeeTypeCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        detailId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+      required:
+      - developerId
+      - name
+      - managementNumber
+      - jobCode
+      - subJobCode
+      - gradeCode
+      - employeeTypeCode
+      - detailId
+      additionalProperties: false
+    WorkforceRecommendationSelection:
+      type: object
+      properties:
+        actionCode:
+          anyOf:
+          - type: string
+            enum:
+            - ASGN
+            - TENT
+            - EXCL
+          - type: 'null'
+        exclusionReasonCode:
+          anyOf:
+          - type: string
+            enum:
+            - SCHD
+            - HOPE
+            - CUST
+            - ETC
+          - type: 'null'
+        actedBy:
+          anyOf:
+          - type: string
+            maxLength: 30
+          - type: 'null'
+        actedAt:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
+            description: Asia/Seoul 서버 일시 YYYY-MM-DD HH:mm:ss
+          - type: 'null'
+        assignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        tentativeAssignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        finalOpportunityId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        finalNeedSn:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,2}$
+            maxLength: 3
+            description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+          - type: 'null'
+      required:
+      - actionCode
+      - exclusionReasonCode
+      - actedBy
+      - actedAt
+      - assignmentId
+      - tentativeAssignmentId
+      - finalOpportunityId
+      - finalNeedSn
+      additionalProperties: false
+      description: ASGN_ID/TENT_ID/최종 NEED키는 필드별 공통 감사에서 조회. 추천행에 새 연결열/MOD열을 발명하지 않는다.
+    WorkforceRecommendationOtherTentative:
+      type: object
+      properties:
+        tentativeAssignmentId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        opportunityId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        opportunityName:
+          type: string
+        needSn:
+          type: string
+          pattern: ^[1-9][0-9]{0,2}$
+          maxLength: 3
+          description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+      required:
+      - tentativeAssignmentId
+      - opportunityId
+      - opportunityName
+      - needSn
+      - startMonth
+      additionalProperties: false
+    WorkforceRecommendationCandidate:
+      type: object
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 5
+        developer:
+          $ref: '#/components/schemas/WorkforceRecommendationDeveloper'
+        opportunityId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        needSn:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,2}$
+            maxLength: 3
+            description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+          - type: 'null'
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        requestedGradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        totalScore:
+          type: string
+          pattern: ^(?:100(?:\.0)?|(?:[0-9]|[1-9][0-9])(?:\.[0-9])?)$
+          description: 총점 0~100 정확 십진 문자열·합계 HALF_UP1·뒤0 제거.
+        scoreItems:
+          oneOf:
+          - type: array
+            items:
+              $ref: '#/components/schemas/WorkforceRecommendationScoreItem'
+            minItems: 8
+            maxItems: 8
+          - type: array
+            items:
+              $ref: '#/components/schemas/WorkforceRecommendationScoreItem'
+            minItems: 5
+            maxItems: 5
+        scoreDetail:
+          $ref: '#/components/schemas/WorkforceRecommendationScoreDetail'
+        reason:
+          type: string
+          maxLength: 300
+        otherTentativeAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationOtherTentative'
+        selection:
+          $ref: '#/components/schemas/WorkforceRecommendationSelection'
+        revision:
+          $ref: '#/components/schemas/Revision'
+        targetRevision:
+          $ref: '#/components/schemas/Revision'
+        candidateRevision:
+          $ref: '#/components/schemas/Revision'
+        nextPosition:
+          anyOf:
+          - $ref: '#/components/schemas/NextPositionCardDetails'
+          - type: 'null'
+      required:
+      - rank
+      - developer
+      - opportunityId
+      - needSn
+      - jobCode
+      - startMonth
+      - requestedGradeCode
+      - totalScore
+      - scoreItems
+      - scoreDetail
+      - reason
+      - otherTentativeAssignments
+      - selection
+      - revision
+      - targetRevision
+      - candidateRevision
+      - nextPosition
+      additionalProperties: false
+      description: AI는 8항목/NEXT는 5항목. 반환 DTO 점수는 십진 문자열, scoreDetail 안 숫자만 정확 JSON 숫자 예외. rank/조건/점수/이유는 불변.
+    WorkforceRecommendationExclusionDiagnostic:
+      type: object
+      properties:
+        developerId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        reasons:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      required:
+      - developerId
+      - reasons
+      additionalProperties: false
+      description: 임시관리자 진단만 제공하며 제외자는 점수카드에 넣지 않는다.
+    WorkforceRecommendationExclusionSummary:
+      type: object
+      properties:
+        totalCandidateCount:
+          type: integer
+          minimum: 0
+        excludedUniqueCount:
+          type: integer
+          minimum: 0
+        byReason:
+          type: array
+          items:
+            type: object
+            properties:
+              reason:
+                type: string
+              count:
+                type: integer
+                minimum: 0
+            required:
+            - reason
+            - count
+            additionalProperties: false
+        diagnostics:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationExclusionDiagnostic'
+        reasonCountsOverlap:
+          type: boolean
+          const: true
+      required:
+      - totalCandidateCount
+      - excludedUniqueCount
+      - byReason
+      - diagnostics
+      - reasonCountsOverlap
+      additionalProperties: false
+      description: 한 사람에 복수 사유 가능·사유합과 고유 제외수는 다르다.
+    WorkforceRecommendationData:
+      type: object
+      properties:
+        rcmdId:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,11}$
+            maxLength: 12
+            description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+          - type: 'null'
+        recommendationType:
+          type: string
+          enum:
+          - AI
+          - NEXT
+        appliedCondition:
+          anyOf:
+          - $ref: '#/components/schemas/WorkforceRecommendationCondition'
+          - type: 'null'
+        sourceAssignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        executedAt:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
+            description: Asia/Seoul 서버 일시 YYYY-MM-DD HH:mm:ss
+          - type: 'null'
+        executedBy:
+          anyOf:
+          - type: string
+            maxLength: 30
+          - type: 'null'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationCandidate'
+          maxItems: 5
+        exclusions:
+          $ref: '#/components/schemas/WorkforceRecommendationExclusionSummary'
+        message:
+          type: string
+        revision:
+          $ref: '#/components/schemas/Revision'
+        shortageMonths:
+          type: array
+          items:
+            $ref: '#/components/schemas/NextPositionShortageMonth'
+      required:
+      - rcmdId
+      - recommendationType
+      - appliedCondition
+      - sourceAssignmentId
+      - executedAt
+      - executedBy
+      - candidates
+      - exclusions
+      - message
+      - revision
+      - shortageMonths
+      additionalProperties: false
+      description: 결과0이면 rcmdId/실행로그주체/시각 NULL·candidates=[]·결과행0, 제외집계와 안내 반환. 기존 로그를 조회할 때 현재 원천으로 재계산하지 않는다.
+    WorkforceRecommendationHistoryItem:
+      type: object
+      properties:
+        rcmdId:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+        recommendationType:
+          type: string
+          enum:
+          - AI
+          - NEXT
+        targetId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        startMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        requestedGradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        executedAt:
+          type: string
+          pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
+          description: Asia/Seoul 서버 일시 YYYY-MM-DD HH:mm:ss
+        executedBy:
+          type: string
+          maxLength: 30
+        candidateCount:
+          type: integer
+          minimum: 1
+          maximum: 5
+      required:
+      - rcmdId
+      - recommendationType
+      - targetId
+      - jobCode
+      - startMonth
+      - requestedGradeCode
+      - executedAt
+      - executedBy
+      - candidateCount
+      additionalProperties: false
+      description: 대상/JOB 삭제 후에도 저장 ID/조건으로 표시. NEXT는 회차 안 복수 자리 대상이 있으므로 targetId 필터는 해당 회차 행 존재 조건이다.
+    WorkforceRecommendationHistoryData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceRecommendationHistoryItem'
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        totalCount:
+          type: integer
+          minimum: 0
+      required:
+      - items
+      - page
+      - size
+      - totalCount
+      additionalProperties: false
+    CreateWorkforceRecommendationExclusionRequest:
+      type: object
+      properties:
+        reasonCode:
+          type: string
+          enum:
+          - SCHD
+          - HOPE
+          - CUST
+          - ETC
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - reasonCode
+      - expectedRevision
+      additionalProperties: false
+      description: reasonCode는 현재 활성·미삭제 RCMD_EXCL 실제값이어야 한다. NEXT 제외400, 미등록/비활성사유400 field=reasonCode.
+    CreateWorkforceRecommendationTentativeAssignmentRequest:
+      type: object
+      properties:
+        needSn:
+          type: string
+          pattern: ^[1-9][0-9]{0,2}$
+          maxLength: 3
+          description: NEED_SN 십진 문자열·배열 인덱스가 아니다.
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+        targetRevision:
+          $ref: '#/components/schemas/Revision'
+        candidateRevision:
+          $ref: '#/components/schemas/Revision'
+        confirmedWarnings:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          uniqueItems: true
+      required:
+      - needSn
+      - expectedRevision
+      - targetRevision
+      - candidateRevision
+      - confirmedWarnings
+      additionalProperties: false
+      description: AI는 현재 선택 NEED_SN, NEXT는 카드 NEED_SN과 동일해야 한다. 서버 발급한 최신 이동/다른JOB/MM 경고를 명시 확인. 취소는 호출하지 않는다. 점수/DEV/출처/시작월/처리자
+        주입400.
+    WorkforceRecommendationActionData:
+      type: object
+      properties:
+        rcmdId:
+          type: string
+          pattern: ^[1-9][0-9]{0,11}$
+          maxLength: 12
+          description: RCMD_ID NUMERIC(12)의 십진 문자열. 시퀀스 소진409 ID_EXHAUSTED.
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 5
+        changed:
+          type: boolean
+        selection:
+          $ref: '#/components/schemas/WorkforceRecommendationSelection'
+        revision:
+          $ref: '#/components/schemas/Revision'
+        message:
+          type: string
+        releasedTentativeAssignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+      required:
+      - rcmdId
+      - rank
+      - changed
+      - selection
+      - revision
+      - message
+      - releasedTentativeAssignmentId
+      additionalProperties: false
+      description: 같은 성공 요청은 기존 연결 결과 changed=false·중복 업무/감사0. 다른 최종 선택409 ACTION_ALREADY_TAKEN.
+    WithdrawalNextAssignment:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - CONFIRMED
+          - CANDIDATE
+          - TENTATIVE
+        assignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        tentativeAssignmentId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        projectId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        opportunityId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        name:
+          type: string
+        startDate:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+        startMonth:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+            description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+          - type: 'null'
+      required:
+      - kind
+      - assignmentId
+      - tentativeAssignmentId
+      - projectId
+      - opportunityId
+      - name
+      - startDate
+      - startMonth
+      additionalProperties: false
+      description: 미래 실제ACT(다른배정·시작>철수·실주제외)→CNVT→진행기회ACT 우선, 각 그룹 가까운 시작순. DONE는 실제배정, DROP/REL 미포함.
+    WithdrawalRow:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        developer:
+          $ref: '#/components/schemas/WorkforceRecommendationDeveloper'
+        projectId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        projectName:
+          type: string
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        withdrawalDate:
+          type: string
+          format: date
+        remainingDays:
+          type: integer
+        extensionCount:
+          type: integer
+          minimum: 0
+        earlyWithdrawal:
+          type: boolean
+        extensionPossibility:
+          anyOf:
+          - type: string
+            enum:
+            - H
+            - M
+            - L
+          - type: 'null'
+        extensionEditable:
+          type: boolean
+        nextAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WithdrawalNextAssignment'
+        recommendationCount:
+          type: integer
+          minimum: 0
+          maximum: 5
+        canRecommend:
+          type: boolean
+        canChangeTentative:
+          type: boolean
+        revision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - assignmentId
+      - developer
+      - projectId
+      - projectName
+      - jobCode
+      - withdrawalDate
+      - remainingDays
+      - extensionCount
+      - earlyWithdrawal
+      - extensionPossibility
+      - extensionEditable
+      - nextAssignments
+      - recommendationCount
+      - canRecommend
+      - canChangeTentative
+      - revision
+      additionalProperties: false
+      description: ASGN_ID별 행. 철수완료 nextAssignments=[]·표시 –. 일수는 LocalDate, 0~30/31~60/61+ 및 음수 완료 구분.
+    WithdrawalGuidance:
+      type: object
+      properties:
+        visible:
+          type: boolean
+        withinThreeMonthsPeople:
+          type: integer
+          minimum: 0
+        withoutNextAssignmentPeople:
+          type: integer
+          minimum: 0
+        withMatchingPositionsPeople:
+          type: integer
+          minimum: 0
+        message:
+          type: string
+      required:
+      - visible
+      - withinThreeMonthsPeople
+      - withoutNextAssignmentPeople
+      - withMatchingPositionsPeople
+      - message
+      additionalProperties: false
+      description: 올해만 표시. A/B/C DEV중복제거·필터/페이지와 무관한 D~M+2월말 전체·연도경계 포함. C/n곳은 NEXT 순수계산·로그0.
+    WithdrawalsData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WithdrawalRow'
+        year:
+          type: integer
+          description: Asia/Seoul Y 기본·CASH_BASE_YM 연도~Y+1. 지난 연도 조회 전용.
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          enum:
+          - 20
+          - 50
+          - 100
+        totalCount:
+          type: integer
+          minimum: 0
+        guidance:
+          $ref: '#/components/schemas/WithdrawalGuidance'
+        serverDate:
+          type: string
+          format: date
+        baseMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+      required:
+      - items
+      - year
+      - page
+      - size
+      - totalCount
+      - guidance
+      - serverDate
+      - baseMonth
+      additionalProperties: false
+      description: totalCount는 필터 전체합·페이지 부분합 아님. 과거 인력중지/종료프로젝트도 철수이력 보존.
+    SaveWithdrawalExtensionPossibilityRequest:
+      type: object
+      properties:
+        year:
+          type: integer
+          description: Asia/Seoul Y 기본·CASH_BASE_YM 연도~Y+1. 지난 연도 조회 전용.
+        extensionPossibility:
+          anyOf:
+          - type: string
+            enum:
+            - H
+            - M
+            - L
+          - type: 'null'
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - year
+      - extensionPossibility
+      - expectedRevision
+      additionalProperties: false
+      description: extensionPossibility는 required이면서 NULL 허용. 빈문자/문자열NULL/사유/메모/작업자/시각/새단가/새MM/플래그는400. 과거year 쓰기409.
+    WithdrawalExtensionPossibilityData:
+      type: object
+      properties:
+        assignmentId:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+        extensionPossibility:
+          anyOf:
+          - type: string
+            enum:
+            - H
+            - M
+            - L
+          - type: 'null'
+        changed:
+          type: boolean
+        revision:
+          $ref: '#/components/schemas/Revision'
+        historySerial:
+          anyOf:
+          - type: string
+            pattern: ^[1-9][0-9]{0,4}$
+          - type: 'null'
+        appliedDate:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+      required:
+      - assignmentId
+      - extensionPossibility
+      - changed
+      - revision
+      - historySerial
+      - appliedDate
+      additionalProperties: false
+      description: 같은값 changed=false·revision/시각/이력 불변. 변경시 EXTP1건/공통감사1건·적용일max(D,INPUT_BGN_DT).
+    CreateNextPositionRecommendationRequest:
+      type: object
+      properties:
+        year:
+          type: integer
+          description: Asia/Seoul Y 기본·CASH_BASE_YM 연도~Y+1. 지난 연도 조회 전용.
+        expectedRevision:
+          $ref: '#/components/schemas/Revision'
+      required:
+      - year
+      - expectedRevision
+      additionalProperties: false
+      description: 철수행과 후보/기회/NEED/기준/공통예측 전체 snapshot을 서버 재검사. 신규/기존ACT 바꾸기 자격은 서버가 현재 상태로 분기.
+    NextPositionCardDetails:
+      type: object
+      properties:
+        opportunityName:
+          type: string
+        probability:
+          type: string
+          pattern: ^-?[0-9]+(?:\.[0-9]+)?$
+          description: 정확 십진 문자열·BigDecimal. float/double/브라우저 Number 업무 계산 금지.
+        salesStepCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        customerId:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 20
+            description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+          - type: 'null'
+        customerName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        originalStartMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        actualStartMonth:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        gradeCode:
+          type: string
+          enum:
+          - JR
+          - MD
+          - SR
+          - EX
+        remainingCount:
+          type: integer
+          minimum: 0
+        gapMonths:
+          type: integer
+          minimum: 0
+          maximum: 3
+        waitDays:
+          type: integer
+          minimum: 0
+        alreadyTentativelyAssigned:
+          type: boolean
+        reasonChips:
+          type: array
+          items:
+            type: string
+      required:
+      - opportunityName
+      - probability
+      - salesStepCode
+      - customerId
+      - customerName
+      - originalStartMonth
+      - actualStartMonth
+      - gradeCode
+      - remainingCount
+      - gapMonths
+      - waitDays
+      - alreadyTentativelyAssigned
+      - reasonChips
+      additionalProperties: false
+      description: 자기 기존ACT는 정원 계산에서 제외하고 가배정됨 비활성. wait=max(0,실제예정월1일−철수일−1).
+    NextPositionShortageMonth:
+      type: object
+      properties:
+        month:
+          type: string
+          pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+          description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+        jobCode:
+          type: string
+          minLength: 1
+          maxLength: 10
+        shortagePeople:
+          type: string
+          pattern: ^-?[0-9]+(?:\.[0-9]+)?$
+          description: 정확 십진 문자열·BigDecimal. float/double/브라우저 Number 업무 계산 금지.
+      required:
+      - month
+      - jobCode
+      - shortagePeople
+      additionalProperties: false
+      description: 12 공통 WorkforceForecast M+1~M+6/includeUnfilled=true/주JOB의 수요−공급>SHORT_PERSON. 해당없으면 배열빈값.
+    AiRecommendationScoreDetailV1:
+      type: object
+      properties:
+        v:
+          type: integer
+          const: 1
+        b:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 8
+          maxItems: 8
+        w:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 8
+          maxItems: 8
+        s:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 8
+          maxItems: 8
+        e:
+          type: object
+          properties:
+            j:
+              type: string
+              enum:
+              - P
+              - S
+              - R
+              - O
+            sk:
+              type: array
+              prefixItems:
+              - type: integer
+                minimum: 0
+              - type: integer
+                minimum: 0
+              - type: integer
+                enum:
+                - 0
+                - 1
+              items: false
+              minItems: 3
+              maxItems: 3
+            cu:
+              type: string
+              enum:
+              - S
+              - I
+              - O
+            g:
+              anyOf:
+              - type: integer
+                minimum: 0
+                maximum: 3
+              - type: 'null'
+            p:
+              type: array
+              items:
+                type: integer
+                minimum: 0
+              minItems: 3
+              maxItems: 3
+            a:
+              type: string
+              enum:
+              - IDLE
+              - BEFORE
+              - LOW
+              - OTHER
+            l:
+              type: string
+              enum:
+              - S
+              - D
+              - N
+              - U
+          required:
+          - j
+          - sk
+          - cu
+          - g
+          - p
+          - a
+          - l
+          additionalProperties: false
+        m:
+          type: string
+          pattern: ^[0-9]{4}(0[1-9]|1[0-2])$
+        c:
+          anyOf:
+          - type: string
+            pattern: ^-?[0-9]+$
+          - type: 'null'
+        u:
+          anyOf:
+          - type: string
+            pattern: ^-?[0-9]+$
+          - type: 'null'
+        f:
+          type: integer
+          enum:
+          - 0
+          - 1
+      required:
+      - v
+      - b
+      - w
+      - s
+      - e
+      - m
+      - c
+      - u
+      - f
+      additionalProperties: false
+      description: v=1 고정·직무/스킬/고객/등급/성과/비용/가용/지역 순서. e.sk=[H,N,특징0/1], e.p=[n,e,h]. m은 원가월M의 DB YYYYMM·c/u 원정수 문자열/NULL·f
+        예정0/1. 이름/스킬전문/긴주소 미복제. 최대 ID/코드/숫자에서 정확 십진 JSON compact 직렬화500자 이하를 검증, 초과 전체추천 저장실패·절단/근거누락 금지.
+      x-number-serialization: 'b/w/s 및 e의 수치: BigDecimal 기반 정확 JSON 숫자·과학적 표기/이진부동소수 업무계산 금지. 일반 API 점수/금액/율은 십진 문자열.'
+    NextPositionScoreDetailV1:
+      type: object
+      properties:
+        v:
+          type: integer
+          const: 1
+        b:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 5
+          maxItems: 5
+        w:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 5
+          maxItems: 5
+          const:
+          - 40
+          - 20
+          - 25
+          - 10
+          - 5
+        s:
+          type: array
+          items:
+            type: number
+            minimum: 0
+            maximum: 100
+            multipleOf: 1.0e-06
+          minItems: 5
+          maxItems: 5
+        e:
+          type: object
+          properties:
+            aid:
+              type: string
+              minLength: 1
+              maxLength: 20
+              description: 기존 업무 ID 문자열. 관리번호/식별자의 앞0과 원래 형식을 보존한다.
+            end:
+              type: string
+              format: date
+            st:
+              type: string
+              pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+              description: 유효 YYYY-MM·CASH_BASE_YM 이상. 실제 달력과 BASE는 서버 검증.
+            gap:
+              type: integer
+              minimum: 0
+              maximum: 3
+            wait:
+              type: integer
+              minimum: 0
+            left:
+              type: integer
+              minimum: 0
+            g:
+              anyOf:
+              - type: integer
+                minimum: 0
+                maximum: 3
+              - type: 'null'
+            cu:
+              type: integer
+              enum:
+              - 0
+              - 1
+            pr:
+              type: number
+              minimum: 0
+              maximum: 100
+              multipleOf: 1.0e-06
+          required:
+          - aid
+          - end
+          - st
+          - gap
+          - wait
+          - left
+          - g
+          - cu
+          - pr
+          additionalProperties: false
+      required:
+      - v
+      - b
+      - w
+      - s
+      - e
+      additionalProperties: false
+      description: 직무/등급/공백/고객/확률 순서·aid 원철수ASGN_ID/end철수일/st원자리시작월. w고정, b=s. 정확 십진 JSON 전체500자 초과면 회차 전체실패·잘라저장/키누락
+        금지.
+      x-number-serialization: 'b/w/s 및 e의 수치: BigDecimal 기반 정확 JSON 숫자·과학적 표기/이진부동소수 업무계산 금지. 일반 API 점수/금액/율은 십진 문자열.'
+    WorkforceRecommendationScoreDetail:
+      oneOf:
+      - $ref: '#/components/schemas/AiRecommendationScoreDetailV1'
+      - $ref: '#/components/schemas/NextPositionScoreDetailV1'
+      x-storage-validation: TB_SL_RCMD_LOG.SCORE_DTL VARCHAR(500), JSON v=1·최대범위 compact 직렬화 길이≤500·정확 BigDecimal JSON
+        숫자·배열순서 고정. 문자열 점수 DTO와 구분. 초과는409 SCORE_DETAIL_TOO_LONG·회차 전부 롤백.
+    WorkforceRecommendationWarning:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 서버가 현재 조건에서 발급한 경고 식별자. UI는 합성하지 않고 confirmedWarnings에 되돌려 보낸다.
+        message:
+          type: string
+          minLength: 1
+          description: 다른 ACT 이동·다른 직무·실제 MM 경고의 한국어 설명.
+      required:
+      - code
+      - message
+      additionalProperties: false
+      description: 원문 L116/L186/L188/L238/L258의 확인 가능한 경고. 경고 enum/정책을 추가하지 않는다.
   responses:
     BadRequest:
       description: 원문 필수·타입·길이·연월·허용외 필드 오류. 연산별 실제 적용 조건을 확인한다.
@@ -66323,6 +69510,198 @@ x-uncovered-requirements:
   status: non-functional
   evidence: SPEC-REQUEST.md:259 — 실제DB·미리보기·빌드·정상·경합·회귀 결과은 plan.md의 해당 구현 항목과 tasks.md T315의 개별 검증으로 충족한다. 독립 업무 HTTP operation 신설 대상이 아닌 non-functional
     계약이다.
+- canonical_id: REQ-2045
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L15: 전체 UI-30 구성/화면 교체는 프런트엔드 수락대상. 본 패치는 대상/추천/행동 API 데이터만 제공하며 화면 완성은 spec/tasks
+    검증.'
+- canonical_id: REQ-2046
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L15: 전체 UI-05 화면 교체는 프런트엔드 수락대상. 목록/다음자리/출력 API는 연결하지만 화면 완성은 spec/tasks 검증.'
+- canonical_id: REQ-2067
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L46: NULL/0/음수 원값은 공통직렬화에서 보존·대시/표시부호는 프런트엔드 렌더링 전용. API 쓰기/새 연산 없음.'
+- canonical_id: REQ-2068
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L48: 원/천원/백만원 표시변환·MM/율 표시정밀도는 클라이언트 표현 전용. 서버 점수원값은 불변·새 API 없음.'
+- canonical_id: REQ-2116
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L114: 최초 진입 자동POST 정확1회/대상없음 버튼비활성은 클라이언트 수명 제어·POST 자체가 화면진입 이벤트를 감지하지 않음.'
+- canonical_id: REQ-2119
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L118: 폼입력/적용조건/이전카드 유지·경고띠와 자동재추천 금지는 화면 상태머신 전용. 반환 appliedCondition을 사용.'
+- canonical_id: REQ-2121
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L120: 대상변경 자동호출/요청중 비활성/뒤늦은 응답폐기는 클라이언트 경합제어 전용. 별도 API/서버 자동추천 없음.'
+- canonical_id: REQ-2125
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L126: 프로젝트/기회 버튼 구성과 사람/대상 상세 링크 클릭은 기존 UI 라우팅. API는 대상유형/상세ID/선택데이터 제공.'
+- canonical_id: REQ-2214
+  status: screen-only
+  evidence: 'SPEC-REQUEST.md L302: 모바일 카드/초점/라벨/키보드/PC다운로드/설정재사용/대상화면수명은 프런트엔드 및 기존 사용자설정 계약 대상·신규 서버 쓰기 없음.'
+- canonical_id: REQ-2047
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 시안 관찰과 운영 원천 분리: 지정 HTML의 전체/세부 화면을 확인하고 구조·색·간격·글꼴·아이콘을 따르되 동작·산식은
+    본문을 따른다.'
+- canonical_id: REQ-2048
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — 기존 설치 보존: 기존 테이블·마이그레이션·기본값을 사용하고 전체 DDL·DML·예제 데이터를 재실행하지 않는다.'
+- canonical_id: REQ-2050
+  status: out-of-scope
+  evidence: 'spec.md 범위 제외 — 추천 금지 개인정보: 나이·성별·학력·이력서 원문을 추천 입력으로 사용하지 않는다.'
+- canonical_id: REQ-2052
+  status: out-of-scope
+  evidence: 'spec.md 범위 제외 — 후속 자동화 제외: 배점 자동 조정안·평가 입력·주간 추천 알림·파견 2년 만료 알림을 만들지 않는다.'
+- canonical_id: REQ-2053
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 최신 실제 선행 계약 발견: 원문 main 해시는 당시 01~07 확인값이다. 구현 시작에 최신 main 실제 코드/선행
+    계약을 확인하고 08~12 병합을 가정하거나 가배정/원가를 임시 숫자·별도 상태 테이블로 대체하지 않는다.'
+- canonical_id: REQ-2054
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 기존 화면·기간 등록 재사용: WorkforceRecommendationsScreen/WithdrawalListScreen·screenRegistry·periods를
+    변경하고 UI-30 NONE·UI-05 YEAR를 유지한다.'
+- canonical_id: REQ-2055
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 배정 폼·실제 상세 재사용: AssignmentCreateForm/AssignmentDrawer/assignmentActionsApi/StaffingAssignmentsScreen을
+    재사용해 추천 참조 저장과 철수 상세 진입을 연결한다.'
+- canonical_id: REQ-2056
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 사람·프로젝트 상세 재사용: DeveloperDrawer·ProjectDetailPanel을 재사용한다.'
+- canonical_id: REQ-2057
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 공통 표·모달·갱신 재사용: DataTable·FilterBar·Dialog·DetailDrawer·Feedback·useCommitRefresh를
+    재사용한다.'
+- canonical_id: REQ-2058
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 배정 저장·메타 분기 재사용: 기존 AssignmentActionsService/Input/Repository의
+    revision·잠금·기간·단가 검증을 재사용하고 EXTP만 메타정보 분기로 수정한다.'
+- canonical_id: REQ-2059
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 월MM·유효 이력 재사용: AssignmentMonthlyService·AssignmentService의 실제 월MM·유효
+    이력·보호월·조회 계약을 사용한다.'
+- canonical_id: REQ-2060
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 경합·감사·쓰기 경계 재사용: RevisionService·WriteCoordinator·ChangeHistoryWriter·PersistenceBoundary를
+    재사용한다.'
+- canonical_id: REQ-2061
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 기준·엑셀·접근기록 재사용: OperatingStandardsService·ExcelExportService·AccessLogWriter를
+    재사용한다.'
+- canonical_id: REQ-2062
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 기술·기능 명명 유지: Spring MVC/MyBatis/Flyway를 유지하고 WorkforceRecommendation/Withdrawal/NextPosition
+    기능명을 쓴다.'
+- canonical_id: REQ-2063
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 개인 원가·공통 상태·예측 호출: 08 개인 월 인건비·12 TentativeAssignment·기회 revision/수정시각·WorkforceForecast를
+    호출하고 급여/가배정/공급 계산을 복제하지 않는다.'
+- canonical_id: REQ-2064
+  status: out-of-scope
+  evidence: 'spec.md 범위 제외 — 재협상 실행 제외: 11 단가 재협상 계산/실제 단가 변경 정책을 추천에서 실행하지 않는다.'
+- canonical_id: REQ-2071
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — 물리 열·서버 감사값 보존: 동일 PK 기존 행·기존 열을 쓰고 새 업무 SQL 식별자는 따옴표 없이 사용한다. A는 서버
+    주체·시각이다.'
+- canonical_id: REQ-2090
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_HR_DEV 기존 열·용도: TB_HR_DEV (DEV_ID)의 기존 물리 계약을 보존하고 MNG_NO·DEV_NM·EMP_TYPE_CD·DRCT_CLS_CD·JOB_CD·SUB_JOB_CD·GRADE_CD·JNCMP_DT·RETIRE_DT·WORK_STAT_CD·HOME_AREA_CD·HOME_ADDR·USE_YN·A를
+    이번 용도로 사용한다.'
+- canonical_id: REQ-2091
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_HR_DEV_SKILL 기존 열·용도: TB_HR_DEV_SKILL (DEV_ID,SKILL_NM)의 기존 물리 계약을
+    보존하고 SKILL_NM·SORT_ORD·A. 실제 보유 스킬를 이번 용도로 사용한다.'
+- canonical_id: REQ-2092
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_HR_DEV_STAT 기존 열·용도: TB_HR_DEV_STAT (DEV_ID,STAT_SN)의 기존 물리 계약을 보존하고
+    WORK_STAT_CD·BGN_DT·END_DT·CLOSE_LEAVE_SN·A. 휴직 기간를 이번 용도로 사용한다.'
+- canonical_id: REQ-2093
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_HR_DEV_PRC 기존 열·용도: TB_HR_DEV_PRC (DEV_ID,APLY_BGN_YM)의 기존 물리 계약을
+    보존하고 APLY_END_YM·MON_UPRC·MON_PAY_AMT·A. 유효 기본단가/급여를 이번 용도로 사용한다.'
+- canonical_id: REQ-2094
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_HR_MON_PAY 기존 열·용도: TB_HR_MON_PAY (PAY_YM,DEV_ID)의 기존 물리 계약을 보존하고
+    EMP_TYPE_CD·DRCT_CLS_CD·PAY_AMT·ALWNC_AMT·INSR_CMPNY_AMT·RETIRE_RSV_AMT·VNDR_SPLY_AMT·A. 08 인건비 원천를 이번 용도로 사용한다.'
+- canonical_id: REQ-2095
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_CO_MON_COST 기존 열·용도: TB_CO_MON_COST (COST_YM,DEV_ID,PROJ_ID,ASGN_ID)의
+    기존 물리 계약을 보존하고 LABOR_ALLOC_AMT·COST_CLS_CD·FIX_YN. M 마감 사본의 인건비 읽기를 이번 용도로 사용한다.'
+- canonical_id: REQ-2096
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_PJ_ASGN 기존 열·용도: TB_PJ_ASGN (ASGN_ID)의 기존 물리 계약을 보존하고 PROJ_ID·DEV_ID·JOB_CD·INPUT_BGN_DT/INPUT_END_DT·CTRT_MM·BILL_UPRC·INPUT_TYPE_CD·EXT_PSBL_CD·EXT_CNT·EARLY_WTHDR_YN·ASGN_STAT_CD·A.
+    철수 조회/성과/가용/실제 배정; EXTP는 EXT_PSBL_CD만 변경를 이번 용도로 사용한다.'
+- canonical_id: REQ-2097
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_PJ_ASGN_MON 기존 열·용도: TB_PJ_ASGN_MON (ASGN_ID,INPUT_YM)의 기존 물리 계약을
+    보존하고 DEV_ID·PROJ_ID·MON_MM·APLY_UPRC·SALES_AMT·FIX_YN·A. 05의 월MM/보호월 원천를 이번 용도로 사용한다.'
+- canonical_id: REQ-2098
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_PJ_ASGN_HIST 기존 열·용도: TB_PJ_ASGN_HIST (ASGN_ID,HIST_SN)의 기존 물리 계약을
+    보존하고 ASGN_CHG_TYPE_CD·APLY_DT·BFR_VAL·AFT_VAL·ASGN_CHG_RSN_CD·CHG_MEMO·NEW_UPRC·NEW_CTRT_MM·RTRO_YN·CLOSE_CROSS_YN·CRCT_YN·CRCT_TRGT_SN·REG_USER_ID·REG_DTTM를
+    이번 용도로 사용한다.'
+- canonical_id: REQ-2099
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_PJ_PROJ 기존 열·용도: TB_PJ_PROJ (PROJ_ID)의 기존 물리 계약을 보존하고 PROJ_NM·CUST_CLNT_ID·CTRT_TYPE_CD·PROJ_STAT_CD·CTRT_BGN_DT/CTRT_END_DT·FEATURE_CN·WORK_PLC_ADDR·A.
+    대상/고객 경험/배정 검증를 이번 용도로 사용한다.'
+- canonical_id: REQ-2100
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_PJ_MNPW_PLAN 기존 열·용도: TB_PJ_MNPW_PLAN (PROJ_ID,JOB_CD)의 기존 물리 계약을
+    보존하고 PLAN_MM·SRC_CD·A. 프로젝트 추천 조건의 첫 JOB 기본값를 이번 용도로 사용한다.'
+- canonical_id: REQ-2101
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_BS_CLNT 기존 열·용도: TB_BS_CLNT (CLNT_ID)의 기존 물리 계약을 보존하고 CLNT_NM·INDUTY_CD·USE_YN.
+    고객/업종를 이번 용도로 사용한다.'
+- canonical_id: REQ-2102
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SL_OPP 기존 열·용도: TB_SL_OPP (OPP_ID)의 기존 물리 계약을 보존하고 OPP_NM·CUST_CLNT_ID·SALES_STEP_CD·WIN_PRBL_RT·BGN_PLAN_YM·CTRT_TYPE_CD·OPP_STAT_CD·WORK_PLC_ADDR·RMRK·PROJ_ID·RSLT_DT·A를
+    이번 용도로 사용한다.'
+- canonical_id: REQ-2103
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SL_OPP_NEED 기존 열·용도: TB_SL_OPP_NEED (OPP_ID,NEED_SN)의 기존 물리 계약을 보존하고
+    JOB_CD·GRADE_CD·NEED_CNT·BGN_YM·PRD_MCNT·MON_MM·EXPCT_UPRC·A. 자리/잔여 인원를 이번 용도로 사용한다.'
+- canonical_id: REQ-2104
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SL_TENT_ASGN 기존 열·용도: TB_SL_TENT_ASGN (TENT_ID)의 기존 물리 계약을 보존하고 OPP_ID·NEED_SN·DEV_ID·BGN_YM·TENT_STAT_CD·SRC_SCRN_ID·PROC_DTTM·A.
+    12 공통 서비스만 생성/해제/상태 전환를 이번 용도로 사용한다.'
+- canonical_id: REQ-2105
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_CODE 기존 열·용도: TB_SY_CODE (CODE_GRP_ID,CODE)의 기존 물리 계약을 보존하고 CODE_NM·SORT_ORD·ADD_VAL1·ADD_VAL2·USE_YN·DEL_YN.
+    관련직무/필요스킬/등급·제외 사유를 이번 용도로 사용한다.'
+- canonical_id: REQ-2106
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_OPER_STD 기존 열·용도: TB_SY_OPER_STD (STD_CD,APLY_BGN_YM)의 기존 물리 계약을
+    보존하고 STD_VAL·A. M 유효 AI_SCORE_*·부족 기준를 이번 용도로 사용한다.'
+- canonical_id: REQ-2107
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_ADM_AREA 기존 열·용도: TB_SY_ADM_AREA (AREA_CD)의 기존 물리 계약을 보존하고 AREA_LVL_CD·UPPER_AREA_CD·SIDO_NM·SIDO_FULL_NM·USE_YN.
+    시·도 이름 정규화를 이번 용도로 사용한다.'
+- canonical_id: REQ-2108
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_CL_CLOSE 기존 열·용도: TB_CL_CLOSE (CLOSE_YM)의 기존 물리 계약을 보존하고 CLOSE_STAT_CD.
+    기존 실제 배정/급여/원가 보호 재사용를 이번 용도로 사용한다.'
+- canonical_id: REQ-2109
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_CHG_HIST 기존 열·용도: TB_SY_CHG_HIST (HIST_ID)의 기존 물리 계약을 보존하고 TRGT_TBL_NM·TRGT_KEY·CHG_TYPE_CD·CHG_ITEM_NM·BFR_VAL·AFT_VAL·CHG_RSN·REG_USER_ID·REG_DTTM.
+    선택/업무 연결·생명주기 감사를 이번 용도로 사용한다.'
+- canonical_id: REQ-2110
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_ACCS_LOG 기존 열·용도: TB_SY_ACCS_LOG (LOG_ID)의 기존 물리 계약을 보존하고 USER_ID·ACT_TYPE_CD·SCRN_ID·TRGT_DESC·CLIENT_IP·ACT_DTTM·REG_USER_ID·REG_DTTM.
+    다운로드DNLD를 이번 용도로 사용한다.'
+- canonical_id: REQ-2111
+  status: data-constraint
+  evidence: 'data-model.md 기존 물리/변경가능성 계약 — TB_SY_USER_PREF 기존 열·용도: TB_SY_USER_PREF (USER_ID,PREF_TYPE_CD,PREF_KEY)의
+    기존 물리 계약을 보존하고 PREF_VAL·A. 기존 PERIOD/PAGE_SIZE/DENSE/AMT_UNIT를 이번 용도로 사용한다.'
+- canonical_id: REQ-2189
+  status: out-of-scope
+  evidence: 'spec.md 범위 제외 — NEXT 제외 정책 금지: NEXT에 새 제외정책/제외버튼을 추가하지 않는다.'
+- canonical_id: REQ-2212
+  status: out-of-scope
+  evidence: 'spec.md 범위 제외 — UI-30 엑셀 제외: UI-30 추천전체 별도엑셀은만들지않는다.'
+- canonical_id: REQ-2213
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 점수·예측·전환 단일 재사용: 조건/카드/막대/이유/모달/NEXT/경고/빈결과컴포넌트공유·8/5전략DTO분리·NEXT순수계산기/12예측/상태전환단일이다.'
+- canonical_id: REQ-2215
+  status: non-functional
+  evidence: 'architecture.md·plan.md의 공통 실행 책임 — 실제 검증·미실행 분리: 빌드/시험·실DB/미리보기에서점수/배점/제외/철수경계/저장/경합/원천불변/기존투입회귀를확인하고미실행을구분한다.'
 x-requirement-accounting:
   registry_total: 156
   mapped_unique: 106
@@ -70051,3 +73430,36 @@ x-basic141-requirement-accounting:
   - getSalesOpportunityForecastExport
   source_id: null
   verification: strict diff/YAML/ref/operation/coverage 검증은 evidence. 제품/DB/브라우저 실행 미실행.
+x-basic142-requirement-accounting:
+  source_id: null
+  request: BASIC-142
+  new_operation_count: 10
+  operation_ids:
+  - getWorkforceRecommendationTargets
+  - createWorkforceRecommendation
+  - getWorkforceRecommendationHistory
+  - getWorkforceRecommendation
+  - createWorkforceRecommendationExclusion
+  - createWorkforceRecommendationTentativeAssignment
+  - getWithdrawals
+  - saveWithdrawalExtensionPossibility
+  - createNextPositionRecommendation
+  - getWithdrawalExport
+  changed_existing_operation_ids:
+  - createAssignment
+  - createAssignmentChange
+  registry_range: REQ-2045..REQ-2215
+  registry_count: 171
+  functional_count: 107
+  uncovered_functional_ids:
+  - REQ-2045
+  - REQ-2046
+  - REQ-2067
+  - REQ-2068
+  - REQ-2116
+  - REQ-2119
+  - REQ-2121
+  - REQ-2125
+  - REQ-2214
+  policy: 요청정책만·임시관리자 security=[]·선행문서/원장번호 불변·전체yaml.dump 금지·사본점수숫자예외 명시
+  implementation_tests: 미실행·문서 diff/YAML/ref/operation/coverage 검증과 구분

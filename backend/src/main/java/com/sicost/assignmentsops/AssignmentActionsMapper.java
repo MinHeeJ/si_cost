@@ -27,5 +27,7 @@ public interface AssignmentActionsMapper {
     int serial(String id);
     int insert(Write write);
     int update(Write write);
+    int updateExtension(Write write);
+    String lockAssignment(String id);
     int event(Event event);
 }

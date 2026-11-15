@@ -97,10 +97,33 @@ class ProjectExpenseContractTest {
     @Test void endedContractStillAcceptsUnclosedOneOffExpense() throws Exception {project=new ProjectState("MO","END");create(body()).andExpect(status().isOk());}
     @Test void publicConfirmedDeleteKeepsOtherMonthAndDoesNotReuseAuditedSerial() throws Exception {
         create(body()).andExpect(status().isOk());create(body().put("expenseMonth","2026-08")).andExpect(status().isOk());
-        remove("2026-07","1",deletion()).andExpect(status().isOk()).andExpect(jsonPath("$.data.value.items.length()").value(1));
+        mvc.perform(delete("/api/projects/EXPENSE-1/expenses/2026-07/1").contentType("application/json").content(deletion().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true))
+            .andExpect(jsonPath("$.data.value.items.length()").value(1));
         assertThat(rows).extracting(Stored::month).containsExactly("202608");
         assertThat(audits.stream().filter(a->a.type().equals("DEL")).toList()).extracting(ChangeHistoryEntry::before).containsExactly("2026-07","TRIP","1","출장 메모");
         create(body()).andExpect(status().isOk());assertThat(rows.get(0).sn()).isEqualTo(2);
+    }
+    @Test void deleteAuthRejectsForgedActorWithoutChangingExpenseOrAudit() throws Exception {
+        rows.add(new Stored("202607",1,"TRIP","출장비",BigDecimal.ONE,"memo",LocalDateTime.of(2026,7,1,0,0)));
+        mvc.perform(delete("/api/projects/EXPENSE-1/expenses/2026-07/1").contentType("application/json")
+                .content(deletion().put("actor","other").toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("actor"));
+        assertThat(rows).hasSize(1);noWrites();
+    }
+    @Test void deleteBusinessStaleRevisionPreservesCurrentRowAndAudit() throws Exception {
+        rows.add(new Stored("202607",1,"TRIP","출장비",BigDecimal.ONE,"memo",LocalDateTime.of(2026,7,1,0,0)));
+        var request=deletion();sibling="changed-pm";
+        mvc.perform(delete("/api/projects/EXPENSE-1/expenses/2026-07/1").contentType("application/json").content(request.toString()))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));
+        assertThat(rows).hasSize(1);assertThat(audits).isEmpty();noWrites();
+    }
+    @Test void deleteSideEffectAuditFailureRollsBackBeforeCommit() throws Exception {
+        rows.add(new Stored("202607",1,"TRIP","출장비",BigDecimal.ONE,"memo",LocalDateTime.of(2026,7,1,0,0)));
+        doThrow(new IllegalStateException("private SQL")).when(history).insert(any());
+        mvc.perform(delete("/api/projects/EXPENSE-1/expenses/2026-07/1").contentType("application/json").content(deletion().toString()))
+            .andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+        verify(manager).rollback(any());verify(manager,never()).commit(any());verifyNoInteractions(invalidation);
     }
     @Test void missingDeleteRevisionNeverDeletesOriginal() throws Exception {
         rows.add(new Stored("202607",1,"TRIP","출장비",BigDecimal.ONE,null,LocalDateTime.of(2026,7,1,0,0)));

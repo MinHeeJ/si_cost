@@ -142,8 +142,12 @@ export function AssignmentCreateForm({
       ...old,
       [key]: value,
       ...(["projectId", "developerId", "inputType"].includes(key)
-        ? { contractDeveloperId: null, billingUnitPrice: "" }
+        ? {
+            contractDeveloperId: null,
+            billingUnitPrice: "",
+          }
         : {}),
+      ...(["projectId", "developerId"].includes(key) ? { recommendationRef: null } : {}),
     }));
   }
   function payload(): api.Create {

@@ -67,6 +67,12 @@ class PeopleHistoryContractTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty())
             .andExpect(jsonPath("$.data.total").value(0));
     }
+    @Test void historyAuthRejectsForgedActorBeforeReadingContactHistory() throws Exception {
+        mvc.perform(get("/api/people-history").param("targetType","DEVELOPER").param("targetId","DEV-000001").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
+    }
     @Test void missingTargetIs404EvenIfOrphanHistoryExists() throws Exception {
         when(mapper.exists(any())).thenReturn(false);
         var result=mvc.perform(get("/api/people-history").param("targetType","CANDIDATE").param("targetId","absent"))

@@ -66,7 +66,10 @@ export function AssignmentWarnings({
   protectedMonths: string[];
 }) {
   // 월마다 같은 문장이 반복되므로 (종류, 월을 뺀 문장)이 같은 경고를 한 줄로 묶는다
-  const groups = new Map<string, { code: string; text: string; months: string[] }>();
+  const groups = new Map<
+    string,
+    { code: string; text: string; months: string[] }
+  >();
   for (const w of warnings) {
     let text = w.message;
     for (const m of w.months) text = text.replace(m, "").replace(/\s+/g, " ");
@@ -214,9 +217,9 @@ export function AssignmentChangeDialog({
         return { ...common, type, applyMonth: month, newContractMm: value };
       case "EXTP":
         return {
-          ...common,
+          year,
+          expectedRevision: assignment.revision,
           type,
-          applyDate: date,
           extensionPossibility: value || null,
         };
       case "KIND":
@@ -232,7 +235,7 @@ export function AssignmentChangeDialog({
     setError(undefined);
     setFields({});
     try {
-      if (!preview) {
+      if (!preview && type !== "EXTP") {
         setPreview(await api.preview({ id: assignment.id, change: body() }));
         return;
       }
@@ -315,23 +318,25 @@ export function AssignmentChangeDialog({
             </select>
           </label>
           {type === "EXT" && <p>연장 시작일은 기존 종료일 다음 날입니다.</p>}
-          {type === "RATE" || type === "UPRC"
-            ? field("적용월", "applyMonth", "month", month, setMonth)
-            : field(
-                type === "EXT"
-                  ? "새 종료일"
-                  : type === "EARLY"
-                    ? "철수일"
-                    : "바꾼날",
-                type === "EXT"
-                  ? "newEndDate"
-                  : type === "EARLY"
-                    ? "withdrawalDate"
-                    : "applyDate",
-                "date",
-                date,
-                setDate,
-              )}
+          {type === "EXTP"
+            ? null
+            : type === "RATE" || type === "UPRC"
+              ? field("적용월", "applyMonth", "month", month, setMonth)
+              : field(
+                  type === "EXT"
+                    ? "새 종료일"
+                    : type === "EARLY"
+                      ? "철수일"
+                      : "바꾼날",
+                  type === "EXT"
+                    ? "newEndDate"
+                    : type === "EARLY"
+                      ? "withdrawalDate"
+                      : "applyDate",
+                  "date",
+                  date,
+                  setDate,
+                )}
           {(type === "RATE" || type === "UPRC") &&
             field(
               type === "RATE" ? "새 계약MM" : "새 단가 (원)",
@@ -366,13 +371,15 @@ export function AssignmentChangeDialog({
               </select>
             </label>
           )}
-          <ReasonFields
-            reason={reason}
-            memo={memo}
-            disabled={pending || Boolean(preview)}
-            error={fields}
-            onChange={(k, v) => (k === "reason" ? setReason(v) : setMemo(v))}
-          />
+          {type !== "EXTP" && (
+            <ReasonFields
+              reason={reason}
+              memo={memo}
+              disabled={pending || Boolean(preview)}
+              error={fields}
+              onChange={(k, v) => (k === "reason" ? setReason(v) : setMemo(v))}
+            />
+          )}
           {preview && (
             <>
               <AssignmentWarnings

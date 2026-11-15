@@ -59,6 +59,19 @@ class PayrollUploadContractTest {
         mvc.perform(get("/api/payroll/uploads").param("month","2026-07"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.total").value(0));
     }
+    @Test void uploadsAuthRejectsForgedActorBeforeReadingPayrollHistory() throws Exception {
+        mvc.perform(get("/api/payroll/uploads").param("month","2026-07").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void uploadsBusinessEmptyResultHasNoSideEffectsOrSyntheticRecords() throws Exception {
+        mvc.perform(get("/api/payroll/uploads").param("month","2026-07"))
+            .andExpect(DurableOpenApi.response("GET","/api/payroll/uploads",200))
+            .andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.total").value(0));
+        var query=new Query("202607",1,50,0);
+        verify(mapper).list(query);verify(mapper).count(query);verifyNoMoreInteractions(mapper);
+    }
     @Test void explicitPageUsesLongOffsetAndSameCountFilter() throws Exception {
         mvc.perform(get("/api/payroll/uploads").param("month","2026-07").param("page","2147483647").param("size","100"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(2147483647));

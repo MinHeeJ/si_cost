@@ -21,6 +21,9 @@ public class AssignmentService {
     private final AssignmentMonthlyService monthly;
     private final CurrentUserProvider users;
     private final Clock clock;
+    private com.sicost.common.assignments.RecommendationAssignmentHandler recommendations;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setRecommendations(com.sicost.common.assignments.RecommendationAssignmentHandler recommendations){this.recommendations=recommendations;}
     public AssignmentService(AssignmentRepository repository,AssignmentActionsService actions,AssignmentMonthlyService monthly,CurrentUserProvider users,Clock clock) {
         this.repository=repository;this.actions=actions;this.monthly=monthly;this.users=users;this.clock=clock;
     }
@@ -47,8 +50,15 @@ public class AssignmentService {
     }
     @Transactional
     public Save create(Create input) {
+        if(input.recommendationRef()!=null){
+            if(recommendations==null)throw new IllegalStateException("추천 배정 연결을 확인할 수 없습니다.");
+            String id=repository.allocate();return recommendations.create(input,id,()->createOrdinary(input,id));
+        }
+        return createOrdinary(input,repository.allocate());
+    }
+    private Save createOrdinary(Create input,String id) {
         String actor=users.userId();ProjectInputPolicy.requireWritableYear(input.year(),monthly.cashBase(),clock);
-        String id=repository.allocate();repository.lock(id,input);monthly.mapper().lockClose();
+        repository.lock(id,input);monthly.mapper().lockClose();
         Source prepared=actions.prepare(input);
         Source source=new Source(id,prepared.projectId(),prepared.developerId(),prepared.jobCode(),prepared.startDate(),prepared.endDate(),
             prepared.contractMm(),prepared.price(),prepared.inputType(),prepared.contractDeveloperId(),null,0,"N","ACT");

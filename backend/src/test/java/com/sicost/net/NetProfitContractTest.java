@@ -59,10 +59,19 @@ class NetProfitContractTest {
         when(costs.loadYear(any())).thenReturn(sources);when(costs.calculate(any())).thenReturn(new MonthlyCostsData(sources.period(),List.of()));
     }
     static BigDecimal n(String value) {return value==null?null:new BigDecimal(value);}
+    @Test void netAuthRejectsForgedActorBeforeFinancialSources() throws Exception {
+        mvc.perform(get("/api/profit-loss/net").param("year","2026").param("month","2026-07").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/profit-loss/net",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));verifyNoInteractions(financial,mapper,costs,logs,users);
+    }
+    @Test void netExportValidationRejectsUnitBeforeFileOrDownloadAudit() throws Exception {
+        mvc.perform(get("/api/profit-loss/net/export").param("year","2026").param("month","2026-07").param("amountUnit","bad"))
+            .andExpect(DurableOpenApi.response("GET","/api/profit-loss/net/export",400));verifyNoInteractions(financial,logs);
+    }
     org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request(String path,String month) {return get(path).param("year",month.substring(0,4)).param("month",month);}
-    ResultActions read(String month)throws Exception {return mvc.perform(request(READ,month));}
+    ResultActions read(String month)throws Exception {return mvc.perform(get("/api/profit-loss/net").param("year",month.substring(0,4)).param("month",month));}
     @Test void publicUnmaskedNetStatementHasTwoCardsAndAllEighteenRowsFromOneRead()throws Exception {
-        var response=read("2026-07").andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.months.length()").value(12)).andExpect(jsonPath("$.data.summary.length()").value(2))
+        var response=mvc.perform(get("/api/profit-loss/net").param("year","2026").param("month","2026-07")).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.months.length()").value(12)).andExpect(jsonPath("$.data.summary.length()").value(2))
             .andExpect(jsonPath("$.data.context.timezone").value("Asia/Seoul")).andExpect(jsonPath("$.data.rows.length()").value(18))
             .andExpect(jsonPath("$.data.summary[1].amount").value(n("1000").subtract(n("50")).subtract(n("20")).subtract(n("10")).toPlainString()))
             .andExpect(jsonPath("$.data.contributionMonth").value("2026-07")).andExpect(jsonPath("$.data.contributions.contractTypes[0].contributionAmt").value("1000"))
@@ -150,7 +159,7 @@ class NetProfitContractTest {
     }
     @Test void unknownContributionDoesNotClaimFullPositiveDistribution()throws Exception {people(List.of(cost("mo","MO","100",null)));read("2026-07").andExpect(jsonPath("$.data.contributions.complete").value(false)).andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value(nullValue()));}
     @Test void publicExportContainsNumericWorkbookContributionAndCommittedUi09Log()throws Exception {
-        var response=mvc.perform(request(EXPORT,"2026-07").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
+        var response=mvc.perform(get("/api/profit-loss/net/export").param("year","2026").param("month","2026-07").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
         assertThat(org.springframework.http.ContentDisposition.parse(response.getHeader("Content-Disposition")).getFilename()).isEqualTo("순이익표_202607.xlsx");
         try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
             var sheet=workbook.getSheet("순이익표");assertThat(sheet.getRow(1).getCell(7).getNumericCellValue()).isEqualTo(1000);

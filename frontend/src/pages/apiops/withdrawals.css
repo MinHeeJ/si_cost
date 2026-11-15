@@ -1,0 +1,149 @@
+.withdrawal-screen {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.withdrawal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.withdrawal-download {
+  margin-left: auto;
+}
+.withdrawal-help,
+.withdrawal-sub {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.withdrawal-help {
+  margin: 0;
+}
+.withdrawal-sub {
+  display: block;
+}
+.withdrawal-screen select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+.withdrawal-screen .sicost-table select {
+  height: 28px;
+  padding: 0 6px;
+}
+.withdrawal-link {
+  color: var(--primary);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.withdrawal-screen .sicost-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.withdrawal-screen details {
+  font-size: 12px;
+}
+.withdrawal-screen summary {
+  cursor: pointer;
+  color: var(--primary);
+}
+.withdrawal-next {
+  display: grid;
+  gap: 12px;
+}
+.withdrawal-position {
+  padding: 12px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.withdrawal-position h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+.withdrawal-position p {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.withdrawal-score {
+  display: grid;
+  grid-template-columns: 42px 1fr 88px;
+  gap: 8px;
+  font-size: 12px;
+  align-items: center;
+}
+.withdrawal-score meter {
+  width: 100%;
+  accent-color: var(--primary);
+}
+.withdrawal-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+@media (max-width: 1023px) {
+  .withdrawal-download {
+    display: none;
+  }
+  .withdrawal-screen .sicost-table-viewport {
+    overflow: visible;
+  }
+  .withdrawal-screen .sicost-table,
+  .withdrawal-screen .sicost-table tbody {
+    display: block;
+  }
+  .withdrawal-screen .sicost-table thead {
+    display: none;
+  }
+  .withdrawal-screen .sicost-table tr {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .withdrawal-screen .sicost-table td {
+    display: flex;
+    gap: 12px;
+    height: auto;
+    min-height: 28px;
+    white-space: normal;
+    border: 0;
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+  }
+  .withdrawal-screen .sicost-table td::before {
+    min-width: 90px;
+    color: var(--text-sub);
+    font-weight: 600;
+  }
+  .withdrawal-screen td[data-column="name"]::before {
+    content: "이름";
+  }
+  .withdrawal-screen td[data-column="project"]::before {
+    content: "프로젝트";
+  }
+  .withdrawal-screen td[data-column="job"]::before {
+    content: "직무";
+  }
+  .withdrawal-screen td[data-column="date"]::before {
+    content: "철수일";
+  }
+  .withdrawal-screen td[data-column="days"]::before {
+    content: "남은 일수";
+  }
+  .withdrawal-screen td[data-column="history"]::before {
+    content: "연장·조기 철수";
+  }
+  .withdrawal-screen td[data-column="extension"]::before {
+    content: "연장 가능성";
+  }
+  .withdrawal-screen td[data-column="next"]::before {
+    content: "다음 배정";
+  }
+}

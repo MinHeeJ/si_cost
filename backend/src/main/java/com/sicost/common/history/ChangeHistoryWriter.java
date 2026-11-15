@@ -31,7 +31,7 @@ public class ChangeHistoryWriter {
             "TB_PJ_STEP", "TB_PJ_WEEK_MEMO", "TB_PJ_ISSUE",
             "TB_FI_ITEM", "TB_FI_CORP_TAX", "TB_FI_TAX_PAY", "TB_CO_PREV_ADJ", "TB_FI_LOAN",
             "TB_FI_CARD", "TB_FI_CARD_PAY", "TB_FI_CARD_MON", "TB_FI_XFER", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL",
-            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL", "TB_SL_TENT_ASGN", "TB_SL_OPP", "TB_SL_OPP_NEED", "TB_SL_APRV_HIST", "TB_SY_NOTI");
+            "TB_CO_PART_SETL", "TB_CO_PART_SETL_DTL", "TB_SL_TENT_ASGN", "TB_SL_OPP", "TB_SL_OPP_NEED", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_SL_RCMD_LOG");
     private static final Set<String> PEOPLE = Set.of("TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC");
     private static final Set<String> TYPES = Set.of("NEW", "UPD", "STOP", "RESUME", "DEL");
@@ -48,7 +48,31 @@ public class ChangeHistoryWriter {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Change change) {
+        if ("TB_SL_RCMD_LOG".equals(change.tableName())) {
+            RecommendationHistoryPolicy.requireAllowed(change);
+            append(change, users::userId, true);
+            return;
+        }
         append(change, users::userId, false);
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendRecommendation(Change change) {
+        boolean recommendation = "TB_SL_RCMD_LOG".equals(change.tableName())
+            && change.targetKey() != null && change.targetKey().matches("[1-9][0-9]{0,11}:[1-5]")
+            && Set.of("NEW", "UPD").contains(change.type()) && change.item() != null
+            && Set.of("targetRevision", "candidateRevision", "expectedRevision", "sourceAssignmentId",
+                "USER_ACT_CD", "RCMD_EXCL_CD", "ACT_USER_ID", "ACT_DTTM", "assignmentId", "tentativeAssignmentId",
+                "finalOpportunityId", "finalNeedSn", "needSn", "reasonCode", "confirmedWarnings", "year", "projectId",
+                "developerId", "jobCode", "startDate", "endDate", "contractMm", "billingUnitPrice", "inputType", "contractDeveloperId").contains(change.item());
+        boolean extension = "TB_PJ_ASGN".equals(change.tableName()) && "UPD".equals(change.type())
+            && "EXT_PSBL_CD".equals(change.item());
+        if (!recommendation && !extension) throw InputValidator.invalid("history");
+        append(change, users::userId, true);
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendRecommendationAssignment(Change change) {
+        if (!"TB_PJ_ASGN".equals(change.tableName()) || !Set.of("NEW", "UPD").contains(change.type())) throw InputValidator.invalid("history");
+        append(change, users::userId, true);
     }
     @Transactional(propagation = Propagation.MANDATORY)
     public void appendSales(Change change) {
@@ -75,6 +99,7 @@ public class ChangeHistoryWriter {
         append(change, () -> actor, false);
     }
     private void append(Change change, Supplier<String> actor, boolean required) {
+        if ("TB_SL_RCMD_LOG".equals(change.tableName()) && !required) throw InputValidator.invalid("history");
         if (!TABLES.contains(change.tableName()) || !TYPES.contains(change.type())) throw InputValidator.invalid("history");
         if (Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI").contains(change.tableName())
                 && (!Set.of("NEW", "UPD").contains(change.type())

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.candidates.RecommendationActionMapper">
+  <sql id="rowColumns">rcmd_id::text AS "rcmdId",rank_ord::int AS rank,rcmd_type_cd AS type,opp_id AS "opportunityId",need_sn::text AS "needSn",proj_id AS "projectId",job_cd AS "jobCode",bgn_ym AS "startMonth",dev_id AS "developerId",score_dtl AS "scoreDetail",user_act_cd AS "actionCode",rcmd_excl_cd AS "exclusionReasonCode",act_user_id AS "actedBy",act_dttm AS "actedAt",reg_dttm AS "registeredAt"</sql>
+  <select id="row" resultType="com.sicost.candidates.RecommendationActionDtos$Row" useCache="false" flushCache="true">SELECT <include refid="rowColumns"/> FROM tb_sl_rcmd_log WHERE rcmd_id=CAST(#{rcmdId} AS numeric) AND rank_ord=#{rank}</select>
+  <select id="lockRow" resultType="com.sicost.candidates.RecommendationActionDtos$Row" useCache="false" flushCache="true">SELECT <include refid="rowColumns"/> FROM tb_sl_rcmd_log WHERE rcmd_id=CAST(#{rcmdId} AS numeric) AND rank_ord=#{rank} FOR UPDATE</select>
+  <select id="auditValues" resultType="com.sicost.candidates.RecommendationActionDtos$AuditValue" useCache="false" flushCache="true">
+    SELECT DISTINCT ON(chg_item_nm) chg_item_nm AS item,aft_val AS value FROM tb_sy_chg_hist
+    WHERE trgt_tbl_nm='TB_SL_RCMD_LOG' AND trgt_key=(#{rcmdId}||':'||CAST(#{rank} AS text)) ORDER BY chg_item_nm,hist_id
+  </select>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    SELECT jsonb_build_object(
+      'source',(<include refid="com.sicost.salesopportunitiesops.SalesCommandMapper.opportunitySnapshot"/>),
+      'skills',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.dev_id,s.skill_nm) FROM tb_hr_dev_skill s),
+      'opportunities',(SELECT jsonb_agg(to_jsonb(o) ORDER BY o.opp_id) FROM tb_sl_opp o),
+      'needs',(SELECT jsonb_agg(to_jsonb(n) ORDER BY n.opp_id,n.need_sn) FROM tb_sl_opp_need n),
+      'tentatives',(SELECT jsonb_agg(to_jsonb(t) ORDER BY t.tent_id) FROM tb_sl_tent_asgn t),
+      'recommendations',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.rcmd_id,r.rank_ord) FROM tb_sl_rcmd_log r WHERE r.user_act_cd='EXCL'),
+      'lifecycle',(SELECT jsonb_agg(to_jsonb(h) ORDER BY h.hist_id) FROM tb_sy_chg_hist h WHERE h.trgt_tbl_nm IN ('TB_SL_OPP','TB_PJ_PROJ'))
+    )::text
+  </select>
+  <select id="assignmentIds" resultType="string" useCache="false">SELECT asgn_id FROM tb_pj_asgn WHERE dev_id=#{developerId} ORDER BY asgn_id</select>
+  <select id="payrollMonths" resultType="string">SELECT pay_ym FROM tb_hr_mon_pay WHERE dev_id=#{developerId} UNION SELECT input_ym FROM tb_pj_asgn_mon WHERE dev_id=#{developerId} ORDER BY 1</select>
+  <select id="activeOpportunityIds" resultType="string" useCache="false">SELECT DISTINCT opp_id FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='ACT' ORDER BY opp_id</select>
+  <select id="lockOpportunity" resultType="string">SELECT opp_id FROM tb_sl_opp WHERE opp_id=#{id} FOR UPDATE</select>
+  <select id="lockProject" resultType="string">SELECT proj_id FROM tb_pj_proj WHERE proj_id=#{id} FOR UPDATE</select>
+  <select id="lockDeveloper" resultType="string">SELECT dev_id FROM tb_hr_dev WHERE dev_id=#{id} FOR UPDATE</select>
+  <select id="lockAssignments" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE dev_id=#{id} ORDER BY asgn_id FOR UPDATE</select>
+  <select id="lockNeeds" resultType="string">SELECT need_sn::text FROM tb_sl_opp_need WHERE opp_id=#{id} ORDER BY need_sn FOR UPDATE</select>
+  <update id="lockClose">LOCK TABLE tb_cl_close IN SHARE MODE</update>
+  <select id="need" resultType="com.sicost.candidates.RecommendationActionDtos$Need" useCache="false" flushCache="true">
+    SELECT n.opp_id AS "opportunityId",n.need_sn::text AS "needSn",n.job_cd AS "jobCode",n.bgn_ym AS "startMonth",n.prd_mcnt::int AS months,n.need_cnt::int AS count,o.opp_stat_cd AS status,o.ctrt_type_cd AS "contractType",o.opp_nm AS name
+    FROM tb_sl_opp_need n JOIN tb_sl_opp o ON o.opp_id=n.opp_id WHERE n.opp_id=#{opportunityId} AND n.need_sn=CAST(#{needSn} AS numeric)
+  </select>
+  <select id="developer" resultType="com.sicost.candidates.RecommendationActionDtos$Developer" useCache="false" flushCache="true">SELECT dev_id AS id,job_cd AS "jobCode",emp_type_cd AS "employeeType",drct_cls_cd AS "directClass",use_yn AS "useYn",jncmp_dt AS "joinDate",retire_dt AS "retireDate" FROM tb_hr_dev WHERE dev_id=#{id}</select>
+  <select id="withdrawal" resultType="com.sicost.candidates.RecommendationActionDtos$Withdrawal" useCache="false" flushCache="true">SELECT a.asgn_id AS id,a.input_end_dt AS "endDate",a.ext_psbl_cd AS "extensionPossibility",a.asgn_stat_cd AS status,p.proj_stat_cd AS "projectStatus" FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.asgn_id=#{id}</select>
+  <select id="hasConfirmedNext" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_pj_asgn WHERE dev_id=#{developerId} AND asgn_stat_cd='ACT' AND input_bgn_dt&gt;#{date})</select>
+  <select id="hasConvertedNext" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='CNVT')</select>
+  <select id="leave" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_hr_dev_stat WHERE dev_id=#{developerId} AND work_stat_cd='LEAVE' AND bgn_dt&lt;=#{endDate} AND (end_dt IS NULL OR end_dt&gt;=#{startDate}))</select>
+  <select id="activeReason" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.code_grp_id='RCMD_EXCL' AND c.code=#{code} AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y')</select>
+  <select id="targetOpen" resultType="boolean">SELECT EXISTS(<choose><when test="opportunityId != null">SELECT 1 FROM tb_sl_opp WHERE opp_id=#{opportunityId} AND opp_stat_cd='ING'</when><otherwise>SELECT 1 FROM tb_pj_proj WHERE proj_id=#{projectId} AND proj_stat_cd='ING'</otherwise></choose>)</select>
+  <select id="progressingEnd" resultType="java.time.LocalDate">SELECT max(a.input_end_dt) FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.dev_id=#{developerId} AND a.asgn_stat_cd='ACT' AND p.proj_stat_cd='ING' AND a.input_bgn_dt&lt;=#{today} AND a.input_end_dt&gt;=#{today}</select>
+  <select id="resumed" resultType="java.time.LocalDateTime">SELECT max(reg_dttm) FROM tb_sy_chg_hist WHERE trgt_tbl_nm=<choose><when test="opportunityId != null">'TB_SL_OPP' AND trgt_key=#{opportunityId}</when><otherwise>'TB_PJ_PROJ' AND trgt_key=#{projectId}</otherwise></choose> AND (chg_type_cd='RESUME' OR (chg_item_nm IN ('OPP_STAT_CD','PROJ_STAT_CD') AND bfr_val='STOP' AND aft_val='ING'))</select>
+  <select id="excluded" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sl_rcmd_log r WHERE r.rcmd_type_cd='AI' AND r.user_act_cd='EXCL' AND r.job_cd=#{jobCode} AND r.dev_id=#{developerId}
+      <choose><when test="opportunityId != null">AND r.opp_id=#{opportunityId}</when><otherwise>AND r.proj_id=#{projectId}</otherwise></choose>
+      AND NOT EXISTS(SELECT 1 FROM tb_sy_chg_hist h WHERE h.trgt_tbl_nm=<choose><when test="opportunityId != null">'TB_SL_OPP' AND h.trgt_key=#{opportunityId}</when><otherwise>'TB_PJ_PROJ' AND h.trgt_key=#{projectId}</otherwise></choose>
+        AND (h.chg_type_cd='RESUME' OR (h.chg_item_nm IN ('OPP_STAT_CD','PROJ_STAT_CD') AND h.bfr_val='STOP' AND h.aft_val='ING')) AND h.reg_dttm&gt;r.act_dttm))
+  </select>
+  <update id="choose">UPDATE tb_sl_rcmd_log SET user_act_cd=#{action},rcmd_excl_cd=#{reason,jdbcType=VARCHAR},act_user_id=#{actor},act_dttm=#{now} WHERE rcmd_id=CAST(#{key.rcmdId} AS numeric) AND rank_ord=#{key.rank} AND user_act_cd IS NULL</update>
+</mapper>

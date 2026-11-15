@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.workforcerecommendationsops.RecommendationBrowseMapper">
+  <sql id="historyPredicates">
+    <where>
+      <if test="targetType == 'OPPORTUNITY'">AND r.opp_id=#{targetId} AND r.proj_id IS NULL</if>
+      <if test="targetType == 'PROJECT'">AND r.proj_id=#{targetId}</if>
+      <if test="job != null">AND r.job_cd=#{job}</if>
+      <if test="recommendationType != null">AND r.rcmd_type_cd=#{recommendationType}</if>
+    </where>
+  </sql>
+  <select id="history" resultType="com.sicost.workforcerecommendationsops.RecommendationBrowseDtos$HistoryItem" useCache="false">
+    <bind name="targetType" value="query.targetType"/>
+    <bind name="targetId" value="query.targetId"/>
+    <bind name="job" value="query.job"/>
+    <bind name="recommendationType" value="query.recommendationType"/>
+    SELECT r.rcmd_id::text AS "rcmdId",r.rcmd_type_cd AS "recommendationType",
+      coalesce(r.proj_id,r.opp_id) AS "targetId",r.job_cd AS "jobCode",
+      substring(r.bgn_ym,1,4)||'-'||substring(r.bgn_ym,5,2) AS "startMonth",r.req_grade_cd AS "requestedGradeCode",
+      to_char(r.reg_dttm,'YYYY-MM-DD HH24:MI:SS') AS "executedAt",r.reg_user_id AS "executedBy",
+      (SELECT count(*)::int FROM tb_sl_rcmd_log c WHERE c.rcmd_id=r.rcmd_id) AS "candidateCount"
+    FROM (SELECT DISTINCT ON (r.rcmd_id) r.* FROM tb_sl_rcmd_log r
+      <include refid="historyPredicates"/>
+      ORDER BY r.rcmd_id,r.rank_ord) r
+    ORDER BY
+    <choose>
+      <when test="query.sort != null">
+        <choose>
+          <when test="query.sort == 'rcmdId'">r.rcmd_id</when>
+          <when test="query.sort == 'recommendationType'">r.rcmd_type_cd</when>
+          <when test="query.sort == 'targetId'">coalesce(r.proj_id,r.opp_id)</when>
+          <when test="query.sort == 'jobCode'">r.job_cd</when>
+          <when test="query.sort == 'startMonth'">r.bgn_ym</when>
+          <when test="query.sort == 'requestedGradeCode'">r.req_grade_cd</when>
+          <when test="query.sort == 'executedAt'">r.reg_dttm</when>
+          <when test="query.sort == 'executedBy'">r.reg_user_id</when>
+          <when test="query.sort == 'candidateCount'">"candidateCount"</when>
+          <otherwise>r.rcmd_id</otherwise>
+        </choose>
+        <choose><when test="query.direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose>
+        NULLS LAST,r.rcmd_id ASC
+      </when>
+      <otherwise>r.reg_dttm DESC NULLS LAST,r.rcmd_id DESC</otherwise>
+    </choose>
+    LIMIT #{query.size} OFFSET #{offset}
+  </select>
+  <select id="historyCount" resultType="long" useCache="false">
+    SELECT count(DISTINCT r.rcmd_id) FROM tb_sl_rcmd_log r <include refid="historyPredicates"/>
+  </select>
+  <select id="targets" resultType="com.sicost.workforcerecommendationsops.RecommendationBrowseDtos$TargetSource" useCache="false">
+    SELECT 'OPPORTUNITY' AS "targetType",opp_id AS "targetId",opp_nm AS name,ctrt_type_cd AS "contractTypeCode",
+      proj_id AS "projectIdAfterWin",NULL::date AS "contractStartDate",NULL::date AS "contractEndDate",
+      substring(bgn_plan_ym,1,4)||'-'||substring(bgn_plan_ym,5,2) AS "startMonth"
+    FROM tb_sl_opp WHERE opp_stat_cd='ING'
+    UNION ALL
+    SELECT 'PROJECT',proj_id,proj_nm,ctrt_type_cd,NULL::varchar,ctrt_bgn_dt,ctrt_end_dt,to_char(ctrt_bgn_dt,'YYYY-MM')
+    FROM tb_pj_proj WHERE proj_stat_cd='ING' AND ctrt_type_cd &lt;&gt; 'IN' AND ctrt_end_dt &gt;= #{today}
+    ORDER BY "targetType",name,"targetId"
+  </select>
+  <select id="needs" resultType="com.sicost.workforcerecommendationsops.RecommendationBrowseDtos$NeedSource" useCache="false">
+    SELECT n.need_sn::text AS "needSn",n.job_cd AS "jobCode",n.grade_cd AS "gradeCode",n.need_cnt::int AS "needCount",
+      substring(n.bgn_ym,1,4)||'-'||substring(n.bgn_ym,5,2) AS "startMonth",n.prd_mcnt::int AS "periodMonths",
+      n.mon_mm::text AS "monthlyMm",(SELECT count(*)::int FROM tb_sl_tent_asgn t
+        WHERE t.opp_id=n.opp_id AND t.need_sn=n.need_sn AND t.tent_stat_cd='ACT') AS "activeCount",
+      jsonb_build_object('need',to_jsonb(n),'tentatives',(SELECT jsonb_agg(to_jsonb(t) ORDER BY t.tent_id)
+        FROM tb_sl_tent_asgn t WHERE t.opp_id=n.opp_id AND t.need_sn=n.need_sn))::text AS snapshot
+    FROM tb_sl_opp_need n WHERE n.opp_id=#{id} ORDER BY n.need_sn
+  </select>
+  <select id="projectJob" resultType="string" useCache="false">
+    SELECT p.job_cd FROM tb_pj_mnpw_plan p LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=p.job_cd
+    WHERE p.proj_id=#{id} ORDER BY c.sort_ord NULLS LAST,p.job_cd LIMIT 1
+  </select>
+  <select id="firstJob" resultType="string" useCache="false">
+    SELECT c.code FROM tb_sy_code c JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id
+    WHERE c.code_grp_id='JOB' AND c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y' ORDER BY c.sort_ord,c.code LIMIT 1
+  </select>
+  <select id="cashBase" resultType="string" useCache="false">
+    SELECT lpad(trunc(std_val)::text,6,'0') FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM' ORDER BY aply_bgn_ym DESC LIMIT 1
+  </select>
+  <select id="opportunitySnapshot" resultType="string" useCache="false">
+    <include refid="com.sicost.salesopportunitiesops.SalesCommandMapper.opportunitySnapshot"/>
+  </select>
+  <select id="projectSnapshot" resultType="string" useCache="false">
+    SELECT jsonb_build_object('project',(SELECT to_jsonb(p) FROM tb_pj_proj p WHERE p.proj_id=#{id}),
+      'plans',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.job_cd) FROM tb_pj_mnpw_plan p WHERE p.proj_id=#{id}),
+      'codes',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.code_grp_id,c.code) FROM tb_sy_code c),
+      'standards',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.std_cd,s.aply_bgn_ym) FROM tb_sy_oper_std s))::text
+  </select>
+</mapper>

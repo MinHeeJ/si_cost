@@ -43,6 +43,9 @@ import { NetProfitScreen } from "../pages/shared/NetProfitScreen";
 import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerformanceScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
+import { WorkforceRecommendationsScreen } from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
+import { WorkforceRecommendationCandidates } from "../pages/candidates/WorkforceRecommendationCandidates";
+import { DeveloperDrawer } from "../pages/developers/DeveloperDrawer";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
 import { SalesPartStandardDialog } from "../pages/salespartsops/SalesPartStandardDialog";
 import { ExcelUploadDialog } from "../pages/b7/ExcelUploadDialog";
@@ -559,9 +562,15 @@ function PeopleWorkspace({
       ) : (
         <CandidatesScreen
           {...props}
-          entryJob={typeof (location.state as { jobCode?: unknown } | null)?.jobCode === "string"
-            ? { key: location.key, jobCode: (location.state as { jobCode: string }).jobCode }
-            : undefined}
+          entryJob={
+            typeof (location.state as { jobCode?: unknown } | null)?.jobCode ===
+            "string"
+              ? {
+                  key: location.key,
+                  jobCode: (location.state as { jobCode: string }).jobCode,
+                }
+              : undefined
+          }
           amountUnit={unit === "원" || unit === "백만원" ? unit : "천원"}
         />
       )}
@@ -960,6 +969,62 @@ function RegisteredProjectAnalysis({
   );
 }
 
+function RegisteredWorkforceRecommendations() {
+  const navigate = useNavigate();
+  const preferences = usePreferences();
+  const [unitError, setUnitError] = useState("");
+  const storedUnit = preferences.get("AMT_UNIT")?.value;
+  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
+  const [developer, setDeveloper] = useState<string>();
+  return (
+    <SharedScreenFrame screenId="UI-30" periodBar={null}>
+      {unitError && <ErrorBanner message={unitError} />}
+      <label className="sicost-field">금액 단위
+        <select aria-label="추천 금액 단위" value={amountUnit} disabled={preferences.pending}
+          onChange={(e) => { setUnitError(""); void preferences.put("AMT_UNIT", "*", e.target.value).catch((e: unknown) => setUnitError(e instanceof Error ? e.message : "금액 단위를 저장하지 못했습니다.")); }}>
+          {["원", "천원", "백만원"].map((unit) => <option key={unit}>{unit}</option>)}
+        </select>
+      </label>
+      <WorkforceRecommendationsScreen
+        renderRecommendation={(value, currentNeedSn, canAct, context) => (
+          <WorkforceRecommendationCandidates
+            key={value.rcmdId ?? "empty"}
+            rcmdId={value.rcmdId}
+            type="AI"
+            target={{
+              type: context.target.targetType,
+              id: context.target.targetId,
+              name: context.target.name,
+            }}
+            candidates={value.candidates}
+            amountUnit={amountUnit}
+            selectedNeedSn={currentNeedSn}
+            year={Number(context.serverDate.slice(0, 4))}
+            today={context.serverDate}
+            actionsEnabled={canAct}
+            onRefresh={context.onRefresh}
+            onReset={context.onReset}
+            onDeveloperDetails={setDeveloper}
+            onTargetDetails={(type, id) =>
+              navigate(
+                type === "PROJECT"
+                  ? `/UI-01?${new URLSearchParams({ projectId: id })}`
+                  : `/UI-29?${new URLSearchParams({ opportunityId: id })}`,
+              )
+            }
+          />
+        )}
+      />
+      {developer && (
+        <DeveloperDrawer
+          id={developer}
+          onClose={() => setDeveloper(undefined)}
+        />
+      )}
+    </SharedScreenFrame>
+  );
+}
+
 function RegisteredApplication() {
   const preferences = usePreferences();
   const [codesDirty, setCodesDirty] = useState(false),
@@ -1081,6 +1146,7 @@ function RegisteredApplication() {
         "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
         "UI-19": <SalesPartnerProfitScreen />,
         "UI-32": <RateRenegotiationsScreen />,
+        "UI-30": <RegisteredWorkforceRecommendations />,
         "UI-07": <RegisteredCompanyProfit screenId="UI-07" />,
         "UI-08": <RegisteredCompanyProfit screenId="UI-08" />,
         "UI-09": <RegisteredCompanyProfit screenId="UI-09" />,

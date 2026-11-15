@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
+import type {
+  WithdrawalQuery,
+  WithdrawalRow,
+} from "../pages/apiops/withdrawalsApi";
 
 const cases: {
   name: string;
@@ -1261,6 +1265,115 @@ const financialCases: typeof cases = [
     call: () => api.getUploadIssues("999999999999", "ERR", 2, 20),
   },
 ];
+const recommendationCondition = {
+  targetType: "OPPORTUNITY" as const,
+  targetId: "O-00042",
+  jobCode: "BE",
+  startMonth: "2026-11",
+  requestedGradeCode: "SR",
+  needSn: "7",
+};
+const recommendationTentative = {
+  needSn: "19",
+  expectedRevision: "choice-original",
+  targetRevision: "target-original",
+  candidateRevision: "candidate-original",
+  confirmedWarnings: [],
+};
+const withdrawalRow = {
+  assignmentId: "A-00042",
+  revision: "assignment-original",
+} as WithdrawalRow;
+const withdrawalQuery: WithdrawalQuery = {
+  year: 2025,
+  period: "SOON",
+  extension: "UNSET",
+  job: "BE",
+  page: 2,
+  size: 20,
+};
+const recommendationCases: typeof cases = [
+  {
+    name: "getWorkforceRecommendationTargets",
+    call: () => api.getWorkforceRecommendationTargets(),
+    method: "GET",
+    path: "/api/workforce-recommendations/targets",
+  },
+  {
+    name: "createWorkforceRecommendation",
+    call: () => api.createWorkforceRecommendation(recommendationCondition),
+    method: "POST",
+    path: "/api/workforce-recommendations",
+    body: recommendationCondition,
+  },
+  {
+    name: "getWorkforceRecommendationHistory",
+    call: () =>
+      api.getWorkforceRecommendationHistory({
+        targetType: "OPPORTUNITY",
+        targetId: recommendationCondition.targetId,
+        job: "BE",
+        page: 2,
+        size: 20,
+      }),
+    method: "GET",
+    path: "/api/workforce-recommendations/history?targetType=OPPORTUNITY&targetId=O-00042&job=BE&page=2&size=20",
+  },
+  {
+    name: "getWorkforceRecommendation",
+    call: () => api.getWorkforceRecommendation("42"),
+    method: "GET",
+    path: "/api/workforce-recommendations/42",
+  },
+  {
+    name: "createWorkforceRecommendationExclusion",
+    call: () =>
+      api.createWorkforceRecommendationExclusion("42", 1, {
+        reasonCode: "SCHD",
+        expectedRevision: "choice-original",
+      }),
+    method: "POST",
+    path: "/api/workforce-recommendations/42/candidates/1/exclude",
+    body: { reasonCode: "SCHD", expectedRevision: "choice-original" },
+  },
+  {
+    name: "createWorkforceRecommendationTentativeAssignment",
+    call: () =>
+      api.createWorkforceRecommendationTentativeAssignment(
+        "42",
+        1,
+        recommendationTentative,
+      ),
+    method: "POST",
+    path: "/api/workforce-recommendations/42/candidates/1/tentative-assignment",
+    body: recommendationTentative,
+  },
+  {
+    name: "getWithdrawals",
+    call: () => api.getWithdrawals(withdrawalQuery),
+    method: "GET",
+    path: "/api/withdrawals?year=2025&period=SOON&extension=UNSET&job=BE&page=2&size=20",
+  },
+  {
+    name: "saveWithdrawalExtensionPossibility",
+    call: () =>
+      api.saveWithdrawalExtensionPossibility(withdrawalRow, 2026, null),
+    method: "POST",
+    path: "/api/withdrawals/A-00042/extension-possibility",
+    body: {
+      year: 2026,
+      expectedRevision: "assignment-original",
+      extensionPossibility: null,
+    },
+  },
+  {
+    name: "createNextPositionRecommendation",
+    call: () => api.createNextPositionRecommendation(withdrawalRow, 2026),
+    method: "POST",
+    path: "/api/withdrawals/A-00042/next-positions",
+    body: { year: 2026, expectedRevision: "assignment-original" },
+  },
+];
 const settlementCases: typeof cases = [
   {
     name: "getSalesPartSettlements default",
@@ -1363,6 +1476,7 @@ const settlementCases: typeof cases = [
   },
 ];
 cases.push(
+  ...recommendationCases,
   ...settlementCases,
   ...projectCases,
   ...assignmentCases,
@@ -1371,6 +1485,30 @@ cases.push(
 );
 afterEach(() => vi.unstubAllGlobals());
 describe("승인 API 등록", () => {
+  it("getWithdrawalExport는 과거연도와 적용 필터만 보내고 page/size를 제외한다", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
+    const body = {
+      success: false,
+      meta: {},
+      code: "INTERNAL_ERROR",
+      message: "파일 생성 실패",
+      requestId: "export-one",
+    };
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(
+      api.getWithdrawalExport(withdrawalQuery),
+    ).rejects.toMatchObject({ status: 500, body });
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher.mock.calls[0][0]).toBe(
+      "/api/withdrawals/export?year=2025&period=SOON&extension=UNSET&job=BE",
+    );
+  });
   it.each(["validate", "apply"] as const)(
     "B2 %s는 문자열 ID와 재무 revision을 보존한다",
     async (operation) => {
@@ -1535,6 +1673,7 @@ describe("승인 API 등록", () => {
   });
   it.each([
     ...settlementCases,
+    ...recommendationCases,
     ...projectCases,
     ...assignmentCases,
     ...billingCases,
