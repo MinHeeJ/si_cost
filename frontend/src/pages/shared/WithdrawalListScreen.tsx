@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { WithdrawalListScreen as WithdrawalBody } from "../apiops/WithdrawalListScreen";
 export function WithdrawalListScreen() {
-  return <FollowUpScreen screenId="UI-05" />;
+  return (
+    <SharedScreenFrame screenId="UI-05">
+      <WithdrawalBody />
+    </SharedScreenFrame>
+  );
 }

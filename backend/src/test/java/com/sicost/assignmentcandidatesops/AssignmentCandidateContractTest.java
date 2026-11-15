@@ -91,8 +91,18 @@ class AssignmentCandidateContractTest {
     org.springframework.test.web.servlet.ResultActions post(String action,ObjectNode body) throws Exception {return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/assignment-candidates/101/"+action).contentType("application/json").content(body.toString()));}
     void noWrites(){verify(mapper,never()).insert(any());verify(candidates,never()).transition(any());verify(audit,never()).insert(any());}
     void state(String status){origin=new Origin(origin.id(),origin.opportunityId(),origin.projectId(),origin.developerId(),origin.jobCode(),status,origin.developerUseYn(),origin.projectStatus(),origin.projectEndDate(),origin.processedAt());}
+    @Test void confirmAuthRejectsForgedActorBeforeAssignmentCreation() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/assignment-candidates/101/confirm").contentType("application/json").content(body().put("actor","other").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/assignment-candidates/{id}/confirm",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));noWrites();
+    }
+    @Test void dropValidationRequiresRevisionAndKeepsConvertedCandidate() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/assignment-candidates/101/drop").contentType("application/json").content("{}"))
+            .andExpect(DurableOpenApi.response("POST","/api/assignment-candidates/{id}/drop",400));
+        assertThat(origin.status()).isEqualTo("CNVT");noWrites();
+    }
     @Test void publicConfirmUsesExistingCreationWithInputMonthlyAndFieldAudit() throws Exception {
-        post("confirm",body()).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap()).andExpect(jsonPath("$.data.assignmentId").value("A-0102")).andExpect(jsonPath("$.data.tentativeId").value("101")).andExpect(jsonPath("$.data.changed").value(true));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/assignment-candidates/101/confirm").contentType("application/json").content(body().toString())).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap()).andExpect(jsonPath("$.data.assignmentId").value("A-0102")).andExpect(jsonPath("$.data.tentativeId").value("101")).andExpect(jsonPath("$.data.changed").value(true));
         assertThat(origin.status()).isEqualTo("DONE");assertThat(origin.processedAt()).isNotNull();assertThat(rows.get("A-0102").price()).isEqualByComparingTo("101");assertThat(events).singleElement().satisfies(e->{assertThat(e.type()).isEqualTo("INPUT");assertThat(e.actor()).isEqualTo("admin");});assertThat(monthRows.get("A-0102")).hasSize(1);
         verify(audit).insert(argThat(e->"sourceTentId".equals(e.item())&&"101".equals(e.after())));
         verify(audit).insert(argThat(e->"assignmentId".equals(e.item())&&"A-0102".equals(e.after())));
@@ -103,7 +113,7 @@ class AssignmentCandidateContractTest {
         post("confirm",request).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false)).andExpect(jsonPath("$.data.assignmentId").value("A-0102"));noWrites();
     }
     @Test void doneWithoutLinkedAuditCannotCreateAgain() throws Exception {state("DONE");post("confirm",body()).andExpect(status().isConflict());noWrites();}
-    @Test void dropIsPublicAndCreatesNoAssignment() throws Exception {post("drop",json.createObjectNode().put("expectedRevision",revision())).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true)).andExpect(jsonPath("$.data.opportunityId").value("O-0101"));assertThat(origin.status()).isEqualTo("DROP");verify(mapper,never()).insert(any());verify(candidates,never()).confirmedAssignment(anyString());}
+    @Test void dropIsPublicAndCreatesNoAssignment() throws Exception {mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/assignment-candidates/101/drop").contentType("application/json").content(json.createObjectNode().put("expectedRevision",revision()).toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true)).andExpect(jsonPath("$.data.opportunityId").value("O-0101"));assertThat(origin.status()).isEqualTo("DROP");verify(mapper,never()).insert(any());verify(candidates,never()).confirmedAssignment(anyString());}
     @Test void latestDropReplayHasNoAuditOrTimestampChange() throws Exception {state("DROP");Origin before=origin;post("drop",json.createObjectNode().put("expectedRevision",revision())).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false));assertThat(origin).isEqualTo(before);noWrites();}
     @ParameterizedTest @ValueSource(strings={"ACT","REL","DONE"}) void dropOtherStatesAre409(String state) throws Exception {state(state);post("drop",json.createObjectNode().put("expectedRevision",revision())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_STATE"));noWrites();}
     @ParameterizedTest @ValueSource(strings={"ACT","REL","DROP"}) void confirmOtherStatesAre409(String state) throws Exception {state(state);post("confirm",body()).andExpect(status().isConflict());noWrites();}

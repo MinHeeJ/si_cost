@@ -37,6 +37,23 @@ export {
 export const getHealth = () => request<void>("/api/health");
 
 export {
+  getWorkforceRecommendationTargets,
+  getWorkforceRecommendationHistory,
+  getRecommendationHistorySnapshot as getWorkforceRecommendation,
+  requestTargetRecommendation as createWorkforceRecommendation,
+} from "../pages/workforcerecommendationsops/recommendationBrowseApi";
+export {
+  createWorkforceRecommendationExclusion,
+  createWorkforceRecommendationTentativeAssignment,
+} from "../pages/candidates/recommendationActionsApi";
+export {
+  getWithdrawals,
+  saveWithdrawalExtensionPossibility,
+  createNextPositionRecommendation,
+  downloadWithdrawals as getWithdrawalExport,
+} from "../pages/apiops/withdrawalsApi";
+
+export {
   getSalesPartSettlements,
   getSalesPartSettlement,
 } from "../pages/salespartsettlements/salesPartSettlementsApi";

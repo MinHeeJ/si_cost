@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.withdrawalsops.NextPositionMapper">
+  <select id="source" resultType="com.sicost.apiops.WithdrawalDtos$Source" useCache="false" flushCache="true">
+    SELECT a.asgn_id AS "assignmentId",d.dev_id AS "developerId",d.dev_nm AS "name",d.mng_no AS "managementNumber",
+      d.job_cd AS "developerJob",d.sub_job_cd AS "subJobCode",d.grade_cd AS "gradeCode",d.emp_type_cd AS "employeeTypeCode",
+      p.proj_id AS "projectId",p.proj_nm AS "projectName",a.job_cd AS "jobCode",a.input_end_dt AS "withdrawalDate",
+      a.ext_cnt::int AS "extensionCount",(a.early_wthdr_yn='Y') AS "earlyWithdrawal",a.ext_psbl_cd AS "extensionPossibility",
+      p.proj_stat_cd AS "projectStatus",d.use_yn AS "developerUse",d.drct_cls_cd AS "directClass",d.work_stat_cd AS "workStatus",
+      d.jncmp_dt AS "joinDate",d.retire_dt AS "retireDate",p.cust_clnt_id AS "customerId"
+    FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.asgn_id=#{assignmentId}
+  </select>
+  <select id="sourceKeys" resultType="string">
+    SELECT 'OPP:'||opp_id FROM tb_sl_opp WHERE opp_stat_cd='ING'
+    UNION SELECT 'ASGN:'||asgn_id FROM tb_pj_asgn WHERE dev_id=#{developerId}
+    UNION SELECT 'PROJECT:'||proj_id FROM tb_pj_asgn WHERE dev_id=#{developerId}
+    UNION SELECT 'PAY:'||pay_ym FROM tb_hr_mon_pay WHERE dev_id=#{developerId}
+    UNION SELECT 'OPP:'||opp_id FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='ACT'
+    ORDER BY 1
+  </select>
+  <select id="lockAssignment" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE asgn_id=#{assignmentId} FOR UPDATE</select>
+  <select id="lockOpportunities" resultType="string">SELECT opp_id FROM tb_sl_opp WHERE opp_stat_cd='ING' ORDER BY opp_id FOR UPDATE</select>
+  <select id="lockNeeds" resultType="string">SELECT n.opp_id FROM tb_sl_opp_need n JOIN tb_sl_opp o ON o.opp_id=n.opp_id WHERE o.opp_stat_cd='ING' ORDER BY n.opp_id,n.need_sn FOR UPDATE OF n</select>
+  <select id="lockDeveloper" resultType="string">SELECT dev_id FROM tb_hr_dev WHERE dev_id=#{developerId} FOR UPDATE</select>
+  <select id="nextId" resultType="string">SELECT nextval('SQ_TB_SL_RCMD_LOG')::text</select>
+  <insert id="insert">
+    INSERT INTO tb_sl_rcmd_log(rcmd_id,rank_ord,rcmd_type_cd,opp_id,need_sn,proj_id,job_cd,bgn_ym,req_grade_cd,dev_id,tot_score,score_dtl,rcmd_rsn,reg_user_id,reg_dttm)
+    VALUES(CAST(#{rcmdId} AS numeric),#{rank},#{recommendationType},#{opportunityId},CAST(#{needSn} AS numeric),#{projectId,jdbcType=VARCHAR},#{jobCode},#{startMonth},#{requestedGradeCode},#{developerId},CAST(#{totalScore} AS numeric),#{scoreDetail},#{reason},#{executedBy},#{executedAt})
+  </insert>
+</mapper>

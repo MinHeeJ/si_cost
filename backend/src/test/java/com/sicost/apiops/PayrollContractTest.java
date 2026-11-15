@@ -102,6 +102,12 @@ class PayrollContractTest {
         mvc.perform(get("/api/payroll").param("month", "2026-07").contentType("application/json").content("{\"actor\":\"forged\"}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("body"));verifyNoInteractions(mapper);
     }
+    @Test void payrollAuthRejectsForgedActorBeforeReadingSalary() throws Exception {
+        mvc.perform(get("/api/payroll").param("month","2026-07").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
+    }
     @Test void unknownSingleResourceIsNotInvented() throws Exception {
         mvc.perform(get("/api/payroll/missing")).andExpect(status().isNotFound());verifyNoInteractions(mapper);
     }

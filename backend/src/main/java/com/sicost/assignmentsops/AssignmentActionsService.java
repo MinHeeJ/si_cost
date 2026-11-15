@@ -166,8 +166,34 @@ public class AssignmentActionsService {
     private void reason(String code,boolean required) {if(code==null){if(required)throw invalid("reasonCode");}else if(!mapper().active(new CodeQuery("ASGN_CHG_RSN",code)))throw invalid("reasonCode");}
     @Transactional
     public Save change(String id,Change c) {
+        if("EXTP".equals(c.type())) {
+            ExtensionResult result=extensionPossibility(id,c);
+            return saved(id,c.year(),result.changed());
+        }
         users.currentUser();Source discovery=repository.required(id);lock(keys(discovery));writable(c.year());Source before=repository.required(id);present(before,c.year());revisions.requireExpected(c.expectedRevision(),repository.revision(id));
         Plan plan=plan(before,c);if(plan.changed())persistChange(before,c,plan);return saved(id,c.year(),plan.changed());
+    }
+    @Transactional
+    public ExtensionResult extensionPossibility(String id,Change c) {
+        users.currentUser();
+        if(!"EXTP".equals(c.type())||c.reasonCode()!=null||c.memo()!=null||c.applyDate()!=null||c.applyMonth()!=null||c.newEndDate()!=null||c.withdrawalDate()!=null||c.newUnitPrice()!=null||c.newContractMm()!=null||c.inputType()!=null)throw invalid("change");
+        if(c.extensionPossibility()!=null&&(!Set.of("H","M","L").contains(c.extensionPossibility())||!mapper().active(new CodeQuery("EXT_PSBL",c.extensionPossibility()))))throw invalid("extensionPossibility");
+        Source discovery=repository.required(id);lock(keys(discovery));mapper().lockAssignment(id);
+        Source before=repository.required(id);
+        if(!discovery.projectId().equals(before.projectId())||!discovery.developerId().equals(before.developerId()))throw conflict("STALE_WRITE","배정 원천이 변경되었습니다. 다시 조회해 주세요.");
+        ProjectInputPolicy.year(c.year(),months.cashBase(),clock);
+        if(c.year()<today().getYear()||c.year()>today().getYear()+1||!"ACT".equals(before.status())||before.endDate().isBefore(today())||"LOSE".equals(repository.project(before.projectId()).status()))throw conflict("INVALID_STATE","과거연도·철수 완료·취소·실주 배정은 연장가능성을 변경할 수 없습니다.");
+        present(before,c.year());revisions.requireExpected(c.expectedRevision(),repository.revision(id));
+        if(Objects.equals(before.extensionPossibility(),c.extensionPossibility()))return new ExtensionResult(id,before.extensionPossibility(),false,repository.revision(id),null,null);
+        LocalDate date=today().isBefore(before.startDate())?before.startDate():today();int serial=serial(id);
+        Source after=before.changed(before.endDate(),before.contractMm(),before.price(),before.inputType(),c.extensionPossibility(),before.extensionCount(),before.earlyWithdrawal(),before.status());
+        String actor=users.userId();LocalDateTime time=now();
+        repository.one(mapper().updateExtension(new Write(after,actor,time)));
+        repository.one(mapper().event(new Event(id,serial,"EXTP",date,before.extensionPossibility(),c.extensionPossibility(),null,null,null,null,"N","N",actor,time)));
+        audit.appendRecommendation(new ChangeHistoryWriter.Change("TB_PJ_ASGN",id,"UPD","EXT_PSBL_CD",before.extensionPossibility(),c.extensionPossibility(),null));
+        invalidate(before);
+        for(String key:List.of("assignments","withdrawals","workforce-forecasts","workforce-operations","sales-opportunities","workforce-recommendations"))invalidation.afterCommit(key);
+        return new ExtensionResult(id,c.extensionPossibility(),true,repository.revision(id),Integer.toString(serial),date);
     }
     private void persistChange(Source before,Change c,Plan plan) {
         ensureInput(before);String actor=users.userId();LocalDateTime time=now();List<String> protection=protection(before,plan.source());

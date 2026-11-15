@@ -55,10 +55,22 @@ class AddressContractTest {
         verify(users).userId();verify(mapper).children(sido.code(),"SGG");
     }
     @Test void pathWithoutAuthenticationRestoresCodesAndNamesInParentOrder() throws Exception {
-        mvc.perform(get("/api/areas/"+emd.code()+"/path")).andExpect(status().isOk())
+        mvc.perform(get("/api/areas/0101010000/path")).andExpect(status().isOk())
             .andExpect(jsonPath("$.data.items[0].code").value(sido.code())).andExpect(jsonPath("$.data.items[1].code").value(sgg.code()))
             .andExpect(jsonPath("$.data.items[2].code").value(emd.code())).andExpect(jsonPath("$.data.homeAddress").value("경기 성남시 분당구 정자동"));
         verify(users).userId();
+    }
+    @Test void sidosValidationRejectsPaginationBeforePersistence() throws Exception {
+        mvc.perform(get("/api/areas/sidos").param("page","0"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("page")).andExpect(jsonPath("$.requestId").isNotEmpty());
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void pathAuthRejectsForgedActorBeforePersistence() throws Exception {
+        mvc.perform(get("/api/areas/0101010000/path").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
     }
     @ParameterizedTest @ValueSource(strings={"/api/areas/sidos","/api/areas/children","/api/areas/0101010000/path"})
     void actorInjectionIsUnknownFieldBeforeAnyRead(String path) throws Exception {

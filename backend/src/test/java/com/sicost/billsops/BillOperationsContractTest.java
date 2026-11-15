@@ -123,6 +123,24 @@ class BillOperationsContractTest {
     ObjectNode command(boolean cancel) {var b=json.createObjectNode().put("year",2026).put("expectedRevision",service.revision(ID));if(cancel)b.put("reason"," 취소 사유 ");return b;}
     ResultActions mutate(String action,ObjectNode body) throws Exception {return mvc.perform(post("/api/bills/"+ID+"/"+action).contentType("application/json").content(body.toString()));}
     void noWrites() {verify(mapper,never()).insert(any());verify(mapper,never()).cancel(any());verifyNoInteractions(history,invalidation);}
+    @Test void estimateAuthRejectsForgedActorBeforeReadingMoney() throws Exception {
+        mvc.perform(get("/api/bills/estimate").param("projectId","P").param("month","2026-08").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/estimate",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,monthly,users);noWrites();
+    }
+    @Test void selectionAuthRejectsForgedActorWithoutCachingASelection() throws Exception {
+        mvc.perform(get("/api/bills/selection").param("year","2026").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/selection",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,monthly,users);noWrites();
+    }
+    @Test void summaryAuthRejectsForgedActorWithoutReadingReceipts() throws Exception {
+        mvc.perform(get("/api/bills/summary").param("year","2026").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/bills/summary",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,monthly,users);noWrites();
+    }
     @Test void publicEstimateUsesActualMonthlyPreviewAndExactStringsWithoutWrites() throws Exception {
         mvc.perform(get("/api/bills/estimate").param("projectId","P").param("month","2026-08"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.supplyAmount").value("1001"))

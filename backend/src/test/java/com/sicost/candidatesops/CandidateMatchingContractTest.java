@@ -68,6 +68,18 @@ class CandidateMatchingContractTest {
             .andExpect(jsonPath("$.data.items[0].startMonth").value("2027-01"));
         verify(users).currentUser(); verifyNoInteractions(monthly);
     }
+    @Test void positionsAuthRejectsForgedActorBeforeReadingCandidate() throws Exception {
+        mvc.perform(get("/api/candidates/C-1/positions").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/candidates/{id}/positions",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,workforce,monthly,users);
+    }
+    @Test void shortagesAuthRejectsForgedActorBeforeReadingWorkforce() throws Exception {
+        mvc.perform(get("/api/candidates/shortages").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/candidates/shortages",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));
+        verifyNoInteractions(mapper,workforce,monthly,users);
+    }
     @Test void shortageUsesNextSixMonthsNoUnfilledAndMonthEndCounts() throws Exception {
         mvc.perform(get("/api/candidates/shortages")).andExpect(status().isOk())
             .andExpect(jsonPath("$.data.from").value("2027-01")).andExpect(jsonPath("$.data.months").value(6))

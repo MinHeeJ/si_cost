@@ -55,6 +55,18 @@ class StaffingReadContractTest {
         when(mapper.candidates(anyString())).thenReturn(List.of(new CandidateSource("2","O-2","P-2","프로젝트","D-2","개발자","DEV",day,day,BigDecimal.ONE,null)));
         mvc.perform(get("/api/assignment-candidates?page=2&size=20")).andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1)).andExpect(jsonPath("$.data.items").isEmpty());
     }
+    @Test void candidateAuthRejectsActorBeforeReadingNeedOrTentativeSource() throws Exception {
+        mvc.perform(get("/api/assignment-candidates").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,revisions,users);
+    }
+    @Test void candidateValidationRejectsInvalidSizeWithoutReadingOrWriting() throws Exception {
+        mvc.perform(get("/api/assignment-candidates").param("size","30"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("size"))
+            .andExpect(jsonPath("$.requestId").isNotEmpty());
+        verifyNoInteractions(mapper,revisions);
+    }
     @Test void comparisonProratesContractAndCountsWholeFilteredTotals()throws Exception{
         when(comparisons.projects(any())).thenReturn(List.of(new StaffingComparisonDtos.Project("P-1","프로젝트",LocalDate.of(2025,7,1),LocalDate.of(2026,6,30),"ING","MO")));
         when(comparisons.plans("P-1")).thenReturn(List.of(new StaffingComparisonDtos.Plan("P-1","DEV",new BigDecimal("12.00"))));

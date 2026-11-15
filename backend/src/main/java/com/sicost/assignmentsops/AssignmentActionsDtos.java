@@ -19,7 +19,9 @@ public final class AssignmentActionsDtos {
     public record BulkItem(String id,String outcome,String revision,ApiError error,List<String> protectedMonths) {}
     public record BulkResult(int requested,int applied,int noChange,int rejected,List<BulkItem> items) {}
     public record Create(int year,String projectId,String developerId,String jobCode,LocalDate startDate,LocalDate endDate,
-        BigDecimal contractMm,String billingUnitPrice,String inputType,String contractDeveloperId) {}
+        BigDecimal contractMm,String billingUnitPrice,String inputType,String contractDeveloperId,com.sicost.common.assignments.RecommendationReference recommendationRef) {
+        public Create(int year,String projectId,String developerId,String jobCode,LocalDate startDate,LocalDate endDate,BigDecimal contractMm,String billingUnitPrice,String inputType,String contractDeveloperId){this(year,projectId,developerId,jobCode,startDate,endDate,contractMm,billingUnitPrice,inputType,contractDeveloperId,null);}
+    }
     public record Change(int year,String expectedRevision,String type,LocalDate applyDate,YearMonth applyMonth,
         LocalDate newEndDate,LocalDate withdrawalDate,BigDecimal newUnitPrice,BigDecimal newContractMm,
         String extensionPossibility,String inputType,String reasonCode,String memo) {}
@@ -36,6 +38,8 @@ public final class AssignmentActionsDtos {
         LocalDate startDate,LocalDate endDate,String contractMm,String billingUnitPrice,String inputType,String contractDeveloperId,String extensionPossibility,
         int extensionCount,String earlyWithdrawal,String assignmentStatus,String yearMm,String revision,List<Warning> warnings,List<String> protectedMonths) {}
     public record Save(Assignment assignment,boolean changed,List<Warning> warnings,List<String> protectedMonths) {}
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)
+    public record ExtensionResult(String assignmentId,String extensionPossibility,boolean changed,String revision,String historySerial,LocalDate appliedDate) {}
     public record Project(String id,String name,String status,String contractType,LocalDate startDate,LocalDate endDate) {}
     public record Developer(String id,String name,String managementNo,String employeeType,String directClass,String partId,String useYn,LocalDate joinDate,LocalDate retireDate) {}
     public record Labels(String projectName,String developerName,String managementNo,String jobName) {}

@@ -142,7 +142,11 @@ export function AssignmentCreateForm({
       ...old,
       [key]: value,
       ...(["projectId", "developerId", "inputType"].includes(key)
-        ? { contractDeveloperId: null, billingUnitPrice: "" }
+        ? {
+            contractDeveloperId: null,
+            billingUnitPrice: "",
+            recommendationRef: null,
+          }
         : {}),
     }));
   }

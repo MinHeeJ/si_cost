@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.workforcerecommendations.WorkforceRecommendationMapper">
+  <select id="target" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Target">
+    <choose><when test="targetType == 'OPPORTUNITY'">
+      SELECT o.opp_id AS "targetId",o.ctrt_type_cd AS "contractType",o.cust_clnt_id AS "customerId",c.induty_cd AS industry,
+        o.work_plc_addr AS address,o.rmrk AS feature,NULL::date AS "startDate",NULL::date AS "endDate",o.opp_stat_cd AS status
+      FROM tb_sl_opp o LEFT JOIN tb_bs_clnt c ON c.clnt_id=o.cust_clnt_id WHERE o.opp_id=#{targetId}
+    </when><otherwise>
+      SELECT p.proj_id AS "targetId",p.ctrt_type_cd AS "contractType",p.cust_clnt_id AS "customerId",c.induty_cd AS industry,
+        p.work_plc_addr AS address,p.feature_cn AS feature,p.ctrt_bgn_dt AS "startDate",p.ctrt_end_dt AS "endDate",p.proj_stat_cd AS status
+      FROM tb_pj_proj p LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id WHERE p.proj_id=#{targetId}
+    </otherwise></choose>
+  </select>
+  <select id="needExists" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sl_opp_need WHERE opp_id=#{targetId} AND need_sn=CAST(#{needSn} AS numeric))</select>
+  <sql id="personColumns">dev_id AS "developerId",dev_nm AS name,mng_no AS "managementNumber",job_cd AS "jobCode",sub_job_cd AS "subJobCode",grade_cd AS "gradeCode",emp_type_cd AS "employeeTypeCode",use_yn AS "useYn",drct_cls_cd AS "directClass",work_stat_cd AS "workStatus",jncmp_dt AS "hireDate",retire_dt AS "retireDate",home_area_cd AS "areaCode",home_addr AS address</sql>
+  <select id="people" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Person">SELECT <include refid="personColumns"/> FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="person" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Person">SELECT <include refid="personColumns"/> FROM tb_hr_dev WHERE dev_id=#{developerId}</select>
+  <select id="codes" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Code">
+    SELECT c.code_grp_id AS "groupId",c.code,c.code_nm AS name,c.sort_ord::int AS "order",c.add_val1 AS related FROM tb_sy_code c
+    JOIN tb_sy_code_grp g ON g.code_grp_id=c.code_grp_id WHERE c.use_yn='Y' AND c.del_yn='N' AND g.use_yn='Y' AND c.code_grp_id IN ('JOB','SKILL','GRADE') ORDER BY c.code_grp_id,c.sort_ord,c.code
+  </select>
+  <select id="standards" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Standard">
+    SELECT DISTINCT ON (std_cd) std_cd AS code,std_val AS value FROM tb_sy_oper_std WHERE std_cd LIKE 'AI_SCORE_%' AND aply_bgn_ym &lt;= #{month} ORDER BY std_cd,aply_bgn_ym DESC
+  </select>
+  <select id="skills" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Skill">SELECT dev_id AS "developerId",skill_nm AS name FROM tb_hr_dev_skill ORDER BY dev_id,sort_ord,skill_nm</select>
+  <select id="leaves" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Leave">SELECT dev_id AS "developerId",bgn_dt AS "startDate",end_dt AS "endDate" FROM tb_hr_dev_stat WHERE work_stat_cd='LEAVE' ORDER BY dev_id,stat_sn</select>
+  <select id="areas" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Area">SELECT area_cd AS code,sido_nm AS name,sido_full_nm AS "fullName" FROM tb_sy_adm_area WHERE use_yn='Y' ORDER BY area_cd</select>
+  <select id="assignments" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Assignment">
+    SELECT a.asgn_id AS "assignmentId",a.dev_id AS "developerId",p.cust_clnt_id AS "customerId",c.induty_cd AS industry,p.proj_stat_cd AS "projectStatus",p.ctrt_type_cd AS "contractType",
+      EXISTS(SELECT 1 FROM tb_pj_asgn_hist h WHERE h.asgn_id=a.asgn_id AND h.asgn_chg_type_cd='EARLY' AND h.asgn_chg_rsn_cd='HR' AND h.crct_yn='N') AS "hrEarly"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id LEFT JOIN tb_bs_clnt c ON c.clnt_id=p.cust_clnt_id WHERE a.asgn_stat_cd='ACT' ORDER BY a.asgn_id
+  </select>
+  <select id="tentatives" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Tentative">
+    SELECT t.dev_id AS "developerId",t.tent_id::text AS "tentativeAssignmentId",t.opp_id AS "opportunityId",o.opp_nm AS "opportunityName",t.need_sn::text AS "needSn",substring(t.bgn_ym,1,4)||'-'||substring(t.bgn_ym,5,2) AS "startMonth"
+    FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id WHERE t.tent_stat_cd='ACT' ORDER BY t.tent_id
+  </select>
+  <select id="exclusions" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Excluded">
+    SELECT DISTINCT r.dev_id AS "developerId" FROM tb_sl_rcmd_log r
+    WHERE r.rcmd_type_cd='AI' AND r.user_act_cd='EXCL' AND r.job_cd=#{jobCode}
+    <choose><when test="targetType == 'OPPORTUNITY'">AND r.opp_id=#{targetId}</when><otherwise>AND r.proj_id=#{targetId}</otherwise></choose>
+      AND NOT EXISTS(SELECT 1 FROM tb_sy_chg_hist h WHERE h.trgt_tbl_nm=<choose><when test="targetType == 'OPPORTUNITY'">'TB_SL_OPP'</when><otherwise>'TB_PJ_PROJ'</otherwise></choose>
+        AND h.trgt_key=#{targetId} AND (h.chg_type_cd='RESUME' OR (h.chg_item_nm IN ('OPP_STAT_CD','PROJ_STAT_CD') AND h.bfr_val='STOP' AND h.aft_val='ING')) AND h.reg_dttm&gt;r.act_dttm)
+  </select>
+  <select id="price" resultType="java.math.BigDecimal">SELECT mon_uprc FROM tb_hr_dev_prc WHERE dev_id=#{developerId} AND aply_bgn_ym &lt;= #{month} AND (aply_end_ym IS NULL OR aply_end_ym &gt;= #{month}) ORDER BY aply_bgn_ym DESC LIMIT 1</select>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    SELECT COALESCE(jsonb_agg(s ORDER BY s::text)::text,'[]') FROM (
+      SELECT jsonb_build_array('DEV',to_jsonb(t)) s FROM tb_hr_dev t UNION ALL
+      SELECT jsonb_build_array('SKILL',to_jsonb(t)) FROM tb_hr_dev_skill t UNION ALL
+      SELECT jsonb_build_array('PRC',to_jsonb(t)) FROM tb_hr_dev_prc t UNION ALL
+      SELECT jsonb_build_array('STAT',to_jsonb(t)) FROM tb_hr_dev_stat t UNION ALL
+      SELECT jsonb_build_array('PAY',to_jsonb(t)) FROM tb_hr_mon_pay t UNION ALL
+      SELECT jsonb_build_array('ASGN',to_jsonb(t)) FROM tb_pj_asgn t UNION ALL
+      SELECT jsonb_build_array('MON',to_jsonb(t)) FROM tb_pj_asgn_mon t UNION ALL
+      SELECT jsonb_build_array('HIST',to_jsonb(t)) FROM tb_pj_asgn_hist t UNION ALL
+      SELECT jsonb_build_array('PROJ',to_jsonb(t)) FROM tb_pj_proj t UNION ALL
+      SELECT jsonb_build_array('OPP',to_jsonb(t)) FROM tb_sl_opp t UNION ALL
+      SELECT jsonb_build_array('NEED',to_jsonb(t)) FROM tb_sl_opp_need t UNION ALL
+      SELECT jsonb_build_array('TENT',to_jsonb(t)) FROM tb_sl_tent_asgn t UNION ALL
+      SELECT jsonb_build_array('STD',to_jsonb(t)) FROM tb_sy_oper_std t UNION ALL
+      SELECT jsonb_build_array('CODE',to_jsonb(t)) FROM tb_sy_code t UNION ALL
+      SELECT jsonb_build_array('GROUP',to_jsonb(t)) FROM tb_sy_code_grp t UNION ALL
+      SELECT jsonb_build_array('COST',to_jsonb(t)) FROM tb_co_mon_cost t UNION ALL
+      SELECT jsonb_build_array('CLOSE',to_jsonb(t)) FROM tb_cl_close t UNION ALL
+      SELECT jsonb_build_array('AREA',to_jsonb(t)) FROM tb_sy_adm_area t UNION ALL
+      SELECT jsonb_build_array('CUSTOMER',to_jsonb(t)) FROM tb_bs_clnt t UNION ALL
+      SELECT jsonb_build_array('SOURCEAUDIT',to_jsonb(t)) FROM tb_sy_chg_hist t WHERE trgt_tbl_nm &lt;&gt; 'TB_SL_RCMD_LOG'
+    ) source
+  </select>
+  <select id="nextId" resultType="string">SELECT nextval('SQ_TB_SL_RCMD_LOG')::text</select>
+  <insert id="insert">
+    INSERT INTO tb_sl_rcmd_log(rcmd_id,rank_ord,rcmd_type_cd,opp_id,need_sn,proj_id,job_cd,bgn_ym,req_grade_cd,dev_id,tot_score,score_dtl,rcmd_rsn,user_act_cd,rcmd_excl_cd,act_user_id,act_dttm,reg_user_id,reg_dttm)
+    VALUES(CAST(#{rcmdId} AS numeric),#{rank},'AI',#{opportunityId},CAST(#{needSn} AS numeric),#{projectId},#{jobCode},#{startMonth},#{requestedGradeCode},#{developerId},CAST(#{totalScore} AS numeric),#{scoreDetail},#{reason},NULL,NULL,NULL,NULL,#{executedBy},#{executedAt})
+  </insert>
+  <select id="rows" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$Row" useCache="false" flushCache="true">
+    SELECT rcmd_id::text AS "rcmdId",rank_ord::int AS rank,rcmd_type_cd AS "recommendationType",opp_id AS "opportunityId",need_sn::text AS "needSn",proj_id AS "projectId",job_cd AS "jobCode",bgn_ym AS "startMonth",req_grade_cd AS "requestedGradeCode",dev_id AS "developerId",tot_score::text AS "totalScore",score_dtl AS "scoreDetail",rcmd_rsn AS reason,user_act_cd AS "actionCode",rcmd_excl_cd AS "exclusionReasonCode",act_user_id AS "actedBy",act_dttm AS "actedAt",reg_user_id AS "executedBy",reg_dttm AS "executedAt"
+    FROM tb_sl_rcmd_log WHERE rcmd_id=CAST(#{rcmdId} AS numeric) ORDER BY rank_ord
+  </select>
+  <select id="metadata" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$AuditValue">SELECT chg_item_nm AS item,aft_val AS value FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SL_RCMD_LOG' AND trgt_key=#{key} ORDER BY hist_id</select>
+  <select id="nextCard" resultType="com.sicost.workforcerecommendations.WorkforceRecommendationDtos$NextCard">
+    SELECT o.opp_nm AS "opportunityName",o.sales_step_cd AS "salesStepCode",o.cust_clnt_id AS "customerId",c.clnt_nm AS "customerName",
+      EXISTS(SELECT 1 FROM tb_sl_tent_asgn t WHERE t.opp_id=o.opp_id AND t.need_sn=CAST(#{needSn} AS numeric) AND t.dev_id=#{developerId} AND t.tent_stat_cd='ACT') AS "alreadyTentativelyAssigned"
+    FROM tb_sl_opp o LEFT JOIN tb_bs_clnt c ON c.clnt_id=o.cust_clnt_id WHERE o.opp_id=#{opportunityId}
+  </select>
+</mapper>

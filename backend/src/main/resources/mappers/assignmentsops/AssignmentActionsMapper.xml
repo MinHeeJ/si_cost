@@ -11,7 +11,7 @@
     SELECT p.proj_nm AS "projectName",d.dev_nm AS "developerName",d.mng_no AS "managementNo",COALESCE(c.code_nm,a.job_cd) AS "jobName"
     FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id JOIN tb_hr_dev d ON d.dev_id=a.dev_id LEFT JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=a.job_cd WHERE a.asgn_id=#{id}
   </select>
-  <select id="snapshot" resultType="string">
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
     SELECT json_build_object('assignment',(SELECT row_to_json(a) FROM tb_pj_asgn a WHERE asgn_id=#{id}),
       'history',COALESCE((SELECT json_agg(row_to_json(h) ORDER BY hist_sn) FROM tb_pj_asgn_hist h WHERE asgn_id=#{id}),'[]'::json),
       'months',COALESCE((SELECT json_agg(row_to_json(m) ORDER BY input_ym) FROM tb_pj_asgn_mon m WHERE asgn_id=#{id}),'[]'::json))::text
@@ -56,4 +56,6 @@
   <update id="update">UPDATE tb_pj_asgn SET input_end_dt=#{source.endDate},ctrt_mm=#{source.contractMm},bill_uprc=#{source.price,jdbcType=NUMERIC},input_type_cd=#{source.inputType},ext_psbl_cd=#{source.extensionPossibility,jdbcType=VARCHAR},ext_cnt=#{source.extensionCount},early_wthdr_yn=#{source.earlyWithdrawal},asgn_stat_cd=#{source.status},mod_user_id=#{actor},mod_dttm=#{now} WHERE asgn_id=#{source.id}</update>
   <insert id="event">INSERT INTO tb_pj_asgn_hist(asgn_id,hist_sn,asgn_chg_type_cd,aply_dt,bfr_val,aft_val,asgn_chg_rsn_cd,chg_memo,new_uprc,new_ctrt_mm,rtro_yn,close_cross_yn,crct_yn,crct_trgt_sn,reg_user_id,reg_dttm)
     VALUES(#{id},#{serial},#{type},#{date},#{before,jdbcType=VARCHAR},#{after,jdbcType=VARCHAR},#{reason,jdbcType=VARCHAR},#{memo,jdbcType=VARCHAR},#{price,jdbcType=NUMERIC},#{mm,jdbcType=NUMERIC},#{retroactive},#{closeCross},'N',NULL,#{actor},#{now})</insert>
+  <select id="lockAssignment" resultType="string">SELECT asgn_id FROM tb_pj_asgn WHERE asgn_id=#{id} FOR UPDATE</select>
+  <update id="updateExtension">UPDATE tb_pj_asgn SET ext_psbl_cd=#{source.extensionPossibility,jdbcType=VARCHAR},mod_user_id=#{actor},mod_dttm=#{now} WHERE asgn_id=#{source.id} AND asgn_stat_cd='ACT'</update>
 </mapper>

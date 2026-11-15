@@ -1,0 +1,82 @@
+.recommendation-candidates {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.recommendation-card {
+  padding: 20px 24px;
+  border: 1px solid var(--divider, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  min-width: 0;
+}
+.recommendation-card header,
+.recommendation-card footer,
+.recommendation-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.recommendation-card p {
+  overflow-wrap: anywhere;
+}
+.recommendation-rank {
+  color: var(--text-sub, #4b5563);
+  font-size: 13px;
+}
+.recommendation-total {
+  margin-left: auto;
+  color: var(--primary, #1d4ed8);
+}
+.recommendation-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary-text, #1d4ed8);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+}
+.recommendation-scores {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.recommendation-score {
+  display: grid;
+  grid-template-columns: 70px minmax(60px, 1fr) minmax(70px, auto);
+  align-items: center;
+  gap: 8px;
+}
+.recommendation-score progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--primary, #1d4ed8);
+}
+.recommendation-score small {
+  grid-column: 2 / -1;
+  color: var(--text-sub, #4b5563);
+  overflow-wrap: anywhere;
+}
+.recommendation-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-sub, #4b5563);
+}
+.recommendation-empty h2 {
+  color: var(--text, #111827);
+}
+@media (max-width: 600px) {
+  .recommendation-card {
+    padding: 16px;
+  }
+  .recommendation-score {
+    grid-template-columns: 55px minmax(40px, 1fr) auto;
+  }
+}

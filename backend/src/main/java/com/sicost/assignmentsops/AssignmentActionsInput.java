@@ -35,16 +35,26 @@ public final class AssignmentActionsInput {
         String value=string(node,"extensionPossibility",false);return value==null?null:choice(value,Set.of("H","M","L"),"extensionPossibility");
     }
     public static Create create(JsonNode n) {
-        object(n,Set.of("year","projectId","developerId","jobCode","startDate","endDate","contractMm","billingUnitPrice","inputType","contractDeveloperId"));
+        object(n,Set.of("year","projectId","developerId","jobCode","startDate","endDate","contractMm","billingUnitPrice","inputType","contractDeveloperId","recommendationRef"));
         String kind=n.has("inputType")?choice(string(n,"inputType",true),Set.of("NEW","ADD","SUB","FREE"),"inputType"):"NEW";
         String contract=optionalText(string(n,"contractDeveloperId",false),20,"contractDeveloperId");
         if("SUB".equals(kind)&&contract==null||!"SUB".equals(kind)&&contract!=null)throw invalid("contractDeveloperId");
         var start=date(string(n,"startDate",true),"startDate");var end=date(string(n,"endDate",true),"endDate");dateRange(start,end);
         return new Create(year(n),text(string(n,"projectId",true),20,"projectId"),text(string(n,"developerId",true),20,"developerId"),text(string(n,"jobCode",true),10,"jobCode"),
-            start,end,AssignmentInputPolicy.contractMm(string(n,"contractMm",false),true),string(n,"billingUnitPrice",false),kind,contract);
+            start,end,AssignmentInputPolicy.contractMm(string(n,"contractMm",false),true),string(n,"billingUnitPrice",false),kind,contract,recommendationRef(n));
+    }
+    private static com.sicost.common.assignments.RecommendationReference recommendationRef(JsonNode n){
+        JsonNode ref=n.get("recommendationRef");if(ref==null||ref.isNull())return null;
+        object(ref,Set.of("rcmdId","rank"));String id=string(ref,"rcmdId",true).strip();
+        if(!id.matches("[1-9][0-9]{0,11}")||!ref.path("rank").isIntegralNumber()||!ref.path("rank").canConvertToInt()||ref.path("rank").intValue()<1||ref.path("rank").intValue()>5)throw invalid("recommendationRef");
+        return new com.sicost.common.assignments.RecommendationReference(id,ref.path("rank").intValue());
     }
     public static Change change(JsonNode n) {
         if(n==null||!n.isObject())throw invalid("change");String type=choice(string(n,"type",true),Set.of("EXT","EARLY","UPRC","RATE","EXTP","KIND"),"type");
+        if("EXTP".equals(type)) {
+            object(n,Set.of("year","expectedRevision","type","extensionPossibility"));
+            return new Change(year(n),expectedRevision(string(n,"expectedRevision",true)),type,null,null,null,null,null,null,possibility(n),null,null,null);
+        }
         Set<String> allowed=new HashSet<>(Set.of("year","expectedRevision","type","reasonCode","memo"));
         allowed.addAll(switch(type){case "EXT"->Set.of("newEndDate");case "EARLY"->Set.of("withdrawalDate");case "UPRC"->Set.of("applyMonth","newUnitPrice");case "RATE"->Set.of("applyMonth","newContractMm");case "EXTP"->Set.of("applyDate","extensionPossibility");default->Set.of("applyDate","inputType");});object(n,allowed);
         return new Change(year(n),expectedRevision(string(n,"expectedRevision",true)),type,

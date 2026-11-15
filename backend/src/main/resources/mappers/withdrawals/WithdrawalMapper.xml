@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.apiops.WithdrawalMapper">
+  <select id="sources" resultType="com.sicost.apiops.WithdrawalDtos$Source" useCache="false">
+    SELECT a.asgn_id AS "assignmentId",d.dev_id AS "developerId",d.dev_nm AS "name",d.mng_no AS "managementNumber",
+      d.job_cd AS "developerJob",d.sub_job_cd AS "subJobCode",d.grade_cd AS "gradeCode",d.emp_type_cd AS "employeeTypeCode",
+      p.proj_id AS "projectId",p.proj_nm AS "projectName",a.job_cd AS "jobCode",a.input_end_dt AS "withdrawalDate",
+      a.ext_cnt::int AS "extensionCount",(a.early_wthdr_yn='Y') AS "earlyWithdrawal",a.ext_psbl_cd AS "extensionPossibility",
+      p.proj_stat_cd AS "projectStatus",d.use_yn AS "developerUse",d.drct_cls_cd AS "directClass",d.work_stat_cd AS "workStatus",
+      d.jncmp_dt AS "joinDate",d.retire_dt AS "retireDate",p.cust_clnt_id AS "customerId"
+    FROM tb_pj_asgn a JOIN tb_hr_dev d ON d.dev_id=a.dev_id JOIN tb_pj_proj p ON p.proj_id=a.proj_id
+    WHERE a.asgn_stat_cd!='CNCL' AND ((a.input_end_dt &gt;= make_date(#{year},1,1) AND a.input_end_dt &lt; make_date(#{year}+1,1,1))
+      OR (a.input_end_dt &gt;= #{today} AND a.input_end_dt &lt;= #{soonEnd}))
+    ORDER BY a.input_end_dt,d.mng_no,a.asgn_id
+  </select>
+  <select id="activeJob" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_code WHERE code_grp_id='JOB' AND code=#{job} AND use_yn='Y' AND del_yn='N')
+  </select>
+  <select id="nextAssignments" resultType="com.sicost.apiops.WithdrawalDtos$NextAssignment" useCache="false">
+    SELECT * FROM (
+      SELECT 'CONFIRMED' AS "kind",a.asgn_id AS "assignmentId",NULL::text AS "tentativeAssignmentId",
+        a.proj_id AS "projectId",NULL::text AS "opportunityId",p.proj_nm AS "name",a.input_bgn_dt AS "startDate",
+        NULL::text AS "startMonth"
+      FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id
+      WHERE a.dev_id=#{developerId} AND a.asgn_id!=#{assignmentId} AND a.asgn_stat_cd='ACT' AND p.proj_stat_cd!='LOSE' AND a.input_bgn_dt &gt; #{withdrawalDate}
+      UNION ALL
+      SELECT CASE WHEN t.tent_stat_cd='CNVT' THEN 'CANDIDATE' ELSE 'TENTATIVE' END,NULL::text,t.tent_id::text,
+        o.proj_id,o.opp_id,CASE WHEN t.tent_stat_cd='CNVT' THEN p.proj_nm ELSE o.opp_nm END,
+        CASE WHEN t.tent_stat_cd='CNVT' THEN p.ctrt_bgn_dt ELSE NULL::date END,
+        to_char(to_date(t.bgn_ym,'YYYYMM'),'YYYY-MM')
+      FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id LEFT JOIN tb_pj_proj p ON p.proj_id=o.proj_id
+      WHERE t.dev_id=#{developerId} AND ((t.tent_stat_cd='ACT' AND o.opp_stat_cd='ING') OR t.tent_stat_cd='CNVT')
+
+    ) n ORDER BY CASE "kind" WHEN 'CONFIRMED' THEN 0 WHEN 'CANDIDATE' THEN 1 ELSE 2 END,
+      COALESCE("startDate",to_date("startMonth",'YYYY-MM')),"assignmentId" NULLS LAST,"tentativeAssignmentId" NULLS LAST
+  </select>
+  <select id="positions" resultType="com.sicost.apiops.WithdrawalDtos$Position" useCache="false">
+    SELECT n.opp_id AS "opportunityId",n.need_sn::int AS "needSn",n.job_cd AS "jobCode",n.grade_cd AS "gradeCode",
+      to_char(to_date(n.bgn_ym,'YYYYMM'),'YYYY-MM') AS "startMonth",n.prd_mcnt::int AS "months",
+      (n.need_cnt-(SELECT count(*) FROM tb_sl_tent_asgn t WHERE t.opp_id=n.opp_id AND t.need_sn=n.need_sn
+        AND t.tent_stat_cd='ACT' AND t.dev_id!=#{developerId}))::int AS "remainingCount",
+      o.ctrt_type_cd AS "contractType",j.add_val1 AS "relatedJobs",o.cust_clnt_id AS "customerId",o.win_prbl_rt AS "probability"
+    FROM tb_sl_opp_need n JOIN tb_sl_opp o ON o.opp_id=n.opp_id
+      JOIN tb_sy_code j ON j.code_grp_id='JOB' AND j.code=n.job_cd AND j.use_yn='Y' AND j.del_yn='N'
+    WHERE o.opp_stat_cd='ING' ORDER BY n.opp_id,n.need_sn
+  </select>
+  <select id="leaves" resultType="com.sicost.apiops.WithdrawalDtos$Leave" useCache="false">
+    SELECT dev_id AS "developerId",bgn_dt AS "startDate",end_dt AS "endDate" FROM tb_hr_dev_stat
+    WHERE dev_id=#{developerId} AND work_stat_cd='LEAVE' ORDER BY bgn_dt,stat_sn
+  </select>
+</mapper>

@@ -40,6 +40,9 @@ import * as progress from "../pages/progress/projectProgressApi";
 import * as issues from "../pages/issues/projectIssuesApi";
 import * as settlements from "../pages/salespartsettlements/salesPartSettlementsApi";
 import * as renegotiations from "../pages/apiops/rateRenegotiationsApi";
+import * as recommendations from "../pages/workforcerecommendationsops/recommendationBrowseApi";
+import * as recommendationActions from "../pages/candidates/recommendationActionsApi";
+import * as withdrawals from "../pages/apiops/withdrawalsApi";
 import { financialEditorFixture } from "../pages/financialitems/financialFixtures";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
 
@@ -56,6 +59,15 @@ vi.mock("../pages/corporatetaxesops/corporateTaxApi", async (original) => ({
   createCorporateTaxDefaults: vi.fn(),
 }));
 vi.mock("../pages/clients/clientsApi");
+vi.mock("../pages/workforcerecommendationsops/recommendationBrowseApi");
+vi.mock("../pages/candidates/recommendationActionsApi", async (original) => ({
+  ...(await original<
+    typeof import("../pages/candidates/recommendationActionsApi")
+  >()),
+  createWorkforceRecommendationExclusion: vi.fn(),
+  createWorkforceRecommendationTentativeAssignment: vi.fn(),
+}));
+vi.mock("../pages/apiops/withdrawalsApi");
 vi.mock("../pages/salespartsettlements/salesPartSettlementsApi");
 vi.mock("../pages/apiops/rateRenegotiationsApi", async (original) => ({
   ...(await original<typeof import("../pages/apiops/rateRenegotiationsApi")>()),
@@ -195,6 +207,98 @@ const menus: shared.MenuNode[] = [
   },
 ];
 let preferences: prefs.Preference[];
+const recommendationTarget: recommendations.RecommendationTarget = {
+  targetType: "OPPORTUNITY",
+  targetId: "O-0042",
+  name: "연결 검증 기회",
+  contractTypeCode: "MO",
+  projectIdAfterWin: null,
+  contractStartDate: null,
+  contractEndDate: null,
+  needs: ["7", "19"].map((needSn) => ({
+    needSn,
+    jobCode: "BE",
+    gradeCode: "SR",
+    needCount: 2,
+    startMonth: "2026-11",
+    periodMonths: 3,
+    monthlyMm: "1.00",
+    activeCount: 0,
+    remainingCount: 2,
+    revision: `need-${needSn}`,
+  })),
+  defaults: {
+    jobCode: "BE",
+    startMonth: "2026-11",
+    requestedGradeCode: "SR",
+    needSn: "7",
+  },
+  revision: "target-original",
+};
+const recommendationResult: recommendations.RecommendationSnapshot = {
+  rcmdId: "42",
+  recommendationType: "AI",
+  sourceAssignmentId: null,
+  executedAt: "2026-11-10 09:00:00",
+  executedBy: "admin",
+  appliedCondition: {
+    targetType: "OPPORTUNITY",
+    targetId: recommendationTarget.targetId,
+    jobCode: "BE",
+    startMonth: "2026-11",
+    requestedGradeCode: "SR",
+    needSn: "7",
+  },
+  candidates: [
+    {
+      rank: 1,
+      developer: {
+        developerId: "D-0042",
+        detailId: "D-0042",
+        name: "연결 검증 인력",
+        managementNumber: "00042",
+        jobCode: "BE",
+        subJobCode: null,
+        gradeCode: "SR",
+        employeeTypeCode: "FT",
+      },
+      opportunityId: recommendationTarget.targetId,
+      needSn: "7",
+      jobCode: "BE",
+      startMonth: "2026-11",
+      requestedGradeCode: "SR",
+      totalScore: "87.5",
+      scoreItems: [
+        {
+          itemCode: "JOB",
+          baseScore: "100",
+          weight: "20",
+          score: "20",
+          basis: "직무 일치",
+        },
+      ],
+      scoreDetail: { v: 1 },
+      reason: "직무가 일치합니다.",
+      otherTentativeAssignments: [],
+      nextPosition: null,
+      revision: "choice-original",
+      targetRevision: "target-original",
+      candidateRevision: "candidate-original",
+      selection: {
+        actionCode: null,
+        exclusionReasonCode: null,
+        actedBy: null,
+        actedAt: null,
+        assignmentId: null,
+        tentativeAssignmentId: null,
+        finalOpportunityId: null,
+        finalNeedSn: null,
+      },
+    },
+  ],
+  message: "추천했습니다.",
+  revision: "round-original",
+};
 const group: codes.CodeGroup = {
   groupId: "EDUCATION",
   name: "교육",
@@ -297,6 +401,58 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(
+    recommendations.getWorkforceRecommendationTargets,
+  ).mockResolvedValue({
+    items: [recommendationTarget],
+    firstTargetId: recommendationTarget.targetId,
+    serverDate: context.currentDate,
+    currentMonth: context.currentMonth,
+    baseMonth: context.cashBaseMonth,
+    revision: "targets-original",
+  });
+  vi.mocked(recommendations.requestTargetRecommendation).mockResolvedValue(
+    recommendationResult,
+  );
+  vi.mocked(recommendations.getRecommendationHistorySnapshot).mockResolvedValue(
+    recommendationResult,
+  );
+  vi.mocked(
+    recommendations.getWorkforceRecommendationHistory,
+  ).mockResolvedValue({ items: [], totalCount: 0, page: 1, size: 50 });
+  vi.mocked(
+    recommendationActions.createWorkforceRecommendationTentativeAssignment,
+  ).mockResolvedValue({
+    rcmdId: "42",
+    rank: 1,
+    changed: true,
+    revision: "selected",
+    message: "가배정했습니다.",
+    releasedTentativeAssignmentId: null,
+    selection: {
+      ...recommendationResult.candidates[0].selection,
+      actionCode: "TENT",
+      tentativeAssignmentId: "52",
+      finalOpportunityId: recommendationTarget.targetId,
+      finalNeedSn: "19",
+    },
+  });
+  vi.mocked(withdrawals.getWithdrawals).mockImplementation(async (query) => ({
+    items: [],
+    year: query.year ?? 2026,
+    page: query.page,
+    size: query.size,
+    totalCount: 0,
+    serverDate: context.currentDate,
+    baseMonth: context.cashBaseMonth,
+    guidance: {
+      visible: false,
+      withinThreeMonthsPeople: 0,
+      withoutNextAssignmentPeople: 0,
+      withMatchingPositionsPeople: 0,
+      message: "",
+    },
+  }));
   vi.mocked(settlements.getSalesPartSettlements).mockResolvedValue({
     month: context.currentMonth,
     baseMonth: context.cashBaseMonth,
@@ -550,6 +706,12 @@ beforeEach(() => {
   vi.mocked(shared.getSharedPreferences).mockImplementation(async () => ({
     items: preferences,
   }));
+  vi.mocked(shared.putSharedPreference).mockImplementation(
+    async (type, key, value) => ({
+      changed: true,
+      preference: { type, key, value, revision: "saved", stored: true },
+    }),
+  );
   vi.mocked(shared.getMenus).mockResolvedValue({
     items: menus,
     diagnostics: [],
@@ -637,6 +799,119 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("UI-30은 현재 자리와 원래 revision으로 행동하고 조회 실패 뒤 GET만 재시도한다", async () => {
+    open("/UI-30");
+    await screen.findByTestId("recommendation-candidates");
+    expect(
+      screen.queryByRole("combobox", { name: "기간" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "엑셀 다운로드" }),
+    ).not.toBeInTheDocument();
+    await userEvent.selectOptions(
+      screen.getByTestId("recommendation-need"),
+      "19",
+    );
+    fireEvent.change(screen.getByTestId("recommendation-start-month"), {
+      target: { value: "2027-01" },
+    });
+    vi.mocked(
+      recommendations.getRecommendationHistorySnapshot,
+    ).mockRejectedValueOnce(new Error("사본 조회 실패"));
+    await userEvent.click(screen.getByTestId("recommendation-assign-1"));
+    await screen.findByText("저장됐지만 다시 불러오지 못했습니다");
+    expect(
+      recommendationActions.createWorkforceRecommendationTentativeAssignment,
+    ).toHaveBeenCalledWith("42", 1, {
+      needSn: "19",
+      expectedRevision: "choice-original",
+      targetRevision: "target-original",
+      candidateRevision: "candidate-original",
+      confirmedWarnings: [],
+    });
+    await userEvent.click(screen.getByTestId("recommendation-refresh"));
+    await waitFor(() =>
+      expect(
+        recommendations.getRecommendationHistorySnapshot,
+      ).toHaveBeenCalledTimes(2),
+    );
+    expect(
+      recommendationActions.createWorkforceRecommendationTentativeAssignment,
+    ).toHaveBeenCalledOnce();
+    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("recommendation-card-1")).toHaveTextContent(
+      "2026-11",
+    );
+  });
+  it("UI-30의 기록은 기존 drawer에서 GET만 사용하고 닫아도 추천을 재실행하지 않는다", async () => {
+    open("/UI-30");
+    await screen.findByTestId("recommendation-candidates");
+    await userEvent.click(screen.getByTestId("recommendation-history-open"));
+    const dialog = await screen.findByRole("dialog", { name: "추천 기록" });
+    expect(
+      await within(dialog).findByText("추천 기록이 없습니다."),
+    ).toBeVisible();
+    await userEvent.click(screen.getByTestId("recommendation-history-close"));
+    expect(
+      screen.queryByRole("dialog", { name: "추천 기록" }),
+    ).not.toBeInTheDocument();
+    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledOnce();
+    expect(
+      applicationRoutes.filter((route) => route.path === "/UI-30"),
+    ).toHaveLength(1);
+    expect(
+      applicationRoutes.some((route) => route.path?.includes("UI-30-")),
+    ).toBe(false);
+  });
+  it("UI-30 대상 조회 오류는 후보 행동을 막고 GET 복구 후에만 첫 추천을 실행한다", async () => {
+    vi.mocked(
+      recommendations.getWorkforceRecommendationTargets,
+    ).mockRejectedValueOnce(new Error("대상 연결 실패"));
+    open("/UI-30");
+    await screen.findByText("대상 연결 실패");
+    expect(
+      screen.queryByTestId("recommendation-assign-1"),
+    ).not.toBeInTheDocument();
+    expect(recommendations.requestTargetRecommendation).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
+    await screen.findByTestId("recommendation-assign-1");
+    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledOnce();
+  });
+  it("UI-30 진행 대상 없음은 기록 접근을 유지하고 후보나 생성 요청을 만들지 않는다", async () => {
+    vi.mocked(
+      recommendations.getWorkforceRecommendationTargets,
+    ).mockResolvedValue({
+      items: [],
+      firstTargetId: null,
+      serverDate: context.currentDate,
+      currentMonth: context.currentMonth,
+      baseMonth: context.cashBaseMonth,
+      revision: "empty-targets",
+    });
+    open("/UI-30");
+    await screen.findByText("진행 중인 추천 대상이 없습니다.");
+    expect(screen.getByTestId("recommendation-history-open")).toBeEnabled();
+    expect(
+      screen.queryByTestId("recommendation-candidates"),
+    ).not.toBeInTheDocument();
+    expect(recommendations.requestTargetRecommendation).not.toHaveBeenCalled();
+  });
+  it("UI-05 기간 변경은 기존 철수 목록을 선택 연도로 GET하고 추천을 기록하지 않는다", async () => {
+    open("/UI-05");
+    await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
+    await userEvent.selectOptions(
+      within(screen.getByRole("region", { name: "화면 기간" })).getByLabelText(
+        "기간",
+      ),
+      "2027",
+    );
+    await waitFor(() =>
+      expect(withdrawals.getWithdrawals).toHaveBeenLastCalledWith(
+        expect.objectContaining({ year: 2027 }),
+      ),
+    );
+    expect(withdrawals.createNextPositionRecommendation).not.toHaveBeenCalled();
+  });
   it.each([
     ["/UI-04", "projectCost", "유형", "contractType", costColumns],
     ["/UI-31", "statusBoard", "PM", "pm", boardColumns],
@@ -1274,6 +1549,24 @@ describe("공식 진입점 합성", () => {
         expect(
           id === "UI-02" ? developers.getDevelopers : candidates.getCandidates,
         ).toHaveBeenCalled();
+      } else if (id === "UI-05") {
+        expect(
+          await screen.findByTestId("withdrawal-list-screen"),
+        ).toBeVisible();
+        await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
+        expect(withdrawals.getWithdrawals).toHaveBeenCalledWith(
+          expect.objectContaining({ year: 2026 }),
+        );
+        expect(screenRegistry[id].periodType).toBe("YEAR");
+      } else if (id === "UI-30") {
+        expect(
+          await screen.findByTestId("recommendation-candidates"),
+        ).toBeVisible();
+        expect(screen.getByTestId("recommendation-assign-1")).toBeEnabled();
+        expect(
+          recommendations.requestTargetRecommendation,
+        ).toHaveBeenCalledOnce();
+        expect(screenRegistry[id].periodType).toBe("NONE");
       } else if (["UI-11", "UI-17", "UI-28", "UI-29"].includes(id)) {
         const screens: Record<string, string> = {
           "UI-11": "staffing-comparison-screen",
@@ -1282,7 +1575,11 @@ describe("공식 진입점 합성", () => {
           "UI-29": "sales-pipeline-screen",
         };
         expect(await screen.findByTestId(screens[id])).toBeVisible();
-        expect(screen.queryAllByText("이 화면은 다음 단계에서 만듭니다.").some((node) => !node.closest("[hidden]"))).toBe(false);
+        expect(
+          screen
+            .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
+            .some((node) => !node.closest("[hidden]")),
+        ).toBe(false);
       } else if (["UI-07", "UI-08", "UI-09", "UI-18"].includes(id)) {
         const financialScreens: Record<string, string> = {
           "UI-07": "profit-structure-screen",

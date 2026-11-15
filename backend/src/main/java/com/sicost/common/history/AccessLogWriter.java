@@ -29,7 +29,9 @@ public class AccessLogWriter {
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
         if (!Set.of("DNLD", "ACCT_VIEW", "USER_REG").contains(event.action())
-                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+                || !Set.of("UI-15", "UI-23", "UI-02", "UI-03", "UI-04", "UI-33", "UI-01", "UI-12", "UI-13", "UI-10", "UI-31", "UI-18", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05").contains(event.screenId())) throw InputValidator.invalid("accessLog");
+        if (event.screenId().equals("UI-05") && (!"DNLD".equals(event.action()) || event.targetId()!=null
+                || !"철수리스트".equals(event.fileType()) || event.count()==null)) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-28") && (!"DNLD".equals(event.action()) || event.targetId()!=null
                 || event.count()==null || !Set.of("인력운영달력", "인력운영수요공급").contains(event.fileType()==null?"":event.fileType()))) throw InputValidator.invalid("accessLog");
         if (event.screenId().equals("UI-17") && (!"DNLD".equals(event.action()) || event.targetId()!=null
@@ -79,6 +81,7 @@ public class AccessLogWriter {
         }
         String kind = event.fileType();
         Set<String> kinds = switch (event.screenId()) {
+            case "UI-05" -> Set.of("철수리스트");
             case "UI-28" -> Set.of("인력운영달력", "인력운영수요공급");
             case "UI-17" -> Set.of("인력수요예측");
             case "UI-11" -> Set.of("계획대비투입");

@@ -58,10 +58,19 @@ class OperatingProfitContractTest {
         when(costs.loadYear(any())).thenReturn(sources);when(costs.calculate(any())).thenReturn(new MonthlyCostsData(sources.period(),List.of()));
     }
     static BigDecimal n(String value) {return value==null?null:new BigDecimal(value);}
+    @Test void operatingAuthRejectsForgedActorBeforeFinancialSources() throws Exception {
+        mvc.perform(get("/api/profit-loss/operating").param("year","2026").param("month","2026-07").param("actor","other"))
+            .andExpect(DurableOpenApi.response("GET","/api/profit-loss/operating",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));verifyNoInteractions(financial,mapper,costs,logs,users);
+    }
+    @Test void operatingExportValidationRejectsUnitBeforeFileOrDownloadAudit() throws Exception {
+        mvc.perform(get("/api/profit-loss/operating/export").param("year","2026").param("month","2026-07").param("amountUnit","bad"))
+            .andExpect(DurableOpenApi.response("GET","/api/profit-loss/operating/export",400));verifyNoInteractions(financial,logs);
+    }
     org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request(String path,String month) {return get(path).param("year",month.substring(0,4)).param("month",month);}
-    ResultActions read(String month)throws Exception {return mvc.perform(request(READ,month));}
+    ResultActions read(String month)throws Exception {return mvc.perform(get("/api/profit-loss/operating").param("year",month.substring(0,4)).param("month",month));}
     @Test void publicUnmaskedStatementUsesOneMaterializedResultInExactAccountingOrder()throws Exception {
-        var response=read("2026-07").andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.months.length()").value(12)).andExpect(jsonPath("$.data.summary.length()").value(4))
+        var response=mvc.perform(get("/api/profit-loss/operating").param("year","2026").param("month","2026-07")).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.months.length()").value(12)).andExpect(jsonPath("$.data.summary.length()").value(4))
             .andExpect(jsonPath("$.data.context.timezone").value("Asia/Seoul")).andExpect(jsonPath("$.data.rows.length()").value(13))
             .andExpect(jsonPath("$.data.summary[0].amount").value("1000")).andExpect(jsonPath("$.data.rows[0].monthlyValues[6]").value("1000"))
             .andExpect(jsonPath("$.data.rows[0].cumulativeValue").value("1000")).andExpect(jsonPath("$.data.rows[11].cumulativeValue").value("930"))
@@ -100,7 +109,7 @@ class OperatingProfitContractTest {
     @Test void negativeAdjustmentPreservedAndProvisionalPropagated()throws Exception {read("2026-07").andExpect(jsonPath("$.data.rows[10].cumulativeValue").value("-20")).andExpect(jsonPath("$.data.summary[3].amount").value("930")).andExpect(jsonPath("$.data.cumulativeProvisional").value(true));}
     @Test void repeatedReadsHaveNoAuditAndRepeatableReadBoundary()throws Exception {read("2026-07");read("2026-07");verify(costs,times(2)).loadYear(2026);verifyNoInteractions(logs);verify(manager,atLeastOnce()).getTransaction(argThat(d->d.isReadOnly()&&d.getIsolationLevel()==TransactionDefinition.ISOLATION_REPEATABLE_READ));}
     @Test void publicExportContainsRealNumericWorkbookAndCommittedUi08Log()throws Exception {
-        var response=mvc.perform(request(EXPORT,"2026-07").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
+        var response=mvc.perform(get("/api/profit-loss/operating/export").param("year","2026").param("month","2026-07").param("amountUnit","WON")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn().getResponse();
         assertThat(org.springframework.http.ContentDisposition.parse(response.getHeader("Content-Disposition")).getFilename()).isEqualTo("영업이익표_202607.xlsx");
         try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
             var sheet=workbook.getSheet("영업이익표");assertThat(sheet.getRow(1).getCell(7).getNumericCellValue()).isEqualTo(1000);

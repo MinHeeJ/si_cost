@@ -72,6 +72,25 @@ class SalesCommandContractTest {
         when(mapper.approvalEvent(any())).thenAnswer(c->{events.add(c.getArgument(0));return 1;});when(mapper.notification(any())).thenReturn(1);when(mapper.activeLossReason("PRICE")).thenReturn(true);when(audit.insert(any())).thenReturn(1);
     }
     ObjectNode body(){return json.createObjectNode().put("expectedRevision",revision());}
+    @Test void stageAuthRejectsActorWithoutChangingOpportunity() throws Exception {
+        mvc.perform(post("/api/sales-opportunities/O-0101/stage").contentType("application/json").content(body().put("stage","PROP").put("actor","other").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/sales-opportunities/{id}/stage",400))
+            .andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));noWrites();
+    }
+    @Test void lossValidationRejectsInactiveReasonWithoutReleasingTentative() throws Exception {
+        mvc.perform(post("/api/sales-opportunities/O-0101/lose").contentType("application/json").content(body().put("reasonCode","INVALID").toString()))
+            .andExpect(DurableOpenApi.response("POST","/api/sales-opportunities/{id}/lose",400));
+        assertThat(tentatives.get(0).status()).isEqualTo("ACT");noWrites();
+    }
+    @Test void resumeValidationRequiresRevisionWithoutWriting() throws Exception {
+        mvc.perform(post("/api/sales-opportunities/O-0101/resume").contentType("application/json").content("{}"))
+            .andExpect(DurableOpenApi.response("POST","/api/sales-opportunities/{id}/resume",400));noWrites();
+    }
+    @Test void winValidationRequiresRevisionWithoutRegisteringProject() throws Exception {
+        mvc.perform(post("/api/sales-opportunities/O-0101/win").contentType("application/json").content("{}"))
+            .andExpect(DurableOpenApi.response("POST","/api/sales-opportunities/{id}/win",400));
+        verifyNoInteractions(registration);noWrites();
+    }
     void request(String operation,ObjectNode body,int expected)throws Exception{mvc.perform(post("/api/sales-opportunities/O-0101/"+operation).contentType("application/json").content(body.toString())).andExpect(r->assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(expected));}
     void noWrites(){verify(mapper,never()).update(any());verify(mapper,never()).approvalEvent(any());verify(mapper,never()).notification(any());verifyNoInteractions(audit);}
     @Test void previewIsPublicAndReadOnlyUnknownIsNotZero()throws Exception{
@@ -91,7 +110,7 @@ class SalesCommandContractTest {
         request("stop",body(),200);assertThat(row.status()).isEqualTo("STOP");assertThat(row.resultDate()).isEqualTo(LocalDate.of(2026,7,15));assertThat(tentatives.get(0).status()).isEqualTo("REL");
         clearInvocations(mapper,audit);request("stop",body(),200);verify(mapper,never()).update(any());verifyNoInteractions(audit);
     }
-    @Test void loseStoresFull500CharacterMemoAndReleases()throws Exception{request("lose",body().put("reasonCode","PRICE").put("memo","가".repeat(500)),200);assertThat(row.status()).isEqualTo("LOSE");assertThat(row.lossMemo()).hasSize(500);assertThat(tentatives.get(0).status()).isEqualTo("REL");}
+    @Test void loseStoresFull500CharacterMemoAndReleases()throws Exception{mvc.perform(post("/api/sales-opportunities/O-0101/lose").contentType("application/json").content(body().put("reasonCode","PRICE").put("memo","가".repeat(500)).toString())).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data").isMap());assertThat(row.status()).isEqualTo("LOSE");assertThat(row.lossMemo()).hasSize(500);assertThat(tentatives.get(0).status()).isEqualTo("REL");}
     @Test void invalidLossReasonIs400()throws Exception{request("lose",body().put("reasonCode","INVALID"),400);noWrites();}
     @Test void overlongLossMemoIs400()throws Exception{request("lose",body().put("reasonCode","PRICE").put("memo","x".repeat(501)),400);noWrites();}
     @Test void staleWriteStopsAllEffects()throws Exception{request("stop",body().put("expectedRevision","old"),409);noWrites();}
@@ -103,13 +122,13 @@ class SalesCommandContractTest {
     }
     Opportunity withRate(String rate,String status){return SalesCommandService.with(row,new SalesCommandService.Transition(row.stage(),row.probability(),row.manualProbability(),row.status(),rate==null?null:new BigDecimal(rate),status,null,row.resultDate(),row.lossReasonCode(),row.lossMemo(),row.projectId()));}
     @Test void stageChangesDbDefaultAndManualEqualDefaultIsPreserved()throws Exception{
-        request("stage",body().put("stage","PROP"),200);assertThat(row.probability()).isEqualByComparingTo("30");
+        mvc.perform(post("/api/sales-opportunities/O-0101/stage").contentType("application/json").content(body().put("stage","PROP").toString())).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data").isMap());assertThat(row.probability()).isEqualByComparingTo("30");
         request("stage",body().put("stage","PROP").put("manualProbability",true).put("probability","30"),200);assertThat(row.manualProbability()).isEqualTo("Y");
         request("stage",body().put("stage","FIND"),200);assertThat(row.probability()).isEqualByComparingTo("30");
         request("stage",body().put("stage","FIND").put("manualProbability",false),200);assertThat(row.manualProbability()).isEqualTo("N");assertThat(row.probability()).isEqualByComparingTo("10");
     }
     @Test void missingProbabilityStandardDoesNotReseed()throws Exception{standards.removeIf(s->s.code().equals("STEP_PRBL_2"));request("stage",body().put("stage","PROP"),409);noWrites();}
-    @Test void resumeRequotesButDoesNotRestoreReleasedTentative()throws Exception{request("stop",body(),200);request("resume",body(),200);assertThat(row.status()).isEqualTo("ING");assertThat(row.profitRate()).isNull();assertThat(row.approvalStatus()).isEqualTo("WAIT");assertThat(row.resultDate()).isNull();assertThat(tentatives.get(0).status()).isEqualTo("REL");assertThat(events).isEmpty();}
+    @Test void resumeRequotesButDoesNotRestoreReleasedTentative()throws Exception{request("stop",body(),200);mvc.perform(post("/api/sales-opportunities/O-0101/resume").contentType("application/json").content(body().toString())).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data").isMap());assertThat(row.status()).isEqualTo("ING");assertThat(row.profitRate()).isNull();assertThat(row.approvalStatus()).isEqualTo("WAIT");assertThat(row.resultDate()).isNull();assertThat(tentatives.get(0).status()).isEqualTo("REL");assertThat(events).isEmpty();}
     @ParameterizedTest @ValueSource(strings={"WIN","LOSE"}) void terminalCannotResume(String state)throws Exception{row=SalesCommandService.with(row,new SalesCommandService.Transition(row.stage(),row.probability(),"N",state,null,"WAIT",null,null,null,null,null));request("resume",body(),409);noWrites();}
     @Test void auditFailureIs500AndRollsBackTransaction()throws Exception{when(audit.insert(any())).thenReturn(0);request("stop",body(),500);verify(manager,atLeastOnce()).rollback(any());}
     @Test void invalidWinDateCannotCreateProject()throws Exception{request("win",body().put("contractAmount","1").put("contractType","TK").put("projectStatus","ING").put("startDate","2026-07-01").put("endDate","2026-07-01"),400);verifyNoInteractions(registration);noWrites();}
@@ -141,7 +160,7 @@ class SalesCommandContractTest {
         numericCost("8000000");row=withRate("20.00","NONE");
         when(projects.defaults(anyString())).thenReturn(new com.sicost.projects.ProjectDtos.DefaultsRow(new BigDecimal("202501"),new BigDecimal("20"),BigDecimal.ZERO,BigDecimal.ZERO));
         when(projects.activeType("TK")).thenReturn(true);when(projects.customer(anyString())).thenReturn(new com.sicost.projects.ProjectDtos.Reference("C-0001","고객",true));when(projects.part(anyString())).thenReturn(new com.sicost.projects.ProjectDtos.Reference("PART-0001","파트",true));when(registration.reservedIds(any())).thenReturn(new HashSet<>());when(mapper.insertOpportunityPlan(any())).thenReturn(1);
-        request("win",body().put("contractAmount","12000000").put("contractType","TK").put("projectStatus","ING").put("startDate","2026-07-01").put("endDate","2027-06-30"),200);
+        mvc.perform(post("/api/sales-opportunities/O-0101/win").contentType("application/json").content(body().put("contractAmount","12000000").put("contractType","TK").put("projectStatus","ING").put("startDate","2026-07-01").put("endDate","2027-06-30").toString())).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data").isMap());
         assertThat(row.status()).isEqualTo("WIN");assertThat(row.projectId()).isEqualTo("P-0001");assertThat(row.probability()).isEqualByComparingTo("100");assertThat(tentatives.get(0).status()).isEqualTo("CNVT");
         var captor=org.mockito.ArgumentCaptor.forClass(ProjectRegistrationService.Project.class);verify(registration).register(eq("P-0001"),captor.capture(),eq("admin"),any());assertThat(captor.getValue().opportunityId()).isEqualTo(row.id());
         var plan=org.mockito.ArgumentCaptor.forClass(Plan.class);verify(mapper).insertOpportunityPlan(plan.capture());assertThat(plan.getValue().planMm()).isEqualByComparingTo("1.00");

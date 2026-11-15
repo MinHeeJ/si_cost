@@ -44,7 +44,7 @@ class FinancialReadContractTest {
     ResultActions contributions()throws Exception{return mvc.perform(get("/api/financial-contributions").param("month","2026-07"));}
     ResultActions history(String scope)throws Exception{return mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope",scope));}
     @Test void publicContributionsAreExactStringsWithoutCredentials()throws Exception{
-        contributions().andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap())
+        mvc.perform(get("/api/financial-contributions").param("month","2026-07")).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap())
             .andExpect(jsonPath("$.data.sgaAmount").value("1999999999999998")).andExpect(jsonPath("$.data.sgaVatAmount").value("2"))
             .andExpect(jsonPath("$.data.nonOperatingIncome").value("3")).andExpect(jsonPath("$.data.nonOperatingIncomeVat").value("4"))
             .andExpect(jsonPath("$.data.nonOperatingExpense").value("5")).andExpect(jsonPath("$.data.nonOperatingExpenseVat").value("6"))
@@ -55,6 +55,18 @@ class FinancialReadContractTest {
             .andExpect(jsonPath("$.data.cashLoanOut").value("14")).andExpect(jsonPath("$.data.cashLoanNet").value("-1"))
             .andExpect(jsonPath("$.data.cashTaxPayment").value("15")).andExpect(jsonPath("$.data.corporateTaxAllocation").value("1666666"));
         verify(users).currentUser();
+    }
+    @Test void contributionsAuthRejectsActorBeforeReadingFinancialSource() throws Exception {
+        mvc.perform(get("/api/financial-contributions").param("month","2026-07").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
+    }
+    @Test void historyAuthRejectsActorBeforeReadingAudit() throws Exception {
+        mvc.perform(get("/api/financial-history").param("month","2026-07").param("scope","MONTH").param("actor","other"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"))
+            .andExpect(jsonPath("$.field").value("actor"));
+        verifyNoInteractions(mapper,users);
     }
     @ParameterizedTest @ValueSource(strings={"MONTH","TAX","CARDS"})
     void publicHistoryReturnsFieldValuesAndFilteredTotal(String scope)throws Exception{

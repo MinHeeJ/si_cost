@@ -61,6 +61,7 @@ export type Filters = {
   includeCancelled?: boolean;
 };
 export type Create = {
+  recommendationRef?: { rcmdId: string; rank: number } | null;
   year: number;
   projectId: string;
   developerId: string;
@@ -84,7 +85,7 @@ export type Change = CommonChange &
     | { type: "EARLY"; withdrawalDate: string }
     | { type: "RATE"; applyMonth: string; newContractMm: string }
     | { type: "UPRC"; applyMonth: string; newUnitPrice: string }
-    | { type: "EXTP"; applyDate: string; extensionPossibility: string | null }
+    | { type: "EXTP"; extensionPossibility: string | null }
     | { type: "KIND"; applyDate: string; inputType: "NEW" | "ADD" }
   );
 export type Preview = {

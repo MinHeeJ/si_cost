@@ -73,6 +73,8 @@ class AssignmentActionsContractTest {
         when(mapper.price(any())).thenReturn(new BigDecimal("100"));when(mapper.overlaps(any())).thenReturn(List.of());when(mapper.candidates(any())).thenReturn(List.of());
         when(mapper.serial(anyString())).thenAnswer(c->1+events.size());
         when(mapper.update(any())).thenAnswer(c->{Write w=c.getArgument(0);rows.put(w.source().id(),w.source());return 1;});
+        when(mapper.updateExtension(any())).thenAnswer(c->{Write w=c.getArgument(0);rows.put(w.source().id(),w.source());return 1;});
+        when(audit.insert(any())).thenReturn(1);
         when(mapper.insert(any())).thenAnswer(c->{Write w=c.getArgument(0);rows.put(w.source().id(),w.source());return 1;});
         when(mapper.event(any())).thenAnswer(c->{Event e=c.getArgument(0);events.add(e);if(e.id().equals("A-101"))histories.add(new ValueHistory(e.serial(),e.type(),e.date(),e.mm(),e.price(),"N",null));return 1;});
         when(months.saveMonth(any())).thenReturn(1);when(ids.nextAssignmentId()).thenReturn("A-0102");
@@ -132,8 +134,11 @@ class AssignmentActionsContractTest {
         postBody("/api/assignments/A-101/changes",change("EARLY").put("withdrawalDate","2026-08-31").put("reasonCode","ETC"),200);
         clearInvocations(mapper,months,audit,invalidation);postBody("/api/assignments/A-101/changes",change("EARLY").put("withdrawalDate","2026-08-31").put("reasonCode","ETC"),200);noWrites();
     }
-    @Test void possibilityCanReturnToNullImmediatelyEvenFutureDate() throws Exception {
-        postBody("/api/assignments/A-101/changes",change("EXTP").put("applyDate","2026-08-01").putNull("extensionPossibility"),200);assertThat(rows.get("A-101").extensionPossibility()).isNull();
+    @Test void possibilityCanReturnToNullImmediatelyWithoutDateAndRepeatIsNoOp() throws Exception {
+        postBody("/api/assignments/A-101/changes",change("EXTP").putNull("extensionPossibility"),200);assertThat(rows.get("A-101").extensionPossibility()).isNull();
+        int count=events.size();
+        mvc.perform(post("/api/assignments/A-101/changes").contentType("application/json").content(change("EXTP").putNull("extensionPossibility").toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false));
+        assertThat(events).hasSize(count);
         postBody("/api/assignments/A-101/changes",change("EXTP").put("applyDate","2026-08-01").putNull("extensionPossibility"),400);
     }
     @Test void kindPreservesPeriodAndDisallowsSubTransition() throws Exception {
@@ -141,8 +146,8 @@ class AssignmentActionsContractTest {
         postBody("/api/assignments/A-101/changes",change("KIND").put("applyDate","2026-07-01").put("inputType","SUB"),400);
     }
     @Test void staleAndCancelledAndLoseAreRejectedWithoutMutation() throws Exception {
-        postBody("/api/assignments/A-101/changes",change("EXTP").put("applyDate","2026-07-01").putNull("extensionPossibility").put("expectedRevision","stale"),409);
-        rows.put("A-101",source("A-101","CNCL"));postBody("/api/assignments/A-101/changes",change("EXTP").put("applyDate","2026-07-01").putNull("extensionPossibility"),409);
+        postBody("/api/assignments/A-101/changes",change("EXTP").putNull("extensionPossibility").put("expectedRevision","stale"),409);
+        rows.put("A-101",source("A-101","CNCL"));postBody("/api/assignments/A-101/changes",change("EXTP").putNull("extensionPossibility"),409);
         rows.put("A-101",source("A-101","ACT"));project=new Project(project.id(),project.name(),"LOSE","MO",project.startDate(),project.endDate());postBody("/api/assignments/A-101/changes",change("EXT").put("newEndDate","2026-09-30"),409);noWrites();
     }
     @Test void selectionFixesRevisionsAndExcludesActualIdWithoutWrites() throws Exception {
