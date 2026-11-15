@@ -101,6 +101,7 @@ export function WithdrawalContent({ year }: { year: number }) {
   const [optionsError, setOptionsError] = useState<unknown>();
   const [loading, setLoading] = useState(true);
   const [dense, setDense] = useState(shared.dense ?? false);
+  const [densityPending, setDensityPending] = useState(false);
   const [assignment, setAssignment] = useState<string>();
   const [developer, setDeveloper] = useState<string>();
   const [panel, setPanel] = useState<{
@@ -192,7 +193,7 @@ export function WithdrawalContent({ year }: { year: number }) {
   const columns: Column<api.WithdrawalRow>[] = [
     {
       id: "name",
-      label: "이름",
+      label: "이름", sortable: true,
       render: (row) => (
         <>
           <button
@@ -213,7 +214,7 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "project",
-      label: "프로젝트",
+      label: "프로젝트", sortable: true,
       render: (row) => (
         <Link
           data-testid={`withdrawal-project-${row.assignmentId.toLowerCase()}`}
@@ -226,14 +227,14 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "job",
-      label: "직무",
+      label: "직무", sortable: true,
       render: (row) =>
         jobs.find((j) => j.code === row.jobCode)?.name ?? row.jobCode,
     },
-    { id: "date", label: "철수일", render: (row) => row.withdrawalDate },
+    { id: "date", label: "철수일", sortable: true, render: (row) => row.withdrawalDate },
     {
       id: "days",
-      label: "남은 일수",
+      label: "남은 일수", sortable: true,
       render: (row) => (
         <StatusBadge
           tone={
@@ -252,7 +253,7 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "history",
-      label: "연장·조기 철수",
+      label: "연장·조기 철수", sortable: true,
       render: (row) => (
         <>
           연장 {row.extensionCount}회
@@ -264,7 +265,7 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "extension",
-      label: "연장 가능성",
+      label: "연장 가능성", sortable: true,
       render: (row) => (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -293,7 +294,7 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "next",
-      label: "다음 배정",
+      label: "다음 배정", sortable: true,
       render: (row) => (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -475,7 +476,15 @@ export function WithdrawalContent({ year }: { year: number }) {
         <button
           data-testid="withdrawal-density"
           aria-pressed={dense}
-          onClick={() => setDense((v) => !v)}
+          disabled={densityPending}
+          onClick={() => {
+            const next = !dense;
+            setDensityPending(true);
+            void Promise.resolve().then(() => shared.saveDense?.(next))
+              .then(() => setDense(next))
+              .catch(setError)
+              .finally(() => setDensityPending(false));
+          }}
         >
           {dense ? "넓게 보기" : "좁게 보기"}
         </button>
@@ -488,13 +497,23 @@ export function WithdrawalContent({ year }: { year: number }) {
         loading={loading}
         dense={dense}
         empty="조건에 맞는 철수 배정이 없습니다."
+        emptyAction={
+          <button type="button" onClick={() => {
+            const filters = defaults();
+            setDraft(filters);
+            apply(filters);
+          }}>조건 초기화</button>
+        }
         page={query.page}
         size={query.size}
         total={data?.totalCount ?? 0}
+        sort={query.sort ? { id: query.sort, direction: query.direction ?? "ASC" } : undefined}
+        onSortChange={(id) => setQuery((old) => ({ ...old, sort: id as api.WithdrawalQuery["sort"], direction: old.sort === id && old.direction !== "DESC" ? "DESC" : "ASC", page: 1 }))}
         onPageChange={(page) => setQuery((v) => ({ ...v, page }))}
         onSizeChange={(size) => {
-          setQuery((v) => ({ ...v, size, page: 1 }));
-          void shared.savePageSize?.(size);
+          void Promise.resolve().then(() => shared.savePageSize?.(size))
+            .then(() => setQuery((v) => ({ ...v, size, page: 1 })))
+            .catch(setError);
         }}
         onRowAction={(row) => setAssignment(row.assignmentId)}
       />

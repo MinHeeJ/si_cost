@@ -382,6 +382,10 @@ export function SharedApplication({
           ? (Number(getPref("PAGE_SIZE")?.value) as 20 | 50 | 100)
           : 50,
         dense: getPref("DENSE")?.value === "좁게",
+        saveDense: async (dense) => {
+          if (!(await savePreference("DENSE", dense ? "좁게" : "넓게")))
+            throw new Error("목록 설정을 저장하지 못했습니다.");
+        },
         savePageSize: async (size) => {
           if (!(await savePreference("PAGE_SIZE", size)))
             throw new Error("목록 설정을 저장하지 못했습니다.");

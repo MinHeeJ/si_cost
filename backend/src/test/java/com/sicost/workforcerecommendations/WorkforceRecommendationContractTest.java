@@ -112,6 +112,21 @@ class WorkforceRecommendationContractTest {
     @Test void unknownQueryBothOperations() throws Exception{mvc.perform(get("/api/workforce-recommendations/10?actor=x")).andExpect(status().isBadRequest());mvc.perform(post("/api/workforce-recommendations?score=1").contentType("application/json").content(body().toString())).andExpect(status().isBadRequest());noWrites();}
     @Test void emptyDoesNotAllocateOrInsert() throws Exception{when(mapper.people()).thenReturn(List.of());create(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.rcmdId").isEmpty()).andExpect(jsonPath("$.data.candidates").isEmpty());noWrites();verify(mapper,never()).nextId();}
     @Test void overlappingExclusionsCountPeopleOnce() throws Exception{when(mapper.people()).thenReturn(List.of(new Person("D-1","인력","02","BE",null,"MD","FL","Y","DRCT","RETIRE",null,LocalDate.of(2030,1,1),null,null)));when(mapper.target(any())).thenReturn(new Target("O-1","DP",null,null,null,null,null,null,"ING"));create(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.exclusions.excludedUniqueCount").value(1)).andExpect(jsonPath("$.data.exclusions.byReason.length()").value(2)).andExpect(jsonPath("$.data.candidates").isEmpty());noWrites();}
+    @Test void currentLeaveIsExcludedEvenWhenRequestedMonthIsAfterLeaveEnds() throws Exception {
+        when(mapper.leaves()).thenReturn(List.of(new Leave("D-1",LocalDate.of(2026,7,1),LocalDate.of(2026,7,2))));
+        create(body().put("startMonth","2026-08")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.candidates").isEmpty())
+            .andExpect(jsonPath("$.data.exclusions.byReason[0].reason").value("휴직"));
+        noWrites();
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"2026-06-01,2026-07-01,0", "2026-07-01,2026-07-01,0", "2026-06-01,2026-06-30,1", "2026-07-02,2026-07-31,1"})
+    void currentLeaveIncludesBothEndsButDoesNotExcludeExpiredOrFutureOnlyPeriods(String begin,String end,int count) throws Exception {
+        when(mapper.leaves()).thenReturn(List.of(new Leave("D-1",LocalDate.parse(begin),LocalDate.parse(end))));
+        create(body().put("startMonth","2026-08")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.candidates.length()").value(count));
+        if(count==0)noWrites();
+    }
     @Test void leaveOneDayAndOpenEndAreExcluded() throws Exception{when(mapper.leaves()).thenReturn(List.of(new Leave("D-1",LocalDate.of(2026,7,31),null)));create(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.exclusions.byReason[0].reason").value("휴직"));noWrites();}
     @Test void sameOpportunityActExcluded() throws Exception{when(mapper.tentatives()).thenReturn(List.of(new Tentative("D-1","1","O-1","기회","1","2026-07")));create(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.candidates").isEmpty());noWrites();}
     @Test void otherOpportunityActStillCandidate() throws Exception{when(mapper.tentatives()).thenReturn(List.of(new Tentative("D-1","1","O-2","다른 기회","1","2026-07")));create(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.candidates[0].otherTentativeAssignments[0].opportunityId").value("O-2"));}

@@ -210,4 +210,24 @@ class WithdrawalActionsContractTest {
         order.verify(manager).commit(any());
     }
     @ParameterizedTest @ValueSource(strings={"extension-possibility","next-positions"}) void postRejectsQueryInjection(String action) throws Exception {mvc.perform(post("/api/withdrawals/A-001/"+action).param("actor","x").contentType("application/json").content(extension().toString())).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("actor"));noExtensionWrites();verify(next,never()).nextId();}
+    @ParameterizedTest @ValueSource(strings={"name","project","job","date","days","history","extension","next"})
+    void exportAcceptsEverySortAndReadsAllRowsWithPkTies(String sort) throws Exception {
+        for(int i=25;i>=1;i--)sources.add(source(String.format("A-%02d",i),day,"H"));
+        for(String direction:List.of("ASC","DESC")){
+            byte[] bytes=mvc.perform(get("/api/withdrawals/export").param("sort",sort).param("direction",direction)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+            try(var book=new XSSFWorkbook(new ByteArrayInputStream(bytes))){
+                var sheet=book.getSheetAt(0);assertThat(sheet.getLastRowNum()).isEqualTo(25);
+                for(int i=1;i<=25;i++)assertThat(sheet.getRow(i).getCell(0).getStringCellValue()).isEqualTo(String.format("A-%02d",i));
+            }
+        }
+        noExtensionWrites();verify(next,never()).insert(any(),anyString());
+    }
+    @ParameterizedTest @CsvSource({"sort,unknown","sort,","direction,down","direction,"})
+    void invalidExportSortDoesNotReadOrLog(String field,String value) throws Exception {
+        mvc.perform(get("/api/withdrawals/export").param(field,value==null?"":value)).andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value(field)).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(jsonPath("$.message").isNotEmpty());
+        verifyNoInteractions(withdrawals,access);
+    }
+
 }

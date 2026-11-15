@@ -177,12 +177,7 @@ public class ExcelExportService {
                     for (Information item : result.information()) {
                         Row row = info.createRow(index++); row.createCell(0).setCellValue(item.label());
                         var cell = row.createCell(1);
-                        if (item.value() instanceof java.time.LocalDate date) {
-                            cell.setCellValue(date.atStartOfDay());
-                            var style = workbook.createCellStyle();
-                            style.setDataFormat(workbook.createDataFormat().getFormat("yyyy-mm-dd"));
-                            cell.setCellStyle(style);
-                        } else if (item.value() instanceof Number number) cell.setCellValue(number.doubleValue());
+                        if (item.value() instanceof Number number) cell.setCellValue(number.doubleValue());
                         else if (item.value() != null) cell.setCellValue(item.value().toString());
                     }
                     workbook.write(output);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import * as api from "./recommendationBrowseApi";
@@ -91,6 +92,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
     setSelected(undefined);
     setDetail(undefined);
     setQuery({
+      ...(query.sort ? { sort: query.sort, direction: query.direction } : {}),
       page: 1,
       size: query.size,
       ...(draft.targetType
@@ -115,11 +117,18 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
         data-screen-id="SCR-UI-01-B138-HISTORY SCR-UI-19-B140-HISTORY-OPEN SCR-UI-19-B140-HISTORY-PAGE SCR-UI-19-B140-HISTORY-CLOSE"
         aria-busy={loading}
       >
-        <form
-          className="recommendation-filters"
-          onSubmit={(e) => {
-            e.preventDefault();
-            apply();
+        <FilterBar
+          testId="history-filters"
+          searchTestId="history-search"
+          resetTestId="history-reset"
+          disabled={loading}
+          onSubmit={apply}
+          onReset={() => {
+            setDraft({ targetType: "", targetId: "", job: "", recommendationType: "" });
+            setFields({});
+            setSelected(undefined);
+            setDetail(undefined);
+            setQuery({ page: 1, size: query.size });
           }}
         >
           <label className="sicost-field">
@@ -185,10 +194,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
               <option value="NEXT">NEXT</option>
             </select>
           </label>
-          <button data-testid="history-search" type="submit" disabled={loading}>
-            조회
-          </button>
-        </form>
+        </FilterBar>
         <RecommendationBrowseError
           error={error}
           retry={() => setRetry((n) => n + 1)}
@@ -197,24 +203,30 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
         {!loading && !error && data && (
           <>
             {data.items.length === 0 ? (
-              <p className="recommendation-empty">추천 기록이 없습니다.</p>
+              <div className="recommendation-empty">추천 기록이 없습니다.
+                <button type="button" onClick={() => {
+                  setDraft({ targetType: "", targetId: "", job: "", recommendationType: "" });
+                  setFields({});
+                  setSelected(undefined);
+                  setDetail(undefined);
+                  setQuery({ page: 1, size: query.size });
+                }}>조건 초기화</button>
+              </div>
             ) : (
               <div className="sicost-table-viewport">
                 <table className="sicost-table">
                   <thead>
                     <tr>
-                      {[
-                        "회차",
-                        "유형",
-                        "대상",
-                        "직무",
-                        "시작월",
-                        "요청등급",
-                        "실행시각",
-                        "사용자",
-                        "후보 수",
-                      ].map((label) => (
-                        <th key={label}>{label}</th>
+                      {([
+                        ["rcmdId", "회차"], ["recommendationType", "유형"], ["targetId", "대상"],
+                        ["jobCode", "직무"], ["startMonth", "시작월"], ["requestedGradeCode", "요청등급"],
+                        ["executedAt", "실행시각"], ["executedBy", "사용자"], ["candidateCount", "후보 수"],
+                      ] as const).map(([id, label]) => (
+                        <th key={id} aria-sort={query.sort === id ? query.direction === "DESC" ? "descending" : "ascending" : "none"}>
+                          <button type="button" onClick={() => setQuery((old) => ({ ...old, sort: id, direction: old.sort === id && old.direction !== "DESC" ? "DESC" : "ASC", page: 1 }))}>
+                            {label}{query.sort === id ? query.direction === "DESC" ? " ▼" : " ▲" : ""}
+                          </button>
+                        </th>
                       ))}
                     </tr>
                   </thead>

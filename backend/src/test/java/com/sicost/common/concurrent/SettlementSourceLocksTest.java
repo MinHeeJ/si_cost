@@ -31,6 +31,19 @@ class SettlementSourceLocksTest {
         order.verify(advisory).lock("operating-standards:CASH_BASE_YM"); order.verify(mapper).partIds(any());
         verifyNoMoreInteractions(mapper, advisory);
     }
+    @Test void repeatedSourceLockStillChecksMembershipInsideSameTransaction() {
+        when(mapper.partIds(any())).thenReturn(List.of("PART-001"), List.of("PART-001"), List.of("PART-001"), List.of("PART-002"));
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            locks.lock(List.of("DEV:D-001"));
+            assertThatThrownBy(() -> locks.lock(List.of("DEV:D-001")))
+                .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.code()).isEqualTo("STATE_CONFLICT"));
+        } finally {
+            for (var sync : org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations())
+                sync.afterCompletion(org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK);
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
     @Test void changedMembershipConflictsAfterSourceLockAndBeforeMutation() {
         when(mapper.partIds(any())).thenReturn(List.of("PART-001"), List.of("PART-002"));
         assertThatThrownBy(() -> locks.lock(List.of("DEV:D-001"))).isInstanceOfSatisfying(ApiException.class, e -> {

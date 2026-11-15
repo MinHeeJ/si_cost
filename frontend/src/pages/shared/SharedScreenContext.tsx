@@ -11,6 +11,7 @@ export type SharedScreenState = {
   pageSize?: 20 | 50 | 100;
   dense?: boolean;
   savePageSize?(size: 20 | 50 | 100): Promise<void>;
+  saveDense?(dense: boolean): Promise<void>;
 };
 export const SharedScreenContext = createContext<SharedScreenState>({
   menus: [],

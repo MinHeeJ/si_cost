@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formatRate } from "../../shared/format";
 import { Link } from "react-router-dom";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { Dialog } from "../../shared/Dialog";
@@ -201,7 +202,7 @@ export function WithdrawalNextPanel({
                       </Link>
                     </h3>
                     <p>
-                      수주확률 {position.probability}% · 단계{" "}
+                      수주확률 {formatRate(position.probability)} · 단계{" "}
                       {position.salesStepCode} · {candidate.jobCode} ·{" "}
                       {position.gradeCode}
                     </p>

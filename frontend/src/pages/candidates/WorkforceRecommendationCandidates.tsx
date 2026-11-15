@@ -1,3 +1,4 @@
+import { formatAmount, formatRate, type AmountUnit } from "../../shared/format";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -18,6 +19,7 @@ export type RecommendationCandidatesProps = {
   target: { type: "OPPORTUNITY" | "PROJECT"; id: string; name: string };
   candidates: api.RecommendationCandidate[];
   selectedNeedSn: string | null;
+  amountUnit?: AmountUnit;
   selectedNeedLabel?: string;
   year: number;
   today: string;
@@ -25,6 +27,7 @@ export type RecommendationCandidatesProps = {
   error?: unknown;
   actionsEnabled?: boolean;
   onRefresh(): Promise<void>;
+  onReset?(): void;
   onDeveloperDetails(id: string): void;
   onTargetDetails(type: "OPPORTUNITY" | "PROJECT", id: string): void;
 };
@@ -40,6 +43,13 @@ const itemLabels: Record<string, string> = {
   GAP: "공백",
   PROB: "수주 확률",
 };
+function costBasis(row: api.RecommendationCandidate, unit: AmountUnit, fallback: string) {
+  const detail = row.scoreDetail;
+  if (!detail || typeof detail !== "object" || !("c" in detail) || !("u" in detail)) return fallback;
+  const c = detail.c, u = detail.u;
+  if (!(c === null || typeof c === "string") || !(u === null || typeof u === "string")) return fallback;
+  return <>{"m" in detail && typeof detail.m === "string" ? `원가월 ${detail.m} · ` : ""}인건비 {formatAmount(c, unit)} {unit} · 단가 {formatAmount(u, unit)} {unit}{"f" in detail && detail.f === 1 ? " · 예정" : ""}{c === null || u === null ? " · 원천 미확인" : ""}</>;
+}
 export function WorkforceRecommendationCandidates(
   props: RecommendationCandidatesProps,
 ) {
@@ -259,6 +269,7 @@ export function WorkforceRecommendationCandidates(
         <div className="recommendation-empty">
           <h2>맞는 인력이 없습니다.</h2>
           <p>조건을 확인한 뒤 다시 추천해 주세요.</p>
+          {props.onReset && <button type="button" onClick={props.onReset}>조건 초기화</button>}
         </div>
       ) : (
         candidates
@@ -315,7 +326,7 @@ export function WorkforceRecommendationCandidates(
                     </button>
                     <p>
                       {next.customerName ?? "고객 미확인"} ·{" "}
-                      {next.salesStepCode} · 수주 확률 {next.probability}%
+                      {next.salesStepCode} · 수주 확률 {formatRate(next.probability)}
                     </p>
                     <p>
                       원 시작월 {next.originalStartMonth} · 실제 예정월{" "}
@@ -386,7 +397,7 @@ export function WorkforceRecommendationCandidates(
                       <span>
                         {item.score}/{item.weight}
                       </span>
-                      <small>{item.basis}</small>
+                      <small>{item.itemCode === "COST" ? costBasis(row, props.amountUnit ?? "천원", item.basis) : item.basis}</small>
                     </div>
                   ))}
                 </div>

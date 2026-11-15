@@ -14,6 +14,7 @@ public class WithdrawalRepository {
     public List<NextAssignment> next(Source row){return mapper.nextAssignments(new NextQuery(row.assignmentId(),row.developerId(),row.withdrawalDate()));}
     public List<Position> positions(String developerId){return mapper.positions(developerId);}
     public List<Leave> leaves(String developerId){return mapper.leaves(developerId);}
+    public String jobName(String job){return mapper.jobName(job);}
     public boolean activeJob(String job){return mapper.activeJob(job);}
     public String revision(String id){return assignments.revision(id);}
 }

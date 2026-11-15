@@ -148,16 +148,14 @@ export async function downloadBusinessPlanTemplate(year: number) {
   );
 }
 async function send<T>(
-  path:
-    | "/api/business-plans/imports/validate"
-    | "/api/business-plans/imports/apply",
+  operation: "validate" | "apply",
   file: File,
   fields: Record<string, string>,
 ): Promise<T> {
   const body = new FormData();
   body.append("file", file);
   Object.entries(fields).forEach(([key, value]) => body.append(key, value));
-  const response = await fetch(path, {
+  const response = await fetch(`/api/business-plans/imports/${operation}`, {
     method: "POST",
     body,
     redirect: "error",
@@ -172,24 +170,18 @@ async function send<T>(
   return payload.data;
 }
 export const validateBusinessPlan = (file: File, year: number) =>
-  send<PlanValidation>("/api/business-plans/imports/validate", file, {
-    year: String(year),
-  });
+  send<PlanValidation>("validate", file, { year: String(year) });
 export async function applyBusinessPlan(
   file: File,
   validation: PlanValidation,
   mode: "ALL" | "KEEP_CLOSED",
 ) {
-  const result = await send<PlanApplied>(
-    "/api/business-plans/imports/apply",
-    file,
-    {
-      year: String(validation.year),
-      uploadId: validation.uploadId,
-      expectedRevision: validation.expectedRevision,
-      mode,
-    },
-  );
+  const result = await send<PlanApplied>("apply", file, {
+    year: String(validation.year),
+    uploadId: validation.uploadId,
+    expectedRevision: validation.expectedRevision,
+    mode,
+  });
   window.dispatchEvent(new Event(BUSINESS_PLAN_COMMITTED));
   return result;
 }

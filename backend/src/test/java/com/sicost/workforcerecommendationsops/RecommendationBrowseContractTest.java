@@ -121,4 +121,15 @@ class RecommendationBrowseContractTest {
         mvc.perform(get("/api/workforce-recommendations/history").param(key,value)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field))
             .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.matchesPattern(".*[가-힣].*"))).andExpect(jsonPath("$.requestId").isNotEmpty());verifyNoInteractions(mapper,users);
     }
+    @ParameterizedTest @org.junit.jupiter.params.provider.CsvSource({"sort,unknown","sort,","direction,down","direction,"})
+    void invalidSortDoesNotReadOrWrite(String field,String value) throws Exception {invalid(field,value==null?"":value);}
+    @ParameterizedTest @ValueSource(strings={"rcmdId","recommendationType","targetId","jobCode","startMonth","requestedGradeCode","executedAt","executedBy","candidateCount"})
+    void optionalSortReachesMapper(String sort) throws Exception {
+        for(String direction:List.of("ASC","DESC")){
+            mvc.perform(get("/api/workforce-recommendations/history").param("sort",sort).param("direction",direction)).andExpect(status().isOk())
+                .andExpect(DurableOpenApi.response("GET","/api/workforce-recommendations/history",200));
+            verify(mapper).history(new HistoryQuery(null,null,null,null,1,50,sort,direction),0);
+        }
+    }
+
 }

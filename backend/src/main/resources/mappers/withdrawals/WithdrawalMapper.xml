@@ -48,4 +48,5 @@
     SELECT dev_id AS "developerId",bgn_dt AS "startDate",end_dt AS "endDate" FROM tb_hr_dev_stat
     WHERE dev_id=#{developerId} AND work_stat_cd='LEAVE' ORDER BY bgn_dt,stat_sn
   </select>
+  <select id="jobName" resultType="string">SELECT code_nm FROM tb_sy_code WHERE code_grp_id='JOB' AND code=#{job} AND del_yn='N'</select>
 </mapper>

@@ -27,5 +27,23 @@ class AiWorkforceScoringTest {
     @Test void costKeepsKnownZeroAndUnknownSeparateAndUsesCurrentMonth(){var p=person("BE",null,"MD");var c=context(null,null,List.of(),List.of(),codes());var d=scoring.calculate(p,c,weights,new Labor("202607","60",true),new BigDecimal("100")).detail();assertThat(d.b().get(5)).isEqualByComparingTo("5");assertThat(d.m()).isEqualTo("202607");assertThat(d.f()).isEqualTo(1);assertThat(scoring.calculate(p,c,weights,new Labor("202607","0",false),new BigDecimal("100")).detail().b().get(5)).isEqualByComparingTo("5");assertThat(scoring.calculate(p,c,weights,new Labor("202607",null,false),new BigDecimal("100")).detail().b().get(5)).isZero();assertThat(scoring.calculate(p,c,weights,new Labor("202607","60",false),BigDecimal.ZERO).detail().b().get(5)).isZero();}
     @Test void availabilityUsesWholeCurrentAssignmentLatestEndAndMixedTie(){var p=person("BE",null,"MD");var old=history("A-1",day.minusMonths(1),day.plusDays(1),0,false,"H",null,null);assertThat(calculate(p,context(null,null,List.of(),List.of(old),codes())).detail().b().get(6)).isEqualByComparingTo("10");var low=history("A-2",day.minusMonths(1),LocalDate.of(2026,8,10),0,false,"L",null,null);assertThat(calculate(p,context(null,null,List.of(),List.of(low),codes())).detail().b().get(6)).isEqualByComparingTo("6");var medium=history("A-3",day.minusMonths(1),LocalDate.of(2026,8,10),0,false,"M",null,null);assertThat(calculate(p,context(null,null,List.of(),List.of(low,medium),codes())).detail().b().get(6)).isEqualByComparingTo("2");}
     @Test void locationUsesOfficialAndShortProvinceButNotRemoteWord(){var p=person("BE",null,"MD");assertThat(calculate(p,context(null,"서울특별시 강남구",List.of(),List.of(),codes())).detail().b().get(7)).isEqualByComparingTo("10");assertThat(calculate(p,context(null,null,List.of(),List.of(),codes())).detail().b().get(7)).isEqualByComparingTo("5");assertThat(calculate(p,context(null,"재택",List.of(),List.of(),codes())).detail().b().get(7)).isEqualByComparingTo("6");}
+    @Test void fractionalWeightsPreserveRawScoresAndRoundTheTotalOnce() {
+        var w=List.of("24.4444","20.5556","14.1234","10.8766","4.5555","5.4445","9.1234","10.8766").stream().map(BigDecimal::new).toList();
+        var codes=new ArrayList<>(codes());
+        for(int i=1;i<=5;i++)codes.add(new Code("SKILL","SK"+i,"skill"+i,i,"BE"));
+        var h=history("A-1",day.minusMonths(1),LocalDate.of(2026,8,10),0,false,"L","C-2","IT");
+        var c=context("skill1", "판별불가",List.of(new Skill("D-1","skill1")),List.of(h),codes);
+        var result=scoring.calculate(person("FE",null,"JR"),c,w,new Labor("202607","70",false),new BigDecimal("100"));
+        assertThat(result.detail().b()).usingElementComparator(BigDecimal::compareTo)
+            .containsExactly(new BigDecimal("12"),new BigDecimal("7"),new BigDecimal("9"),new BigDecimal("5"),new BigDecimal("3"),new BigDecimal("4"),new BigDecimal("6"),new BigDecimal("6"));
+        assertThat(result.detail().s()).usingElementComparator(BigDecimal::compareTo)
+            .containsExactly(new BigDecimal("11.733312"),new BigDecimal("7.19446"),new BigDecimal("8.47404"),new BigDecimal("5.4383"),new BigDecimal("2.7333"),new BigDecimal("4.3556"),new BigDecimal("5.47404"),new BigDecimal("6.52596"));
+        assertThat(result.totalScore()).isEqualTo("51.9");
+    }
+    @Test void costHalfUpBoundaryAndClampUseExactLaborRatio() {
+        var c=context(null,null,List.of(),List.of(),codes());var p=person("BE",null,"MD");
+        for(String[] row:new String[][]{{"649999","5"},{"650000","5"},{"650001","4"},{"1000000","1"},{"2000000","1"}})
+            assertThat(scoring.calculate(p,c,weights,new Labor("202607",row[0],false),new BigDecimal("1000000")).detail().b().get(5)).isEqualByComparingTo(row[1]);
+    }
     @Test void scalingPreservesSixDecimalsZeroWeightAndOnlyRoundsTotal(){var w=List.of(new BigDecimal("0"),new BigDecimal("45"),new BigDecimal("15"),new BigDecimal("10"),new BigDecimal("5"),new BigDecimal("5"),new BigDecimal("10"),new BigDecimal("10"));var d=scoring.calculate(person("BE",null,"MD"),context(null,null,List.of(),List.of(),codes()),w,new Labor("202607",null,false),null).detail();assertThat(d.s().get(0)).isZero();assertThat(scoring.items(d).get(0).weight()).isEqualTo("0");assertThat(scoring.items(d).get(0).score()).isEqualTo("0");}
 }

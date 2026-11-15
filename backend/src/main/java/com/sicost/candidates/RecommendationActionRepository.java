@@ -34,7 +34,7 @@ public class RecommendationActionRepository {
         mapper.lockDeveloper(before.developerId());mapper.lockAssignments(before.developerId());
         mapper.lockClose();
         Row row=mapper.lockRow(key);if(row==null)throw new ApiException(404,"NOT_FOUND","추천 후보가 없습니다.");
-        if(!Objects.equals(before.opportunityId(),row.opportunityId())||!Objects.equals(before.projectId(),row.projectId())||!before.developerId().equals(row.developerId())||!opportunities.equals(mapper.activeOpportunityIds(row.developerId())))throw stale();return row;
+        if(!Objects.equals(before.opportunityId(),row.opportunityId())||!Objects.equals(before.projectId(),row.projectId())||!before.developerId().equals(row.developerId())||(row.actionCode()==null&&!opportunities.equals(mapper.activeOpportunityIds(row.developerId()))))throw stale();return row;
     }
     public Map<String,String> values(Key key){Map<String,String> values=new TreeMap<>();for(AuditValue value:mapper.auditValues(key))values.putIfAbsent(value.item(),value.value());return values;}
     public Revisions current(Row row){

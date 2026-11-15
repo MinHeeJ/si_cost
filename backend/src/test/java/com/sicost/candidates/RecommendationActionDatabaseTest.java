@@ -114,6 +114,21 @@ class RecommendationActionDatabaseTest {
         var a=body("101",1,"tentative-assignment");var b=body("101",3,"tentative-assignment");ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);
         try{var first=pool.submit(()->{start.await();return call("101",1,"tentative-assignment",a).andReturn().getResponse();});var next=pool.submit(()->{start.await();return call("101",3,"tentative-assignment",b).andReturn().getResponse();});start.countDown();var results=List.of(first.get(30,TimeUnit.SECONDS),next.get(30,TimeUnit.SECONDS));assertThat(results.stream().map(r->r.getStatus()).toList()).containsExactlyInAnyOrder(200,409);assertThat(results.stream().filter(r->r.getStatus()==409).findFirst().orElseThrow().getContentAsString()).contains("SLOT_FULL");assertThat(sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE tent_stat_cd='ACT'",Integer.class)).isEqualTo(1);}finally{pool.shutdownNow();}
     }
+    @Test void concurrentSameCardReplaysCommittedResultWithoutSecondTentativeOrAudit() throws Exception {
+        var request=body("101",1,"tentative-assignment");
+        ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);
+        try {
+            Callable<org.springframework.mock.web.MockHttpServletResponse> task=()->{start.await();return call("101",1,"tentative-assignment",request).andReturn().getResponse();};
+            var first=pool.submit(task);var second=pool.submit(task);start.countDown();
+            var results=List.of(first.get(30,TimeUnit.SECONDS),second.get(30,TimeUnit.SECONDS));
+            assertThat(results).allSatisfy(r->assertThat(r.getStatus()).as(r.getContentAsString()).isEqualTo(200));
+            assertThat(results.stream().map(r->{try{return json.readTree(r.getContentAsString()).path("data").path("changed").asBoolean();}catch(Exception e){throw new RuntimeException(e);}}).toList()).containsExactlyInAnyOrder(true,false);
+            assertThat(count("tb_sl_tent_asgn")).isEqualTo(1);
+            int audits=count("tb_sy_chg_hist");
+            call("101",1,"tentative-assignment",request).andExpect(status().isOk());
+            assertThat(count("tb_sy_chg_hist")).isEqualTo(audits);
+        } finally {pool.shutdownNow();}
+    }
     @Test void changedOffPageMonthAndPayrollRejectOriginalRevision()throws Exception{
         var b=body("101",1,"tentative-assignment");sql.update("UPDATE tb_hr_dev_prc SET mon_pay_amt=200 WHERE dev_id=?",developer);call("101",1,"tentative-assignment",b).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));assertThat(count("tb_sl_tent_asgn")).isZero();assertThat(action()).isNull();
     }

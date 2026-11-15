@@ -109,4 +109,29 @@ class WithdrawalContractTest {
         assertThat(WithdrawalPositionCalculator.calculate(s,today,positions,List.of(new Leave(s.developerId(),LocalDate.of(2026,12,1),LocalDate.of(2027,3,31))))).isEmpty();
     }
     @Test void internalErrorsDoNotExposeSqlOrStack() throws Exception {when(mapper.sources(any())).thenThrow(new IllegalStateException("SELECT private password"));mvc.perform(get("/api/withdrawals")).andExpect(status().isInternalServerError()).andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SELECT"))));}
+    @ParameterizedTest @CsvSource({"sort,unknown","sort,","direction,down","direction,"})
+    void invalidSortDoesNotReadOrWrite(String field,String value) throws Exception {
+        mvc.perform(get("/api/withdrawals").param(field,value==null?"":value)).andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value(field)).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.requestId").isNotEmpty()).andExpect(jsonPath("$.message").isNotEmpty());
+        verifyNoInteractions(mapper,assignments,monthly,users);
+    }
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"name","project","job","date","days","history","extension","next"})
+    void allSortColumnsUseWholeSetBeforePagingAndPkTies(String sort) throws Exception {
+        for(int i=25;i>=1;i--)rows.add(source(String.format("A-%02d",i),today,"H"));
+        for(String direction:List.of("ASC","DESC")){
+            mvc.perform(get("/api/withdrawals").param("sort",sort).param("direction",direction).param("size","20").param("page","1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].assignmentId").value("A-01")).andExpect(jsonPath("$.data.items[19].assignmentId").value("A-20"));
+            mvc.perform(get("/api/withdrawals").param("sort",sort).param("direction",direction).param("size","20").param("page","2"))
+                .andExpect(jsonPath("$.data.items[0].assignmentId").value("A-21")).andExpect(jsonPath("$.data.items[4].assignmentId").value("A-25"));
+        }
+    }
+    @Test void extensionNullsLastBothDirectionsAndDaysAreNumeric() throws Exception {
+        rows.add(source("A-null",today,null));rows.add(source("A-2",today.plusDays(2),"H"));rows.add(source("A-10",today.plusDays(10),"L"));
+        for(String direction:List.of("ASC","DESC"))mvc.perform(get("/api/withdrawals").param("sort","extension").param("direction",direction))
+            .andExpect(jsonPath("$.data.items[2].assignmentId").value("A-null"));
+        mvc.perform(get("/api/withdrawals").param("sort","days")).andExpect(jsonPath("$.data.items[1].assignmentId").value("A-2")).andExpect(jsonPath("$.data.items[2].assignmentId").value("A-10"));
+        mvc.perform(get("/api/withdrawals").param("sort","days").param("direction","DESC")).andExpect(jsonPath("$.data.items[0].assignmentId").value("A-10"));
+    }
+
 }

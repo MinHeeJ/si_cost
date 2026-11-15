@@ -48,6 +48,8 @@ export type RecommendationTargets = {
   revision: string;
 };
 export type RecommendationHistoryQuery = {
+  sort?: keyof RecommendationHistoryItem;
+  direction?: "ASC" | "DESC";
   targetType?: TargetType;
   targetId?: string;
   job?: string;
@@ -76,6 +78,13 @@ export type RecommendationSnapshot = {
   rcmdId: string | null;
   recommendationType: "AI" | "NEXT";
   appliedCondition: RecommendationCondition | null;
+  exclusions?: {
+    totalCandidateCount: number;
+    excludedUniqueCount: number;
+    byReason: { reason: string; count: number }[];
+    diagnostics: { developerId: string; reasons: string[] }[];
+    reasonCountsOverlap: boolean;
+  };
   sourceAssignmentId: string | null;
   executedAt: string | null;
   executedBy: string | null;

@@ -14,7 +14,7 @@ public final class RecommendationBrowseInput {
         });
     }
     public static HistoryQuery history(MultiValueMap<String,String> q) {
-        query(q,Set.of("targetType","targetId","job","recommendationType","page","size"));
+        query(q,Set.of("targetType","targetId","job","recommendationType","page","size","sort","direction"));
         String type=value(q,"targetType",11),id=value(q,"targetId",20),job=value(q,"job",10),kind=value(q,"recommendationType",4);
         if(type!=null&&!Set.of("OPPORTUNITY","PROJECT").contains(type))throw invalid("targetType","대상 유형을 확인해 주세요.");
         if((type==null)!=(id==null))throw invalid(type==null?"targetType":"targetId","대상 유형과 대상 ID를 함께 지정해 주세요.");
@@ -22,7 +22,10 @@ public final class RecommendationBrowseInput {
         int page=integer(q,"page",1),size=integer(q,"size",50);
         if(page<1)throw invalid("page","페이지는 1 이상이어야 합니다.");
         if(!Set.of(20,50,100).contains(size))throw invalid("size","페이지 크기는 20, 50, 100 중에서 선택해 주세요.");
-        return new HistoryQuery(type,id,job,kind,page,size);
+        String sort=value(q,"sort",20),direction=value(q,"direction",4);
+        if(sort!=null&&!Set.of("rcmdId","recommendationType","targetId","jobCode","startMonth","requestedGradeCode","executedAt","executedBy","candidateCount").contains(sort))throw invalid("sort","정렬 열을 확인해 주세요.");
+        if(direction!=null&&!Set.of("ASC","DESC").contains(direction))throw invalid("direction","정렬 방향을 확인해 주세요.");
+        return new HistoryQuery(type,id,job,kind,page,size,sort,direction==null?"ASC":direction);
     }
     private static String value(MultiValueMap<String,String> q,String key,int length) {
         if(!q.containsKey(key))return null;

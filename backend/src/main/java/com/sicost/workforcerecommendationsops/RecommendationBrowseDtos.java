@@ -5,7 +5,8 @@ import java.util.List;
 
 public final class RecommendationBrowseDtos {
     private RecommendationBrowseDtos() {}
-    public record HistoryQuery(String targetType,String targetId,String job,String recommendationType,int page,int size) {
+    public record HistoryQuery(String targetType,String targetId,String job,String recommendationType,int page,int size,String sort,String direction) {
+        public HistoryQuery(String targetType,String targetId,String job,String recommendationType,int page,int size){this(targetType,targetId,job,recommendationType,page,size,null,"ASC");}
         public long offset(){return (long)(page-1)*size;}
     }
     public record HistoryItem(String rcmdId,String recommendationType,String targetId,String jobCode,String startMonth,

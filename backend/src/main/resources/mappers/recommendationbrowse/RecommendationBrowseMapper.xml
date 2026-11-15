@@ -22,7 +22,26 @@
     FROM (SELECT DISTINCT ON (r.rcmd_id) r.* FROM tb_sl_rcmd_log r
       <include refid="historyPredicates"/>
       ORDER BY r.rcmd_id,r.rank_ord) r
-    ORDER BY r.reg_dttm DESC NULLS LAST,r.rcmd_id DESC
+    ORDER BY
+    <choose>
+      <when test="query.sort != null">
+        <choose>
+          <when test="query.sort == 'rcmdId'">r.rcmd_id</when>
+          <when test="query.sort == 'recommendationType'">r.rcmd_type_cd</when>
+          <when test="query.sort == 'targetId'">coalesce(r.proj_id,r.opp_id)</when>
+          <when test="query.sort == 'jobCode'">r.job_cd</when>
+          <when test="query.sort == 'startMonth'">r.bgn_ym</when>
+          <when test="query.sort == 'requestedGradeCode'">r.req_grade_cd</when>
+          <when test="query.sort == 'executedAt'">r.reg_dttm</when>
+          <when test="query.sort == 'executedBy'">r.reg_user_id</when>
+          <when test="query.sort == 'candidateCount'">"candidateCount"</when>
+          <otherwise>r.rcmd_id</otherwise>
+        </choose>
+        <choose><when test="query.direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose>
+        NULLS LAST,r.rcmd_id ASC
+      </when>
+      <otherwise>r.reg_dttm DESC NULLS LAST,r.rcmd_id DESC</otherwise>
+    </choose>
     LIMIT #{query.size} OFFSET #{offset}
   </select>
   <select id="historyCount" resultType="long" useCache="false">

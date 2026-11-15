@@ -59,4 +59,14 @@ class WithdrawalDatabaseTest {
         for(int i=0;i<3;i++){mapper.sources(new Window(2080,today,today.plusMonths(2)));mapper.nextAssignments(new NextQuery(id,developer,today));mapper.positions(developer);mapper.leaves(developer);}
         tables.forEach(t->assertThat(all(t)).as(t).isEqualTo(before.get(t)));assertThat(sql.queryForMap("SELECT last_value,is_called FROM sq_tb_sl_rcmd_log")).isEqualTo(sequence);
     }
+    @Test void jobSortUsesOnlyNamesAvailableInTheScreenCodeLookup(){
+        String displayed=mapper.jobName("BE");
+        assertThat(displayed).isNotBlank();
+        sql.update("UPDATE tb_sy_code SET use_yn='N' WHERE code_grp_id='JOB' AND code='BE'");
+        assertThat(mapper.jobName("BE")).isEqualTo(displayed);
+        sql.update("UPDATE tb_sy_code SET use_yn='Y',del_yn='Y' WHERE code_grp_id='JOB' AND code='BE'");
+        assertThat(mapper.jobName("BE")).isNull();
+        assertThat(mapper.jobName("MISSING")).isNull();
+    }
+
 }

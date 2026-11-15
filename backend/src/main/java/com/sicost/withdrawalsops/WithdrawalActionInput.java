@@ -25,7 +25,7 @@ public final class WithdrawalActionInput {
         for(String key:query.keySet())throw ProjectInputPolicy.invalid(key);
     }
     public static WithdrawalInput.Query export(MultiValueMap<String,String> query,String body) {
-        for(String key:query.keySet())if(!Set.of("year","period","extension","job").contains(key))throw ProjectInputPolicy.invalid(key);
+        for(String key:query.keySet())if(!Set.of("year","period","extension","job","sort","direction").contains(key))throw ProjectInputPolicy.invalid(key);
         return WithdrawalInput.parse(query,body);
     }
 }

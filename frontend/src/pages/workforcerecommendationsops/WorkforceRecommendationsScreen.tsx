@@ -34,6 +34,7 @@ export function WorkforceRecommendationsScreen({
       target: api.RecommendationTarget;
       serverDate: string;
       onRefresh(): Promise<void>;
+      onReset(): void;
     },
   ): ReactNode;
 } = {}) {
@@ -427,6 +428,9 @@ export function WorkforceRecommendationsScreen({
             renderRecommendation(result, draft?.needSn ?? null, canAct, {
               target: selected,
               serverDate: targets.serverDate,
+              onReset: () => {
+                if (targets && selected) void recommend(initialCondition(selected), selected, targets.baseMonth);
+              },
               onRefresh: async () => {
                 if (!result.rcmdId) return;
                 const current = generation.current;
@@ -441,6 +445,21 @@ export function WorkforceRecommendationsScreen({
             <RecommendationSavedValues value={result} />
           )}
         </fieldset>
+      )}
+      {result?.exclusions && (
+        <section className="recommendation-card" data-testid="recommendation-exclusions">
+          <h2>후보 제외 진단</h2>
+          <p>전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외 {result.exclusions.excludedUniqueCount}명</p>
+          <p>한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은 다를 수 있습니다.</p>
+          <div>{result.exclusions.byReason.map((r) => (
+            <span className="sicost-badge sicost-tone-neutral" key={r.reason}>{r.reason} {r.count}명</span>
+          ))}</div>
+          <details><summary>개인 진단</summary>
+            {result.exclusions.diagnostics.map((d) => (
+              <p key={d.developerId}>{d.developerId}: {d.reasons.join(" · ")}</p>
+            ))}
+          </details>
+        </section>
       )}
       <button
         type="button"

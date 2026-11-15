@@ -6,9 +6,11 @@ import static com.sicost.apiops.StaffingQueryInput.invalid;
 
 public final class WithdrawalInput {
     private WithdrawalInput() {}
-    public record Query(Integer year,String period,String extension,String job,int page,int size) {}
+    public record Query(Integer year,String period,String extension,String job,int page,int size,String sort,String direction) {
+        public Query(Integer year,String period,String extension,String job,int page,int size){this(year,period,extension,job,page,size,null,"ASC");}
+    }
     public static Query parse(MultiValueMap<String,String> raw,String body) {
-        StaffingQueryInput.validate(raw,Set.of("year","period","extension","job","page","size"),body);
+        StaffingQueryInput.validate(raw,Set.of("year","period","extension","job","page","size","sort","direction"),body);
         var q=new org.springframework.util.LinkedMultiValueMap<String,String>();
         raw.forEach((k,v)->q.add(k,v.get(0).strip()));
         int size=StaffingQueryInput.integer(q.getFirst("size"),50,"size");
@@ -18,6 +20,8 @@ public final class WithdrawalInput {
         return new Query(q.containsKey("year")?StaffingQueryInput.integer(q.getFirst("year"),0,"year"):null,
             StaffingQueryInput.choice(q,"period",Set.of("ALL","SOON","LATER","PAST"),"ALL"),
             StaffingQueryInput.choice(q,"extension",Set.of("ALL","H","M","L","UNSET"),"ALL"),job,
-            StaffingQueryInput.integer(q.getFirst("page"),1,"page"),size);
+            StaffingQueryInput.integer(q.getFirst("page"),1,"page"),size,
+            StaffingQueryInput.choice(q,"sort",Set.of("name","project","job","date","days","history","extension","next"),null),
+            StaffingQueryInput.choice(q,"direction",Set.of("ASC","DESC"),"ASC"));
     }
 }

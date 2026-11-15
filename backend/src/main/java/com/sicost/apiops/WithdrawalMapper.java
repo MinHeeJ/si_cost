@@ -10,5 +10,6 @@ public interface WithdrawalMapper {
     List<NextAssignment> nextAssignments(NextQuery query);
     List<Position> positions(String developerId);
     List<Leave> leaves(String developerId);
+    String jobName(String job);
     boolean activeJob(String job);
 }

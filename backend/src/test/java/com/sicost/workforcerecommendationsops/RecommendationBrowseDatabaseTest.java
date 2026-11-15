@@ -61,4 +61,25 @@ class RecommendationBrowseDatabaseTest {
         assertThat(snapshot()).isEqualTo(afterSourceChange);assertThat(before).isNotEqualTo(afterSourceChange);
         assertThat(mapper.history(new HistoryQuery(null,null,"NOPE",null,1,50),0)).isEmpty();
     }
+    @Test void everySortUsesWholeRoundsNullsLastNumericIdAndPkTies(){
+        for(int id=1;id<=25;id++)for(int rank=1;rank<=1+(id%5);rank++)
+            sql.update("INSERT INTO tb_sl_rcmd_log(rcmd_id,rank_ord,rcmd_type_cd,opp_id,job_cd,bgn_ym,req_grade_cd,dev_id,tot_score,score_dtl,reg_user_id,reg_dttm) VALUES (?,?,'AI',?,'OLD','208007','SR',?,80,'{}','admin','2080-07-01 10:00:00')",id,rank,opportunity,developer);
+        sql.update("UPDATE tb_sl_rcmd_log SET opp_id=NULL WHERE rcmd_id=25");
+        String before=snapshot();
+        for(String sort:List.of("rcmdId","recommendationType","targetId","jobCode","startMonth","requestedGradeCode","executedAt","executedBy","candidateCount"))for(String direction:List.of("ASC","DESC")){
+            var q=new HistoryQuery(null,null,null,null,1,20,sort,direction);
+            var all=new ArrayList<>(mapper.history(q,0));all.addAll(mapper.history(q,20));
+            assertThat(all).hasSize(25);
+            java.util.function.Function<HistoryItem,Comparable> value=switch(sort){
+                case "rcmdId"->r->new java.math.BigDecimal(r.rcmdId());case "recommendationType"->HistoryItem::recommendationType;
+                case "targetId"->HistoryItem::targetId;case "jobCode"->HistoryItem::jobCode;case "startMonth"->HistoryItem::startMonth;
+                case "requestedGradeCode"->HistoryItem::requestedGradeCode;case "executedAt"->HistoryItem::executedAt;
+                case "executedBy"->HistoryItem::executedBy;default->HistoryItem::candidateCount;};
+            Comparator<Comparable> values=direction.equals("DESC")?Comparator.reverseOrder():Comparator.naturalOrder();
+            var expected=new ArrayList<>(all);expected.sort(Comparator.comparing(value,Comparator.nullsLast(values)).thenComparing(r->new java.math.BigDecimal(r.rcmdId())));
+            assertThat(all).as(sort+direction).isEqualTo(expected);
+        }
+        assertThat(snapshot()).isEqualTo(before);
+    }
+
 }

@@ -145,9 +145,9 @@ export function AssignmentCreateForm({
         ? {
             contractDeveloperId: null,
             billingUnitPrice: "",
-            recommendationRef: null,
           }
         : {}),
+      ...(["projectId", "developerId"].includes(key) ? { recommendationRef: null } : {}),
     }));
   }
   function payload(): api.Create {

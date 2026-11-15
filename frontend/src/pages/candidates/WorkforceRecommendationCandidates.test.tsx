@@ -406,3 +406,43 @@ it("Escape closes exclusion without changing business data", async () => {
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(api.createWorkforceRecommendationExclusion).not.toHaveBeenCalled();
 });
+
+it("empty recommendations offer the supplied condition reset without writing an action", async () => {
+  const onReset = vi.fn();
+  render(<WorkforceRecommendationCandidates {...props} candidates={[]} onReset={onReset} />);
+  const empty = screen.getByRole("heading", { name: "맞는 인력이 없습니다." }).parentElement!;
+  await userEvent.click(within(empty).getByRole("button", { name: "조건 초기화" }));
+  expect(onReset).toHaveBeenCalledTimes(1);
+  expect(api.createWorkforceRecommendationExclusion).not.toHaveBeenCalled();
+  expect(api.createWorkforceRecommendationTentativeAssignment).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["천원", "1000.001", "1,000.001"],
+  ["원", "1000001", "1,000,001"],
+  ["백만원", "1.000001", "1.000001"],
+] as const)("cost evidence displays integer won exactly in %s without changing the saved score", (unit, _decimal, expected) => {
+  render(<WorkforceRecommendationCandidates {...props} amountUnit={unit} candidates={[{ ...candidate,
+    scoreDetail: { m: "202611", c: "1000001", u: "0", f: 1 },
+    scoreItems: [{ itemCode: "COST", baseScore: "0", weight: "5", score: "0", basis: "raw cost" }],
+  }]} />);
+  expect(screen.getByText(new RegExp(`인건비 ${expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ${unit}`))).toHaveTextContent(`단가 0 ${unit}`);
+  expect(screen.getByText(/총점/)).toHaveTextContent("82.3");
+  expect(api.createWorkforceRecommendationTentativeAssignment).not.toHaveBeenCalled();
+});
+
+it("cost evidence keeps unknown distinct from zero", () => {
+  render(<WorkforceRecommendationCandidates {...props} candidates={[{ ...candidate,
+    scoreDetail: { c: null, u: "0", f: 0 },
+    scoreItems: [{ itemCode: "COST", baseScore: "0", weight: "5", score: "0", basis: "raw cost" }],
+  }]} />);
+  expect(screen.getByText(/인건비 – 천원/)).toHaveTextContent("단가 0 천원 · 원천 미확인");
+});
+
+it.each([["1000000", "1,000"], ["-1000001", "−1,000.001"]])("cost evidence preserves %s and trims only trailing zeros", (value, expected) => {
+  render(<WorkforceRecommendationCandidates {...props} candidates={[{ ...candidate,
+    scoreDetail: { c: value, u: "8000000" },
+    scoreItems: [{ itemCode: "COST", baseScore: "5", weight: "5", score: "5", basis: "raw" }],
+  }]} />);
+  expect(screen.getByText(`인건비 ${expected} 천원 · 단가 8,000 천원`)).toBeInTheDocument();
+});

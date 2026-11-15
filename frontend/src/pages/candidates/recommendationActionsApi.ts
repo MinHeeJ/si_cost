@@ -28,6 +28,7 @@ export type RecommendationCandidate = {
   startMonth: string;
   requestedGradeCode: string;
   totalScore: string;
+  scoreDetail?: unknown;
   scoreItems: {
     itemCode: string;
     baseScore: string;

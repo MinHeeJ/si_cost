@@ -53,10 +53,38 @@ public class WithdrawalService {
                 source.extensionCount(),source.earlyWithdrawal(),source.extensionPossibility(),writable&&!"LOSE".equals(source.projectStatus()),
                 next,count,writable&&eligible&&soon&&nonH&&noNext,change,repository.revision(source.assignmentId())));
         }
-        selected.sort(Comparator.comparing(Row::withdrawalDate).thenComparing(r->r.developer().managementNumber()).thenComparing(Row::assignmentId));
+        selected.sort(order(query));
         Guidance guidance=new Guidance(year==today.getYear(),a.size(),b.size(),c.size(),
             "3개월 안 철수 "+a.size()+"명 · 다음 배정 없는 "+b.size()+"명 중 "+c.size()+"명은 맞는 자리가 있습니다. 연도 경계의 다른 연도 자료는 연도를 바꿔 조회하세요.");
         return new Data(paged?selected.stream().skip((long)(query.page()-1)*query.size()).limit(query.size()).toList():List.copyOf(selected),year,query.page(),query.size(),selected.size(),guidance,today,base.toString());
+    }
+    private Comparator<Row> order(WithdrawalInput.Query query){
+        if(query.sort()==null)return Comparator.comparing(Row::withdrawalDate).thenComparing(r->r.developer().managementNumber()).thenComparing(Row::assignmentId);
+        Map<String,String> jobNames=new HashMap<>();
+        Comparator<Row> result=switch(query.sort()){
+            case "name" -> by(r->r.developer().name(),query.direction());
+            case "project" -> by(Row::projectName,query.direction());
+            case "job" -> by(r->jobNames.computeIfAbsent(r.jobCode(),job->Objects.requireNonNullElse(repository.jobName(job),job)),query.direction());
+            case "date" -> by(Row::withdrawalDate,query.direction());
+            case "days" -> by(Row::remainingDays,query.direction());
+            case "history" -> by(Row::extensionCount,query.direction());
+            case "extension" -> by(r->switch(Objects.toString(r.extensionPossibility(),"")){case "H"->"높음";case "M"->"보통";case "L"->"낮음";default->null;},query.direction());
+            case "next" -> by(WithdrawalService::nextLabel,query.direction());
+            default -> throw StaffingQueryInput.invalid("sort","VALIDATION_ERROR");
+        };
+        return result.thenComparing(Row::assignmentId);
+    }
+    private static <T extends Comparable<? super T>> Comparator<Row> by(java.util.function.Function<Row,T> value,String direction){
+        Comparator<T> values="DESC".equals(direction)?Comparator.reverseOrder():Comparator.naturalOrder();
+        return Comparator.comparing(value,Comparator.nullsLast(values));
+    }
+    private static String nextLabel(Row row){
+        if(row.remainingDays()<0)return null;
+        if(!row.nextAssignments().isEmpty()){
+            var next=row.nextAssignments().get(0);
+            return switch(next.kind()){case "CONFIRMED"->"확정";case "CANDIDATE"->"배정 후보";default->"가배정";}+" · "+next.name();
+        }
+        return row.canRecommend()&&row.recommendationCount()>0?"추천 "+row.recommendationCount()+"곳":row.canRecommend()?"없음 · 맞는 자리 없음":"없음";
     }
     static String period(LocalDate date,LocalDate today,LocalDate end){return date.isBefore(today)?"PAST":date.isAfter(end)?"LATER":"SOON";}
     private boolean matches(Source source,WithdrawalInput.Query q,LocalDate today,LocalDate end){

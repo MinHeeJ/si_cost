@@ -435,6 +435,9 @@ describe("공식 화면과 공통 틀", () => {
     "UI-17": "workforce-forecast-screen",
     "UI-28": "workforce-operations-screen",
     "UI-29": "sales-pipeline-screen",
+    // Requirement 13 replaces the withdrawal and recommendation placeholders.
+    "UI-05": "withdrawal-list-screen",
+    "UI-30": "workforce-recommendations-screen",
   };
   it.each(
     Object.keys(screenRegistry).filter(

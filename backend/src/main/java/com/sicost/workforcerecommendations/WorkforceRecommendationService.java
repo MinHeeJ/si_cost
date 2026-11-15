@@ -54,7 +54,7 @@ public class WorkforceRecommendationService {
         List<Diagnostic> diagnostics=new ArrayList<>();Map<String,Integer> reasonCounts=new TreeMap<>();List<Calculation> eligible=new ArrayList<>();
         for(Person person:people){List<String> reasons=new ArrayList<>();String id=person.developerId();
             if(!"Y".equals(person.useYn())||!"DRCT".equals(person.directClass()))reasons.add("활성 직접 인력 아님");
-            if("LEAVE".equals(person.workStatus())||leaves.stream().anyMatch(l->id.equals(l.developerId())&&!l.startDate().isAfter(YearMonth.parse(condition.startMonth()).atEndOfMonth())&&(l.endDate()==null||!l.endDate().isBefore(YearMonth.parse(condition.startMonth()).atDay(1)))))reasons.add("휴직");
+            if("LEAVE".equals(person.workStatus())||leaves.stream().anyMatch(l->id.equals(l.developerId())&&((!l.startDate().isAfter(day)&&(l.endDate()==null||!l.endDate().isBefore(day)))||(!l.startDate().isAfter(YearMonth.parse(condition.startMonth()).atEndOfMonth())&&(l.endDate()==null||!l.endDate().isBefore(YearMonth.parse(condition.startMonth()).atDay(1)))))))reasons.add("휴직");
             if(person.retireDate()!=null||"RETIRE".equals(person.workStatus()))reasons.add("퇴사 또는 퇴사 예정");
             if(person.hireDate()!=null&&person.hireDate().isAfter(start.atEndOfMonth()))reasons.add("시작월 이후 입사");
             if(mm.getOrDefault(id,BigDecimal.ZERO).compareTo(BigDecimal.ONE)>=0)reasons.add("실제 투입 MM 포화");

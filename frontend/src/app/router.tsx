@@ -971,9 +971,20 @@ function RegisteredProjectAnalysis({
 
 function RegisteredWorkforceRecommendations() {
   const navigate = useNavigate();
+  const preferences = usePreferences();
+  const [unitError, setUnitError] = useState("");
+  const storedUnit = preferences.get("AMT_UNIT")?.value;
+  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
+      {unitError && <ErrorBanner message={unitError} />}
+      <label className="sicost-field">금액 단위
+        <select aria-label="추천 금액 단위" value={amountUnit} disabled={preferences.pending}
+          onChange={(e) => { setUnitError(""); void preferences.put("AMT_UNIT", "*", e.target.value).catch((e: unknown) => setUnitError(e instanceof Error ? e.message : "금액 단위를 저장하지 못했습니다.")); }}>
+          {["원", "천원", "백만원"].map((unit) => <option key={unit}>{unit}</option>)}
+        </select>
+      </label>
       <WorkforceRecommendationsScreen
         renderRecommendation={(value, currentNeedSn, canAct, context) => (
           <WorkforceRecommendationCandidates
@@ -986,11 +997,13 @@ function RegisteredWorkforceRecommendations() {
               name: context.target.name,
             }}
             candidates={value.candidates}
+            amountUnit={amountUnit}
             selectedNeedSn={currentNeedSn}
             year={Number(context.serverDate.slice(0, 4))}
             today={context.serverDate}
             actionsEnabled={canAct}
             onRefresh={context.onRefresh}
+            onReset={context.onReset}
             onDeveloperDetails={setDeveloper}
             onTargetDetails={(type, id) =>
               navigate(
