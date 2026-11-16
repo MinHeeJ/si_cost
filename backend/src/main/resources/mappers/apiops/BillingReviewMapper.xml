@@ -43,6 +43,14 @@
     WHERE b.cncl_yn='N' AND b.tot_amt-COALESCE(r.amount,0)>0 AND b.pay_due_dt &lt; #{today}
     ORDER BY (#{today}::date-b.pay_due_dt) DESC,b.pay_due_dt,b.bill_id
   </select>
+  <select id="notYetOverdue" resultType="com.sicost.apiops.BillingReviewDtos$OverdueBill">
+    SELECT b.bill_id AS "billId",b.proj_id AS "projectId",p.proj_nm AS "projectName",
+      b.tot_amt-COALESCE(r.amount,0) AS "unpaidAmount",b.pay_due_dt AS "dueDate"
+    FROM tb_bl_bill b JOIN tb_pj_proj p ON p.proj_id=b.proj_id
+    LEFT JOIN (SELECT bill_id,sum(rcpt_amt) AS amount FROM tb_bl_rcpt WHERE cncl_yn='N' GROUP BY bill_id) r ON r.bill_id=b.bill_id
+    WHERE b.cncl_yn='N' AND b.tot_amt-COALESCE(r.amount,0)>0 AND b.pay_due_dt &gt;= #{today}
+    ORDER BY (#{today}::date-b.pay_due_dt) DESC,b.pay_due_dt,b.bill_id
+  </select>
   <select id="pendingDeliveryBillIds" resultType="string">
     SELECT DISTINCT bill_id FROM tb_sy_delivery_task
     WHERE noti_type_cd='DUN' AND state_cd IN ('PENDING','SENDING')

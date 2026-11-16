@@ -7,6 +7,7 @@ import {
   formatAmount,
   formatDateTime,
   formatDecimal,
+  formatFixedDecimal,
   type AmountUnit,
 } from "../../shared/format";
 import { Icon } from "../../shared/Icon";
@@ -364,6 +365,7 @@ function AnalysisResultTable({
         >
           {display(cell(r, c.key)?.value, c.key)}
           {cell(r, c.key)?.reason && <small> · {cell(r, c.key)?.reason}</small>}
+          {c.key === table.columns[0].key && r.reason && <small> · {r.reason}</small>}
         </span>
       ),
     }));
@@ -372,7 +374,11 @@ function AnalysisResultTable({
     return c.valueType === "DECIMAL"
       ? c.unit === "원"
         ? formatAmount(value, unit)
-        : formatDecimal(value)
+        : c.unit === "MM"
+          ? formatFixedDecimal(value, 2)
+          : ["명", "%", "%p"].includes(c.unit)
+            ? formatFixedDecimal(value, 1)
+            : formatDecimal(value)
       : (states[value ?? ""] ?? value ?? "–");
   };
   return (
@@ -410,9 +416,13 @@ function AnalysisResultTable({
             c.id === table.columns[0].key
               ? "전체 합계"
               : table.totals.some((v) => v.columnKey === c.id)
-                ? display(
-                    table.totals.find((v) => v.columnKey === c.id)?.value,
-                    c.id,
+                ? (
+                    <span>
+                      {display(table.totals.find((v) => v.columnKey === c.id)?.value, c.id)}
+                      {table.totals.find((v) => v.columnKey === c.id)?.reason && (
+                        <small> · {table.totals.find((v) => v.columnKey === c.id)?.reason}</small>
+                      )}
+                    </span>
                   )
                 : "",
         }}

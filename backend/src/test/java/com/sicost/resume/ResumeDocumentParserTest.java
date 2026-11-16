@@ -17,7 +17,37 @@ import org.junit.jupiter.api.*;
 import static org.assertj.core.api.Assertions.*;
 
 class ResumeDocumentParserTest {
-    final ResumeDocumentParser parser=new ResumeDocumentParser();
+    final ResumeDocumentParser parser=new ResumeDocumentParser(){
+        @Override public String extract(byte[] bytes,String filename){
+            String result=super.extract(bytes,filename);
+            // Explicit opt-in verifies the same real binary fixtures through a running API.
+            String base=System.getenv("SICOST_RESUME_API_URL");
+            if(base!=null&&!base.isBlank())verifyLiveApi(base,bytes,filename);
+            return result;
+        }
+    };
+    private static void verifyLiveApi(String base,byte[] bytes,String filename){
+        String boundary="qa16"+UUID.randomUUID();
+        try(var body=new ByteArrayOutputStream()){
+            body.write(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"targetType\"\r\n\r\nCANDIDATE\r\n--"+boundary+"\r\nContent-Disposition: form-data; name=\"file\"; filename=\""+filename+"\"\r\nContent-Type: application/octet-stream\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            body.write(bytes);body.write(("\r\n--"+boundary+"--\r\n").getBytes(StandardCharsets.UTF_8));
+            var request=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/resume-extractions")).timeout(java.time.Duration.ofSeconds(40)).header("Content-Type","multipart/form-data; boundary="+boundary).POST(java.net.http.HttpRequest.BodyPublishers.ofByteArray(body.toByteArray())).build();
+            var response=java.net.http.HttpClient.newHttpClient().send(request,java.net.http.HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).as("live API %s: %s",filename,response.body()).isEqualTo(200);
+            var json=new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.body());
+            assertThat(json.path("success").asBoolean()).isTrue();
+            String expected=switch(filename){
+                case "resume.TXT" -> "김하늘";case "resume.txt" -> "시험인물";
+                case "r.doc" -> "Actual DOC Person";case "r.docx" -> "문서표인물";
+                case "r.ppt" -> "슬라이드표인물";case "r.pptx" -> "새슬라이드표인물";
+                case "r.pdf" -> "PDF Person";case "r.rtf" -> "Real RTF Person";
+                case "r.hwp" -> "한글본문인물";case "r.hwpx" -> "한글표인물";
+                case "exact10m.docx" -> "ExactSize";default -> null;
+            };
+            if(expected!=null)assertThat(json.path("data").path("values").path("name").asText()).as("live extracted name %s",filename).isEqualTo(expected);
+            System.out.println("LIVE_RESUME_API_OK "+filename);
+        }catch(Exception e){throw new AssertionError("Live resume API fixture failed: "+filename,e);}
+    }
     @AfterEach void close(){parser.close();}
     @Test void utf8BomMs949AndInvalidEncoding(){
         assertThat(parser.extract("\ufeff성 명 : 김 하 늘\n기술: Java".getBytes(StandardCharsets.UTF_8),"resume.TXT")).contains("성 명 : 김 하 늘");
@@ -77,6 +107,18 @@ class ResumeDocumentParserTest {
         assertThatThrownBy(()->parser.extract("plain text".getBytes(),"r.docx")).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.status()).isEqualTo(415));
         byte[] xxe=zip(Map.of("mimetype","application/hwp+zip","Contents/section0.xml","<!DOCTYPE s [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><s><t>&xxe;</t></s>"));
         assertThatThrownBy(()->parser.extract(xxe,"r.hwpx")).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.status()).isEqualTo(422));
+    }
+    @Test void exactlyTenMiBValidDocumentIsAccepted()throws Exception {
+        byte[] sample=storedDocx(0);byte[] exact=storedDocx(ResumeDocumentParser.MAX_BYTES-sample.length);
+        assertThat(exact).hasSize(ResumeDocumentParser.MAX_BYTES);
+        assertThat(parser.extract(exact,"exact10m.docx")).contains("ExactSize");
+    }
+    private static byte[] storedDocx(int padding)throws IOException {
+        var entries=new LinkedHashMap<String,byte[]>();entries.put("[Content_Types].xml","<Types/>".getBytes(StandardCharsets.UTF_8));
+        entries.put("word/document.xml","<w:document xmlns:w='urn:word'><w:p><w:r><w:t>Name: ExactSize</w:t></w:r></w:p></w:document>".getBytes(StandardCharsets.UTF_8));entries.put("padding",new byte[padding]);
+        try(var out=new ByteArrayOutputStream();var zip=new ZipOutputStream(out)){for(var entry:entries.entrySet()){
+            var crc=new CRC32();crc.update(entry.getValue());var item=new ZipEntry(entry.getKey());item.setMethod(ZipEntry.STORED);item.setSize(entry.getValue().length);item.setCrc(crc.getValue());zip.putNextEntry(item);zip.write(entry.getValue());zip.closeEntry();
+        }zip.finish();return out.toByteArray();}
     }
     static byte[] zip(Map<String,String> entries)throws IOException {try(var out=new ByteArrayOutputStream();var zip=new ZipOutputStream(out)){for(var e:entries.entrySet()){zip.putNextEntry(new ZipEntry(e.getKey()));zip.write(e.getValue().getBytes(StandardCharsets.UTF_8));zip.closeEntry();}zip.finish();return out.toByteArray();}}
 }

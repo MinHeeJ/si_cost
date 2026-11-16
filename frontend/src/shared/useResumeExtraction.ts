@@ -42,7 +42,7 @@ export function mergeResume<T extends object>(
   const protectedFields: string[] = [];
   const allowed = extraction.targetType === "DEVELOPER" ? common : candidate;
   const employmentConflict =
-    touched.has("employeeType") &&
+    (touched.has("employeeType") || filled.has("employeeType")) &&
     extraction.values.employeeType !== undefined &&
     extraction.values.employeeType !== next.employeeType;
   for (const field of extraction.fields) {

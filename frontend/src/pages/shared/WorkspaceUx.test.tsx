@@ -16,6 +16,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SharedApplication } from "./SharedApplication";
 import { ChangeHistoryPanel } from "./ChangeHistoryPanel";
 import { HeaderActions } from "./HeaderActions";
+import { AnalysisAssistantProvider } from "./AnalysisAssistantContext";
+import * as analysis from "./analysisClient";
+vi.mock("./analysisClient", async (original) => ({
+  ...(await original<typeof import("./analysisClient")>()),
+  listQuestions: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
+}));
 import * as api from "./sharedApi";
 import * as notices from "../notificationsops/notificationsApi";
 vi.mock("./sharedApi");
@@ -156,12 +162,11 @@ describe("레퍼런스 공통 UX", () => {
       "!",
     );
   });
-  it("AI는 준비 안내를 유지하고 알림은 실제 조회 결과를 표시한다", async () => {
-    render(<HeaderActions />);
+  it("AI 대화창을 열고 알림은 실제 조회 결과를 표시한다", async () => {
+    vi.mocked(analysis.listQuestions).mockResolvedValue({ items: [], nextCursor: null, hasMore: false });
+    render(<MemoryRouter><AnalysisAssistantProvider><HeaderActions /></AnalysisAssistantProvider></MemoryRouter>);
     await userEvent.click(screen.getByRole("button", { name: "AI에게 묻기" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "AI 기능은 준비 중입니다.",
-    );
+    expect(screen.getByRole("dialog", { name: "AI에게 묻기 대화창" })).toHaveTextContent("조회·해석 전용");
     await userEvent.click(screen.getByRole("button", { name: "알림" }));
     expect(await screen.findByText("알림이 없습니다.")).toBeInTheDocument();
     expect(notices.getNotifications).toHaveBeenCalledWith(1);

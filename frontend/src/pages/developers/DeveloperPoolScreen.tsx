@@ -388,15 +388,16 @@ export function DeveloperPoolScreen({
       data-feature-id="SLICE-BASIC132-DEVELOPERS"
       hidden={!active}
     >
-      {form ? (
+      {form && (
         <DeveloperForm
           key={form.developer?.id ?? "new"}
+          open={active}
           developer={form.developer}
           onClose={() => setForm(undefined)}
           onSaved={saved}
           onDirtyChange={onDirtyChange}
         />
-      ) : (
+      )}
         <>
           <header className="developer-toolbar">
             {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
@@ -673,7 +674,6 @@ export function DeveloperPoolScreen({
             </div>
           )}
         </>
-      )}
       {id && !form && (
         <DeveloperDrawer
           id={id}

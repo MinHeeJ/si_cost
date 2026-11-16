@@ -14,6 +14,7 @@ public class ResumeFieldExtractor {
     static String normalize(String text){return Normalizer.normalize(text,Normalizer.Form.NFKC).toLowerCase(Locale.ROOT).replaceAll("[\\s.]","");}
     static String vendorKey(String text){return normalize(text).replace("주식회사","").replace("(주)","").replace("㈜","");}
     public Extraction extract(String text,String target,Dictionary dictionary,LocalDate today) {
+        if(text.length()>ResumeDocumentParser.MAX_CHARS||Thread.currentThread().isInterrupted())throw ResumeDocumentParser.limit();
         var out=new Output(target);if(text.isBlank())return out.finish(null);
         Map<String,Set<String>> labels=new LinkedHashMap<>();
         dictionary.codes().stream().filter(c->c.groupId().equals("RSM_LABEL")).forEach(c->labels.computeIfAbsent(normalize(c.name()),k->new LinkedHashSet<>()).add(c.addVal1()));
@@ -23,7 +24,9 @@ public class ResumeFieldExtractor {
             String[] cells=line.strip().split("[:：\\t]|\\u0007",-1);
             for(int index=0;index+1<cells.length;index++) {
                 Set<String> mapped=labels.get(normalize(cells[index]));
-                if(mapped==null||mapped.size()!=1)continue;String key=mapped.iterator().next();String value=cells[++index].strip();
+                if(mapped==null||mapped.size()!=1)continue;String key=mapped.iterator().next();String label=normalize(cells[index]);String value=cells[++index].strip();
+                // Preserve annual context carried by the dictionary label, not just its value.
+                if(key.equals("WANT")&&(label.contains("연봉")||label.contains("연간")||label.contains("annual")))value="연봉 "+value;
                 if(!value.isBlank())fields.computeIfAbsent(key,k->new ArrayList<>()).add(value);
             }
         }
@@ -56,9 +59,19 @@ public class ResumeFieldExtractor {
         Set<String> normalized=new LinkedHashSet<>();boolean invalid=false;
         for(String p:phones){String n=p.replaceAll("[^0-9]","");if(p.strip().startsWith("+82"))n="0"+n.substring(2);if(n.matches("01[016789][0-9]{7,8}"))normalized.add(n.substring(0,3)+"-"+n.substring(3,n.length()-4)+"-"+n.substring(n.length()-4));else if(p.matches("[0-9][0-9-]{7,19}"))normalized.add(p);else invalid=true;}
         if(normalized.size()==1&&!invalid){String p=normalized.iterator().next();out.put("phone",p,!p.matches("01[016789]-[0-9]{3,4}-[0-9]{4}"),p);}else if(!phones.isEmpty())out.invalid("phone","전화번호가 여러 개이거나 불명확합니다. 직접 선택해 주세요.",normalized.size()>1&&!invalid?new ArrayList<>(normalized):List.of());
-        List<String> emails=new ArrayList<>(fields.getOrDefault("MAIL",List.of()));if(emails.isEmpty()){var m=Pattern.compile("[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}").matcher(text);while(m.find())emails.add(m.group());}
+        List<String> emails=new ArrayList<>(fields.getOrDefault("MAIL",List.of()));if(emails.isEmpty()){var m=Pattern.compile("(?<![A-Za-z0-9.!#$%&'*+/=?^_`{|}~-])[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,99}@[A-Za-z0-9.-]{1,99}\\.[A-Za-z]{2,99}(?![A-Za-z0-9.-])").matcher(interruptible(text));while(m.find())emails.add(m.group());}
         Set<String> unique=new LinkedHashSet<>();boolean bad=false;for(String e:emails){String value=e.strip().toLowerCase(Locale.ROOT);if(value.length()<=100&&value.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+"))unique.add(value);else bad=true;}
         if(unique.size()==1&&!bad)out.put("email",unique.iterator().next(),false,"");else if(!emails.isEmpty())out.invalid("email","이메일이 여러 개이거나 유효하지 않습니다. 직접 확인해 주세요.",unique.size()>1&&!bad?new ArrayList<>(unique):List.of());
+    }
+    // A bounded email candidate cannot restart at each suffix of a long word.
+    // Cancellation must also stop a running matcher, not just its waiting request.
+    private static CharSequence interruptible(String text) {
+        return new CharSequence() {
+            public int length(){return text.length();}
+            public char charAt(int index){if(Thread.currentThread().isInterrupted())throw ResumeDocumentParser.limit();return text.charAt(index);}
+            public CharSequence subSequence(int start,int end){return interruptible(text.substring(start,end));}
+            public String toString(){return text;}
+        };
     }
     private static String unique(Map<String,List<String>> fields,String label,String field,Output out) {
         var values=fields.getOrDefault(label,List.of()).stream().map(String::strip).distinct().toList();if(values.size()>1){out.invalid(field,"서로 다른 값이 여러 개입니다. 자동 선택하지 않습니다.");return null;}return values.isEmpty()?null:values.get(0);

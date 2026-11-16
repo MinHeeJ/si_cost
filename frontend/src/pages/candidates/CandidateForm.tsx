@@ -240,7 +240,13 @@ export function CandidateForm({
         title={candidate ? "외부 인력 후보 수정" : "외부 인력 후보 등록"}
         pending={pending}
         onConfirm={save}
-        onCancel={onClose}
+        onCancel={() => {
+          if (!candidate && (resume.pending || resume.notice || resume.error)) {
+            changed.current = false;
+            onDirtyChange?.(false);
+            onSaved("", "", false);
+          } else onClose();
+        }}
         confirmLabel={candidate ? "저장" : "등록"}
         confirmDisabled={Boolean(lookupError) || resume.pending}
         footerStart={

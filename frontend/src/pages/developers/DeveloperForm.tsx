@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
 import { Decimal } from "../../shared/Decimal";
 import { CodeSelect } from "../../shared/CodeSelect";
-import { FormPage } from "../../shared/FormPage";
 import { SkillsInput } from "../../shared/SkillsInput";
 import { AddressSelector } from "../../shared/AddressSelector";
 import { Dialog } from "../../shared/Dialog";
@@ -28,12 +27,14 @@ export const developerBanner =
 export const priceHelp =
   "단가·급여 변경은 저장월부터 적용되며 월별 급여 업로드와 별개입니다.";
 type Props = {
+  open?: boolean;
   developer?: api.DeveloperDetail;
   onClose(): void;
   onSaved(id: string, message: string): Promise<void> | void;
   onDirtyChange?(dirty: boolean): void;
 };
 export function DeveloperForm({
+  open = true,
   developer,
   onClose,
   onSaved,
@@ -57,10 +58,10 @@ export function DeveloperForm({
     skills: developer?.skills ?? [],
   }));
   const initial = useRef(form),
-    container = useRef<HTMLFormElement>(null),
+    container = useRef<HTMLDivElement>(null),
     busy = useRef(false);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial.current);
-  const resume = useResumeExtraction("DEVELOPER", form, setForm);
+  const resume = useResumeExtraction("DEVELOPER", form, setForm, undefined, open);
   const [codes, setCodes] = useState<
     Record<string, { code: string; name: string }[]>
   >({});
@@ -251,19 +252,21 @@ export function DeveloperForm({
     );
   }
   return (
-    <FormPage
-      title={developer ? "개발자 수정" : "개발자 등록"}
-      actions={
-        <button
-          type="button"
-          data-testid="developer-form-back"
-          onClick={close}
-          disabled={pending}
-        >
-          목록
-        </button>
-      }
-    >
+    <>
+      <Dialog
+        open={open}
+        wide
+        noValidate
+        title={developer ? "개발자 수정" : "개발자 등록"}
+        pending={pending}
+        onConfirm={save}
+        onCancel={close}
+        confirmLabel={developer ? "저장" : "등록"}
+        confirmDisabled={loading || Boolean(lookupError) || resume.pending}
+        confirmTestId="developer-form-save"
+        cancelTestId="developer-form-cancel"
+        footerStart={!developer ? <ResumeUploadButton state={resume} disabled={pending || loading} /> : undefined}
+      >
       <p className="sicost-banner sicost-tone-info">{developerBanner}</p>
       {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
       {lookupError != null && (
@@ -282,15 +285,7 @@ export function DeveloperForm({
           }
         />
       )}
-      <form
-        ref={container}
-        data-testid="developer-edit-form"
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save();
-        }}
-      >
+      <div ref={container} data-testid="developer-edit-form">
         {!developer && <ResumeExtractionFeedback state={resume} />}
         <fieldset disabled={pending} className="developer-form-fields">
           <legend>기본 정보</legend>
@@ -363,32 +358,10 @@ export function DeveloperForm({
           )}
           <p>{priceHelp}</p>
         </fieldset>
-        <footer className="developer-toolbar">
-          {!developer && (
-            <ResumeUploadButton state={resume} disabled={pending || loading} />
-          )}
-          <button
-            type="button"
-            data-testid="developer-form-cancel"
-            onClick={close}
-            disabled={pending}
-          >
-            취소
-          </button>
-          <button
-            className="sicost-primary"
-            type="submit"
-            data-testid="developer-form-save"
-            disabled={
-              pending || loading || Boolean(lookupError) || resume.pending
-            }
-          >
-            {pending ? "저장 중…" : developer ? "저장" : "등록"}
-          </button>
-        </footer>
-      </form>
+      </div>
+      </Dialog>
       <Dialog
-        open={leaving}
+        open={open && leaving}
         title="저장하지 않은 내용이 있습니다."
         onCancel={() => setLeaving(false)}
         onConfirm={onClose}
@@ -399,6 +372,6 @@ export function DeveloperForm({
           계속 작성하면 입력한 내용이 유지됩니다. 나가기를 선택하면 폐기합니다.
         </p>
       </Dialog>
-    </FormPage>
+    </>
   );
 }

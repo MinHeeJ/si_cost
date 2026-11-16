@@ -20,6 +20,11 @@ class AnalysisDataQueriesTest {
         for(String metric:List.of("operatingProfitRate","netProfitRate")){
             String label=metric.equals("operatingProfitRate")?"영업이익률":"순이익률";var question=new Question("2026년 10월 회사 "+label,new Context("UI-26",null,null,null));var intent=new AnalysisQuestionInterpreter().interpret(question.question(),question.context(),at.toLocalDate());var result=queries.read("admin",question,intent,at);
             assertThat(result.status()).isEqualTo("OK");assertThat(result.tables().get(0).columns()).contains(new Column(metric,label,"DECIMAL","%"));assertThat(result.tables().get(0).rows().get(0).cells()).contains(new Cell(metric,actual.amounts().get(metric),null));
+            var mixed=new Question(question.question()+" 및 부도확률",question.context());
+            var partial=queries.read("admin",mixed,new AnalysisQuestionInterpreter().interpret(mixed.question(),mixed.context(),at.toLocalDate()),at);
+            assertThat(partial.status()).isEqualTo("OK");
+            assertThat(partial.unknownReasons()).anyMatch(reason->reason.contains("부도확률")&&reason.contains("제외"));
+            assertThat(partial.tables().get(0).rows().get(0).cells()).contains(new Cell(metric,actual.amounts().get(metric),null));
         }
     }
     @Test void nonTurnkeyProjectsWithoutForecastStillExposeTheirCommonActualCost(){

@@ -85,6 +85,21 @@ describe("resume draft-only merging", () => {
     expect(merged.form).toEqual(form);
     expect(merged.applied).toHaveLength(0);
   });
+  it("keeps a previously imported employment decision and rejects a conflicting company on reupload", () => {
+    for (const protectedBy of ["filled", "touched"] as const) {
+      const form = initial();
+      const merged = mergeResume(
+        form,
+        result({ employeeType: "OS", companyId: "V2", name: "새 이름" }),
+        new Set(protectedBy === "touched" ? ["employeeType"] : []),
+        new Set(protectedBy === "filled" ? ["employeeType"] : []),
+      );
+      expect(merged.form.employeeType).toBe("FL");
+      expect(merged.form.companyId).toBeNull();
+      expect(merged.form.name).toBe("새 이름");
+      expect(merged.applied.map((f) => f.field)).toEqual(["name"]);
+    }
+  });
   it("protects edits made during an outstanding request and counts only actually applied fields", async () => {
     let resolve!: (value: api.ResumeExtraction) => void;
     vi.mocked(api.extractResume).mockReturnValue(

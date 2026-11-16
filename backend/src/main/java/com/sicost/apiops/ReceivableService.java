@@ -49,6 +49,21 @@ public class ReceivableService {
         }
         return new ReceivablesPage(today,List.copyOf(items),items.size(),items.size(),1,50,List.copyOf(cards));
     }
+    /** Read-only risk view also includes outstanding bills due today or later.
+     * The existing overdue/dunning screen keeps its original row set and send rules.
+     */
+    public ReceivablesPage allReceivableRisks() {
+        var overdue=allReceivables();LocalDate today=overdue.asOfDate();
+        var thresholds=thresholds(YearMonth.from(today).toString().replace("-",""));
+        List<Receivable> rows=new ArrayList<>(overdue.items());
+        for(var bill:repository.notYetOverdue(today)) {
+            if(bill.unpaidAmount().signum()<=0||bill.dueDate().isBefore(today))continue;
+            var indicator=new Dunning(0,0,1,bill.dueDate().plusDays(thresholds.get(0).setScale(0,RoundingMode.CEILING).longValueExact()),false);
+            rows.add(new Receivable(bill.billId(),bill.projectId(),bill.projectName(),BillingCheckService.decimal(bill.unpaidAmount()),bill.dueDate(),indicator,List.of(),List.of(),"알림 대상 아님"));
+        }
+        rows.sort(Comparator.comparingInt((Receivable r)->r.dunning().elapsedDays()).reversed().thenComparing(Receivable::dueDate).thenComparing(Receivable::billId));
+        return new ReceivablesPage(today,List.copyOf(rows),rows.size(),rows.size(),1,50,overdue.cards());
+    }
     private List<BigDecimal> thresholds(String month) {
         BigDecimal d1=repository.standard("DUN_D1",month),d2=repository.standard("DUN_D2",month),d3=repository.standard("DUN_D3",month);
         if(d1==null||d2==null||d3==null||d1.compareTo(BigDecimal.ONE)<0||d1.compareTo(d2)>=0||d2.compareTo(d3)>=0)

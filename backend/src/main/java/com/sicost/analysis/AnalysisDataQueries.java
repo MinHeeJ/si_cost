@@ -82,6 +82,8 @@ public class AnalysisDataQueries {
             default -> {return b.noAnswer("지원하는 조회를 다시 지정해 주세요.");}
         }
         policy.require(user,b.scope());
+        if(b.question.question().matches("(?s).*(부도|회수확률|회수성공률|신용등급).*"))
+            b.unknown.add("부도확률·미래 회수확률·임의 신용등급은 등록 자료로 계산할 수 없어 답변에서 제외했습니다. 제공한 표는 요청 중 지원되는 조회 지표만 포함합니다.");
         if(b.question.question().matches(".*(왜|원인|이유).*"))b.unknown.add("원인 판단은 등록 자료만으로 확정하지 않습니다. 요청한 수치 부분만 제공합니다.");
         return b.finish();
     }
@@ -218,10 +220,10 @@ public class AnalysisDataQueries {
     }
     private void receivables(Builder b) {
         b.from=b.to=YearMonth.from(b.at).toString();b.provisional=true;
-        var result=receivables.allReceivables();
+        var result=receivables.allReceivableRisks();
         var rows=result.items().stream().filter(r->b.i.minimumOverdue()==null||r.dunning().elapsedDays()>=b.i.minimumOverdue()).map(r->{var t=target("PROJECT",r.projectId(),r.projectName(),List.of("unpaidAmount"));b.targets.add(t);return row(r.billId(),t,"bill",r.billId(),"project",r.projectName(),"balance",r.unpaidAmount(),"due",r.dueDate().toString(),"days",Integer.toString(r.dunning().elapsedDays()),"step",Integer.toString(r.dunning().step()),"notice","등록 자료의 연체 지표 · 회수일 확인 필요");}).toList();
         b.table("미수 연체 위험 지표",List.of(col("bill","청구","TEXT",""),col("project","프로젝트","TEXT",""),col("balance","남은 잔액","DECIMAL","원"),col("due","납기","DATE",""),col("days","연체일","DECIMAL","일"),col("step","현재 단계","TEXT",""),col("notice","확인할 사항","TEXT","")),rows,"BASE");
-        b.evidence("ReceivableService.allReceivables","PROVISIONAL","미취소·원청구·부분입금 후 양수 잔액 · 기준일 현재 연체 지표",result);b.link("UI-13","현재 미수 목록 · 자동 알림 발송 없음");
+        b.evidence("ReceivableService.allReceivableRisks","PROVISIONAL","미취소·원청구·부분입금 후 양수 잔액 · 기준일 현재 연체 지표",result);b.link("UI-13","현재 미수 목록 · 자동 알림 발송 없음");
     }
     private void billing(Builder b) {
         List<Row> rows=new ArrayList<>();String projectId=null;

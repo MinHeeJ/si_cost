@@ -159,7 +159,7 @@ async function ready() {
 }
 async function fill() {
   await ready();
-  fireEvent.change(screen.getByLabelText(/이름/), {
+  fireEvent.change(screen.getByTestId("developer-name-input"), {
     target: { value: "등록이름" },
   });
   await userEvent.selectOptions(screen.getByLabelText("소속"), "__own__");
@@ -184,7 +184,7 @@ it("한국어 첫 오류로 포커스하고 저장0회", async () => {
   expect(
     screen.getByText("이름을 1~50자로 입력해 주세요."),
   ).toBeInTheDocument();
-  expect(screen.getByLabelText(/이름/)).toHaveFocus();
+  expect(screen.getByTestId("developer-name-input")).toHaveFocus();
   expect(api.createDeveloper).not.toHaveBeenCalled();
 });
 it("외주는 자사 선택을 거부한다", async () => {
@@ -201,7 +201,7 @@ it("수정 관리번호 readonly, 파생정보/미편집 금액 생략, revision
   );
   await ready();
   expect(screen.getByLabelText("관리번호")).toHaveAttribute("readonly");
-  fireEvent.change(screen.getByLabelText(/이름/), {
+  fireEvent.change(screen.getByTestId("developer-name-input"), {
     target: { value: "이름변경" },
   });
   await userEvent.click(screen.getByTestId("developer-form-save"));
@@ -266,7 +266,7 @@ it("dirty 취소 계속 작성은 입력 보존과 서버 요청0", async () => 
   await fill();
   await userEvent.click(screen.getByTestId("developer-form-cancel"));
   await userEvent.click(screen.getByRole("button", { name: "계속 작성" }));
-  expect(screen.getByLabelText(/이름/)).toHaveValue("등록이름");
+  expect(screen.getByTestId("developer-name-input")).toHaveValue("등록이름");
   expect(close).not.toHaveBeenCalled();
   expect(api.createDeveloper).not.toHaveBeenCalled();
 });
@@ -360,10 +360,13 @@ it("목록 상태 색·MM경고·관리번호와 소속 표시", async () => {
   expect(screen.getByText("이번 달 1.10 MM")).toBeInTheDocument();
   expect(screen.getByText("기준값 1.00 초과")).toBeInTheDocument();
 });
-it("같은 주소 전체화면 등록과 201 관리번호 및 2초 이내 재조회", async () => {
+it("목록을 유지하는 등록 모달과 201 관리번호 및 2초 이내 재조회", async () => {
   render(<DeveloperPoolScreen />);
   await screen.findByText(developer.name);
   await userEvent.click(screen.getByTestId("developer-create-button"));
+  expect(screen.getByRole("dialog", { name: "개발자 등록" })).toBeVisible();
+  expect(screen.getByTestId("developer-filter-form")).toBeVisible();
+  expect(screen.getByText(developer.name)).toBeVisible();
   await fill();
   const start = performance.now();
   await userEvent.click(screen.getByTestId("developer-form-save"));
@@ -575,4 +578,17 @@ it("상세에서 단건 사용 중지·다시 사용을 할 수 있다", async (
   );
   await screen.findByText("검증개발자");
   expect(screen.getByRole("button", { name: "사용 중지" })).toBeInTheDocument();
+});
+
+it("작업 탭을 숨기면 등록 모달도 숨기고 돌아오면 입력을 보존한다", async () => {
+  const view = render(<DeveloperPoolScreen />);
+  await screen.findByText(developer.name);
+  await userEvent.click(screen.getByTestId("developer-create-button"));
+  await ready();
+  fireEvent.change(screen.getByTestId("developer-name-input"), { target: { value: "보존할 이름" } });
+  view.rerender(<DeveloperPoolScreen active={false} />);
+  expect(screen.queryByRole("dialog", { name: "개발자 등록" })).not.toBeInTheDocument();
+  view.rerender(<DeveloperPoolScreen active />);
+  expect(screen.getByRole("dialog", { name: "개발자 등록" })).toBeVisible();
+  expect(screen.getByTestId("developer-name-input")).toHaveValue("보존할 이름");
 });

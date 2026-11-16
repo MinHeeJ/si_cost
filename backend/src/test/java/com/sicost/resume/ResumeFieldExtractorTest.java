@@ -16,6 +16,29 @@ class ResumeFieldExtractorTest {
     @Test void conflictingValuesAndNoLabelsDoNotInventNamesOrGrade(){var r=run("이름이란 무엇인가\n전화:010-1234-5678\n전화:010-2222-3333\n메일: a @example.com\n희망단가:연봉 6000만원\n가능일:2026-02-30\n경력 8년 2개월","CANDIDATE");assertThat(r.values()).doesNotContainKeys("name","phone","email","desiredRate","availableDate","gradeCode","consent");assertThat(r.careerReference()).isEqualTo("경력 8년 2개월");assertThat(r.fields()).anyMatch(f->!f.valid());}
     @Test void vendorAndFreelancerConflictNeedsManualDecision(){var r=run("소속: (주)시험업체\n프리랜서","CANDIDATE");assertThat(r.values()).doesNotContainKeys("employeeType","companyId");assertThat(r.warnings()).isNotEmpty();var os=run("소속: (주)시험업체","CANDIDATE");assertThat(os.values()).containsEntry("employeeType","OS").containsEntry("companyId","V1");}
     @Test void latinWordBoundariesAndOverlongNameAreNotSilentlyRepaired(){var r=run("성명: "+"가".repeat(51)+"\nJavaScript","CANDIDATE");assertThat(r.values()).doesNotContainKey("name").containsEntry("jobCode","FE").doesNotContainKey("subJobCode");}
+    @Test void annualLabelNeverTurnsAnnualPayIntoMonthlyRate(){
+        var d=dictionary();var codes=new ArrayList<>(d.codes());codes.add(new Code("RSM_LABEL","ANNUAL","희망연봉","WANT",99));
+        var result=extractor.extract("희망연봉: 7800만원","CANDIDATE",new Dictionary(codes,d.areas(),d.vendors()),day);
+        assertThat(result.values()).doesNotContainKey("desiredRate");
+        assertThat(result.fields()).anyMatch(f->f.field().equals("desiredRate")&&!f.valid());
+    }
     @Test void zeroNegativeAnnualRangeAndFractionalWonAreNotRates(){for(String amount:List.of("0원","-1원","600~700만원","연봉 6000만원","1.12345만원","650만원/년"))assertThat(run("희망단가: "+amount,"CANDIDATE").values()).doesNotContainKey("desiredRate");assertThat(run("희망단가: 650.5만원","CANDIDATE").values()).containsEntry("desiredRate","6505000");}
+    @Test void adversarialUnlabelledContactsFinishWithinBudgetAndDoNotPoisonNextExtraction(){
+        org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(java.time.Duration.ofSeconds(2),()->{
+            for(String text:List.of("a".repeat(200_000),"a.".repeat(99_999)+"@x", "@.".repeat(100_000),"a".repeat(199_980)+"@example.com"))
+                assertThat(run(text,"CANDIDATE").values()).doesNotContainKey("email");
+            assertThat(run("plain.person@example.com", "CANDIDATE").values()).containsEntry("email","plain.person@example.com");
+        });
+    }
+    @Test void contactScanDoesNotTruncateLongAddressesOrAcceptAmbiguousOnes(){
+        assertThat(run("x".repeat(100)+"@example.com", "CANDIDATE").values()).doesNotContainKey("email");
+        assertThat(run("one@example.com two@example.com", "CANDIDATE").values()).doesNotContainKey("email");
+        assertThat(run("(One.Name+tag@Example.com)", "CANDIDATE").values()).containsEntry("email","one.name+tag@example.com");
+    }
+    @Test void interruptedExtractionStopsBeforeKeepingDocumentWorkAlive(){
+        Thread.currentThread().interrupt();
+        try {assertThatThrownBy(()->run("person@example.com","CANDIDATE")).isInstanceOf(com.sicost.common.api.ApiException.class);}
+        finally {Thread.interrupted();}
+    }
     @Test void noTextIsARealZeroResult(){var r=run("", "CANDIDATE");assertThat(r.values()).isEmpty();assertThat(r.notice()).isEqualTo("가져올 칸을 찾지 못했습니다. 직접 적어 주세요.");}
 }

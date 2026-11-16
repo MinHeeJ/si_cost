@@ -18,6 +18,7 @@ export type DialogProps = {
   confirmActionId?: string;
   cancelActionId?: string;
   footerStart?: ReactNode;
+  noValidate?: boolean;
 };
 const FOCUSABLE =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
@@ -38,6 +39,7 @@ export function Dialog({
   confirmActionId,
   cancelActionId,
   footerStart,
+  noValidate,
 }: DialogProps) {
   const ref = useRef<HTMLFormElement>(null);
   const inFlight = useRef(false);
@@ -109,6 +111,7 @@ export function Dialog({
       }}
     >
       <form
+        noValidate={noValidate}
         ref={ref}
         data-testid={testId}
         className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}`}
