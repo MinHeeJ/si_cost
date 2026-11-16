@@ -9,7 +9,7 @@ export function ActivityCenter(props: NotificationBellProps = {}) {
   const [automationOpen, setAutomationOpen] = useState(false);
   return (
     <div className="sicost-header-actions" data-testid="activity-center">
-      <NotificationBell {...props} />
+      <NotificationBell {...props} onOpenAutomation={() => setAutomationOpen(true)} />
       <button
         type="button"
         data-testid="activity-automation-open"

@@ -105,7 +105,7 @@ export type DashboardData = {
     remainingChecks: {
       checkCode: string;
       status: string;
-      count: number;
+      count: number | null;
       reason: string;
     }[];
     snapshot: boolean;

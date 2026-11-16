@@ -24,7 +24,7 @@ class NotificationPublisherTest {
     final NotificationRecipients.Recipient recipient=new NotificationRecipients.Recipient("pm","담당",null,List.of("PM"));
     final Event event=new Event("UPLD:123:APPLIED","UPLD_DONE","업로드 반영 완료",new Link("UI-13","123"),null);
     @BeforeEach void setup() {
-        when(mapper.eligibleRoles()).thenReturn(List.of(new NotificationRecipients.Role("pm","현재 담당","current@example.test","PM")));
+        when(mapper.activeUsers()).thenReturn(List.of(new NotificationRecipients.Role("pm","현재 담당","current@example.test","PM")));
         when(mapper.registeredScreen("UI-13")).thenReturn(true);
         when(mapper.reserveSystem(any())).thenReturn(1);
         when(mapper.insertNotification(any())).thenReturn(new BigDecimal("123"));
@@ -44,9 +44,14 @@ class NotificationPublisherTest {
         verify(mapper,never()).insertNotification(any());verifyNoInteractions(history);
     }
     @Test void inactiveRecipientIsNotReplacedWithAdministrator() {
-        when(mapper.eligibleRoles()).thenReturn(List.of(new NotificationRecipients.Role("admin","관리자",null,"ADMIN")));
+        when(mapper.activeUsers()).thenReturn(List.of(new NotificationRecipients.Role("admin","관리자",null,"ADMIN")));
         assertThat(publisher.publish(event,List.of(recipient))).isEmpty();
         verify(mapper,never()).reserveSystem(any());verifyNoInteractions(history);
+    }
+    @Test void explicitActiveRecipientNeedsNoRole() {
+        when(mapper.activeUsers()).thenReturn(List.of(new NotificationRecipients.Role("pm","역할 없는 업로더",null,"")));
+        assertThat(publisher.publish(event,List.of(recipient))).hasSize(1);
+        verify(mapper,never()).eligibleRoles();
     }
     @Test void mandatoryAuditFailurePropagatesToCallerTransaction() {
         doThrow(new IllegalStateException("audit failure")).when(history).appendAsSystem(any());

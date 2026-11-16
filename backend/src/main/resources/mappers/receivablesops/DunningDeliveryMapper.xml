@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.sicost.receivablesops.DunningDeliveryMapper">
+  <select id="billIds" resultType="string">SELECT bill_id FROM tb_bl_bill ORDER BY bill_id</select>
+  <select id="highestStep" resultType="int">SELECT COALESCE(max(dun_step),0)::int FROM (SELECT dun_step FROM tb_bl_dun_hist WHERE bill_id=#{billId} UNION ALL SELECT dun_step FROM tb_sy_delivery_task WHERE bill_id=#{billId}) s</select>
   <select id="bill" resultType="com.sicost.receivablesops.DunningDeliveryDtos$BillSource">
     SELECT b.bill_id AS "billId",b.proj_id AS "projectId",p.proj_nm AS "projectName",
       b.tot_amt-COALESCE((SELECT sum(r.rcpt_amt) FROM tb_bl_rcpt r WHERE r.bill_id=b.bill_id AND r.cncl_yn='N'),0) AS "unpaidAmount",
@@ -56,7 +58,7 @@
     INSERT INTO tb_sy_delivery_task (task_id,event_key,rcvr_user_id,rcvr_nm,channel_cd,state_cd,noti_type_cd,noti_cn,link_scrn_id,link_key,
       mail_to,mail_subject,mail_body,message_id,bill_id,dun_step,dun_sn,resend_yn,error_cd,error_cn,reg_user_id,reg_dttm)
     VALUES (CAST(#{taskId} AS uuid),#{eventKey},#{userId},#{userName},'MAIL',#{state},'DUN',#{content},'UI-13',#{billId},
-      #{emailAddress},#{subject},#{body},#{messageId},#{billId},#{step},#{serial},'Y',#{errorCode},#{errorMessage},'SYSTEM',#{at})
+      #{emailAddress},#{subject},#{body},#{messageId},#{billId},#{step},#{serial},<choose><when test="resend">'Y'</when><otherwise>'N'</otherwise></choose>,#{errorCode},#{errorMessage},'SYSTEM',#{at})
   </insert>
   <update id="transition">
     UPDATE tb_sy_delivery_task SET state_cd=#{state},message_id=#{messageId},sent_dttm=#{sentAt},error_cd=#{errorCode},error_cn=#{errorMessage},mod_user_id='SYSTEM',mod_dttm=#{at}

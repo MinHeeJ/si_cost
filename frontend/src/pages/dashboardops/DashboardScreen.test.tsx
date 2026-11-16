@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { DashboardScreen } from "./DashboardScreen";
@@ -34,10 +34,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 function Destination() {
   const location = useLocation();
+  const navigate = useNavigate();
   return (
     <p data-testid="destination">
       {location.pathname}
-      {location.search} {JSON.stringify(location.state)}
+      {location.search} <output data-testid="destination-state">{JSON.stringify(location.state)}</output>
+      <button onClick={() => navigate(-1)}>뒤로</button>
     </p>
   );
 }
@@ -46,7 +48,7 @@ function ready() {
     <MemoryRouter initialEntries={["/UI-16"]}>
       <SharedScreenContext.Provider
         value={{
-          menus: ["UI-08", "UI-13", "UI-14", "UI-04", "UI-21"].map(
+          menus: ["UI-08", "UI-13", "UI-14", "UI-04", "UI-21", "UI-28", "UI-18", "UI-10", "UI-12", "UI-05", "UI-01", "UI-31", "UI-29"].map(
             (screenId) => ({
               menuId: screenId,
               parentId: null,
@@ -65,7 +67,7 @@ function ready() {
       >
         <Routes>
           <Route path="/UI-16" element={<DashboardScreen />} />
-          {["UI-08", "UI-13", "UI-14", "UI-04", "UI-21"].map((id) => (
+          {["UI-08", "UI-13", "UI-14", "UI-04", "UI-21", "UI-28", "UI-18", "UI-10", "UI-12", "UI-05", "UI-01", "UI-31", "UI-29"].map((id) => (
             <Route key={id} path={`/${id}`} element={<Destination />} />
           ))}
         </Routes>
@@ -278,4 +280,81 @@ it("rejects an external target even when the API supplies it as a link", async (
     "대상 화면을 사용할 수 없습니다.",
   );
   expect(screen.queryByTestId("destination")).not.toBeInTheDocument();
+});
+
+it.each([null, 0])("마감점검 미확인과 실제0을 구별한다: %s", async (value) => {
+  data.closeProgress.passedCheckCount = 5;
+  data.closeProgress.remainingChecks[0].count = value;
+  data.closeProgress.remainingChecks[0].status = value === null ? "UNKNOWN" : "WARN";
+  data.closeProgress.remainingChecks[0].reason = value === null ? "원천 미확인" : "실제 0건";
+  ready();
+  const panel = await screen.findByTestId("dashboard-close");
+  expect(panel).toHaveTextContent(value === null ? "MM_OVER –건" : "MM_OVER 0건");
+  expect(panel).toHaveTextContent("5/6");
+  expect(panel).toHaveTextContent(value === null ? "원천 미확인" : "실제 0건");
+});
+it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 이동한다", async () => {
+  data.selectedMonth = "2026-06";
+  ready();
+  expect(await screen.findByTestId("dashboard-metric-sales")).toHaveTextContent("06월 매출");
+  expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent("자세히");
+});
+
+const cardTargets = [
+  ["sales", "UI-08"], ["operating-profit", "UI-08"], ["ytd-operating-profit", "UI-18"],
+  ["utilization", "UI-28"], ["receivable", "UI-13"],
+] as const;
+it.each(cardTargets.flatMap(([card, target]) => [null, "0", "12.3"].map((value) => ({ card, target, value }))))(
+  "$card 값 $value에서도 서버 목적지와 월 문맥을 보존하고 뒤로 돌아온다", async ({ card, target, value }) => {
+    const index = cardTargets.findIndex(([name]) => name === card);
+    data.metrics[index].value = value;
+    ready();
+    await userEvent.click(await screen.findByTestId(`dashboard-metric-${card}`));
+    expect(screen.getByTestId("destination")).toHaveTextContent(`/${target}`);
+    const state = JSON.parse(screen.getByTestId("destination-state").textContent!);
+    expect(state).toMatchObject({ fromDashboard: true, month: "2026-07", year: "2026", linkKey: index === 4 ? null : "2026-07" });
+    if (index === 4) expect(state.section).toBe("receivables");
+    await userEvent.click(screen.getByRole("button", { name: "뒤로" }));
+    expect(await screen.findByTestId(`dashboard-metric-${card}`)).toBeVisible();
+  },
+);
+it.each([
+  ["OVERDUE_RECEIVABLE", "UI-13", "receivables", "overdue"],
+  ["CORPORATE_TAX_DUE", "UI-10", "tax", undefined],
+  ["CASH_SHORTAGE", "UI-21", undefined, undefined],
+  ["STAFF_SHORTAGE", "UI-28", "supply", undefined],
+  ["MM_OVER", "UI-12", undefined, "MM_OVER"],
+  ["PRECONTRACT_ASSIGNMENT", "UI-12", undefined, undefined],
+  ["WITHDRAWAL_DUE", "UI-05", undefined, undefined],
+  ["SALES_PART_MISSING", "UI-01", undefined, undefined],
+  ["PROJECT_RISK", "UI-31", undefined, undefined],
+  ["ISSUE_OVERDUE", "UI-31", undefined, undefined],
+  ["WEEK_MEMO_STALE", "UI-31", undefined, undefined],
+  ["BILLING_MISSING", "UI-13", "checks", undefined],
+  ["QUOTE_APPROVAL_WAIT", "UI-29", undefined, undefined],
+])("%s 목적 화면·탭·필터 문맥", async (actionCode, screenId, section, filter) => {
+  const cash = actionCode === "CASH_SHORTAGE";
+  const month = cash ? "2027-01" : "2026-07";
+  data.actions = [{ ...data.actions[0], actionCode: actionCode!, link: { screenId: screenId!, linkKey: month } }];
+  ready();
+  await userEvent.click(await screen.findByTestId(`dashboard-action-${actionCode!.toLowerCase().replaceAll("_", "-")}`));
+  const state = JSON.parse(screen.getByTestId("destination-state").textContent!);
+  expect(screen.getByTestId("destination")).toHaveTextContent(`/${screenId}`);
+  expect(state).toEqual({ fromDashboard: true, linkKey: month, month, year: month.slice(0, 4), ...(section ? {section} : {}), ...(filter ? {filter} : {}) });
+});
+it("자금 월 이동은 불완전한 원천상세 요청을 만들지 않는다", async () => {
+  ready();
+  await userEvent.click(await screen.findByTestId("dashboard-cash-2027-02"));
+  const state = JSON.parse(screen.getByTestId("destination-state").textContent!);
+  expect(state).toMatchObject({fromDashboard: true, month: "2027-02", year: "2027"});
+  expect(state).not.toHaveProperty("cashFlowSource");
+});
+it("등록되지 않은 대상과 0건 할일은 업무 화면으로 이동하지 않는다", async () => {
+  data.metrics[0].link = { screenId: "UI-99", linkKey: "2026-07" };
+  data.actions[0].count = 0;
+  ready();
+  await userEvent.click(await screen.findByTestId("dashboard-metric-sales"));
+  expect(screen.getByRole("status")).toHaveTextContent("대상 화면을 사용할 수 없습니다.");
+  expect(screen.queryByTestId("destination")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("dashboard-action-overdue-receivable")).not.toBeInTheDocument();
 });

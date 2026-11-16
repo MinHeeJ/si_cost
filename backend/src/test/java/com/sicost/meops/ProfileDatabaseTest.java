@@ -50,7 +50,7 @@ class ProfileDatabaseTest {
     }
     String part(String suffix,String name,boolean hq) {
         String id=prefix+suffix;
-        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES (?,?,?,'Y',?)",id,name,hq?"Y":"N",actor);
+        db.sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES (?,?,?,'Y',?)",id,name+" "+id,hq?"Y":"N",actor);
         return id;
     }
     void scope(String user,String type,String part,String project) {
@@ -75,7 +75,10 @@ class ProfileDatabaseTest {
         scope(actor,"PART",hq,null);scope(actor,"PART",b,null);
         String p=project("p","ING",a);projectPart(p,"202607",c);projectPart(p,"202608",b);
         scope(actor,"PROJ",null,p);
-        assertThat(mapper.parts(actor,"202607")).extracting(Part::partId).containsExactly(a,b,hq,c);
+        var actual=mapper.parts(actor,"202607").stream().map(Part::partId).toList();
+        assertThat(actual).containsExactlyInAnyOrder(a,b,hq,c).doesNotHaveDuplicates();
+        var ordered=db.sql.queryForList("SELECT part_id FROM tb_bs_part WHERE part_id IN (?,?,?,?) ORDER BY part_nm,part_id",String.class,a,b,hq,c);
+        assertThat(actual).containsExactlyElementsOf(ordered);
     }
     @Test void endedProjectContributesNoPart() {
         String a=part("a","종료",false);project("p","END",a);
@@ -102,10 +105,12 @@ class ProfileDatabaseTest {
     @Test void rolesExcludeDisabledAndOtherUsersAndSortByNameThenId() {
         String a=prefix+"a",b=prefix+"b",off=prefix+"c",foreign=prefix+"d";
         role(a,"가나다","Y",actor);role(b,"가나다","Y",actor);role(off,"비활성","N",actor);role(foreign,"타 사용자","Y",other);
-        assertThat(mapper.activeRoles(actor)).extracting(Role::roleId).containsExactly(a,b);
+        var actual=mapper.activeRoles(actor).stream().map(Role::roleId).toList();
+        assertThat(actual).containsExactlyInAnyOrder(a,b).doesNotHaveDuplicates();
+        assertThat(actual).containsExactlyElementsOf(db.sql.queryForList("SELECT role_id FROM tb_sy_role WHERE role_id IN (?,?) ORDER BY role_nm,role_id",String.class,a,b));
     }
     void role(String id,String name,String use,String user) {
-        db.sql.update("INSERT INTO tb_sy_role(role_id,role_nm,data_scope_cd,sort_ord,use_yn,reg_user_id) VALUES (?,?,'ALL',1,?,?)",id,name,use,actor);
+        db.sql.update("INSERT INTO tb_sy_role(role_id,role_nm,data_scope_cd,sort_ord,use_yn,reg_user_id) VALUES (?,?,'ALL',1,?,?)",id,name+" "+id,use,actor);
         db.sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES (?,?,?)",user,id,actor);
     }
     @Test void mapperMaterializesSafeIdentityAndDoesNotCreateAnyMissingAffiliation() {

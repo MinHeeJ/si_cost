@@ -30,4 +30,18 @@ class DashboardFinancialSourcesTest {
         var read=new ProfitStructureRepository.Read(null,List.of(),Map.of(),Map.of(2026,detail),List.of(),List.of());
         assertThat(new DashboardFinancialSources(mock(ProfitStructureRepository.class),mock(RevenueCompositionCalculation.class)).utilization(read,YearMonth.of(2026,7)).value()).isNull();
     }
+    @Test void oneAssignedOfThreeDirectEmployeesRoundsOnceToThirtyThreePointThree() {
+        var sources=mock(Sources.class);var people=new java.util.ArrayList<Person>();
+        for(String id:List.of("assigned","idle","leave")) {
+            var person=mock(Person.class);when(person.personId()).thenReturn(id);when(person.employed("202607")).thenReturn(true);
+            when(person.employeeType()).thenReturn("FT");when(person.directClass()).thenReturn("DRCT");people.add(person);
+        }
+        when(sources.people()).thenReturn(people);when(sources.payroll()).thenReturn(List.of());
+        when(sources.states()).thenReturn(List.of(new WorkState("leave","1","LEAVE",java.time.LocalDate.of(2026,7,1),null)));
+        var cost=mock(MonthlyPersonCost.class);when(cost.personId()).thenReturn("assigned");when(cost.month()).thenReturn("202607");when(cost.assignmentMm()).thenReturn("0.01");
+        var detail=new ProfitStructureRepository.Details(sources,List.of(cost),List.of(),List.of());
+        var read=new ProfitStructureRepository.Read(null,List.of(),Map.of(),Map.of(2026,detail),List.of(),List.of());
+        var result=new DashboardFinancialSources(mock(ProfitStructureRepository.class),mock(RevenueCompositionCalculation.class)).utilization(read,YearMonth.of(2026,7));
+        assertThat(result.value()).isEqualTo("33.3");assertThat(result.idle()).isEqualTo(1);
+    }
 }

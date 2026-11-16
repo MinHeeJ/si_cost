@@ -1,7 +1,11 @@
+import * as dashboard from "../dashboardops/dashboardApi";
+import { dashboardFixture } from "../dashboardops/dashboardFixture";
+import type { ReactElement } from "react";
+import { PreferencesProvider } from "../me/usePreferences";
 import {
   act,
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
   within,
@@ -15,6 +19,7 @@ import { HeaderActions } from "./HeaderActions";
 import * as api from "./sharedApi";
 import * as notices from "../notificationsops/notificationsApi";
 vi.mock("./sharedApi");
+vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
 vi.mock("../notificationsops/notificationsApi", async (original) => ({
   ...(await original<typeof import("../notificationsops/notificationsApi")>()),
   getNotificationUnreadCount: vi.fn(),
@@ -48,6 +53,7 @@ const menus: api.MenuNode[] = [
 ];
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
   vi.mocked(notices.getNotificationUnreadCount).mockResolvedValue({
     unreadCount: 0,
     receivableCount: 0,
@@ -258,3 +264,9 @@ describe("레퍼런스 공통 UX", () => {
     await screen.findByText("조회된 변경 이력이 없습니다.");
   });
 });
+
+const render = (ui: ReactElement) => renderUi(<PreferencesProvider api={{
+  getPreferences: () => api.getSharedPreferences() as ReturnType<import("../me/preferencesApi").PreferenceApi["getPreferences"]>,
+  putPreference: async (...args) => { const saved = await api.putSharedPreference(...args); return { ...saved, preference: saved.preference as import("../me/preferencesApi").Preference }; },
+  deletePreference: api.deleteSharedPreference,
+}}>{ui}</PreferencesProvider>);

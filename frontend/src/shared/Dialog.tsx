@@ -47,7 +47,8 @@ export function Dialog({
     const target =
       ref.current?.querySelector<HTMLElement>(
         '[aria-invalid="true"],input:not(:disabled),textarea:not(:disabled),select:not(:disabled)',
-      ) ?? ref.current?.querySelector<HTMLElement>("[data-confirm]");
+      ) ?? ref.current?.querySelector<HTMLElement>("[data-confirm]:not(:disabled)") ??
+      ref.current?.querySelector<HTMLElement>(FOCUSABLE) ?? ref.current;
     target?.focus();
     return () => {
       previous?.focus();

@@ -12,7 +12,6 @@ export function dashboardFixture(): DashboardData {
     status: "AVAILABLE",
     reasons: [],
   };
-  const link = { screenId: "UI-08", linkKey: null };
   const metric = (
     metricCode: DashboardMetric["metricCode"],
   ): DashboardMetric => ({
@@ -30,7 +29,7 @@ export function dashboardFixture(): DashboardData {
     overdueCount: 2,
     overdueAmount: "1001",
     basis,
-    link,
+    link: { screenId: metricCode === "UTILIZATION" ? "UI-28" : metricCode === "YTD_OPERATING_PROFIT" ? "UI-18" : metricCode === "RECEIVABLE" ? "UI-13" : "UI-08", linkKey: metricCode === "RECEIVABLE" ? null : basis.basisMonth },
   });
   return {
     selectedMonth: "2026-07",

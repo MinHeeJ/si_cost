@@ -9,7 +9,7 @@ import java.math.RoundingMode;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import com.sicost.common.notifications.NotificationRecipients;
+import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import static com.sicost.apiops.BillingReviewDtos.*;
@@ -61,11 +61,27 @@ public class ReceivableService {
         return new Dunning(elapsed,step,step==3?null:step+1,step==3?null:due.plusDays(thresholds.get(step).setScale(0,RoundingMode.CEILING).longValueExact()),step==3);
     }
     static List<RecipientGroup> recipients(String projectId,ProjectPart part,List<RecipientRole> roles,List<RecipientScope> scopes) {
-        return NotificationRecipients.dunning(projectId,
-            part==null?null:new NotificationRecipients.Part(part.partId(),part.headquarters(),part.leaderId()),
-            roles.stream().map(r->new NotificationRecipients.Role(r.userId(),r.name(),null,r.role())).toList(),
-            scopes.stream().map(s->new NotificationRecipients.Scope(s.userId(),s.type(),s.partId(),s.projectId())).toList())
-            .stream().map(g->new RecipientGroup(g.step(),g.recipients().stream()
-                .map(r->new Recipient(r.userId(),r.name(),r.qualifications())).toList(),g.unassignedReasons())).toList();
+        Map<String,Recipient> selected=new TreeMap<>();List<String> reasons=new ArrayList<>();List<RecipientGroup> result=new ArrayList<>();
+        add(selected,reasons,roles,r->r.role().equals("PM")&&scopes.stream().anyMatch(s->s.userId().equals(r.userId())&&"PROJ".equals(s.type())&&projectId.equals(s.projectId())),"프로젝트 PM 미지정");
+        result.add(group(1,selected,reasons));
+        if(part==null||part.partId()==null) {
+            add(selected,reasons,roles,r->r.role().equals("EXEC"),"영업파트 미지정 · EXEC 대체 수신자 미지정");
+        } else if(part.headquarters()) {
+            Predicate<RecipientRole> hq=r->r.role().equals("SALES_LDR")&&scopes.stream().anyMatch(s->s.userId().equals(r.userId())&&"PART".equals(s.type())&&part.partId().equals(s.partId()));
+            if(roles.stream().anyMatch(hq))add(selected,reasons,roles,hq,"HQ SALES_LDR 미지정");
+            else add(selected,reasons,roles,r->r.role().equals("EXEC"),"HQ SALES_LDR 없음 · EXEC 대체 수신자 미지정");
+        } else add(selected,reasons,roles,r->r.role().equals("SALES_LDR")&&Objects.equals(part.leaderId(),r.userId()),"영업파트 SALES_LDR 미지정");
+        result.add(group(2,selected,reasons));
+        add(selected,reasons,roles,r->r.role().equals("EXEC"),"EXEC 미지정");
+        add(selected,reasons,roles,r->r.role().equals("FIN"),"FIN 미지정");
+        result.add(group(3,selected,reasons));return List.copyOf(result);
     }
+    private static void add(Map<String,Recipient> selected,List<String> reasons,List<RecipientRole> roles,Predicate<RecipientRole> eligible,String missing) {
+        List<RecipientRole> found=roles.stream().filter(eligible).toList();if(found.isEmpty())reasons.add(missing);
+        for(RecipientRole row:found) {
+            var old=selected.get(row.userId());Set<String> merged=new TreeSet<>();if(old!=null)merged.addAll(old.roles());merged.add(row.role());
+            selected.put(row.userId(),new Recipient(row.userId(),row.name(),List.copyOf(merged)));
+        }
+    }
+    private static RecipientGroup group(int step,Map<String,Recipient> selected,List<String> reasons) {return new RecipientGroup(step,List.copyOf(selected.values()),List.copyOf(reasons));}
 }

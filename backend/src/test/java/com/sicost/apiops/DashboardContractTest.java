@@ -110,4 +110,91 @@ class DashboardContractTest {
     @ParameterizedTest @ValueSource(strings={"userId","page","sort","actor","asOfDate"})
     void unknownFieldsAreRejected(String field) throws Exception {mvc.perform(get("/api/dashboard").param(field,"injected")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("UNKNOWN_FIELD"));verifyNoInteractions(repository);}
     @Test void financialPercentageRoundingHasPositivePreviousGuard(){assertThat(DashboardService.change("101","100")).isEqualTo("1.0");assertThat(DashboardService.change("101","0")).isNull();assertThat(DashboardService.change("101","-100")).isNull();}
+    @Test void utilizationLinkUsesWorkforceScreenAndUnknownCloseCheckIsNotPassed() throws Exception {
+        var result=closes.getMonthCloses(null);
+        var checks=new ArrayList<>(result.checks());
+        checks.set(5,new MonthCloseDtos.Check("UNKNOWN","검사","UNKNOWN",null,"원천 미확인",null,"UI-14","2026-12",null));
+        when(closes.getMonthCloses(any())).thenReturn(new MonthCloseReadDtos.Result("2026-12","WORK",null,null,"2026-12","2026-11",true,true,true,false,"revision",checks,"CURRENT",0,null,List.of()));
+        mvc.perform(get("/api/dashboard")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.metrics[3].link.screenId").value("UI-28"))
+            .andExpect(jsonPath("$.data.closeProgress.passedCheckCount").value(5))
+            .andExpect(jsonPath("$.data.closeProgress.remainingChecks[0].count").value(org.hamcrest.Matchers.nullValue()))
+            .andExpect(jsonPath("$.data.closeProgress.remainingChecks[0].status").value("UNKNOWN"));
+    }
+    @Test void everyRequiredLinkRetainsItsSelectedOrCurrentPeriodAndRealIdentifier() throws Exception {
+        when(repository.taxes(day)).thenReturn(new DashboardDtos.TaxDue(1));
+        var snapshot=mock(ProjectAnalysisDtos.Snapshot.class);
+        var costs=mock(MonthlyCostDtos.MonthlyCostsData.class);
+        var person=mock(MonthlyCostDtos.MonthlyPersonCost.class);
+        var row=mock(MonthlyCostDtos.MonthlyCostRow.class);
+        when(row.costClass()).thenReturn("PRE");when(row.assignmentMm()).thenReturn("2.00");
+        when(person.personId()).thenReturn("00001");when(person.month()).thenReturn("202612");
+        when(person.assignmentMm()).thenReturn("2.00");when(person.rows()).thenReturn(List.of(row));
+        when(snapshot.costs()).thenReturn(costs);when(costs.items()).thenReturn(List.of(person));
+        var board=new HashMap<String,Object>();board.put("contractType","MO");board.put("partId",null);
+        board.put("light","위험");board.put("overdueIssueCount",1);board.put("lastUpdatedDate",null);
+        var alert=new HashMap<String,Object>();alert.put("projectId","000012");alert.put("projectName","프로젝트");
+        alert.put("contractType","MO");alert.put("monthlyMargin","-1.0");alert.put("budgetUsage","100.0");
+        alert.put("alerts",List.of(Map.of("kind","BUDGET_OVER","primaryCause","예산 초과")));
+        when(operations.projects(day)).thenReturn(new DashboardOperationalSources.Projects(snapshot,List.of(alert),List.of(board)));
+        when(operations.withdrawals(day)).thenReturn(new WithdrawalDtos.Guidance(true,1,1,1,"철수 예정"));
+        var source=mock(SalesForecastSources.Snapshot.class);
+        when(source.opportunities()).thenReturn(List.of(new SalesForecastSources.Opportunity("000003","기회","MO","ING","202612",1,BigDecimal.TEN,BigDecimal.TEN,null),
+            new SalesForecastSources.Opportunity("WAIT","대기","MO","WAIT","202701",1,BigDecimal.TEN,BigDecimal.TEN,null)));
+        var workforce=mock(SalesForecastDtos.Workforce.class);
+        when(workforce.totals()).thenReturn(List.of(new SalesForecastDtos.WorkforceMonth("2027-01","0.0","2.0","0.0","2.0","-2.0","0","2","0","AVAILABLE")));
+        when(operations.forecast(day)).thenReturn(new DashboardOperationalSources.Forecast(source,workforce));
+        when(cash.calculateContiguousRange(month,3)).thenReturn(List.of(new CashFlowDtos.Month("2027-01","PLANNED","0",List.of(),"0","0","0",true,true,List.of())));
+        var close=closes.getMonthCloses(null);var checks=new ArrayList<>(close.checks());
+        checks.set(0,new MonthCloseDtos.Check("BILL_MISS","검사","WARN",1L,"누락",null,"UI-13","2026-06",null));
+        when(closes.getMonthCloses(any())).thenReturn(new MonthCloseReadDtos.Result("2026-06","WORK",null,null,"2026-12","2026-11",true,true,true,false,"revision",checks,"CURRENT",0,null,List.of()));
+        var response=mvc.perform(get("/api/dashboard").param("month","2026-06")).andExpect(status().isOk()).andReturn();
+        var data=new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.getResponse().getContentAsString()).path("data");
+        String[] metricScreens={"UI-08","UI-08","UI-18","UI-28","UI-13"};
+        for(int i=0;i<metricScreens.length;i++) {
+            assertThat(data.path("metrics").get(i).path("link").path("screenId").asText()).isEqualTo(metricScreens[i]);
+            assertThat(data.path("metrics").get(i).path("basis").path("basisMonth").asText()).isEqualTo(i==4?"2026-12":"2026-06");
+            if(i<4)assertThat(data.path("metrics").get(i).path("link").path("linkKey").asText()).isEqualTo("2026-06");
+        }
+        String[] screens={"UI-13","UI-10","UI-21","UI-28","UI-12","UI-12","UI-05","UI-01","UI-31","UI-31","UI-31","UI-13","UI-29"};
+        assertThat(data.path("actions").size()).isEqualTo(13);
+        for(int i=0;i<screens.length;i++)assertThat(data.path("actions").get(i).path("link").path("screenId").asText()).as("action "+i).isEqualTo(screens[i]);
+        assertThat(data.path("actions").get(2).path("link").path("linkKey").asText()).isEqualTo("2027-01");
+        assertThat(data.path("actions").get(3).path("link").path("linkKey").asText()).isEqualTo("2027-01");
+        assertThat(data.path("actions").get(4).path("basis").path("basisMonth").asText()).isEqualTo("2026-12");
+        assertThat(data.path("actions").get(11).path("link").path("linkKey").asText()).isEqualTo("2026-06");
+        assertThat(data.path("closeProgress").path("link").path("screenId").asText()).isEqualTo("UI-14");
+        assertThat(data.path("closeProgress").path("link").path("linkKey").asText()).isEqualTo("2026-06");
+        assertThat(data.path("projectAlerts").get(0).path("link").path("screenId").asText()).isEqualTo("UI-04");
+        assertThat(data.path("projectAlerts").get(0).path("link").path("linkKey").asText()).isEqualTo("000012");
+        assertThat(data.path("pipeline").path("startingSoon").get(0).path("link").path("screenId").asText()).isEqualTo("UI-29");
+        assertThat(data.path("pipeline").path("startingSoon").get(0).path("link").path("linkKey").asText()).isEqualTo("000003");
+        for(var cashRow:data.path("cashForecast")) {
+            assertThat(cashRow.path("link").path("screenId").asText()).isEqualTo("UI-21");
+            assertThat(cashRow.path("link").path("linkKey").asText()).isEqualTo(cashRow.path("month").asText());
+        }
+        java.nio.file.Files.writeString(java.nio.file.Path.of("target/dashboard-all-links.json"),data.toPrettyString());
+    }
+    @Test void pipelineTruncatesEachOpportunityAndIncludesOnlyMThroughMPlusThreeInUpcoming() throws Exception {
+        var forecast=mock(SalesForecastSources.Snapshot.class);
+        when(forecast.opportunities()).thenReturn(List.of(
+            new SalesForecastSources.Opportunity("past","과거","MO","ING","202611",1,new BigDecimal("101"),new BigDecimal("50"),null),
+            new SalesForecastSources.Opportunity("now","현재","MO","ING","202612",1,new BigDecimal("101"),new BigDecimal("50"),null),
+            new SalesForecastSources.Opportunity("edge","경계","MO","ING","202703",1,new BigDecimal("101"),new BigDecimal("50"),null),
+            new SalesForecastSources.Opportunity("future","미래","MO","ING","202704",1,new BigDecimal("101"),new BigDecimal("50"),null)));
+        var workforce=mock(SalesForecastDtos.Workforce.class);when(workforce.totals()).thenReturn(List.of());
+        when(operations.forecast(day)).thenReturn(new DashboardOperationalSources.Forecast(forecast,workforce));
+        mvc.perform(get("/api/dashboard")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.pipeline.opportunityCount").value(4))
+            .andExpect(jsonPath("$.data.pipeline.weightedExpectedAmount").value("200"))
+            .andExpect(jsonPath("$.data.pipeline.startingSoon[*].opportunityId").value(org.hamcrest.Matchers.contains("now","edge")));
+    }
+    @Test void financialRoundingIsFinalHalfUpWithUnknownAndNonPositiveDenominatorGuards() {
+        assertThat(DashboardService.change("3","2")).isEqualTo("50.0");
+        assertThat(DashboardService.change("1","3")).isEqualTo("-66.7");
+        assertThat(DashboardService.change(null,"3")).isNull();
+        assertThat(DashboardService.change("3",null)).isNull();
+        assertThat(com.sicost.businessplansops.BusinessPlanActuals.ratio("1","3",true)).isEqualTo("33.3");
+        assertThat(com.sicost.businessplansops.BusinessPlanActuals.ratio("1","0",true)).isNull();
+    }
 }

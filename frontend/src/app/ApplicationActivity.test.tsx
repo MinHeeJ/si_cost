@@ -246,7 +246,7 @@ it("mounts notifications and automation in the header and opens the existing rec
   open();
   await userEvent.click(await screen.findByRole("button", { name: "알림" }));
   await screen.findByText("알림이 없습니다.");
-  await userEvent.click(screen.getByRole("button", { name: "자동처리상태" }));
+  await userEvent.click(within(screen.getByTestId("notification-popover")).getByRole("button", { name: "자동처리상태" }));
   await screen.findByText("자동 처리 실행 기록이 없습니다.");
   expect(screen.queryByTestId("automation-run-daily")).not.toBeInTheDocument();
   await userEvent.click(screen.getByTestId("automation-runs-deliveries"));

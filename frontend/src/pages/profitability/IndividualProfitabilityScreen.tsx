@@ -16,7 +16,6 @@ import { useProfitabilityDetails } from "./useProfitabilityDetails";
 import { ProfitabilityMonthlyLedger } from "./ProfitabilityMonthlyLedger";
 import { ProfitabilityDetails } from "./ProfitabilityDetails";
 import { ProfitabilityBadges } from "./ProfitabilityBadges";
-import { ProfitabilityExpansionActions } from "../notificationsops/ProfitabilityExpansionActions";
 import type {
   IndividualProfitabilityData,
   ProfitabilityMetrics,
@@ -75,12 +74,7 @@ export function IndividualProfitabilityScreen({
         personId={person.personId}
         query={applied}
         unit={unit}
-        jobLabels={Object.fromEntries(
-          (data?.contributions ?? []).map((cell) => [
-            cell.jobCode,
-            cell.jobName,
-          ]),
-        )}
+        jobLabels={Object.fromEntries((data?.contributions ?? []).map((cell) => [cell.jobCode, cell.jobName]))}
       />
     ));
   const [settingsError, setSettingsError] = useState("");
@@ -164,8 +158,7 @@ export function IndividualProfitabilityScreen({
       data-testid="profitability-overview"
       className="profitability-overview"
     >
-      {data && (
-        <>
+      {data && (<>
           <p
             className="profitability-context"
             data-testid="profitability-context"
@@ -188,8 +181,7 @@ export function IndividualProfitabilityScreen({
             cells={data.contributions}
             unit={unit}
           />
-        </>
-      )}
+      </>)}
       <ProfitabilityFilters
         query={query}
         onApply={apply}
@@ -200,20 +192,11 @@ export function IndividualProfitabilityScreen({
       />
       <div className="profitability-toolbar">
         <div className="profitability-view" role="group" aria-label="금액 보기">
-          {(
-            [
-              ["CUMULATIVE", "연 누계"],
-              ["MONTHLY_AVERAGE", "월 평균"],
-            ] as const
-          ).map(([view, label]) => (
-            <button
-              key={view}
-              type="button"
-              disabled={loading}
+          {([['CUMULATIVE', '연 누계'], ['MONTHLY_AVERAGE', '월 평균']] as const).map(([view, label]) => (
+            <button key={view} type="button" disabled={loading}
               className={query.view === view ? "sicost-primary" : ""}
               aria-pressed={query.view === view}
-              onClick={() => apply({ ...query, view })}
-            >
+              onClick={() => apply({ ...query, view })}>
               {label}
             </button>
           ))}
@@ -251,12 +234,29 @@ export function IndividualProfitabilityScreen({
       {data && (
         <>
           {!mobile && (
-            <ProfitabilityExpansionActions
-              personIds={data.items.map((person) => person.personId)}
-              expandedKeys={expandedKeys}
-              loading={loading}
-              onExpandedChange={setExpandedKeys}
-            />
+            <div
+              className="profitability-toolbar"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                data-testid="profitability-expand-page"
+                disabled={loading || !data.items.length}
+                onClick={() =>
+                  setExpandedKeys(data.items.map((person) => person.personId))
+                }
+              >
+                현재 페이지 모두 펼치기
+              </button>
+              <button
+                type="button"
+                data-testid="profitability-collapse-all"
+                disabled={!expandedKeys.length}
+                onClick={() => setExpandedKeys([])}
+              >
+                모두 접기
+              </button>
+            </div>
           )}
           {mobile ? (
             <div
@@ -305,11 +305,7 @@ export function IndividualProfitabilityScreen({
                   {data.context.period.noData
                     ? "개인 원가 자료 없음"
                     : "조건에 맞는 사람이 없습니다."}
-                  <button
-                    type="button"
-                    data-testid="profitability-mobile-empty-reset-button"
-                    onClick={state.reset}
-                  >
+                  <button type="button" data-testid="profitability-mobile-empty-reset-button" onClick={state.reset}>
                     조건 초기화
                   </button>
                 </p>

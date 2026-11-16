@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
@@ -34,11 +34,15 @@ const statuses: Record<api.CalendarCell["status"], string> = {
   PAST_EMPTY: "–",
 };
 export function WorkforceOperationsScreen() {
+  const location = useLocation();
+  const incoming = location.state as { fromDashboard?: boolean; section?: string } | null;
+  const dashboardSupply = incoming?.fromDashboard && incoming.section === "supply";
   const [context, setContext] = useState<PeriodContext>();
   const [year, setYear] = useState<number>();
   const [error, setError] = useState<unknown>();
   const [reload, setReload] = useState(0);
-  const [tab, setTab] = useState("calendar");
+  const [tab, setTab] = useState(dashboardSupply ? "supply" : "calendar");
+  useEffect(() => { if (location.pathname === "/UI-28" && incoming?.fromDashboard) setTab(dashboardSupply ? "supply" : "calendar"); }, [location.key]);
   useEffect(() => {
     let live = true;
     void getPeriodContext()

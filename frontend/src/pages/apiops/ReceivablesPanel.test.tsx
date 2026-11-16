@@ -259,3 +259,21 @@ it("목록 행의 전달상태는 선택한 청구만 읽고 빈 회차도 성�
   ).toBeInTheDocument();
   expect(delivery.createReceivableReminder).not.toHaveBeenCalled();
 });
+
+it("알림 저장 후 목록 재조회가 지연돼도 전달결과 패널을 유지한다", async () => {
+  vi.mocked(delivery.getReceivableDeliveryPreview).mockResolvedValue({
+    ...(await delivery.getReceivableDeliveryPreview(row.billId)), canRemind: true,
+  });
+  vi.mocked(delivery.createReceivableReminder).mockResolvedValue({ billId: row.billId, eventKey: "manual", operationId: "7047f01a-fab0-48cb-9208-99481bc962ff", reservedSn: 1, accepted: true, completed: false, tasks: [], history: null });
+  draw();
+  await screen.findByTestId("reminder-open-selected-bill");
+  let finish!: (value: api.ReceivablesPage) => void;
+  vi.mocked(api.getReceivables).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  await userEvent.click(screen.getByTestId("reminder-open-selected-bill"));
+  await screen.findByTestId("reminder-confirm");
+  await waitFor(() => expect(screen.getByTestId("reminder-confirm")).toBeEnabled());
+  await userEvent.click(screen.getByTestId("reminder-confirm"));
+  expect(await screen.findByRole("dialog", { name: /전달/ })).toBeVisible();
+  await act(async () => finish(result));
+  expect(screen.getByRole("dialog", { name: /전달/ })).toBeVisible();
+});

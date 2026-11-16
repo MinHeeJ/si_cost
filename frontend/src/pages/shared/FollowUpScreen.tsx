@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScreenPeriodBar } from "./ScreenPeriodBar";
 import { useSharedScreen } from "./SharedScreenContext";
 import { Icon } from "../../shared/Icon";
@@ -14,6 +14,9 @@ export function SharedScreenFrame({
   periodBar?: ReactNode;
   initialMonth?: string;
 }) {
+  const location = useLocation();
+  const incoming = location.state as { fromDashboard?: boolean; month?: string } | null;
+  const dashboardMonth = location.pathname === `/${screenId}` && incoming?.fromDashboard && ["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"].includes(screenId) ? incoming.month : undefined;
   const { menu, menus, favorites, star, pending } = useSharedScreen(screenId),
     navigate = useNavigate();
   const parent = menus.find((node) => node.menuId === menu?.parentId);
@@ -76,7 +79,7 @@ export function SharedScreenFrame({
         className={`sicost-screen-content${menu.pcOnly ? " sicost-pc-body" : ""}`}
       >
         {periodBar === undefined ? (
-          <ScreenPeriodBar screenId={screenId} initialMonth={initialMonth} />
+          <ScreenPeriodBar screenId={screenId} initialMonth={initialMonth ?? dashboardMonth} />
         ) : (
           periodBar
         )}

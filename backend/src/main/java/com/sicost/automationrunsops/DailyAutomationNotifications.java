@@ -37,7 +37,7 @@ public class DailyAutomationNotifications {
                 if(days.compareTo(BigDecimal.valueOf(ChronoUnit.DAYS.between(date,row.endDate())))!=0)return null;
             }
             var selected=NotificationRecipients.withdrawal(row.projectId(),mapper.projectPart(row.projectId(),DailyAutomationActions.db(date)),recipients.eligibleRoles(),recipients.recipientScopes());
-            if(selected.isEmpty())throw new IllegalStateException("철수 알림 수신자가 지정되지 않았습니다.");
+            if(selected.isEmpty())throw new com.sicost.common.api.ApiException(409,"RECIPIENT_UNASSIGNED","알림 수신자 미지정");
             publisher.publish(new Event(NotificationEventKeys.withdrawal(id,row.endDate(),days),"WTHDR","철수 예정: "+id+" · "+row.endDate(),new Link("UI-05",id),null),selected);
             return null;
         });
@@ -52,7 +52,7 @@ public class DailyAutomationNotifications {
             var shortage=cash.calculateContiguousRange(from,3).stream().filter(m->m.shortage()&&m.closingBalance()!=null&&!m.status().equals("ACTUAL")).toList();
             if(shortage.isEmpty())return null;
             var selected=NotificationRecipients.cash(recipients.eligibleRoles());
-            if(selected.isEmpty())throw new IllegalStateException("자금 알림 수신자가 지정되지 않았습니다.");
+            if(selected.isEmpty())throw new com.sicost.common.api.ApiException(409,"RECIPIENT_UNASSIGNED","알림 수신자 미지정");
             publisher.publish(new Event(NotificationEventKeys.cash(date),"CASH_SHORT","자금 부족 예상: "+String.join(", ",shortage.stream().map(m->m.month()).toList()),new Link("UI-21",shortage.get(0).month()),null),selected);
             return null;
         });

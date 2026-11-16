@@ -34,7 +34,7 @@ public class DailyAutomationStages {
     private void items(int stage,List<String> keys,Consumer<String> action) {
         for(String key:keys.stream().distinct().sorted().toList()) {
             try { action.accept(key); }
-            catch(RuntimeException error) { throw new ItemFailure(stage,key); }
+            catch(RuntimeException error) { throw new ItemFailure(stage,key,error instanceof com.sicost.common.api.ApiException api&&api.code().equals("RECIPIENT_UNASSIGNED")); }
         }
     }
     public void recoverAbandonedSending() {
@@ -42,9 +42,10 @@ public class DailyAutomationStages {
     }
     public static class ItemFailure extends RuntimeException {
         private final String publicMessage;
-        public ItemFailure(int stage,String key) {
+        public ItemFailure(int stage,String key) {this(stage,key,false);}
+        public ItemFailure(int stage,String key,boolean unassigned) {
             String safe=key!=null&&key.matches("[A-Za-z0-9_:.-]{1,160}")?key:"JOB";
-            publicMessage="단계 "+stage+" / "+safe+" / 처리 또는 필수 감사 저장 실패";
+            publicMessage="단계 "+stage+" / "+safe+" / "+(unassigned?"알림 수신자 미지정":"처리 또는 필수 감사 저장 실패");
         }
         public String publicMessage() { return publicMessage; }
     }

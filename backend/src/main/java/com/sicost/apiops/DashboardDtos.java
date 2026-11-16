@@ -17,7 +17,8 @@ public final class DashboardDtos {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Action(String actionCode,int count,boolean urgent,String amount,String personCount,List<String> months,
         Integer withoutNextAssignmentCount,Integer recommendedPlacementCount,String reason,Basis basis,Link link) {}
-    public record Check(String checkCode,String status,int count,String reason) {}
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record Check(String checkCode,String status,Integer count,String reason) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record CloseProgress(Basis basis,String closeStatus,Integer passedCheckCount,int totalCheckCount,List<Check> remainingChecks,boolean snapshot,Link link) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)

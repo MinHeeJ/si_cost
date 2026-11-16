@@ -35,6 +35,9 @@ export function FilterBar({
     <form
       className={`sicost-filterbar ${className}`.trim()}
       data-testid={testId}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && (event.nativeEvent.isComposing)) event.preventDefault();
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();

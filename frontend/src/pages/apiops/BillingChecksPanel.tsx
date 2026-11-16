@@ -274,6 +274,7 @@ function BillingChecksContent({
         rowKey={(r) => r.projectId}
         loading={loading}
         empty="점검할 프로젝트가 없습니다."
+        emptyAction={<button type="button" onClick={() => { setMonth(initialMonth); setPage(1); setReload((r) => r + 1); }}>조건 초기화</button>}
         page={page}
         size={size}
         total={data?.total ?? 0}

@@ -33,7 +33,7 @@ public class NotificationPublisher {
         validate(event);
         if (event.link() != null && !mapper.registeredScreen(event.link().screenId())) throw InputValidator.invalid("screenId");
         var active = new TreeMap<String, NotificationRecipients.Role>();
-        for (var role : mapper.eligibleRoles()) active.putIfAbsent(role.userId(), role);
+        for (var role : (Set.of("UPLD_DONE", "AI_DONE", "QUOTE_REJ").contains(event.type()) ? mapper.activeUsers() : mapper.eligibleRoles())) active.putIfAbsent(role.userId(), role);
         var selected = new TreeMap<String, NotificationRecipients.Recipient>();
         for (var recipient : recipients) {
             var current = active.get(recipient.userId());

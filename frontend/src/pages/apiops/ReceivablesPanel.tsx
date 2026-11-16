@@ -245,8 +245,9 @@ function ReceivablesContent({
         rows={error ? [] : (data?.items ?? [])}
         columns={columns}
         rowKey={(r) => r.billId}
-        loading={loading}
+        loading={loading && !data}
         empty="입금 예정일이 지난 청구가 없습니다."
+        emptyAction={<button type="button" onClick={() => { setPage(1); setReload((r) => r + 1); }}>조건 초기화</button>}
         page={page}
         size={size}
         total={data?.total ?? 0}

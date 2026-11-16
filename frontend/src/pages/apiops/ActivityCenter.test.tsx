@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ActivityCenter } from "./ActivityCenter";
@@ -75,7 +75,7 @@ it("opens existing notification and automation regions without introducing anoth
   expect(new URLSearchParams(list?.path.split("?")[1]).get("sort")).toBe(
     "notifiedAt,desc;id,desc",
   );
-  await userEvent.click(screen.getByRole("button", { name: "자동처리상태" }));
+  await userEvent.click(within(screen.getByTestId("notification-popover")).getByRole("button", { name: "자동처리상태" }));
   expect(
     await screen.findByText("자동 처리 실행 기록이 없습니다."),
   ).toBeInTheDocument();

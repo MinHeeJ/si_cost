@@ -158,6 +158,7 @@ function AutomationRunsContent({ onClose, onOpenReceivables }: Props) {
             rowKey={(r) => `${r.jobCode}-${r.runDate}`}
             loading={loading}
             empty="자동 처리 실행 기록이 없습니다."
+            emptyAction={<button type="button" onClick={() => { setPage(1); void load(); }}>조건 초기화</button>}
             page={page}
             size={size}
             total={data?.total ?? 0}

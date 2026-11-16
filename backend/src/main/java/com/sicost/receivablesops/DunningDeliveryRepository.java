@@ -25,6 +25,8 @@ public class DunningDeliveryRepository {
     public List<DeliveryWork> interrupted() {return mapper.interrupted();}
     public List<DeliveryWork> automaticPending() {return mapper.automaticPending();}
     public String snapshot(String id) {return mapper.snapshot(id);}
+    public List<String> billIds() {return mapper.billIds();}
+    public int highestStep(String id) {return mapper.highestStep(id);}
     public int nextSerial(String id) {return mapper.nextSerial(id);}
     public List<DeliveryRound> rounds(String id) {
         var tasks=mapper.tasks(id);var histories=mapper.histories(id);
@@ -41,7 +43,7 @@ public class DunningDeliveryRepository {
         fields.put("CHANNEL_CD","MAIL");fields.put("STATE_CD",row.state());fields.put("NOTI_TYPE_CD","DUN");fields.put("NOTI_CN",row.content());
         fields.put("LINK_SCRN_ID","UI-13");fields.put("LINK_KEY",row.billId());fields.put("MAIL_TO",row.emailAddress());fields.put("MAIL_SUBJECT",row.subject());
         fields.put("MAIL_BODY",row.taskId()+":MAIL_BODY");fields.put("MESSAGE_ID",row.messageId());fields.put("NOTI_ID",null);
-        fields.put("BILL_ID",row.billId());fields.put("DUN_STEP",row.step());fields.put("DUN_SN",row.serial());fields.put("RESEND_YN","Y");
+        fields.put("BILL_ID",row.billId());fields.put("DUN_STEP",row.step());fields.put("DUN_SN",row.serial());fields.put("RESEND_YN",row.resend()?"Y":"N");
         fields.put("SENT_DTTM",null);fields.put("ERROR_CD",row.errorCode());fields.put("ERROR_CN",row.errorMessage());fields.put("REG_USER_ID","SYSTEM");fields.put("REG_DTTM",row.at());
         fields.forEach((field,value)->audit(row.taskId(),"NEW",field,null,value));
     }

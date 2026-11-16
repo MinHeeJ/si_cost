@@ -1,6 +1,10 @@
+import * as dashboard from "../dashboardops/dashboardApi";
+import { dashboardFixture } from "../dashboardops/dashboardFixture";
+import type { ReactElement } from "react";
+import { PreferencesProvider } from "../me/usePreferences";
 import {
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
   within,
@@ -13,6 +17,7 @@ import { SharedScreenContext } from "./SharedScreenContext";
 import { FinancialItemsScreen } from "./FinancialItemsScreen";
 import * as api from "./sharedApi";
 vi.mock("./sharedApi");
+vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
 const child = (screenId: string, name: string, pcOnly = false) => ({
   menuId: screenId,
   parentId: "G",
@@ -41,6 +46,7 @@ const menus = [
 ];
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
   vi.mocked(api.getSharedCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({
@@ -183,3 +189,9 @@ it("PC 전용 화면은 안내·뒤로·홈과 보존되는 본문 컨테이너�
       .closest(".sicost-pc-body"),
   ).toHaveClass("sicost-pc-body");
 });
+
+const render = (ui: ReactElement) => renderUi(<PreferencesProvider api={{
+  getPreferences: () => api.getSharedPreferences() as ReturnType<import("../me/preferencesApi").PreferenceApi["getPreferences"]>,
+  putPreference: async (...args) => { const saved = await api.putSharedPreference(...args); return { ...saved, preference: saved.preference as import("../me/preferencesApi").Preference }; },
+  deletePreference: api.deleteSharedPreference,
+}}>{ui}</PreferencesProvider>);

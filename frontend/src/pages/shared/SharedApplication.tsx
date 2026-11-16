@@ -5,6 +5,7 @@ import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
 import { HeaderActions } from "./HeaderActions";
+import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
 import {
   notificationDestination,
@@ -62,6 +63,8 @@ export function SharedApplication({
   renderSettings,
   isDirty,
 }: SharedApplicationProps) {
+  const [utility, setUtility] = useState<"search" | "help" | null>(null);
+  useEffect(() => { const open = () => setUtility("search"); window.addEventListener("sicost:menu-search", open); return () => window.removeEventListener("sicost:menu-search", open); }, []);
   const location = useLocation(),
     navigate = useNavigate();
   const [menus, setMenus] = useState<MenusData | null>(null),
@@ -486,6 +489,8 @@ export function SharedApplication({
                 >
                   화면 설정
                 </button>
+                <button type="button" onClick={() => { setUtility("search"); setUserMenu(false); }}>메뉴 찾기</button>
+                <button type="button" onClick={() => { setUtility("help"); setUserMenu(false); }}>단축키 보기</button>
               </div>
             )}
           </div>
@@ -701,6 +706,7 @@ export function SharedApplication({
           </main>
         </div>
       </div>
+      <WorkspaceUsability menus={menus.items} active={active} onOpen={go} mode={utility} onClose={() => setUtility(null)} />
       <ProfileDialog
         open={dialog === "profile"}
         onClose={() => setDialog(null)}

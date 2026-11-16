@@ -891,6 +891,7 @@ function BillsContent({
             rowKey={(b) => b.id}
             loading={loading}
             empty="조회된 청구가 없습니다."
+            emptyAction={<button type="button" onClick={() => { setProjectSearch(""); setSelected([]); setQuery({ year, includeCarryover: year === currentYear, page: 1, size: initialSize }); }}>조건 초기화</button>}
             page={query.page}
             size={query.size}
             total={data?.total ?? 0}

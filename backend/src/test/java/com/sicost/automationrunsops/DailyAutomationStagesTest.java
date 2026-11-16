@@ -50,4 +50,10 @@ class DailyAutomationStagesTest {
     @Test void startupRecoveryNeverCallsDispatchStages() {
         stages.recoverAbandonedSending();verify(dunning).recoverAbandonedSending();verify(dunning,never()).process(anyInt(),anyString(),any());
     }
+    @Test void unassignedRecipientHasExplicitSafeFailureReason() {
+        when(dunning.businessKeys(2,today)).thenReturn(List.of("B1"));
+        doThrow(new com.sicost.common.api.ApiException(409,"RECIPIENT_UNASSIGNED","private email or SQL")).when(dunning).process(2,"B1",today);
+        assertThatThrownBy(()->stages.execute(new Key("RECEIVABLE_DUNNING",today),2))
+            .isInstanceOfSatisfying(DailyAutomationStages.ItemFailure.class,e->assertThat(e.publicMessage()).contains("알림 수신자 미지정").doesNotContain("private","email","SQL"));
+    }
 }

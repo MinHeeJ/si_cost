@@ -25,7 +25,7 @@ final class DashboardExportFixture {
             var card=data.withArray("metrics").addObject();card.put("metricCode",code);card.put("unit",code.equals("UTILIZATION")?"PERCENT":"KRW");
             for(String key:List.of("value","previousValue","difference","changeRate","targetValue","achievementRate","profitRate","targetGapPercentagePoints","idlePersonCount","overdueCount","overdueAmount"))card.putNull(key);
             card.put("value",code.equals("UTILIZATION")?"0.0":"-1234");card.set("basis",basis.deepCopy());
-            card.set("link",json.readTree("{\"screenId\":\"UI-08\",\"linkKey\":null}"));
+            card.putObject("link").put("screenId",code.equals("UTILIZATION")?"UI-28":code.equals("YTD_OPERATING_PROFIT")?"UI-18":code.equals("RECEIVABLE")?"UI-13":"UI-08").put("linkKey",code.equals("RECEIVABLE")?null:"2026-07");
         }
         for(int i=1;i<=12;i++) {
             var row=data.withArray("salesCostTrend").addObject();row.put("month","2026-"+String.format("%02d",i));

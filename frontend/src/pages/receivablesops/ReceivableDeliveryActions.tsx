@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ReminderDialog } from "./ReminderDialog";
 import { DeliveryStatusPanel } from "./DeliveryStatusPanel";
 import type { ReminderResult } from "./dunningDeliveryApi";
@@ -6,11 +6,14 @@ import type { ReminderResult } from "./dunningDeliveryApi";
 export function ReceivableDeliveryActions({
   billId,
   onChanged,
+  onPanelChange,
 }: {
   billId: string;
+  onPanelChange?(open: boolean): void;
   onChanged?(): Promise<void> | void;
 }) {
   const [open, setOpen] = useState<"reminder" | "deliveries">();
+  useEffect(() => { onPanelChange?.(!!open); return () => onPanelChange?.(false); }, [open, onPanelChange]);
   const [serial, setSerial] = useState<number>();
   async function accepted(result: ReminderResult) {
     await onChanged?.();

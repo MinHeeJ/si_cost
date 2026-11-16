@@ -50,6 +50,7 @@ class OpenApiControllerRegistrationContractTest {
             @Override protected org.yaml.snakeyaml.Yaml createYaml() {
                 var options = new org.yaml.snakeyaml.LoaderOptions();
                 options.setMaxAliasesForCollections(10000);
+                options.setCodePointLimit(8 * 1024 * 1024);
                 options.setAllowDuplicateKeys(false);
                 return new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(options));
             }

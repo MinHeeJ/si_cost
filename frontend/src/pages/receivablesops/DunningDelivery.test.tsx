@@ -281,3 +281,24 @@ it("uses the selected bill in both host actions and opens delivery round after a
     expect.any(AbortSignal),
   );
 });
+
+it("HTTP 환경에서 randomUUID가 없어도 보안 난수 UUID로 동일 요청을 제출한다", async () => {
+  const original = crypto.randomUUID;
+  Object.defineProperty(crypto, "randomUUID", { configurable: true, value: undefined });
+  try {
+    draw();
+    await screen.findByText("999,999,999,999,999");
+    await userEvent.click(screen.getByTestId("reminder-confirm"));
+    await waitFor(() => expect(api.createReceivableReminder).toHaveBeenCalled());
+    expect(vi.mocked(api.createReceivableReminder).mock.calls[0][1].operationId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  } finally { Object.defineProperty(crypto, "randomUUID", { configurable: true, value: original }); }
+});
+
+it("전달 패널 열림과 닫힘을 부모 상세에 알려 중첩을 방지한다", async () => {
+  const changed = vi.fn();
+  render(<ReceivableDeliveryActions billId={preview.billId} onPanelChange={changed} />);
+  await userEvent.click(screen.getByTestId("deliveries-open-test-bill"));
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith(true));
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(changed).toHaveBeenLastCalledWith(false));
+});

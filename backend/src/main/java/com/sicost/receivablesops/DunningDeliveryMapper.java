@@ -14,6 +14,8 @@ public interface DunningDeliveryMapper {
     List<DeliveryHistory> histories(String billId);
     List<DeliveryWork> interrupted();
     List<DeliveryWork> automaticPending();
+    List<String> billIds();
+    int highestStep(String billId);
     int nextSerial(String billId);
     int insertMail(MailReservation row);
     int transition(TaskTransition row);

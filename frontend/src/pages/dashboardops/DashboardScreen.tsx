@@ -272,7 +272,7 @@ export function DashboardScreen({
                     )
                   }
                 >
-                  <span>{metricLabels[card.metricCode]}</span>
+                  <span>{card.metricCode === "SALES" ? `${data.selectedMonth.slice(5)}월 매출` : card.metricCode === "OPERATING_PROFIT" ? `${data.selectedMonth.slice(5)}월 영업이익` : metricLabels[card.metricCode]}</span>
                   <strong>
                     {card.unit === "PERCENT"
                       ? formatRate(card.value)
@@ -333,13 +333,15 @@ export function DashboardScreen({
                       key={action.actionCode}
                       data-testid={`dashboard-action-${testKey(action.actionCode)}`}
                       onClick={() =>
-                        go(action.link, action.basis, {
+                        go(action.link, action.actionCode === "CASH_SHORTAGE" && action.link.linkKey
+                          ? { ...action.basis, basisMonth: action.link.linkKey } : action.basis, {
                           section:
                             action.actionCode === "OVERDUE_RECEIVABLE"
                               ? "receivables"
                               : action.actionCode === "BILLING_MISSING"
                                 ? "checks"
-                                : undefined,
+                                : action.actionCode === "CORPORATE_TAX_DUE" ? "tax"
+                                : action.actionCode === "STAFF_SHORTAGE" && action.link.screenId === "UI-28" ? "supply" : undefined,
                           filter:
                             action.actionCode === "OVERDUE_RECEIVABLE"
                               ? "overdue"
@@ -409,7 +411,7 @@ export function DashboardScreen({
                       data-testid={`dashboard-check-${testKey(check.checkCode)}`}
                     >
                       <StatusBadge tone="warn">
-                        {check.checkCode} {check.count}건
+                        {check.checkCode} {count(check.count)}건
                       </StatusBadge>{" "}
                       {check.reason}
                     </p>
@@ -539,7 +541,7 @@ export function DashboardScreen({
               </Panel>
             </div>
             <div className="dashboard-bottom-grid">
-              <Panel title="영업 파트별 이번 달" testId="dashboard-parts">
+              <Panel title={`영업 파트별 ${data.selectedMonth.slice(5)}월`} testId="dashboard-parts">
                 <DashboardBasis basis={data.salesPartsBasis} />
                 <p>{data.salesPartExplanation}</p>
                 {data.salesParts.length === 0 &&
@@ -575,6 +577,7 @@ export function DashboardScreen({
                 </table>
               </Panel>
               <Panel title="영업 파이프라인" testId="dashboard-pipeline">
+                <button type="button" onClick={() => go({ screenId: "UI-29", linkKey: null }, data.pipeline.basis)}>자세히</button>
                 <DashboardBasis basis={data.pipeline.basis} />
                 <p>진행 기회 {count(data.pipeline.opportunityCount)}건</p>
                 <strong>
@@ -623,7 +626,7 @@ export function DashboardScreen({
                       go(
                         row.link,
                         { ...data.cashBasis, basisMonth: row.month },
-                        { cashFlowSource: { month: row.month } },
+                        {},
                       )
                     }
                   >

@@ -67,7 +67,7 @@ public class DashboardService {
             metric("SALES",sales,previousSales,salesTarget,pl.basis(),"UI-08"),
             new Metric("OPERATING_PROFIT",profit,"KRW",previousProfit,subtract(profit,previousProfit),change(profit,previousProfit),null,null,ratio(profit,sales,false),null,null,null,null,valueBasis(pl.basis(),profit),link("UI-08",selected.toString())),
             metric("YTD_OPERATING_PROFIT",ytd,null,ytdTarget,pl.basis(),"UI-18"),
-            new Metric("UTILIZATION",util,"PERCENT",null,null,null,utilTarget,null,null,oneDifference(util,utilTarget),utilization==null?null:utilization.idle(),null,null,valueBasis(pl.basis(),util),link("UI-08",selected.toString())),
+            new Metric("UTILIZATION",util,"PERCENT",null,null,null,utilTarget,null,null,oneDifference(util,utilTarget),utilization==null?null:utilization.idle(),null,null,valueBasis(pl.basis(),util),link("UI-28",selected.toString())),
             new Metric("RECEIVABLE",r==null?null:money(r.balance()),"KRW",null,null,null,null,null,null,null,null,r==null?null:r.overdueCount(),r==null?null:money(r.overdueAmount()),receivables.basis(),link("UI-13",null)));
         List<Trend> trend=new ArrayList<>();for(int i=1;i<=12;i++) {
             String month=YearMonth.of(selected.getYear(),i).toString();var a=pl.value()==null?null:pl.value().all().get(month);Target t=plans.get(month);
@@ -84,7 +84,7 @@ public class DashboardService {
             cashForecast.add(new Cash(month,row==null?null:row.closingBalance(),money(minimum.value()),row==null||row.closingBalance()==null||minimum.value()==null?null:row.shortage(),reasons,link("UI-21",month)));
         }
         var closeValue=close.value();
-        List<Check> remaining=closeValue==null?Collections.emptyList():closeValue.checks().stream().filter(ch->ch.count()!=null&&!Set.of("OK","PASS").contains(ch.status())).map(ch->new Check(ch.code(),ch.status(),Math.toIntExact(ch.count()),ch.description())).toList();
+        List<Check> remaining=closeValue==null?Collections.emptyList():closeValue.checks().stream().filter(ch->!Set.of("OK","PASS").contains(ch.status())).map(ch->new Check(ch.code(),ch.status(),ch.count()==null?null:Math.toIntExact(ch.count()),ch.description())).toList();
         CloseProgress progress=new CloseProgress(close.basis(),closeStatus,closeValue==null?null:6-remaining.size(),6,remaining,"CLOSE".equals(closeStatus),link("UI-14",selected.toString()));
         List<Alert> alerts=alerts(project,c);
         var parts=pl.value()==null?Collections.<Part>emptyList():financial.parts(pl.value(),selected);
@@ -94,7 +94,7 @@ public class DashboardService {
         var shortCash=cashForecast.stream().filter(row->Boolean.TRUE.equals(row.shortage())).toList();
         if(!shortCash.isEmpty())actions.add(new Action("CASH_SHORTAGE",shortCash.size(),true,null,null,shortCash.stream().map(Cash::month).toList(),null,null,"미마감 월말잔액이 최소자금보다 적습니다.",cashRows.basis(),link("UI-21",shortCash.get(0).month())));
         var shortSupply=supply.stream().filter(row->row.differencePersons()!=null&&shortPeople.value()!=null&&new BigDecimal(row.differencePersons()).compareTo(shortPeople.value().negate())<0).toList();
-        if(!shortSupply.isEmpty())actions.add(new Action("STAFF_SHORTAGE",shortSupply.size(),true,null,shortSupply.stream().map(row->new BigDecimal(row.differencePersons()).abs()).max(BigDecimal::compareTo).orElseThrow().setScale(1,RoundingMode.HALF_UP).toPlainString(),shortSupply.stream().map(Supply::month).toList(),null,null,"가용 인력보다 수요가 많습니다.",forecast.basis(),link("UI-17",shortSupply.get(0).month())));
+        if(!shortSupply.isEmpty())actions.add(new Action("STAFF_SHORTAGE",shortSupply.size(),true,null,shortSupply.stream().map(row->new BigDecimal(row.differencePersons()).abs()).max(BigDecimal::compareTo).orElseThrow().setScale(1,RoundingMode.HALF_UP).toPlainString(),shortSupply.stream().map(Supply::month).toList(),null,null,"가용 인력보다 수요가 많습니다.",forecast.basis(),link("UI-28",shortSupply.get(0).month())));
         if(project.value()!=null)projectActions(actions,project.value(),mmLimit.value(),c,project.basis());
         if(withdrawal.value()!=null){var w=withdrawal.value();if(w.withinThreeMonthsPeople()>0)actions.add(new Action("WITHDRAWAL_DUE",w.withinThreeMonthsPeople(),false,null,null,List.of(current.toString()),w.withoutNextAssignmentPeople(),w.withMatchingPositionsPeople(),w.message(),withdrawal.basis(),link("UI-05",null)));}
         if(closeValue!=null){var warning=closeValue.checks().stream().filter(ch->ch.code().equals("BILL_MISS")&&ch.count()!=null).findFirst();warning.ifPresent(ch->addAction(actions,"BILLING_MISSING","WARN".equals(ch.status())?Math.toIntExact(ch.count()):0,"UI-13",close.basis(),null));}

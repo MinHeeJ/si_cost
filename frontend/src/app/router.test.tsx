@@ -1484,9 +1484,7 @@ describe("공식 진입점 합성", () => {
           screen.queryByText("화면 구성 요소가 아직 연결되지 않았습니다."),
         ).not.toBeInTheDocument();
       } else if (id === "UI-16") {
-        expect(
-          await screen.findByTestId("dashboard-metric-sales"),
-        ).toBeVisible();
+        await waitFor(() => expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible());
         expect(dashboard.getDashboard).toHaveBeenCalled();
       } else if (id === "UI-15") {
         expect(await screen.findByTestId("clients-screen")).toBeInTheDocument();

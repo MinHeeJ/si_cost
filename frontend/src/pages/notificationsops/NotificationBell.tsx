@@ -8,6 +8,7 @@ import "./notifications.css";
 
 export type NotificationBellProps = {
   onOpenTarget?(link: api.NotificationLink): boolean | Promise<boolean>;
+  onOpenAutomation?(): void;
   onBadges?(badges: api.NotificationUnreadCount): void;
 };
 const labels: Record<api.NotificationItem["typeCode"], string> = {
@@ -42,6 +43,7 @@ function relativeTime(value: string, basis: string) {
 export function NotificationBell({
   onOpenTarget,
   onBadges,
+  onOpenAutomation,
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [badges, setBadges] = useState<api.NotificationUnreadCount>();
@@ -349,6 +351,7 @@ export function NotificationBell({
             ))}
           </ul>
           <footer>
+            {onOpenAutomation && <button type="button" onClick={() => { close(); onOpenAutomation(); }}>자동처리상태</button>}
             {page?.hasMore && (
               <button
                 type="button"
