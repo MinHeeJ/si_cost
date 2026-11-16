@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.businessusersops.UserAdministrationMapper">
+  <select id="projects" resultType="com.sicost.businessusersops.UserAdministrationDtos$AssignedProject">
+    SELECT proj_id AS "projectId",scope_sn::integer AS "scopeSn" FROM tb_sy_user_scope
+    WHERE user_id=#{userId} AND scope_type_cd='PROJ' AND proj_id IS NOT NULL ORDER BY proj_id,scope_sn
+  </select>
+  <select id="activities" resultType="com.sicost.businessusersops.UserAdministrationDtos$Activity">
+    SELECT log_id::bigint AS "logId",user_id AS "userId",to_char(act_dttm,'YYYY-MM-DD HH24:MI') AS "actedAt",
+      act_type_cd AS "actionType",COALESCE(scrn_id,'') AS "screenId",COALESCE(trgt_desc,'') AS "targetDescription"
+    FROM tb_sy_accs_log WHERE user_id=#{userId} ORDER BY act_dttm DESC,log_id DESC LIMIT #{size} OFFSET #{offset}
+  </select>
+  <select id="activityCount" resultType="long">SELECT count(*) FROM tb_sy_accs_log WHERE user_id=#{userId}</select>
+  <sql id="administrators">
+    FROM tb_sy_user u WHERE u.user_stat_cd='USE' AND EXISTS(SELECT 1 FROM tb_sy_user_role ur
+      JOIN tb_sy_role r ON r.role_id=ur.role_id WHERE ur.user_id=u.user_id AND r.role_id='ADMIN' AND r.use_yn='Y')
+  </sql>
+  <select id="activeAdministrator" resultType="boolean">
+    SELECT EXISTS(SELECT 1 <include refid="administrators"/> AND u.user_id=#{userId})
+  </select>
+  <select id="activeAdministratorCount" resultType="long">SELECT count(*) <include refid="administrators"/></select>
+  <update id="changeState">
+    UPDATE tb_sy_user SET user_stat_cd=#{status},mod_user_id=#{actor},mod_dttm=#{now}
+    <if test="unlock">,pwd_err_cnt=0</if>
+    WHERE user_id=#{userId}
+  </update>
+</mapper>

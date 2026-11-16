@@ -8,6 +8,10 @@ import { HeaderActions } from "./HeaderActions";
 import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
 import {
+  getMenuManagement,
+  type ManagedMenuTree,
+} from "../menumanagement/menuManagementApi";
+import {
   notificationDestination,
   type NotificationUnreadCount,
 } from "../notificationsops/notificationsApi";
@@ -82,6 +86,9 @@ function SharedApplicationContent({
   const [menus, setMenus] = useState<MenusData | null>(null),
     [user, setUser] = useState<CurrentUser | null>(null),
     [localPrefs, setPrefs] = useState<SharedPreference[]>([]);
+  const [management, setManagement] = useState<ManagedMenuTree | null>(null);
+  const loadedMenus = useRef<MenusData | null>(null);
+  const [menuDeparture, setMenuDeparture] = useState<(() => void) | null>(null);
   const [localPrefsReady, setPrefsReady] = useState(false);
   const [notificationBadges, setNotificationBadges] =
     useState<NotificationUnreadCount>();
@@ -110,6 +117,12 @@ function SharedApplicationContent({
   const byScreen = (id: string) => nodes.find((node) => node.screenId === id);
   const getPref = (type: string) =>
     prefs.find((item) => item.type === type && item.key === "*");
+  const storedIds = (type: string): string[] => {
+    const value = getPref(type)?.value;
+    return Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === "string")
+      : [];
+  };
   const ids = (type: string) => {
     const value = getPref(type)?.value;
     return Array.isArray(value)
@@ -123,6 +136,19 @@ function SharedApplicationContent({
   const active = location.pathname.slice(1),
     current = byScreen(active);
   const visibleOnDevice = (id: string) => !mobile || !byScreen(id)?.pcOnly;
+  const registered = management?.items.find((row) => row.screenId === active);
+  const restriction =
+    registered && !registered.use
+      ? "사용 중지된 메뉴입니다."
+      : mobile && (registered?.pcOnly ?? current?.pcOnly)
+        ? "PC에서 이용해 주세요. PC전용 메뉴입니다."
+        : "";
+  useEffect(() => {
+    const refresh = () => setReload((n) => n + 1);
+    window.addEventListener("sicost:configuration-committed", refresh);
+    return () =>
+      window.removeEventListener("sicost:configuration-committed", refresh);
+  }, []);
   useEffect(() => {
     const resize = () => setMobile(window.innerWidth < 768);
     const escape = (event: KeyboardEvent) => {
@@ -141,16 +167,53 @@ function SharedApplicationContent({
   useEffect(() => {
     let live = true;
     setError("");
-    void Promise.all([getMenus(), getCurrentUser()])
-      .then(([menuData, actor]) => {
+    void Promise.all([
+      getMenus(),
+      getCurrentUser(),
+      getMenuManagement().catch(() => null),
+    ])
+      .then(([menuData, actor, metadata]) => {
         if (live) {
-          setMenus(menuData);
           setUser(actor);
+          const nextNodes = flattenMenus(menuData.items).filter(
+            (row) =>
+              row.screenId &&
+              screenRegistry[row.screenId] &&
+              (!mobile || !row.pcOnly),
+          );
+          const wasOpen = flattenMenus(loadedMenus.current?.items ?? []).some(
+            (row) => row.screenId === active,
+          );
+          const unavailable =
+            wasOpen && !nextNodes.some((row) => row.screenId === active);
+          const apply = () => {
+            loadedMenus.current = menuData;
+            setMenus(menuData);
+            setManagement(metadata);
+            if (unavailable && nextNodes[0]?.screenId)
+              navigate(`/${nextNodes[0].screenId}`, { replace: true });
+          };
+          if (unavailable) {
+            const event = new CustomEvent("sicost:screen-navigation-request", {
+              cancelable: true,
+              detail: {
+                screenId: active,
+                label: "메뉴 사용·PC 설정 변경으로 화면 나가기",
+                proceed: apply,
+              },
+            });
+            if (!window.dispatchEvent(event)) return;
+            if (isDirty?.(active)) {
+              setMenuDeparture(() => apply);
+              return;
+            }
+          }
+          apply();
         }
       })
       .catch((e: unknown) => {
         if (live)
-          setError(
+          (loadedMenus.current ? setPreferenceError : setError)(
             e instanceof ApiError
               ? `${e.message} 문의 번호: ${e.body.requestId}`
               : e instanceof Error
@@ -190,6 +253,16 @@ function SharedApplicationContent({
   }, [preferences?.items, preferences?.loading]);
   const savePreference = async (type: string, value: unknown) => {
     if (saving.current || !prefsReady || preferences?.pending) return false;
+    if ((type === "FAV" || type === "RECENT") && Array.isArray(value)) {
+      const hidden = storedIds(type).filter((id) => !byScreen(id));
+      const visible = value.filter(
+        (id): id is string => typeof id === "string" && !hidden.includes(id),
+      );
+      value = [
+        ...visible.slice(0, (type === "FAV" ? 10 : 5) - hidden.length),
+        ...hidden,
+      ];
+    }
     saving.current = true;
     setPending(true);
     setPreferenceError("");
@@ -228,6 +301,11 @@ function SharedApplicationContent({
     if (!menus || !nodes.length) return;
     const hash = location.hash.match(/^#(UI-\d{2})$/)?.[1];
     const candidate = hash ?? (location.pathname === "/" ? "UI-16" : active);
+    if (
+      screenRegistry[candidate] &&
+      (!byScreen(candidate) || !visibleOnDevice(candidate))
+    )
+      return;
     const valid = byScreen(candidate)
       ? candidate
       : byScreen("UI-16")
@@ -259,16 +337,23 @@ function SharedApplicationContent({
         [valid, ...recent.filter((id) => id !== valid)].slice(0, 5),
       );
     }
-  }, [menus, location.pathname, location.hash, location.key, prefsReady]);
+  }, [
+    menus,
+    location.pathname,
+    location.hash,
+    location.key,
+    prefsReady,
+    mobile,
+  ]);
   const go = (
     id: string,
     financialConfirmed = false,
     state?: unknown,
   ): boolean | undefined => {
-    if (!byScreen(id)) return;
+    if (!byScreen(id) || !visibleOnDevice(id)) return;
     if (
       !financialConfirmed &&
-      ["UI-10", "UI-19"].includes(active) &&
+      ["UI-10", "UI-19", "UI-25"].includes(active) &&
       id !== active &&
       !window.dispatchEvent(
         new CustomEvent("sicost:screen-navigation-request", {
@@ -280,6 +365,13 @@ function SharedApplicationContent({
           },
         }),
       )
+    )
+      return;
+    if (
+      active === "UI-24" &&
+      id !== active &&
+      isDirty?.(active) &&
+      !window.confirm("저장하지 않은 변경을 버릴까요?")
     )
       return;
     if (!tabs.includes(id) && tabs.length >= 8) {
@@ -307,7 +399,7 @@ function SharedApplicationContent({
   const close = (id: string, financialConfirmed = false) => {
     if (
       !financialConfirmed &&
-      ["UI-10", "UI-19"].includes(id) &&
+      ["UI-10", "UI-19", "UI-25"].includes(id) &&
       !window.dispatchEvent(
         new CustomEvent("sicost:screen-navigation-request", {
           cancelable: true,
@@ -717,6 +809,14 @@ function SharedApplicationContent({
                 {item.menuId}: {item.message}
               </p>
             ))}
+            {restriction && (
+              <p role="alert" className="sicost-banner sicost-tone-warn">
+                {restriction}
+              </p>
+            )}
+            {!restriction && screenRegistry[active] && !byScreen(active) && (
+              <p role="alert">등록된 메뉴를 사용할 수 없습니다.</p>
+            )}
             {tabs
               .filter((id) => byScreen(id))
               .map((id) => {
@@ -724,7 +824,7 @@ function SharedApplicationContent({
                 return (
                   <div
                     key={id}
-                    hidden={id !== active}
+                    hidden={id !== active || Boolean(restriction)}
                     className="sicost-screen-host"
                   >
                     {screens?.[id] ?? <Component />}
@@ -741,6 +841,22 @@ function SharedApplicationContent({
         mode={utility}
         onClose={() => setUtility(null)}
       />
+      <Dialog
+        open={Boolean(menuDeparture)}
+        title="저장하지 않은 내용이 있습니다."
+        cancelLabel="계속 작성"
+        confirmLabel="버리기/나가기"
+        onCancel={() => setMenuDeparture(null)}
+        onConfirm={() => {
+          menuDeparture?.();
+          setMenuDeparture(null);
+        }}
+      >
+        <p>
+          메뉴 사용·PC 설정이 변경되었습니다. 미저장 내용을 버리고 첫 진입
+          가능한 메뉴로 이동할까요?
+        </p>
+      </Dialog>
       <ProfileDialog
         open={dialog === "profile"}
         onClose={() => setDialog(null)}

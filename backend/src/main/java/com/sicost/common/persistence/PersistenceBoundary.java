@@ -19,7 +19,7 @@ public class PersistenceBoundary implements Interceptor {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     public void setMonthCloseBoundary(com.sicost.common.concurrent.MonthCloseBoundary boundary) { this.closeBoundary=boundary; }
     private static final Set<String> WRITABLE = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP",
-            "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST", "TB_SY_USER", "TB_SY_USER_ROLE",
+            "TB_SY_OPER_STD", "TB_SY_USER_PREF", "TB_SY_CHG_HIST", "TB_SY_USER", "TB_SY_USER_ROLE", "TB_SY_ROLE", "TB_SY_MENU", "TB_SY_ROLE_MENU_AUTH",
             "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD", "TB_SY_UPLD", "TB_SY_UPLD_ERR", "TB_SY_ACCS_LOG",
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
@@ -78,6 +78,14 @@ public class PersistenceBoundary implements Interceptor {
         String remainder = sql.substring(match.end());
         String tableName = match.group(2).toUpperCase(Locale.ROOT);
         String operation = match.group(1).toUpperCase(Locale.ROOT);
+        if (Set.of("TB_SY_ROLE", "TB_SY_MENU", "TB_SY_ROLE_MENU_AUTH").contains(tableName)) {
+            requireUserConfigurationWrite(tableName, operation, remainder);
+        }
+        if (tableName.equals("TB_SY_USER") && operation.equals("UPDATE")) {
+            String field = "(?:(?:USER_NM|EMAIL_ADDR|MOD_USER_ID|MOD_DTTM)\\s*=\\s*\\?|USER_STAT_CD\\s*=\\s*(?:\\?|'USE'|'LOCK'|'STOP')|PWD_ERR_CNT\\s*=\\s*0)";
+            if (!remainder.matches("(?is)\\s+SET\\s+" + field + "(?:\\s*,\\s*" + field + ")*\\s+WHERE\\s+USER_ID\\s*=\\s*\\?\\s*"))
+                throw new IllegalStateException("사용자 인증 준비값과 식별자는 변경할 수 없습니다.");
+        }
         if (tableName.equals("TB_SL_OPP") && (!operation.equals("UPDATE") || !remainder.matches("(?is)\\s+SET\\s+"
                 + assignments("SALES_STEP_CD|WIN_PRBL_RT|PRBL_MANUAL_YN|OPP_STAT_CD|EXPCT_PRFT_RT|APRV_STAT_CD|APRV_PRFT_RT|RSLT_DT|LOSE_RSN_CD|LOSE_MEMO|PROJ_ID|MOD_USER_ID|MOD_DTTM")
                 + "\\s+WHERE\\s+OPP_ID\\s*=\\s*\\?\\s*"))) throw new IllegalStateException("지정 기회의 업무 상태만 변경할 수 있습니다.");
@@ -149,7 +157,7 @@ public class PersistenceBoundary implements Interceptor {
                 case "TB_PJ_DRCT_EXPS" -> "PROJ_ID\\s*=\\s*\\?\\s+AND\\s+EXPS_YM\\s*=\\s*\\?\\s+AND\\s+EXPS_SN\\s*=\\s*\\?";
                 case "TB_PJ_TK_DSTRB" -> "PROJ_ID\\s*=\\s*\\?\\s+AND\\s+DSTRB_STEP_CD\\s*=\\s*\\?";
                 case "TB_PJ_PROJ_PART" -> "PROJ_ID\\s*=\\s*\\?\\s+AND\\s+APLY_BGN_YM\\s*(?:=|>=|>)\\s*\\?(?:\\s+AND\\s+APLY_BGN_YM\\s*(?:<=|<)\\s*\\?)?";
-                case "TB_SY_USER_SCOPE" -> "USER_ID\\s*=\\s*\\?\\s+AND\\s+SCOPE_SN\\s*=\\s*\\?\\s+AND\\s+SCOPE_TYPE_CD\\s*=\\s*'PROJ'(?:\\s+AND\\s+PROJ_ID\\s*=\\s*\\?)?";
+                case "TB_SY_USER_SCOPE" -> "USER_ID\\s*=\\s*\\?\\s+AND\\s+SCOPE_SN\\s*=\\s*\\?\\s+AND\\s+(?:SCOPE_TYPE_CD\\s*=\\s*'PROJ'(?:\\s+AND\\s+PROJ_ID\\s*=\\s*\\?)?|SCOPE_TYPE_CD\\s*=\\s*'PART'\\s+AND\\s+PART_ID\\s*=\\s*'HQ'(?:\\s+AND\\s+PROJ_ID\\s+IS\\s+NULL)?)";
                 case "TB_PJ_ASGN_MON" -> "ASGN_ID\\s*=\\s*\\?\\s+AND\\s+INPUT_YM\\s*=\\s*\\?\\s+AND\\s+FIX_YN\\s*(?:<>\\s*'Y'|!=\\s*'Y'|=\\s*'N')";
                 case "TB_HR_MON_PAY" -> "PAY_YM\\s*=\\s*\\?(?:\\s+AND\\s+DEV_ID\\s*=\\s*\\?)?";
                 case "TB_FI_ITEM" -> "FIN_YM\\s*=\\s*\\?\\s+AND\\s+(?:ITEM_SN\\s*=\\s*\\?|UPLD_ID\\s+IS\\s+NOT\\s+NULL)";
@@ -170,9 +178,8 @@ public class PersistenceBoundary implements Interceptor {
             if (table.equals("TB_HR_DEV_STAT") && !remainder.matches("(?is)\\s+WHERE\\s+DEV_ID\\s*=\\s*\\?\\s+AND\\s+STAT_SN\\s*=\\s*\\?\\s+AND\\s+WORK_STAT_CD\\s*(?:IN\\s*\\(\\s*'WORK'\\s*,\\s*'RETIRE'\\s*\\)|=\\s*'(?:WORK|RETIRE)')\\s*")) {
                 throw new IllegalStateException("지정 개발자의 복귀 또는 퇴사 이력 한 건만 취소할 수 있습니다.");
             }
-            if (table.equals("TB_SY_USER_ROLE") && (!remainder.matches("(?is).*\\bUSER_ID\\s*=\\s*\\?.*")
-                    || !remainder.matches("(?is).*\\bROLE_ID\\s+IN\\s*\\(\\s*'PM'\\s*,\\s*'SALES_LDR'\\s*\\).*"))) {
-                throw new IllegalStateException("업무 자격 연결만 해제할 수 있습니다.");
+            if (table.equals("TB_SY_USER_ROLE") && !remainder.matches("(?is)\\s+WHERE\\s+USER_ID\\s*=\\s*\\?\\s+AND\\s+(?:ROLE_ID\\s*=\\s*\\?|ROLE_ID\\s+IN\\s*\\(\\s*'PM'\\s*,\\s*'SALES_LDR'\\s*\\)(?:\\s+AND\\s+ROLE_ID\\s*=\\s*\\?)?)\\s*")) {
+                throw new IllegalStateException("지정 사용자의 명시 역할 연결만 해제할 수 있습니다.");
             }
             if (table.equals("TB_SY_UPLD_ERR") && !remainder.matches("(?is).*\\bUPLD_ID\\s*=\\s*\\?.*")) {
                 throw new IllegalStateException("동일 업로드의 검사 결과만 교체할 수 있습니다.");
@@ -185,6 +192,31 @@ public class PersistenceBoundary implements Interceptor {
         remainder = remainder.replaceAll("(?is)ON\\s+CONFLICT\\s*\\([^)]*\\)\\s+DO\\s+UPDATE\\s+SET", "");
         if (remainder.contains(";") || remainder.matches("(?is).*\\b(INSERT|UPDATE|DELETE|TRUNCATE|DROP|ALTER|CREATE)\\b.*")) {
             throw new IllegalStateException("단일 업무 쓰기만 허용합니다.");
+        }
+    }
+    private static void requireUserConfigurationWrite(String table, String operation, String remainder) {
+        String permissions = "INQ_YN|REG_YN|UPD_YN|DEL_YN|UPLD_YN|DNLD_YN|CNFM_YN";
+        String values = switch (table) {
+            case "TB_SY_ROLE" -> "DATA_SCOPE_CD|SNSTV_VIEW_YN|USE_YN";
+            case "TB_SY_MENU" -> "MENU_NM|UPPER_MENU_ID|SORT_ORD|USE_YN|PC_ONLY_YN";
+            default -> permissions;
+        };
+        String key = table.equals("TB_SY_MENU") ? "MENU_ID" : "ROLE_ID";
+        String predicate = key + "\\s*=\\s*\\?" + (table.equals("TB_SY_ROLE_MENU_AUTH") ? "\\s+AND\\s+MENU_ID\\s*=\\s*\\?" : "");
+        if (operation.startsWith("INSERT")) {
+            String initial = switch (table) {
+                case "TB_SY_ROLE" -> "ROLE_ID|ROLE_NM|DATA_SCOPE_CD|SNSTV_VIEW_YN|SYS_ROLE_YN|SORT_ORD|USE_YN";
+                case "TB_SY_MENU" -> "MENU_ID|UPPER_MENU_ID|MENU_NM|SCRN_ID|MENU_LVL|SORT_ORD|USE_YN|PC_ONLY_YN|ICON_NM|LOCK_YN";
+                default -> "ROLE_ID|MENU_ID|" + permissions;
+            };
+            requireInsert(remainder, initial + "|REG_USER_ID|REG_DTTM|MOD_USER_ID|MOD_DTTM");
+            String row = "\\s*\\([A-Z_,\\s]+\\)\\s+VALUES\\s*\\(\\s*(?:\\?|NULL|'[A-Z]+'|[0-9]+)(?:\\s*,\\s*(?:\\?|NULL|'[A-Z]+'|[0-9]+))*\\s*\\)";
+            String conflict = table.equals("TB_SY_ROLE_MENU_AUTH")
+                ? "(?:\\s+ON\\s+CONFLICT\\s*\\(\\s*ROLE_ID\\s*,\\s*MENU_ID\\s*\\)\\s+DO\\s+UPDATE\\s+SET\\s+" + assignments(permissions + "|MOD_USER_ID|MOD_DTTM") + ")?" : "";
+            if (!remainder.matches("(?is)" + row + conflict + "\\s*")) throw new IllegalStateException("설정은 명시된 신규 행 또는 권한 차분만 저장할 수 있습니다.");
+        } else if (!operation.equals("UPDATE") || !remainder.matches("(?is)\\s+SET\\s+" + assignments(values + "|MOD_USER_ID|MOD_DTTM")
+                + "\\s+WHERE\\s+" + predicate + "\\s*")) {
+            throw new IllegalStateException("설정의 전체 키와 최초 등록값은 보존해야 합니다.");
         }
     }
     private static void requireSettlementWrite(String table, String operation, String remainder) {

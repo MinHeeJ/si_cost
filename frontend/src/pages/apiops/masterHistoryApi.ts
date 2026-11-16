@@ -1,11 +1,11 @@
 import { request } from "../../shared/api";
 
-export type MasterHistoryTarget = "USER" | "CLIENT" | "PART";
+export type MasterHistoryTarget = "USER" | "CLIENT" | "PART" | "ROLE" | "MENU";
 export type MasterHistoryEntry = {
   historyId: number;
   targetTable: string;
   targetKey: string;
-  changeType: "NEW" | "UPD" | "STOP" | "RESUME";
+  changeType: "NEW" | "UPD" | "STOP" | "RESUME" | "DEL";
   itemName: string;
   beforeValue: string | null;
   afterValue: string | null;

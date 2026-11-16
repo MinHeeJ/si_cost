@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.currentuserops.PermissionSettingsMapper">
+  <select id="roles" resultType="com.sicost.currentuserops.PermissionSettingsDtos$Role">
+    SELECT r.role_id AS "roleId",r.data_scope_cd AS "dataScope",r.snstv_view_yn='Y' AS "sensitiveView"
+    FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id
+    WHERE ur.user_id=#{userId} AND r.use_yn='Y' ORDER BY r.role_id
+  </select>
+  <select id="menuPermissions" resultType="com.sicost.currentuserops.PermissionSettingsDtos$MenuPermission">
+    SELECT a.menu_id AS "menuId",bool_or(a.inq_yn='Y') AS "inquire",bool_or(a.reg_yn='Y') AS "register",
+      bool_or(a.upd_yn='Y') AS "update",bool_or(a.del_yn='Y') AS "delete",bool_or(a.upld_yn='Y') AS "upload",
+      bool_or(a.dnld_yn='Y') AS "download",bool_or(a.cnfm_yn='Y') AS "confirm"
+    FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id AND r.use_yn='Y'
+    JOIN tb_sy_role_menu_auth a ON a.role_id=r.role_id JOIN tb_sy_menu m ON m.menu_id=a.menu_id AND m.menu_lvl=2
+    WHERE ur.user_id=#{userId} GROUP BY a.menu_id ORDER BY a.menu_id
+  </select>
+  <select id="assignedParts" resultType="com.sicost.currentuserops.PermissionSettingsDtos$AssignedPart">
+    SELECT p.part_id AS "partId",p.part_nm AS "name",p.hq_yn='Y' AS "headOffice"
+    FROM tb_bs_part p WHERE p.part_id IN (
+      SELECT s.part_id FROM tb_bs_part_std s JOIN tb_bs_part normal ON normal.part_id=s.part_id AND normal.hq_yn='N'
+      WHERE s.part_ldr_user_id=#{userId} AND s.aply_bgn_ym &lt;= #{month}
+        AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month})
+      UNION
+      SELECT s.part_id FROM tb_sy_user_scope s JOIN tb_bs_part hq ON hq.part_id=s.part_id AND hq.hq_yn='Y'
+      WHERE s.user_id=#{userId} AND s.scope_type_cd='PART')
+    ORDER BY p.part_nm,p.part_id
+  </select>
+  <select id="assignedProjects" resultType="com.sicost.currentuserops.PermissionSettingsDtos$AssignedProject">
+    SELECT proj_id AS "projectId",scope_sn::integer AS "scopeSn" FROM tb_sy_user_scope
+    WHERE user_id=#{userId} AND scope_type_cd='PROJ' AND proj_id IS NOT NULL ORDER BY proj_id,scope_sn
+  </select>
+  <select id="snapshot" resultType="string">
+    SELECT jsonb_build_object(
+      'roles',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.role_id) FROM tb_sy_role r
+        JOIN tb_sy_user_role ur ON ur.role_id=r.role_id WHERE ur.user_id=#{userId}),
+      'links',(SELECT jsonb_agg(to_jsonb(ur) ORDER BY ur.role_id) FROM tb_sy_user_role ur WHERE ur.user_id=#{userId}),
+      'permissions',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.role_id,a.menu_id) FROM tb_sy_role_menu_auth a
+        JOIN tb_sy_user_role ur ON ur.role_id=a.role_id WHERE ur.user_id=#{userId}),
+      'menus',(SELECT jsonb_agg(to_jsonb(m) ORDER BY m.menu_id) FROM tb_sy_menu m),
+      'scopes',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.scope_sn) FROM tb_sy_user_scope s WHERE s.user_id=#{userId}),
+      'leadership',(SELECT jsonb_agg(to_jsonb(s) ORDER BY s.part_id,s.aply_bgn_ym) FROM tb_bs_part_std s WHERE s.part_ldr_user_id=#{userId})
+    )::text
+  </select>
+</mapper>

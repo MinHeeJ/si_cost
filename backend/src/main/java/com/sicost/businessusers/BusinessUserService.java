@@ -100,10 +100,12 @@ public class BusinessUserService {
     }
     private List<String> businessIds(List<Role> roles) {return roles.stream().map(Role::roleId).filter(BusinessUserInput.BUSINESS_ROLES::contains).sorted().toList();}
     private String revision(Stored row,List<Role> roles) {
-        return revisions.revision(new Snapshot(row.userId(),row.name(),row.email(),row.regDttm(),row.modDttm(),roles.stream().map(Role::roleId).sorted().toList()));
+        return revisions.revision(repository.snapshot(row.userId()));
     }
     private User view(Stored row,List<Role> roles) {
         return new User(row.userId(),row.name(),row.email(),roles.stream().sorted(Comparator.comparing(Role::roleId)).map(Role::name).toList(),
-            businessIds(roles),row.status(),row.lastLoginAt()==null?null:row.lastLoginAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),revision(row,roles));
+            businessIds(roles),row.status(),row.lastLoginAt()==null?null:row.lastLoginAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),revision(row,roles),
+            roles.stream().map(Role::roleId).sorted().toList(),repository.headOffice(row.userId()),
+            repository.assignedParts(row.userId(),YearMonth.from(LocalDateTime.ofInstant(clock.instant(),ZoneId.of("Asia/Seoul"))).toString().replace("-","")),repository.tempPassword(row.userId()));
     }
 }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.concurrent.RoleConfigurationSnapshotMapper">
+  <select id="role" resultType="map">
+    SELECT role_id AS "roleId",role_nm AS "name",data_scope_cd AS "dataScope",
+      snstv_view_yn AS "sensitiveView",sys_role_yn AS "systemRole",sort_ord::int AS "sortOrder",use_yn AS "use",
+      reg_user_id AS "regUserId",reg_dttm::text AS "regDttm",mod_user_id AS "modUserId",mod_dttm::text AS "modDttm"
+    FROM tb_sy_role WHERE role_id=#{roleId}
+  </select>
+  <select id="permissions" resultType="map">
+    SELECT role_id AS "roleId",menu_id AS "menuId",inq_yn AS "inquire",reg_yn AS "register",upd_yn AS "update",
+      del_yn AS "delete",upld_yn AS "upload",dnld_yn AS "download",cnfm_yn AS "confirm",
+      reg_user_id AS "regUserId",reg_dttm::text AS "regDttm",mod_user_id AS "modUserId",mod_dttm::text AS "modDttm"
+    FROM tb_sy_role_menu_auth WHERE role_id=#{roleId} ORDER BY role_id,menu_id
+  </select>
+  <select id="storedSnapshot" resultType="string" useCache="false" flushCache="true">
+    <include refid="com.sicost.roles.RoleMapper.storedSnapshot"/>
+  </select>
+  <select id="settings" resultType="string" useCache="false" flushCache="true">
+    <include refid="com.sicost.roles.RoleMapper.storedSettingsSnapshot"/>
+  </select>
+</mapper>

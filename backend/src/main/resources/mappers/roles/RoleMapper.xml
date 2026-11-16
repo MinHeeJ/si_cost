@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.roles.RoleMapper">
+  <sql id="roleColumns">role_id AS "roleId",role_nm AS "name",data_scope_cd AS "dataScope",snstv_view_yn AS "sensitiveYn",
+    sys_role_yn AS "systemYn",use_yn AS "useYn",sort_ord AS "sortOrder"</sql>
+  <select id="roles" resultType="com.sicost.roles.RoleDtos$Stored">SELECT <include refid="roleColumns"/> FROM tb_sy_role ORDER BY sort_ord,role_id</select>
+  <select id="find" resultType="com.sicost.roles.RoleDtos$Stored">SELECT <include refid="roleColumns"/> FROM tb_sy_role WHERE role_id=#{roleId}</select>
+  <select id="permissions" resultType="com.sicost.roles.RoleDtos$Permission">
+    SELECT m.menu_id AS "menuId",coalesce(a.inq_yn,'N')='Y' AS "inquire",coalesce(a.reg_yn,'N')='Y' AS "register",
+      coalesce(a.upd_yn,'N')='Y' AS "update",coalesce(a.del_yn,'N')='Y' AS "delete",coalesce(a.upld_yn,'N')='Y' AS "upload",
+      coalesce(a.dnld_yn,'N')='Y' AS "download",coalesce(a.cnfm_yn,'N')='Y' AS "confirm",m.upper_menu_id AS "parentId",
+      m.menu_nm AS "name",m.scrn_id AS "screenId",m.use_yn='Y' AS "use"
+    FROM tb_sy_menu m LEFT JOIN tb_sy_menu p ON p.menu_id=m.upper_menu_id
+    LEFT JOIN tb_sy_role_menu_auth a ON a.menu_id=m.menu_id AND a.role_id=#{roleId}
+    WHERE m.menu_lvl=2 ORDER BY p.sort_ord,p.menu_id,m.sort_ord,m.menu_id
+  </select>
+  <sql id="treeIdentity">SELECT menu_id,upper_menu_id,menu_lvl,scrn_id FROM tb_sy_menu WHERE menu_lvl=2 ORDER BY menu_id</sql>
+  <sql id="storedSnapshot">
+    SELECT json_build_object('role',row_to_json(r),'permissions',
+      (SELECT coalesce(json_agg(row_to_json(a) ORDER BY a.menu_id),'[]'::json) FROM tb_sy_role_menu_auth a WHERE a.role_id=r.role_id),
+      'menuIds',(SELECT coalesce(json_agg(row_to_json(m)),'[]'::json) FROM (<include refid="com.sicost.roles.RoleMapper.treeIdentity"/>) m))::text
+    FROM tb_sy_role r WHERE r.role_id=#{roleId}
+  </sql>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    <include refid="storedSnapshot"/>
+  </select>
+  <sql id="storedSettingsSnapshot">
+    SELECT json_build_object('roles',(SELECT coalesce(json_agg(row_to_json(r)),'[]'::json) FROM (SELECT * FROM tb_sy_role ORDER BY role_id) r),
+      'permissions',(SELECT coalesce(json_agg(row_to_json(a)),'[]'::json) FROM (SELECT * FROM tb_sy_role_menu_auth ORDER BY role_id,menu_id) a),
+      'menus',(SELECT coalesce(json_agg(row_to_json(m)),'[]'::json) FROM (SELECT * FROM tb_sy_menu ORDER BY menu_id) m))::text
+  </sql>
+  <select id="settingsSnapshot" resultType="string" useCache="false" flushCache="true">
+    <include refid="storedSettingsSnapshot"/>
+  </select>
+  <insert id="insert">
+    INSERT INTO tb_sy_role(role_id,role_nm,data_scope_cd,snstv_view_yn,sys_role_yn,sort_ord,use_yn,reg_user_id,reg_dttm)
+    VALUES(#{roleId},#{value.name},#{value.dataScope},#{value.sensitiveYn},'N',#{value.sortOrder},'Y',#{actor},#{now})
+  </insert>
+  <update id="update">
+    UPDATE tb_sy_role SET data_scope_cd=#{value.dataScope},snstv_view_yn=#{value.sensitiveYn},mod_user_id=#{actor},mod_dttm=#{now} WHERE role_id=#{roleId}
+  </update>
+  <sql id="permissionValues">
+    <bind name="inq" value="value.inquire ? 'Y' : 'N'"/><bind name="reg" value="value.register ? 'Y' : 'N'"/>
+    <bind name="upd" value="value.update ? 'Y' : 'N'"/><bind name="del" value="value.delete ? 'Y' : 'N'"/>
+    <bind name="upld" value="value.upload ? 'Y' : 'N'"/><bind name="dnld" value="value.download ? 'Y' : 'N'"/>
+    <bind name="cnfm" value="value.confirm ? 'Y' : 'N'"/>
+  </sql>
+  <insert id="insertPermission">
+    <include refid="permissionValues"/>
+    INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id,reg_dttm)
+    VALUES(#{roleId},#{value.menuId},#{inq},#{reg},#{upd},#{del},#{upld},#{dnld},#{cnfm},#{actor},#{now})
+  </insert>
+  <update id="updatePermission">
+    <include refid="permissionValues"/>
+    UPDATE tb_sy_role_menu_auth SET inq_yn=#{inq},reg_yn=#{reg},upd_yn=#{upd},del_yn=#{del},upld_yn=#{upld},dnld_yn=#{dnld},cnfm_yn=#{cnfm},
+      mod_user_id=#{actor},mod_dttm=#{now} WHERE role_id=#{roleId} AND menu_id=#{value.menuId}
+  </update>
+  <select id="permissionExists" resultType="boolean">SELECT EXISTS(SELECT 1 FROM tb_sy_role_menu_auth WHERE role_id=#{roleId} AND menu_id=#{value.menuId})</select>
+</mapper>

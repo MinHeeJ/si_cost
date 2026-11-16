@@ -1,0 +1,70 @@
+.menu-management {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  min-width: 0;
+}
+.menu-management-heading,
+.menu-management-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.menu-management-heading {
+  justify-content: space-between;
+}
+.menu-management-heading p,
+.menu-management-actions p,
+.menu-management h1 small {
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 400;
+}
+.menu-management-actions > :first-child {
+  margin-right: auto;
+}
+.menu-management-root td {
+  background: var(--head-bg);
+  font-weight: 600;
+}
+.menu-management-name {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+.menu-management-name input {
+  min-width: 120px;
+  width: 180px;
+}
+.menu-management tr:not(.menu-management-root) .menu-management-name {
+  padding-left: 20px;
+}
+.menu-management-order {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.menu-management-order button {
+  height: 28px;
+  padding: 0 8px;
+}
+.menu-management-history {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.menu-management-history details {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 280px;
+}
+@media (max-width: 767px) {
+  .menu-management {
+    padding: 12px;
+  }
+}

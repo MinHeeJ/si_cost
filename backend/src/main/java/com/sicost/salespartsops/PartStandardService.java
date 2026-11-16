@@ -26,6 +26,13 @@ public class PartStandardService {
     private final CurrentUserProvider users;
     private final CommitInvalidation invalidation;
     private final Clock clock;
+    private com.sicost.common.concurrent.SettlementSourceLocks qualificationLocks;
+    private com.sicost.common.concurrent.MonthCloseBoundary closeBoundary;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setQualificationLocks(com.sicost.common.concurrent.SettlementSourceLocks locks,
+                                      com.sicost.common.concurrent.MonthCloseBoundary boundary) {
+        this.qualificationLocks=locks;this.closeBoundary=boundary;
+    }
     public PartStandardService(PartStandardRepository repository, RevisionService revisions, ChangeHistoryWriter history,
                                CurrentUserProvider users, CommitInvalidation invalidation, Clock clock) {
         this.repository=repository;this.revisions=revisions;this.history=history;this.users=users;this.invalidation=invalidation;this.clock=clock;
@@ -77,20 +84,28 @@ public class PartStandardService {
     }
     @Transactional
     public Result save(String id,JsonNode body) {
+        String actor=users.userId();
         PartStandardInput.allow(body);
         id=InputValidator.text(id,30,"id");
         String expected=PartStandardInput.text(body,"expectedRevision",200);
         JsonNode selected=body.get("leaderUserId");
         String leader=selected!=null && selected.isTextual()?selected.textValue().trim():null;
         PartStandardMapper mapper=repository.rows();
-        if(leader!=null && !leader.isEmpty() && leader.length()<=30) mapper.lockUser(leader);
+        closeBoundary.shared();
+        Set<String> keys=new TreeSet<>();keys.add("PART:"+id);keys.add("operating-standards:CASH_BASE_YM");
+        if(leader!=null && !leader.isEmpty() && leader.length()<=30)keys.add("USER:"+leader);
+        List<Stored> discovered=mapper.timeline(id,false);
+        discovered.forEach(row->keys.add("USER:"+row.leaderUserId()));
+        qualificationLocks.lock(keys);
         Header part=mapper.header(id,true);
         if(part==null || "Y".equals(part.hqYn())) throw new ApiException(404,"NOT_FOUND","일반 영업 파트를 찾을 수 없습니다.");
         List<Stored> timeline=mapper.timeline(id,true);
+        if(timeline.stream().anyMatch(row->!keys.contains("USER:"+row.leaderUserId())))
+            throw new ApiException(409,"STALE_WRITE","파트장 연결이 변경되었습니다. 다시 조회해 주세요.");
         revisions.requireExpected(expected,revision(part,timeline));
         Save input=PartStandardInput.parse(body);
         if(!mapper.eligible(input.leaderUserId())) throw new ApiException(400,"VALIDATION_ERROR","사용 중인 파트장 자격 사용자를 선택해 주세요.","leaderUserId",null);
-        repository.lockCashAndClose();
+
         YearMonth min=minimum(true), month=YearMonth.parse(input.effectiveMonth());
         if(month.isBefore(min)) throw closed();
         String start=db(month);
@@ -115,7 +130,7 @@ public class PartStandardService {
         Stored next=timeline.stream().filter(row->row.month().compareTo(start)>0).min(Comparator.comparing(Stored::month)).orElse(null);
         String end=next==null?null:db(YearMonth.parse(DatabaseMonthCodec.toApi(next.month())).minusMonths(1));
         String priorEnd=db(month.minusMonths(1));
-        String actor=users.userId();LocalDateTime now=LocalDateTime.now(clock);
+        LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),com.sicost.common.TimeConfiguration.SEOUL);
         if(mapper.endPrevious(new Mutation(id,prior.month(),priorEnd,input,actor,now))!=1) throw new IllegalStateException("이전 기준을 변경하지 못했습니다.");
         if(mapper.insert(new Mutation(id,start,end,input,actor,now))!=1) throw new IllegalStateException("새 기준을 저장하지 못했습니다.");
         history.append(new ChangeHistoryWriter.Change("TB_BS_PART_STD",id+":"+prior.month(),"UPD","APLY_END_YM",prior.endMonth(),priorEnd,null));

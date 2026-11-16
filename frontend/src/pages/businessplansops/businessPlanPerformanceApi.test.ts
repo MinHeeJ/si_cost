@@ -44,8 +44,9 @@ it("apply resends same file, validation year and revision with explicit KEEP_CLO
       } as PlanValidation,
       "KEEP_CLOSED",
     );
-    const [, options] = vi.mocked(fetch).mock.calls[0],
+    const [path, options] = vi.mocked(fetch).mock.calls[0],
       body = options?.body as FormData;
+    expect(path).toBe("/api/business-plans/imports/apply");
     expect(body.get("file")).toBe(file);
     expect(body.get("year")).toBe("2026");
     expect(body.get("mode")).toBe("KEEP_CLOSED");

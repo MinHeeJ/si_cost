@@ -63,7 +63,15 @@ it("사용자 열 설정은 공유 모달에서 필수열을 잠그고 서버 �
       "UI-23",
       {
         users: {
-          order: ["userId", "name", "email", "roles", "status", "lastLoginAt"],
+          order: [
+            "userId",
+            "name",
+            "email",
+            "roles",
+            "status",
+            "lastLoginAt",
+            "assignedParts",
+          ],
           hidden: ["email"],
         },
       },

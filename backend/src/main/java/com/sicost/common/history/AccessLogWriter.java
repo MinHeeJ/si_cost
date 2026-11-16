@@ -41,6 +41,17 @@ public class AccessLogWriter {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void append(Event event, HttpServletRequest request) {
+        if ("AUTH_CHG".equals(event.action())) {
+            if (!Set.of("UI-23", "UI-24").contains(event.screenId()) || event.targetId()==null
+                    || !event.targetId().matches("[A-Za-z0-9_-]{1,30}") || event.fileType()!=null
+                    || event.count()!=null || event.filename()!=null) throw InputValidator.invalid("accessLog");
+            String ip=request.getRemoteAddr();
+            if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
+            if(mapper.insert(new Entry(users.userId(),event.action(),event.screenId(),event.targetId(),ip,
+                    LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL)))!=1)
+                throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
+            return;
+        }
         if ("UI-16".equals(event.screenId())) {
             if (!"DNLD".equals(event.action()) || event.targetId()!=null || !"대시보드".equals(event.fileType())
                     || event.count()==null || event.count()<0 || event.filename()!=null) throw InputValidator.invalid("accessLog");
@@ -53,11 +64,13 @@ public class AccessLogWriter {
         }
         if (Set.of("UI-21", "UI-26").contains(event.screenId())) {
             String kind = "UI-26".equals(event.screenId()) ? "AI분석" : "자금수지표";
-            if (!"DNLD".equals(event.action()) || event.targetId()!=null || !kind.equals(event.fileType())
+            boolean validTarget = "UI-26".equals(event.screenId())
+                ? event.targetId()!=null && event.targetId().matches("[1-9][0-9]{0,11}") : event.targetId()==null;
+            if (!"DNLD".equals(event.action()) || !validTarget || !kind.equals(event.fileType())
                     || event.count()==null || event.count()<0 || event.filename()!=null) throw InputValidator.invalid("accessLog");
             String ip=request.getRemoteAddr();
             if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
-            if(mapper.insert(new Entry(users.userId(),"DNLD",event.screenId(),kind+" "+event.count(),ip,
+            if(mapper.insert(new Entry(users.userId(),"DNLD",event.screenId(),(event.targetId()==null?"":event.targetId()+" ")+kind+" "+event.count(),ip,
                     LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL)))!=1)
                 throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
             return;

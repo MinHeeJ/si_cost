@@ -35,6 +35,8 @@ class PartStandardContractTest {
     @Autowired PartStandardService service;
     @MockBean PartStandardMapper mapper;
     @MockBean AggregateLockMapper locks;
+    @MockBean SettlementSourceLocks qualificationLocks;
+    @MockBean MonthCloseBoundary closeBoundary;
     @MockBean MasterLockMapper references;
     @MockBean CurrentUserProvider users;
     @MockBean ChangeHistoryMapper history;
@@ -71,9 +73,11 @@ class PartStandardContractTest {
         save(body()).andExpect(status().isCreated()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.changed").value(true));
         verify(mapper).endPrevious(argThat(m->m.month().equals("202601") && m.endMonth().equals("202607")));
         verify(mapper).insert(argThat(m->m.month().equals("202608") && m.endMonth().equals("202611") && m.actor().equals("admin")));
-        var order=inOrder(mapper,locks,references);
-        order.verify(mapper).lockUser("leader");order.verify(mapper).header("PART-test",true);order.verify(mapper).timeline("PART-test",true);
-        order.verify(locks).lock("operating-standards:CASH_BASE_YM");order.verify(references).lockClose();order.verify(references).lockSettlement();
+        var order=inOrder(mapper,qualificationLocks,closeBoundary,references);
+        order.verify(closeBoundary).shared();order.verify(mapper).timeline("PART-test",false);
+        order.verify(qualificationLocks).lock(argThat(keys->keys.containsAll(Set.of("PART:PART-test","USER:leader","operating-standards:CASH_BASE_YM"))));
+        order.verify(mapper).header("PART-test",true);order.verify(mapper).timeline("PART-test",true);
+        order.verify(references).lockSettlement();verify(mapper,never()).lockUser(anyString());
         verify(history).insert(argThat(e->e.type().equals("NEW") && e.userId().equals("admin") && e.targetKey().equals("PART-test:202608")));
         verify(history).insert(argThat(e->e.type().equals("UPD") && e.before().equals("202611") && e.after().equals("202607")));
     }

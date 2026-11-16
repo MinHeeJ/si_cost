@@ -107,7 +107,7 @@ it("초기 조건 전체와 전체 역할·상태별 배지 및 NULL 접속을 �
     "sicost-tone-lock",
   );
   expect(screen.getAllByText("관리자")[0]).toHaveClass("sicost-tone-info");
-  expect(screen.getAllByText("–")).toHaveLength(3);
+  expect(screen.getAllByText("–")).toHaveLength(6);
   expect(api.getBusinessUsers).toHaveBeenCalledWith({
     page: 1,
     size: 50,
@@ -200,10 +200,14 @@ it("사용자 상세는 가운데 모달이 아니라 오른쪽 패널로 열리
   expect(drawer).toHaveClass("sicost-drawer");
   const header = drawer.querySelector("header") as HTMLElement;
   expect(await within(header).findByText("ab12")).toBeInTheDocument();
-  const buttons = within(header).getAllByRole("button").map((b) => b.textContent);
+  const buttons = within(header)
+    .getAllByRole("button")
+    .map((b) => b.textContent);
   expect(buttons).toEqual(["수정", "닫기"]);
   await userEvent.click(within(header).getByRole("button", { name: "닫기" }));
-  expect(screen.queryByRole("dialog", { name: "사용자 상세" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("dialog", { name: "사용자 상세" }),
+  ).not.toBeInTheDocument();
 });
 it("신규는 DB 표시명과 PM만 기본 체크하고 등록 후 목록·상세를 갱신한다", async () => {
   render(<BusinessUsersScreen />);
@@ -345,8 +349,9 @@ it("열 순서·필수열과 밀도·헤더 정렬을 유지한다", async () =>
   );
   await screen.findByText("ab12");
   const headers = screen.getAllByRole("columnheader");
-  expect(headers[0]).toHaveTextContent("이름");
-  expect(headers[1]).toHaveTextContent("아이디");
+  expect(headers[0]).toHaveTextContent("선택");
+  expect(headers[1]).toHaveTextContent("이름");
+  expect(headers[2]).toHaveTextContent("아이디");
   expect(
     screen.queryByRole("columnheader", { name: "이메일" }),
   ).not.toBeInTheDocument();

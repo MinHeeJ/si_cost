@@ -11,6 +11,10 @@ export type BusinessUser = {
   status: "USE" | "LOCK" | "STOP";
   lastLoginAt: string | null;
   revision: string;
+  roleIds?: string[];
+  headOffice?: boolean;
+  assignedParts?: { partId: string; name: string; headOffice: boolean }[];
+  tempPassword?: boolean;
 };
 export type BusinessUsersPage = {
   items: BusinessUser[];

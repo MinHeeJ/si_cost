@@ -31,6 +31,25 @@
     SELECT role_id AS "roleId",role_nm AS "name",use_yn AS "useYn" FROM tb_sy_role
     WHERE role_id IN ('PM','SALES_LDR') AND use_yn='Y' ORDER BY role_id
   </select>
+  <select id="snapshot" resultType="string" useCache="false" flushCache="true">
+    SELECT jsonb_build_object('user',jsonb_build_object('userId',u.user_id,'name',u.user_nm,'email',u.email_addr,
+      'status',u.user_stat_cd,'regUserId',u.reg_user_id,'regDttm',u.reg_dttm,'modUserId',u.mod_user_id,'modDttm',u.mod_dttm),
+      'roles',COALESCE((SELECT jsonb_agg(to_jsonb(r) ORDER BY r.role_id) FROM tb_sy_user_role r WHERE r.user_id=u.user_id),'[]'::jsonb),
+      'scopes',COALESCE((SELECT jsonb_agg(to_jsonb(s) ORDER BY s.scope_sn) FROM tb_sy_user_scope s WHERE s.user_id=u.user_id),'[]'::jsonb))::text
+    FROM tb_sy_user u WHERE u.user_id=#{userId}
+  </select>
+  <select id="tempPassword" resultType="boolean">SELECT temp_pwd_yn='Y' FROM tb_sy_user WHERE user_id=#{userId}</select>
+  <select id="headOffice" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_sy_user_scope WHERE user_id=#{userId} AND scope_type_cd='PART' AND part_id='HQ' AND proj_id IS NULL)
+  </select>
+  <select id="assignedParts" resultType="com.sicost.businessusers.BusinessUserDtos$AssignedPart">
+    SELECT p.part_id AS "partId",p.part_nm AS "name",p.part_id='HQ' AS "headOffice" FROM tb_bs_part p
+    WHERE (p.hq_yn='N' AND EXISTS(SELECT 1 FROM tb_bs_part_std s WHERE s.part_id=p.part_id
+      AND s.part_ldr_user_id=#{userId} AND s.aply_bgn_ym &lt;= #{month} AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month})))
+      OR (p.part_id='HQ' AND EXISTS(SELECT 1 FROM tb_sy_user_scope s WHERE s.user_id=#{userId}
+        AND s.scope_type_cd='PART' AND s.part_id=p.part_id AND s.proj_id IS NULL))
+    ORDER BY p.part_nm,p.part_id
+  </select>
   <select id="lockUser" resultType="string">SELECT pg_advisory_xact_lock(hashtextextended('USER:' || #{userId},0))::text</select>
   <select id="connectedProjects" resultType="string">
     SELECT DISTINCT s.proj_id FROM tb_sy_user_scope s

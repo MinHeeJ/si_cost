@@ -11,6 +11,10 @@ public interface BusinessUserMapper {
     long count(Filter filter);
     Stored find(@Param("userId") String userId, @Param("lock") boolean lock);
     List<Role> roles(String userId);
+    String snapshot(String userId);
+    boolean tempPassword(String userId);
+    boolean headOffice(String userId);
+    List<AssignedPart> assignedParts(@Param("userId") String userId, @Param("month") String month);
     List<Role> availableRoles();
     String lockUser(String userId);
     List<String> connectedProjects(String userId);

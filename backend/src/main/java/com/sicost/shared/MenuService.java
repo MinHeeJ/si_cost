@@ -8,6 +8,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MenuService {
     public static final Set<String> SCREEN_IDS = Set.of("UI-16","UI-15","UI-02","UI-01","UI-31","UI-12","UI-05","UI-11","UI-28","UI-17","UI-29","UI-33","UI-13","UI-03","UI-04","UI-19","UI-32","UI-10","UI-07","UI-08","UI-09","UI-18","UI-21","UI-14","UI-26","UI-30","UI-23","UI-24","UI-25","UI-27");
+    public static final Set<String> IMPLEMENTED_BUSINESS_SCREEN_IDS = Set.of("UI-16","UI-02","UI-31","UI-12","UI-05","UI-11","UI-28","UI-17","UI-29","UI-33","UI-13","UI-03","UI-04","UI-19","UI-32","UI-10","UI-07","UI-08","UI-09","UI-18","UI-21","UI-14","UI-26","UI-30","UI-24","UI-25","UI-27");
+    public record ScreenRegistration(String screenId, String name, boolean implemented) {}
+    public List<ScreenRegistration> screenRegistrations() {
+        Map<String,String> names = new LinkedHashMap<>();
+        mapper.menus().stream().sorted(ORDER).filter(row -> row.screenId()!=null)
+            .forEach(row -> names.putIfAbsent(row.screenId(),row.name()));
+        return SCREEN_IDS.stream().sorted().map(id -> new ScreenRegistration(id,names.getOrDefault(id,id),
+            IMPLEMENTED_BUSINESS_SCREEN_IDS.contains(id))).toList();
+    }
     private static final Comparator<MenuRow> ORDER = Comparator.comparingInt(MenuRow::sortOrder).thenComparing(MenuRow::menuId);
     private final SharedQueriesMapper mapper;
     public MenuService(SharedQueriesMapper mapper) { this.mapper=mapper; }
@@ -35,7 +44,9 @@ public class MenuService {
         Map<String,List<MenuRow>> children=new HashMap<>();
         for (MenuRow row:rows) if (!excluded.containsKey(row.menuId())) children.computeIfAbsent(row.parentId(),key -> new ArrayList<>()).add(row);
         children.values().forEach(list -> list.sort(ORDER));
-        List<MenuNode> roots=children.getOrDefault(null,Collections.emptyList()).stream().map(row -> node(row,children)).toList();
+        List<MenuNode> roots=children.getOrDefault(null,Collections.emptyList()).stream()
+            .filter(row -> row.screenId()!=null || !children.getOrDefault(row.menuId(),Collections.emptyList()).isEmpty())
+            .map(row -> node(row,children)).toList();
         return new MenusData(roots,excluded.entrySet().stream().map(e -> new MenuDiagnostic(e.getKey(),e.getValue())).toList());
     }
     private String invalid(MenuRow row,Map<String,MenuRow> byId) {

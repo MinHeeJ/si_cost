@@ -6,14 +6,26 @@
       <choose>
         <when test="targetType == 'USER'">SELECT 1 FROM tb_sy_user WHERE user_id = #{targetId}</when>
         <when test="targetType == 'CLIENT'">SELECT 1 FROM tb_bs_clnt WHERE clnt_id = #{targetId}</when>
+        <when test="targetType == 'ROLE'">SELECT 1 FROM tb_sy_role WHERE role_id = #{targetId}</when>
+        <when test="targetType == 'MENU'">SELECT 1 FROM tb_sy_menu WHERE menu_id = #{targetId}</when>
         <otherwise>SELECT 1 FROM tb_bs_part WHERE part_id = #{targetId}</otherwise>
       </choose>
     )
   </select>
   <sql id="target">
     <choose>
-      <when test="targetType == 'USER'">h.trgt_tbl_nm = 'TB_SY_USER' AND h.trgt_key = #{targetId}</when>
+      <when test="targetType == 'USER'">
+        ((h.trgt_tbl_nm = 'TB_SY_USER' AND h.trgt_key = #{targetId}) OR
+         (h.trgt_tbl_nm IN ('TB_SY_USER_ROLE','TB_SY_USER_SCOPE')
+          AND left(h.trgt_key, length(#{targetId}) + 1) = #{targetId} || ':'))
+      </when>
       <when test="targetType == 'CLIENT'">h.trgt_tbl_nm = 'TB_BS_CLNT' AND h.trgt_key = #{targetId}</when>
+      <when test="targetType == 'ROLE'">
+        ((h.trgt_tbl_nm = 'TB_SY_ROLE' AND h.trgt_key = #{targetId}) OR
+         (h.trgt_tbl_nm = 'TB_SY_ROLE_MENU_AUTH'
+          AND left(h.trgt_key, length(#{targetId}) + 1) = #{targetId} || ':'))
+      </when>
+      <when test="targetType == 'MENU'">h.trgt_tbl_nm = 'TB_SY_MENU' AND h.trgt_key = #{targetId}</when>
       <otherwise>
         ((h.trgt_tbl_nm = 'TB_BS_PART' AND h.trgt_key = #{targetId}) OR
          (h.trgt_tbl_nm = 'TB_BS_PART_STD'

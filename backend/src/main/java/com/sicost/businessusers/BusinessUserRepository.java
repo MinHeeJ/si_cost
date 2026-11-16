@@ -12,6 +12,10 @@ public class BusinessUserRepository {
     public long count(Filter filter) {return mapper.count(filter);}
     public Stored find(String id,boolean lock) {return mapper.find(id,lock);}
     public List<Role> roles(String id) {return mapper.roles(id);}
+    public String snapshot(String id) {return mapper.snapshot(id);}
+    public boolean tempPassword(String id) {return mapper.tempPassword(id);}
+    public boolean headOffice(String id) {return mapper.headOffice(id);}
+    public List<AssignedPart> assignedParts(String id,String month) {return mapper.assignedParts(id,month);}
     public List<Role> availableRoles() {return mapper.availableRoles();}
     public void lockUser(String id) {mapper.lockUser(id);}
     public List<String> connectedProjects(String id) {return mapper.connectedProjects(id);}

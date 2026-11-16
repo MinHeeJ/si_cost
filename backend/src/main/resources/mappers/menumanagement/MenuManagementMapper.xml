@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.menumanagement.MenuManagementMapper">
+  <select id="tree" resultType="com.sicost.menumanagement.MenuManagementDtos$Stored">
+    SELECT menu_id AS "menuId", upper_menu_id AS "parentId", menu_nm AS "name", menu_lvl AS "level",
+      scrn_id AS "screenId", sort_ord AS "sortOrder", use_yn='Y' AS "use", pc_only_yn='Y' AS "pcOnly",
+      lock_yn='Y' AS "locked", icon_nm AS "icon", reg_user_id AS "regUserId", reg_dttm AS "regDttm",
+      mod_user_id AS "modUserId", mod_dttm AS "modDttm"
+    FROM tb_sy_menu ORDER BY menu_id
+  </select>
+  <update id="update">
+    UPDATE tb_sy_menu SET menu_nm=#{input.name}, upper_menu_id=#{input.parentId,jdbcType=VARCHAR},
+      sort_ord=#{input.sortOrder}, use_yn=#{useYn}, pc_only_yn=#{pcOnlyYn}, mod_user_id=#{actor}, mod_dttm=#{now}
+    WHERE menu_id=#{input.menuId}
+  </update>
+</mapper>

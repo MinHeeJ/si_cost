@@ -12,6 +12,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApplicationRoutes, applicationRoutes } from "./router";
 import { screenRegistry } from "../pages/shared/screenRegistry";
 import * as shared from "../pages/shared/sharedApi";
+import * as roles from "../pages/roles/rolesApi";
+import * as managedMenus from "../pages/menumanagement/menuManagementApi";
+import * as permissionSettings from "../pages/currentuserops/permissionSettingsApi";
 import * as prefs from "../pages/me/preferencesApi";
 import * as codes from "../pages/codegroups/codeGroupsApi";
 import * as mappings from "../pages/codemappings/codeMappingsApi";
@@ -118,6 +121,18 @@ vi.mock("../pages/exportsops/masterDataExportApi", async (original) => ({
 }));
 
 vi.mock("../pages/shared/sharedApi");
+vi.mock("../pages/roles/rolesApi", async (original) => ({
+  ...(await original<typeof import("../pages/roles/rolesApi")>()),
+  getRoles: vi.fn(),
+  getRoleMenus: vi.fn(),
+}));
+vi.mock("../pages/menumanagement/menuManagementApi", async (original) => ({
+  ...(await original<
+    typeof import("../pages/menumanagement/menuManagementApi")
+  >()),
+  getMenuManagement: vi.fn(),
+}));
+vi.mock("../pages/currentuserops/permissionSettingsApi");
 vi.mock("../pages/me/preferencesApi", async (original) => ({
   ...(await original<typeof import("../pages/me/preferencesApi")>()),
   getPreferences: vi.fn(),
@@ -414,6 +429,33 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(roles.getRoles).mockResolvedValue({
+    items: [],
+    developmentMode: true,
+    accessEnforcement: false,
+    settingsRevision: "settings-r",
+  });
+  vi.mocked(roles.getRoleMenus).mockResolvedValue({ items: [] });
+  vi.mocked(managedMenus.getMenuManagement).mockResolvedValue({
+    items: [],
+    revision: "menus-r",
+    developmentMode: true,
+    accessEnforcement: false,
+  });
+  vi.mocked(
+    permissionSettings.getCurrentUserPermissionSettings,
+  ).mockResolvedValue({
+    userId: "admin",
+    roleIds: ["ADMIN"],
+    menuPermissions: [],
+    sensitiveView: false,
+    rowScope: { all: true, partIds: [], projectIds: [] },
+    assignedParts: [],
+    assignedProjects: [],
+    developmentMode: true,
+    accessEnforcement: false,
+    settingsRevision: "settings-r",
+  });
   vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
   vi.mocked(cashFlow.getCashFlow).mockRejectedValue(
     new Error("자금수지 원천 조회 실패"),
@@ -1484,7 +1526,9 @@ describe("공식 진입점 합성", () => {
           screen.queryByText("화면 구성 요소가 아직 연결되지 않았습니다."),
         ).not.toBeInTheDocument();
       } else if (id === "UI-16") {
-        await waitFor(() => expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible());
+        await waitFor(() =>
+          expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible(),
+        );
         expect(dashboard.getDashboard).toHaveBeenCalled();
       } else if (id === "UI-15") {
         expect(await screen.findByTestId("clients-screen")).toBeInTheDocument();
@@ -1636,8 +1680,29 @@ describe("공식 진입점 합성", () => {
             .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
             .some((node) => !node.closest("[hidden]")),
         ).toBe(false);
+      } else if (id === "UI-24" || id === "UI-25") {
+        expect(
+          await screen.findByTestId(
+            id === "UI-24" ? "roles-screen" : "menus-screen",
+          ),
+        ).toBeVisible();
+        expect(managedMenus.getMenuManagement).toHaveBeenCalled();
+        if (id === "UI-24") {
+          expect(roles.getRoles).toHaveBeenCalled();
+          expect(
+            await screen.findByTestId("permission-settings-panel"),
+          ).toBeVisible();
+          expect(
+            permissionSettings.getCurrentUserPermissionSettings,
+          ).toHaveBeenCalled();
+        }
+        expect(
+          screen.queryByText("이 화면은 다음 단계에서 만듭니다."),
+        ).not.toBeInTheDocument();
       } else if (id === "UI-26") {
-        expect(await screen.findByRole("region", { name: "AI 대화" })).toBeVisible();
+        expect(
+          await screen.findByRole("region", { name: "AI 대화" }),
+        ).toBeVisible();
         expect(
           screen
             .queryAllByText("이 화면은 다음 단계에서 만듭니다.")

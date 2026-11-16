@@ -27,6 +27,22 @@ const result = (
   total = items.length,
 ): MasterHistoryPage => ({ items, total, page: 1, size: 50 });
 beforeEach(() => vi.resetAllMocks());
+it.each(["ROLE", "MENU"] as const)("%s 이력도 공통 조회 경로를 사용한다", async (targetType) => {
+  vi.mocked(getMasterHistory).mockResolvedValue(result());
+  render(<ChangeHistoryTable targetType={targetType} targetId="selected-target" />);
+  await screen.findByText("조회된 변경 이력이 없습니다.");
+  expect(getMasterHistory).toHaveBeenCalledWith(
+    targetType, "selected-target", 1, 50, expect.any(AbortSignal),
+  );
+});
+it("해제된 연결의 DEL 이력을 삭제 버튼 없이 표시한다", async () => {
+  vi.mocked(getMasterHistory).mockResolvedValue(result([
+    { ...row, targetTable: "TB_SY_USER_ROLE", targetKey: "admin:R-901", changeType: "DEL" },
+  ]));
+  render(<ChangeHistoryTable targetType="USER" targetId="admin" />);
+  expect(await screen.findByText("삭제")).toHaveClass("sicost-tone-bad");
+  expect(screen.queryByRole("button", { name: "삭제" })).not.toBeInTheDocument();
+});
 it("선택한 대상의 당시 문자열과 서버 순서, 유형별 색을 읽기 전용으로 표시한다", async () => {
   vi.mocked(getMasterHistory).mockResolvedValue(
     result([

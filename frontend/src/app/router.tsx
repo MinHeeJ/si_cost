@@ -11,6 +11,9 @@ import {
 } from "react-router-dom";
 import { BusinessPartnersScreen } from "../pages/shared/BusinessPartnersScreen";
 import { UsersScreen } from "../pages/shared/UsersScreen";
+import { PermissionsScreen } from "../pages/shared/PermissionsScreen";
+import { MenusScreen } from "../pages/shared/MenusScreen";
+import { PermissionSettingsPanel } from "../pages/currentuserops/PermissionSettingsPanel";
 import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWorkspace";
 import { ProjectsWorkspace } from "../pages/projects/ProjectsWorkspace";
 import type { ProjectsRegistration } from "../pages/projects/ProjectsScreen";
@@ -1096,6 +1099,25 @@ function RegisteredWorkforceRecommendations() {
 
 function RegisteredApplication() {
   const preferences = usePreferences();
+  const [permissionsDirty, setPermissionsDirty] = useState(false),
+    [menusDirty, setMenusDirty] = useState(false);
+  const [settingsVersion, setSettingsVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => {
+      setSettingsVersion((value) => value + 1);
+      window.dispatchEvent(new Event("sicost:configuration-committed"));
+    };
+    const events = [
+      "sicost:roles-committed",
+      "sicost:business-users-committed",
+      "sicost:menus-committed",
+      "sicost:permission-settings-committed",
+      "sicost:role-settings-committed",
+    ];
+    events.forEach((event) => window.addEventListener(event, refresh));
+    return () =>
+      events.forEach((event) => window.removeEventListener(event, refresh));
+  }, []);
   const [codesDirty, setCodesDirty] = useState(false),
     [standardsDirty, setStandardsDirty] = useState(false);
   const [partnersDirty, setPartnersDirty] = useState(false),
@@ -1183,7 +1205,11 @@ function RegisteredApplication() {
                           ? billingDirty
                           : id === "UI-10"
                             ? financialDirty
-                            : id === "UI-23" && usersDirty
+                            : id === "UI-24"
+                              ? permissionsDirty
+                              : id === "UI-25"
+                                ? menusDirty
+                                : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-16": <DashboardScreen />,
@@ -1230,6 +1256,17 @@ function RegisteredApplication() {
           <UsersScreen>
             <RegisteredUsersWorkspace onDirtyChange={onUsersDirty} />
           </UsersScreen>
+        ),
+        "UI-24": (
+          <>
+            <PermissionsScreen onDirtyChange={setPermissionsDirty} />
+            <PermissionSettingsPanel key={settingsVersion} />
+          </>
+        ),
+        "UI-25": (
+          <SharedScreenFrame screenId="UI-25" periodBar={null}>
+            <MenusScreen onDirtyChange={setMenusDirty} />
+          </SharedScreenFrame>
         ),
       }}
       renderSettings={(open, onClose) => (

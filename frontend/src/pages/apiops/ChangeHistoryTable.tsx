@@ -33,6 +33,7 @@ const types: Record<
   UPD: { label: "변경", tone: "info" },
   STOP: { label: "중지", tone: "lock" },
   RESUME: { label: "재개", tone: "ok" },
+  DEL: { label: "삭제", tone: "bad" },
 };
 const columns: Column<MasterHistoryEntry>[] = [
   { id: "createdAt", label: "일시", render: (row) => row.createdAt },
@@ -85,7 +86,13 @@ function loadDefaultHistory(
   size: 20 | 50 | 100,
   signal?: AbortSignal,
 ) {
-  if (targetType === "USER" || targetType === "CLIENT" || targetType === "PART")
+  if (
+    targetType === "USER" ||
+    targetType === "CLIENT" ||
+    targetType === "PART" ||
+    targetType === "ROLE" ||
+    targetType === "MENU"
+  )
     return getMasterHistory(targetType, targetId, page, size, signal);
   return Promise.reject(new Error("대상에 맞는 이력 조회가 필요합니다."));
 }

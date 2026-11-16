@@ -4,6 +4,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import { BusinessUserForm } from "./BusinessUserForm";
 import { BusinessUserDetail } from "./BusinessUserDetail";
+import { UserBulkStatusToolbar } from "../businessusersops/UserBulkStatusToolbar";
 import * as api from "./businessUsersApi";
 import "./businessusers.css";
 
@@ -47,6 +48,10 @@ export function BusinessUsersScreen({
       registration?: BusinessUsersScreenProps["registration"];
     }>();
   const [refresh, setRefresh] = useState(0);
+  const [selected, setSelected] = useState<Record<string, api.BusinessUser>>(
+    {},
+  );
+  useEffect(() => setSelected({}), [filters]);
   const requestSequence = useRef(0);
   const registrationKey = useRef<string>();
   useEffect(() => {
@@ -115,6 +120,7 @@ export function BusinessUsersScreen({
     roles: "역할",
     status: "상태",
     lastLoginAt: "마지막 접속",
+    assignedParts: "담당파트",
   };
   const columns: Column<api.BusinessUser>[] = [
     "userId",
@@ -123,10 +129,11 @@ export function BusinessUsersScreen({
     "roles",
     "status",
     "lastLoginAt",
+    "assignedParts",
   ].map((id) => ({
     id,
     label: labels[id],
-    sortable: id !== "roles",
+    sortable: id !== "roles" && id !== "assignedParts",
     render: (row) =>
       id === "userId" ? (
         <button
@@ -161,6 +168,8 @@ export function BusinessUsersScreen({
               ? "잠김"
               : "중지"}
         </span>
+      ) : id === "assignedParts" ? (
+        row.assignedParts?.map((part) => part.name).join(", ") || "–"
       ) : id === "lastLoginAt" ? (
         (row.lastLoginAt ?? "–")
       ) : id === "email" ? (
@@ -170,7 +179,12 @@ export function BusinessUsersScreen({
       ),
   }));
   const visible = columnView
-    ? columnView.order.flatMap((id) => {
+    ? [
+        ...columnView.order,
+        ...(!columnView.order.includes("assignedParts")
+          ? ["assignedParts"]
+          : []),
+      ].flatMap((id) => {
         const column = columns.find((c) => c.id === id);
         return column &&
           (!columnView.hidden.includes(id) || id === "userId" || id === "name")
@@ -186,6 +200,9 @@ export function BusinessUsersScreen({
     >
       <p className="businessusers-mobile">이 화면은 PC에서 사용해 주세요.</p>
       <div className="businessusers-desktop">
+        <p className="sicost-banner sicost-tone-info">
+          권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.
+        </p>
         <div className="businessusers-toolbar">
           <h2>사용자</h2>
           <button
@@ -281,6 +298,14 @@ export function BusinessUsersScreen({
             )}
           </p>
         )}
+        <UserBulkStatusToolbar
+          selected={Object.values(selected)}
+          onCommitted={async () => {
+            await load();
+            setSelected({});
+            await onCommitted?.();
+          }}
+        />
         {error != null && (
           <ErrorBanner
             message={
@@ -294,7 +319,30 @@ export function BusinessUsersScreen({
         {!error && (
           <DataTable
             rows={data?.items ?? []}
-            columns={visible}
+            columns={[
+              {
+                id: "selection",
+                label: "선택",
+                render: (row) => (
+                  <input
+                    type="checkbox"
+                    aria-label={`${row.userId} 선택`}
+                    data-testid={`business-user-select-${row.userId}`}
+                    checked={!!selected[row.userId]}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) =>
+                      setSelected((previous) => {
+                        const next = { ...previous };
+                        if (event.target.checked) next[row.userId] = row;
+                        else delete next[row.userId];
+                        return next;
+                      })
+                    }
+                  />
+                ),
+              },
+              ...visible,
+            ]}
             rowKey={(row) => row.userId}
             onRowAction={(row) => setDetail(row.userId)}
             dense={dense}
@@ -331,6 +379,11 @@ export function BusinessUsersScreen({
           onDirtyChange={onDirtyChange}
           onClose={() => setDetail(undefined)}
           onEdit={(user) => setForm({ user })}
+          onCommitted={async () => {
+            await load();
+            setSelected({});
+            await onCommitted?.();
+          }}
         />
       )}
       {form && (

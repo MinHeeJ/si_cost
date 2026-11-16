@@ -72,7 +72,7 @@ public class ExcelExportService {
                 if (data.filename() == null || !data.filename().matches(pattern)) throw InputValidator.invalid("filename");
             } else if (data.filename() != null) throw InputValidator.invalid("filename");
             for (Sheet sheet : data.sheets()) {
-                validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
+                validate(new Specification(specification.kind(), specification.uploadId(), sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
                 SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), !Set.of("UI-21", "UI-26").contains(specification.screenId()));
                 sheet.rows().read(writer::append);
             }
@@ -236,6 +236,8 @@ public class ExcelExportService {
         if (!kinds.contains(specification.kind())) throw InputValidator.invalid("kind");
         if (Set.of("거래처_업로드검사", "개발자_업로드검사", "프로젝트_업로드검사", "턴키배분표_업로드검사", "급여_업로드검사", "투입_업로드검사", "재무_업로드검사", "사업계획_업로드검사", "이관손익_업로드검사").contains(specification.kind())) {
             if (specification.uploadId() == null || !specification.uploadId().matches("[0-9]{1,12}")) throw InputValidator.invalid("uploadId");
+        } else if ("UI-26".equals(specification.screenId())) {
+            if (specification.uploadId() == null || !specification.uploadId().matches("[1-9][0-9]{0,11}")) throw InputValidator.invalid("qnaId");
         } else if (specification.uploadId() != null) throw InputValidator.invalid("uploadId");
         if (specification.columns() == null || specification.columns().isEmpty()) throw InputValidator.invalid("columns");
         for (Column column : specification.columns()) {

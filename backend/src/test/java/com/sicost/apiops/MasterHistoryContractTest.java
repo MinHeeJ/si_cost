@@ -39,7 +39,7 @@ class MasterHistoryContractTest {
         return new Entry(9, "TB_SY_USER", "admin", "UPD", item, before, after, null,
             "admin", "임시 관리자", "2026-11-11 09:10");
     }
-    @ParameterizedTest @CsvSource({"USER,admin", "CLIENT,C-001", "PART,PART-001"})
+    @ParameterizedTest @CsvSource({"USER,admin", "CLIENT,C-001", "PART,PART-001", "ROLE,ADMIN", "MENU,M028"})
     void publicQueryUsesServerContextAndEnvelope(String type, String id) throws Exception {
         when(mapper.count(any())).thenReturn(1L);
         when(mapper.list(any())).thenReturn(List.of(entry("이름", "이전 이름", "변경 당시 이름")));

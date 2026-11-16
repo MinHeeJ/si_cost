@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { UserProjectsPanel } from "../businessusersops/UserProjectsPanel";
+import {
+  UserActivityPanel,
+  UserScopesPanel,
+} from "../businessusersops/UserActivityPanel";
+import { UserStateActions } from "../businessusersops/UserStateActions";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -79,18 +84,22 @@ export function BusinessUserDetail({
   onClose,
   onEdit,
   onDirtyChange,
+  onCommitted,
 }: {
   id: string;
   onClose(): void;
   onEdit(user: api.BusinessUser): void;
   onDirtyChange?(dirty: boolean): void;
+  onCommitted?(): Promise<void>;
 }) {
   const [user, setUser] = useState<api.BusinessUser>(),
     [error, setError] = useState<unknown>(),
     [refresh, setRefresh] = useState(0);
-  const [tab, setTab] = useState<"basic" | "history">("basic");
+  type Tab = "basic" | "projects" | "activity" | "history";
+  const [tab, setTab] = useState<Tab>("basic");
+  const [nextTab, setNextTab] = useState<Tab>();
   const [dirty, setDirty] = useState(false);
-  const [leaving, setLeaving] = useState<"close" | "edit">();
+  const [leaving, setLeaving] = useState<"close" | "edit" | "tab">();
   const reportDirty = useCallback(
     (value: boolean) => {
       setDirty(value);
@@ -155,16 +164,49 @@ export function BusinessUserDetail({
             role="tab"
             aria-selected={tab === "basic"}
             data-testid="business-user-basic-tab"
-            onClick={() => setTab("basic")}
+            onClick={() => {
+              if (dirty) {
+                setNextTab("basic");
+                setLeaving("tab");
+              } else setTab("basic");
+            }}
           >
-            기본정보
+            계정 정보
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "projects"}
+            data-testid="business-user-projects-tab"
+            onClick={() => setTab("projects")}
+          >
+            담당 프로젝트
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "activity"}
+            data-testid="business-user-activity-tab"
+            onClick={() => {
+              if (dirty) {
+                setNextTab("activity");
+                setLeaving("tab");
+              } else setTab("activity");
+            }}
+          >
+            접근 기록
           </button>
           <button
             type="button"
             role="tab"
             aria-selected={tab === "history"}
             data-testid="business-user-history-tab"
-            onClick={() => setTab("history")}
+            onClick={() => {
+              if (dirty) {
+                setNextTab("history");
+                setLeaving("tab");
+              } else setTab("history");
+            }}
           >
             변경이력
           </button>
@@ -216,10 +258,39 @@ export function BusinessUserDetail({
             </dd>
             <dt>마지막 접속</dt>
             <dd>{user.lastLoginAt ?? "–"}</dd>
+            <dt>임시비밀번호 여부</dt>
+            <dd>
+              {user.tempPassword == null
+                ? "–"
+                : user.tempPassword
+                  ? "예"
+                  : "아니오"}
+            </dd>
+            <dt>본사 연결</dt>
+            <dd>{user.headOffice ? "본사(직접 영업)" : "–"}</dd>
           </dl>
         )}
+        {user && tab === "basic" && (
+          <>
+            <UserScopesPanel
+              key={`${user.userId}-${user.revision}`}
+              id={user.userId}
+            />
+            <UserStateActions
+              user={user}
+              onCommitted={async () => {
+                const latest = await api.getBusinessUser(id);
+                setUser(latest);
+                await onCommitted?.();
+              }}
+            />
+          </>
+        )}
+        {user && tab === "activity" && (
+          <UserActivityPanel key={user.userId} id={user.userId} />
+        )}
         {user && tab === "history" && <BusinessUserHistory id={user.userId} />}
-        {user && (
+        {user && tab === "projects" && (
           <UserProjectsPanel
             key={user.userId}
             user={user}
@@ -235,7 +306,9 @@ export function BusinessUserDetail({
           onConfirm={() => {
             reportDirty(false);
             if (leaving === "edit" && user) onEdit(user);
+            else if (leaving === "tab" && nextTab) setTab(nextTab);
             else onClose();
+            setLeaving(undefined);
           }}
         >
           <p>저장하지 않은 내용이 있습니다.</p>

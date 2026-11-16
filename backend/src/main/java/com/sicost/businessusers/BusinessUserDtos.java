@@ -11,7 +11,9 @@ public final class BusinessUserDtos {
     public record Snapshot(String userId, String name, String email, LocalDateTime regDttm,
                            LocalDateTime modDttm, List<String> roleIds) {}
     public record User(String userId, String name, String email, List<String> roles, List<String> businessRoleIds,
-                       String status, String lastLoginAt, String revision) {}
+                       String status, String lastLoginAt, String revision, List<String> roleIds,
+                       boolean headOffice, List<AssignedPart> assignedParts, boolean tempPassword) {}
+    public record AssignedPart(String partId, String name, boolean headOffice) {}
     public record Page(List<User> items, long total, int page, int size) {}
     public record Result(boolean changed, String message, User user) {}
     public record Filter(String q, String businessRole, String status, int page, int size,

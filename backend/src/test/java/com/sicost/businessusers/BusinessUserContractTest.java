@@ -46,6 +46,8 @@ class BusinessUserContractTest {
         roles=List.of(new Role("ADMIN","관리자","Y"),new Role("PM","프로젝트 담당","Y"));
         when(mapper.find(anyString(),anyBoolean())).thenReturn(original);
         when(mapper.roles(anyString())).thenAnswer(call->roles);
+        when(mapper.snapshot(anyString())).thenAnswer(call->json.writeValueAsString(List.of(original.userId(),original.name(),original.email(),original.status(),roles.stream().map(Role::roleId).sorted().toList())));
+        when(history.insert(any())).thenReturn(1);
         when(mapper.availableRoles()).thenReturn(List.of(new Role("PM","프로젝트 담당","Y"),new Role("SALES_LDR","영업 파트장","Y")));
         when(mapper.insert(any())).thenReturn(1);when(mapper.update(any())).thenReturn(1);
         when(mapper.link(any())).thenReturn(1);when(mapper.unlink(any())).thenReturn(1);
@@ -53,7 +55,7 @@ class BusinessUserContractTest {
     }
     ObjectNode create() {return json.createObjectNode().put("userId","ab12").put("name","사용자").put("email","user@example.org").set("businessRoleIds",json.valueToTree(List.of("PM")));}
     ObjectNode edit() {ObjectNode body=create();body.remove("userId");body.put("expectedRevision",revision());return body;}
-    String revision() {return revisions.revision(new Snapshot(original.userId(),original.name(),original.email(),original.regDttm(),original.modDttm(),roles.stream().map(Role::roleId).sorted().toList()));}
+    String revision() {return revisions.revision(mapper.snapshot(original.userId()));}
     void noWrites() {verify(mapper,never()).insert(any());verify(mapper,never()).update(any());verify(mapper,never()).link(any());verify(mapper,never()).unlink(any());verifyNoInteractions(history,access);}
     @Test void createWithoutAuthenticationUsesServerActorAndSecretFreeEnvelope() throws Exception {
         mvc.perform(post("/api/business-users").contentType("application/json").content(create().toString()))
