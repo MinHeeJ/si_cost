@@ -62,8 +62,18 @@ class ReceivableContractTest {
     }
     @Test void noHistoryMeansEmptyArrayAndNoInventedDatesOrSendActions() throws Exception {
         bills.add(bill("B",61));mvc.perform(get("/api/receivables")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].sentHistory").isEmpty())
-            .andExpect(jsonPath("$.data.items[0].sendNotice").value("발송 기능 연결 예정")).andExpect(jsonPath("$.data.items[0].dunning.finalStep").value(true))
+            .andExpect(jsonPath("$.data.items[0].sendNotice").value("다시알림 가능")).andExpect(jsonPath("$.data.items[0].dunning.finalStep").value(true))
             .andExpect(jsonPath("$.data.items[0].dunning.nextDate").isEmpty());
+    }
+    @Test void sendNoticeUsesCurrentStageRecipientsAndPendingDeliveryState() throws Exception {
+        bills.add(bill("early",1));bills.add(bill("pending",8));bills.add(bill("unassigned",8));
+        when(mapper.pendingDeliveryBillIds()).thenReturn(List.of("early","pending"));
+        when(mapper.recipientScopes()).thenReturn(List.of());
+        mvc.perform(get("/api/receivables")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[?(@.billId == 'early')].sendNotice").value(org.hamcrest.Matchers.contains("알림 대상 아님")))
+            .andExpect(jsonPath("$.data.items[?(@.billId == 'pending')].sendNotice").value(org.hamcrest.Matchers.contains("전달 처리 중")))
+            .andExpect(jsonPath("$.data.items[?(@.billId == 'unassigned')].sendNotice").value(org.hamcrest.Matchers.contains("수신자 미지정")));
+        verify(mapper).pendingDeliveryBillIds();
     }
     @Test void actualHistoricalReceiversRemainSeparateFromCurrentRecipientsAndResendIsPreserved() throws Exception {
         bills.add(bill("B",8));var history=List.of(new DunningHistory("B",1,1,today.minusDays(2),"당시 담당","EMAIL",false),new DunningHistory("B",2,1,today.minusDays(2),"이전 담당","SYSTEM",true));when(mapper.sentHistory("B")).thenReturn(history);

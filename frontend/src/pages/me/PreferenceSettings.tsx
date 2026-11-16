@@ -134,6 +134,11 @@ export function PreferenceSettings({
               );
             })
           )}
+          <button type="button" disabled={preferences.pending} onClick={async () => {
+            setFailure(null);
+            try { await preferences.put("PAGE_SIZE", "*", 50); await preferences.put("DENSE", "*", "넓게"); }
+            catch (e) { setFailure(e); }
+          }}>기본값으로</button>
           <p className="me-help">
             표 열 설정은 해당 표의 [열 설정]에서 변경합니다.
           </p>

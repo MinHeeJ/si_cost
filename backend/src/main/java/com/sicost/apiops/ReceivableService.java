@@ -31,12 +31,14 @@ public class ReceivableService {
         String month=DatabaseMonthCodec.toDatabase(YearMonth.from(today).toString());
         List<BigDecimal> thresholds=thresholds(month);
         List<RecipientRole> roles=repository.roles();List<RecipientScope> scopes=repository.scopes();
+        Set<String> pendingDeliveries=new HashSet<>(repository.pendingDeliveryBillIds());
         List<Receivable> items=new ArrayList<>();Map<String,List<RecipientGroup>> groups=new HashMap<>();
         for(OverdueBill bill:repository.overdue(today)) {
             if(!bill.dueDate().isBefore(today)||bill.unpaidAmount().signum()<=0)continue;
             Dunning dunning=dunning(bill.dueDate(),today,thresholds);
             var recipients=groups.computeIfAbsent(bill.projectId(),id->recipients(id,repository.part(id,month),roles,scopes));
-            items.add(new Receivable(bill.billId(),bill.projectId(),bill.projectName(),BillingCheckService.decimal(bill.unpaidAmount()),bill.dueDate(),dunning,recipients,repository.history(bill.billId()),"발송 기능 연결 예정"));
+            String sendNotice=dunning.step()==0?"알림 대상 아님":pendingDeliveries.contains(bill.billId())?"전달 처리 중":recipients.get(dunning.step()-1).recipients().isEmpty()?"수신자 미지정":"다시알림 가능";
+            items.add(new Receivable(bill.billId(),bill.projectId(),bill.projectName(),BillingCheckService.decimal(bill.unpaidAmount()),bill.dueDate(),dunning,recipients,repository.history(bill.billId()),sendNotice));
         }
         items.sort(Comparator.comparingInt((Receivable r)->r.dunning().elapsedDays()).reversed().thenComparing(Receivable::dueDate).thenComparing(Receivable::billId));
         List<StepCard> cards=new ArrayList<>();

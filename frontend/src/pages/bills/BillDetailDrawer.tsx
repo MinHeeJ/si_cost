@@ -7,6 +7,7 @@ import { formatDecimal } from "../../shared/format";
 import { getMonthClose, type PeriodContext } from "../shared/sharedApi";
 import { BillActionsPanel } from "../billsops/BillActionsPanel";
 import { ReceiptEntryDialog } from "../receipts/ReceiptEntryDialog";
+import { ReceivableDeliveryActions } from "../receivablesops/ReceivableDeliveryActions";
 import * as api from "./billsApi";
 
 export type AmountUnit = "원" | "천원" | "백만원";
@@ -148,9 +149,11 @@ export function BillDetailDrawer({
       live = false;
     };
   }, [id, year, period, refreshKey, reload]);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
   const bill = detail?.bill;
   return (
     <DetailDrawer
+      hidden={deliveryOpen}
       title={`청구 상세 ${id}`}
       onClose={onClose}
       testId="bill-detail-drawer"
@@ -214,6 +217,7 @@ export function BillDetailDrawer({
             </button>
           </div>
           <p>정상 입금 {detail.receipts.normalCount}건</p>
+          <ReceivableDeliveryActions billId={bill.id} onChanged={refresh} onPanelChange={setDeliveryOpen} />
           {protectedBill && (
             <p className="sicost-banner sicost-tone-lock">
               청구월·TK 매출월이 마감·이관·지난해이면 청구 수정은 할 수

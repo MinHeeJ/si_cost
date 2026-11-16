@@ -100,10 +100,18 @@ class ChangeHistoryWriterTest {
         verify(mapper,times(7)).insert(argThat(entry -> entry.userId().equals("admin") && entry.targetKey().equals("DEV-000001:1")));
     }
     @Test void automaticPeopleChangesExplicitlyUseSystemWithoutResolvingAdmin() {
+        when(mapper.insert(any())).thenReturn(1);
         writer.appendAsSystem(new ChangeHistoryWriter.Change("TB_HR_DEV","DEV-000001","UPD","WORK_STAT_CD","IDLE","RETIRE",null));
         verify(mapper).insert(argThat(entry -> entry.userId().equals("SYSTEM")));
         verifyNoInteractions(users);
         assertThatThrownBy(() -> writer.appendAsSystem(new ChangeHistoryWriter.Change("TB_SY_USER","admin","UPD","USER_STAT_CD","USE","STOP",null))).isInstanceOf(ApiException.class);
+    }
+    @Test void missingMandatorySystemAuditFailsAndEqualValuesRemainNoOp() {
+        assertThatThrownBy(()->writer.appendAsSystem(new ChangeHistoryWriter.Change("TB_HR_DEV","DEV-000001","UPD","WORK_STAT_CD","IDLE","RETIRE",null)))
+            .isInstanceOf(IllegalStateException.class);
+        clearInvocations(mapper);
+        writer.appendAsSystem(new ChangeHistoryWriter.Change("TB_HR_DEV","DEV-000001","UPD","WORK_STAT_CD","IDLE","IDLE",null));
+        verifyNoInteractions(mapper,users);
     }
     @Test void peoplePhoneAndEmailAreMaskedButDistinctRawChangesStillProduceEvents() {
         when(users.userId()).thenReturn("admin");

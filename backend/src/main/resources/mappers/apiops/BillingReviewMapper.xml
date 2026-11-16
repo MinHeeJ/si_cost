@@ -43,6 +43,10 @@
     WHERE b.cncl_yn='N' AND b.tot_amt-COALESCE(r.amount,0)>0 AND b.pay_due_dt &lt; #{today}
     ORDER BY (#{today}::date-b.pay_due_dt) DESC,b.pay_due_dt,b.bill_id
   </select>
+  <select id="pendingDeliveryBillIds" resultType="string">
+    SELECT DISTINCT bill_id FROM tb_sy_delivery_task
+    WHERE noti_type_cd='DUN' AND state_cd IN ('PENDING','SENDING')
+  </select>
   <select id="sentHistory" resultType="com.sicost.apiops.BillingReviewDtos$DunningHistory">
     SELECT bill_id AS "billId",dun_sn::int AS "sn",dun_step::int AS "step",send_dt AS "sendDate",
       rcvr_desc AS "receiverDescription",send_mthd_cd AS "sendMethodCode",resend_yn='Y' AS "resend"

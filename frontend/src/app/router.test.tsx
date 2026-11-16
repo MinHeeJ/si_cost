@@ -47,6 +47,9 @@ import * as recommendationActions from "../pages/candidates/recommendationAction
 import * as withdrawals from "../pages/apiops/withdrawalsApi";
 import { financialEditorFixture } from "../pages/financialitems/financialFixtures";
 import { clientFixture, pageFixture } from "../pages/clients/clientsFixtures";
+import { dashboardFixture } from "../pages/dashboardops/dashboardFixture";
+import * as dashboard from "../pages/dashboardops/dashboardApi";
+vi.mock("../pages/dashboardops/dashboardApi");
 
 vi.mock("../pages/financialitems/financialApi", async (original) => ({
   ...(await original<typeof import("../pages/financialitems/financialApi")>()),
@@ -411,6 +414,7 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
   vi.mocked(cashFlow.getCashFlow).mockRejectedValue(
     new Error("자금수지 원천 조회 실패"),
   );
@@ -1479,6 +1483,9 @@ describe("공식 진입점 합성", () => {
         expect(
           screen.queryByText("화면 구성 요소가 아직 연결되지 않았습니다."),
         ).not.toBeInTheDocument();
+      } else if (id === "UI-16") {
+        await waitFor(() => expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible());
+        expect(dashboard.getDashboard).toHaveBeenCalled();
       } else if (id === "UI-15") {
         expect(await screen.findByTestId("clients-screen")).toBeInTheDocument();
         expect(clients.getClients).toHaveBeenCalled();
@@ -1818,8 +1825,10 @@ describe("공식 진입점 합성", () => {
       applicationRoutes.some((route) => route.path?.includes("upload")),
     ).toBe(false);
     expect(
-      screen.queryByText("이 화면은 다음 단계에서 만듭니다."),
-    ).not.toBeVisible();
+      screen
+        .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
+        .some((node) => !node.closest("[hidden]")),
+    ).toBe(false);
   });
   it("거래처 다운로드는 현재 필터와 저장된 열 순서·숨김을 연결한다", async () => {
     preferences.push({

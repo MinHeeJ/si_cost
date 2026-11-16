@@ -34,7 +34,7 @@ export function CashFlowScreen({
 } = {}) {
   const navigate = useNavigate(),
     location = useLocation();
-  const incoming = location.state as { cashFlowSource?: CashSelection } | null;
+  const incoming = location.state as { cashFlowSource?: CashSelection; fromDashboard?: boolean; month?: string } | null;
   const [year, setYear] = useState<number>(),
     [localUnit, setLocalUnit] = useState<AmountUnit>("천원"),
     [data, setData] = useState<api.CashFlowResult>();
@@ -223,6 +223,7 @@ export function CashFlowScreen({
     : [];
   return (
     <SharedScreenFrame screenId="UI-21">
+      {incoming?.fromDashboard && incoming.month && /^\d{4}-(0[1-9]|1[0-2])$/.test(incoming.month) && <p className="sicost-banner sicost-tone-info">대시보드 요청월 {incoming.month}{data && incoming.month.slice(0,4) !== String(data.year) ? " · 조회 가능 연도 밖입니다. 현재 허용 연도를 표시합니다." : " · 해당 월의 자금 행을 확인해 주세요."}</p>}
       <div
         className="operating-profit cash-flow"
         data-testid="cash-flow-screen"

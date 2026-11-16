@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.automationrunsops.DailyAutomationMapper">
+  <select id="run" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Stored">
+    SELECT job_cd AS "jobCode",run_dt AS "runDate",state_cd AS "state",last_step::int AS "lastStep",
+      start_dttm AS "startedAt",end_dttm AS "endedAt",error_cn AS "errorMessage"
+    FROM tb_sy_automation_run WHERE job_cd=#{jobCode} AND run_dt=#{runDate}
+  </select>
+  <insert id="insertRun">
+    INSERT INTO tb_sy_automation_run (job_cd,run_dt,state_cd,last_step,start_dttm,end_dttm,error_cn,reg_user_id,reg_dttm)
+    VALUES (#{key.jobCode},#{key.runDate},'RUNNING',0,#{at},NULL,NULL,'SYSTEM',#{at})
+    ON CONFLICT (job_cd,run_dt) DO NOTHING
+  </insert>
+  <update id="updateRun">
+    UPDATE tb_sy_automation_run SET state_cd=#{state},last_step=#{lastStep},end_dttm=#{endedAt},error_cn=#{errorMessage},mod_user_id='SYSTEM',mod_dttm=#{at}
+    WHERE job_cd=#{key.jobCode} AND run_dt=#{key.runDate}
+  </update>
+  <select id="developerIds" resultType="string">SELECT dev_id FROM tb_hr_dev ORDER BY dev_id</select>
+  <select id="projectIds" resultType="string">SELECT proj_id FROM tb_pj_proj WHERE ctrt_end_dt &lt; #{today} AND proj_stat_cd='ING' ORDER BY proj_id</select>
+  <select id="project" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Project">
+    SELECT proj_id AS "id",proj_stat_cd AS "state",ctrt_end_dt AS "endDate" FROM tb_pj_proj WHERE proj_id=#{id} FOR UPDATE
+  </select>
+  <update id="endProject">UPDATE tb_pj_proj SET proj_stat_cd='END',mod_user_id='SYSTEM',mod_dttm=#{at} WHERE proj_id=#{id}</update>
+  <select id="projectSerial" resultType="int">SELECT COALESCE(max(hist_sn),0)::int FROM tb_pj_proj_chg WHERE proj_id=#{id}</select>
+  <insert id="projectEvent">
+    INSERT INTO tb_pj_proj_chg (proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm)
+    VALUES (#{id},#{serial},'STATUS','상태',#{before},'END',#{date},'SYSTEM',#{at})
+  </insert>
+  <select id="assignmentIds" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Item">
+    SELECT asgn_id AS "id",proj_id AS "projectId",dev_id AS "developerId" FROM tb_pj_asgn
+    WHERE asgn_stat_cd='ACT' AND input_bgn_dt &lt;= #{today} AND input_end_dt &gt;= #{today} ORDER BY asgn_id
+  </select>
+  <select id="assignment" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Assignment">
+    SELECT a.asgn_id AS "id",a.proj_id AS "projectId",a.dev_id AS "developerId",a.input_bgn_dt AS "startDate",a.input_end_dt AS "endDate",
+      a.asgn_stat_cd AS "state",p.proj_stat_cd AS "projectState",a.ctrt_mm AS "mm",a.bill_uprc AS "price"
+    FROM tb_pj_asgn a JOIN tb_pj_proj p ON p.proj_id=a.proj_id WHERE a.asgn_id=#{id} FOR UPDATE OF a
+  </select>
+  <select id="assignmentIdentity" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Item">SELECT asgn_id AS "id",proj_id AS "projectId",dev_id AS "developerId" FROM tb_pj_asgn WHERE asgn_id=#{id}</select>
+  <select id="lastClosedMonth" resultType="string">SELECT max(close_ym) FROM tb_cl_close WHERE close_stat_cd='CLOSE'</select>
+  <select id="valueHistory" resultType="com.sicost.projectsops.ProjectStatusDtos$ValueHistory">
+    SELECT hist_sn AS "serial",asgn_chg_type_cd AS "type",aply_dt AS "date",new_ctrt_mm AS "mm",new_uprc AS "price",crct_yn AS "corrected",crct_trgt_sn AS "target"
+    FROM tb_pj_asgn_hist WHERE asgn_id=#{id} ORDER BY aply_dt,hist_sn
+  </select>
+  <update id="pointer">
+    UPDATE tb_pj_asgn SET ctrt_mm=#{mm},bill_uprc=#{price},mod_user_id='SYSTEM',mod_dttm=#{at} WHERE asgn_id=#{id}
+  </update>
+  <select id="protectedMonth" resultType="boolean">
+    SELECT EXISTS(SELECT 1 FROM tb_cl_close WHERE close_ym=#{month} AND close_stat_cd='CLOSE')
+      OR #{month} &lt; (SELECT min(std_val::bigint::text) FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM')
+  </select>
+  <select id="expiredNotificationIds" resultType="string">SELECT noti_id::text FROM tb_sy_noti WHERE noti_dttm &lt; #{cutoff} ORDER BY noti_id</select>
+  <select id="notification" resultType="com.sicost.automationrunsops.DailyAutomationDtos$Notification">
+    SELECT noti_id::text AS "id",rcvr_user_id AS "userId",noti_type_cd AS "type",noti_cn AS "content",link_scrn_id AS "screenId",link_key AS "linkKey",
+      send_mthd_cd AS "method",read_yn AS "read",read_dttm AS "readAt",noti_dttm AS "notifiedAt",reg_user_id AS "regUserId",reg_dttm AS "registeredAt",
+      mod_user_id AS "modUserId",mod_dttm AS "modifiedAt" FROM tb_sy_noti WHERE noti_id=CAST(#{id} AS numeric) FOR UPDATE
+  </select>
+  <delete id="cleanup">DELETE FROM tb_sy_noti WHERE noti_dttm &lt; #{cutoff}</delete>
+  <select id="projectPart" resultType="com.sicost.common.notifications.NotificationRecipients$Part">
+    SELECT pp.part_id AS "partId",COALESCE(p.hq_yn='Y',false) AS "headquarters",s.part_ldr_user_id AS "leaderId"
+    FROM tb_pj_proj_part pp LEFT JOIN tb_bs_part p ON p.part_id=pp.part_id
+    LEFT JOIN LATERAL (SELECT part_ldr_user_id FROM tb_bs_part_std WHERE part_id=pp.part_id AND aply_bgn_ym &lt;= #{month}
+      AND (aply_end_ym IS NULL OR aply_end_ym &gt;= #{month}) ORDER BY aply_bgn_ym DESC LIMIT 1) s ON true
+    WHERE pp.proj_id=#{id} AND pp.aply_bgn_ym &lt;= #{month} ORDER BY pp.aply_bgn_ym DESC LIMIT 1
+  </select>
+</mapper>

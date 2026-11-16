@@ -372,3 +372,16 @@ describe("공통 부품 계약", () => {
     expect(screen.getByTestId("bar")).toHaveClass("sicost-filterbar");
   });
 });
+
+it("FilterBar는 IME 확정 Enter로 조회하지 않고 여러 줄 입력의 기본 Enter를 보존한다", () => {
+  render(<FilterBar onSubmit={vi.fn()} onReset={vi.fn()}><input aria-label="검색"/><textarea aria-label="본문"/></FilterBar>);
+  expect(fireEvent.keyDown(screen.getByLabelText("검색"), {key:"Enter",isComposing:true})).toBe(false);
+  expect(fireEvent.keyDown(screen.getByLabelText("본문"), {key:"Enter"})).toBe(true);
+});
+
+it("로딩으로 확인 버튼이 비활성이어도 초점을 모달 안에 두고 Esc로 닫는다", async () => {
+  const close = vi.fn();
+  render(<Dialog open title="로딩 확인" confirmDisabled onConfirm={vi.fn()} onCancel={close}><p>조회 중</p></Dialog>);
+  expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement);
+  await userEvent.keyboard("{Escape}"); expect(close).toHaveBeenCalledTimes(1);
+});

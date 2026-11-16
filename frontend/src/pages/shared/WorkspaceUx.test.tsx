@@ -1,7 +1,11 @@
+import * as dashboard from "../dashboardops/dashboardApi";
+import { dashboardFixture } from "../dashboardops/dashboardFixture";
+import type { ReactElement } from "react";
+import { PreferencesProvider } from "../me/usePreferences";
 import {
   act,
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
   within,
@@ -13,7 +17,14 @@ import { SharedApplication } from "./SharedApplication";
 import { ChangeHistoryPanel } from "./ChangeHistoryPanel";
 import { HeaderActions } from "./HeaderActions";
 import * as api from "./sharedApi";
+import * as notices from "../notificationsops/notificationsApi";
 vi.mock("./sharedApi");
+vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
+vi.mock("../notificationsops/notificationsApi", async (original) => ({
+  ...(await original<typeof import("../notificationsops/notificationsApi")>()),
+  getNotificationUnreadCount: vi.fn(),
+  getNotifications: vi.fn(),
+}));
 const originalWidth = window.innerWidth;
 const leaf = (id: string, name: string, pcOnly: boolean): api.MenuNode => ({
   menuId: id,
@@ -42,6 +53,21 @@ const menus: api.MenuNode[] = [
 ];
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
+  vi.mocked(notices.getNotificationUnreadCount).mockResolvedValue({
+    unreadCount: 0,
+    receivableCount: 0,
+    currentMonthUnclosed: false,
+    observedAt: "2026-07-15T09:00:00+09:00",
+  });
+  vi.mocked(notices.getNotifications).mockResolvedValue({
+    items: [],
+    page: 1,
+    size: 20,
+    total: 0,
+    hasMore: false,
+    observedAt: "2026-07-15T09:00:00+09:00",
+  });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({
     userId: "admin",
@@ -89,18 +115,60 @@ afterEach(() => {
 });
 
 describe("레퍼런스 공통 UX", () => {
-  it("AI·알림은 안내만 열고 서버 요청이나 가짜 알림 수를 만들지 않는다", async () => {
+  it("미수 메뉴는 전체 현재 미수건수·마감 메뉴는 현재월 미마감 경고를 표시한다", async () => {
+    vi.mocked(api.getMenus).mockResolvedValue({
+      items: [
+        {
+          ...menus[0],
+          children: [
+            ...menus[0].children,
+            leaf("UI-13", "청구·입금", false),
+            leaf("UI-14", "월 마감", false),
+          ],
+        },
+      ],
+      diagnostics: [],
+    });
+    vi.mocked(notices.getNotificationUnreadCount).mockResolvedValue({
+      unreadCount: 101,
+      receivableCount: 7,
+      currentMonthUnclosed: true,
+      observedAt: "2026-07-15T09:00:00+09:00",
+    });
+    render(
+      <MemoryRouter initialEntries={["/UI-16"]}>
+        <SharedApplication />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByTestId("receivable-menu-count"),
+    ).toHaveTextContent("7");
+    expect(screen.getByTestId("month-close-menu-warning")).toHaveTextContent(
+      "!",
+    );
+    vi.mocked(notices.getNotificationUnreadCount).mockRejectedValueOnce(
+      new Error("가벼운 조회 실패"),
+    );
+    act(() => window.dispatchEvent(new Event("focus")));
+    await screen.findByRole("button", { name: "알림 수 다시 조회" });
+    expect(screen.getByTestId("receivable-menu-count")).toHaveTextContent("7");
+    expect(screen.getByTestId("month-close-menu-warning")).toHaveTextContent(
+      "!",
+    );
+  });
+  it("AI는 준비 안내를 유지하고 알림은 실제 조회 결과를 표시한다", async () => {
     render(<HeaderActions />);
     await userEvent.click(screen.getByRole("button", { name: "AI에게 묻기" }));
     expect(screen.getByRole("status")).toHaveTextContent(
       "AI 기능은 준비 중입니다.",
     );
     await userEvent.click(screen.getByRole("button", { name: "알림" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "알림 기능은 준비 중입니다.",
-    );
+    expect(await screen.findByText("알림이 없습니다.")).toBeInTheDocument();
+    expect(notices.getNotifications).toHaveBeenCalledWith(1);
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "알림 목록" }),
+    ).not.toBeInTheDocument();
     expect(api.getCommonCodeHistory).not.toHaveBeenCalled();
   });
   it("임시 ADMIN 메뉴는 DB 이름으로 표시하고 모바일의 PC 항목만 숨겼다가 복원한다", async () => {
@@ -196,3 +264,9 @@ describe("레퍼런스 공통 UX", () => {
     await screen.findByText("조회된 변경 이력이 없습니다.");
   });
 });
+
+const render = (ui: ReactElement) => renderUi(<PreferencesProvider api={{
+  getPreferences: () => api.getSharedPreferences() as ReturnType<import("../me/preferencesApi").PreferenceApi["getPreferences"]>,
+  putPreference: async (...args) => { const saved = await api.putSharedPreference(...args); return { ...saved, preference: saved.preference as import("../me/preferencesApi").Preference }; },
+  deletePreference: api.deleteSharedPreference,
+}}>{ui}</PreferencesProvider>);

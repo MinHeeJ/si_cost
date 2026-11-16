@@ -5,6 +5,12 @@ import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
 import { HeaderActions } from "./HeaderActions";
+import { WorkspaceUsability } from "./WorkspaceUsability";
+import { ProfileDialog } from "../meops/ProfileDialog";
+import {
+  notificationDestination,
+  type NotificationUnreadCount,
+} from "../notificationsops/notificationsApi";
 import { flattenMenus, SharedScreenContext } from "./SharedScreenContext";
 import { screenRegistry } from "./screenRegistry";
 import {
@@ -57,12 +63,16 @@ export function SharedApplication({
   renderSettings,
   isDirty,
 }: SharedApplicationProps) {
+  const [utility, setUtility] = useState<"search" | "help" | null>(null);
+  useEffect(() => { const open = () => setUtility("search"); window.addEventListener("sicost:menu-search", open); return () => window.removeEventListener("sicost:menu-search", open); }, []);
   const location = useLocation(),
     navigate = useNavigate();
   const [menus, setMenus] = useState<MenusData | null>(null),
     [user, setUser] = useState<CurrentUser | null>(null),
     [localPrefs, setPrefs] = useState<SharedPreference[]>([]);
   const [localPrefsReady, setPrefsReady] = useState(false);
+  const [notificationBadges, setNotificationBadges] =
+    useState<NotificationUnreadCount>();
   const prefs = preferences?.items ?? localPrefs,
     prefsReady = preferences ? !preferences.loading : localPrefsReady;
   const [error, setError] = useState(""),
@@ -74,8 +84,11 @@ export function SharedApplication({
     [mobileOpen, setMobileOpen] = useState(false),
     [groups, setGroups] = useState<string[]>([]);
   const [tabs, setTabs] = useState<string[]>(["UI-16"]),
-    [dialog, setDialog] = useState<"settings" | "favorites" | null>(null),
+    [dialog, setDialog] = useState<"settings" | "favorites" | "profile" | null>(
+      null,
+    ),
     [userMenu, setUserMenu] = useState(false);
+  const userButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false),
     recentActivation = useRef(""),
     lru = useRef<string[]>([]);
@@ -235,7 +248,11 @@ export function SharedApplication({
       );
     }
   }, [menus, location.pathname, location.hash, location.key, prefsReady]);
-  const go = (id: string, financialConfirmed = false) => {
+  const go = (
+    id: string,
+    financialConfirmed = false,
+    state?: unknown,
+  ): boolean | undefined => {
     if (!byScreen(id)) return;
     if (
       !financialConfirmed &&
@@ -247,7 +264,7 @@ export function SharedApplication({
           detail: {
             screenId: active,
             label: "다른 화면으로 이동",
-            proceed: () => go(id, true),
+            proceed: () => go(id, true, state),
           },
         }),
       )
@@ -272,7 +289,8 @@ export function SharedApplication({
         return;
       setTabs((previous) => previous.filter((item) => item !== oldest));
     }
-    navigate(`/${id}`);
+    navigate(`/${id}`, { state });
+    return true;
   };
   const close = (id: string, financialConfirmed = false) => {
     if (
@@ -417,7 +435,24 @@ export function SharedApplication({
             <strong className="sicost-brand">프로젝트·원가 관리</strong>
           </Link>
           <span className="sicost-header-spacer" />
-          <HeaderActions />
+          <HeaderActions
+            onBadges={setNotificationBadges}
+            onOpenTarget={(link) => {
+              const target = notificationDestination(link);
+              return (
+                target !== null &&
+                Boolean(
+                  go(
+                    target.screenId,
+                    false,
+                    target.screenId === "UI-13" && link.linkKey === null
+                      ? { fromActivity: true, section: "receivables" }
+                      : target.state,
+                  ),
+                )
+              );
+            }}
+          />
           {user.developmentMode && (
             <span className="sicost-development">개발용 임시 관리자</span>
           )}
@@ -425,6 +460,7 @@ export function SharedApplication({
             <button
               type="button"
               aria-label={user.name}
+              ref={userButton}
               onClick={() => setUserMenu((open) => !open)}
               aria-expanded={userMenu}
             >
@@ -435,6 +471,17 @@ export function SharedApplication({
             {userMenu && (
               <div className="sicost-user-menu">
                 <button
+                  type="button"
+                  data-testid="profile-menu-button"
+                  onClick={() => {
+                    userButton.current?.focus();
+                    setDialog("profile");
+                    setUserMenu(false);
+                  }}
+                >
+                  내 정보
+                </button>
+                <button
                   onClick={() => {
                     setDialog("settings");
                     setUserMenu(false);
@@ -442,6 +489,8 @@ export function SharedApplication({
                 >
                   화면 설정
                 </button>
+                <button type="button" onClick={() => { setUtility("search"); setUserMenu(false); }}>메뉴 찾기</button>
+                <button type="button" onClick={() => { setUtility("help"); setUserMenu(false); }}>단축키 보기</button>
               </div>
             )}
           </div>
@@ -573,6 +622,19 @@ export function SharedApplication({
                             }}
                           >
                             {child.name}
+                            {child.screenId === "UI-13" &&
+                              notificationBadges &&
+                              notificationBadges.receivableCount > 0 && (
+                                <small data-testid="receivable-menu-count">
+                                  {notificationBadges.receivableCount}
+                                </small>
+                              )}
+                            {child.screenId === "UI-14" &&
+                              notificationBadges?.currentMonthUnclosed && (
+                                <small data-testid="month-close-menu-warning">
+                                  !
+                                </small>
+                              )}
                             {child.pcOnly && <small>PC</small>}
                           </Link>
                         ))}
@@ -644,6 +706,11 @@ export function SharedApplication({
           </main>
         </div>
       </div>
+      <WorkspaceUsability menus={menus.items} active={active} onOpen={go} mode={utility} onClose={() => setUtility(null)} />
+      <ProfileDialog
+        open={dialog === "profile"}
+        onClose={() => setDialog(null)}
+      />
       {renderSettings ? (
         renderSettings(dialog === "settings", () => setDialog(null))
       ) : (

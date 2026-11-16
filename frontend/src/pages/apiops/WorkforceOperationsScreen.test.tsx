@@ -319,3 +319,9 @@ it("name header toggles server sorting, resets the page and exports the same ord
   await userEvent.click(screen.getByTestId("calendar-download"));
   expect(api.downloadWorkforceCalendar).toHaveBeenCalledWith(expect.objectContaining({ sort: "name", direction: "DESC" }));
 });
+
+it("대시보드 인력부족 진입은 기존 수요·공급 탭을 연다", async () => {
+  render(<MemoryRouter initialEntries={[{pathname:"/UI-28",state:{fromDashboard:true,section:"supply",month:"2026-11"}}]}><WorkforceOperationsScreen /></MemoryRouter>);
+  expect(await screen.findByTestId("supply-tab")).toHaveAttribute("aria-selected","true");
+  expect(screen.getByTestId("supply-panel")).toBeVisible();
+});

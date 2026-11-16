@@ -33,6 +33,7 @@ public class BillingReviewRepository {
     public String checkRevision(CheckKey key) {return revisions.revision(mapper.checkSnapshot(key));}
     public String billRevision(String id) {return revisions.revision(mapper.billSnapshot(id));}
     public List<OverdueBill> overdue(LocalDate today) {return mapper.overdue(today);}
+    public List<String> pendingDeliveryBillIds() {return mapper.pendingDeliveryBillIds();}
     public List<DunningHistory> history(String id) {return mapper.sentHistory(id);}
     public List<RecipientRole> roles() {return mapper.eligibleRoles();}
     public List<RecipientScope> scopes() {return mapper.recipientScopes();}

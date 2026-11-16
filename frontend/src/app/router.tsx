@@ -36,6 +36,7 @@ import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
 import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
+import { DashboardScreen } from "../pages/shared/DashboardScreen";
 import { FinancialItemsScreen } from "../pages/financialitems/FinancialItemsScreen";
 import { ProfitStructureScreen } from "../pages/shared/ProfitStructureScreen";
 import { OperatingProfitScreen } from "../pages/shared/OperatingProfitScreen";
@@ -443,16 +444,45 @@ function BusinessPartnersWorkspace({
   );
 }
 
-function CloseLinkedAssignments({ onDirtyChange }: { onDirtyChange(dirty: boolean): void }) {
+function CloseLinkedAssignments({
+  onDirtyChange,
+}: {
+  onDirtyChange(dirty: boolean): void;
+}) {
   const location = useLocation();
-  const incoming = location.state as { fromMonthClose?: boolean; month?: string; filter?: string } | null;
+  const incoming = location.state as {
+    fromMonthClose?: boolean;
+    fromDashboard?: boolean;
+    month?: string;
+    filter?: string;
+  } | null;
   const entry = useRef<{ key: string; month?: string; filter?: string }>();
-  if (location.pathname === "/UI-12" && incoming?.fromMonthClose && entry.current?.key !== location.key)
-    entry.current = { key: location.key, month: incoming.month, filter: incoming.filter };
+  if (
+    location.pathname === "/UI-12" &&
+    (incoming?.fromMonthClose || incoming?.fromDashboard) &&
+    entry.current?.key !== location.key
+  )
+    entry.current = {
+      key: location.key,
+      month: incoming.month,
+      filter: incoming.filter,
+    };
   const month = entry.current?.month;
-  return <SharedScreenFrame key={entry.current?.key} screenId="UI-12" initialMonth={month}>
-    <StaffingAssignmentsScreen onDirtyChange={onDirtyChange} initialMonth={month} initialWarning={month && entry.current?.filter === "MM_OVER" ? "MM_OVER" : undefined} />
-  </SharedScreenFrame>;
+  return (
+    <SharedScreenFrame
+      key={entry.current?.key}
+      screenId="UI-12"
+      initialMonth={month}
+    >
+      <StaffingAssignmentsScreen
+        onDirtyChange={onDirtyChange}
+        initialMonth={month}
+        initialWarning={
+          month && entry.current?.filter === "MM_OVER" ? "MM_OVER" : undefined
+        }
+      />
+    </SharedScreenFrame>
+  );
 }
 
 function RegisteredUsersWorkspace({
@@ -988,15 +1018,40 @@ function RegisteredWorkforceRecommendations() {
   const preferences = usePreferences();
   const [unitError, setUnitError] = useState("");
   const storedUnit = preferences.get("AMT_UNIT")?.value;
-  const amountUnit = storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
+  const amountUnit =
+    storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
       {unitError && <ErrorBanner message={unitError} />}
-      <label className="sicost-field">금액 단위
-        <select aria-label="추천 금액 단위" value={amountUnit} disabled={preferences.pending}
-          onChange={(e) => { setUnitError(""); void preferences.put("AMT_UNIT", "*", e.target.value).catch((e: unknown) => setUnitError(e instanceof Error ? e.message : "금액 단위를 저장하지 못했습니다.")); }}>
-          {["원", "천원", "백만원"].map((unit) => <option key={unit}>{unit}</option>)}
+      <label className="sicost-field">
+        금액 단위
+        <select
+          data-testid="workforce-recommendations-amount-unit"
+          aria-label="추천 금액 단위"
+          value={amountUnit}
+          disabled={preferences.pending}
+          onChange={(e) => {
+            setUnitError("");
+            void preferences
+              .put("AMT_UNIT", "*", e.target.value)
+              .catch((e: unknown) =>
+                setUnitError(
+                  e instanceof Error
+                    ? e.message
+                    : "금액 단위를 저장하지 못했습니다.",
+                ),
+              );
+          }}
+        >
+          {["원", "천원", "백만원"].map((unit) => (
+            <option
+              data-testid={`workforce-recommendations-amount-unit-${{ 원: "won", 천원: "thousand-won", 백만원: "million-won" }[unit]}`}
+              key={unit}
+            >
+              {unit}
+            </option>
+          ))}
         </select>
       </label>
       <WorkforceRecommendationsScreen
@@ -1131,6 +1186,7 @@ function RegisteredApplication() {
                             : id === "UI-23" && usersDirty
       }
       screens={{
+        "UI-16": <DashboardScreen />,
         "UI-01": (
           <SharedScreenFrame screenId="UI-01">
             <RegisteredProjectsWorkspace onDirtyChange={onProjectsDirty} />
@@ -1151,9 +1207,7 @@ function RegisteredApplication() {
         "UI-02": (
           <PeopleWorkspace screenId="UI-02" onDirtyChange={onDevelopersDirty} />
         ),
-        "UI-12": (
-          <CloseLinkedAssignments onDirtyChange={onAssignmentsDirty} />
-        ),
+        "UI-12": <CloseLinkedAssignments onDirtyChange={onAssignmentsDirty} />,
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
         "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
         "UI-19": <SalesPartnerProfitScreen />,

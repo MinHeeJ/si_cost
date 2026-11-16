@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.meops.ProfileMapper">
+  <select id="user" resultType="com.sicost.meops.ProfileDtos$User">
+    SELECT user_id AS "userId", user_nm AS "userName"
+    FROM tb_sy_user WHERE user_id=#{userId}
+  </select>
+  <select id="activeRoles" resultType="com.sicost.meops.ProfileDtos$Role">
+    SELECT r.role_id AS "roleId", r.role_nm AS "roleName"
+    FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id
+    WHERE ur.user_id=#{userId} AND r.use_yn='Y'
+    ORDER BY r.role_nm, r.role_id
+  </select>
+  <select id="parts" resultType="com.sicost.meops.ProfileDtos$Part">
+    WITH affiliations AS (
+      SELECT s.part_id
+      FROM tb_bs_part_std s
+      WHERE s.part_ldr_user_id=#{userId} AND s.aply_bgn_ym &lt;= #{month}
+        AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month})
+        AND NOT EXISTS (
+          SELECT 1 FROM tb_bs_part_std newer
+          WHERE newer.part_id=s.part_id AND newer.aply_bgn_ym &lt;= #{month}
+            AND (newer.aply_end_ym IS NULL OR newer.aply_end_ym &gt;= #{month})
+            AND newer.aply_bgn_ym &gt; s.aply_bgn_ym
+        )
+      UNION
+      SELECT s.part_id FROM tb_sy_user_scope s
+      WHERE s.user_id=#{userId} AND s.scope_type_cd='PART'
+      UNION
+      SELECT pp.part_id
+      FROM tb_sy_user_scope s JOIN tb_pj_proj p ON p.proj_id=s.proj_id
+      JOIN LATERAL (
+        SELECT h.part_id FROM tb_pj_proj_part h
+        WHERE h.proj_id=p.proj_id AND h.aply_bgn_ym &lt;= #{month}
+        ORDER BY h.aply_bgn_ym DESC LIMIT 1
+      ) pp ON true
+      WHERE s.user_id=#{userId} AND s.scope_type_cd='PROJ'
+        AND p.proj_stat_cd NOT IN ('END','LOSE')
+    )
+    SELECT p.part_id AS "partId", p.part_nm AS "partName"
+    FROM tb_bs_part p JOIN affiliations a ON a.part_id=p.part_id
+    ORDER BY p.part_nm, p.part_id
+  </select>
+</mapper>

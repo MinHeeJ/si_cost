@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.common.notifications.NotificationPublicationMapper">
+  <select id="quoteRejection" resultType="com.sicost.common.notifications.NotificationPublicationMapper$QuoteRejection">
+    SELECT o.reg_user_id AS "userId",h.hist_sn::int AS "historySn" FROM tb_sl_opp o JOIN tb_sl_aprv_hist h ON h.opp_id=o.opp_id
+    WHERE o.opp_id=#{opportunityId} AND h.aprv_act_cd='REJ' ORDER BY h.hist_sn DESC LIMIT 1
+  </select>
+  <select id="appliedUpload" resultType="com.sicost.common.notifications.NotificationPublicationMapper$AppliedUpload">
+    SELECT reg_user_id AS "userId",scrn_id AS "screenId" FROM tb_sy_upld WHERE upld_id=#{uploadId} AND upld_stat_cd='APPLIED'
+  </select>
+  <select id="registeredScreen" resultType="boolean">
+    SELECT EXISTS (SELECT 1 FROM tb_sy_menu WHERE scrn_id=#{screenId})
+  </select>
+  <select id="activeUsers" resultType="com.sicost.common.notifications.NotificationRecipients$Role">
+    SELECT user_id AS "userId",user_nm AS "name",NULLIF(trim(email_addr),'') AS "emailAddress",'' AS "role"
+    FROM tb_sy_user WHERE user_stat_cd='USE' ORDER BY user_id
+  </select>
+  <select id="eligibleRoles" resultType="com.sicost.common.notifications.NotificationRecipients$Role">
+    SELECT u.user_id AS "userId", u.user_nm AS "name", NULLIF(trim(u.email_addr),'') AS "emailAddress", r.role_id AS "role"
+    FROM tb_sy_user u JOIN tb_sy_user_role ur ON ur.user_id=u.user_id JOIN tb_sy_role r ON r.role_id=ur.role_id
+    WHERE u.user_stat_cd='USE' AND r.use_yn='Y' AND r.role_id IN ('ADMIN','EXEC','FIN','SALES_LDR','PM')
+    ORDER BY u.user_id,r.role_id
+  </select>
+  <select id="recipientScopes" resultType="com.sicost.common.notifications.NotificationRecipients$Scope">
+    SELECT s.user_id AS "userId",s.scope_type_cd AS "type",s.part_id AS "partId",s.proj_id AS "projectId"
+    FROM tb_sy_user_scope s JOIN tb_sy_user u ON u.user_id=s.user_id
+    WHERE u.user_stat_cd='USE' ORDER BY s.user_id,s.scope_sn
+  </select>
+  <insert id="reserveSystem">
+    INSERT INTO tb_sy_delivery_task (task_id,event_key,rcvr_user_id,rcvr_nm,channel_cd,state_cd,noti_type_cd,noti_cn,
+      link_scrn_id,link_key,bill_id,dun_step,dun_sn,resend_yn,sent_dttm,reg_user_id,reg_dttm)
+    VALUES (CAST(#{taskId,typeHandler=com.sicost.common.notifications.NotificationTaskUuidTypeHandler} AS uuid),#{event.key},#{recipient.userId},#{recipient.name},'SYS','SENT',#{event.type},#{event.content},
+      #{event.link.screenId},#{event.link.key},#{event.dunning.billId},#{event.dunning.step},#{event.dunning.serial},
+      <choose><when test="event.dunning != null and event.dunning.resend">'Y'</when><otherwise>'N'</otherwise></choose>,#{at},'SYSTEM',#{at})
+    ON CONFLICT (event_key,rcvr_user_id,channel_cd) DO NOTHING
+  </insert>
+  <select id="insertNotification" resultType="java.math.BigDecimal" affectData="true" flushCache="true">
+    INSERT INTO tb_sy_noti (rcvr_user_id,noti_type_cd,noti_cn,link_scrn_id,link_key,send_mthd_cd,read_yn,read_dttm,noti_dttm,reg_user_id,reg_dttm)
+    VALUES (#{recipient.userId},#{event.type},#{event.content},#{event.link.screenId},#{event.link.key},
+      <choose><when test="event.type == 'DUN'">'BOTH'</when><otherwise>'SYS'</otherwise></choose>,'N',NULL,#{at},'SYSTEM',#{at})
+    RETURNING noti_id
+  </select>
+  <update id="connectNotification">
+    UPDATE tb_sy_delivery_task SET noti_id=#{notificationId} WHERE task_id=CAST(#{taskId,typeHandler=com.sicost.common.notifications.NotificationTaskUuidTypeHandler} AS uuid)
+  </update>
+</mapper>

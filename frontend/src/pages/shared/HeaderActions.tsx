@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/Icon";
+import type { NotificationBellProps } from "../notificationsops/NotificationBell";
+import { ActivityCenter } from "../apiops/ActivityCenter";
 
-export function HeaderActions() {
-  const [open, setOpen] = useState<"ai" | "notice" | null>(null);
+export function HeaderActions(props: NotificationBellProps = {}) {
+  const [open, setOpen] = useState<"ai" | null>(null);
   const anchor = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const dismiss = (event: PointerEvent) => {
@@ -15,6 +17,10 @@ export function HeaderActions() {
     <div
       className="sicost-header-actions"
       ref={anchor}
+      onClickCapture={(event) => {
+        if ((event.target as Element).closest(".notification-anchor"))
+          setOpen(null);
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") setOpen(null);
       }}
@@ -28,22 +34,11 @@ export function HeaderActions() {
         <Icon name="sparkle" size={16} />
         <span>AI에게 묻기</span>
       </button>
-      <button
-        className="sicost-icon-button"
-        aria-label="알림"
-        aria-expanded={open === "notice"}
-        onClick={() => setOpen(open === "notice" ? null : "notice")}
-      >
-        <Icon name="bell" />
-      </button>
+      <ActivityCenter {...props} />
       {open && (
         <div role="status" className="sicost-header-popover">
-          <strong>{open === "ai" ? "AI 분석 도우미" : "알림"}</strong>
-          <p>
-            {open === "ai"
-              ? "AI 기능은 준비 중입니다."
-              : "알림 기능은 준비 중입니다."}
-          </p>
+          <strong>AI 분석 도우미</strong>
+          <p>AI 기능은 준비 중입니다.</p>
         </div>
       )}
     </div>

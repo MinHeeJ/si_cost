@@ -1,0 +1,27 @@
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-fields {
+  margin: 0;
+  display: grid;
+  gap: 16px;
+  font-size: 14px;
+}
+.profile-fields > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+}
+.profile-fields dt {
+  color: var(--text-sub);
+}
+.profile-fields dd {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}

@@ -247,10 +247,10 @@ class DeveloperStateContractTest {
     @Test void repeatedReadsDoNotResumeManualStopOrWriteHistory()throws Exception {
         developer=new Developer(ID,developer.hireDate(),null,"IDLE","N");mvc.perform(get(URL)).andExpect(status().isOk());mvc.perform(get(URL)).andExpect(status().isOk());noWrites();
     }
-    @Test void readRecalculationUsesSeparateWriteTransactionAndActualChangeOnly()throws Exception {
+    @Test void readsPreserveManualStopAndNeverPersistDerivedLeaveState()throws Exception {
         leave(null);developer=new Developer(ID,developer.hireDate(),null,"IDLE","N");
         mvc.perform(get(URL)).andExpect(status().isOk());mvc.perform(get(URL)).andExpect(status().isOk());
-        verify(mapper,times(1)).updateDeveloper(any());assertThat(developer.useYn()).isEqualTo("N");verify(history,times(1)).insert(any());
+        assertThat(developer.useYn()).isEqualTo("N");assertThat(developer.status()).isEqualTo("IDLE");noWrites();
     }
     @Test void errorsReturnSafeRequestIdNotClientHeaderInjection()throws Exception {
         mvc.perform(get(URL).param("actor","other").header("X-Request-Id","bad\r\nheader"))

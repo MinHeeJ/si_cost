@@ -11,6 +11,7 @@ import {
   type ReviewPageSize,
 } from "./billingReviewApi";
 import { BillingReviewDownloadButton } from "./BillingReviewDownloadButton";
+import { ReceivableDeliveryActions } from "../receivablesops/ReceivableDeliveryActions";
 import "./billingReview.css";
 
 type Props = {
@@ -165,6 +166,16 @@ function ReceivablesContent({
       ),
     },
     {
+      id: "delivery",
+      label: "전달",
+      render: (r) => (
+        <ReceivableDeliveryActions
+          billId={r.billId}
+          onChanged={() => setReload((value) => value + 1)}
+        />
+      ),
+    },
+    {
       id: "nextNotification",
       label: "다음 알림",
       render: (r) =>
@@ -223,8 +234,9 @@ function ReceivablesContent({
             ))}
           </div>
           <p className="sicost-banner sicost-tone-info">
-            발송 기능 연결 예정 · 현재 수신대상과 과거 실제 수신자는 다릅니다.
-            기준일 이전의 모든 연체를 포함하며 알림 전 단계도 숨기지 않습니다.
+            다시알림은 실제 수신자와 잔액을 확인한 뒤 요청합니다. 현재
+            수신대상과 과거 실제 수신자는 다릅니다. 기준일 이전의 모든 연체를
+            포함하며 알림 전 단계도 숨기지 않습니다.
           </p>
           <h2>입금 예정일이 지난 청구 {data.total}건</h2>
         </>
@@ -233,8 +245,9 @@ function ReceivablesContent({
         rows={error ? [] : (data?.items ?? [])}
         columns={columns}
         rowKey={(r) => r.billId}
-        loading={loading}
+        loading={loading && !data}
         empty="입금 예정일이 지난 청구가 없습니다."
+        emptyAction={<button type="button" onClick={() => { setPage(1); setReload((r) => r + 1); }}>조건 초기화</button>}
         page={page}
         size={size}
         total={data?.total ?? 0}

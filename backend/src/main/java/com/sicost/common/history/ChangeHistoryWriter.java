@@ -103,8 +103,28 @@ public class ChangeHistoryWriter {
     }
     @Transactional(propagation = Propagation.MANDATORY)
     public void appendAsSystem(Change change) {
+        if (AutomationDeliveryHistoryPolicy.supports(change.tableName())) {
+            appendDelivery(change, "SYSTEM");
+            return;
+        }
         if (!PEOPLE.contains(change.tableName())) throw InputValidator.invalid("history");
         append(change, () -> "SYSTEM", false);
+    }
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void appendDelivery(Change change) {
+        appendDelivery(change, users.userId());
+    }
+    private void appendDelivery(Change original, String actor) {
+        Change change = AutomationDeliveryHistoryPolicy.requireAllowed(original);
+        if ("UPD".equals(change.type()) && Objects.equals(change.before(), change.after())) return;
+        InputValidator.text(actor, 30, "actor");
+        InputValidator.text(change.targetKey(), 100, "targetKey");
+        check(change.item(), 50); check(change.before(), 500); check(change.after(), 500); check(change.reason(), 500);
+        if (mapper.insert(new ChangeHistoryEntry(change.tableName(), change.targetKey(), change.type(), change.item(),
+                change.before(), change.after(), change.reason(), actor,
+                LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL))) != 1) {
+            throw new IllegalStateException("자동 처리·전달 필드 감사를 저장하지 못했습니다.");
+        }
     }
     @Transactional(propagation = Propagation.MANDATORY)
     public void appendSettlement(Change change, String actor) {
@@ -186,7 +206,7 @@ public class ChangeHistoryWriter {
         int written = mapper.insert(new ChangeHistoryEntry(change.tableName(), change.targetKey(), change.type(), change.item(),
                 privateContact ? maskedContact(change.before()) : change.before(),
                 privateContact ? maskedContact(change.after()) : change.after(), change.reason(), actor.get(), LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL)));
-        if (((required && !"TB_FI_TAX_PAY".equals(change.tableName())) || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
+        if (("SYSTEM".equals(actor.get()) || (required && !"TB_FI_TAX_PAY".equals(change.tableName())) || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
             throw new IllegalStateException("목표 필드 감사를 저장하지 못했습니다.");
         }
     }

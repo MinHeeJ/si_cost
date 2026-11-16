@@ -390,3 +390,10 @@ it("renders BASE-before months as unavailable without calculation-source actions
   expect(screen.getByTestId("cash-source-cash-sales-2026-06")).toBeInTheDocument();
   expect(within(screen.getByTestId("cash-row-opening")).getAllByRole("cell")[0]).toHaveTextContent("–");
 });
+
+it("대시보드의 다음연도 요청월은 연도범위 확장·다른 원천 상세 없이 안내한다", async () => {
+ render(<MemoryRouter initialEntries={[{pathname:"/UI-21",state:{fromDashboard:true,month:"2027-01"}}]}><CashFlowScreen /></MemoryRouter>);
+ expect(await screen.findByText(/대시보드 요청월 2027-01/)).toBeVisible();
+ await waitFor(() => expect(screen.getByText(/조회 가능 연도 밖/)).toBeVisible());
+ expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
