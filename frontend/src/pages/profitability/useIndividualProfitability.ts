@@ -8,10 +8,14 @@ import {
   type ProfitabilityQuery,
 } from "./individualProfitabilityApi";
 
-export function useIndividualProfitability(initialSize: 20 | 50 | 100 = 50) {
+export function useIndividualProfitability(
+  initialSize: 20 | 50 | 100 = 50,
+  initialYear?: number,
+) {
   const [mobile, setMobile] = useState(() => window.innerWidth < 768);
   const [query, setQuery] = useState<ProfitabilityQuery>(() => ({
     ...defaultProfitabilityQuery(),
+    ...(initialYear === undefined ? {} : { year: initialYear }),
     size: mobile ? 20 : initialSize,
   }));
   const [data, setData] = useState<IndividualProfitabilityData | null>(null);
@@ -21,6 +25,12 @@ export function useIndividualProfitability(initialSize: 20 | 50 | 100 = 50) {
   const [revision, setRevision] = useState(0);
   const sequence = useRef(0);
   const currentYear = useRef<number>();
+  useEffect(() => {
+    if (initialYear !== undefined)
+      setQuery((q) =>
+        q.year === initialYear ? q : { ...q, year: initialYear, page: 1 },
+      );
+  }, [initialYear]);
   useEffect(() => {
     const resize = () => setMobile(window.innerWidth < 768);
     window.addEventListener("resize", resize);

@@ -1,4 +1,5 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import type { AnalysisContext } from "./analysisClient";
 import type { MenuNode } from "./sharedApi";
 export type SharedScreenState = {
   menus: MenuNode[];
@@ -21,6 +22,34 @@ export const SharedScreenContext = createContext<SharedScreenState>({
 });
 export function flattenMenus(nodes: MenuNode[]): MenuNode[] {
   return nodes.flatMap((node) => [node, ...flattenMenus(node.children)]);
+}
+/** Local identifiers only; the question provider freezes this context at send time. */
+export function useAnalysisScreenContext(
+  screenId: string,
+  context: AnalysisContext,
+  active = true,
+) {
+  useEffect(() => {
+    if (!active) return;
+    // Kept-alive hidden tabs can finish a read after navigation. They own their
+    // original screen context, never the currently visible screen's target.
+    window.dispatchEvent(
+      new CustomEvent("sicost:analysis-context", {
+        detail: { ...context, screenId },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("sicost:analysis-context", { detail: { screenId } }),
+      );
+    };
+  }, [
+    screenId,
+    context.projectId,
+    context.developerId,
+    context.baseMonth,
+    active,
+  ]);
 }
 export function useSharedScreen(screenId: string) {
   const state = useContext(SharedScreenContext);

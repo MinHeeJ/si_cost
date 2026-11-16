@@ -502,6 +502,9 @@ describe("공식 화면과 공통 틀", () => {
       expect(
         await screen.findByTestId(financialScreenTestIds[id]),
       ).toBeVisible();
+    } else if (id === "UI-26") {
+      expect(screen.getByRole("textbox", { name: "질문" })).toBeVisible();
+      expect(screen.getByRole("region", { name: "AI 대화" })).toBeVisible();
     } else if (id !== "UI-27")
       expect(
         screen

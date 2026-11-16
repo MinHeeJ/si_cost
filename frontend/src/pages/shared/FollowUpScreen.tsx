@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScreenPeriodBar } from "./ScreenPeriodBar";
 import { useSharedScreen } from "./SharedScreenContext";
 import { Icon } from "../../shared/Icon";
+import type { AnalysisScope } from "./analysisClient";
 export function SharedScreenFrame({
   screenId,
   children,
@@ -15,8 +16,23 @@ export function SharedScreenFrame({
   initialMonth?: string;
 }) {
   const location = useLocation();
-  const incoming = location.state as { fromDashboard?: boolean; month?: string } | null;
-  const dashboardMonth = location.pathname === `/${screenId}` && incoming?.fromDashboard && ["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"].includes(screenId) ? incoming.month : undefined;
+  const incoming = location.state as {
+    fromDashboard?: boolean;
+    fromAnalysis?: boolean;
+    month?: string;
+    scope?: AnalysisScope;
+    guidance?: string;
+  } | null;
+  const analysisEntry =
+    location.pathname === `/${screenId}` && incoming?.fromAnalysis
+      ? incoming
+      : undefined;
+  const dashboardMonth =
+    location.pathname === `/${screenId}` &&
+    incoming?.fromDashboard &&
+    ["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"].includes(screenId)
+      ? incoming.month
+      : undefined;
   const { menu, menus, favorites, star, pending } = useSharedScreen(screenId),
     navigate = useNavigate();
   const parent = menus.find((node) => node.menuId === menu?.parentId);
@@ -79,9 +95,30 @@ export function SharedScreenFrame({
         className={`sicost-screen-content${menu.pcOnly ? " sicost-pc-body" : ""}`}
       >
         {periodBar === undefined ? (
-          <ScreenPeriodBar screenId={screenId} initialMonth={initialMonth ?? dashboardMonth} />
+          <ScreenPeriodBar
+            screenId={screenId}
+            initialMonth={
+              analysisEntry?.month ?? initialMonth ?? dashboardMonth
+            }
+          />
         ) : (
           periodBar
+        )}
+        {analysisEntry?.scope && (
+          <p className="sicost-banner sicost-tone-info" role="note">
+            분석에서 연 원천 화면 · {analysisEntry.scope.fromMonth} ~{" "}
+            {analysisEntry.scope.toMonth} ·{" "}
+            {analysisEntry.scope.targets
+              .filter((t) => t.targetType !== "FUNCTION")
+              .map((t) => t.displayName)
+              .join(" · ")}{" "}
+            {analysisEntry.scope.filters
+              .map((f) => `${f.key} ${f.operator} ${f.values.join(", ")}`)
+              .join(" · ")}
+            <br />
+            {analysisEntry.guidance} · 원래 화면의 조회 단위가 다르면 월별
+            원장과 위 분석 범위를 대조해 주세요.
+          </p>
         )}
         {children}
       </div>

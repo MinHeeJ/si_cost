@@ -135,7 +135,13 @@ public class MonthlyCostCalculation {
         BigDecimal revenue = null;
         if (p != null) {
             if (!"ALLOC".equals(cls) || "FREE".equals(a.inputType())) revenue = ZERO;
-            else if (Set.of("MO", "DP").contains(p.contractType())) revenue = checked(a.salesAmount(), person, a.month(), issues);
+            else if (Set.of("MO", "DP").contains(p.contractType())) {
+                // Open assignment rows require SALES_AMT even when the price is unresolved.
+                // That placeholder zero is not evidence of a valid zero applied price.
+                if (a.appliedUnitPrice() == null)
+                    issues.add(issue(person, a.month(), "유효 적용 단가 미확인: 배정 " + a.assignmentId() + "의 매출·이익을 확정하지 않습니다.", null));
+                else revenue = checked(a.salesAmount(), person, a.month(), issues);
+            }
             // TK revenue is resolved by the next composition step, never by an invented default.
         }
         return row(new RowIdentity(person, a.month(), a.projectId(), a.assignmentId(), a.assignmentMm(),

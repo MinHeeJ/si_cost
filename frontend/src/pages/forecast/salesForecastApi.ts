@@ -9,10 +9,10 @@ export type ForecastIssue = {
 };
 export type RevenueMonth = {
   month: string;
-  projectRevenue: string;
+  projectRevenue: string | null;
   opportunityRevenue: string;
-  totalRevenue: string;
-  allWonRevenue: string;
+  totalRevenue: string | null;
+  allWonRevenue: string | null;
 };
 export type RevenueSource = {
   sourceType: "PROJECT" | "OPPORTUNITY";
@@ -20,7 +20,7 @@ export type RevenueSource = {
   name: string;
   contractType: string | null;
   month: string;
-  amount: string;
+  amount: string | null;
   allWonAmount: string | null;
   basis: string;
 };
@@ -48,9 +48,9 @@ export type SalesForecast = {
   from: string;
   months: number;
   summary: {
-    sixMonthRevenue: string;
+    sixMonthRevenue: string | null;
     opportunityRevenue: string;
-    allWonRevenue: string;
+    allWonRevenue: string | null;
     averageDemand: string | null;
     averageSupply: string | null;
     hiringJobCount: number;

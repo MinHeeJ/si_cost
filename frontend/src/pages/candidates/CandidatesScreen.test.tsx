@@ -199,7 +199,7 @@ it("starts with FL MD SITE server today plus thirty and never auto-checks consen
 it("focuses Korean first error without posting an invalid form", async () => {
   render(<CandidatesScreen />);
   await begin();
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
   expect(
     await screen.findByText("이름은 1~50자로 입력해 주세요."),
   ).toBeInTheDocument();
@@ -211,7 +211,7 @@ it("requires deliberate consent when either contact exists", async () => {
   await begin();
   await fill();
   await userEvent.type(screen.getByLabelText("이메일"), "s@test.com");
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
   expect(
     await screen.findByText("연락처가 있으면 개인정보 동의를 확인해 주세요."),
   ).toBeInTheDocument();
@@ -242,7 +242,7 @@ it("successful registration refreshes immediately, closes modal, highlights once
   render(<CandidatesScreen />);
   await begin();
   await fill();
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
   await waitFor(() =>
     expect(api.createCandidate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -273,7 +273,7 @@ it("committed refresh failure offers only re-query and never repeats POST", asyn
   render(<CandidatesScreen />);
   await begin();
   await fill();
-  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
   await screen.findByText(/저장은 완료됐습니다/);
   expect(api.createCandidate).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("button", { name: "후보 등록" })).toBeDisabled();

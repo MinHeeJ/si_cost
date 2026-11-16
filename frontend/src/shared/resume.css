@@ -1,0 +1,42 @@
+.resume-upload {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+}
+.resume-upload button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.resume-feedback:empty {
+  display: none;
+}
+.resume-feedback {
+  grid-column: 1/-1;
+  min-width: 0;
+  font-size: 13px;
+}
+.resume-feedback > p {
+  margin: 8px 0;
+}
+.resume-field-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  list-style: none;
+  padding: 0;
+}
+.resume-field-results li {
+  padding: 6px 10px;
+  border: 1px solid var(--sicost-border, var(--border, #d1d5db));
+  border-radius: 4px;
+}
+.resume-feedback details {
+  margin: 8px 0;
+}
+.resume-feedback small {
+  overflow-wrap: anywhere;
+}
+.developer-toolbar .resume-upload {
+  margin-right: auto;
+}

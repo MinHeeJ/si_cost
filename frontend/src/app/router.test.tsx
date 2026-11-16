@@ -1636,6 +1636,13 @@ describe("공식 진입점 합성", () => {
             .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
             .some((node) => !node.closest("[hidden]")),
         ).toBe(false);
+      } else if (id === "UI-26") {
+        expect(await screen.findByRole("region", { name: "AI 대화" })).toBeVisible();
+        expect(
+          screen
+            .queryAllByText("이 화면은 다음 단계에서 만듭니다.")
+            .some((node) => !node.closest("[hidden]")),
+        ).toBe(false);
       } else
         expect(
           screen
@@ -2032,7 +2039,8 @@ describe("공식 진입점 합성", () => {
           id === "UI-02" ? "developer-create-button" : "candidate-create",
         ),
       );
-      const name = screen.getByLabelText(/^이름/);
+      // 등록 폼은 공통 모달이라 뒤의 목록 필터에도 같은 이름표가 있다: 모달 안으로 범위를 좁힌다.
+      const name = within(screen.getByRole("dialog")).getByLabelText(/^이름/);
       fireEvent.change(name, { target: { value: "보존 인력" } });
       await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
       if (id === "UI-33")

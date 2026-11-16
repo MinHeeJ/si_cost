@@ -41,6 +41,17 @@ export function ScreenPeriodBar({
     closeRead = useRef(0);
   const applyPeriod = useRef<(next: PeriodValue) => void>(() => {});
   useEffect(() => {
+    if (controlled)
+      window.dispatchEvent(
+        new CustomEvent("sicost:screen-period-changed", {
+          detail: {
+            screenId,
+            value: { type: "YEAR_MONTH", value: controlled.month },
+          },
+        }),
+      );
+  }, [screenId, controlled?.month]);
+  useEffect(() => {
     const refresh = () => setCloseRefresh((n) => n + 1);
     window.addEventListener("sicost:month-close-committed", refresh);
     return () =>
@@ -67,9 +78,11 @@ export function ScreenPeriodBar({
   }, [screenId, context]);
   useEffect(() => {
     if (screenId !== "UI-14" || !context) return;
-    const reset = () => applyPeriod.current({ type: "YEAR_MONTH", value: context.currentMonth });
+    const reset = () =>
+      applyPeriod.current({ type: "YEAR_MONTH", value: context.currentMonth });
     window.addEventListener("sicost:month-close-reset-period", reset);
-    return () => window.removeEventListener("sicost:month-close-reset-period", reset);
+    return () =>
+      window.removeEventListener("sicost:month-close-reset-period", reset);
   }, [screenId, context]);
   useEffect(() => {
     if (screenId !== "UI-03" || !context) return;
@@ -179,13 +192,24 @@ export function ScreenPeriodBar({
             ? cumulative(initial, ctx.currentMonth, ctx)
             : { type: type as "YEAR" | "YEAR_MONTH", value: initial };
         const valid = validStored(pref?.value, ctx);
-        const incoming: PeriodValue | undefined = initialMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth)
-          ? {
-              ...(type === "YEAR_CUM"
-                ? { type: "YEAR_CUM" as const, year: initialMonth.slice(0, 4), month: initialMonth }
-                : { type: type as "YEAR" | "YEAR_MONTH", value: type === "YEAR" ? initialMonth.slice(0, 4) : initialMonth }),
-            }
-          : undefined;
+        const incoming: PeriodValue | undefined =
+          initialMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth)
+            ? {
+                ...(type === "YEAR_CUM"
+                  ? {
+                      type: "YEAR_CUM" as const,
+                      year: initialMonth.slice(0, 4),
+                      month: initialMonth,
+                    }
+                  : {
+                      type: type as "YEAR" | "YEAR_MONTH",
+                      value:
+                        type === "YEAR"
+                          ? initialMonth.slice(0, 4)
+                          : initialMonth,
+                    }),
+              }
+            : undefined;
         setValue(
           incoming && validStored(incoming, ctx)
             ? incoming

@@ -32,6 +32,7 @@ public class BillingReviewRepository {
     public List<CheckBill> bills(CheckKey key) {return mapper.checkBills(key);}
     public String checkRevision(CheckKey key) {return revisions.revision(mapper.checkSnapshot(key));}
     public String billRevision(String id) {return revisions.revision(mapper.billSnapshot(id));}
+    public List<OverdueBill> notYetOverdue(LocalDate today) {return mapper.notYetOverdue(today);}
     public List<OverdueBill> overdue(LocalDate today) {return mapper.overdue(today);}
     public List<String> pendingDeliveryBillIds() {return mapper.pendingDeliveryBillIds();}
     public List<DunningHistory> history(String id) {return mapper.sentHistory(id);}

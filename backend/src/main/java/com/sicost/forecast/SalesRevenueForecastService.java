@@ -39,6 +39,7 @@ public class SalesRevenueForecastService {
                 YearMonth start=max(from,YearMonth.from(project.startDate())), end=YearMonth.from(project.endDate());
                 if (month.isBefore(start)||month.isAfter(end)) continue;
                 BigDecimal amount=BigDecimal.ZERO;
+                boolean complete=true;
                 String basis;
                 if ("TK".equals(project.type())) {
                     long remaining=ChronoUnit.MONTHS.between(start,end)+1;
@@ -49,10 +50,13 @@ public class SalesRevenueForecastService {
                 } else {
                     for (Assignment assignment:snapshot.assignments()) if (project.id().equals(assignment.source().projectId())
                         && "ACT".equals(assignment.source().status()) && !"FREE".equals(assignment.source().inputType()))
-                        for (var value:assignment.months()) if (month.toString().equals(value.month())) amount=amount.add(new BigDecimal(value.salesAmount()));
-                    basis="05 해당월 유상매출 · 철수일까지 · 예상연장 제외";
+                        for (var value:assignment.months()) if (month.toString().equals(value.month())) {
+                            if(value.salesAmount()==null||new BigDecimal(value.monthlyMm()).signum()>0&&value.appliedUnitPrice()==null)complete=false;
+                            else amount=amount.add(new BigDecimal(value.salesAmount()));
+                        }
+                    basis="05 해당월 유상매출 · 철수일까지 · 예상연장 제외"+(complete?"":" · 유효 적용 단가 미확인: 0으로 보정하지 않음");
                 }
-                rows.add(new RevenueSource("PROJECT",project.id(),project.name(),project.type(),month.toString(),amount.toPlainString(),null,basis));
+                rows.add(new RevenueSource("PROJECT",project.id(),project.name(),project.type(),month.toString(),complete?amount.toPlainString():null,null,basis));
             }
             for (Opportunity opportunity:snapshot.opportunities()) {
                 if (!activeOpportunity(snapshot,opportunity)) continue;
@@ -67,15 +71,17 @@ public class SalesRevenueForecastService {
             var selected=rows.stream().filter(r -> month.toString().equals(r.month())).toList();
             BigDecimal project=sum(selected.stream().filter(r -> "PROJECT".equals(r.sourceType())).map(RevenueSource::amount).toList());
             BigDecimal opportunity=sum(selected.stream().filter(r -> "OPPORTUNITY".equals(r.sourceType())).map(RevenueSource::amount).toList());
-            BigDecimal all=project.add(sum(selected.stream().filter(r -> "OPPORTUNITY".equals(r.sourceType())).map(RevenueSource::allWonAmount).toList()));
-            months.add(new RevenueMonth(month.toString(),project.toPlainString(),opportunity.toPlainString(),project.add(opportunity).toPlainString(),all.toPlainString()));
+            BigDecimal all=add(project,sum(selected.stream().filter(r -> "OPPORTUNITY".equals(r.sourceType())).map(RevenueSource::allWonAmount).toList()));
+            months.add(new RevenueMonth(month.toString(),plain(project),plain(opportunity),plain(add(project,opportunity)),plain(all)));
         }
         Workforce people=workforce.calculate(snapshot,day,from,6,true);
-        Summary summary=new Summary(sum(months.stream().map(RevenueMonth::totalRevenue).toList()).toPlainString(),
-            sum(months.stream().map(RevenueMonth::opportunityRevenue).toList()).toPlainString(),sum(months.stream().map(RevenueMonth::allWonRevenue).toList()).toPlainString(),
+        Summary summary=new Summary(plain(sum(months.stream().map(RevenueMonth::totalRevenue).toList())),
+            plain(sum(months.stream().map(RevenueMonth::opportunityRevenue).toList())),plain(sum(months.stream().map(RevenueMonth::allWonRevenue).toList())),
             average(people.totals().stream().map(WorkforceMonth::demand).toList()),average(people.totals().stream().map(WorkforceMonth::supply).toList()),people.hiring().size());
         return new Result(from.toString(),6,summary,List.copyOf(months),List.copyOf(rows),people);
     }
-    private static BigDecimal sum(List<String> values) {return values.stream().map(BigDecimal::new).reduce(BigDecimal.ZERO,BigDecimal::add);}
+    private static BigDecimal sum(List<String> values) {return values.stream().anyMatch(Objects::isNull)?null:values.stream().map(BigDecimal::new).reduce(BigDecimal.ZERO,BigDecimal::add);}
+    private static BigDecimal add(BigDecimal a,BigDecimal b){return a==null||b==null?null:a.add(b);}
+    private static String plain(BigDecimal value){return value==null?null:value.toPlainString();}
     private static String average(List<String> values) {return values.stream().anyMatch(Objects::isNull)?null:sum(values).divide(BigDecimal.valueOf(6),1,RoundingMode.HALF_UP).toPlainString();}
 }

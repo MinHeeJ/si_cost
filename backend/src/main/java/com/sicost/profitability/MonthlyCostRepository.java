@@ -43,6 +43,16 @@ public class MonthlyCostRepository {
         return load(period, new Range(from, to), at);
     }
 
+    /** Separate read-only forecast seam; actual reader validation remains unchanged. */
+    public Sources loadForecastRange(YearMonth from, YearMonth to) {
+        Instant at = clock.instant();
+        YearMonth current = YearMonth.from(at.atZone(TimeConfiguration.SEOUL));
+        if (!from.isAfter(current) || to.isBefore(from) || to.isAfter(current.plusMonths(12))) throw invalid("month");
+        String base = DatabaseMonthCodec.toDatabase(shared.getPeriodContext().cashBaseMonth());
+        var period = new ProfitabilityPeriod(from.getYear(), base, db(from), db(to), at.atZone(TimeConfiguration.SEOUL).toOffsetDateTime(), false);
+        return load(period, new Range(db(from), db(to)), at);
+    }
+
     public Sources loadRange(String requestedMonth) {
         Instant at = clock.instant();
         String base = DatabaseMonthCodec.toDatabase(shared.getPeriodContext().cashBaseMonth());

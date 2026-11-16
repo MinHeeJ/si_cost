@@ -11,25 +11,64 @@ import { CostMetrics, CostSourceIssues } from "./ProjectCostSummaryPanel";
 import { ProjectCostSimulationPanel } from "./ProjectCostSimulationPanel";
 import * as api from "./projectCostApi";
 import "./projectCost.css";
+import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 const tabs = [
   ["months", "월별 원가"],
   ["assignments", "투입 인력"],
   ["causes", "원가 초과 원인"],
   ["simulation", "시뮬레이션"],
 ] as const;
-const causeNames = { EXCESS_MM: "투입이 계획보다 많음", OVER_UNIT_COST: "원가가 단가 기준을 넘음", FREE_SUPPORT: "무상지원" };
-function CostCauseBars({ value, unit }: {value: api.Causes; unit: AmountUnit}) {
-  const maximum=value.items.reduce((max,row)=>row.amount!==null&&BigInt(row.amount)>max?BigInt(row.amount):max,0n);
-  return <div className="cost-cause-bars" data-testid="cost-cause-bars" data-highlight={value.highlight}>
-    {value.items.map(row=>{
-      // Visual length only: preserve server amounts, with no browser floating-point conversion.
-      const width=row.amount===null||maximum===0n?0n:BigInt(row.amount)*10000n/maximum;
-      return <div key={row.kind}>
-        <p><span>{causeNames[row.kind]}</span><span>{formatAmount(row.amount,unit)} {unit}</span></p>
-        <div className="cost-cause-track"><span style={{width: `${width/100n}.${String(width%100n).padStart(2,"0")}%`}} /></div>
-      </div>;
-    })}
-  </div>;
+const causeNames = {
+  EXCESS_MM: "투입이 계획보다 많음",
+  OVER_UNIT_COST: "원가가 단가 기준을 넘음",
+  FREE_SUPPORT: "무상지원",
+};
+function CostCauseBars({
+  value,
+  unit,
+}: {
+  value: api.Causes;
+  unit: AmountUnit;
+}) {
+  const maximum = value.items.reduce(
+    (max, row) =>
+      row.amount !== null && BigInt(row.amount) > max
+        ? BigInt(row.amount)
+        : max,
+    0n,
+  );
+  return (
+    <div
+      className="cost-cause-bars"
+      data-testid="cost-cause-bars"
+      data-highlight={value.highlight}
+    >
+      {value.items.map((row) => {
+        // Visual length only: preserve server amounts, with no browser floating-point conversion.
+        const width =
+          row.amount === null || maximum === 0n
+            ? 0n
+            : (BigInt(row.amount) * 10000n) / maximum;
+        return (
+          <div key={row.kind}>
+            <p>
+              <span>{causeNames[row.kind]}</span>
+              <span>
+                {formatAmount(row.amount, unit)} {unit}
+              </span>
+            </p>
+            <div className="cost-cause-track">
+              <span
+                style={{
+                  width: `${width / 100n}.${String(width % 100n).padStart(2, "0")}%`,
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 export type ProjectCostDetailPanelProps = {
   projectId: string;
@@ -52,6 +91,10 @@ export function ProjectCostDetailPanel({
   const requested = search.get("costTab") ?? initialTab;
   const tab = tabs.some(([key]) => key === requested) ? requested : "months";
   const [detail, setDetail] = useState<api.Detail>();
+  useAnalysisScreenContext("UI-04", {
+    projectId,
+    baseMonth: detail?.month ?? month,
+  });
   const [months, setMonths] = useState<api.Months>();
   const [assignments, setAssignments] = useState<api.Assignments>();
   const [causes, setCauses] = useState<api.Causes>();

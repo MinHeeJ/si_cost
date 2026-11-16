@@ -20,7 +20,11 @@ import "./settlements.css";
 export type SalesPartnerProfitScreenProps = {
   onPerson?(developerId: string): void;
   onPartStandard?(partId: string): void;
-  renderActions?(data: api.SettlementResult, refresh: () => void, query: api.SettlementQuery): ReactNode;
+  renderActions?(
+    data: api.SettlementResult,
+    refresh: () => void,
+    query: api.SettlementQuery,
+  ): ReactNode;
   amountUnit?: AmountUnit;
   onAmountUnitChange?(unit: AmountUnit): void;
   renderViews?(
@@ -56,10 +60,23 @@ export function SalesPartnerProfitScreen({
 }: SalesPartnerProfitScreenProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
-  const incoming = location.state as { fromMonthClose?: boolean; month?: string; partId?: string } | null;
+  const incoming = location.state as {
+    fromMonthClose?: boolean;
+    fromAnalysis?: boolean;
+    month?: string;
+    partId?: string;
+  } | null;
   const entry = useRef<{ key: string; month?: string; partId?: string }>();
-  if (location.pathname === "/UI-19" && incoming?.fromMonthClose && entry.current?.key !== location.key)
-    entry.current = { key: location.key, month: incoming.month, partId: incoming.partId };
+  if (
+    location.pathname === "/UI-19" &&
+    (incoming?.fromMonthClose || incoming?.fromAnalysis) &&
+    entry.current?.key !== location.key
+  )
+    entry.current = {
+      key: location.key,
+      month: incoming.month,
+      partId: incoming.partId,
+    };
   const entryMonth = entry.current?.month;
   const shared = useSharedScreen("UI-19");
   const [query, setQuery] = useState<api.SettlementQuery>({
@@ -68,7 +85,9 @@ export function SalesPartnerProfitScreen({
     size: shared.pageSize ?? 50,
   });
   const [tabs, setTabs] = useState<api.SettlementTabsResult>();
-  const [selected, setSelected] = useState<string | undefined>(entry.current?.partId);
+  const [selected, setSelected] = useState<string | undefined>(
+    entry.current?.partId,
+  );
   const [data, setData] = useState<api.SettlementResult>();
   const [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -76,10 +95,12 @@ export function SalesPartnerProfitScreen({
     [notice, setNotice] = useState("");
   const [unit, setUnit] = useState<AmountUnit>("천원"),
     [person, setPerson] = useState<string>();
-  useEffect(() => { setPerson(undefined); }, [location.pathname]);
+  useEffect(() => {
+    setPerson(undefined);
+  }, [location.pathname]);
   useEffect(() => {
     if (!entryMonth) return;
-    setQuery(q => ({ ...q, month: entryMonth, page: 1 }));
+    setQuery((q) => ({ ...q, month: entryMonth, page: 1 }));
     setSelected(entry.current?.partId || undefined);
   }, [entry.current?.key, entryMonth]);
   const selectedRef = useRef(selected);
@@ -253,7 +274,19 @@ export function SalesPartnerProfitScreen({
     ...moneyColumns.map(
       ([id, label]): Column<api.SettlementRow> => ({
         id,
-        label: <span title={id === "costAmount" ? "급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)" : id === "profitAmount" ? "단가 − 파트 비용" : undefined}>{label}</span>,
+        label: (
+          <span
+            title={
+              id === "costAmount"
+                ? "급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)"
+                : id === "profitAmount"
+                  ? "단가 − 파트 비용"
+                  : undefined
+            }
+          >
+            {label}
+          </span>
+        ),
         align: "right",
         sortable: [
           "unitPrice",
@@ -532,7 +565,14 @@ export function SalesPartnerProfitScreen({
                     ? "마감 정산 자료 미확인"
                     : "이번 달 투입 인력이 없습니다."
                 }
-                emptyAction={<button type="button" onClick={() => guarded(() => apply(defaultQuery))}>조건 초기화</button>}
+                emptyAction={
+                  <button
+                    type="button"
+                    onClick={() => guarded(() => apply(defaultQuery))}
+                  >
+                    조건 초기화
+                  </button>
+                }
                 footer={{
                   label: "전체 합계",
                   render: (column) =>
