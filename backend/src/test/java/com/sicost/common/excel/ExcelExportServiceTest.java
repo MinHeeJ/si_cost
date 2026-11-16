@@ -23,6 +23,12 @@ import static org.mockito.Mockito.*;
 import static com.sicost.common.excel.ExcelExportService.*;
 
 class ExcelExportServiceTest {
+    @Test void analysisWorkbookPreservesUnrepresentableDecimalStringsAndKeepsNormalNegativeAmountsNumeric()throws Exception {
+        var columns=List.of(new Column("name","대상",CellType.TEXT),new Column("amount","금액 (원)",CellType.NUMBER));var output=new ByteArrayOutputStream();
+        try(var file=service.generateWorkbook(new Specification("AI분석",null,columns,"저장된 질문","원","UI-26"),()->new WorkbookData(List.of(new Sheet("결과1",columns,sink->{sink.accept(List.of("=SUM(1,1)","-12"));sink.accept(List.of("큰 합계","9007199254740993"));})),List.of(),2,"202611"),request)){file.transferTo(output);}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))){var sheet=book.getSheetAt(0);assertThat(sheet.getRow(1).getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);assertThat(sheet.getRow(1).getCell(1).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.NUMERIC);assertThat(sheet.getRow(1).getCell(1).getNumericCellValue()).isEqualTo(-12d);assertThat(sheet.getRow(2).getCell(1).getStringCellValue()).isEqualTo("9007199254740993");}
+        verify(logs).append(argThat(e->e.screenId().equals("UI-26")&&e.action().equals("DNLD")&&e.count()==2),same(request));
+    }
     @Test void financialTemplateRetainsTextColumnsGuideAndDownloadAuditBeforeExposure() throws Exception {
         var columns=List.of(new Column("amount","금액*",CellType.TEXT));
         var output=new ByteArrayOutputStream();

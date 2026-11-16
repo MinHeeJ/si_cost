@@ -9,6 +9,11 @@ import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { ClientSelect } from "../clientsops/ClientSelect";
 import * as api from "./peopleClient";
+import { useResumeExtraction } from "../../shared/useResumeExtraction";
+import {
+  ResumeUploadButton,
+  ResumeExtractionFeedback,
+} from "../../shared/ResumeAssist";
 
 export function CandidateForm({
   candidate,
@@ -69,6 +74,16 @@ export function CandidateForm({
     [retry, setRetry] = useState(0);
   const changed = useRef(false),
     busy = useRef(false);
+  const resume = useResumeExtraction(
+    "CANDIDATE",
+    form,
+    setForm,
+    () => {
+      changed.current = true;
+      onDirtyChange?.(true);
+    },
+    open,
+  );
   useEffect(() => {
     let active = true;
     setLookupError(undefined);
@@ -88,7 +103,7 @@ export function CandidateForm({
           const value = new Date(`${date.currentDate}T00:00:00Z`);
           value.setUTCDate(value.getUTCDate() + 30);
           setForm((f) =>
-            f.availableDate
+            f.availableDate || resume.isTouched("availableDate")
               ? f
               : { ...f, availableDate: value.toISOString().slice(0, 10) },
           );
@@ -106,6 +121,7 @@ export function CandidateForm({
     key: K,
     value: api.CandidateFields[K],
   ) {
+    resume.touch(key);
     setForm((f) => ({ ...f, [key]: value }));
     changed.current = true;
     onDirtyChange?.(true);
@@ -163,7 +179,7 @@ export function CandidateForm({
     return Object.keys(messages).length === 0;
   }
   async function save() {
-    if (busy.current || !validate()) return;
+    if (busy.current || resume.isBusy() || !validate()) return;
     busy.current = true;
     setPending(true);
     setError(undefined);
@@ -225,14 +241,20 @@ export function CandidateForm({
         pending={pending}
         onConfirm={save}
         onCancel={onClose}
-        confirmLabel="저장"
-        confirmDisabled={Boolean(lookupError)}
+        confirmLabel={candidate ? "저장" : "등록"}
+        confirmDisabled={Boolean(lookupError) || resume.pending}
+        footerStart={
+          !candidate ? (
+            <ResumeUploadButton state={resume} disabled={pending} />
+          ) : undefined
+        }
       >
         <div
           className="candidate-form"
           data-testid="candidate-form"
           data-screen-id="SCR-UI-33"
         >
+          {!candidate && <ResumeExtractionFeedback state={resume} />}
           {lookupError != null && (
             <ErrorBanner
               message="선택 항목과 서버 날짜를 불러오지 못했습니다."
@@ -250,6 +272,7 @@ export function CandidateForm({
           />
           <CodeSelect
             label="구분 *"
+            onSelectionConfirmed={() => resume.touch("employeeType")}
             value={form.employeeType}
             options={(codes.EMP_TYPE ?? []).filter((c) =>
               ["FL", "OS"].includes(c.code),
@@ -274,6 +297,24 @@ export function CandidateForm({
           </div>
           {text("phone", "전화번호")}
           {text("email", "이메일")}
+          <div className="candidate-form-wide">
+            <label>
+              <input
+                data-testid="candidate-consent"
+                type="checkbox"
+                checked={form.consent}
+                disabled={pending}
+                aria-invalid={Boolean(fields.consent)}
+                onChange={(e) => change("consent", e.target.checked)}
+              />{" "}
+              후보에게 개인정보(전화번호·이메일) 수집·이용 동의를 받았습니다
+            </label>
+            {fields.consent && (
+              <p role="alert" className="sicost-field-error">
+                {fields.consent}
+              </p>
+            )}
+          </div>
           <CodeSelect
             label="주 직무 *"
             value={form.jobCode}
@@ -320,24 +361,6 @@ export function CandidateForm({
               disabled={pending}
               error={fields.homeAreaCode}
             />
-          </div>
-          <div className="candidate-form-wide">
-            <label>
-              <input
-                data-testid="candidate-consent"
-                type="checkbox"
-                checked={form.consent}
-                disabled={pending}
-                aria-invalid={Boolean(fields.consent)}
-                onChange={(e) => change("consent", e.target.checked)}
-              />{" "}
-              후보에게 개인정보(전화번호·이메일) 수집·이용 동의를 받았습니다
-            </label>
-            {fields.consent && (
-              <p role="alert" className="sicost-field-error">
-                {fields.consent}
-              </p>
-            )}
           </div>
           <label className="sicost-field candidate-form-wide">
             자체 메모

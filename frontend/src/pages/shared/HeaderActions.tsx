@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../shared/Icon";
 import type { NotificationBellProps } from "../notificationsops/NotificationBell";
 import { ActivityCenter } from "../apiops/ActivityCenter";
+import { AnalysisConversation } from "./AnalysisConversation";
 
 export function HeaderActions(props: NotificationBellProps = {}) {
   const [open, setOpen] = useState<"ai" | null>(null);
@@ -36,9 +37,25 @@ export function HeaderActions(props: NotificationBellProps = {}) {
       </button>
       <ActivityCenter {...props} />
       {open && (
-        <div role="status" className="sicost-header-popover">
-          <strong>AI 분석 도우미</strong>
-          <p>AI 기능은 준비 중입니다.</p>
+        <div
+          role="dialog"
+          aria-label="AI에게 묻기 대화창"
+          className="analysis-side-panel"
+        >
+          <header>
+            <div>
+              <strong>AI에게 묻기</strong>
+              <small>지금 화면을 보면서 질문할 수 있습니다</small>
+            </div>
+            <button
+              type="button"
+              aria-label="AI 대화창 닫기"
+              onClick={() => setOpen(null)}
+            >
+              ×
+            </button>
+          </header>
+          <AnalysisConversation compact />
         </div>
       )}
     </div>

@@ -40,6 +40,12 @@ public class PersistenceBoundary implements Interceptor {
     private static final String PAYROLL_KEY = "PAY_YM\\s*=\\s*\\?\\s+AND\\s+DEV_ID\\s*=\\s*\\?";
     private static final String CORRECTION = "(?is)\\s+SET\\s+CRCT_YN\\s*=\\s*'Y'\\s+WHERE\\s+ASGN_ID\\s*=\\s*\\?\\s+AND\\s+HIST_SN\\s*=\\s*\\?\\s+AND\\s+CRCT_YN\\s*=\\s*'N'\\s*";
     public static void requireAllowed(String sql) {
+        String analysis = sql.replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        if (analysis.startsWith("INSERTINTOTB_SY_AI_QNA")) {
+            if (!analysis.equals("INSERTINTOTB_SY_AI_QNA(QNA_ID,USER_ID,QSTN_CN,ANS_CN,USE_DATA_DESC,BASE_YM,PRVS_YN,ANS_STAT_CD,QSTN_DTTM,REG_USER_ID,REG_DTTM,MOD_USER_ID,MOD_DTTM)VALUES(CAST(?ASNUMERIC),?,?,?,?,?,?,?,?,?,?,NULL,NULL)"))
+                throw new IllegalStateException("질문 완료는 지정 열의 추가만 허용합니다.");
+            return;
+        }
         if (AutomationDeliveryPersistence.supports(sql)) {
             AutomationDeliveryPersistence.requireAllowed(sql);
             return;

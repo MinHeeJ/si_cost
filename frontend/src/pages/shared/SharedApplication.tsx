@@ -25,6 +25,7 @@ import {
 } from "./sharedApi";
 import "../../shared/common.css";
 import "./shared.css";
+import { AnalysisAssistantProvider } from "./AnalysisAssistantContext";
 export type SharedPreferenceAdapter = {
   items: SharedPreference[];
   loading: boolean;
@@ -53,7 +54,14 @@ export function SharedRoutes() {
     <div role="alert">등록되지 않은 화면입니다.</div>
   );
 }
-export function SharedApplication({
+export function SharedApplication(props: SharedApplicationProps) {
+  return (
+    <AnalysisAssistantProvider>
+      <SharedApplicationContent {...props} />
+    </AnalysisAssistantProvider>
+  );
+}
+function SharedApplicationContent({
   screens,
   codes,
   mappings,
@@ -64,7 +72,11 @@ export function SharedApplication({
   isDirty,
 }: SharedApplicationProps) {
   const [utility, setUtility] = useState<"search" | "help" | null>(null);
-  useEffect(() => { const open = () => setUtility("search"); window.addEventListener("sicost:menu-search", open); return () => window.removeEventListener("sicost:menu-search", open); }, []);
+  useEffect(() => {
+    const open = () => setUtility("search");
+    window.addEventListener("sicost:menu-search", open);
+    return () => window.removeEventListener("sicost:menu-search", open);
+  }, []);
   const location = useLocation(),
     navigate = useNavigate();
   const [menus, setMenus] = useState<MenusData | null>(null),
@@ -489,8 +501,24 @@ export function SharedApplication({
                 >
                   화면 설정
                 </button>
-                <button type="button" onClick={() => { setUtility("search"); setUserMenu(false); }}>메뉴 찾기</button>
-                <button type="button" onClick={() => { setUtility("help"); setUserMenu(false); }}>단축키 보기</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUtility("search");
+                    setUserMenu(false);
+                  }}
+                >
+                  메뉴 찾기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUtility("help");
+                    setUserMenu(false);
+                  }}
+                >
+                  단축키 보기
+                </button>
               </div>
             )}
           </div>
@@ -706,7 +734,13 @@ export function SharedApplication({
           </main>
         </div>
       </div>
-      <WorkspaceUsability menus={menus.items} active={active} onOpen={go} mode={utility} onClose={() => setUtility(null)} />
+      <WorkspaceUsability
+        menus={menus.items}
+        active={active}
+        onOpen={go}
+        mode={utility}
+        onClose={() => setUtility(null)}
+      />
       <ProfileDialog
         open={dialog === "profile"}
         onClose={() => setDialog(null)}

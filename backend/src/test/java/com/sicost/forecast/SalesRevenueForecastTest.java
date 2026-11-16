@@ -57,6 +57,12 @@ class SalesRevenueForecastTest {
         var s=snapshot(List.of(p),List.of());s=new Snapshot(s.projects(),s.opportunities(),s.needs(),s.plans(),s.people(),s.leaves(),s.candidates(),s.standards(),s.jobs(),List.of(a,free));
         assertThat(service.calculate(s,DAY).revenueMonths()).extracting(SalesForecastDtos.RevenueMonth::projectRevenue).containsExactly("48","0","0","0","0","0");
     }
+    @Test void missingPaidPriceIsUnknownRatherThanZeroAcrossForecastAndSummary() {
+        var missing=new Assignment(source("A","NEW","2026-08-31",null),List.of(new Month("2026-08","P","D",31,"1.00","1.00",null,"0","N")));
+        var base=snapshot(List.of(project("P","MO","ING","2026-12-31","0","0")),List.of());
+        var unknown=service.calculate(new Snapshot(base.projects(),base.opportunities(),base.needs(),base.plans(),base.people(),base.leaves(),base.candidates(),base.standards(),base.jobs(),List.of(missing)),DAY);
+        assertThat(unknown.revenueMonths().get(0).projectRevenue()).isNull();assertThat(unknown.summary().sixMonthRevenue()).isNull();assertThat(unknown.revenueSources().get(0).basis()).contains("단가 미확인");
+    }
     @Test void demandUsesNeedsOwnMonthsAndAverageHalfUpOne() {
         var s=workforce(List.of(new Need("O",1,"BE","202608",1,1,n("1.00"))),List.of(),List.of(),List.of(),List.of());
         var r=service.calculate(s,DAY);

@@ -17,6 +17,11 @@ import {
   type PartOption,
 } from "../salespartsops/partStandardsApi";
 import * as api from "./peopleClient";
+import { useResumeExtraction } from "../../shared/useResumeExtraction";
+import {
+  ResumeUploadButton,
+  ResumeExtractionFeedback,
+} from "../../shared/ResumeAssist";
 
 export const developerBanner =
   "보유 스킬·거주지는 이 화면에서 입력합니다. 동까지만 받으며 번지·연락처 입력은 없습니다.";
@@ -55,6 +60,7 @@ export function DeveloperForm({
     container = useRef<HTMLFormElement>(null),
     busy = useRef(false);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial.current);
+  const resume = useResumeExtraction("DEVELOPER", form, setForm);
   const [codes, setCodes] = useState<
     Record<string, { code: string; name: string }[]>
   >({});
@@ -112,6 +118,7 @@ export function DeveloperForm({
     key: K,
     value: (typeof form)[K],
   ) {
+    resume.touch(key);
     setForm((f) => ({ ...f, [key]: value }));
     setFields((f) => ({ ...f, [key]: "" }));
   }
@@ -122,7 +129,7 @@ export function DeveloperForm({
     }
   };
   async function save() {
-    if (busy.current) return;
+    if (busy.current || resume.isBusy()) return;
     const validation: Record<string, string> = {};
     if (!form.name.trim() || [...form.name.trim()].length > 50)
       validation.name = "이름을 1~50자로 입력해 주세요.";
@@ -234,6 +241,7 @@ export function DeveloperForm({
         key={key}
         label={label}
         value={form[key]}
+        onSelectionConfirmed={() => resume.touch(key)}
         options={all}
         onChange={(v) => change(key, v)}
         required={required}
@@ -283,6 +291,7 @@ export function DeveloperForm({
           void save();
         }}
       >
+        {!developer && <ResumeExtractionFeedback state={resume} />}
         <fieldset disabled={pending} className="developer-form-fields">
           <legend>기본 정보</legend>
           {text("name", "이름", 50, true)}
@@ -355,6 +364,9 @@ export function DeveloperForm({
           <p>{priceHelp}</p>
         </fieldset>
         <footer className="developer-toolbar">
+          {!developer && (
+            <ResumeUploadButton state={resume} disabled={pending || loading} />
+          )}
           <button
             type="button"
             data-testid="developer-form-cancel"
@@ -367,9 +379,11 @@ export function DeveloperForm({
             className="sicost-primary"
             type="submit"
             data-testid="developer-form-save"
-            disabled={pending || loading || Boolean(lookupError)}
+            disabled={
+              pending || loading || Boolean(lookupError) || resume.pending
+            }
           >
-            {pending ? "저장 중…" : "저장"}
+            {pending ? "저장 중…" : developer ? "저장" : "등록"}
           </button>
         </footer>
       </form>

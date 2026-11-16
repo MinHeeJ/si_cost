@@ -191,6 +191,26 @@ class MonthlyCostCalculationTest {
         assertThat(signed.rows().get(0).teamExpense()).isEqualTo("0");
         assertThat(signed.rows().get(0).projectExpense()).isEqualTo("0");
     }
+    @ParameterizedTest @ValueSource(strings={"MO","DP"})
+    void unresolvedAppliedPriceDoesNotConfirmMandatorySalesPlaceholderButValidZeroDoes(String type) {
+        var p = person("FL"); var a = assignment("a", "1.00");
+        var missing = new Assignment(a.month(),a.personId(),a.projectId(),a.assignmentId(),a.assignmentMm(),null,BigDecimal.ZERO,
+            a.fixed(),a.jobCode(),a.inputType(),a.contractPersonId(),a.status(),a.fromDate(),a.toDate());
+        var unknown = calculation.calculate(sources(p,List.of(pay("FL","400000")),List.of(missing),List.of(project(type,"ACT"))),p,MONTH);
+        assertThat(unknown.rows().get(0).personalRevenue()).isNull();
+        assertThat(unknown.rows().get(0).profit()).isNull();
+        assertThat(unknown.rows().get(0).totalCost()).isEqualTo("400000");
+        assertThat(unknown.completeness().costComplete()).isTrue();
+        assertThat(unknown.completeness().revenueComplete()).isFalse();
+        assertThat(unknown.completeness().issues()).anyMatch(i -> i.message().contains("유효 적용 단가 미확인"));
+        var zero = new Assignment(a.month(),a.personId(),a.projectId(),a.assignmentId(),a.assignmentMm(),BigDecimal.ZERO,BigDecimal.ZERO,
+            a.fixed(),a.jobCode(),a.inputType(),a.contractPersonId(),a.status(),a.fromDate(),a.toDate());
+        var known = calculation.calculate(sources(p,List.of(pay("FL","400000")),List.of(zero),List.of(project(type,"ACT"))),p,MONTH);
+        assertThat(known.rows().get(0).personalRevenue()).isEqualTo("0");
+        assertThat(known.rows().get(0).profit()).isEqualTo("-400000");
+        assertThat(known.completeness().revenueComplete()).isTrue();
+        assertThat(missing.salesAmount()).isEqualTo(BigDecimal.ZERO);
+    }
     @Test void protectedMonthsCannotAccidentallyEnterOpenCalculation() {
         var p = person("FT"); var base = sources(p,List.of(pay("FT","4970000")),List.of(assignment("a","1.00")),List.of(project("MO","LOSE")));
         var closed = new Sources(base.period(),base.actor(),base.asOfDate(),base.people(),base.prices(),base.states(),base.payroll(),base.assignments(),base.projectMonths(),

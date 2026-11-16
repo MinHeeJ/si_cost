@@ -16,6 +16,7 @@ import { ProjectPlansPanel } from "../plans/ProjectPlansPanel";
 import { ProjectExpensesPanel } from "../expenses/ProjectExpensesPanel";
 import { projectAmount, projectStatusTone } from "./projectFormat";
 import * as api from "./projectsApi";
+import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 export type ProjectDetailContext = {
   detail: api.ProjectDetail;
   year: number;
@@ -68,6 +69,7 @@ export function ProjectDetailPanel({
   onDirtyChange,
   registration,
 }: Props) {
+  useAnalysisScreenContext("UI-01", { projectId: id }, active);
   const [detail, setDetail] = useState<api.ProjectDetail>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
@@ -258,7 +260,9 @@ export function ProjectDetailPanel({
                   disabled={dirty && tab !== key}
                   onClick={() => setTab(key)}
                 >
-                  {key === "issues" && context && registration?.issuesTitle ? registration.issuesTitle(context) : label}
+                  {key === "issues" && context && registration?.issuesTitle
+                    ? registration.issuesTitle(context)
+                    : label}
                 </button>
               ))}
             </nav>

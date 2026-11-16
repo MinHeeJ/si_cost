@@ -9,6 +9,7 @@ export type CodeSelectProps = {
   required?: boolean;
   error?: string;
   disabled?: boolean;
+  onSelectionConfirmed?(): void;
 };
 export function CodeSelect({
   label,
@@ -16,6 +17,7 @@ export function CodeSelect({
   options,
   onChange,
   error,
+  onSelectionConfirmed,
   ...props
 }: CodeSelectProps) {
   const id = useId();
@@ -27,6 +29,7 @@ export function CodeSelect({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onSelectionConfirmed}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
       >

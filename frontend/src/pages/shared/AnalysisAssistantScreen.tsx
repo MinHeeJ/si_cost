@@ -1,4 +1,9 @@
-import { FollowUpScreen } from "./FollowUpScreen";
+import { SharedScreenFrame } from "./FollowUpScreen";
+import { AnalysisConversation } from "./AnalysisConversation";
 export function AnalysisAssistantScreen() {
-  return <FollowUpScreen screenId="UI-26" />;
+  return (
+    <SharedScreenFrame screenId="UI-26">
+      <AnalysisConversation />
+    </SharedScreenFrame>
+  );
 }

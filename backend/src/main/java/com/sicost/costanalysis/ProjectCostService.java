@@ -15,6 +15,8 @@ public class ProjectCostService {
     private final ProjectCostCalculation calculation;
     public ProjectCostService(ProjectCostRepository repository,ProjectCostCalculation calculation) {this.repository=repository;this.calculation=calculation;}
     public Detail getProjectCostAnalysis(String id,String month) {return calculation.detail(calculation.view(repository.load(id,month)));}
+    /** Read the registered weekly progress without turning absent notes into a zero. */
+    public String getProjectCostWeeklyProgress(String id,String month) {return ProjectCostCalculation.rate(repository.load(id,month).actualProgress());}
     public Months getProjectCostMonths(String id,String month) {return calculation.months(calculation.view(repository.load(id,month)));}
     public Assignments getProjectCostAssignments(String id,String month) {return calculation.assignments(calculation.view(repository.load(id,month)));}
     public Causes getProjectCostCauses(String id,String month) {return calculation.causes(calculation.view(repository.load(id,month)));}

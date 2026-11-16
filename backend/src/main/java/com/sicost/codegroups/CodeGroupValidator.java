@@ -93,7 +93,7 @@ public class CodeGroupValidator {
         Set<String> prior=previous==null?Set.of():new HashSet<>(Arrays.asList(previous.split(",")));
         for(String code:csv.split(",")) {
             StoredCode target=targets.get(code);
-            if(target==null || "Y".equals(target.delYn()) || (!prior.contains(code) && !"Y".equals(target.useYn())))
+            if(target==null || "Y".equals(target.delYn()) || ((!prior.contains(code) || group.groupId().equals("RSM_JOB_KW")) && !"Y".equals(target.useYn())))
                 throw InputValidator.invalid(change.field()+field);
         }
     }

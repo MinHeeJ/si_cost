@@ -51,12 +51,13 @@ public class AccessLogWriter {
                 throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
             return;
         }
-        if ("UI-21".equals(event.screenId())) {
-            if (!"DNLD".equals(event.action()) || event.targetId()!=null || !"자금수지표".equals(event.fileType())
+        if (Set.of("UI-21", "UI-26").contains(event.screenId())) {
+            String kind = "UI-26".equals(event.screenId()) ? "AI분석" : "자금수지표";
+            if (!"DNLD".equals(event.action()) || event.targetId()!=null || !kind.equals(event.fileType())
                     || event.count()==null || event.count()<0 || event.filename()!=null) throw InputValidator.invalid("accessLog");
             String ip=request.getRemoteAddr();
             if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
-            if(mapper.insert(new Entry(users.userId(),"DNLD","UI-21","자금수지표 "+event.count(),ip,
+            if(mapper.insert(new Entry(users.userId(),"DNLD",event.screenId(),kind+" "+event.count(),ip,
                     LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL)))!=1)
                 throw new IllegalStateException("접근기록을 저장하지 못했습니다.");
             return;

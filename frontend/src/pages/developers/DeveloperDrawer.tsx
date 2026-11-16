@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -9,6 +9,7 @@ import { DeveloperStatesPanel } from "../states/DeveloperStatesPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { priceHelp } from "./DeveloperForm";
 import * as api from "./peopleClient";
+import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 import { DeveloperSingleStatus } from "../developersops/DeveloperStatusToolbar";
 import {
   getSalesPartOptions,
@@ -39,6 +40,14 @@ export function DeveloperDrawer({
   const [data, setData] = useState<api.DeveloperDetail>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
+  const analysisHost = useMemo(
+    () =>
+      /^\/UI-\d{2}$/.test(window.location.pathname)
+        ? window.location.pathname.slice(1)
+        : "UI-02",
+    [id],
+  );
+  useAnalysisScreenContext(analysisHost, { developerId: id });
   const [tab, setTab] = useState("기본 정보"),
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);

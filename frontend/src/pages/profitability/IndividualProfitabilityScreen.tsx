@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import { formatDateTime, type AmountUnit } from "../../shared/format";
@@ -24,9 +24,11 @@ import type {
   ProfitabilitySort,
 } from "./individualProfitabilityApi";
 import "./profitability.css";
+import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 
 /** Later detail/export groups compose into these typed seams, sharing the applied query. */
 export type IndividualProfitabilityScreenProps = {
+  analysisEntry?: { key: string; year: number; developerId?: string };
   onPerson?(personId: string): void;
   renderLedger?(
     person: ProfitabilityPerson,
@@ -51,6 +53,7 @@ const sortable = new Set<string>([
   "profitRate",
 ]);
 export function IndividualProfitabilityScreen({
+  analysisEntry,
   onPerson,
   renderLedger,
   renderExport,
@@ -62,9 +65,14 @@ export function IndividualProfitabilityScreen({
   const unitValue = preferences.get("AMT_UNIT")?.value;
   const unit: AmountUnit =
     unitValue === "원" || unitValue === "백만원" ? unitValue : "천원";
-  const state = useIndividualProfitability(initialSize);
+  const state = useIndividualProfitability(initialSize, analysisEntry?.year);
   const { query, data, loading, mobile } = state;
   const details = useProfitabilityDetails(query, mobile);
+  useEffect(() => {
+    if (analysisEntry?.developerId)
+      details.openPerson(analysisEntry.developerId);
+  }, [analysisEntry?.key, analysisEntry?.developerId, query]);
+  useAnalysisScreenContext("UI-03", { developerId: details.personId });
   const { expandedKeys, setExpandedKeys } = details;
   const openPerson = onPerson ?? details.openPerson;
   const ledger =
@@ -74,7 +82,12 @@ export function IndividualProfitabilityScreen({
         personId={person.personId}
         query={applied}
         unit={unit}
-        jobLabels={Object.fromEntries((data?.contributions ?? []).map((cell) => [cell.jobCode, cell.jobName]))}
+        jobLabels={Object.fromEntries(
+          (data?.contributions ?? []).map((cell) => [
+            cell.jobCode,
+            cell.jobName,
+          ]),
+        )}
       />
     ));
   const [settingsError, setSettingsError] = useState("");
@@ -158,7 +171,8 @@ export function IndividualProfitabilityScreen({
       data-testid="profitability-overview"
       className="profitability-overview"
     >
-      {data && (<>
+      {data && (
+        <>
           <p
             className="profitability-context"
             data-testid="profitability-context"
@@ -181,7 +195,8 @@ export function IndividualProfitabilityScreen({
             cells={data.contributions}
             unit={unit}
           />
-      </>)}
+        </>
+      )}
       <ProfitabilityFilters
         query={query}
         onApply={apply}
@@ -192,11 +207,20 @@ export function IndividualProfitabilityScreen({
       />
       <div className="profitability-toolbar">
         <div className="profitability-view" role="group" aria-label="금액 보기">
-          {([['CUMULATIVE', '연 누계'], ['MONTHLY_AVERAGE', '월 평균']] as const).map(([view, label]) => (
-            <button key={view} type="button" disabled={loading}
+          {(
+            [
+              ["CUMULATIVE", "연 누계"],
+              ["MONTHLY_AVERAGE", "월 평균"],
+            ] as const
+          ).map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              disabled={loading}
               className={query.view === view ? "sicost-primary" : ""}
               aria-pressed={query.view === view}
-              onClick={() => apply({ ...query, view })}>
+              onClick={() => apply({ ...query, view })}
+            >
               {label}
             </button>
           ))}
@@ -305,7 +329,11 @@ export function IndividualProfitabilityScreen({
                   {data.context.period.noData
                     ? "개인 원가 자료 없음"
                     : "조건에 맞는 사람이 없습니다."}
-                  <button type="button" data-testid="profitability-mobile-empty-reset-button" onClick={state.reset}>
+                  <button
+                    type="button"
+                    data-testid="profitability-mobile-empty-reset-button"
+                    onClick={state.reset}
+                  >
                     조건 초기화
                   </button>
                 </p>
