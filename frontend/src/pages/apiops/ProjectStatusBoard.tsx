@@ -409,7 +409,11 @@ export function ProjectStatusBoard({
             <option value="">전체</option>
             <option value="UNASSIGNED">미지정</option>
             {parts.map((part) => (
-              <option key={part.id} value={part.id}>
+              <option
+                data-testid={`status-part-option-${Array.from(String(part.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={part.id}
+                value={part.id}
+              >
                 {part.name}
                 {part.hqYn === "Y" ? " (본사 직접 영업)" : ""}
               </option>
@@ -469,6 +473,7 @@ export function ProjectStatusBoard({
           empty="조건에 맞는 진행 프로젝트가 없습니다."
           emptyAction={
             <button
+              data-testid="status-empty-reset"
               type="button"
               onClick={() =>
                 apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
@@ -490,7 +495,7 @@ export function ProjectStatusBoard({
           ))}
       </section>
       <details>
-        <summary>계산 방법</summary>
+        <summary data-testid="status-calculation-summary">계산 방법</summary>
         <p>{result.data?.calculationNotice}</p>
         <p>
           일정 늦음 = 계획 − 실적: 10.0%p 이상 위험, 5.0%p 이상 주의. TK 진척

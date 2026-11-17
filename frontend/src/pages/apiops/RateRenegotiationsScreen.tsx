@@ -5,7 +5,11 @@ import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
 import { ApiError } from "../../shared/api";
-import { formatDateTime, formatRate, type AmountUnit } from "../../shared/format";
+import {
+  formatDateTime,
+  formatRate,
+  type AmountUnit,
+} from "../../shared/format";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { usePreferences } from "../me/usePreferences";
@@ -70,12 +74,25 @@ export function RateRenegotiationsScreen({
     [unit, setUnit] = useState<AmountUnit>("천원");
   const storedUnit = preferences.get("AMT_UNIT")?.value;
   useEffect(() => {
-    if (storedUnit === "원" || storedUnit === "천원" || storedUnit === "백만원") setUnit(storedUnit);
+    if (storedUnit === "원" || storedUnit === "천원" || storedUnit === "백만원")
+      setUnit(storedUnit);
   }, [storedUnit]);
-  useEffect(() => { setDense(shared.dense ?? false); }, [shared.dense]);
-  useEffect(() => { if (shared.pageSize) setQuery(q => q.size === shared.pageSize ? q : {...q, size: shared.pageSize!, page: 1}); }, [shared.pageSize]);
+  useEffect(() => {
+    setDense(shared.dense ?? false);
+  }, [shared.dense]);
+  useEffect(() => {
+    if (shared.pageSize)
+      setQuery((q) =>
+        q.size === shared.pageSize
+          ? q
+          : { ...q, size: shared.pageSize!, page: 1 },
+      );
+  }, [shared.pageSize]);
   const [columnDraft, setColumnDraft] = useState<ColumnView>();
-  useEffect(() => { setPerson(undefined); setColumnDraft(undefined); }, [location.pathname]);
+  useEffect(() => {
+    setPerson(undefined);
+    setColumnDraft(undefined);
+  }, [location.pathname]);
   const [exporting, setExporting] = useState(false),
     [exportError, setExportError] = useState("");
   const alive = useRef(true);
@@ -210,7 +227,10 @@ export function RateRenegotiationsScreen({
                 type="button"
                 className="sicost-link"
                 data-testid={`renegotiation-person-${marker}`}
-                onClick={(event) => { event.stopPropagation(); openPerson(row.developerId); }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openPerson(row.developerId);
+                }}
               >
                 {row.name}
                 <small className="renegotiation-sub">{row.managementNo}</small>
@@ -362,6 +382,7 @@ export function RateRenegotiationsScreen({
         </article>
       </div>
       <form
+        data-testid="renegotiation-assumption-form"
         className="renegotiation-assumption"
         onSubmit={(e) => {
           e.preventDefault();
@@ -445,7 +466,11 @@ export function RateRenegotiationsScreen({
           >
             <option value="ALL">전체</option>
             {["10", "15", "20"].map((value) => (
-              <option key={value} value={value}>
+              <option
+                data-testid={`renegotiation-margin-option-${value}`}
+                key={value}
+                value={value}
+              >
                 {value}% 미만
               </option>
             ))}
@@ -462,7 +487,11 @@ export function RateRenegotiationsScreen({
           >
             <option value="">전체</option>
             {employees.map((e) => (
-              <option key={e.code} value={e.code}>
+              <option
+                data-testid={`renegotiation-employee-option-${Array.from(e.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={e.code}
+                value={e.code}
+              >
                 {e.name}
               </option>
             ))}
@@ -479,7 +508,11 @@ export function RateRenegotiationsScreen({
           >
             <option value="">전체</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option
+                data-testid={`renegotiation-project-option-${Array.from(String(p.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={p.id}
+                value={p.id}
+              >
                 {p.name}
               </option>
             ))}
@@ -499,6 +532,7 @@ export function RateRenegotiationsScreen({
       )}
       {data?.issues.map((i, index) => (
         <div
+          data-testid={`renegotiation-banner-${index}`}
           className="sicost-banner sicost-tone-warn"
           role="note"
           key={`${i.code}-${index}`}
@@ -508,7 +542,7 @@ export function RateRenegotiationsScreen({
       ))}
       {!!data?.unevaluatedCount && (
         <details data-testid="renegotiation-unevaluated">
-          <summary>
+          <summary data-testid="renegotiation-unevaluated-summary">
             평가불가 {data.unevaluatedCount}건 · 원가·매출 미확인 근거 펼침
           </summary>
           {data.unevaluatedAssignments.map((i, index) => (
@@ -544,7 +578,12 @@ export function RateRenegotiationsScreen({
           data-testid="renegotiation-density"
           type="button"
           aria-pressed={dense}
-          onClick={() => { void preferences.put("DENSE", "*", dense ? "넓게" : "좁게").then(() => setDense(!dense)).catch(setError); }}
+          onClick={() => {
+            void preferences
+              .put("DENSE", "*", dense ? "넓게" : "좁게")
+              .then(() => setDense(!dense))
+              .catch(setError);
+          }}
         >
           좁게 보기
         </button>
@@ -553,10 +592,21 @@ export function RateRenegotiationsScreen({
           <select
             data-testid="renegotiation-unit"
             value={unit}
-            onChange={(e) => { const value = e.target.value as AmountUnit; void preferences.put("AMT_UNIT", "*", value).then(() => setUnit(value)).catch(setError); }}
+            onChange={(e) => {
+              const value = e.target.value as AmountUnit;
+              void preferences
+                .put("AMT_UNIT", "*", value)
+                .then(() => setUnit(value))
+                .catch(setError);
+            }}
           >
             {["원", "천원", "백만원"].map((u) => (
-              <option key={u}>{u}</option>
+              <option
+                data-testid={`renegotiation-unit-option-${Array.from(u, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={u}
+              >
+                {u}
+              </option>
             ))}
           </select>
         </label>
@@ -580,7 +630,11 @@ export function RateRenegotiationsScreen({
           submit({ ...applied, page }, applied.increaseRate)
         }
         onSizeChange={(size) => {
-          void (shared.savePageSize?.(size) ?? Promise.resolve()).then(() => submit({ ...applied, page: 1, size }, applied.increaseRate)).catch(setError);
+          void (shared.savePageSize?.(size) ?? Promise.resolve())
+            .then(() =>
+              submit({ ...applied, page: 1, size }, applied.increaseRate),
+            )
+            .catch(setError);
         }}
         sort={{ id: applied.sort, direction: applied.direction }}
         onSortChange={(sort) =>
@@ -624,7 +678,7 @@ export function RateRenegotiationsScreen({
         className="renegotiation-guide"
         data-testid="renegotiation-guide"
       >
-        <summary>계산 방법</summary>
+        <summary data-testid="renegotiation-guide-summary">계산 방법</summary>
         <p>
           기준월 {data?.baseMonth ?? "–"} · 목표율은 기준월 유효
           TGT_MRGN_RT입니다. 월 계산은 월MM m, 연 증가는 계약MM k를 사용합니다.
@@ -641,7 +695,10 @@ export function RateRenegotiationsScreen({
             {Object.entries(help)
               .filter(([id]) => id !== "contractMm")
               .map(([id, text]) => (
-                <tr key={id}>
+                <tr
+                  data-testid={`renegotiation-guide-row-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={id}
+                >
                   <td>
                     {renegotiationColumns.find((c) => c.id === id)?.label}
                   </td>
