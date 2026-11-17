@@ -76,9 +76,13 @@ export function UserStatusResultsDialog({
 
 export function UserBulkStatusToolbar({
   selected,
+  onClear,
+  onSelectAll,
   onCommitted,
 }: {
   selected: BusinessUser[];
+  onClear?(): void;
+  onSelectAll?(): Promise<void>;
   onCommitted(): Promise<void>;
 }) {
   const [action, setAction] = useState<"STOP" | "RESUME">(),
@@ -107,8 +111,9 @@ export function UserBulkStatusToolbar({
   }
   return (
     <section data-testid="user-bulk-status-toolbar">
-      <div className="businessusers-toolbar">
-        <span>선택 {selected.length}명</span>
+      {selected.length > 0 && <div className="businessusers-toolbar">
+        <span>선택 {selected.length}건</span>
+        {onSelectAll && <button type="button" disabled={pending} onClick={()=>void onSelectAll().catch(setError)}>조회전체 선택</button>}
         <div>
           <button
             data-testid="user-bulk-stop"
@@ -130,8 +135,9 @@ export function UserBulkStatusToolbar({
           >
             일괄 다시 사용
           </button>
+          {onClear && <button type="button" disabled={pending} onClick={onClear}>선택 해제</button>}
         </div>
-      </div>
+      </div>}
       {message && !action && <p role="status">{message}</p>}
       {message?.includes("다시 불러오지") && (
         <button

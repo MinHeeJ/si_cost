@@ -55,6 +55,7 @@ const rejected: api.UserStateResults = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(users.getManagedUserRoleOptions).mockResolvedValue([]);
   vi.mocked(users.getBusinessUser).mockResolvedValue(user);
   vi.mocked(users.getBusinessUsers).mockResolvedValue({
     items: [user],
@@ -304,7 +305,8 @@ it("선택 없을 때 일괄 명령이 비활성이고 회계 불일치는 오�
       />
     </>,
   );
-  expect(screen.getByTestId("user-bulk-stop")).toBeDisabled();
+  expect(screen.queryByTestId("user-bulk-stop")).not.toBeInTheDocument();
+  expect(screen.queryByText("선택 0건")).not.toBeInTheDocument();
   expect(screen.getByRole("alert")).toHaveTextContent("건수가 일치하지");
 });
 it("부분 성공 결과는 각 ID·결과·코드·이유를 보존한다", () => {
@@ -376,7 +378,7 @@ it("목록 선택은 조회 조건 변경에 해제되고 과거 열설정 끝�
   expect(screen.getByTestId("user-bulk-stop")).not.toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "조회" }));
   await waitFor(() =>
-    expect(screen.getByTestId("user-bulk-stop")).toBeDisabled(),
+    expect(screen.queryByTestId("user-bulk-stop")).not.toBeInTheDocument(),
   );
   expect(screen.getByText(/실제 접근권한 적용 전인/)).toBeInTheDocument();
 });

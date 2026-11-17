@@ -31,13 +31,26 @@ export function BusinessUsersScreen({
   onDirtyChange,
   onCommitted,
 }: BusinessUsersScreenProps) {
-  const [draft, setDraft] = useState({ q: "", businessRole: "", status: "" });
+  const [draft, setDraft] = useState({ q: "", role: "", status: "", includeStopped: false });
   const [filters, setFilters] = useState<api.BusinessUserFilters>({
     page: 1,
     size: pageSize,
     sort: "name",
     direction: "ASC",
   });
+  const [roleOptions, setRoleOptions] = useState<{roleId:string;name:string}[]>([]);
+  const [roleError, setRoleError] = useState<unknown>();
+  async function loadRoles() {
+    setRoleError(undefined);
+    try { setRoleOptions(await api.getManagedUserRoleOptions()); }
+    catch(e) { setRoleError(e); }
+  }
+  useEffect(() => {
+    void loadRoles();
+    const refresh = () => { void loadRoles(); };
+    window.addEventListener("sicost:configuration-committed", refresh);
+    return () => window.removeEventListener("sicost:configuration-committed", refresh);
+  }, []);
   const [data, setData] = useState<api.BusinessUsersPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -91,9 +104,8 @@ export function BusinessUsersScreen({
     setFilters((previous) => ({
       ...previous,
       q: draft.q.trim() || undefined,
-      businessRole: (draft.businessRole || undefined) as
-        | api.BusinessRole
-        | undefined,
+      role: draft.role || undefined,
+      includeStopped: draft.includeStopped || undefined,
       status: (draft.status || undefined) as
         | api.BusinessUser["status"]
         | undefined,
@@ -101,7 +113,7 @@ export function BusinessUsersScreen({
     }));
   }
   function reset() {
-    setDraft({ q: "", businessRole: "", status: "" });
+    setDraft({ q: "", role: "", status: "", includeStopped: false });
     setFilters({ page: 1, size: filters.size, sort: "name", direction: "ASC" });
   }
   function sort(id: string) {
@@ -127,9 +139,9 @@ export function BusinessUsersScreen({
     "name",
     "email",
     "roles",
+    "assignedParts",
     "status",
     "lastLoginAt",
-    "assignedParts",
   ].map((id) => ({
     id,
     label: labels[id],
@@ -216,6 +228,7 @@ export function BusinessUsersScreen({
             등록
           </button>
         </div>
+        {roleError != null && <ErrorBanner message={roleError instanceof Error ? roleError.message : "역할을 불러오지 못했습니다."} onRetry={() => void loadRoles()} />}
         <FilterBar
           testId="business-users-filter-form"
           resetTestId="business-users-reset"
@@ -227,14 +240,13 @@ export function BusinessUsersScreen({
             역할
             <select
               data-testid="business-users-role-filter"
-              value={draft.businessRole}
+              value={draft.role}
               onChange={(e) =>
-                setDraft({ ...draft, businessRole: e.target.value })
+                setDraft({ ...draft, role: e.target.value })
               }
             >
               <option value="">전체</option>
-              <option value="PM">PM</option>
-              <option value="SALES_LDR">SALES_LDR</option>
+              {roleOptions.map(option => <option key={option.roleId} value={option.roleId}>{option.name}</option>)}
             </select>
           </label>
           <label className="sicost-field">
@@ -250,6 +262,7 @@ export function BusinessUsersScreen({
               <option value="STOP">중지</option>
             </select>
           </label>
+          <label className="sicost-field"><input type="checkbox" checked={draft.includeStopped} onChange={e => setDraft({...draft, includeStopped: e.target.checked})} />사용 중지 포함</label>
           <label className="sicost-field businessusers-search">
             이름
             <input
@@ -262,7 +275,28 @@ export function BusinessUsersScreen({
           </label>
         </FilterBar>
         <div className="businessusers-toolbar">
-          <span>총 {data?.total ?? 0}건</span>
+          {!Object.keys(selected).length && <span>총 {data?.total ?? 0}건</span>}
+        <UserBulkStatusToolbar
+          onClear={() => setSelected({})}
+          onSelectAll={async () => {
+            try {
+              const all: Record<string, api.BusinessUser> = {};
+              for(let page=1; ; page++) {
+                const result = await api.getBusinessUsers({...filters,page,size:100});
+                result.items.forEach(row => {all[row.userId]=row;});
+                if(page*100 >= result.total || !result.items.length) break;
+              }
+              setSelected(all);
+            } catch(e) { setError(e); }
+          }}
+          selected={Object.values(selected)}
+          onCommitted={async () => {
+            await load();
+            setSelected({});
+            await onCommitted?.();
+          }}
+        />
+
           <div>
             {onColumnsChange && (
               <button
@@ -298,14 +332,6 @@ export function BusinessUsersScreen({
             )}
           </p>
         )}
-        <UserBulkStatusToolbar
-          selected={Object.values(selected)}
-          onCommitted={async () => {
-            await load();
-            setSelected({});
-            await onCommitted?.();
-          }}
-        />
         {error != null && (
           <ErrorBanner
             message={
@@ -398,7 +424,7 @@ export function BusinessUsersScreen({
           onSaved={async (result) => {
             setForm(undefined);
             setDetail(result.user.userId);
-            setNotice(result.message);
+            setNotice(form.user ? result.message : "등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.");
             api.notifyBusinessUsersCommitted();
             try {
               await Promise.all([load(), Promise.resolve(onCommitted?.())]);

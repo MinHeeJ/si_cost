@@ -95,13 +95,13 @@ class PermissionSettingsDatabaseTest {
     @Test void partAndProjectScopesAreBothPreservedWithCurrentSeoulMonthAndSortedDeduplicatedParts() {
         part("CP1","나 파트","N","202601","202607");part("CP2","가 파트","N","202607",null);
         part("FUT","미래 파트","N","202608",null);part("PAST","과거 파트","N","202601","202606");
-        part("HEAD","본사 시험","Y",null,null);scope(1,"PART","HEAD",null);scope(2,"PART","HEAD",null);
+        scope(1,"PART","HQ",null);scope(2,"PART","HQ",null);
         String project="PROJTEST";
         sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES(?,'권한 시험 프로젝트','TK','END','2020-01-01','2020-12-31',0,0,0,'admin')",project);
         scope(3,"PROJ",null,project);scope(4,"PROJ",null,project);
         var before=snapshot();var result=service.getCurrentUserPermissionSettings();
-        assertThat(result.assignedParts()).extracting(PermissionSettingsDtos.AssignedPart::partId).containsExactly("CP2","CP1","HEAD");
-        assertThat(result.rowScope().partIds()).containsExactly("CP1","CP2","HEAD");
+        assertThat(result.assignedParts()).extracting(PermissionSettingsDtos.AssignedPart::partId).containsExactly("CP2","CP1","HQ");
+        assertThat(result.rowScope().partIds()).containsExactly("CP1","CP2","HQ");
         assertThat(result.rowScope().projectIds()).containsExactly(project);assertThat(result.assignedProjects()).hasSize(2);
         assertThat(snapshot()).isEqualTo(before);
     }

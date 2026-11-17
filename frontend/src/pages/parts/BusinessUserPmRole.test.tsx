@@ -7,13 +7,10 @@ import * as api from "../businessusers/businessUsersApi";
 vi.mock("../businessusers/businessUsersApi");
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(api.getBusinessRoleOptions).mockResolvedValue({
-    items: [],
-    roleOptions: [
+  vi.mocked(api.getManagedUserRoleOptions).mockResolvedValue([
       { roleId: "PM", name: "프로젝트 담당" },
       { roleId: "SALES_LDR", name: "영업 파트장" },
-    ],
-  });
+    ]);
 });
 it("UI-23 연결잔존409는 해제안내와 다른역할·입력을 유지한다", async () => {
   vi.mocked(api.putBusinessUser).mockRejectedValue(
@@ -58,7 +55,8 @@ it("UI-23 연결잔존409는 해제안내와 다른역할·입력을 유지한�
   expect(api.putBusinessUser).toHaveBeenCalledWith("pm12", {
     name: "PM 사용자",
     email: "pm@example.org",
-    businessRoleIds: ["SALES_LDR"],
+    roleIds: ["SALES_LDR"],
+    headOffice: false,
     expectedRevision: "before",
   });
   expect(onSaved).not.toHaveBeenCalled();

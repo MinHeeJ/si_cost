@@ -15,15 +15,7 @@
     WHERE ur.user_id=#{userId} GROUP BY a.menu_id ORDER BY a.menu_id
   </select>
   <select id="assignedParts" resultType="com.sicost.currentuserops.PermissionSettingsDtos$AssignedPart">
-    SELECT p.part_id AS "partId",p.part_nm AS "name",p.hq_yn='Y' AS "headOffice"
-    FROM tb_bs_part p WHERE p.part_id IN (
-      SELECT s.part_id FROM tb_bs_part_std s JOIN tb_bs_part normal ON normal.part_id=s.part_id AND normal.hq_yn='N'
-      WHERE s.part_ldr_user_id=#{userId} AND s.aply_bgn_ym &lt;= #{month}
-        AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month})
-      UNION
-      SELECT s.part_id FROM tb_sy_user_scope s JOIN tb_bs_part hq ON hq.part_id=s.part_id AND hq.hq_yn='Y'
-      WHERE s.user_id=#{userId} AND s.scope_type_cd='PART')
-    ORDER BY p.part_nm,p.part_id
+    <include refid="com.sicost.businessusers.BusinessUserMapper.assignedPartSource"/>
   </select>
   <select id="assignedProjects" resultType="com.sicost.currentuserops.PermissionSettingsDtos$AssignedProject">
     SELECT proj_id AS "projectId",scope_sn::integer AS "scopeSn" FROM tb_sy_user_scope

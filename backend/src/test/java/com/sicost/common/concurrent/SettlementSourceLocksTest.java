@@ -111,4 +111,29 @@ class SettlementSourceLocksTest {
             verifyNoInteractions(mapper,advisory);
         } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
     }
+    @Test void ordinaryFlowsMayStillAddLockTargetsInTheSameTransactionAsBeforeRequirement17() {
+        // 배정 후보 확정: 먼저 후보·개발자·프로젝트·급여월을 잠그고, 배정 생성이 새 배정 ID 를 더한다(미리 잠글 수 없는 새 값).
+        var first = List.of("TENT:1", "DEV:D-001", "PROJECT:P-001", "PAY:202607", "PAY:202608");
+        var additions = List.of(List.of("ASGN:A-0001"), List.of("PAY:202609"), List.of("DEV:D-002"), List.of("ASGN:A-0002", "PAY:202610"));
+        for (var added : additions) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+            try {
+                locks.lock(first); clearInvocations(mapper, advisory);
+                var second = new java.util.ArrayList<>(first); second.addAll(added);
+                locks.lock(second);
+                for (String key : added) verify(advisory).lock(key);
+            } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
+        }
+    }
+    @Test void userRoleAndMenuCommandsMustStillNameEveryTargetInTheFirstLock() {
+        for (var added : List.of(List.of("USER:aa11"), List.of("TB_SY_ROLE"), List.of("TB_SY_MENU"))) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+            try {
+                locks.lock(List.of("DEV:D-001")); clearInvocations(mapper, advisory);
+                assertThatThrownBy(() -> locks.lock(added))
+                    .as(added.toString()).isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.code()).isEqualTo("STALE_WRITE"));
+                verifyNoInteractions(mapper, advisory);
+            } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
+        }
+    }
 }

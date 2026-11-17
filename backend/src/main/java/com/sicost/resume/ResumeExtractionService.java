@@ -44,7 +44,7 @@ public class ResumeExtractionService {
 class ResumeExtractionController {
     private final ResumeExtractionService service;
     ResumeExtractionController(ResumeExtractionService service){this.service=service;}
-    @PostMapping(value="/api/resume-extractions",name="createResumeExtraction",consumes="multipart/form-data")
+    @PostMapping(value="/api/resume-extractions",consumes="multipart/form-data")
     ApiResponse<Extraction> extract(MultipartHttpServletRequest request)throws java.io.IOException, jakarta.servlet.ServletException {
         var parts=request.getParts();
         request.getParameterMap().keySet().forEach(key->{if(!key.equals("targetType"))throw ResumeDocumentParser.error(400,"file과 targetType만 입력해 주세요.");});if(parts.size()!=2||parts.stream().anyMatch(p->!Set.of("file","targetType").contains(p.getName()))||request.getFiles("file").size()!=1||request.getParameterValues("targetType")==null||request.getParameterValues("targetType").length!=1)

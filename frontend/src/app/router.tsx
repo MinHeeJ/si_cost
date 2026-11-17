@@ -1263,11 +1263,7 @@ function RegisteredApplication() {
             <PermissionSettingsPanel key={settingsVersion} />
           </>
         ),
-        "UI-25": (
-          <SharedScreenFrame screenId="UI-25" periodBar={null}>
-            <MenusScreen onDirtyChange={setMenusDirty} />
-          </SharedScreenFrame>
-        ),
+        "UI-25": <MenusScreen onDirtyChange={setMenusDirty} />,
       }}
       renderSettings={(open, onClose) => (
         <PreferenceSettings open={open} onClose={onClose} />

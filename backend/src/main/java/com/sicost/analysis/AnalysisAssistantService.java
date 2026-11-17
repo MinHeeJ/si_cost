@@ -70,11 +70,10 @@ public class AnalysisAssistantService {
         return new Page(selected.stream().map(r->new Summary(r.qnaId(),r.question(),r.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),r.status(),r.provisional().equals("Y"))).toList(),next,more);
     }
     public Detail detail(String id) {
-        if(id==null||!id.matches("[1-9][0-9]{0,11}"))throw invalid("qnaId");String user=users.userId();var row=mapper.find(user,id);if(row==null)throw missing();
+        if(id==null||!id.matches("[1-9][0-9]{0,11}"))throw missing();String user=users.userId();var row=mapper.find(user,id);if(row==null)throw missing();
         try {var result=json.readValue(row.answer(),Result.class);policy.require(user,result.appliedScope());for(var table:result.tables())for(var r:table.rows())if(r.target()!=null)policy.require(user,new Scope(List.of(r.target()),List.of(),null,null,result.appliedScope().baseDate(),result.appliedScope().baseMonth()));
             return new Detail(row.qnaId(),row.question(),row.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),row.status(),row.provisional().equals("Y"),result,row.description(),row.baseMonth()==null?null:row.baseMonth().substring(0,4)+"-"+row.baseMonth().substring(4),"질문 당시 결과 · "+result.dataAsOf());
-        }catch(ApiException e){if(e.status()==403)throw missing();throw e;}
-        catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new ApiException(500,"ANALYSIS_RECORD_ERROR","저장된 답변을 읽지 못했습니다.");}
+        }catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new ApiException(500,"ANALYSIS_RECORD_ERROR","저장된 답변을 읽지 못했습니다.");}
     }
     private Result failure(Accepted a,String status,String reason,AnalysisQuestionInterpreter.Intent i){return new Result("1",status.equals("ERR")?"오류 · "+reason:"답할 수 없음 · "+reason,List.of(),List.of(),List.of(reason),List.of(),List.of("질문 기록 확인 후 다시 질문해 주세요."),a.question().context(),new Scope(List.of(),List.of(),i.from().toString(),i.to().toString(),a.at().toLocalDate(),i.prediction()?YearMonth.from(a.at()).toString():i.to().toString()),status,reason,List.of(),new Interpreter("SERVER_RULE",null,"서버 규칙으로 해석·외부 모델 미사용"),a.at());}
     private static ApiException invalid(String field){return new ApiException(400,"INVALID_INPUT","질문은 1~1000자, 문맥과 조회 조건은 지정된 형식으로 입력해 주세요.",field,null);}

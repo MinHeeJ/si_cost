@@ -38,7 +38,7 @@ class DeveloperImportIssuesTest {
     @MockBean CurrentUserMapper users;
     @MockBean AccessLogMapper logs;
     @MockBean PlatformTransactionManager transactions;
-    @BeforeEach void setup(){when(users.findAdministrator()).thenReturn("admin");when(users.findAdministratorRoles()).thenReturn(List.of("ADMIN"));
+    @BeforeEach void setup(){when(users.findAdministrator()).thenReturn("admin");when(users.findAdministratorRoles()).thenReturn(List.of("ADMIN"));when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(transactions.getTransaction(any())).thenAnswer(c->new SimpleTransactionStatus());when(logs.insert(any())).thenReturn(1);when(mapper.exists(17)).thenReturn(true);}
     @ParameterizedTest @ValueSource(strings={"B7","B8"})
     void metadataSelectsKindScreenAndFilenameWithoutChangingB7(String form) throws Exception {

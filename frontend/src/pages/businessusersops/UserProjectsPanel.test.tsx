@@ -57,7 +57,7 @@ const project = (
   status,
   contractType: "TK",
   startDate: "2024-01-01",
-  endDate: "2024-12-31",
+  endDate: status === "ING" || status === "PRE" ? "2027-12-31" : "2024-12-31",
   contractAmount: "999999999999999",
   customerName: null,
   personCount: 0,
@@ -350,8 +350,26 @@ it("existing detail basic information and history remain alongside assigned proj
     <BusinessUserDetail id={user.userId} onClose={vi.fn()} onEdit={vi.fn()} />,
   );
   expect(await screen.findByText(user.email)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "담당 프로젝트" }));
   expect(await screen.findByText("계약 P-601")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("tab", { name: "변경이력" }));
   expect(await screen.findByText("변경 이력이 없습니다.")).toBeInTheDocument();
-  expect(screen.getByText("계약 P-601")).toBeInTheDocument();
+  expect(screen.queryByText("계약 P-601")).not.toBeInTheDocument();
+});
+
+it.each([["2026-06-14",true],["2026-06-15",false],["2026-06-16",false]] as const)("신규 지정 계약 종료일 %s, 서버 오늘 경계",async(endDate,disabled)=>{
+  vi.mocked(api.searchUserProjects).mockResolvedValue({items:[{...project("P-602","ING"),endDate}],total:1,page:1,size:20,year:2026,unassignedCount:0});
+  const dialog=await open();
+  const choose=await within(dialog).findByRole("button",{name:"선택"});
+  if(disabled) expect(choose).toBeDisabled(); else expect(choose).not.toBeDisabled();
+});
+
+it("프로젝트 검색 빈 상태 안에서 조건을 초기화한다",async()=>{
+  vi.mocked(api.searchUserProjects).mockResolvedValue({items:[],total:0,page:1,size:20,year:2026,unassignedCount:0});
+  const dialog=await open();
+  fireEvent.change(within(dialog).getByLabelText("프로젝트 검색"),{target:{value:"없는 프로젝트"}});
+  await userEvent.click(within(dialog).getByRole("button",{name:"조회"}));
+  await userEvent.click(await within(dialog).findByRole("button",{name:"조건 초기화"}));
+  expect(within(dialog).getByLabelText("프로젝트 검색")).toHaveValue("");
+  await waitFor(()=>expect(api.searchUserProjects).toHaveBeenLastCalledWith({year:2026,status:"ING",page:1},expect.any(AbortSignal)));
 });

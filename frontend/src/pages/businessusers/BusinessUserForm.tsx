@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { UserProjectDialog, type UserProjectChoice } from "../businessusersops/UserProjectDialog";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
 import { ApiError } from "../../shared/api";
@@ -20,22 +21,25 @@ export function BusinessUserForm({
   const [userId, setUserId] = useState(user?.userId ?? "");
   const [name, setName] = useState(user?.name ?? ""),
     [email, setEmail] = useState(user?.email ?? "");
-  const [roles, setRoles] = useState<api.BusinessRole[]>(
-    user?.businessRoleIds ?? [initialRole],
+  const [roles, setRoles] = useState<string[]>(
+    user?.roleIds ?? user?.businessRoleIds ?? [initialRole],
   );
-  const [options, setOptions] = useState<api.BusinessRoleOption[]>([]),
+  const [options, setOptions] = useState<{roleId:string;name:string}[]>([]),
     [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false),
     [error, setError] = useState<unknown>();
   const [fields, setFields] = useState<Record<string, string>>({}),
     [discard, setDiscard] = useState(false);
+  const [headOffice, setHeadOffice] = useState(user?.headOffice ?? false);
+  const [projects, setProjects] = useState<(UserProjectChoice & {confirmed:boolean})[]>([]);
+  const [choosingProject, setChoosingProject] = useState(false);
   const saving = useRef(false);
-  const dirty =
+  const dirty = headOffice !== (user?.headOffice ?? false) || projects.length > 0 ||
     userId !== (user?.userId ?? "") ||
     name !== (user?.name ?? "") ||
     email !== (user?.email ?? "") ||
     [...roles].sort().join(",") !==
-      [...(user?.businessRoleIds ?? [initialRole])].sort().join(",");
+      [...(user?.roleIds ?? user?.businessRoleIds ?? [initialRole])].sort().join(",");
   useEffect(() => {
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
@@ -54,7 +58,7 @@ export function BusinessUserForm({
     setLoading(true);
     setError(undefined);
     try {
-      setOptions((await api.getBusinessRoleOptions()).roleOptions);
+      setOptions(await api.getManagedUserRoleOptions());
     } catch (e) {
       setError(e);
     } finally {
@@ -81,8 +85,8 @@ export function BusinessUserForm({
       !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())
     )
       next.email = "올바른 이메일을 입력해 주세요.";
-    if (!user && !roles.length)
-      next.businessRoleIds = "업무 역할을 하나 이상 선택해 주세요.";
+    if (!roles.length)
+      next.roleIds = "역할을 하나 이상 선택해 주세요.";
     setFields(next);
     if (Object.keys(next).length) return;
     saving.current = true;
@@ -92,14 +96,15 @@ export function BusinessUserForm({
       const body = {
         name: name.trim(),
         email: email.trim(),
-        businessRoleIds: roles,
+        roleIds: roles,
+        headOffice,
       };
       const result = user
         ? await api.putBusinessUser(user.userId, {
             ...body,
             expectedRevision: user.revision,
           })
-        : await api.createBusinessUser({ ...body, userId: userId.trim() });
+        : await api.createBusinessUser({ ...body, userId: userId.trim(), projectAssignments: (roles.includes("PM") ? projects : []).map(({project,pm,confirmed}) => ({projectId:project.id, expectedRevision:pm.revision, replaceConfirmed:confirmed})) });
       onDirtyChange?.(false);
       await onSaved(result);
     } catch (e) {
@@ -113,9 +118,10 @@ export function BusinessUserForm({
   return (
     <>
       <Dialog
-        open
+        open={!choosingProject}
         title={user ? "사용자 수정" : "사용자 등록"}
         pending={pending}
+        confirmDisabled={loading || !options.length}
         onCancel={close}
         onConfirm={save}
         confirmLabel="저장"
@@ -147,7 +153,7 @@ export function BusinessUserForm({
             error={fields.email}
           />
           <fieldset disabled={pending || loading}>
-            <legend>업무 역할</legend>
+            <legend>역할</legend>
             {loading ? (
               <p role="status">역할을 불러오는 중입니다.</p>
             ) : (
@@ -172,16 +178,16 @@ export function BusinessUserForm({
                 </label>
               ))
             )}
-            {fields.businessRoleIds && (
+            {(fields.roleIds || fields.businessRoleIds) && (
               <p role="alert" className="sicost-field-error">
-                {fields.businessRoleIds}
+                {fields.roleIds || fields.businessRoleIds}
               </p>
             )}
           </fieldset>
-          <p className="sicost-banner sicost-tone-info">
-            PM·파트장은 업무 자격입니다. 상태·비밀번호·인증 정보와 다른 역할은
-            변경하지 않습니다.
-          </p>
+          <label className="sicost-field">담당파트<select value={headOffice ? "HQ" : ""} disabled={pending} onChange={e=>setHeadOffice(e.target.value === "HQ")}><option value="">–</option><option value="HQ">본사(직접 영업)</option></select></label>
+          <p>영업1·영업2 같은 영업 파트의 파트장은 기준정보 › 거래처·영업 파트에서 정합니다.</p>
+          {!user && roles.includes("PM") && <fieldset disabled={pending}><legend>담당프로젝트</legend>{projects.map(item=><p key={item.project.id}>{item.project.name} ({item.project.id}) <button type="button" onClick={()=>setProjects(v=>v.filter(p=>p.project.id !== item.project.id))}>선택 해제</button></p>)}<button type="button" onClick={()=>setChoosingProject(true)}>담당 프로젝트 추가</button></fieldset>}
+          <p className="sicost-banner sicost-tone-info">로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.</p>
           {user && <p>전체 표시 역할: {user.roles.join(", ")}</p>}
           {error != null && (
             <div role="alert" className="sicost-banner sicost-tone-bad">
@@ -201,6 +207,7 @@ export function BusinessUserForm({
           )}
         </div>
       </Dialog>
+      {choosingProject && <UserProjectDialog creating user={{userId:userId.trim(),name,email,roles:[],businessRoleIds:["PM"],status:"USE",lastLoginAt:null,revision:""}} pending={pending} onClose={()=>setChoosingProject(false)} onAssign={async (choice,confirmed)=>{setProjects(v=>[...v.filter(p=>p.project.id !== choice.project.id),{...choice,confirmed}]);setChoosingProject(false);}} />}
       <Dialog
         open={discard}
         title="저장하지 않은 내용이 있습니다."

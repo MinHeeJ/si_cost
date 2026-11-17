@@ -7,6 +7,12 @@ import static com.sicost.businessusers.BusinessUserDtos.*;
 
 @Mapper
 public interface BusinessUserMapper {
+    Role findRole(String roleId);
+    long activeAdministratorCount();
+    int greatestScopeSn(String userId);
+    Integer headOfficeScopeSn(String userId);
+    int insertHeadOffice(HeadOfficeWrite write);
+    int deleteHeadOffice(HeadOfficeWrite write);
     List<Stored> list(Filter filter);
     long count(Filter filter);
     Stored find(@Param("userId") String userId, @Param("lock") boolean lock);

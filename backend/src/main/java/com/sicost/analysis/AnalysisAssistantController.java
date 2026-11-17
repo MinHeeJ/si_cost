@@ -12,12 +12,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import static com.sicost.analysis.AnalysisAssistantDtos.*;
 
 @RestController
+@RequestMapping("/api/analysis/questions")
 public class AnalysisAssistantController {
     private final AnalysisAssistantService service;private final ExcelExportService excel;
     private final ExecutorService executor=new ThreadPoolExecutor(2,4,60,TimeUnit.SECONDS,new ArrayBlockingQueue<>(32),r->{var t=new Thread(r,"analysis-question");t.setDaemon(true);return t;});
     public AnalysisAssistantController(AnalysisAssistantService service,ExcelExportService excel){this.service=service;this.excel=excel;}
     @jakarta.annotation.PreDestroy public void close(){executor.shutdown();}
-    @PostMapping(value="/api/analysis/questions",name="createAnalysisQuestion",produces=MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(produces=MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter create(@RequestBody com.fasterxml.jackson.databind.JsonNode input,HttpServletRequest request) {
         requireQuery(request,Set.of());
         var accepted=service.accept(AnalysisQuestionInput.parse(input));var emitter=new SseEmitter(180_000L);
@@ -30,13 +31,13 @@ public class AnalysisAssistantController {
     // Disconnection does not cancel accepted work, and never replays a question.
     private static void requireQuery(HttpServletRequest request,Set<String> allowed){request.getParameterMap().forEach((key,values)->{if(!allowed.contains(key)||values.length!=1)throw new ApiException(400,"UNKNOWN_FIELD","허용되지 않은 조회 항목입니다.",key,null);});}
     private static void send(SseEmitter emitter,String name,Object data){try{emitter.send(SseEmitter.event().name(name).data(ApiResponse.ok(data)));}catch(IOException|IllegalStateException ignored){}}
-    @GetMapping(value="/api/analysis/questions",name="getAnalysisQuestions") public ApiResponse<Page> list(@RequestParam(required=false) String cursor,@RequestParam(defaultValue="50") int limit,HttpServletRequest request){requireQuery(request,Set.of("cursor","limit"));return ApiResponse.ok(service.page(cursor,limit));}
-    @GetMapping(value="/api/analysis/questions/{qnaId}",name="getAnalysisQuestion") public ApiResponse<Detail> detail(@PathVariable String qnaId,HttpServletRequest request){requireQuery(request,Set.of());return ApiResponse.ok(service.detail(qnaId));}
-    @GetMapping(value="/api/analysis/questions/{qnaId}/excel",name="getAnalysisQuestionExcel") public void excel(@PathVariable String qnaId,HttpServletRequest request,HttpServletResponse response)throws IOException {
+    @GetMapping public ApiResponse<Page> list(@RequestParam(required=false) String cursor,@RequestParam(defaultValue="50") int limit,HttpServletRequest request){requireQuery(request,Set.of("cursor","limit"));return ApiResponse.ok(service.page(cursor,limit));}
+    @GetMapping("/{qnaId}") public ApiResponse<Detail> detail(@PathVariable String qnaId,HttpServletRequest request){requireQuery(request,Set.of());return ApiResponse.ok(service.detail(qnaId));}
+    @GetMapping("/{qnaId}/excel") public void excel(@PathVariable String qnaId,HttpServletRequest request,HttpServletResponse response)throws IOException {
         requireQuery(request,Set.of());
-        var spec=new ExcelExportService.Specification("AI분석",qnaId,List.of(new ExcelExportService.Column("value","결과",ExcelExportService.CellType.TEXT)),"질문 "+qnaId,"원","UI-26");
+        var spec=new ExcelExportService.Specification("AI분석",null,List.of(new ExcelExportService.Column("value","결과",ExcelExportService.CellType.TEXT)),"질문 "+qnaId,"원","UI-26");
         try(var file=excel.generateWorkbook(spec,()->{
-            var detail=service.detail(qnaId);if(!detail.status().equals("OK"))throw new ApiException(409,"ANALYSIS_RESULT_NOT_EXPORTABLE","답변이 완료된 OK 결과만 다운로드할 수 있습니다.");
+            var detail=service.detail(qnaId);if(!detail.status().equals("OK"))throw new ApiException(409,"ANALYSIS_NOT_OK","답변이 완료된 OK 결과만 다운로드할 수 있습니다.");
             List<ExcelExportService.Sheet> sheets=new ArrayList<>();int index=0;
             for(var table:detail.result().tables()){
                 var columns=table.columns().stream().map(c->new ExcelExportService.Column(c.key(),c.label()+(c.unit().isEmpty()?"":" ("+c.unit()+")"),c.valueType().equals("DECIMAL")?ExcelExportService.CellType.NUMBER:ExcelExportService.CellType.TEXT)).toList();

@@ -7,14 +7,15 @@
     <where>
       <if test="q != null">AND (strpos(u.user_nm,#{q}) &gt; 0 OR strpos(u.user_id,#{q}) &gt; 0)</if>
       <if test="businessRole != null">AND EXISTS (SELECT 1 FROM tb_sy_user_role ur WHERE ur.user_id=u.user_id AND ur.role_id=#{businessRole})</if>
-      <if test="status != null">AND u.user_stat_cd=#{status}</if>
+      <if test="role != null">AND EXISTS (SELECT 1 FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id WHERE ur.user_id=u.user_id AND r.role_id=#{role} AND r.use_yn='Y')</if>
+      <choose><when test="status != null">AND u.user_stat_cd=#{status}</when><when test="!includeStopped">AND u.user_stat_cd IN ('USE','LOCK')</when></choose>
     </where>
   </sql>
   <select id="list" resultType="com.sicost.businessusers.BusinessUserDtos$Stored">
     SELECT <include refid="columns"/> FROM tb_sy_user u <include refid="filters"/>
     ORDER BY
     <choose><when test="sort == 'userId'">u.user_id</when><when test="sort == 'email'">u.email_addr</when>
-      <when test="sort == 'status'">u.user_stat_cd</when><when test="sort == 'lastLoginAt'">u.last_login_dttm</when>
+      <when test="sort == 'status'">CASE u.user_stat_cd WHEN 'USE' THEN 1 WHEN 'LOCK' THEN 2 ELSE 3 END</when><when test="sort == 'lastLoginAt'">u.last_login_dttm</when>
       <otherwise>u.user_nm</otherwise></choose>
     <choose><when test="direction == 'DESC'">DESC</when><otherwise>ASC</otherwise></choose> NULLS LAST,u.user_id ASC
     LIMIT #{size} OFFSET #{offset}
@@ -29,7 +30,7 @@
   </select>
   <select id="availableRoles" resultType="com.sicost.businessusers.BusinessUserDtos$Role">
     SELECT role_id AS "roleId",role_nm AS "name",use_yn AS "useYn" FROM tb_sy_role
-    WHERE role_id IN ('PM','SALES_LDR') AND use_yn='Y' ORDER BY role_id
+    WHERE use_yn='Y' ORDER BY role_id
   </select>
   <select id="snapshot" resultType="string" useCache="false" flushCache="true">
     SELECT jsonb_build_object('user',jsonb_build_object('userId',u.user_id,'name',u.user_nm,'email',u.email_addr,
@@ -42,13 +43,16 @@
   <select id="headOffice" resultType="boolean">
     SELECT EXISTS(SELECT 1 FROM tb_sy_user_scope WHERE user_id=#{userId} AND scope_type_cd='PART' AND part_id='HQ' AND proj_id IS NULL)
   </select>
-  <select id="assignedParts" resultType="com.sicost.businessusers.BusinessUserDtos$AssignedPart">
+  <sql id="assignedPartSource">
     SELECT p.part_id AS "partId",p.part_nm AS "name",p.part_id='HQ' AS "headOffice" FROM tb_bs_part p
     WHERE (p.hq_yn='N' AND EXISTS(SELECT 1 FROM tb_bs_part_std s WHERE s.part_id=p.part_id
       AND s.part_ldr_user_id=#{userId} AND s.aply_bgn_ym &lt;= #{month} AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month})))
       OR (p.part_id='HQ' AND EXISTS(SELECT 1 FROM tb_sy_user_scope s WHERE s.user_id=#{userId}
         AND s.scope_type_cd='PART' AND s.part_id=p.part_id AND s.proj_id IS NULL))
-    ORDER BY p.part_nm,p.part_id
+    ORDER BY p.part_nm COLLATE "C",p.part_id
+  </sql>
+  <select id="assignedParts" resultType="com.sicost.businessusers.BusinessUserDtos$AssignedPart">
+    <include refid="assignedPartSource"/>
   </select>
   <select id="lockUser" resultType="string">SELECT pg_advisory_xact_lock(hashtextextended('USER:' || #{userId},0))::text</select>
   <select id="connectedProjects" resultType="string">
@@ -63,9 +67,21 @@
   </insert>
   <update id="update">UPDATE tb_sy_user SET user_nm=#{input.name},email_addr=#{input.email},mod_user_id=#{actor},mod_dttm=#{now} WHERE user_id=#{userId}</update>
   <insert id="link">INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id,reg_dttm) VALUES(#{userId},#{roleId},#{actor},#{now})</insert>
-  <delete id="unlink">DELETE FROM tb_sy_user_role WHERE user_id=#{userId} AND role_id IN ('PM','SALES_LDR') AND role_id=#{roleId}</delete>
+  <delete id="unlink">DELETE FROM tb_sy_user_role WHERE user_id=#{userId} AND role_id=#{roleId}</delete>
   <select id="leaderParts" resultType="string">
     SELECT DISTINCT p.part_nm FROM tb_bs_part p JOIN tb_bs_part_std s ON s.part_id=p.part_id
     WHERE p.hq_yn='N' AND s.part_ldr_user_id=#{userId} AND (s.aply_end_ym IS NULL OR s.aply_end_ym &gt;= #{month}) ORDER BY p.part_nm
   </select>
+  <select id="findRole" resultType="com.sicost.businessusers.BusinessUserDtos$Role">
+    SELECT role_id AS "roleId",role_nm AS "name",use_yn AS "useYn" FROM tb_sy_role WHERE role_id=#{roleId}
+  </select>
+  <select id="activeAdministratorCount" resultType="long">
+    SELECT count(*) FROM tb_sy_user u WHERE u.user_stat_cd='USE' AND EXISTS(SELECT 1 FROM tb_sy_user_role ur
+      JOIN tb_sy_role r ON r.role_id=ur.role_id WHERE ur.user_id=u.user_id AND r.role_id='ADMIN' AND r.use_yn='Y')
+  </select>
+  <select id="greatestScopeSn" resultType="int">SELECT COALESCE(max(scope_sn),0) FROM tb_sy_user_scope WHERE user_id=#{userId}</select>
+  <select id="headOfficeScopeSn" resultType="int">SELECT scope_sn FROM tb_sy_user_scope WHERE user_id=#{userId} AND scope_type_cd='PART' AND part_id='HQ' AND proj_id IS NULL</select>
+  <insert id="insertHeadOffice">INSERT INTO tb_sy_user_scope(user_id,scope_sn,scope_type_cd,part_id,proj_id,reg_user_id,reg_dttm)
+    VALUES(#{userId},#{scopeSn},'PART','HQ',NULL,#{actor},#{now})</insert>
+  <delete id="deleteHeadOffice">DELETE FROM tb_sy_user_scope WHERE user_id=#{userId} AND scope_sn=#{scopeSn} AND scope_type_cd='PART' AND part_id='HQ' AND proj_id IS NULL</delete>
 </mapper>

@@ -185,7 +185,7 @@ it("등록부의 준비·로그인·미등록·중지연결화면은 선택할 �
     items: [
       { screenId: "UI-20", name: "제외" },
       { screenId: "UI-22", name: "로그인" },
-      { screenId: "UI-01", name: "준비" },
+      { screenId: "UI-06", name: "준비" },
       { screenId: "UI-99", name: "미등록" },
       { screenId: "UI-02", name: "중지연결" },
       { screenId: "UI-03", name: "개인 원가·수익표" },

@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(ProjectPmController.class)
 @ContextConfiguration(classes=ProjectPmController.class)
 @Import({ProjectPmService.class,ProjectPmRepository.class,ProjectBudgetRepository.class,WriteCoordinator.class,
-    RevisionService.class,ChangeHistoryWriter.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
+    RevisionService.class,ChangeHistoryWriter.class,AccessLogWriter.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
 class ProjectPmContractTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -38,6 +38,7 @@ class ProjectPmContractTest {
     @MockBean ProjectBudgetMapper aggregate;
     @MockBean CurrentUserProvider users;
     @MockBean ChangeHistoryMapper audit;
+    @MockBean AccessLogMapper access;
     @MockBean AggregateLockMapper locks;
     @MockBean CommitInvalidation invalidation;
     @MockBean PlatformTransactionManager manager;
@@ -49,7 +50,7 @@ class ProjectPmContractTest {
     @BeforeEach void setup() {
         project=new ProjectSource("P-PM","ING",LocalDate.of(2027,12,31));
         scopes=new ArrayList<>();events=new ArrayList<>();children="persisted-body-parts-plans-expenses-distribution";
-        when(users.userId()).thenReturn("admin");
+        when(users.userId()).thenReturn("admin");when(audit.insert(any())).thenReturn(1);when(access.insert(any())).thenReturn(1);
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","임시 관리자",List.of("ADMIN"),true));
         when(clock.instant()).thenReturn(Instant.parse("2026-06-15T00:00:00Z"));when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));when(clock.withZone(any())).thenReturn(clock);
         when(manager.getTransaction(any())).thenAnswer(c -> new SimpleTransactionStatus());
@@ -71,7 +72,7 @@ class ProjectPmContractTest {
     org.springframework.test.web.servlet.ResultActions remove(ObjectNode input) throws Exception {
         return mvc.perform(delete("/api/projects/P-PM/pm").contentType("application/json").content(input.toString()));
     }
-    void noWrites() {verify(mapper,never()).insertScope(any());verify(mapper,never()).deleteScope(any());verify(mapper,never()).insertHistory(any());verifyNoInteractions(audit,invalidation);}
+    void noWrites() {verify(mapper,never()).insertScope(any());verify(mapper,never()).deleteScope(any());verify(mapper,never()).insertHistory(any());verifyNoInteractions(audit,invalidation,access);}
     void legacy() {scopes.add(new Scope("old-a",2,"P-PM","기존 A"));scopes.add(new Scope("old-b",5,"P-PM","기존 B"));}
     @Test void publicReadReturnsAllLegacyConnectionsAndCompleteRevisionWithoutChanges() throws Exception {
         legacy();String before=revision();
@@ -105,6 +106,7 @@ class ProjectPmContractTest {
             .andExpect(jsonPath("$.data.value.items[0].userId").value("chosen")).andExpect(jsonPath("$.data.value.items[0].scopeSn").value(13));
         assertThat(events).singleElement().satisfies(e -> {assertThat(e.before()).isNull();assertThat(e.after()).contains("chosen");assertThat(e.historySn()).isEqualTo(5);assertThat(e.actor()).isEqualTo("admin");});
         verify(audit).insert(argThat(h -> h.type().equals("NEW") && h.tableName().equals("TB_SY_USER_SCOPE") && h.userId().equals("admin")));
+        verify(access).insert(argThat(e->e.action().equals("AUTH_CHG") && e.userId().equals("admin") && e.screenId().equals("UI-23")));
         mvc.perform(get("/api/projects/P-PM/pm")).andExpect(jsonPath("$.data.revision").value(revision()));
     }
     @Test void preProjectAllowsAssignment() throws Exception {project=new ProjectSource(project.id(),"PRE",project.endDate());save(body()).andExpect(status().isOk());}

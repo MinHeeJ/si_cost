@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
+import { FilterBar } from "../../shared/FilterBar";
 import { Dialog } from "../../shared/Dialog";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -14,12 +15,14 @@ export type UserProjectChoice = {
 };
 export function UserProjectDialog({
   user,
+  creating = false,
   pending,
   onClose,
   onAssign,
   onDirtyChange,
 }: {
   user: BusinessUser;
+  creating?: boolean;
   pending: boolean;
   onClose(): void;
   onAssign(choice: UserProjectChoice, confirmed: boolean): Promise<void>;
@@ -50,14 +53,14 @@ export function UserProjectDialog({
     let active = true;
     setLoading(true);
     setError(undefined);
-    Promise.all([getPeriodContext(), getBusinessUserOptions("PM")])
+    Promise.all([getPeriodContext(), creating ? Promise.resolve({items: []}) : getBusinessUserOptions("PM")])
       .then(([period, options]) => {
         if (!active) return;
         const currentYear = Number(period.currentDate.slice(0, 4));
         setContext(period);
         setYear(currentYear);
         setEligible(
-          user.status === "USE" &&
+          creating || user.status === "USE" &&
             options.items.some((item) => item.userId === user.userId),
         );
         setFilters({ year: currentYear, status: "ING", page: 1 });
@@ -71,7 +74,7 @@ export function UserProjectDialog({
     return () => {
       active = false;
     };
-  }, [user.userId, refresh]);
+  }, [user.userId, refresh, creating]);
   useEffect(() => {
     if (!filters) return;
     const controller = new AbortController();
@@ -105,8 +108,16 @@ export function UserProjectDialog({
     if (dirty) setLeaving(true);
     else onClose();
   }
+  function resetSearch() {
+    if (!context) return;
+    const year = Number(context.currentDate.slice(0, 4));
+    setYear(year);
+    setStatus("ING");
+    setQ("");
+    setFilters({ year, status: "ING", page: 1 });
+  }
   async function submit() {
-    if (!selected || !eligible || pending || loading || error) return;
+    if (!selected || !eligible || pending || loading || error || !context || selected.project.endDate < context.currentDate) return;
     if (selected.pm.items.some((pm) => pm.userId !== user.userId)) {
       setReplacing(true);
       return;
@@ -125,6 +136,7 @@ export function UserProjectDialog({
         </StatusBadge>
       ),
     },
+    { id: "endDate", label: "계약 종료일", render: ({project}) => project.endDate },
     {
       id: "pm",
       label: "기존 PM 전체",
@@ -139,7 +151,7 @@ export function UserProjectDialog({
         <button
           type="button"
           data-testid={`user-project-select-${choice.project.id}`}
-          disabled={pending || !eligible}
+          disabled={pending || !eligible || !context || choice.project.endDate < context.currentDate}
           aria-pressed={selected?.project.id === choice.project.id}
           onClick={() => setSelected(choice)}
         >
@@ -175,7 +187,12 @@ export function UserProjectDialog({
               가능합니다.
             </p>
           )}
-          <div className="user-project-search">
+          <FilterBar embedded
+            onSubmit={() => year !== undefined && setFilters({year,status,q,page:1})}
+            onReset={resetSearch}
+            disabled={pending || loading || year === undefined}
+            searchTestId="user-project-query"
+          >
             <label className="sicost-field">
               조회 연도
               <select
@@ -226,17 +243,7 @@ export function UserProjectDialog({
                 onChange={(e) => setQ(e.target.value)}
               />
             </label>
-            <button
-              type="button"
-              data-testid="user-project-query"
-              disabled={pending || loading || year === undefined}
-              onClick={() =>
-                year !== undefined && setFilters({ year, status, q, page: 1 })
-              }
-            >
-              조회
-            </button>
-          </div>
+          </FilterBar>
           {error != null ? (
             <ErrorBanner
               message={
@@ -259,6 +266,7 @@ export function UserProjectDialog({
               rowKey={({ project }) => project.id}
               loading={loading}
               empty="선택할 수 있는 프로젝트가 없습니다."
+              emptyAction={<button type="button" onClick={resetSearch}>조건 초기화</button>}
               page={filters?.page ?? 1}
               size={20}
               total={data?.total ?? 0}

@@ -28,7 +28,7 @@ class PayrollUploadContractTest {
     @MockBean CurrentUserMapper users;
     @BeforeEach void setup() {
         when(users.findAdministrator()).thenReturn("admin");
-        when(users.findAdministratorRoles()).thenReturn(List.of("ADMIN"));
+        when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(mapper.list(any())).thenReturn(List.of());
     }
     @Test void publicRequestUsesServerActorAndStoredCountsWithDefaultPaging() throws Exception {

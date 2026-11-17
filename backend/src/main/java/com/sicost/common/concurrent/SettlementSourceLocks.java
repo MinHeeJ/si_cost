@@ -36,7 +36,9 @@ public class SettlementSourceLocks {
         List<String> keys = protectionKeys(aggregateKeys);
         if (keys.isEmpty()) throw new IllegalArgumentException("잠금 대상이 필요합니다.");
         var held = currentLocks();
-        if (held != null && !held.keys().containsAll(keys))
+        // 사용자·역할·메뉴 명령은 잠금 순서(역할 → 메뉴 → 사용자)가 정해져 있어 뒤늦게 대상을 더하면 교착 위험이 있다: 처음부터 전체 대상을 요구한다.
+        // 그 밖의 흐름(예: 배정 후보 확정이 새 배정 ID 를 두 번째 잠금에서 더하는 것)은 요구사항 17 이전과 같게 대상을 더 잠글 수 있다.
+        if (held != null && isOrderedCommand(aggregateKeys) && !held.keys().containsAll(keys))
             throw new ApiException(409,"STALE_WRITE","잠금 대상이 추가되었습니다. 전체 대상을 다시 조회해 새 transaction으로 요청해 주세요.");
         Sources sources = new Sources(values(keys, "PART:"), values(keys, "DEV:"), values(keys, "ASGN:"),
             values(keys, "PROJECT:"), values(keys, "PAY:"), values(keys, "USER:"));
@@ -58,6 +60,9 @@ public class SettlementSourceLocks {
         if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) return null;
         return org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations().stream()
             .filter(HeldLocks.class::isInstance).map(HeldLocks.class::cast).findFirst().orElse(null);
+    }
+    private static boolean isOrderedCommand(Collection<String> aggregateKeys) {
+        return aggregateKeys.stream().anyMatch(k -> k.startsWith("USER:") || k.equals(ROLE_RESOURCE) || k.equals(MENU_RESOURCE));
     }
     public static List<String> protectionKeys(Collection<String> aggregateKeys) {
         var keys = new TreeSet<>(ordered(aggregateKeys));

@@ -13,9 +13,9 @@ import static org.mockito.Mockito.*;
 class AccessLogWriterTest {
     @Test void analysisAllowsOnlyItsStructuredDownloadEvent(){
         when(users.userId()).thenReturn("admin");when(mapper.insert(any())).thenReturn(1);
-        writer.append(new AccessLogWriter.Event("DNLD","UI-26","12","AI분석",51L),new MockHttpServletRequest());
-        verify(mapper).insert(argThat(e->e.userId().equals("admin")&&e.screenId().equals("UI-26")&&e.action().equals("DNLD")&&e.description().equals("12 AI분석 51")));
-        for(var event:new AccessLogWriter.Event[]{new AccessLogWriter.Event("USER_REG","UI-26","12","AI분석",1L),new AccessLogWriter.Event("ACCT_VIEW","UI-26","12","AI분석",1L),new AccessLogWriter.Event("DNLD","UI-26","12","개발자",1L),new AccessLogWriter.Event("DNLD","UI-26",null,"AI분석",1L),new AccessLogWriter.Event("DNLD","UI-26","bad","AI분석",1L),new AccessLogWriter.Event("DNLD","UI-26","12","AI분석",null),new AccessLogWriter.Event("DNLD","UI-26","12","AI분석",-1L)})assertThatThrownBy(()->writer.append(event,new MockHttpServletRequest())).isInstanceOf(ApiException.class);
+        writer.append(new AccessLogWriter.Event("DNLD","UI-26",null,"AI분석",51L),new MockHttpServletRequest());
+        verify(mapper).insert(argThat(e->e.userId().equals("admin")&&e.screenId().equals("UI-26")&&e.action().equals("DNLD")&&e.description().equals("AI분석 51")));
+        for(var event:new AccessLogWriter.Event[]{new AccessLogWriter.Event("USER_REG","UI-26",null,"AI분석",1L),new AccessLogWriter.Event("ACCT_VIEW","UI-26",null,"AI분석",1L),new AccessLogWriter.Event("DNLD","UI-26",null,"개발자",1L),new AccessLogWriter.Event("DNLD","UI-26","1","AI분석",1L),new AccessLogWriter.Event("DNLD","UI-26",null,"AI분석",null),new AccessLogWriter.Event("DNLD","UI-26",null,"AI분석",-1L)})assertThatThrownBy(()->writer.append(event,new MockHttpServletRequest())).isInstanceOf(ApiException.class);
         verify(mapper,times(1)).insert(any());
     }
     @Test void financialTemplateAndIssuesRequireStructuredDownloadEvents() {

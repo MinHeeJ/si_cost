@@ -97,3 +97,13 @@ it("오류 envelope는 root field와 requestId를 유지하고 자동 재시도�
   await expect(api.getBusinessUser("ab12")).rejects.toBeInstanceOf(ApiError);
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
+it("관리 역할 선택지는 업무자격 옵션과 분리하고 전체 역할/중지포함 조건을 보낸다",async()=>{
+  const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({success:true,meta:{},data:{items:[{roleId:"FIN",name:"재무 담당"}]}})));
+  vi.stubGlobal("fetch",fetcher);
+  expect(await api.getManagedUserRoleOptions()).toEqual([{roleId:"FIN",name:"재무 담당"}]);
+  expect(fetcher.mock.calls[0][0]).toBe("/api/roles");
+  fetcher.mockResolvedValue(new Response(JSON.stringify({success:true,meta:{},data:{items:[]}})));
+  await api.getBusinessUsers({role:"FIN",includeStopped:true,status:"USE"});
+  const query=new URL(fetcher.mock.calls[1][0],"http://test").searchParams;
+  expect(Object.fromEntries(query)).toEqual({role:"FIN",includeStopped:"true",status:"USE"});
+});

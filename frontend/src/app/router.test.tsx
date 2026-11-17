@@ -831,13 +831,10 @@ beforeEach(() => {
     page: 1,
     size: 50,
   });
-  vi.mocked(users.getBusinessRoleOptions).mockResolvedValue({
-    items: [],
-    roleOptions: [
+  vi.mocked(users.getManagedUserRoleOptions).mockResolvedValue([
       { roleId: "PM", name: "프로젝트 담당" },
       { roleId: "SALES_LDR", name: "영업 파트장" },
-    ],
-  });
+    ]);
   vi.mocked(parts.getSalesParts).mockResolvedValue({
     items: [],
     total: 0,

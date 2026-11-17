@@ -147,10 +147,14 @@ class ProjectPartDatabaseTest {
         var actor=business.create(new BusinessUserDtos.Create(user,"PM 시험",user+"@example.org",List.of("PM","SALES_LDR")),new org.springframework.mock.web.MockHttpServletRequest()).user();
         sql.update("INSERT INTO tb_sy_user_scope(user_id,scope_sn,scope_type_cd,proj_id,reg_user_id) VALUES (?,1,'PROJ',?,'admin')",user,id);
         var before=sql.queryForList("SELECT * FROM tb_sy_user_role WHERE user_id=? ORDER BY role_id",user);
-        var input=new BusinessUserDtos.Edit(actor.name(),actor.email(),List.of("SALES_LDR"),actor.revision());
+        // 사용자 revision 은 담당 연결까지 포함한다(요구사항 17): 연결이 바뀐 뒤에는 현재 revision 을 다시 읽어야 한다.
+        var stale=new BusinessUserDtos.Edit(actor.name(),actor.email(),List.of("SALES_LDR"),actor.revision());
+        assertThatThrownBy(()->business.update(user,stale)).isInstanceOfSatisfying(ApiException.class,x->assertThat(x.code()).isEqualTo("STALE_WRITE"));
+        var input=new BusinessUserDtos.Edit(actor.name(),actor.email(),List.of("SALES_LDR"),business.get(user).revision());
         assertThatThrownBy(()->business.update(user,input)).isInstanceOfSatisfying(ApiException.class,x->assertThat(x.code()).isEqualTo("USER_IS_PROJECT_PM"));
         assertThat(sql.queryForList("SELECT * FROM tb_sy_user_role WHERE user_id=? ORDER BY role_id",user)).isEqualTo(before);
         sql.update("DELETE FROM tb_sy_user_scope WHERE user_id=? AND scope_sn=1",user);
-        assertThat(business.update(user,input).user().businessRoleIds()).containsExactly("SALES_LDR");
+        var detached=new BusinessUserDtos.Edit(actor.name(),actor.email(),List.of("SALES_LDR"),business.get(user).revision());
+        assertThat(business.update(user,detached).user().businessRoleIds()).containsExactly("SALES_LDR");
     }
 }

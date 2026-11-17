@@ -72,10 +72,7 @@ class OpenApiControllerRegistrationContractTest {
                     && entry.getKey().getMethodsCondition().getMethods().stream().anyMatch(m -> m.name().equalsIgnoreCase(method.toString())))
                     .toList();
                 assertThat(matches).as("%s %s", method, path).hasSize(1);
-                String mappingName = matches.get(0).getKey().getName();
-                // Explicit mapping names carry operationId without renaming existing Java callers.
-                assertThat(mappingName == null ? matches.get(0).getValue().getMethod().getName() : mappingName)
-                    .isEqualTo(operation.get("operationId"));
+                assertThat(matches.get(0).getValue().getMethod().getName()).isEqualTo(operation.get("operationId"));
                 assertThat(matches.get(0).getKey().getPatternValues()).hasSize(1);
             }
         }));

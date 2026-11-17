@@ -158,7 +158,7 @@ class BusinessUserContractTest {
         mvc.perform(put("/api/business-users/ab12").contentType("application/json").content(body.toString())).andExpect(status().isOk());
         verify(mapper).unlink(argThat(link->link.roleId().equals("PM")));
         verify(mapper,never()).unlink(argThat(link->link.roleId().equals("ADMIN")));
-        verify(history).insert(argThat(h->h.item().equals("업무 역할") && h.before().equals("PM") && h.after().equals("")));
+        verify(history).insert(argThat(h->h.tableName().equals("TB_SY_USER_ROLE") && h.targetKey().equals("ab12:PM") && h.type().equals("DEL") && h.before().equals("PM") && h.after()==null));
     }
     @Test void currentOrFutureStoppedPartLeaderCannotLoseQualification() throws Exception {
         roles=List.of(new Role("PM","프로젝트 담당","Y"),new Role("SALES_LDR","파트장","Y"));

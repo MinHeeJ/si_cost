@@ -47,7 +47,7 @@ class UploadIssuesContractTest {
         new Issue(3,"WARN",3,"상호","저장된 발췌…","같은 상호입니다."));
     @BeforeEach void setup() {
         when(users.findAdministrator()).thenReturn("admin");
-        when(users.findAdministratorRoles()).thenReturn(List.of("ADMIN"));
+        when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(transactions.getTransaction(any())).thenAnswer(call -> new SimpleTransactionStatus());
         when(logs.insert(any())).thenReturn(1);
         when(mapper.exists(17)).thenReturn(true);

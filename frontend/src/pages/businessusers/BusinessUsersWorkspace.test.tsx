@@ -10,6 +10,7 @@ let stored: Preference[];
 let api: PreferenceApi;
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(business.getManagedUserRoleOptions).mockResolvedValue([]);
   stored = [
     {
       type: "COLS",

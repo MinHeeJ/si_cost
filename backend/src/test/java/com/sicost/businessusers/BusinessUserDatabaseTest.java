@@ -84,7 +84,8 @@ class BusinessUserDatabaseTest {
         assertThat(sql.queryForList("SELECT * FROM tb_sy_role ORDER BY role_id")).isEqualTo(definitions);
         String response=mvc.perform(get("/api/business-users/ab12")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(response).doesNotContain("pwd","mfa","passwordHash");
-        assertThat(sql.queryForList("SELECT chg_type_cd,chg_item_nm,aft_val FROM tb_sy_chg_hist")).containsExactly(Map.of("chg_type_cd","NEW","chg_item_nm","등록","aft_val","ab12 사용자 ab12"));
+        assertThat(sql.queryForList("SELECT chg_type_cd,chg_item_nm,aft_val FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_USER'")).containsExactly(Map.of("chg_type_cd","NEW","chg_item_nm","등록","aft_val","ab12 사용자 ab12"));
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_chg_hist WHERE trgt_tbl_nm='TB_SY_USER_ROLE' AND trgt_key='ab12:PM' AND chg_type_cd='NEW'",Long.class)).isEqualTo(1);
     }
     @Test void accessFailureRollsBackUserRolesAndNewHistoryThroughHttp() throws Exception {
         sql.execute("ALTER TABLE tb_sy_accs_log ADD CONSTRAINT reject_user_registration CHECK(act_type_cd &lt;&gt; 'USER_REG')".replace("&lt;&gt;","<>"));
@@ -100,7 +101,7 @@ class BusinessUserDatabaseTest {
     @Test void listNameAndIdSubstringCombinedRoleStatusAndCountUseIdenticalPredicates() {
         create("ab12",List.of("PM"));create("ab13",List.of("SALES_LDR"));create("cd12",List.of("PM"));
         sql.update("UPDATE tb_sy_user SET user_stat_cd='LOCK' WHERE user_id='ab12'");sql.update("UPDATE tb_sy_user SET user_stat_cd='STOP' WHERE user_id='cd12'");
-        var all=service.list(BusinessUserInput.filter(Map.of()));assertThat(all.items()).extracting(User::status).contains("USE","LOCK","STOP");
+        var all=service.list(BusinessUserInput.filter(Map.of()));assertThat(all.items()).extracting(User::status).contains("USE","LOCK").doesNotContain("STOP");
         var filtered=service.list(BusinessUserInput.filter(Map.of("q","ab","businessRole","PM","status","LOCK")));
         assertThat(filtered.total()).isEqualTo(1);assertThat(filtered.items()).extracting(User::userId).containsExactly("ab12");
         assertThat(service.list(BusinessUserInput.filter(Map.of("q","사용자 ab1"))).total()).isEqualTo(2);
@@ -117,9 +118,10 @@ class BusinessUserDatabaseTest {
         var after=sql.queryForMap("SELECT * FROM tb_sy_user WHERE user_id='ab12'");
         for(String field:List.of("pwd_hash","pwd_chg_dttm","pwd_err_cnt","mfa_err_cnt","mfa_use_yn","mfa_code_hash","mfa_expr_dttm","last_login_dttm","temp_pwd_yn","user_stat_cd"))
             assertThat(Objects.equals(original.get(field),after.get(field))).isTrue();
-        assertThat(sql.queryForList("SELECT chg_item_nm FROM tb_sy_chg_hist ORDER BY chg_item_nm",String.class)).containsExactly("업무 역할","이름");
+        assertThat(sql.queryForList("SELECT chg_item_nm FROM tb_sy_chg_hist ORDER BY hist_id",String.class)).containsExactly("ROLE_ID","ROLE_ID","이름");
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_accs_log WHERE act_type_cd='AUTH_CHG'",Long.class)).isEqualTo(1);
         assertThat(service.update("ab12",edit(changed.user(),"새 이름",List.of("SALES_LDR"))).changed()).isFalse();
-        assertThat(sql.queryForMap("SELECT * FROM tb_sy_user WHERE user_id='ab12'").equals(after)).isTrue();assertThat(count("tb_sy_chg_hist","ab12")).isEqualTo(2);
+        assertThat(sql.queryForMap("SELECT * FROM tb_sy_user WHERE user_id='ab12'").equals(after)).isTrue();assertThat(count("tb_sy_chg_hist","ab12")).isEqualTo(1);
     }
     @Test void unchangedTimestampExternalEditAndFullRoleSetChangeBothInvalidateRevision() {
         User user=create("ab12",List.of("PM"));sql.update("UPDATE tb_sy_user SET user_nm='다른 이름' WHERE user_id='ab12'");cleanHistory();

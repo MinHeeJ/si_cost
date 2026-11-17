@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MenuService {
     public static final Set<String> SCREEN_IDS = Set.of("UI-16","UI-15","UI-02","UI-01","UI-31","UI-12","UI-05","UI-11","UI-28","UI-17","UI-29","UI-33","UI-13","UI-03","UI-04","UI-19","UI-32","UI-10","UI-07","UI-08","UI-09","UI-18","UI-21","UI-14","UI-26","UI-30","UI-23","UI-24","UI-25","UI-27");
-    public static final Set<String> IMPLEMENTED_BUSINESS_SCREEN_IDS = Set.of("UI-16","UI-02","UI-31","UI-12","UI-05","UI-11","UI-28","UI-17","UI-29","UI-33","UI-13","UI-03","UI-04","UI-19","UI-32","UI-10","UI-07","UI-08","UI-09","UI-18","UI-21","UI-14","UI-26","UI-30","UI-24","UI-25","UI-27");
+    public static final Set<String> IMPLEMENTED_BUSINESS_SCREEN_IDS = Set.of("UI-01","UI-15","UI-23","UI-16","UI-02","UI-31","UI-12","UI-05","UI-11","UI-28","UI-17","UI-29","UI-33","UI-13","UI-03","UI-04","UI-19","UI-32","UI-10","UI-07","UI-08","UI-09","UI-18","UI-21","UI-14","UI-26","UI-30","UI-24","UI-25","UI-27");
     public record ScreenRegistration(String screenId, String name, boolean implemented) {}
     public List<ScreenRegistration> screenRegistrations() {
         Map<String,String> names = new LinkedHashMap<>();

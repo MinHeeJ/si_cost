@@ -27,4 +27,8 @@ export const implementedBusinessScreenIds = new Set([
   "UI-24",
   "UI-25",
   "UI-27",
+  // 라우터가 공유 화면 틀 대신 자체 작업 화면으로 구현한 화면들(UI-01 대시보드 진입, UI-15 거래처, UI-23 사용자 관리)
+  "UI-01",
+  "UI-15",
+  "UI-23",
 ]);
