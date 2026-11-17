@@ -17,6 +17,7 @@ import { IndividualProfitabilityScreen } from "../shared/IndividualProfitability
 import { SharedApplication } from "../shared/SharedApplication";
 import * as shared from "../shared/sharedApi";
 import { ProfitabilityTable } from "./ProfitabilityTable";
+import { ProfitabilityColumnSettings } from "./ProfitabilityColumnSettings";
 import { ProfitabilityValue } from "./ProfitabilityValue";
 import {
   profitabilityColumns,
@@ -136,34 +137,37 @@ function Body() {
       ? table.amountUnit
       : "천원";
   return (
-    <ProfitabilityTable
-      rows={[row]}
-      rowKey={(item) => item.personId}
-      columns={profitabilityColumns.map((column) => ({
-        ...column,
-        render: (item: typeof row) =>
-          column.id === "name" ? (
-            item.name
-          ) : (
-            <ProfitabilityValue value={item.amount} unit={unit} />
-          ),
-      }))}
-      page={1}
-      total={101}
-      onPageChange={vi.fn()}
-      stickyColumns={[{ id: "name", width: 180 }]}
-      footer={{
-        label: "필터 전체 합계",
-        render: (column) =>
-          column.id === "name" ? "전체 합계" : "서버 전체합계",
-      }}
-      expandableRow={{
-        expandedKeys,
-        onExpandedChange: setExpandedKeys,
-        label: (item) => item.name,
-        render: () => <p>월별 원본금액(월평균 적용 전)</p>,
-      }}
-    />
+    <>
+      <ProfitabilityColumnSettings />
+      <ProfitabilityTable
+        rows={[row]}
+        rowKey={(item) => item.personId}
+        columns={profitabilityColumns.map((column) => ({
+          ...column,
+          render: (item: typeof row) =>
+            column.id === "name" ? (
+              item.name
+            ) : (
+              <ProfitabilityValue value={item.amount} unit={unit} />
+            ),
+        }))}
+        page={1}
+        total={101}
+        onPageChange={vi.fn()}
+        stickyColumns={[{ id: "name", width: 180 }]}
+        footer={{
+          label: "필터 전체 합계",
+          render: (column) =>
+            column.id === "name" ? "전체 합계" : "서버 전체합계",
+        }}
+        expandableRow={{
+          expandedKeys,
+          onExpandedChange: setExpandedKeys,
+          label: (item) => item.name,
+          render: () => <p>월별 원본금액(월평균 적용 전)</p>,
+        }}
+      />
+    </>
   );
 }
 function mount(api: PreferenceApi) {

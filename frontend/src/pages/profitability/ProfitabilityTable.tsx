@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { DataTable, type DataTableProps } from "../../shared/DataTable";
-import {
-  ColumnPreferencesDialog,
-  useTablePreferences,
-} from "../me/ColumnPreferencesDialog";
+import { useTablePreferences } from "../me/ColumnPreferencesDialog";
 import { usePreferences } from "../me/usePreferences";
 import { ErrorBanner } from "../../shared/Feedback";
 import { profitabilityColumns } from "./profitabilityColumns";
@@ -16,7 +13,6 @@ export type ProfitabilityTableProps<T> = Omit<
 /** UI-03 table boundary. The overview supplies API rows, totals and detail callbacks;
  * this component owns only presentation preferences, never financial calculations. */
 export function ProfitabilityTable<T>(props: ProfitabilityTableProps<T>) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
   const preferences = usePreferences();
   const table = useTablePreferences(
@@ -38,7 +34,6 @@ export function ProfitabilityTable<T>(props: ProfitabilityTableProps<T>) {
         dense={table.dense}
         size={props.size ?? size}
         testId="profitability-table"
-        onColumnsChange={() => setSettingsOpen(true)}
         onSizeChange={
           props.onSizeChange ??
           ((next) => {
@@ -56,15 +51,6 @@ export function ProfitabilityTable<T>(props: ProfitabilityTableProps<T>) {
         }
       />
       {saveError && <ErrorBanner message={saveError} />}
-      {settingsOpen && (
-        <ColumnPreferencesDialog
-          open
-          screenId="UI-03"
-          viewId="individualProfitability"
-          columns={profitabilityColumns}
-          onClose={() => setSettingsOpen(false)}
-        />
-      )}
     </div>
   );
 }

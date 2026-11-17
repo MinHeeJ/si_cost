@@ -193,7 +193,8 @@ export function WithdrawalContent({ year }: { year: number }) {
   const columns: Column<api.WithdrawalRow>[] = [
     {
       id: "name",
-      label: "이름", sortable: true,
+      label: "이름",
+      sortable: true,
       render: (row) => (
         <>
           <button
@@ -214,7 +215,8 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "project",
-      label: "프로젝트", sortable: true,
+      label: "프로젝트",
+      sortable: true,
       render: (row) => (
         <Link
           data-testid={`withdrawal-project-${row.assignmentId.toLowerCase()}`}
@@ -227,14 +229,21 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "job",
-      label: "직무", sortable: true,
+      label: "직무",
+      sortable: true,
       render: (row) =>
         jobs.find((j) => j.code === row.jobCode)?.name ?? row.jobCode,
     },
-    { id: "date", label: "철수일", sortable: true, render: (row) => row.withdrawalDate },
+    {
+      id: "date",
+      label: "철수일",
+      sortable: true,
+      render: (row) => row.withdrawalDate,
+    },
     {
       id: "days",
-      label: "남은 일수", sortable: true,
+      label: "남은 일수",
+      sortable: true,
       render: (row) => (
         <StatusBadge
           tone={
@@ -253,7 +262,8 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "history",
-      label: "연장·조기 철수", sortable: true,
+      label: "연장·조기 철수",
+      sortable: true,
       render: (row) => (
         <>
           연장 {row.extensionCount}회
@@ -265,9 +275,11 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "extension",
-      label: "연장 가능성", sortable: true,
+      label: "연장 가능성",
+      sortable: true,
       render: (row) => (
         <div
+          data-testid={`withdrawal-extension-container-${Array.from(row.assignmentId, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -294,9 +306,11 @@ export function WithdrawalContent({ year }: { year: number }) {
     },
     {
       id: "next",
-      label: "다음 배정", sortable: true,
+      label: "다음 배정",
+      sortable: true,
       render: (row) => (
         <div
+          data-testid={`withdrawal-next-container-${Array.from(row.assignmentId, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -314,6 +328,7 @@ export function WithdrawalContent({ year }: { year: number }) {
                   </summary>
                   {row.nextAssignments.map((next, index) => (
                     <div
+                      data-testid={`withdrawal-next-item-${Array.from(row.assignmentId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${index}`}
                       key={`${next.kind}-${next.assignmentId ?? next.tentativeAssignmentId}`}
                     >
                       <NextLink
@@ -480,7 +495,8 @@ export function WithdrawalContent({ year }: { year: number }) {
           onClick={() => {
             const next = !dense;
             setDensityPending(true);
-            void Promise.resolve().then(() => shared.saveDense?.(next))
+            void Promise.resolve()
+              .then(() => shared.saveDense?.(next))
               .then(() => setDense(next))
               .catch(setError)
               .finally(() => setDensityPending(false));
@@ -498,20 +514,38 @@ export function WithdrawalContent({ year }: { year: number }) {
         dense={dense}
         empty="조건에 맞는 철수 배정이 없습니다."
         emptyAction={
-          <button type="button" onClick={() => {
-            const filters = defaults();
-            setDraft(filters);
-            apply(filters);
-          }}>조건 초기화</button>
+          <button
+            type="button"
+            onClick={() => {
+              const filters = defaults();
+              setDraft(filters);
+              apply(filters);
+            }}
+          >
+            조건 초기화
+          </button>
         }
         page={query.page}
         size={query.size}
         total={data?.totalCount ?? 0}
-        sort={query.sort ? { id: query.sort, direction: query.direction ?? "ASC" } : undefined}
-        onSortChange={(id) => setQuery((old) => ({ ...old, sort: id as api.WithdrawalQuery["sort"], direction: old.sort === id && old.direction !== "DESC" ? "DESC" : "ASC", page: 1 }))}
+        sort={
+          query.sort
+            ? { id: query.sort, direction: query.direction ?? "ASC" }
+            : undefined
+        }
+        onSortChange={(id) =>
+          setQuery((old) => ({
+            ...old,
+            sort: id as api.WithdrawalQuery["sort"],
+            direction:
+              old.sort === id && old.direction !== "DESC" ? "DESC" : "ASC",
+            page: 1,
+          }))
+        }
         onPageChange={(page) => setQuery((v) => ({ ...v, page }))}
         onSizeChange={(size) => {
-          void Promise.resolve().then(() => shared.savePageSize?.(size))
+          void Promise.resolve()
+            .then(() => shared.savePageSize?.(size))
             .then(() => setQuery((v) => ({ ...v, size, page: 1 })))
             .catch(setError);
         }}

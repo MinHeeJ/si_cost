@@ -122,7 +122,10 @@ function ReceivablesContent({
       id: "sentHistory",
       label: "보낸 알림",
       render: (r) => (
-        <div className="billing-review-history">
+        <div
+          data-testid={`receivable-history-container-${Array.from(r.billId, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+          className="billing-review-history"
+        >
           {r.sentHistory.length
             ? r.sentHistory.map((h) => (
                 <p
@@ -150,12 +153,19 @@ function ReceivablesContent({
               >
                 <strong>{group.step}단계</strong>{" "}
                 {group.recipients.map((recipient) => (
-                  <span key={recipient.userId}>
+                  <span
+                    data-testid={`receivable-recipient-${Array.from(r.billId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${group.step}-${Array.from(String(recipient.userId), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                    key={recipient.userId}
+                  >
                     {recipient.name} ({recipient.roles.join("·")}){" "}
                   </span>
                 ))}
                 {group.unassignedReasons.map((reason) => (
-                  <p key={reason} className="billing-review-unassigned">
+                  <p
+                    data-testid={`receivable-unassigned-${Array.from(r.billId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${group.step}-${Array.from(reason, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                    key={reason}
+                    className="billing-review-unassigned"
+                  >
                     {reason}
                   </p>
                 ))}
@@ -247,7 +257,18 @@ function ReceivablesContent({
         rowKey={(r) => r.billId}
         loading={loading && !data}
         empty="입금 예정일이 지난 청구가 없습니다."
-        emptyAction={<button type="button" onClick={() => { setPage(1); setReload((r) => r + 1); }}>조건 초기화</button>}
+        emptyAction={
+          <button
+            data-testid="receivables-empty-reset"
+            type="button"
+            onClick={() => {
+              setPage(1);
+              setReload((r) => r + 1);
+            }}
+          >
+            조건 초기화
+          </button>
+        }
         page={page}
         size={size}
         total={data?.total ?? 0}

@@ -116,7 +116,7 @@ export function TentativeAssignmentSelector({
       )}
       {message && <p role="status">{message}</p>}
       {warnings.map((w, i) => (
-        <p key={i} role="note">
+        <p data-testid={`tentative-warning-${i}`} key={i} role="note">
           {w}
         </p>
       ))}
