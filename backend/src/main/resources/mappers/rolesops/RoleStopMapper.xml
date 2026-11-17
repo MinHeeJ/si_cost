@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.rolesops.RoleStopMapper">
+  <select id="connectedUsers" resultType="long">
+    SELECT count(*) FROM tb_sy_user_role WHERE role_id=#{roleId}
+  </select>
+  <select id="menuPermissions" resultType="com.sicost.rolesops.RoleStopDtos$Permission">
+    SELECT m.menu_id AS "menuId",COALESCE(a.inq_yn,'N')='Y' AS "inquire",COALESCE(a.reg_yn,'N')='Y' AS "register",
+      COALESCE(a.upd_yn,'N')='Y' AS "update",COALESCE(a.del_yn,'N')='Y' AS "delete",COALESCE(a.upld_yn,'N')='Y' AS "upload",
+      COALESCE(a.dnld_yn,'N')='Y' AS "download",COALESCE(a.cnfm_yn,'N')='Y' AS "confirm",
+      m.upper_menu_id AS "parentId",m.menu_nm AS "name",m.scrn_id AS "screenId",m.use_yn='Y' AS "use"
+    FROM tb_sy_menu m LEFT JOIN tb_sy_role_menu_auth a ON a.menu_id=m.menu_id AND a.role_id=#{roleId}
+    WHERE m.menu_lvl=2 ORDER BY m.upper_menu_id,m.sort_ord,m.menu_id
+  </select>
+  <update id="stop">
+    UPDATE tb_sy_role SET use_yn='N',mod_user_id=#{actor},mod_dttm=#{now} WHERE role_id=#{roleId}
+  </update>
+</mapper>

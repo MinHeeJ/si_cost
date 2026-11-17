@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { implementedBusinessScreenIds } from "./screenCapabilities";
 import { screenPeriods, type PeriodType } from "./periods";
 import { DashboardScreen } from "./DashboardScreen";
 import { BusinessPartnersScreen } from "./BusinessPartnersScreen";
@@ -64,10 +65,14 @@ const components: Record<string, ComponentType> = {
 };
 export const screenRegistry: Record<
   string,
-  { component: ComponentType; periodType: PeriodType }
+  { component: ComponentType; periodType: PeriodType; implemented: boolean }
 > = Object.fromEntries(
   Object.entries(components).map(([id, component]) => [
     id,
-    { component, periodType: screenPeriods[id] },
+    {
+      component,
+      periodType: screenPeriods[id],
+      implemented: implementedBusinessScreenIds.has(id),
+    },
   ]),
 );

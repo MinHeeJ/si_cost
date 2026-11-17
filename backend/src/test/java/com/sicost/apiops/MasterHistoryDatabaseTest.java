@@ -76,6 +76,9 @@ class MasterHistoryDatabaseTest {
         assertThat(user.items().get(0).afterValue()).isEqualTo("저장 당시 이름");
     }
     @Test void existingEmptyTargetAndMissingTargetAreDifferent() {
+        assertThat(read("ROLE","ADMIN",1,50).items()).isEmpty();
+        assertThatThrownBy(()->read("ROLE","missing-role",1,50))
+            .isInstanceOfSatisfying(com.sicost.common.api.ApiException.class,e->assertThat(e.code()).isEqualTo("NOT_FOUND"));
         assertThat(read("PART","PART-901",1,50).items()).isEmpty();
         assertThatThrownBy(()->read("PART","PART-absent",1,50))
             .isInstanceOfSatisfying(com.sicost.common.api.ApiException.class,e->assertThat(e.code()).isEqualTo("NOT_FOUND"));
@@ -84,5 +87,26 @@ class MasterHistoryDatabaseTest {
         history("TB_BS_CLNT","C-901","UPD","계좌","****1234","****5678","2026-01-01 00:00:00");
         var row=read("CLIENT","C-901",1,50).items().get(0);
         assertThat(row.beforeValue()).isEqualTo("****1234");assertThat(row.afterValue()).isEqualTo("****5678");
+    }
+    @Test void userRoleAndMenuHistoryUseExactOwnerKeysIncludingDetachedLinks() {
+        String menuId=sql.queryForObject("SELECT menu_id FROM tb_sy_menu WHERE scrn_id='UI-24'",String.class);
+        long user=history("TB_SY_USER","admin","UPD","USER_NM","이전","이후","2001-01-01 00:00:00");
+        long roleLink=history("TB_SY_USER_ROLE","admin:R-901","DEL","ROLE_ID","R-901",null,"2001-01-01 00:00:00");
+        long scopeLink=history("TB_SY_USER_SCOPE","admin:9","DEL","PROJ_ID","P-901",null,"2001-01-01 00:00:00");
+        long role=history("TB_SY_ROLE","ADMIN","UPD","DATA_SCOPE_CD","PART","ALL","2001-01-01 00:00:00");
+        long permission=history("TB_SY_ROLE_MENU_AUTH","ADMIN:"+menuId,"UPD","메뉴 권한","이전","이후","2001-01-01 00:00:00");
+        long menu=history("TB_SY_MENU",menuId,"UPD","MENU_NM","이전","이후","2001-01-01 00:00:00");
+        history("TB_SY_USER_ROLE","admin2:R-901","NEW","ROLE_ID",null,"R-901","2001-01-01 00:00:00");
+        history("TB_SY_ROLE_MENU_AUTH","ADMIN2:"+menuId,"NEW","메뉴 권한",null,"이후","2001-01-01 00:00:00");
+        history("TB_SY_MENU",menuId+"0","UPD","MENU_NM","이전","이후","2001-01-01 00:00:00");
+        var users=read("USER","admin",1,50);
+        assertThat(users.total()).isEqualTo(3);
+        assertThat(users.items()).extracting(Entry::historyId).containsExactly(scopeLink,roleLink,user);
+        var roles=read("ROLE","ADMIN",1,50);
+        assertThat(roles.total()).isEqualTo(2);
+        assertThat(roles.items()).extracting(Entry::historyId).containsExactly(permission,role);
+        var menus=read("MENU",menuId,1,50);
+        assertThat(menus.total()).isEqualTo(1);
+        assertThat(menus.items()).extracting(Entry::historyId).containsExactly(menu);
     }
 }

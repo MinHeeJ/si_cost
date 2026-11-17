@@ -57,7 +57,8 @@ class WriteCoordinatorTest {
         assertThat(result.revision()).isEqualTo(revisions.revision("stored"));
         var order = inOrder(manager, locks, validation, writes, snapshot, invalidation);
         order.verify(manager).getTransaction(any());
-        order.verify(locks).lock("PROJECT:P"); order.verify(locks).lock("USER:u");
+        order.verify(locks).lock("PROJECT:P");
+        order.verify(locks).lock("TB_SY_MENU");order.verify(locks).lock("TB_SY_ROLE");order.verify(locks).lock("USER:u");
         order.verify(validation).run(); order.verify(writes).run(); order.verify(snapshot).get();
         order.verify(invalidation).afterCommit("PROJECT:P"); order.verify(invalidation).afterCommit("USER:u");
         order.verify(manager).commit(any());

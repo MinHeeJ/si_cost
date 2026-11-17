@@ -28,7 +28,17 @@ export function ColumnPreferencesDialog({
   const source = (pref?.value ?? {}) as ScreenColumnPreferences;
   const [draft, setDraft] = useState<ColumnView | null>(null);
   const [reset, setReset] = useState(false);
-  const applied = source[viewId];
+  const storedView = source[viewId];
+  const applied =
+    viewId === "users" &&
+    screenId === "UI-23" &&
+    storedView &&
+    !storedView.order.includes("assignedParts")
+      ? {
+          order: [...storedView.order, "assignedParts"],
+          hidden: storedView.hidden.filter((id) => id !== "assignedParts"),
+        }
+      : storedView;
   const value = draft ?? applied;
   const move = (index: number, delta: number) => {
     if (!value) return;

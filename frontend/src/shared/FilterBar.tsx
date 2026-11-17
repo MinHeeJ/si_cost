@@ -12,6 +12,8 @@ export type FilterBarProps = {
   resetTestId?: string;
   searchTestId?: string;
   disabled?: boolean;
+  /** Dialog의 기존 form 안에서 중첩 form 없이 검색한다. */
+  embedded?: boolean;
   /** 초기화·조회 왼쪽에 붙이는 추가 칸이나 버튼. */
   extra?: ReactNode;
 };
@@ -29,14 +31,21 @@ export function FilterBar({
   resetTestId,
   searchTestId,
   disabled,
+  embedded = false,
   extra,
 }: FilterBarProps) {
+  const Container = embedded ? "div" : "form";
   return (
-    <form
+    <Container
       className={`sicost-filterbar ${className}`.trim()}
       data-testid={testId}
       onKeyDown={(event) => {
-        if (event.key === "Enter" && (event.nativeEvent.isComposing)) event.preventDefault();
+        if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault();
+        else if (embedded && event.key === "Enter") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!disabled) onSubmit();
+        }
       }}
       onSubmit={(event) => {
         event.preventDefault();
@@ -50,7 +59,8 @@ export function FilterBar({
           초기화
         </button>
         <button
-          type="submit"
+          type={embedded ? "button" : "submit"}
+          onClick={embedded ? onSubmit : undefined}
           className="sicost-primary"
           data-testid={searchTestId}
           disabled={disabled}
@@ -58,6 +68,6 @@ export function FilterBar({
           조회
         </button>
       </div>
-    </form>
+    </Container>
   );
 }

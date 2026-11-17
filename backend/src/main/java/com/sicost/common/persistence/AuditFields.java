@@ -5,6 +5,6 @@ import java.time.LocalDateTime;
 
 public record AuditFields(String userId, LocalDateTime occurredAt) {
     public static AuditFields now(String serverUserId, Clock clock) {
-        return new AuditFields(serverUserId, LocalDateTime.now(clock));
+        return new AuditFields(serverUserId, LocalDateTime.ofInstant(clock.instant(), com.sicost.common.TimeConfiguration.SEOUL));
     }
 }

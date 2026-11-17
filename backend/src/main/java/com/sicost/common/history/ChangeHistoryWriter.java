@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class ChangeHistoryWriter {
     private static final Set<String> TABLES = Set.of("TB_SY_CODE_GRP", "TB_SY_CODE", "TB_SY_CODE_MAP", "TB_SY_OPER_STD",
-            "TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD",
+            "TB_SY_USER", "TB_SY_USER_ROLE", "TB_SY_ROLE", "TB_SY_ROLE_MENU_AUTH", "TB_SY_MENU", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD",
             "TB_HR_DEV", "TB_HR_DEV_PRC", "TB_HR_DEV_SKILL", "TB_HR_DEV_STAT",
             "TB_HR_CAND", "TB_HR_CAND_SKILL", "TB_HR_CAND_CNTC",
             "TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_SY_UPLD",
@@ -189,7 +189,7 @@ public class ChangeHistoryWriter {
                 && change.type().equals("DEL")) throw InputValidator.invalid("history");
         if (Set.of("TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_SY_UPLD", "TB_PJ_ASGN", "TB_BL_BILL", "TB_BL_RCPT").contains(change.tableName())
                 && change.type().equals("DEL")) throw InputValidator.invalid("history");
-        if ((Set.of("TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD").contains(change.tableName()) || PEOPLE.contains(change.tableName()))
+        if ((Set.of("TB_SY_USER", "TB_SY_ROLE", "TB_SY_MENU", "TB_SY_ROLE_MENU_AUTH", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD").contains(change.tableName()) || PEOPLE.contains(change.tableName()))
                 && change.type().equals("DEL")) throw InputValidator.invalid("history");
         if (change.item() != null && change.item().toUpperCase(java.util.Locale.ROOT)
                 .matches(".*(PWD|PASSWORD|HASH|MFA|CIPHER|ACCT_NO_ENC).*")) throw InputValidator.invalid("history");
@@ -203,10 +203,11 @@ public class ChangeHistoryWriter {
         check(change.item(), 50); check(change.before(), 500); check(change.after(), 500); check(change.reason(), 500);
         boolean privateContact = PEOPLE.contains(change.tableName()) && change.item() != null
                 && Set.of("TELNO", "PHONE", "EMAIL_ADDR", "EMAIL", "연락처", "이메일").contains(change.item().toUpperCase(java.util.Locale.ROOT));
+        String actorId = actor.get();
         int written = mapper.insert(new ChangeHistoryEntry(change.tableName(), change.targetKey(), change.type(), change.item(),
                 privateContact ? maskedContact(change.before()) : change.before(),
-                privateContact ? maskedContact(change.after()) : change.after(), change.reason(), actor.get(), LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL)));
-        if (("SYSTEM".equals(actor.get()) || (required && !"TB_FI_TAX_PAY".equals(change.tableName())) || candidate || settlement || Set.of("TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
+                privateContact ? maskedContact(change.after()) : change.after(), change.reason(), actorId, LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL)));
+        if (("SYSTEM".equals(actorId) || (required && !"TB_FI_TAX_PAY".equals(change.tableName())) || candidate || settlement || Set.of("TB_SY_USER", "TB_SY_USER_ROLE", "TB_SY_USER_SCOPE", "TB_SY_ROLE", "TB_SY_ROLE_MENU_AUTH", "TB_SY_MENU", "TB_SL_OPP", "TB_SL_APRV_HIST", "TB_SY_NOTI", "TB_FI_BIZ_PLAN", "TB_CO_MON_PL").contains(change.tableName())) && written != 1) {
             throw new IllegalStateException("목표 필드 감사를 저장하지 못했습니다.");
         }
     }

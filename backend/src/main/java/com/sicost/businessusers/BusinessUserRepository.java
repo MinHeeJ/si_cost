@@ -8,10 +8,20 @@ import static com.sicost.businessusers.BusinessUserDtos.*;
 public class BusinessUserRepository {
     private final BusinessUserMapper mapper;
     public BusinessUserRepository(BusinessUserMapper mapper) {this.mapper=mapper;}
+    public Role findRole(String id) {return mapper.findRole(id);}
+    public long activeAdministratorCount() {return mapper.activeAdministratorCount();}
+    public int greatestScopeSn(String id) {return mapper.greatestScopeSn(id);}
+    public Integer headOfficeScopeSn(String id) {return mapper.headOfficeScopeSn(id);}
+    public int insertHeadOffice(HeadOfficeWrite write) {return mapper.insertHeadOffice(write);}
+    public int deleteHeadOffice(HeadOfficeWrite write) {return mapper.deleteHeadOffice(write);}
     public List<Stored> list(Filter filter) {return mapper.list(filter);}
     public long count(Filter filter) {return mapper.count(filter);}
     public Stored find(String id,boolean lock) {return mapper.find(id,lock);}
     public List<Role> roles(String id) {return mapper.roles(id);}
+    public String snapshot(String id) {return mapper.snapshot(id);}
+    public boolean tempPassword(String id) {return mapper.tempPassword(id);}
+    public boolean headOffice(String id) {return mapper.headOffice(id);}
+    public List<AssignedPart> assignedParts(String id,String month) {return mapper.assignedParts(id,month);}
     public List<Role> availableRoles() {return mapper.availableRoles();}
     public void lockUser(String id) {mapper.lockUser(id);}
     public List<String> connectedProjects(String id) {return mapper.connectedProjects(id);}

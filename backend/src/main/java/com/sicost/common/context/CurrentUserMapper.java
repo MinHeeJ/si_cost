@@ -7,4 +7,6 @@ import org.apache.ibatis.annotations.Mapper;
 public interface CurrentUserMapper {
     String findAdministrator();
     List<String> findAdministratorRoles();
+    String findName(String userId);
+    List<String> findActiveRoles(String userId);
 }

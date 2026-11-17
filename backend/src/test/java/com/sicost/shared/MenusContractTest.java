@@ -62,6 +62,41 @@ class MenusContractTest {
         mvc.perform(get("/api/menus")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());
         verify(mapper).menus(); verifyNoMoreInteractions(mapper);
     }
+    @Test void eachRequestReflectsStoredStopResumeAndPcSettingsWithoutPermissionFiltering() throws Exception {
+        MenuRow group=row("G",null,null,1,1);
+        MenuRow active=new MenuRow("M","G","저장된 메뉴","UI-25",2,1,"Y",null,false);
+        MenuRow stopped=new MenuRow("M","G","저장된 메뉴","UI-25",2,1,"N",null,false);
+        MenuRow resumed=new MenuRow("M","G","변경된 메뉴","UI-25",2,1,"Y","folder",true);
+        when(mapper.menus()).thenReturn(List.of(group,active),List.of(group,stopped),List.of(group,resumed));
+
+        mvc.perform(get("/api/menus"))
+            .andExpect(handler().handlerType(SharedQueriesController.class)).andExpect(handler().methodName("getMenus"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.items[0].children[0].name").value("저장된 메뉴"))
+            .andExpect(jsonPath("$.data.items[0].children[0].pcOnly").value(false));
+        mvc.perform(get("/api/menus"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty())
+            .andExpect(jsonPath("$.data.diagnostics.length()").value(1))
+            .andExpect(jsonPath("$.data.diagnostics[0].menuId").value("M"));
+        mvc.perform(get("/api/menus"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].children[0].menuId").value("M"))
+            .andExpect(jsonPath("$.data.items[0].children[0].screenId").value("UI-25"))
+            .andExpect(jsonPath("$.data.items[0].children[0].name").value("변경된 메뉴"))
+            .andExpect(jsonPath("$.data.items[0].children[0].icon").value("folder"))
+            .andExpect(jsonPath("$.data.items[0].children[0].pcOnly").value(true))
+            .andExpect(jsonPath("$.data.diagnostics").isEmpty());
+        verify(mapper,times(3)).menus(); verifyNoMoreInteractions(mapper); verifyNoInteractions(users);
+    }
+    @Test void emptyGroupsAreHiddenWithoutDiagnosticOrSourceMutation() throws Exception {
+        when(mapper.menus()).thenReturn(List.of(row("EMPTY",null,null,1,1),row("G",null,null,1,2),row("M","G","UI-23",2,1)));
+        mvc.perform(get("/api/menus"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.items.length()").value(1))
+            .andExpect(jsonPath("$.data.items[0].menuId").value("G"))
+            .andExpect(jsonPath("$.data.items[0].children[0].screenId").value("UI-23"))
+            .andExpect(jsonPath("$.data.diagnostics").isEmpty());
+        verify(mapper).menus(); verifyNoMoreInteractions(mapper); verifyNoInteractions(users);
+    }
     @Test void unknownQueryIsRejectedBeforeReadingMenus() throws Exception {
         mvc.perform(get("/api/menus").param("userId","other").header("X-Request-Id","menus-validation"))
             .andExpect(handler().handlerType(SharedQueriesController.class)).andExpect(handler().methodName("getMenus"))

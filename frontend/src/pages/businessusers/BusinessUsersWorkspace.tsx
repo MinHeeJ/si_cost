@@ -15,6 +15,7 @@ const columns: PreferenceColumn[] = [
   { id: "roles", label: "역할" },
   { id: "status", label: "상태" },
   { id: "lastLoginAt", label: "마지막 접속" },
+  { id: "assignedParts", label: "담당파트" },
 ];
 export function BusinessUsersWorkspace({
   onDirtyChange,

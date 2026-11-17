@@ -147,6 +147,27 @@ export {
 } from "../pages/businessusers/businessUsersApi";
 export { getBusinessUserOptions } from "../pages/businessusersops/businessUserOptionsApi";
 export {
+  getBusinessUserScopes,
+  getBusinessUserAccessLogs,
+  changeBusinessUserState,
+  saveBusinessUserStatusChanges,
+} from "../pages/businessusersops/userAdministrationApi";
+export { getCurrentUserPermissionSettings } from "../pages/currentuserops/permissionSettingsApi";
+export {
+  getRoles,
+  getRole,
+  createRole,
+  putRole,
+} from "../pages/roles/rolesApi";
+export { saveRoleStop } from "../pages/rolesops/roleStopApi";
+export {
+  getMenuManagement,
+  putMenuManagement,
+  getMenuManagementScreens,
+  createManagedMenu,
+  getMenuHistory,
+} from "../pages/menumanagement/menuManagementApi";
+export {
   getClients,
   getClient,
   createClient,

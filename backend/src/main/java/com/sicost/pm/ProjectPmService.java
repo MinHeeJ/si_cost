@@ -21,6 +21,9 @@ public class ProjectPmService {
     private final CurrentUserProvider users;
     private final ChangeHistoryWriter history;
     private final Clock clock;
+    private com.sicost.common.history.AccessLogWriter access;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setAccessLog(com.sicost.common.history.AccessLogWriter access) {this.access=access;}
     public ProjectPmService(ProjectPmRepository repository,WriteCoordinator writes,RevisionService revisions,
                             CurrentUserProvider users,ChangeHistoryWriter history,Clock clock) {
         this.repository=repository;this.writes=writes;this.revisions=revisions;this.users=users;this.history=history;this.clock=clock;
@@ -75,12 +78,17 @@ public class ProjectPmService {
                 audit(userId,scopeSn,id,"NEW");
             }
             repository.history(new PmHistory(id,historySn,summary(before),summary(repository.scopes(id)),actor,now));
+            if(access!=null) {
+                var attributes=org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+                var request=attributes instanceof org.springframework.web.context.request.ServletRequestAttributes servlet?servlet.getRequest():null;
+                access.append(new com.sicost.common.history.AccessLogWriter.Event("AUTH_CHG","UI-23",id,null,null),request);
+            }
         });
         return new SaveProjectPmResult(view(repository.scopes(id),result.revision()),result.revision(),result.changed());
     }
     private List<String> identities(List<Scope> rows) { return rows.stream().map(r -> r.userId()+":"+r.scopeSn()).sorted().toList(); }
     private ProjectPmData view(List<Scope> rows,String revision) {
-        return new ProjectPmData(rows.stream().map(r -> new ProjectPm(r.userId(),r.name(),r.scopeSn())).toList(),revision);
+        return new ProjectPmData(rows.stream().map(r -> new ProjectPm(r.userId(),r.name(),r.scopeSn(),r.status())).toList(),revision);
     }
     private void audit(String userId,int scopeSn,String id,String type) {
         String value="PROJ:"+id+";PART:NULL";

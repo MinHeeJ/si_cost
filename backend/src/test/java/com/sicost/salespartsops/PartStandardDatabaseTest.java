@@ -49,6 +49,8 @@ class PartStandardDatabaseTest {
         context.registerBean(PartStandardMapper.class,()->mapper);
         context.registerBean(MasterLockMapper.class,()->session.getMapper(MasterLockMapper.class));
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));
+        context.registerBean(SettlementSourceLockMapper.class,()->session.getMapper(SettlementSourceLockMapper.class));
+        context.register(SettlementSourceLocks.class,MonthCloseBoundary.class);
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,CommitInvalidation.class,PartStandardRepository.class,PartStandardService.class);

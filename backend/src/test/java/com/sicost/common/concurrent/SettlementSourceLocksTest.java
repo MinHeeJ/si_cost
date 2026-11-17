@@ -28,6 +28,7 @@ class SettlementSourceLocksTest {
         order.verify(mapper).lockStandards(List.of("PART-001", "PART-002"));
         order.verify(advisory).lock("ASGN:A-001"); order.verify(advisory).lock("DEV:D-001");
         order.verify(advisory).lock("PAY:202607"); order.verify(advisory).lock("PROJECT:P-001");
+        order.verify(advisory).lock("TB_SY_MENU"); order.verify(advisory).lock("TB_SY_ROLE");
         order.verify(advisory).lock("operating-standards:CASH_BASE_YM"); order.verify(mapper).partIds(any());
         verifyNoMoreInteractions(mapper, advisory);
     }
@@ -88,5 +89,51 @@ class SettlementSourceLocksTest {
         Runnable write = mock(Runnable.class);
         assertThatThrownBy(() -> coordinator.create(List.of("DEV:D-001"), () -> "stored", () -> {}, write)).isInstanceOf(ApiException.class);
         verify(manager).rollback(any()); verifyNoInteractions(write, invalidation);
+    }
+    @Test void qualificationAndTreeCommandsUseTheSameSortedDistinctTableResources() {
+        locks.lock(List.of("USER:ab12", "PART:PART-001", "TB_SY_ROLE", "USER:ab12"));
+        var order = inOrder(mapper, advisory);
+        order.verify(mapper).partIds(argThat(s -> s.userIds().equals(List.of("ab12"))));
+        order.verify(mapper).lockParts(List.of("PART-001", "PART-002"));
+        order.verify(mapper).lockHeaders(any()); order.verify(mapper).lockStandards(any());
+        order.verify(advisory).lock("PART:PART-001");
+        order.verify(advisory).lock("TB_SY_MENU"); order.verify(advisory).lock("TB_SY_ROLE");
+        order.verify(advisory).lock("USER:ab12");
+        assertThat(SettlementSourceLocks.protectionKeys(List.of("TB_SY_MENU")))
+            .containsExactly("TB_SY_MENU", "TB_SY_ROLE");
+    }
+    @Test void expandedPopulationMustRestartRatherThanAppendLowerOrderLocks() {
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            locks.lock(List.of("USER:zz99"));clearInvocations(mapper,advisory);
+            assertThatThrownBy(() -> locks.lock(List.of("USER:aa11","USER:zz99")))
+                .isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("STALE_WRITE"));
+            verifyNoInteractions(mapper,advisory);
+        } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
+    }
+    @Test void ordinaryFlowsMayStillAddLockTargetsInTheSameTransactionAsBeforeRequirement17() {
+        // 배정 후보 확정: 먼저 후보·개발자·프로젝트·급여월을 잠그고, 배정 생성이 새 배정 ID 를 더한다(미리 잠글 수 없는 새 값).
+        var first = List.of("TENT:1", "DEV:D-001", "PROJECT:P-001", "PAY:202607", "PAY:202608");
+        var additions = List.of(List.of("ASGN:A-0001"), List.of("PAY:202609"), List.of("DEV:D-002"), List.of("ASGN:A-0002", "PAY:202610"));
+        for (var added : additions) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+            try {
+                locks.lock(first); clearInvocations(mapper, advisory);
+                var second = new java.util.ArrayList<>(first); second.addAll(added);
+                locks.lock(second);
+                for (String key : added) verify(advisory).lock(key);
+            } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
+        }
+    }
+    @Test void userRoleAndMenuCommandsMustStillNameEveryTargetInTheFirstLock() {
+        for (var added : List.of(List.of("USER:aa11"), List.of("TB_SY_ROLE"), List.of("TB_SY_MENU"))) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+            try {
+                locks.lock(List.of("DEV:D-001")); clearInvocations(mapper, advisory);
+                assertThatThrownBy(() -> locks.lock(added))
+                    .as(added.toString()).isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.code()).isEqualTo("STALE_WRITE"));
+                verifyNoInteractions(mapper, advisory);
+            } finally { org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization(); }
+        }
     }
 }

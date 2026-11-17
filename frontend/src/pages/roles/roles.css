@@ -1,0 +1,54 @@
+.roles-editor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.roles-toolbar,
+.roles-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.roles-toolbar {
+  justify-content: space-between;
+}
+.roles-toolbar > div,
+.roles-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.roles-tabs [aria-selected="true"] {
+  background: var(--primary-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.roles-settings {
+  margin: 16px 0;
+}
+.roles-group th {
+  background: var(--head-bg);
+  color: var(--text-sub);
+}
+.roles-hint {
+  margin: 12px 0;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.roles-revision {
+  overflow-wrap: anywhere;
+  color: var(--text-sub);
+}
+.roles-editor [role="tabpanel"] {
+  min-width: 0;
+}
+.roles-editor h3 {
+  margin: 0;
+}
+.roles-editor td details {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 300px;
+}

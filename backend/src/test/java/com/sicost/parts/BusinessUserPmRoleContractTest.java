@@ -41,12 +41,14 @@ class BusinessUserPmRoleContractTest {
         original=new Stored("pm12","사용자","user@example.org","USE",null,"admin",LocalDateTime.of(2026,1,1,0,0),null,null);
         roles=new ArrayList<>(List.of(new Role("ADMIN","관리자","Y"),new Role("PM","PM","Y"),new Role("SALES_LDR","파트장","Y")));
         when(mapper.find(anyString(),anyBoolean())).thenReturn(original);when(mapper.roles(anyString())).thenAnswer(call->List.copyOf(roles));
+        when(mapper.snapshot(anyString())).thenAnswer(call->json.writeValueAsString(List.of(original.userId(),original.name(),original.email(),original.status(),roles.stream().map(Role::roleId).sorted().toList())));
+        when(history.insert(any())).thenReturn(1);when(access.insert(any())).thenReturn(1);
         when(mapper.availableRoles()).thenReturn(List.of(new Role("PM","PM","Y"),new Role("SALES_LDR","파트장","Y")));
         when(mapper.connectedProjects("pm12")).thenReturn(List.of("ended-project","lost-project"));
         when(mapper.update(any())).thenReturn(1);when(mapper.unlink(any())).thenAnswer(call->{RoleLink link=call.getArgument(0);roles.removeIf(r->r.roleId().equals(link.roleId()));return 1;});
     }
     ObjectNode body(List<String> requested) {
-        String revision=revisions.revision(new Snapshot(original.userId(),original.name(),original.email(),original.regDttm(),original.modDttm(),roles.stream().map(Role::roleId).sorted().toList()));
+        String revision=revisions.revision(mapper.snapshot(original.userId()));
         ObjectNode body=json.createObjectNode().put("name",original.name()).put("email",original.email()).put("expectedRevision",revision);
         body.set("businessRoleIds",json.valueToTree(requested));return body;
     }

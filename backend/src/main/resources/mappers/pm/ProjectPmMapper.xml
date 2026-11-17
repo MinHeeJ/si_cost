@@ -5,7 +5,7 @@
     SELECT proj_id AS "id",proj_stat_cd AS "status",ctrt_end_dt AS "endDate" FROM tb_pj_proj WHERE proj_id=#{id}
   </select>
   <select id="scopes" resultType="com.sicost.pm.ProjectPmDtos$Scope" flushCache="true" useCache="false">
-    SELECT s.user_id AS "userId",s.scope_sn AS "scopeSn",s.proj_id AS "projectId",u.user_nm AS "name"
+    SELECT s.user_id AS "userId",s.scope_sn AS "scopeSn",s.proj_id AS "projectId",u.user_nm AS "name",u.user_stat_cd AS "status"
     FROM tb_sy_user_scope s JOIN tb_sy_user u ON u.user_id=s.user_id
     WHERE s.proj_id=#{id} AND s.scope_type_cd='PROJ' ORDER BY s.user_id,s.scope_sn
   </select>

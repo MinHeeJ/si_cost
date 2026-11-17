@@ -44,7 +44,7 @@ class UploadResultContractTest {
     }
     @BeforeEach void setup() {
         when(users.findAdministrator()).thenReturn("admin");
-        when(users.findAdministratorRoles()).thenReturn(List.of("ADMIN"));
+        when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(mapper.find(17)).thenReturn(upload("B9","APPLIED"));
         when(projects.issues(17)).thenReturn(List.of(new Issue(1,"WARN",1,"[파일]","","추가 열"),
             new Issue(2,"WARN",1,"[표]","","합계 차이"),new Issue(3,"WARN",3,"이름","","행 경고")));

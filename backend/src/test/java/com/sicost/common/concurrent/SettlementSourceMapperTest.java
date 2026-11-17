@@ -38,4 +38,9 @@ class SettlementSourceMapperTest {
                 .contains("ORDER BY PART_ID", "FOR UPDATE").doesNotContain("LOCK TABLE", "SHARE");
         }
     }
+    @Test void userQualificationsDiscoverAllLeaderTimelinesAndStoredPartConnections() throws Exception {
+        String sql=sql("partIds",new SettlementSourceLocks.Sources(List.of(),List.of(),List.of(),List.of(),List.of(),List.of("ab12")));
+        assertThat(sql).contains("TB_BS_PART_STD", "PART_LDR_USER_ID IN", "TB_SY_USER_SCOPE", "SCOPE_TYPE_CD='PART'", "s.USER_ID IN")
+            .doesNotContain("USE_YN=", "APLY_BGN_YM", "APLY_END_YM", "FALSE");
+    }
 }

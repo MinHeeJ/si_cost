@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sicost.menumanagementops.MenuRegistrationMapper">
+  <select id="roleIds" resultType="string" useCache="false" flushCache="true">
+    SELECT role_id FROM tb_sy_role ORDER BY role_id
+  </select>
+  <insert id="insertMenu">
+    INSERT INTO tb_sy_menu(menu_id,upper_menu_id,menu_nm,scrn_id,menu_lvl,sort_ord,use_yn,pc_only_yn,icon_nm,lock_yn,reg_user_id,reg_dttm)
+    VALUES(#{menuId},#{input.parentId,jdbcType=VARCHAR},#{input.name},#{input.screenId,jdbcType=VARCHAR},#{input.level},#{sortOrder},'Y',
+      <choose><when test="input.pcOnly">'Y'</when><otherwise>'N'</otherwise></choose>,
+      <choose><when test="input.level == 1">'folder'</when><otherwise>NULL</otherwise></choose>,'N',#{actor},#{now})
+  </insert>
+  <insert id="insertPermission">
+    INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id,reg_dttm)
+    VALUES(#{roleId},#{menuId},'N','N','N','N','N','N','N',#{actor},#{now})
+  </insert>
+</mapper>

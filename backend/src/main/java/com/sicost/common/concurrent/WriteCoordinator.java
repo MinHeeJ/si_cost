@@ -103,6 +103,6 @@ public class WriteCoordinator {
     private void lock(Collection<String> keys) {
         if (boundary != null) boundary.shared();
         if (sourceLocks != null) sourceLocks.lock(keys);
-        else keys.stream().distinct().sorted().forEach(locks::lock);
+        else SettlementSourceLocks.protectionKeys(keys).forEach(locks::lock);
     }
 }

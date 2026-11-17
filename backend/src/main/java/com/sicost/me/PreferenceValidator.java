@@ -24,7 +24,7 @@ public class PreferenceValidator {
             Map.entry("mappings",List.of("sourceText","groupId","code")),
             Map.entry("standards",List.of("key","name","value","unitNm","effectiveMonth","description")),
             Map.entry("history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor")),
-            Map.entry("users",List.of("userId","name","email","roles","status","lastLoginAt")),
+            Map.entry("users",List.of("userId","name","email","roles","status","lastLoginAt","assignedParts")),
             Map.entry("clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn")),
             Map.entry("developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate")),
             Map.entry("candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source")),
@@ -106,6 +106,8 @@ public class PreferenceValidator {
             var view=entry.getValue();fields(view,Set.of("order","hidden"));
             var order=strings(view.get("order"),"value.order");var hidden=strings(view.get("hidden"),"value.hidden");
             var all=COLUMNS.get(entry.getKey());
+            if(key.equals("UI-23") && entry.getKey().equals("users") && !order.contains("assignedParts"))
+                all=all.stream().filter(column->!column.equals("assignedParts")).toList();
             if(order.size()!=all.size()||!new HashSet<>(order).equals(new HashSet<>(all)))throw InputValidator.invalid("value.order");
             if(!all.containsAll(hidden)||hidden.stream().anyMatch(REQUIRED.get(entry.getKey())::contains))throw InputValidator.invalid("value.hidden");
         });

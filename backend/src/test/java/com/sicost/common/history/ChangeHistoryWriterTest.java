@@ -72,6 +72,7 @@ class ChangeHistoryWriterTest {
     }
     @Test void newBusinessTargetsUseExistingHistoryMappingAndServerActor() {
         when(users.userId()).thenReturn("admin");
+        when(mapper.insert(any())).thenReturn(1);
         for (String table : new String[]{"TB_SY_USER", "TB_BS_CLNT", "TB_BS_PART", "TB_BS_PART_STD"}) {
             writer.append(new ChangeHistoryWriter.Change(table,"PART-001:202601","NEW","등록",null,"ID 이름",null));
         }
@@ -151,6 +152,7 @@ class ChangeHistoryWriterTest {
     }
     @Test void projectPlanExpenseScopeAndUploadReceiptsUseExistingAudit() {
         when(users.userId()).thenReturn("admin");
+        when(mapper.insert(any())).thenReturn(1);
         for (String table : new String[]{"TB_PJ_PROJ", "TB_PJ_MNPW_PLAN", "TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE", "TB_SY_UPLD"}) {
             writer.append(new ChangeHistoryWriter.Change(table,"P-1000:202601:1","NEW","등록",null,"원래 값",null));
         }
@@ -158,6 +160,7 @@ class ChangeHistoryWriterTest {
     }
     @Test void expenseAndScopeDeletionIsAuditedButProjectPlanUploadDeletionIsForbidden() {
         when(users.userId()).thenReturn("admin");
+        when(mapper.insert(any())).thenReturn(1);
         for (String table : new String[]{"TB_PJ_DRCT_EXPS", "TB_SY_USER_SCOPE"}) {
             writer.append(new ChangeHistoryWriter.Change(table,"P-1000:202601:1","DEL","삭제","원래 값",null,null));
         }

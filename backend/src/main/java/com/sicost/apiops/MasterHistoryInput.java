@@ -15,7 +15,7 @@ public final class MasterHistoryInput {
             if (entries.size() != 1) throw InputValidator.invalid(key);
         });
         String type = InputValidator.text(values.getFirst("targetType"), 6, "targetType");
-        if (!Set.of("USER", "CLIENT", "PART").contains(type)) throw InputValidator.invalid("targetType");
+        if (!Set.of("USER", "CLIENT", "PART", "ROLE", "MENU").contains(type)) throw InputValidator.invalid("targetType");
         String id = InputValidator.text(values.getFirst("targetId"), 100, "targetId");
         int page = InputValidator.page(integer(values.getFirst("page"), 1, "page"));
         int size = InputValidator.size(integer(values.getFirst("size"), 50, "size"));
