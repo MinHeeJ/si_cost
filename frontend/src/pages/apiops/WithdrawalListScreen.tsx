@@ -468,7 +468,11 @@ export function WithdrawalContent({ year }: { year: number }) {
           >
             <option value="">전체</option>
             {jobs.map((j) => (
-              <option key={j.code} value={j.code}>
+              <option
+                key={j.code}
+                value={j.code}
+                data-testid={`withdrawal-job-option-${Array.from(j.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+              >
                 {j.name}
               </option>
             ))}
@@ -515,6 +519,7 @@ export function WithdrawalContent({ year }: { year: number }) {
         empty="조건에 맞는 철수 배정이 없습니다."
         emptyAction={
           <button
+            data-testid="withdrawal-empty-reset"
             type="button"
             onClick={() => {
               const filters = defaults();

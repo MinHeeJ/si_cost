@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { PayrollActions, PayrollDialog } from "./PayrollDialog";
 import { DeveloperPoolScreen } from "../developers/DeveloperPoolScreen";
@@ -339,7 +340,7 @@ it("모바일은 월내역만 조회하고 업로드·다운로드를 숨긴다"
   expect(screen.getByText(/급여 업로드·다운로드는 PC/)).toBeInTheDocument();
 });
 it("기존 개발자/B8 버튼 보존·급여 닫기 후 필터와 호출 포커스 유지", async () => {
-  render(<DeveloperPoolScreen />);
+  render(<DeveloperPoolScreen />, { wrapper: MemoryRouter });
   await screen.findByText("조회된 자료가 없습니다.");
   expect(screen.getByTestId("b8-upload-button")).toBeInTheDocument();
   expect(screen.getByTestId("b8-template-button")).toBeInTheDocument();

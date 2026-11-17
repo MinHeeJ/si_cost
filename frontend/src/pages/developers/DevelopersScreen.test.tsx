@@ -1,11 +1,13 @@
 import {
   fireEvent,
-  render,
+  render as testingRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { DeveloperPoolScreen } from "./DeveloperPoolScreen";
 import { DeveloperForm, developerBanner, priceHelp } from "./DeveloperForm";
@@ -17,6 +19,8 @@ import * as parts from "../salespartsops/partStandardsApi";
 import * as areas from "../../shared/areaClient";
 import * as stateApi from "../states/developerStatesApi";
 import * as sharedApi from "../shared/sharedApi";
+const render = (ui: ReactElement) =>
+  testingRender(ui, { wrapper: MemoryRouter });
 vi.mock("./peopleClient");
 vi.mock("../clientsops/clientActionsApi");
 vi.mock("../salespartsops/partStandardsApi");
@@ -503,9 +507,10 @@ it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 
     screen.queryByTestId("developer-sort-direction"),
   ).not.toBeInTheDocument();
   expect(screen.getByTestId("sort-name")).toHaveTextContent("이름");
-  expect(
-    screen.getByRole("columnheader", { name: /이름/ }),
-  ).toHaveAttribute("aria-sort", "ascending");
+  expect(screen.getByRole("columnheader", { name: /이름/ })).toHaveAttribute(
+    "aria-sort",
+    "ascending",
+  );
   await userEvent.click(screen.getByTestId("sort-monthlyRate"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
@@ -516,18 +521,14 @@ it("열 이름을 눌러 정렬한다: 오름차순 → 내림차순, 별도의 
       }),
     ),
   );
-  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
-    "월 단가 ↑",
-  );
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent("월 단가 ↑");
   await userEvent.click(screen.getByTestId("sort-monthlyRate"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ sort: "monthlyRate", direction: "DESC" }),
     ),
   );
-  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent(
-    "월 단가 ↓",
-  );
+  expect(screen.getByTestId("sort-monthlyRate")).toHaveTextContent("월 단가 ↓");
   expect(
     screen.queryByTestId("developer-sort-current-projects"),
   ).not.toBeInTheDocument();
@@ -585,9 +586,13 @@ it("작업 탭을 숨기면 등록 모달도 숨기고 돌아오면 입력을 �
   await screen.findByText(developer.name);
   await userEvent.click(screen.getByTestId("developer-create-button"));
   await ready();
-  fireEvent.change(screen.getByTestId("developer-name-input"), { target: { value: "보존할 이름" } });
+  fireEvent.change(screen.getByTestId("developer-name-input"), {
+    target: { value: "보존할 이름" },
+  });
   view.rerender(<DeveloperPoolScreen active={false} />);
-  expect(screen.queryByRole("dialog", { name: "개발자 등록" })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("dialog", { name: "개발자 등록" }),
+  ).not.toBeInTheDocument();
   view.rerender(<DeveloperPoolScreen active />);
   expect(screen.getByRole("dialog", { name: "개발자 등록" })).toBeVisible();
   expect(screen.getByTestId("developer-name-input")).toHaveValue("보존할 이름");

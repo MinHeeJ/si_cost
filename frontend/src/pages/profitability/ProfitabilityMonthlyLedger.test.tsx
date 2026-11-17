@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../me/usePreferences";
 import type { PreferenceApi } from "../me/preferencesApi";
@@ -261,9 +262,11 @@ function mount() {
     deletePreference: vi.fn(),
   };
   return render(
-    <PreferencesProvider api={preferences}>
-      <IndividualProfitabilityScreen />
-    </PreferencesProvider>,
+    <MemoryRouter>
+      <PreferencesProvider api={preferences}>
+        <IndividualProfitabilityScreen />
+      </PreferencesProvider>
+    </MemoryRouter>,
   );
 }
 beforeEach(() => {
