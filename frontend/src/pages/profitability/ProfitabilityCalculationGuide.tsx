@@ -1,70 +1,135 @@
-import type { IndividualProfitabilityData } from "./individualProfitabilityApi";
+import type {
+  IndividualProfitabilityData,
+  ProfitabilityView,
+} from "./individualProfitabilityApi";
 
-/** Render the response's explanations, never a second financial calculator. */
 export function ProfitabilityCalculationGuide({
   data,
+  view = data.context.view,
 }: {
   data: IndividualProfitabilityData;
+  view?: ProfitabilityView;
 }) {
+  const { year, toMonth } = data.context.period;
+  const month = toMonth ?? "–";
+  const rows = [
+    [
+      "기간",
+      view === "CUMULATIVE"
+        ? `${year}년 1월~${month}월 매달 값을 더함 (연 누계)`
+        : `1~${month}월 누계 ÷ 그 사람이 일한 달 수 (월 평균)`,
+      "급여·원가는 그 사람이 일한(급여를 받은) 달만 더함 · 프리랜서·외주는 투입한 달만 · 월 평균은 엑셀 「영업이익현황」(한 달 표)과 비교할 때 씀",
+    ],
+    [
+      "개인별 원가",
+      "월 급여 + 그룹장·팀장 수당 + 4대보험(회사) + 퇴직금 적립",
+      "엑셀 Q열. 수당은 직위 기준값(팀장·그룹장 정액) · 4대보험(회사)은 급여 업로드 값(국민연금·건강·장기요양 회사분 + 고용 1.15% + 산재 1%), 프리랜서·외주는 없음 · 퇴직금 적립 = (월 급여 + 수당) × 퇴직금 적립률(공통코드, 기본 8.33%), 정규직만",
+    ],
+    [
+      "원가합계",
+      "개인별 원가 + 팀비 + 프로젝트경비",
+      "엑셀 T열. 팀비·프로젝트경비는 자사 인력 1인당 월 정액 × MM(1.0MM이면 각 5만 원), 외주는 없음. 프로젝트 상세의 추가 직접 경비는 이 표에 넣지 않고 프로젝트 원가 분석·영업이익표에만 들어감",
+    ],
+    [
+      "단가(매출)",
+      "프로젝트별 (월 단가 × MM)을 모두 더함",
+      "엑셀 I열. 턴키는 그 달 배분표 금액(배분표가 없으면 그 달 배분 원가 × 계약금액 ÷ 예산) · 내부·무상지원·대기는 0 · 턴키 단가 미포함 보기는 턴키 몫을 빼고, 턴키만 하는 사람은 빈칸",
+    ],
+    [
+      "영업이익",
+      "단가 − 원가합계",
+      "엑셀 U열. 내부 프로젝트·대기 인력은 매출이 없어 영업이익이 −원가로 보입니다. 회사 전체 영업이익표에서는 내부 몫은 연구개발비(판관비), 대기 몫은 대기 원가로 따로 잡혀 이 표의 합계와 다를 수 있습니다.",
+    ],
+    ["이익률", "영업이익 ÷ 단가 × 100", "단가가 0이면 –"],
+    [
+      "프로젝트별 배분 원가",
+      "개인별 원가 × 그 프로젝트 MM ÷ MM 합계(1.0보다 작으면 1.0) + (그 프로젝트 팀비 + 프로젝트경비) × 그 프로젝트 MM",
+      "▸로 펼친 줄. 프리랜서·외주는 개인별 원가도 ÷ MM 합계(지급액 전부를 나눔)",
+    ],
+    [
+      "대기 원가",
+      "개인별 원가 × (1.0 − MM 합계)",
+      "MM 합계가 1.0보다 작은 정규·계약직만. 투입이 전혀 없으면 원가합계 전부",
+    ],
+    [
+      "평균 단가",
+      "단가 합 ÷ 단가 칸이 있는 인원",
+      "엑셀 「평균단가」(AVERAGE). 단가 0인 대기·내부 인원도 넣음, 턴키 단가 미포함 보기에서는 턴키만 하는 사람 제외",
+    ],
+    [
+      "평균 원가 · 영업이익",
+      "원가합계 합 ÷ 인원 · 영업이익 합 ÷ 인원",
+      "엑셀 「평균급여(원가포함)」「영업이익」. 인원은 표에 나온 사람(휴직 제외)",
+    ],
+    [
+      "가동률 · 가득률",
+      "가동 인원 ÷ 그 달 재직 직접 인력 × 100 · 가득 인원 ÷ 그 달 재직 직접 인력 × 100 (간접 인력 제외, 식-37)",
+      "가동 = 그 달 MM이 있는 사람(무상지원·내부 포함), 가득 = 월단위·파견 투입 인원, 총 인원은 대기·휴직 포함",
+    ],
+    [
+      "인당 공헌이익",
+      "직무·등급별 영업이익 합 ÷ 그 칸의 인원",
+      "괄호 안 숫자가 인원",
+    ],
+    [
+      "참고 열",
+      "원천세 = (월 급여 + 수당) × 3.3%(계약직·프리랜서) · 4대보험(본인)·근로소득세는 급여 업로드 값 · 실지급액 = 월 급여 + 수당 − 4대보험(본인) − 원천세 − 근로소득세(식-17)",
+      "원가에 들어가지 않음. 엑셀은 실지급액에서 본인 4대보험을 대부분 빼지 않음(7개 행만 뺌)",
+    ],
+    ["1.0 초과", "월 MM 합계 > 1.0", '"1.0 초과" 표시. 동시 투입 확인'],
+    [
+      "휴직자",
+      "표에서 제외",
+      "총 인원에는 포함. 휴직 중 급여 업로드에 금액이 있으면 대기 원가로 넣음",
+    ],
+    [
+      "미확인",
+      "원천 자료 없음",
+      '0이 아니라 "–"로 표시하고 0으로 계산하지 않음',
+    ],
+  ];
   return (
     <section
       className="profitability-calculation-guide"
       data-testid="profitability-calculation-guide"
       aria-label="계산 방법"
     >
-      <p data-testid="profitability-company-profit-note">
-        내부 프로젝트·대기 인력은 매출이 없어 영업이익이 −원가로 보입니다. 회사
-        전체 영업이익표에서는 내부 몫은 연구개발비(판관비), 대기 몫은 대기
-        원가로 따로 잡혀 이 표의 합계와 다를 수 있습니다.
-      </p>
       <details data-testid="profitability-calculation-panel">
         <summary data-testid="profitability-calculation-toggle">
-          계산 방법 · 급여/분모/경비/턴키/평균 도움말
+          ⓘ 계산 방법 <small>이 화면의 숫자를 이렇게 계산합니다</small>
         </summary>
-        <div data-testid="profitability-calculation-basis">
-          {data.calculationBasis.length ? (
-            <ul>
-              {data.calculationBasis.map((basis, index) => (
-                <li
-                  key={`${index}:${basis}`}
-                  data-testid={`profitability-calculation-basis-${index}`}
-                >
-                  {basis}
-                </li>
+        <div className="profitability-guide-table">
+          <table>
+            <thead>
+              <tr>
+                <th>항목</th>
+                <th>계산식</th>
+                <th>참고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([name, formula, note]) => (
+                <tr key={name}>
+                  <th scope="row">{name}</th>
+                  <td>{formula}</td>
+                  <td>{note}</td>
+                </tr>
               ))}
-            </ul>
-          ) : (
-            <p>계산 근거 자료 없음 · 다시 조회해 주세요.</p>
-          )}
+            </tbody>
+          </table>
         </div>
         <p>
-          현재 페이지의 사람별 서버 분모입니다. 월별 원장을 펼치면 같은 조회
-          문맥의 급여 출처·배분액·확인 필요 자료를 볼 수 있습니다.
+          열 순서는 기존 「영업이익현황」(B~W열)과 같습니다. 참고 열은 기본으로
+          숨겨 두었고 [열 설정]에서 켭니다. 단가 합계는 영업이익표의 같은 달
+          매출과 같습니다. 비율·정액 값은 기준정보에서 바꿀 수 있습니다.
         </p>
-        <ul aria-label="사람별 평균·가동률 분모">
-          {data.items.map((person, index) => (
-            <li
-              key={person.personId}
-              data-testid={`profitability-calculation-person-${index}`}
-            >
-              {person.name ?? person.personId} ({person.managementNo ?? "–"}) ·
-              평균 근무월 N=
-              {person.workedMonths} · 직접 재직달 {person.employmentMonths} ·
-              실제 투입달 {person.utilizedMonths}
-              <ul>
-                {person.monthBasis.map((month) => (
-                  <li
-                    key={month.month}
-                    data-testid={`profitability-calculation-month-${index}-${month.month}`}
-                  >
-                    {month.month} · 월 MM {month.assignmentMm} ·{" "}
-                    {month.explanation}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+        <p>
+          월원장은 부모의 누계/평균 보기와 무관하게 월별 원본 금액입니다. 개인
+          단가는 청구·입금액이 아닌 배분 참고액입니다. 원가 = 배분 노동비 + 팀비
+          + 프로젝트경비. 급여·공제 참고값은 투입마다 복제하지 않습니다. IDLE
+          대기 행은 배분 후 남는 몫이며 실주 투입과 구별합니다. 미확인 값은 0이
+          아닌 –로 표시합니다.
+        </p>
       </details>
     </section>
   );

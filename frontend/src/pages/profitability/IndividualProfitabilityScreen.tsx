@@ -38,7 +38,10 @@ export type IndividualProfitabilityScreenProps = {
     query: ProfitabilityQuery,
     data: IndividualProfitabilityData,
   ): ReactNode;
-  renderCalculationGuide?(data: IndividualProfitabilityData): ReactNode;
+  renderCalculationGuide?(
+    data: IndividualProfitabilityData,
+    query: ProfitabilityQuery,
+  ): ReactNode;
 };
 const sortable = new Set<string>([
   "name",
@@ -52,6 +55,16 @@ const sortable = new Set<string>([
   "profit",
   "profitRate",
 ]);
+const headerHelp: Record<string, string> = {
+  utilization:
+    "투입된 달 ÷ 재직한 달. 조회 연도 1월(그 해 입사면 입사한 달)부터 이번 달(퇴사자는 퇴사한 달)까지",
+  personalCost: "월 급여 + 수당 + 4대보험(회사) + 퇴직금 적립 (엑셀 Q열)",
+  teamExpense: "팀비(1인당 월) × 그 사람 MM. 외주 0(식-11)",
+  projectExpense:
+    "프로젝트경비(1인당 월) × 그 사람 MM(식-11). 추가 직접 경비(출장비 등)는 사람에게 나누지 않고 프로젝트 원가에만 들어감",
+  totalCost: "개인별 원가 + 팀비 + 프로젝트경비 (엑셀 T열)",
+  profit: "단가 − 원가합계 (엑셀 U열)",
+};
 export function IndividualProfitabilityScreen({
   analysisEntry,
   onPerson,
@@ -120,9 +133,19 @@ export function IndividualProfitabilityScreen({
     (def) => ({
       id: def.id,
       label:
-        def.id === "pay" && query.view === "CUMULATIVE"
-          ? "급여(누계)"
-          : def.label,
+        def.id === "pay" && query.view === "CUMULATIVE" ? (
+          "급여(누계)"
+        ) : (
+          <>
+            {def.label}
+            {headerHelp[def.id] && (
+              <>
+                {" "}
+                <span title={headerHelp[def.id]}>ⓘ</span>
+              </>
+            )}
+          </>
+        ),
       sortable: sortable.has(def.id),
       align: [
         "name",
@@ -206,62 +229,56 @@ export function IndividualProfitabilityScreen({
         onEmployeeTypes={setEmployeeTypes}
       />
       <div className="profitability-toolbar">
-        <div className="profitability-view" role="group" aria-label="금액 보기">
-          {(
-            [
-              ["CUMULATIVE", "연 누계"],
-              ["MONTHLY_AVERAGE", "월 평균"],
-            ] as const
-          ).map(([view, label]) => (
-            <button
-              key={view}
-              type="button"
-              disabled={loading}
-              className={query.view === view ? "sicost-primary" : ""}
-              aria-pressed={query.view === view}
-              onClick={() => apply({ ...query, view })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label>
-          단위
-          <select
-            data-testid="profitability-unit-select"
-            value={unit}
-            disabled={preferences.loading || preferences.pending}
-            onChange={(e) => {
-              setSettingsError("");
-              void preferences
-                .put("AMT_UNIT", "*", e.target.value)
-                .catch((e: unknown) =>
-                  setSettingsError(
-                    e instanceof Error ? e.message : "단위 저장 실패",
-                  ),
-                );
-            }}
+        <div className="profitability-toolbar-left">
+          <div
+            className="profitability-view"
+            role="group"
+            aria-label="금액 보기"
           >
-            <option>원</option>
-            <option>천원</option>
-            <option>백만원</option>
-          </select>
-        </label>
-        {(mobile || !data) && <ProfitabilityColumnSettings />}
-        {!mobile && data && renderExport?.(query, data)}
-      </div>
-      {settingsError && <ErrorBanner message={settingsError} />}
-      {state.errorMessage && (
-        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
-      )}
-      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
-      {data && (
-        <>
-          {!mobile && (
-            <div
-              className="profitability-toolbar"
-              onClick={(event) => event.stopPropagation()}
+            {(
+              [
+                ["CUMULATIVE", "연 누계"],
+                ["MONTHLY_AVERAGE", "월 평균"],
+              ] as const
+            ).map(([view, label]) => (
+              <button
+                key={view}
+                type="button"
+                disabled={loading}
+                className={query.view === view ? "sicost-primary" : ""}
+                aria-pressed={query.view === view}
+                onClick={() => apply({ ...query, view })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label>
+            단위
+            <select
+              data-testid="profitability-unit-select"
+              value={unit}
+              disabled={preferences.loading || preferences.pending}
+              onChange={(e) => {
+                setSettingsError("");
+                void preferences
+                  .put("AMT_UNIT", "*", e.target.value)
+                  .catch((e: unknown) =>
+                    setSettingsError(
+                      e instanceof Error ? e.message : "단위 저장 실패",
+                    ),
+                  );
+              }}
             >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+        </div>
+        <div className="profitability-toolbar-right">
+          {!mobile && data && (
+            <>
               <button
                 type="button"
                 data-testid="profitability-expand-page"
@@ -280,8 +297,19 @@ export function IndividualProfitabilityScreen({
               >
                 모두 접기
               </button>
-            </div>
+            </>
           )}
+          <ProfitabilityColumnSettings />
+          {!mobile && data && renderExport?.(query, data)}
+        </div>
+      </div>
+      {settingsError && <ErrorBanner message={settingsError} />}
+      {state.errorMessage && (
+        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
+      )}
+      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
+      {data && (
+        <>
           {mobile ? (
             <div
               data-testid="profitability-mobile-cards"
@@ -427,12 +455,7 @@ export function IndividualProfitabilityScreen({
               }}
             />
           )}
-          {renderCalculationGuide?.(data)}
-          <p role="note">
-            월평균 N은 사람별 근무월입니다. 급여구성과 개인 원가는 원 단위
-            절사차이가 날 수 있습니다. 가동률은 투입달 ÷ 운영 이후 직접
-            재직달이며 보기와 무관합니다.
-          </p>
+          {renderCalculationGuide?.(data, query)}
         </>
       )}
       {!onPerson && details.personId && (

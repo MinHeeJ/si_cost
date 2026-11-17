@@ -26,7 +26,7 @@ const won = (value: string | null | undefined) =>
 export function DeveloperDrawer({
   id,
   refreshKey = 0,
-  label = (_group: string, value: string) => value,
+  label: suppliedLabel,
   onClose,
   onEdit,
   onChanged,
@@ -59,6 +59,31 @@ export function DeveloperDrawer({
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [parts, setParts] = useState<PartOption[]>([]);
+  const [codeNames, setCodeNames] = useState<
+    Record<string, { code: string; name: string }[]>
+  >({});
+  useEffect(() => {
+    let current = true;
+    for (const group of ["EMP_TYPE", "DRCT_CLS", "WORK_STAT"]) {
+      void api
+        .getPeopleCodes(group)
+        .then((result) => {
+          if (current)
+            setCodeNames((previous) => ({
+              ...previous,
+              [group]: result.items,
+            }));
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      current = false;
+    };
+  }, []);
+  const label = (group: string, value: string) =>
+    codeNames[group]?.find((code) => code.code === value)?.name ??
+    suppliedLabel?.(group, value) ??
+    value;
   const [positions, setPositions] = useState<{ code: string; name: string }[]>(
     [],
   );

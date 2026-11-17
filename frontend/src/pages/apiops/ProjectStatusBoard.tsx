@@ -145,6 +145,7 @@ export function ProjectStatusBoard({
           <ul className="project-analysis-reasons">
             {row.reasons.map((reason, index) => (
               <li
+                data-testid={`status-reason-${Array.from(row.projectId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${index}`}
                 key={`${reason.kind}-${index}`}
                 title={`${reason.formula} · 기준 ${reason.threshold}`}
               >
@@ -377,7 +378,12 @@ export function ProjectStatusBoard({
           >
             <option value="">전체</option>
             {["위험", "주의", "정상"].map((light) => (
-              <option key={light}>{light}</option>
+              <option
+                data-testid={`status-light-option-${Array.from(light, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={light}
+              >
+                {light}
+              </option>
             ))}
           </select>
         </label>
@@ -390,7 +396,11 @@ export function ProjectStatusBoard({
           >
             <option value="">전체</option>
             {Object.entries(types).map(([id, label]) => (
-              <option key={id} value={id}>
+              <option
+                data-testid={`status-type-option-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={id}
+                value={id}
+              >
                 {label}
               </option>
             ))}
@@ -406,7 +416,11 @@ export function ProjectStatusBoard({
             <option value="">전체</option>
             <option value="UNASSIGNED">미지정</option>
             {parts.map((part) => (
-              <option key={part.id} value={part.id}>
+              <option
+                data-testid={`status-part-option-${Array.from(String(part.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={part.id}
+                value={part.id}
+              >
                 {part.name}
                 {part.hqYn === "Y" ? " (본사 직접 영업)" : ""}
               </option>
@@ -466,6 +480,7 @@ export function ProjectStatusBoard({
           empty="조건에 맞는 진행 프로젝트가 없습니다."
           emptyAction={
             <button
+              data-testid="status-empty-reset"
               type="button"
               onClick={() =>
                 apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
@@ -487,7 +502,7 @@ export function ProjectStatusBoard({
           ))}
       </section>
       <details>
-        <summary>계산 방법</summary>
+        <summary data-testid="status-calculation-summary">계산 방법</summary>
         <p>{result.data?.calculationNotice}</p>
         <p>
           일정 늦음 = 계획 − 실적: 10.0%p 이상 위험, 5.0%p 이상 주의. TK 진척

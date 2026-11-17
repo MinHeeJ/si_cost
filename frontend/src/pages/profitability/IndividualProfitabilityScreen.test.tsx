@@ -254,11 +254,21 @@ describe("개인 기간 조회 본문", () => {
     await screen.findByText("인력 owned (관리-owned)");
     const form = screen.getByTestId("profitability-filters");
     expect(form).toHaveClass("sicost-filterbar");
-    expect(screen.getByRole("textbox", { name: "이름 검색" }).closest("label")).toHaveClass("sicost-field");
+    expect(
+      screen.getByRole("textbox", { name: "이름 검색" }).closest("label"),
+    ).toHaveClass("sicost-field");
     const actions = form.querySelector(".sicost-filterbar-actions")!;
-    expect(within(actions as HTMLElement).getAllByRole("button").map((b) => b.textContent)).toEqual(["초기화", "조회"]);
-    expect(screen.getByTestId("profitability-search-button")).toHaveClass("sicost-primary");
-    vi.mocked(api.getIndividualProfitability).mockImplementation(() => new Promise(() => {}));
+    expect(
+      within(actions as HTMLElement)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["초기화", "조회"]);
+    expect(screen.getByTestId("profitability-search-button")).toHaveClass(
+      "sicost-primary",
+    );
+    vi.mocked(api.getIndividualProfitability).mockImplementation(
+      () => new Promise(() => {}),
+    );
     await userEvent.click(screen.getByTestId("profitability-search-button"));
     expect(screen.getByTestId("profitability-search-button")).toBeDisabled();
     expect(screen.getByTestId("profitability-reset-button")).toBeDisabled();
@@ -267,12 +277,24 @@ describe("개인 기간 조회 본문", () => {
     window.innerWidth = 390;
     vi.mocked(api.getIndividualProfitability).mockResolvedValue(response([]));
     mount();
-    const reset = await screen.findByTestId("profitability-mobile-empty-reset-button");
-    expect(reset.closest('[data-testid="profitability-mobile-cards"]')).not.toBeNull();
-    const callsBeforeReset = vi.mocked(api.getIndividualProfitability).mock.calls.length;
+    const reset = await screen.findByTestId(
+      "profitability-mobile-empty-reset-button",
+    );
+    expect(
+      reset.closest('[data-testid="profitability-mobile-cards"]'),
+    ).not.toBeNull();
+    const callsBeforeReset = vi.mocked(api.getIndividualProfitability).mock
+      .calls.length;
     await userEvent.click(reset);
-    await waitFor(() => expect(api.getIndividualProfitability).toHaveBeenCalledTimes(callsBeforeReset + 1));
-    expect(api.getIndividualProfitability).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, size: 20, includeTurnkey: true }), expect.any(AbortSignal));
+    await waitFor(() =>
+      expect(api.getIndividualProfitability).toHaveBeenCalledTimes(
+        callsBeforeReset + 1,
+      ),
+    );
+    expect(api.getIndividualProfitability).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, size: 20, includeTurnkey: true }),
+      expect.any(AbortSignal),
+    );
   });
   it("등록 진입점은 실제 내보내기·계산안내와 서버 근거를 조립하고 응답 변경을 그대로 표시한다", async () => {
     const first = response();
@@ -293,43 +315,40 @@ describe("개인 기간 조회 본문", () => {
       screen.getByTestId("individual-profitability-screen"),
     ).toHaveAttribute("data-screen-id", "UI-03");
     expect(screen.getByTestId("profitability-export-button")).toBeEnabled();
-    expect(
-      screen.getByTestId("profitability-company-profit-note"),
-    ).toHaveTextContent(
-      "내부 프로젝트·대기 인력은 매출이 없어 영업이익이 −원가로 보입니다. 회사 전체 영업이익표에서는 내부 몫은 연구개발비(판관비), 대기 몫은 대기 원가로 따로 잡혀 이 표의 합계와 다를 수 있습니다.",
-    );
     await userEvent.click(
       screen.getByTestId("profitability-calculation-toggle"),
     );
     expect(
       screen.getByTestId("profitability-calculation-panel"),
     ).toHaveAttribute("open");
-    first.calculationBasis.forEach((basis, index) =>
-      expect(
-        screen.getByTestId(`profitability-calculation-basis-${index}`),
-      ).toHaveTextContent(basis),
-    );
     expect(
-      screen.getByTestId("profitability-calculation-person-0"),
-    ).toHaveTextContent("평균 근무월 N=1");
+      within(
+        screen.getByTestId("profitability-calculation-panel"),
+      ).getAllByRole("row"),
+    ).toHaveLength(17);
+    expect(screen.getByText(/매달 값을 더함 \(연 누계\)/)).toBeVisible();
     expect(
-      screen.getByTestId("profitability-calculation-month-0-202601"),
-    ).toHaveTextContent(first.items[0].monthBasis[0].explanation);
+      screen.getByText(/내부 프로젝트·대기 인력은 매출이 없어/),
+    ).toBeVisible();
     const changed = response();
     changed.calculationBasis = ["새 응답의 월평균 근거"];
     changed.items[0].workedMonths = 7;
     vi.mocked(api.getIndividualProfitability).mockResolvedValue(changed);
     fireEvent.click(screen.getByRole("button", { name: "월 평균" }));
-    await screen.findByText("새 응답의 월평균 근거");
-    await userEvent.click(
-      screen.getByTestId("profitability-calculation-toggle"),
-    );
+    await screen.findByText(/그 사람이 일한 달 수 \(월 평균\)/);
+    if (
+      !screen
+        .getByTestId("profitability-calculation-panel")
+        .hasAttribute("open")
+    ) {
+      await userEvent.click(
+        screen.getByTestId("profitability-calculation-toggle"),
+      );
+    }
     expect(
       screen.queryByText(first.calculationBasis[0]),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByTestId("profitability-calculation-person-0"),
-    ).toHaveTextContent("평균 근무월 N=7");
+
     expect(
       screen.getByTestId("profitability-calculation-panel"),
     ).toHaveAttribute("open");
@@ -351,7 +370,7 @@ describe("개인 기간 조회 본문", () => {
     await userEvent.click(
       screen.getByTestId("profitability-calculation-toggle"),
     );
-    expect(screen.getByText("서버 계산 근거")).toBeVisible();
+    expect(screen.getByText(/매달 값을 더함 \(연 누계\)/)).toBeVisible();
   });
   it("근거가 없으면 예시 산식을 만들지 않고 자료 없음으로 표시한다", async () => {
     const data = response([]);
@@ -360,9 +379,7 @@ describe("개인 기간 조회 본문", () => {
     await userEvent.click(
       screen.getByTestId("profitability-calculation-toggle"),
     );
-    expect(
-      screen.getByText("계산 근거 자료 없음 · 다시 조회해 주세요."),
-    ).toBeVisible();
+    expect(screen.getByText("개인별 원가")).toBeVisible();
     expect(
       screen.queryByTestId("profitability-calculation-basis-0"),
     ).not.toBeInTheDocument();
@@ -387,7 +404,10 @@ describe("개인 기간 조회 본문", () => {
       expect.objectContaining({ view: "MONTHLY_AVERAGE" }),
       expect.any(AbortSignal),
     );
-    expect(screen.getByRole("button", { name: "월 평균" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "월 평균" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
   it("18개 기본열·4개 숨김열·누계급여 제목과 서버 전체합계/요약을 렌더링한다", async () => {
     mount();

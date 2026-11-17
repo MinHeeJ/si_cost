@@ -401,6 +401,7 @@ export function RateRenegotiationsScreen({
         </article>
       </div>
       <form
+        data-testid="renegotiation-assumption-form"
         className="renegotiation-assumption"
         onSubmit={(e) => {
           e.preventDefault();
@@ -484,7 +485,11 @@ export function RateRenegotiationsScreen({
           >
             <option value="ALL">전체</option>
             {["10", "15", "20"].map((value) => (
-              <option key={value} value={value}>
+              <option
+                data-testid={`renegotiation-margin-option-${value}`}
+                key={value}
+                value={value}
+              >
                 {value}% 미만
               </option>
             ))}
@@ -505,7 +510,11 @@ export function RateRenegotiationsScreen({
             >
               <option value="">전체</option>
               {employees.map((e) => (
-                <option key={e.code} value={e.code}>
+                <option
+                  data-testid={`renegotiation-employee-option-${Array.from(e.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={e.code}
+                  value={e.code}
+                >
                   {e.name}
                 </option>
               ))}
@@ -523,7 +532,11 @@ export function RateRenegotiationsScreen({
           >
             <option value="">전체</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option
+                data-testid={`renegotiation-project-option-${Array.from(String(p.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={p.id}
+                value={p.id}
+              >
                 {p.name}
               </option>
             ))}
@@ -543,6 +556,7 @@ export function RateRenegotiationsScreen({
       )}
       {(data?.issues ?? []).map((i, index) => (
         <div
+          data-testid={`renegotiation-banner-${index}`}
           className="sicost-banner sicost-tone-warn"
           role="note"
           key={`${i.code}-${index}`}
@@ -552,7 +566,7 @@ export function RateRenegotiationsScreen({
       ))}
       {canCost && !!data?.unevaluatedCount && (
         <details data-testid="renegotiation-unevaluated">
-          <summary>
+          <summary data-testid="renegotiation-unevaluated-summary">
             평가불가 {data.unevaluatedCount}건 · 원가·매출 미확인 근거 펼침
           </summary>
           {data.unevaluatedAssignments.map((i, index) => (
@@ -611,7 +625,12 @@ export function RateRenegotiationsScreen({
             }}
           >
             {["원", "천원", "백만원"].map((u) => (
-              <option key={u}>{u}</option>
+              <option
+                data-testid={`renegotiation-unit-option-${Array.from(u, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={u}
+              >
+                {u}
+              </option>
             ))}
           </select>
         </label>
@@ -684,7 +703,7 @@ export function RateRenegotiationsScreen({
           className="renegotiation-guide"
           data-testid="renegotiation-guide"
         >
-          <summary>계산 방법</summary>
+          <summary data-testid="renegotiation-guide-summary">계산 방법</summary>
           <p>
             기준월 {data?.baseMonth ?? "–"} · 목표율은 기준월 유효
             TGT_MRGN_RT입니다. 월 계산은 월MM m, 연 증가는 계약MM k를
@@ -702,7 +721,10 @@ export function RateRenegotiationsScreen({
               {Object.entries(help)
                 .filter(([id]) => id !== "contractMm")
                 .map(([id, text]) => (
-                  <tr key={id}>
+                  <tr
+                    data-testid={`renegotiation-guide-row-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                    key={id}
+                  >
                     <td>
                       {renegotiationColumns.find((c) => c.id === id)?.label}
                     </td>

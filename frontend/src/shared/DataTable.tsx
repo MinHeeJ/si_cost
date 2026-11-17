@@ -424,7 +424,7 @@ export function DataTable<T>({
                                 );
                               }}
                             >
-                              {expanded ? "−" : "+"}
+                              {expanded ? "▾" : "▸"}
                             </button>
                           )}
                         </td>
@@ -469,8 +469,22 @@ export function DataTable<T>({
           {footer && !loading && (
             <tfoot aria-label={footer.label} data-testid={`${testId}-totals`}>
               <tr>
-                {onSelectionChange && <td />}
-                {expandableRow && <td />}
+                {onSelectionChange && (
+                  <td
+                    className={
+                      stickyColumns?.length ? "sicost-sticky-cell" : undefined
+                    }
+                    style={utilityStyle(0)}
+                  />
+                )}
+                {expandableRow && (
+                  <td
+                    className={
+                      stickyColumns?.length ? "sicost-sticky-cell" : undefined
+                    }
+                    style={utilityStyle(onSelectionChange ? 44 : 0)}
+                  />
+                )}
                 {columns.map((column) => (
                   <td
                     key={column.id}
