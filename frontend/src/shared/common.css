@@ -180,15 +180,19 @@ button:disabled {
   text-overflow: ellipsis;
 }
 .sicost-table thead .sicost-sticky-cell {
-  z-index: 2;
+  z-index: 4;
   background: var(--head-bg);
 }
 .sicost-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   font-weight: 600;
   border-top: 1px solid var(--border);
   background: var(--head-bg);
 }
 .sicost-table tfoot .sicost-sticky-cell {
+  z-index: 3;
   background: var(--head-bg);
 }
 .sicost-table .sicost-expanded-row > td {
@@ -596,19 +600,68 @@ button[aria-pressed="true"] {
 
 /* 요구15 §7.2: 기기 테마와 현재 활성 화면 인쇄. */
 @media (prefers-color-scheme: dark) {
-  :root { --primary: #3b82f6; --primary-hover: #2563eb; --primary-bg: #172554;
-    --text: #f3f4f6; --text-sub: #cbd5e1; --text-dis: #94a3b8; --border: #475569;
-    --divider: #334155; --bg: #0f172a; --surface: #1e293b; --head-bg: #334155;
-    --ok: #86efac; --ok-bg: #14532d; --warn: #fcd34d; --warn-bg: #422006;
-    --bad: #fca5a5; --bad-bg: #450a0a; --info: #7dd3fc; --info-bg: #082f49;
-    --lock: #cbd5e1; --lock-bg: #334155; }
+  :root {
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --primary-bg: #172554;
+    --text: #f3f4f6;
+    --text-sub: #cbd5e1;
+    --text-dis: #94a3b8;
+    --border: #475569;
+    --divider: #334155;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --head-bg: #334155;
+    --ok: #86efac;
+    --ok-bg: #14532d;
+    --warn: #fcd34d;
+    --warn-bg: #422006;
+    --bad: #fca5a5;
+    --bad-bg: #450a0a;
+    --info: #7dd3fc;
+    --info-bg: #082f49;
+    --lock: #cbd5e1;
+    --lock-bg: #334155;
+  }
 }
 @media print {
-  html, body, #root, .sicost-app, .sicost-app-body, .sicost-main, .sicost-screen-host { height: auto; overflow: visible; display: block; }
-  .sicost-screen-host[hidden], .sicost-header, .sicost-sidebar, .sicost-screen-tabs,
-  .sicost-scrim, .sicost-drawer, .sicost-drawer-scrim, .sicost-filterbar, button, input, select, textarea { display: none !important; }
-  .sicost-screen-host:not([hidden])::after { content: "현재 조회된 목록 페이지 · 필터 전체는 엑셀 다운로드"; display: block; margin-top: 16px; }
-  .sicost-table-wrap { overflow: visible; }
-  thead { display: table-header-group; }
-  tr { break-inside: avoid; }
+  html,
+  body,
+  #root,
+  .sicost-app,
+  .sicost-app-body,
+  .sicost-main,
+  .sicost-screen-host {
+    height: auto;
+    overflow: visible;
+    display: block;
+  }
+  .sicost-screen-host[hidden],
+  .sicost-header,
+  .sicost-sidebar,
+  .sicost-screen-tabs,
+  .sicost-scrim,
+  .sicost-drawer,
+  .sicost-drawer-scrim,
+  .sicost-filterbar,
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+  .sicost-screen-host:not([hidden])::after {
+    content: "현재 조회된 목록 페이지 · 필터 전체는 엑셀 다운로드";
+    display: block;
+    margin-top: 16px;
+  }
+  .sicost-table-wrap {
+    overflow: visible;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
 }
