@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./clientsApi";
@@ -10,7 +11,7 @@ function fetcher() {
       async () =>
         new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
     );
-  vi.stubGlobal("fetch", fn);
+  stubBusinessFetch(fn);
   return fn;
 }
 it("전체는 useYn을 생략하고 검색과 구분과 페이지를 상대경로로 전송한다", async () => {

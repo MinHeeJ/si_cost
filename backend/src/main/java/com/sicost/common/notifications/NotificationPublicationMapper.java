@@ -22,6 +22,7 @@ public interface NotificationPublicationMapper {
     List<NotificationRecipients.Scope> recipientScopes();
     boolean registeredScreen(String screenId);
     int reserveSystem(Publication publication);
+    int reserveSkipped(Publication publication);
     BigDecimal insertNotification(Publication publication);
     int connectNotification(NotificationConnection connection);
 }

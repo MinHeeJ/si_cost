@@ -1,4 +1,9 @@
-import { request, ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  request,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 
 export type ForecastIssue = {
@@ -79,7 +84,7 @@ export type ForecastAmountUnit = "WON" | "THOUSAND" | "MILLION";
 export async function getSalesOpportunityForecastExport(
   amountUnit: ForecastAmountUnit,
 ) {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/api/sales-opportunities/forecast/export?${new URLSearchParams({ amountUnit })}`,
     {
       headers: {

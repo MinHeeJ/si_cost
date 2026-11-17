@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 import { saveDownload } from "../pages/b7/b7Api";
@@ -70,7 +71,7 @@ it.each(cases)(
       .mockResolvedValue(
         new Response(JSON.stringify({ success: true, meta: {}, data })),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     expect(await test.call()).toEqual(data);
     expect(fetcher).toHaveBeenCalledOnce();
     const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
@@ -92,7 +93,7 @@ it("exports the same annual year/unit through the existing binary download", asy
       },
     }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.getCashFlowExport(2025, "WON");
   expect(fetcher).toHaveBeenCalledOnce();
   expect(fetcher.mock.calls[0][0]).toBe(
@@ -125,7 +126,7 @@ it.each([
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).rejects.toMatchObject({ status: 409, body });
     expect(fetcher).toHaveBeenCalledOnce();
     expect(saveDownload).not.toHaveBeenCalled();

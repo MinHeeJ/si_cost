@@ -5,22 +5,45 @@
 저장소 루트에서 `docker compose -f infra/docker-compose.yml up --build -d`로 실행한다.
 프론트는 http://127.0.0.1:3000, 백엔드 health는 http://127.0.0.1:8080/api/health 이다.
 종료는 `docker compose -f infra/docker-compose.yml down`이다. PostgreSQL 지속 볼륨은 삭제하지 않는다.
-DB를 호스트에 공개하지 않으며 앱 포트도 loopback에만 바인딩한다. 이 버전은 인증을 제공하지 않으므로 공개 배포하면 안 된다.
+DB를 호스트에 공개하지 않으며 앱 포트도 loopback에만 바인딩한다. 모든 업무 API에는 서버 세션 인증·현재 저장 권한 검사를 적용한다. 공개 배포 전 HTTPS·Secure 쿠키·SMTP 및 아래 미검증 통합을 확인해야 한다.
 기본 개발 설정으로 시작할 수 있다. 운영에서는 DB_NAME/DB_USER/DB_PASSWORD를 별도로 정하고 기본 개발 비밀번호를 반드시 교체한다.
 
 ## 초기 관리자와 첫 사용
 
-로그인·비밀번호 입력 화면은 없다. 최초 빈 DB 기동 시 Flyway V1/V2가 원본 스키마와 전체 초기값을 설치한다.
-기존 초기 관리자·역할 연결을 DB에서 조회하는 CurrentUserProvider가 임시 관리자 컨텍스트를 공급하며, 비밀번호나 메일은 응답에 포함하지 않는다.
-확인용 별도 계정이나 AIOPS_SMOKE 환경변수는 사용하지 않는다. 최초 관리자 생성은 원본 시드에 포함되고 별도 계정 설정에 의존하지 않는다.
-프론트 진입점은 공식 라우터와 공통 레이아웃에 연결되어 있다. `/`는 `/UI-16`으로 이동하며 `/UI-27`에서 코드·엑셀 표기 대응·운영 기준값·변경 이력을 사용한다. 나머지 등록 업무 화면은 지정 기간 선택과 후속 단계 안내를 제공한다.
+로그인 화면은 `/UI-22`다. 기존 계정/역할/메뉴/담당/기준값을 재설치하거나 일괄 비밀번호 초기화하지 않는다. `CurrentUserProvider`는 실제 인증 주체만 사용하며 임시 관리자·고정 비밀번호·자동 로그인은 없다.
+
+기존 USE/LOCK ADMIN 계정의 초기 비밀번호를 모르는 경우에만 운영자가 `AuthenticationAdminCli`를 명시 실행한다. `mvn -f backend/pom.xml -DskipTests package`로 생성한 `backend/target/sicost.jar`와 운영 DB 환경을 사용한다. 다음 명령의 계정과 이메일은 운영자가 확인한 실제 기존 값으로 바꾼다. 비밀번호는 명령행 인수가 아니다.
+
+```sh
+java -Dloader.main=com.sicost.authentication.AuthenticationAdminCli \
+  -cp backend/target/sicost.jar org.springframework.boot.loader.launch.PropertiesLauncher \
+  reset EXISTING_ADMIN_ID VERIFIED_EMAIL
+```
+
+콘솔의 숨김 입력으로 운영자가 정한 규칙에 맞는 비밀번호를 입력한다. 비대화형 실행에서만 비밀 주입 시스템의 `AUTH_INITIAL_PASSWORD` 환경을 사용할 수 있으며 셸 이력·스크립트·파일·공용 초기값에 저장하지 않는다. CLI는 새 사용자 생성·ADMIN 승격·STOP 재개를 하지 않는다. 초기화 후 TEMP=Y와 ADMIN MFA를 유지하며 일반 로그인 절차를 생략하지 않는다. 운영자 프로세스는 HTTP 서버와 자동 배치/발송 재개를 시작하지 않는다.
+
+관리자 전원이 LOCK인 경우 동일 환경에서 다음 명시 명령으로 기존 ADMIN의 상태/실패횟수만 복구한다. 비밀번호·이메일·역할·담당을 바꾸지 않는다.
+
+```sh
+java -Dloader.main=com.sicost.authentication.AuthenticationAdminCli \
+  -cp backend/target/sicost.jar org.springframework.boot.loader.launch.PropertiesLauncher \
+  unlock EXISTING_ADMIN_ID
+```
+
+필수 환경은 `DB_URL`, `DB_USER`, `DB_PASSWORD`와 인증 메일용 `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_FROM`, `MAIL_STARTTLS`다. SMTP 인증이 필요하면 `MAIL_USERNAME`/`MAIL_PASSWORD`를 함께 비밀 주입한다. 운영 STARTTLS는 true를 사용한다. 로컬의 격리된 MailHog 같은 수집 서버만 포트 1025·STARTTLS=false로 구성하고 실제 수집함에서 메일을 확인한다. `ACCEPTED`는 SMTP 접수이며 수신함 배달 보장이 아니다. 메일 미설정/거절/불명은 인증 우회가 아니며 이전 비밀번호/코드를 복구하지 않는다.
+
+기본 쿠키는 HttpOnly·SameSite=Lax·Secure=true다. 로컬 HTTP 검증에서만 백엔드에 `SESSION_COOKIE_SECURE=false`를 명시 주입한다. 현재 Compose가 이 변수를 전달하지 않으므로 별도 로컬 override의 backend.environment에 설정한다. SMTP 환경도 동일하게 전달해야 한다. 운영에서는 HTTPS와 Secure=true를 유지한다.
+
+정상 첫 사용: 로그인 → 실제 수집 메일의 ADMIN 인증번호(5분) → 임시 비밀번호 강제 변경 → 허용 대시보드 또는 메뉴 순서상 첫 허용 화면. 모바일은 PC 전용 화면을 제외하며 허용 화면이 없으면 안내와 로그아웃만 제공한다. 확인기의 `auth_required`와 `auth.required`는 true이고, 세션ID/비밀번호/인증번호는 확인 산출물에 저장하지 않는다.
+
+롤백/재배포도 인증을 끄거나 옛 해시를 복구하지 않는다. 필요하면 앱 인스턴스를 모두 정지해 메모리 세션을 폐기하고 인증이 유지되는 버전을 배포한다. DB 원장·저장 권한·계좌 암호문·감사기록은 그대로 보존한다. 기존 미통합/제한 범위 안전 차단과 실제 검증 범위는 `docs/security/basic147-integration-discovery.md`를 참고한다. 안전 차단은 해당 업무의 통합 완료를 뜻하지 않는다.
 
 ## 기술 결정과 원본 보존
 
 Java 17 / Spring Boot 3.3.13 / Maven / MyBatis 3.0.4 / Flyway / PostgreSQL 16을 사용한다.
 프론트는 Node 20 / React 18.3.1 / Vite 5.4.21 / TypeScript / React Router, npm을 사용한다.
 영구 OpenAPI 시험 자원은 `backend/src/test/resources/contracts/openapi.yaml`이다. 앱 사용 확인기의 1 MiB 읽기 한도에 맞춰 동일한 YAML 값을 앵커로 공유하며, 연산·스키마·설명·추적 정보를 생략하지 않는다. 갱신 후 `python3 scripts/compact_openapi_fixture.py`로 의미 동일성과 크기를 확인한다(PyYAML 필요).
-백엔드 단독 컨텍스트에서도 계약 시험을 실행하도록 같은 contracts 폴더에 무인증 runtime/첫 사용 안내 fixture를 보존한다. 루트 계약 변경 시 함께 갱신한다. 저장소 전체 Maven 실행에서는 루트 파일을 우선 복사한다.
+백엔드 단독 컨텍스트에서도 계약 시험을 실행하도록 같은 contracts 폴더에 runtime/첫 사용 안내 fixture를 보존한다. 인증 필수 값은 루트와 동일해야 한다. 저장소 전체 Maven 실행에서는 루트 파일을 우선 복사한다.
 부모 POM과 MyBatis POM 및 npm 정확 버전 메타데이터의 실제 HTTP 200을 확인했다.
 요청의 D1~D6/D9/D13 결정을 적용한다. 역사적 상류 문서는 수정하지 않았으며 JPA validate를 실행했다고 주장하지 않는다.
 SQL 원본·승인 OpenAPI fixture는 수정하지 않는다. 원본·투영본 해시와 기계적 차이는 infra/sql-projection.json을 참조한다.

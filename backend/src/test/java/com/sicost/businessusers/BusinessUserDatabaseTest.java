@@ -58,7 +58,7 @@ class BusinessUserDatabaseTest {
         context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AccessLogWriter.class,
             RevisionService.class,BusinessUserRepository.class,BusinessUserService.class);
-        context.refresh();service=context.getBean(BusinessUserService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(BusinessUserService.class);
         mvc=MockMvcBuilders.standaloneSetup(new BusinessUserController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }
     @AfterEach void close() {if(context!=null)context.close();}

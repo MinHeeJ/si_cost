@@ -7,7 +7,10 @@ import java.time.OffsetDateTime;
 
 public final class NotificationDtos {
     private NotificationDtos() {}
-    public record UnreadCount(long unreadCount, long receivableCount, boolean currentMonthUnclosed, OffsetDateTime observedAt) {}
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record UnreadCount(long unreadCount, Long receivableCount, Boolean currentMonthUnclosed, OffsetDateTime observedAt) {
+        public UnreadCount(long unreadCount,long receivableCount,boolean currentMonthUnclosed,OffsetDateTime observedAt) {this(unreadCount,Long.valueOf(receivableCount),Boolean.valueOf(currentMonthUnclosed),observedAt);}
+    }
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Link(String screenId, String linkKey) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)

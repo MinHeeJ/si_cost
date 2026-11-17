@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -42,9 +42,9 @@ beforeEach(() => {
   });
   vi.mocked(api.getBusinessUser).mockResolvedValue(user);
   vi.mocked(api.getManagedUserRoleOptions).mockResolvedValue([
-      { roleId: "PM", name: "프로젝트 담당" },
-      { roleId: "SALES_LDR", name: "영업 파트장" },
-    ]);
+    { roleId: "PM", name: "프로젝트 담당" },
+    { roleId: "SALES_LDR", name: "영업 파트장" },
+  ]);
   vi.mocked(api.getBusinessUserHistory).mockResolvedValue({
     items: [],
     total: 0,
@@ -223,7 +223,11 @@ it("신규는 DB 표시명과 PM만 기본 체크하고 등록 후 목록·상�
       projectAssignments: [],
     }),
   );
-  expect(await screen.findByText("등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.")).toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      "등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.",
+    ),
+  ).toBeInTheDocument();
   expect(api.notifyBusinessUsersCommitted).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(api.getBusinessUsers).toHaveBeenCalledTimes(2));
   expect(
@@ -363,14 +367,27 @@ it("열 순서·필수열과 밀도·헤더 정렬을 유지한다", async () =>
     ),
   );
 });
-it("전체 역할·중지포함 필터를 적용하고 선택 줄은 선택할 때만 총 건수를 대체한다", async()=>{
-  vi.mocked(api.getManagedUserRoleOptions).mockResolvedValue([{roleId:"FIN",name:"재무 담당"}]);
-  render(<BusinessUsersScreen/>);await screen.findByText("ab12");
+it("전체 역할·중지포함 필터를 적용하고 선택 줄은 선택할 때만 총 건수를 대체한다", async () => {
+  vi.mocked(api.getManagedUserRoleOptions).mockResolvedValue([
+    { roleId: "FIN", name: "재무 담당" },
+  ]);
+  render(<BusinessUsersScreen />);
+  await screen.findByText("ab12");
   expect(screen.queryByText("선택 0건")).not.toBeInTheDocument();
-  await userEvent.selectOptions(await screen.findByLabelText("역할"),"FIN");
-  await userEvent.click(screen.getByLabelText("사용 중지 포함"));await userEvent.click(screen.getByRole("button",{name:"조회"}));
-  await waitFor(()=>expect(api.getBusinessUsers).toHaveBeenLastCalledWith(expect.objectContaining({role:"FIN",includeStopped:true,page:1})));
-  await userEvent.click(screen.getByLabelText("ab12 선택"));expect(screen.getByText("선택 1건")).toBeInTheDocument();expect(screen.queryByText("총 1건")).not.toBeInTheDocument();
-  expect(screen.getByRole("button",{name:"조회전체 선택"})).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button",{name:"선택 해제"}));expect(screen.getByText("총 1건")).toBeInTheDocument();
+  await userEvent.selectOptions(await screen.findByLabelText("역할"), "FIN");
+  await userEvent.click(screen.getByLabelText("사용 중지 포함"));
+  await userEvent.click(screen.getByRole("button", { name: "조회" }));
+  await waitFor(() =>
+    expect(api.getBusinessUsers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ role: "FIN", includeStopped: true, page: 1 }),
+    ),
+  );
+  await userEvent.click(screen.getByLabelText("ab12 선택"));
+  expect(screen.getByText("선택 1건")).toBeInTheDocument();
+  expect(screen.queryByText("총 1건")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "조회전체 선택" }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "선택 해제" }));
+  expect(screen.getByText("총 1건")).toBeInTheDocument();
 });

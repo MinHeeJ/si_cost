@@ -15,7 +15,9 @@ public final class BusinessUserDtos {
                        boolean headOffice, List<AssignedPart> assignedParts, boolean tempPassword) {}
     public record AssignedPart(String partId, String name, boolean headOffice) {}
     public record Page(List<User> items, long total, int page, int size) {}
-    public record Result(boolean changed, String message, User user) {}
+    public record Result(boolean changed, String message, User user, com.sicost.authentication.AuthenticationPasswordService.Delivery passwordDelivery) {
+        public Result(boolean changed,String message,User user) {this(changed,message,user,null);}
+    }
     public record Filter(String q, String businessRole, String status, int page, int size,
                          String sort, String direction, long offset, String role, boolean includeStopped) {
         public Filter(String q,String businessRole,String status,int page,int size,String sort,String direction,long offset) {this(q,businessRole,status,page,size,sort,direction,offset,null,false);}

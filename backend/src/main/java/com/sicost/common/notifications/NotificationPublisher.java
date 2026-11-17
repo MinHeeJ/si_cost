@@ -24,6 +24,9 @@ public class NotificationPublisher {
     private final NotificationPublicationMapper mapper;
     private final ChangeHistoryWriter history;
     private final Clock clock;
+    private com.sicost.permission.NotificationRecipientPolicy permission;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRecipientPolicy(com.sicost.permission.NotificationRecipientPolicy value) {permission=value;}
     public NotificationPublisher(NotificationPublicationMapper mapper, ChangeHistoryWriter history, Clock clock) {
         this.mapper = mapper; this.history = history; this.clock = clock;
     }
@@ -37,14 +40,22 @@ public class NotificationPublisher {
         var selected = new TreeMap<String, NotificationRecipients.Recipient>();
         for (var recipient : recipients) {
             var current = active.get(recipient.userId());
-            if (current != null) selected.put(recipient.userId(), new NotificationRecipients.Recipient(current.userId(), current.name(), current.emailAddress(), recipient.qualifications()));
+            selected.put(recipient.userId(), current==null?recipient:new NotificationRecipients.Recipient(current.userId(), current.name(), current.emailAddress(), recipient.qualifications()));
         }
         List<UUID> created = new ArrayList<>();
         LocalDateTime at = LocalDateTime.ofInstant(clock.instant(), TimeConfiguration.SEOUL);
         for (var recipient : selected.values()) {
             InputValidator.text(recipient.name(), 50, "recipientName");
             UUID taskId = UUID.randomUUID();
-            var publication = new Publication(taskId, event, recipient, at);
+            if(permission==null)throw new IllegalStateException("수신 권한 정책이 연결되지 않았습니다.");
+            Event authorized=active.containsKey(recipient.userId())?permission.review(event,recipient.userId()):null;
+            if(authorized==null) {
+                Event omitted=new Event(event.key(),event.type(),"현재 상태·역할·메뉴 또는 담당 범위 변경으로 전달하지 않았습니다.",null,null);
+                if(mapper.reserveSkipped(new Publication(taskId,omitted,recipient,at))==1)
+                    audit("TB_SY_DELIVERY_TASK",taskId.toString(),Map.of("STATE_CD","SKIPPED","ERROR_CD","PERMISSION_REVOKED","ERROR_CN",omitted.content()));
+                continue;
+            }
+            var publication = new Publication(taskId, authorized, recipient, at);
             int inserted = mapper.reserveSystem(publication);
             if (inserted == 0) continue;
             if (inserted != 1) throw new IllegalStateException("전달 작업을 저장하지 못했습니다.");
@@ -53,8 +64,8 @@ public class NotificationPublisher {
             if (mapper.connectNotification(new NotificationConnection(taskId, notificationId)) != 1) throw new IllegalStateException("알림 연결을 저장하지 못했습니다.");
             var task = new LinkedHashMap<String, Object>();
             task.put("TASK_ID", taskId); task.put("EVENT_KEY", event.key()); task.put("RCVR_USER_ID", recipient.userId()); task.put("RCVR_NM", recipient.name());
-            task.put("CHANNEL_CD", "SYS"); task.put("STATE_CD", "SENT"); task.put("NOTI_TYPE_CD", event.type()); task.put("NOTI_CN", event.content());
-            task.put("LINK_SCRN_ID", event.link() == null ? null : event.link().screenId()); task.put("LINK_KEY", event.link() == null ? null : event.link().key());
+            task.put("CHANNEL_CD", "SYS"); task.put("STATE_CD", "SENT"); task.put("NOTI_TYPE_CD", authorized.type()); task.put("NOTI_CN", authorized.content());
+            task.put("LINK_SCRN_ID", authorized.link() == null ? null : authorized.link().screenId()); task.put("LINK_KEY", authorized.link() == null ? null : authorized.link().key());
             task.put("MAIL_TO", null); task.put("MAIL_SUBJECT", null); task.put("MAIL_BODY", null); task.put("MESSAGE_ID", null); task.put("NOTI_ID", notificationId.toPlainString());
             task.put("BILL_ID", event.dunning() == null ? null : event.dunning().billId()); task.put("DUN_STEP", event.dunning() == null ? null : event.dunning().step());
             task.put("DUN_SN", event.dunning() == null ? null : event.dunning().serial()); task.put("RESEND_YN", event.dunning() != null && event.dunning().resend() ? "Y" : "N");
@@ -62,8 +73,8 @@ public class NotificationPublisher {
             audit("TB_SY_DELIVERY_TASK", taskId.toString(), task);
             var notification = new LinkedHashMap<String, Object>();
             notification.put("NOTI_ID", notificationId.toPlainString()); notification.put("RCVR_USER_ID", recipient.userId()); notification.put("NOTI_TYPE_CD", event.type());
-            notification.put("NOTI_CN", event.content()); notification.put("LINK_SCRN_ID", event.link() == null ? null : event.link().screenId());
-            notification.put("LINK_KEY", event.link() == null ? null : event.link().key()); notification.put("SEND_MTHD_CD", event.type().equals("DUN") ? "BOTH" : "SYS");
+            notification.put("NOTI_CN", authorized.content()); notification.put("LINK_SCRN_ID", authorized.link() == null ? null : authorized.link().screenId());
+            notification.put("LINK_KEY", authorized.link() == null ? null : authorized.link().key()); notification.put("SEND_MTHD_CD", authorized.type().equals("DUN") ? "BOTH" : "SYS");
             notification.put("READ_YN", "N"); notification.put("READ_DTTM", null); notification.put("NOTI_DTTM", at); notification.put("REG_USER_ID", "SYSTEM"); notification.put("REG_DTTM", at);
             audit("TB_SY_NOTI", notificationId.toPlainString(), notification);
             created.add(taskId);

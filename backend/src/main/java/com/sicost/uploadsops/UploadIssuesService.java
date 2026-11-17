@@ -30,10 +30,12 @@ public class UploadIssuesService {
         UploadIssuesInput.severity(severity);
         String form=repository.formType(id);
         boolean developers = "B8".equals(form) || "B1".equals(form);
-        Specification specification = new Specification("B11".equals(form) ? "이관손익_업로드검사" : "B10".equals(form) ? "사업계획_업로드검사" : "B2".equals(form) ? "재무_업로드검사" : "B5".equals(form) ? "투입_업로드검사" : "B1".equals(form) ? "급여_업로드검사" : developers ? "개발자_업로드검사" : "거래처_업로드검사", Long.toString(id), List.of(
+        String sourceScreen=switch(form) {case "B1","B8"->"UI-02";case "B2"->"UI-10";case "B5"->"UI-12";case "B6","B9"->"UI-01";case "B10"->"UI-18";case "B11"->"UI-08";default->"UI-15";};
+        String kind=switch(form) {case "B1"->"급여_업로드검사";case "B2"->"재무_업로드검사";case "B5"->"투입_업로드검사";case "B6"->"턴키배분표_업로드검사";case "B8"->"개발자_업로드검사";case "B9"->"프로젝트_업로드검사";case "B10"->"사업계획_업로드검사";case "B11"->"이관손익_업로드검사";default->"거래처_업로드검사";};
+        Specification specification = new Specification(kind, Long.toString(id), List.of(
             new Column("severity", "유형", CellType.TEXT), new Column("rowNumber", "행", CellType.NUMBER),
             new Column("columnName", "열", CellType.TEXT), new Column("inputValue", "입력값", CellType.TEXT),
-            new Column("reason", "이유", CellType.TEXT)), "severity=" + (severity == null ? "전체" : severity), "원", "B11".equals(form) ? "UI-08" : "B10".equals(form) ? "UI-18" : "B2".equals(form) ? "UI-10" : "B5".equals(form) ? "UI-12" : developers ? "UI-02" : "UI-15");
+            new Column("reason", "이유", CellType.TEXT)), "severity=" + (severity == null ? "전체" : severity), "원", sourceScreen);
         return exports.generate(specification, sink -> {
             repository.requireUpload(id);
             long offset = 0;

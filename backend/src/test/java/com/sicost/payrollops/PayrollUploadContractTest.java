@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(PayrollUploadController.class)
 @ContextConfiguration(classes=PayrollUploadController.class)
 @Import({PayrollUploadService.class,PayrollUploadRepository.class,CurrentUserProvider.class,

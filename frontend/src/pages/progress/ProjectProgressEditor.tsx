@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import * as api from "./projectProgressApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 
 export type ProgressEditorMode =
   | { kind: "initialize" }
@@ -9,6 +10,7 @@ export type ProgressEditorMode =
   | { kind: "complete"; step: api.ProgressStep }
   | { kind: "memo"; memo?: api.WeekMemo };
 export function ProjectProgressEditor({
+  permissionScreen = "UI-01",
   data,
   mode,
   onSaved,
@@ -20,7 +22,10 @@ export function ProjectProgressEditor({
   onSaved(result: api.ProgressMutation): Promise<void>;
   onClose(reload?: boolean): void;
   onDirtyChange?(dirty: boolean): void;
+  permissionScreen?: "UI-01" | "UI-31";
 }) {
+  const policy = mode.kind === "memo" ? permissionScreen : "UI-01";
+  const canWrite = usePermission(policy, "UPD");
   const memo = mode.kind === "memo" ? mode.memo : undefined;
   const [draft, setDraft] = useState({
     thisWeek: memo?.thisWeek ?? "",
@@ -97,7 +102,7 @@ export function ProjectProgressEditor({
     }
   }
   async function save() {
-    if (inFlight.current || stale) return;
+    if (!canWrite || inFlight.current || stale) return;
     setFields({});
     setError(undefined);
     const body = { year: data.year, expectedRevision: data.progressRevision };
@@ -173,6 +178,7 @@ export function ProjectProgressEditor({
       <Dialog
         open
         title={title}
+        permission={{ screen: policy, action: "UPD" }}
         pending={pending}
         confirmDisabled={stale || data.readOnly}
         confirmLabel={

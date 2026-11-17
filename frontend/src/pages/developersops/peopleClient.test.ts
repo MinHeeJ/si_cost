@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   getDeveloperAssignments,
@@ -11,7 +12,7 @@ function server(data: unknown) {
       status: 200,
     }),
   );
-  vi.stubGlobal("fetch", fetch);
+  stubBusinessFetch(fetch);
   return fetch;
 }
 it("selection has approved filters but no pagination", async () => {

@@ -61,7 +61,7 @@ class RoleStopDatabaseTest {
         context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AccessLogWriter.class,
             RevisionService.class,RoleConfigurationRevision.class,CommitInvalidation.class,WriteCoordinator.class,RoleStopRepository.class,RoleStopService.class);
-        context.refresh();revisions=context.getBean(RoleConfigurationRevision.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();revisions=context.getBean(RoleConfigurationRevision.class);
         mvc=MockMvcBuilders.standaloneSetup(new RoleStopController(context.getBean(RoleStopService.class)))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         id="R-"+UUID.randomUUID().toString().replace("-","").substring(0,16);

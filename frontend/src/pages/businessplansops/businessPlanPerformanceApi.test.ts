@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -7,7 +8,7 @@ import {
   BUSINESS_PLAN_COMMITTED,
   type PlanValidation,
 } from "./businessPlanPerformanceApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 afterEach(() => vi.unstubAllGlobals());
 const json = (data: unknown) =>
   new Response(JSON.stringify({ success: true, meta: {}, data }));

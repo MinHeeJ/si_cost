@@ -4,7 +4,7 @@ import {
   within,
   fireEvent,
   waitFor,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { PermissionSettingsPanel } from "./PermissionSettingsPanel";

@@ -3,8 +3,11 @@ import { Icon } from "../../shared/Icon";
 import type { NotificationBellProps } from "../notificationsops/NotificationBell";
 import { ActivityCenter } from "../apiops/ActivityCenter";
 import { AnalysisConversation } from "./AnalysisConversation";
+import { SessionIndicator } from "../authentication/SessionIndicator";
+import { useFeaturePermission } from "../../shared/permission/PermissionBoundary";
 
 export function HeaderActions(props: NotificationBellProps = {}) {
+  const canAnalyze = useFeaturePermission("analysisPanel");
   const [open, setOpen] = useState<"ai" | null>(null);
   const anchor = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -26,17 +29,20 @@ export function HeaderActions(props: NotificationBellProps = {}) {
         if (event.key === "Escape") setOpen(null);
       }}
     >
-      <button
-        className="sicost-ai-action"
-        aria-label="AI에게 묻기"
-        aria-expanded={open === "ai"}
-        onClick={() => setOpen(open === "ai" ? null : "ai")}
-      >
-        <Icon name="sparkle" size={16} />
-        <span>AI에게 묻기</span>
-      </button>
+      <SessionIndicator />
+      {canAnalyze && (
+        <button
+          className="sicost-ai-action"
+          aria-label="AI에게 묻기"
+          aria-expanded={open === "ai"}
+          onClick={() => setOpen(open === "ai" ? null : "ai")}
+        >
+          <Icon name="sparkle" size={16} />
+          <span>AI에게 묻기</span>
+        </button>
+      )}
       <ActivityCenter {...props} />
-      {open && (
+      {open && canAnalyze && (
         <div
           role="dialog"
           aria-label="AI에게 묻기 대화창"

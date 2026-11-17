@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(BusinessUserController.class)
 @ContextConfiguration(classes=BusinessUserController.class)
 @Import({BusinessUserService.class,BusinessUserRepository.class,RevisionService.class,ChangeHistoryWriter.class,

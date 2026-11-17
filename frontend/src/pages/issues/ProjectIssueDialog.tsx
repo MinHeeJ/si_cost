@@ -8,6 +8,7 @@ import {
   type SharedCodeLookup,
 } from "../shared/sharedApi";
 import * as api from "./projectIssuesApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./issues.css";
 
 export type IssueProjectChoice = { id: string; name: string };
@@ -34,6 +35,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
     onSaved,
     onDirtyChange,
   } = props;
+  const canWrite = usePermission(host, issue ? "UPD" : "REG");
   const initial = useRef({
     title: issue?.title ?? "",
     dueDate: issue?.dueDate ?? defaultDue(baseDate),
@@ -138,6 +140,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
   }
   async function save() {
     if (
+      !canWrite ||
       active.current ||
       !progress ||
       stale ||
@@ -233,6 +236,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
       <Dialog
         open
         title={issue ? "이슈 수정" : "이슈 등록"}
+        permission={{ screen: host, action: issue ? "UPD" : "REG" }}
         pending={pending}
         onCancel={cancel}
         onConfirm={save}

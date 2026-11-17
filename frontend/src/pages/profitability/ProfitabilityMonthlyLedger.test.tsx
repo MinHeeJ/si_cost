@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { PreferencesProvider } from "../me/usePreferences";
@@ -285,7 +285,12 @@ beforeEach(() => {
 });
 it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액/원가/노동비를 복제 없이 보여준다", async () => {
   render(
-    <ProfitabilityMonthlyLedger personId="owned" query={query} unit="원" jobLabels={{ DEV: "개발 직무" }} />,
+    <ProfitabilityMonthlyLedger
+      personId="owned"
+      query={query}
+      unit="원"
+      jobLabels={{ DEV: "개발 직무" }}
+    />,
   );
   const table = await screen.findByTestId(
     /^profitability-ledger-table-[a-f0-9-]+$/,
@@ -293,7 +298,9 @@ it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액
   const rows = within(table).getAllByRole("row").slice(1);
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("2026-01");
-  expect(rows[0].querySelector('[data-column="project"]')).toHaveTextContent("└ 2026-01 원본 프로젝트 · 개발 직무");
+  expect(rows[0].querySelector('[data-column="project"]')).toHaveTextContent(
+    "└ 2026-01 원본 프로젝트 · 개발 직무",
+  );
   expect(rows[0]).toHaveTextContent("owned-a");
   expect(rows[1]).toHaveTextContent("owned-b");
   for (const item of rows) {

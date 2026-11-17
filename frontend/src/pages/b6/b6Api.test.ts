@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createB6Validation,
@@ -20,7 +21,7 @@ it("multipart는 계약의 file/year/projectId/step/ID/revision만 보내고 API
         ),
       ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await createB6Validation(file, context);
   await saveB6Apply(file, 71, context, "opaque-revision");
   expect(fetcher.mock.calls[0][0]).toBe("/api/excel/B6/validate");
@@ -63,7 +64,7 @@ it("보호월의 월·차이·field/requestId/details를 표시할 수 있도록
       { status: 409 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     saveB6Apply(file, 71, context, "revision"),
   ).rejects.toMatchObject({
@@ -91,7 +92,7 @@ it("양식에는 projectId만, 결과에는 uploadId를, 조회출력에는 조�
       ),
     )
     .mockResolvedValueOnce(xlsx());
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getB6Template("P-selected");
   await getUploadResult(82);
   await exportDistribution("P-selected", "EST", "천원");
@@ -108,8 +109,7 @@ it("양식에는 projectId만, 결과에는 uploadId를, 조회출력에는 조�
   });
 });
 it("실패 JSON을 XLSX로 저장하지 않는다", async () => {
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({

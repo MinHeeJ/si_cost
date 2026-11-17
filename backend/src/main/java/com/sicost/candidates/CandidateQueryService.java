@@ -20,12 +20,16 @@ public class CandidateQueryService {
     private final AddressService addresses;
     private final ObjectMapper json;
     private final Clock clock;
+    private com.sicost.permission.PermissionProjectionService projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
     public CandidateQueryService(CandidateRepository repository,CandidateRevisionService revisions,AddressService addresses,ObjectMapper json,Clock clock){this.repository=repository;this.revisions=revisions;this.addresses=addresses;this.json=json;this.clock=clock;}
     public LocalDate today(){return PeopleInputPolicy.today(clock);}
     public LocalDateTime now(){return LocalDateTime.ofInstant(clock.instant(),com.sicost.common.TimeConfiguration.SEOUL);}
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public JsonNode list(Query query) {
         repository.actor();
+        if(projection!=null && !projection.candidateRate() && "desiredRate".equals(query.sort()))throw new ApiException(400,"FIELD_NOT_EDITABLE","정렬할 수 없는 항목입니다.","sort",null);
         for(String key:List.of("jobCode","gradeCode"))if(query.filters().containsKey(key)&&repository.mapper().code(key.equals("jobCode")?"JOB":"GRADE",query.filters().get(key))==null)throw InputValidator.invalid(key);
         String availability=query.filters().get("availability");
         LocalDate through=availability==null?null:YearMonth.from(today()).plusMonths(availability.equals("NEXT_MONTH")?1:3).atEndOfMonth();
@@ -42,7 +46,7 @@ public class CandidateQueryService {
         String id=row.get("id").toString();Map<String,Object> labels=repository.mapper().labels(id),result=new LinkedHashMap<>();
         for(String key:List.of("id","name","employeeType","homeAddress","contactStatus"))result.put(key,row.get(key));
         for(String key:List.of("companyName","job","grade","source"))result.put(key,labels.get(key));
-        result.put("desiredRate",row.get("desiredRate").toString());
+        if(projection==null || projection.candidateRate())result.put("desiredRate",row.get("desiredRate").toString());
         for(String key:List.of("availableDate","lastContactDate"))result.put(key,date(row.get(key)));
         result.put("skills",repository.mapper().skills(id));result.put("revision",revisions.revision(id,false));
         if(detail){
@@ -50,6 +54,8 @@ public class CandidateQueryService {
             result.put("consentDate",date(row.get("consentDate")));result.put("consentUserName",labels.get("consentUserName"));
             result.put("addressPath",row.get("homeAreaCode")==null?new AreaPath(List.of(),null):addresses.getPath(row.get("homeAreaCode").toString()));
         }
+        if(projection!=null && !projection.candidateRate())result.put("projection","RESTRICTED");
+        result.put("availableFields",List.copyOf(result.keySet()));
         return tree(result);
     }
     private String date(Object value){return value==null?null:value.toString();}

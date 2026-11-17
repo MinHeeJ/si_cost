@@ -27,6 +27,7 @@ import static com.sicost.businessplansops.BusinessPlanActuals.*;
 /** Select-only integration. All business calculations are owned by their original services. */
 @Service
 public class AnalysisDataQueries {
+    static final String PRIVATE_EXCLUSION="급여·개인원가 등 현재 권한으로 조회할 수 없는 항목은 제외했습니다. 표에는 허용된 투입 현황만 제공합니다.";
     private final ProfitStructureRepository company;
     private final MonthlyCostService costs;
     private final IndividualProfitabilityService individuals;
@@ -53,7 +54,11 @@ public class AnalysisDataQueries {
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Result read(String user,Question question,AnalysisQuestionInterpreter.Intent intent,OffsetDateTime at) {
+        return com.sicost.permission.PermissionAcceptanceContext.period(intent.from(),intent.to(),()->readSource(user,question,intent,at));
+    }
+    private Result readSource(String user,Question question,AnalysisQuestionInterpreter.Intent intent,OffsetDateTime at) {
         Builder b=new Builder(user,question,intent,at);
+        policy.require(user,b.scope());
         // A locally identified person/project is never silently answered as whole-company PL.
         if(intent.reason()==null&&intent.function()==COMPANY&&!question.question().matches("(?s).*(회사|전사).*")) {
             var people=mapper.people().stream().filter(e->mentions(question.question(),e)).toList();
@@ -244,10 +249,16 @@ public class AnalysisDataQueries {
     }
     private void assignments(Builder b) {
         List<Row> rows=new ArrayList<>();
+        if(!policy.allows(b.user,target("FUNCTION","COMPANY","",List.of())) && b.question.question().matches("(?s).*(급여|노동비|인건비|개인.?원가|단가|이익|계좌).*"))b.unknown.add(PRIVATE_EXCLUSION);
+        String selectedProject=b.question.context().projectId(),selectedPerson=b.question.context().developerId();
+        if(selectedProject!=null)b.authorize(target("PROJECT",selectedProject,"",List.of("assignments")));
+        if(selectedPerson!=null)b.authorize(target("DEVELOPER",selectedPerson,"",List.of("assignments")));
         for(int year=b.i.from().getYear();year<=b.i.to().getYear();year++) {
             var filter=new AssignmentActionsDtos.Filter(year,null,null,null,null,false);
             var data=assignments.listAll(new AssignmentInput.Query(filter,1,100,"projectName","ASC"));
             for(var a:data)if(!a.endDate().isBefore(b.i.from().atDay(1))&&!a.startDate().isAfter(b.i.to().atEndOfMonth())&&(!b.question.question().contains("현재")||!a.startDate().isAfter(b.at.toLocalDate())&&!a.endDate().isBefore(b.at.toLocalDate()))) {
+                if(!policy.allows(b.user,target("PROJECT",a.projectId(),a.projectName(),List.of("assignments"))))continue;
+                if(selectedProject!=null && !selectedProject.equals(a.projectId()) || selectedPerson!=null && !selectedPerson.equals(a.developerId()))continue;
                 var t=target("DEVELOPER",a.developerId(),a.developerName()+" · "+a.managementNo(),List.of("assignments"));b.targets.add(t);b.targets.add(target("PROJECT",a.projectId(),a.projectName(),List.of("assignments")));
                 rows.add(row(a.id()+year,t,"id",a.id(),"project",a.projectName(),"person",t.displayName(),"job",a.jobName(),"start",a.startDate().toString(),"end",a.endDate().toString(),"year",Integer.toString(year),"mm",a.yearMm(),"type",a.inputType()));
             }
@@ -302,7 +313,7 @@ public class AnalysisDataQueries {
         Builder(String user,Question q,AnalysisQuestionInterpreter.Intent i,OffsetDateTime at){this.user=user;this.question=q;this.i=i;this.at=at;from=i.from().toString();to=i.to().toString();targets.add(target("FUNCTION",i.function().name(),i.function().name(),List.of(i.function().name())));}
         void authorize(Target t){policy.require(user,new Scope(List.of(t),List.of(),from,to,at.toLocalDate(),i.to().toString()));}
         Scope scope(){return new Scope(targets.stream().distinct().toList(),i.minimumOverdue()==null?List.of():List.of(new Filter("overdueDays","GE",List.of(i.minimumOverdue().toString()))),from,to,at.toLocalDate(),i.prediction()?YearMonth.from(at).toString():to);}
-        void evidence(String name,String state,String basis,Object source){evidence.add(new Evidence(name,scope(),state,basis,List.of(revisions.revision(source))));}
+        void evidence(String name,String state,String basis,Object source){evidence.add(new Evidence(name,scope(),state,basis,policy.allows(user,target("FUNCTION","COMPANY","",List.of()))?List.of(revisions.revision(source)):List.of()));}
         void link(String screen,String guidance){links.add(new ScreenLink(screen,scope(),guidance));}
         void table(String title,List<Column> columns,List<Row> rows,String scenario){
             List<Cell> totals=new ArrayList<>();for(var c:columns)if(c.valueType().equals("DECIMAL")&&!Set.of("%","%p","일").contains(c.unit())) {

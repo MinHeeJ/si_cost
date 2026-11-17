@@ -9,6 +9,9 @@ import {
   type PartOption,
 } from "../salespartsops/partStandardsApi";
 import * as api from "./projectAnalysisApi";
+import { DetailDrawer } from "../../shared/DetailDrawer";
+import { ProjectProgressPanel } from "../progress/ProjectProgressPanel";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   AnalysisSummary,
   AnalysisCompleteness,
@@ -43,27 +46,38 @@ export function ProjectStatusBoard({
   renderExport,
   columnView,
   dense,
-  pageSize, onPageSizeChange,
+  pageSize,
+  onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
+  const [detail, setDetail] = useState<api.BoardRow>();
+  const canCosts = usePermission("UI-04", "INQ");
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState<api.AnalysisQuery>(
-    Object.assign(pageSize===undefined?{}:{size:analysisPageSize(pageSize)}, Object.fromEntries(
-      [...params.entries()].filter(([key]) =>
-        [
-          "light",
-          "contractType",
-          "partId",
-          "page",
-          "size",
-          "sort",
-          "direction",
-        ].includes(key),
+    Object.assign(
+      pageSize === undefined ? {} : { size: analysisPageSize(pageSize) },
+      Object.fromEntries(
+        [...params.entries()].filter(([key]) =>
+          [
+            "light",
+            "contractType",
+            "partId",
+            "page",
+            "size",
+            "sort",
+            "direction",
+          ].includes(key),
+        ),
       ),
     ),
-  ));
-  const settings=useAnalysisSettings();
-  const previousSize=useRef(pageSize);
-  useEffect(()=>{if(previousSize.current!==pageSize){previousSize.current=pageSize;apply({...query,size:analysisPageSize(pageSize ?? 50),page:1});}},[pageSize]);
+  );
+  const settings = useAnalysisSettings();
+  const previousSize = useRef(pageSize);
+  useEffect(() => {
+    if (previousSize.current !== pageSize) {
+      previousSize.current = pageSize;
+      apply({ ...query, size: analysisPageSize(pageSize ?? 50), page: 1 });
+    }
+  }, [pageSize]);
   const [draft, setDraft] = useState(query),
     [parts, setParts] = useState<PartOption[]>([]),
     [tab, setTab] = useState(
@@ -149,12 +163,14 @@ export function ProjectStatusBoard({
       sortable: true,
       render: (row) => (
         <>
-          <Link
+          <button
+            type="button"
+            className="sicost-link"
             data-testid={`status-project-${row.projectId.toLowerCase()}`}
-            to={projectLink(row)}
+            onClick={() => setDetail(row)}
           >
             {row.projectName}
-          </Link>
+          </button>
           <small>
             {row.projectId} · {types[row.contractType]}
           </small>
@@ -166,14 +182,14 @@ export function ProjectStatusBoard({
                 확인하세요.
               </small>
             </>
-          ) : (
+          ) : canCosts ? (
             <Link
               data-testid={`status-cost-${row.projectId.toLowerCase()}`}
               to={`/UI-04?${new URLSearchParams({ month: result.data?.currentMonth ?? "", projectId: row.projectId, detailProjectId: row.projectId, returnTo: `/UI-31?${params}` })}`}
             >
               원가 분석
             </Link>
-          )}
+          ) : null}
         </>
       ),
     },
@@ -348,7 +364,9 @@ export function ProjectStatusBoard({
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
-        onReset={() => apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })}
+        onReset={() =>
+          apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
+        }
       >
         <label className="sicost-field">
           신호등
@@ -420,8 +438,20 @@ export function ProjectStatusBoard({
           page={result.data?.page ?? 1}
           size={result.data?.size ?? 50}
           onPageChange={(page) => apply({ ...query, page })}
-          onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...query,size,page:1});});}}
-          sort={query.sort ? {id:String(query.sort),direction:query.direction === "DESC"?"DESC":"ASC"} : undefined}
+          onSizeChange={(size) => {
+            void settings.run(async () => {
+              if (window.innerWidth > 767) await onPageSizeChange?.(size);
+              apply({ ...query, size, page: 1 });
+            });
+          }}
+          sort={
+            query.sort
+              ? {
+                  id: String(query.sort),
+                  direction: query.direction === "DESC" ? "DESC" : "ASC",
+                }
+              : undefined
+          }
           onSortChange={(id) =>
             apply({
               ...query,
@@ -434,7 +464,16 @@ export function ProjectStatusBoard({
             })
           }
           empty="조건에 맞는 진행 프로젝트가 없습니다."
-          emptyAction={<button type="button" onClick={() => apply({page: 1, size: analysisPageSize(pageSize ?? 50)})}>조건 초기화</button>}
+          emptyAction={
+            <button
+              type="button"
+              onClick={() =>
+                apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
+              }
+            >
+              조건 초기화
+            </button>
+          }
         />
       </section>
       <section
@@ -468,6 +507,21 @@ export function ProjectStatusBoard({
             </section>
           ))}
       </details>
+      {detail && (
+        <DetailDrawer
+          title={detail.projectName}
+          onClose={() => setDetail(undefined)}
+        >
+          <ProjectProgressPanel
+            permissionScreen="UI-31"
+            projectId={detail.projectId}
+            year={Number(result.data?.baseDate.slice(0, 4))}
+            onChanged={async () => {
+              result.retry();
+            }}
+          />
+        </DetailDrawer>
+      )}
     </div>
   );
 }

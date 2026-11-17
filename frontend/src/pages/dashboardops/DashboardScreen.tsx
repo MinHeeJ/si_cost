@@ -111,6 +111,7 @@ export function DashboardScreen({
     navigate = useNavigate(),
     { menus } = useSharedScreen("UI-16");
   const money = (value: string | null) => formatAmount(value, amountUnit);
+  const closeProgress = data?.closeProgress;
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -211,7 +212,10 @@ export function DashboardScreen({
         aria-busy={loading}
       >
         <div className="dashboard-toolbar">
-          <small>전체 회사 · 단위: {amountUnit}</small>
+          <small>
+            {data?.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} · 단위:{" "}
+            {amountUnit}
+          </small>
           {!mobile && (
             <button
               data-testid="dashboard-export"
@@ -272,7 +276,13 @@ export function DashboardScreen({
                     )
                   }
                 >
-                  <span>{card.metricCode === "SALES" ? `${data.selectedMonth.slice(5)}월 매출` : card.metricCode === "OPERATING_PROFIT" ? `${data.selectedMonth.slice(5)}월 영업이익` : metricLabels[card.metricCode]}</span>
+                  <span>
+                    {card.metricCode === "SALES"
+                      ? `${data.selectedMonth.slice(5)}월 매출`
+                      : card.metricCode === "OPERATING_PROFIT"
+                        ? `${data.selectedMonth.slice(5)}월 영업이익`
+                        : metricLabels[card.metricCode]}
+                  </span>
                   <strong>
                     {card.unit === "PERCENT"
                       ? formatRate(card.value)
@@ -333,22 +343,35 @@ export function DashboardScreen({
                       key={action.actionCode}
                       data-testid={`dashboard-action-${testKey(action.actionCode)}`}
                       onClick={() =>
-                        go(action.link, action.actionCode === "CASH_SHORTAGE" && action.link.linkKey
-                          ? { ...action.basis, basisMonth: action.link.linkKey } : action.basis, {
-                          section:
-                            action.actionCode === "OVERDUE_RECEIVABLE"
-                              ? "receivables"
-                              : action.actionCode === "BILLING_MISSING"
-                                ? "checks"
-                                : action.actionCode === "CORPORATE_TAX_DUE" ? "tax"
-                                : action.actionCode === "STAFF_SHORTAGE" && action.link.screenId === "UI-28" ? "supply" : undefined,
-                          filter:
-                            action.actionCode === "OVERDUE_RECEIVABLE"
-                              ? "overdue"
-                              : action.actionCode === "MM_OVER"
-                                ? "MM_OVER"
-                                : undefined,
-                        })
+                        go(
+                          action.link,
+                          action.actionCode === "CASH_SHORTAGE" &&
+                            action.link.linkKey
+                            ? {
+                                ...action.basis,
+                                basisMonth: action.link.linkKey,
+                              }
+                            : action.basis,
+                          {
+                            section:
+                              action.actionCode === "OVERDUE_RECEIVABLE"
+                                ? "receivables"
+                                : action.actionCode === "BILLING_MISSING"
+                                  ? "checks"
+                                  : action.actionCode === "CORPORATE_TAX_DUE"
+                                    ? "tax"
+                                    : action.actionCode === "STAFF_SHORTAGE" &&
+                                        action.link.screenId === "UI-28"
+                                      ? "supply"
+                                      : undefined,
+                            filter:
+                              action.actionCode === "OVERDUE_RECEIVABLE"
+                                ? "overdue"
+                                : action.actionCode === "MM_OVER"
+                                  ? "MM_OVER"
+                                  : undefined,
+                          },
+                        )
                       }
                     >
                       <span className="dashboard-row-icon">△</span>
@@ -379,129 +402,140 @@ export function DashboardScreen({
                   ))}
               </Panel>
               <div className="dashboard-stack">
-                <Panel
-                  title={`${data.selectedMonth.slice(5)}월 마감 진행`}
-                  testId="dashboard-close"
-                >
-                  <button
-                    data-testid="dashboard-close-open"
-                    onClick={() =>
-                      go(data.closeProgress.link, data.closeProgress.basis)
-                    }
+                {closeProgress && (
+                  <Panel
+                    title={`${data.selectedMonth.slice(5)}월 마감 진행`}
+                    testId="dashboard-close"
                   >
-                    월 마감
-                  </button>
-                  <p>
-                    {count(data.closeProgress.passedCheckCount)}/
-                    {data.closeProgress.totalCheckCount} ·{" "}
-                    {data.closeProgress.snapshot
-                      ? "당시 마감 사본"
-                      : "현재 점검"}
-                  </p>
-                  {data.closeProgress.passedCheckCount !== null && (
-                    <progress
-                      max={data.closeProgress.totalCheckCount}
-                      value={data.closeProgress.passedCheckCount}
-                      aria-label="마감 점검 진행"
-                    />
-                  )}
-                  {data.closeProgress.remainingChecks.map((check) => (
-                    <p
-                      key={check.checkCode}
-                      data-testid={`dashboard-check-${testKey(check.checkCode)}`}
-                    >
-                      <StatusBadge tone="warn">
-                        {check.checkCode} {count(check.count)}건
-                      </StatusBadge>{" "}
-                      {check.reason}
-                    </p>
-                  ))}
-                  <DashboardBasis basis={data.closeProgress.basis} />
-                </Panel>
-                <Panel
-                  title={`프로젝트 경보 ${data.projectAlerts.length}건`}
-                  testId="dashboard-alerts"
-                >
-                  <DashboardBasis basis={data.projectAlertsBasis} />
-                  {data.projectAlerts.length === 0 &&
-                    ["AVAILABLE", "EMPTY"].includes(
-                      data.projectAlertsBasis.status,
-                    ) && (
-                      <p className="dashboard-empty">
-                        프로젝트 경보가 없습니다.
-                      </p>
-                    )}
-                  {data.projectAlerts.map((alert) => (
                     <button
-                      className="dashboard-list-row"
-                      key={`${alert.projectId}-${alert.alertType}`}
-                      data-testid={`dashboard-alert-${testKey(alert.projectId)}-${testKey(alert.alertType)}`}
+                      data-testid="dashboard-close-open"
                       onClick={() =>
-                        go(alert.link, alert.basis, {
-                          projectId: alert.projectId,
-                        })
+                        go(closeProgress.link, closeProgress.basis)
                       }
                     >
-                      <span>
-                        <strong>{alert.projectName}</strong>
-                        <small>{alert.reason}</small>
-                        <small>
-                          {alert.contractTypeCode} 마진율{" "}
-                          {formatRate(alert.marginRate)} · 예산 소진{" "}
-                          {formatRate(alert.budgetConsumptionRate)}
-                        </small>
-                      </span>
-                      <StatusBadge
-                        tone={
-                          alert.alertType === "BUDGET_EXCEEDED" ? "bad" : "warn"
+                      월 마감
+                    </button>
+                    <p>
+                      {count(closeProgress.passedCheckCount)}/
+                      {closeProgress.totalCheckCount} ·{" "}
+                      {closeProgress.snapshot ? "당시 마감 사본" : "현재 점검"}
+                    </p>
+                    {closeProgress.passedCheckCount !== null && (
+                      <progress
+                        max={closeProgress.totalCheckCount}
+                        value={closeProgress.passedCheckCount}
+                        aria-label="마감 점검 진행"
+                      />
+                    )}
+                    {closeProgress.remainingChecks.map((check) => (
+                      <p
+                        key={check.checkCode}
+                        data-testid={`dashboard-check-${testKey(check.checkCode)}`}
+                      >
+                        <StatusBadge tone="warn">
+                          {check.checkCode} {count(check.count)}건
+                        </StatusBadge>{" "}
+                        {check.reason}
+                      </p>
+                    ))}
+                    <DashboardBasis basis={closeProgress.basis} />
+                  </Panel>
+                )}
+                {data.projectAlerts && (
+                  <Panel
+                    title={`프로젝트 경보 ${data.projectAlerts.length}건`}
+                    testId="dashboard-alerts"
+                  >
+                    <DashboardBasis basis={data.projectAlertsBasis} />
+                    {data.projectAlerts.length === 0 &&
+                      ["AVAILABLE", "EMPTY"].includes(
+                        data.projectAlertsBasis.status,
+                      ) && (
+                        <p className="dashboard-empty">
+                          프로젝트 경보가 없습니다.
+                        </p>
+                      )}
+                    {data.projectAlerts.map((alert) => (
+                      <button
+                        className="dashboard-list-row"
+                        key={`${alert.projectId}-${alert.alertType}`}
+                        data-testid={`dashboard-alert-${testKey(alert.projectId)}-${testKey(alert.alertType)}`}
+                        onClick={() =>
+                          go(alert.link, alert.basis, {
+                            projectId: alert.projectId,
+                          })
                         }
                       >
-                        {alertLabels[alert.alertType]}
-                      </StatusBadge>
-                    </button>
-                  ))}
-                </Panel>
+                        <span>
+                          <strong>{alert.projectName}</strong>
+                          <small>{alert.reason}</small>
+                          <small>
+                            {alert.contractTypeCode} 마진율{" "}
+                            {formatRate(alert.marginRate)} · 예산 소진{" "}
+                            {formatRate(alert.budgetConsumptionRate)}
+                          </small>
+                        </span>
+                        <StatusBadge
+                          tone={
+                            alert.alertType === "BUDGET_EXCEEDED"
+                              ? "bad"
+                              : "warn"
+                          }
+                        >
+                          {alertLabels[alert.alertType]}
+                        </StatusBadge>
+                      </button>
+                    ))}
+                  </Panel>
+                )}
               </div>
             </div>
             <div className="dashboard-two-grid">
-              <Panel title="매출·원가 추이" testId="dashboard-trend">
-                <DashboardBasis basis={data.salesCostTrendBasis} />
-                <DashboardTrendChart rows={data.salesCostTrend} />
-                <div className="sicost-table-viewport">
-                  <table
-                    className="sicost-table"
-                    aria-label="매출·원가 추이 숫자표"
-                  >
-                    <thead>
-                      <tr>
-                        <th>월</th>
-                        <th>매출 ({amountUnit})</th>
-                        <th>매출원가 ({amountUnit})</th>
-                        <th>목표 ({amountUnit})</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.salesCostTrend.map((row) => (
-                        <tr
-                          key={row.month}
-                          data-testid={`dashboard-trend-${row.month}`}
-                        >
-                          <td>{row.month}</td>
-                          <td>{money(row.salesAmount)}</td>
-                          <td>{money(row.salesCostAmount)}</td>
-                          <td>{money(row.salesTargetAmount)}</td>
+              {data.salesCostTrend && (
+                <Panel title="매출·원가 추이" testId="dashboard-trend">
+                  <DashboardBasis basis={data.salesCostTrendBasis} />
+                  <DashboardTrendChart rows={data.salesCostTrend} />
+                  <div className="sicost-table-viewport">
+                    <table
+                      className="sicost-table"
+                      aria-label="매출·원가 추이 숫자표"
+                    >
+                      <thead>
+                        <tr>
+                          <th>월</th>
+                          <th>매출 ({amountUnit})</th>
+                          <th>매출원가 ({amountUnit})</th>
+                          <th>목표 ({amountUnit})</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
+                      </thead>
+                      <tbody>
+                        {data.salesCostTrend.map((row) => (
+                          <tr
+                            key={row.month}
+                            data-testid={`dashboard-trend-${row.month}`}
+                          >
+                            <td>{row.month}</td>
+                            <td>{money(row.salesAmount)}</td>
+                            <td>{money(row.salesCostAmount)}</td>
+                            <td>{money(row.salesTargetAmount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Panel>
+              )}
               <Panel
                 title="앞으로 6개월 인력 수급 예측"
                 testId="dashboard-supply"
               >
                 <DashboardBasis basis={data.supplyBasis} />
-                <p>전체 인력 · 미충원 포함 · 단위: 명</p>
+                <p>
+                  {data.scope === "ALL"
+                    ? "전체 인력"
+                    : "허용된 담당 범위의 인력"}{" "}
+                  · 미충원 포함 · 단위: 명
+                </p>
                 <div className="sicost-table-viewport">
                   <table
                     className="sicost-table"
@@ -541,43 +575,58 @@ export function DashboardScreen({
               </Panel>
             </div>
             <div className="dashboard-bottom-grid">
-              <Panel title={`영업 파트별 ${data.selectedMonth.slice(5)}월`} testId="dashboard-parts">
-                <DashboardBasis basis={data.salesPartsBasis} />
-                <p>{data.salesPartExplanation}</p>
-                {data.salesParts.length === 0 &&
-                  ["AVAILABLE", "EMPTY"].includes(
-                    data.salesPartsBasis.status,
-                  ) && (
-                    <p className="dashboard-empty">
-                      영업 파트 자료가 없습니다.
-                    </p>
-                  )}
-                <table className="sicost-table" aria-label="영업 파트별 실적">
-                  <thead>
-                    <tr>
-                      <th>파트</th>
-                      <th>매출 ({amountUnit})</th>
-                      <th>전체원가 ({amountUnit})</th>
-                      <th>기여이익률</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.salesParts.map((row) => (
-                      <tr
-                        key={row.partId ?? "unassigned"}
-                        data-testid={`dashboard-part-${testKey(row.partId ?? "unassigned")}`}
-                      >
-                        <td>{row.partName}</td>
-                        <td>{money(row.salesAmount)}</td>
-                        <td>{money(row.projectCostAmount)}</td>
-                        <td>{formatRate(row.contributionMarginRate)}</td>
+              {data.salesParts && (
+                <Panel
+                  title={`영업 파트별 ${data.selectedMonth.slice(5)}월`}
+                  testId="dashboard-parts"
+                >
+                  <DashboardBasis basis={data.salesPartsBasis} />
+                  <p>{data.salesPartExplanation}</p>
+                  {data.salesParts.length === 0 &&
+                    ["AVAILABLE", "EMPTY"].includes(
+                      data.salesPartsBasis.status,
+                    ) && (
+                      <p className="dashboard-empty">
+                        영업 파트 자료가 없습니다.
+                      </p>
+                    )}
+                  <table className="sicost-table" aria-label="영업 파트별 실적">
+                    <thead>
+                      <tr>
+                        <th>파트</th>
+                        <th>매출 ({amountUnit})</th>
+                        <th>전체원가 ({amountUnit})</th>
+                        <th>기여이익률</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Panel>
+                    </thead>
+                    <tbody>
+                      {data.salesParts.map((row) => (
+                        <tr
+                          key={row.partId ?? "unassigned"}
+                          data-testid={`dashboard-part-${testKey(row.partId ?? "unassigned")}`}
+                        >
+                          <td>{row.partName}</td>
+                          <td>{money(row.salesAmount)}</td>
+                          <td>{money(row.projectCostAmount)}</td>
+                          <td>{formatRate(row.contributionMarginRate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Panel>
+              )}
               <Panel title="영업 파이프라인" testId="dashboard-pipeline">
-                <button type="button" onClick={() => go({ screenId: "UI-29", linkKey: null }, data.pipeline.basis)}>자세히</button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    go(
+                      { screenId: "UI-29", linkKey: null },
+                      data.pipeline.basis,
+                    )
+                  }
+                >
+                  자세히
+                </button>
                 <DashboardBasis basis={data.pipeline.basis} />
                 <p>진행 기회 {count(data.pipeline.opportunityCount)}건</p>
                 <strong>
@@ -615,53 +664,55 @@ export function DashboardScreen({
                   </button>
                 ))}
               </Panel>
-              <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">
-                <DashboardBasis basis={data.cashBasis} />
-                {data.cashForecast.map((row) => (
-                  <button
-                    className="dashboard-list-row"
-                    key={row.month}
-                    data-testid={`dashboard-cash-${row.month}`}
-                    onClick={() =>
-                      go(
-                        row.link,
-                        { ...data.cashBasis, basisMonth: row.month },
-                        {},
-                      )
-                    }
-                  >
-                    <span>
-                      <strong>
-                        {row.month}{" "}
-                        <StatusBadge
-                          tone={
-                            row.shortage === true
-                              ? "bad"
+              {data.cashForecast && (
+                <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">
+                  <DashboardBasis basis={data.cashBasis} />
+                  {data.cashForecast.map((row) => (
+                    <button
+                      className="dashboard-list-row"
+                      key={row.month}
+                      data-testid={`dashboard-cash-${row.month}`}
+                      onClick={() =>
+                        go(
+                          row.link,
+                          { ...data.cashBasis, basisMonth: row.month },
+                          {},
+                        )
+                      }
+                    >
+                      <span>
+                        <strong>
+                          {row.month}{" "}
+                          <StatusBadge
+                            tone={
+                              row.shortage === true
+                                ? "bad"
+                                : row.shortage === null
+                                  ? "warn"
+                                  : "info"
+                            }
+                          >
+                            {row.shortage === true
+                              ? "자금 부족"
                               : row.shortage === null
-                                ? "warn"
-                                : "info"
-                          }
-                        >
-                          {row.shortage === true
-                            ? "자금 부족"
-                            : row.shortage === null
-                              ? "미확인"
-                              : "예측"}
-                        </StatusBadge>
-                      </strong>
-                      <small>
-                        월말 잔액 {money(row.closingBalance)} {amountUnit}
-                      </small>
-                      <small>
-                        최소 자금 {money(row.minimumCashAmount)} {amountUnit}
-                      </small>
-                      {row.unconfirmedReasons.map((reason, i) => (
-                        <small key={i}>{reason}</small>
-                      ))}
-                    </span>
-                  </button>
-                ))}
-              </Panel>
+                                ? "미확인"
+                                : "예측"}
+                          </StatusBadge>
+                        </strong>
+                        <small>
+                          월말 잔액 {money(row.closingBalance)} {amountUnit}
+                        </small>
+                        <small>
+                          최소 자금 {money(row.minimumCashAmount)} {amountUnit}
+                        </small>
+                        {row.unconfirmedReasons.map((reason, i) => (
+                          <small key={i}>{reason}</small>
+                        ))}
+                      </span>
+                    </button>
+                  ))}
+                </Panel>
+              )}
             </div>
           </>
         )}

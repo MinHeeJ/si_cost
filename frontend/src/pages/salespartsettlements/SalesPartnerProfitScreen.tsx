@@ -15,6 +15,7 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./salesPartSettlementsApi";
+import { SettlementRestrictedView } from "./SettlementRestrictedView";
 import "./settlements.css";
 
 export type SalesPartnerProfitScreenProps = {
@@ -228,6 +229,30 @@ export function SalesPartnerProfitScreen({
     ["profitAmount", "이익 ⓘ"],
     ["profitShareAmount", "이익금"],
   ] as const;
+  if (tabs?.projection === "RESTRICTED" || data?.projection === "RESTRICTED")
+    return (
+      <SharedScreenFrame
+        screenId="UI-19"
+        periodBar={
+          <ScreenPeriodBar screenId="UI-19" initialMonth={entryMonth} />
+        }
+      >
+        <SettlementRestrictedView
+          tabs={tabs}
+          data={data}
+          selected={selected}
+          query={query}
+          loading={loading}
+          error={error}
+          onSelect={(id) => {
+            setSelected(id);
+            apply({});
+          }}
+          onQuery={setQuery}
+          onRetry={refresh}
+        />
+      </SharedScreenFrame>
+    );
   const columns: Column<api.SettlementRow>[] = [
     {
       id: "name",

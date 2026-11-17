@@ -1,4 +1,8 @@
-import { ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 import type {
   CandidateFilters,
   CandidatesPage,
@@ -40,9 +44,10 @@ export type CandidatePosition = {
   endMonth: string;
   availableDate: string;
   effectiveRate: string;
-  candidateCost: string;
-  profitRate: string;
-  belowApprovalThreshold: boolean;
+  candidateCost?: string;
+  profitRate?: string;
+  belowApprovalThreshold?: boolean;
+  availableFields?: string[];
   gradeDistance: number | null;
 };
 export type CandidatePositions = {
@@ -61,7 +66,7 @@ async function read<T>(
   path: string,
   signal?: AbortSignal,
 ): Promise<CandidateRead<T>> {
-  const response = await fetch(path, {
+  const response = await authenticatedFetch(path, {
     signal,
     redirect: "error",
     headers: { Accept: "application/json" },

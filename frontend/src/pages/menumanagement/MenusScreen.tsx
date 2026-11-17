@@ -5,15 +5,17 @@ import { ErrorBanner } from "../../shared/Feedback";
 import { COMMITTED_REFRESH_FAILED } from "../../shared/useCommitRefresh";
 import * as api from "./menuManagementApi";
 import { MenuRegistrationDialog } from "../menumanagementops/MenuRegistrationDialog";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./menus.css";
 
-const modeMessage =
-  "권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.";
+const modeMessage = "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.";
 export function MenusScreen({
   onDirtyChange,
 }: {
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const canRegister = usePermission("UI-25", "REG"),
+    canUpdate = usePermission("UI-25", "UPD");
   const [tree, setTree] = useState<api.ManagedMenuTree>();
   const [draft, setDraft] = useState<api.ManagedMenu[]>([]);
   const [error, setError] = useState<unknown>(),
@@ -96,13 +98,14 @@ export function MenusScreen({
     setFields(e instanceof ApiError ? e.fieldMessages : {});
   }
   function edit(id: string, values: Partial<api.ManagedMenu>) {
+    if (!canUpdate) return;
     setDraft((items) =>
       items.map((item) => (item.menuId === id ? { ...item, ...values } : item)),
     );
     setMessage("");
   }
   async function save(): Promise<boolean> {
-    if (!tree || busy.current || refreshOnly) return false;
+    if (!canUpdate || !tree || busy.current || refreshOnly) return false;
     const invalid: Record<string, string> = {};
     draft.forEach((row, index) => {
       if (!row.name.trim() || [...row.name.trim()].length > 50)
@@ -144,6 +147,7 @@ export function MenusScreen({
     }
   }
   function openRegistration() {
+    if (!canRegister) return;
     if (dirty)
       setLeave({
         label: "메뉴 등록",
@@ -166,15 +170,22 @@ export function MenusScreen({
             메뉴 <small>UI-25</small>
           </h1>
         </div>
-        <button
-          data-testid="menus-register-button"
-          disabled={loading || pending || !tree || refreshOnly}
-          onClick={openRegistration}
-        >
-          메뉴 등록
-        </button>
+        {canRegister && (
+          <button
+            data-testid="menus-register-button"
+            disabled={loading || pending || !tree || refreshOnly}
+            onClick={openRegistration}
+          >
+            메뉴 등록
+          </button>
+        )}
       </header>
       <p className="sicost-banner sicost-tone-info">{modeMessage}</p>
+      {!canUpdate && (
+        <p role="note">
+          수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
+        </p>
+      )}
       {message && (
         <p role="status" className="sicost-banner sicost-tone-info">
           {message}
@@ -255,6 +266,7 @@ export function MenusScreen({
                       onDragOver={(event) => event.preventDefault()}
                       onDrop={(event) => {
                         event.preventDefault();
+                        if (!canUpdate) return;
                         const moving = draft.find(
                           (item) => item.menuId === drag.current,
                         );
@@ -274,8 +286,8 @@ export function MenusScreen({
                         <button
                           type="button"
                           data-testid={`menu-drag-${row.menuId.toLowerCase()}`}
-                          draggable={!pending}
-                          disabled={pending || refreshOnly}
+                          draggable={canUpdate && !pending}
+                          disabled={!canUpdate || pending || refreshOnly}
                           aria-label={`${row.name} 이동 손잡이`}
                           onDragStart={() => {
                             drag.current = row.menuId;
@@ -326,7 +338,7 @@ export function MenusScreen({
                             aria-label={`${row.menuId} 메뉴이름`}
                             aria-invalid={Boolean(fields[key])}
                             value={row.name}
-                            disabled={pending || refreshOnly}
+                            disabled={!canUpdate || pending || refreshOnly}
                             onChange={(event) =>
                               edit(row.menuId, { name: event.target.value })
                             }
@@ -346,7 +358,10 @@ export function MenusScreen({
                             data-testid={`menu-up-${row.menuId.toLowerCase()}`}
                             aria-label={`${row.menuId} 위`}
                             disabled={
-                              pending || refreshOnly || row.sortOrder === 1
+                              !canUpdate ||
+                              pending ||
+                              refreshOnly ||
+                              row.sortOrder === 1
                             }
                             onClick={() =>
                               setDraft((items) =>
@@ -365,6 +380,7 @@ export function MenusScreen({
                             data-testid={`menu-down-${row.menuId.toLowerCase()}`}
                             aria-label={`${row.menuId} 아래`}
                             disabled={
+                              !canUpdate ||
                               pending ||
                               refreshOnly ||
                               row.sortOrder === siblings.length
@@ -387,7 +403,12 @@ export function MenusScreen({
                               data-testid={`menu-group-${row.menuId.toLowerCase()}`}
                               aria-label={`${row.menuId} 그룹`}
                               value={row.parentId!}
-                              disabled={pending || refreshOnly || protectedRow}
+                              disabled={
+                                !canUpdate ||
+                                pending ||
+                                refreshOnly ||
+                                protectedRow
+                              }
                               onChange={(event) =>
                                 setDraft((items) =>
                                   api.moveMenu(
@@ -418,7 +439,12 @@ export function MenusScreen({
                             type="checkbox"
                             aria-label={`${row.menuId} 사용`}
                             checked={row.use}
-                            disabled={pending || refreshOnly || protectedRow}
+                            disabled={
+                              !canUpdate ||
+                              pending ||
+                              refreshOnly ||
+                              protectedRow
+                            }
                             onChange={(event) =>
                               edit(row.menuId, { use: event.target.checked })
                             }
@@ -432,7 +458,7 @@ export function MenusScreen({
                             type="checkbox"
                             aria-label={`${row.menuId} PC전용`}
                             checked={row.pcOnly}
-                            disabled={pending || refreshOnly}
+                            disabled={!canUpdate || pending || refreshOnly}
                             onChange={(event) =>
                               edit(row.menuId, { pcOnly: event.target.checked })
                             }
@@ -469,32 +495,34 @@ export function MenusScreen({
           )}
         </div>
       )}
-      <footer className="menu-management-actions">
-        <span>
-          {dirty ? "저장하지 않은 변경이 있습니다." : "저장된 메뉴 설정"}
-        </span>
-        <button
-          data-testid="menus-cancel-button"
-          disabled={!dirty || pending}
-          onClick={() => {
-            if (tree) {
-              setDraft(api.orderedMenus(tree.items));
-              setFields({});
-              setError(undefined);
-            }
-          }}
-        >
-          취소
-        </button>
-        <button
-          data-testid="menus-save-button"
-          className="sicost-primary"
-          disabled={!dirty || pending || refreshOnly}
-          onClick={() => void save()}
-        >
-          {pending ? "저장 중…" : "저장"}
-        </button>
-      </footer>
+      {canUpdate && (
+        <footer className="menu-management-actions">
+          <span>
+            {dirty ? "저장하지 않은 변경이 있습니다." : "저장된 메뉴 설정"}
+          </span>
+          <button
+            data-testid="menus-cancel-button"
+            disabled={!dirty || pending}
+            onClick={() => {
+              if (tree) {
+                setDraft(api.orderedMenus(tree.items));
+                setFields({});
+                setError(undefined);
+              }
+            }}
+          >
+            취소
+          </button>
+          <button
+            data-testid="menus-save-button"
+            className="sicost-primary"
+            disabled={!dirty || pending || refreshOnly}
+            onClick={() => void save()}
+          >
+            {pending ? "저장 중…" : "저장"}
+          </button>
+        </footer>
+      )}
       {leave && (
         <Dialog
           open
@@ -538,7 +566,7 @@ export function MenusScreen({
           </p>
         </Dialog>
       )}
-      {register && tree && (
+      {canRegister && register && tree && (
         <MenuRegistrationDialog
           tree={tree}
           onClose={() => setRegister(false)}

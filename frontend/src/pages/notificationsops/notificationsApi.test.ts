@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getNotificationUnreadCount,
@@ -13,7 +14,7 @@ describe("알림 상대경로 명령 계약", () => {
       status: 200,
       text: async () => JSON.stringify({ success: true, meta: {}, data: {} }),
     });
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await getNotificationUnreadCount();
     expect(fetcher.mock.calls[0][0]).toBe("/api/notifications/unread-count");
   });
@@ -23,7 +24,7 @@ describe("알림 상대경로 명령 계약", () => {
       status: 200,
       text: async () => JSON.stringify({ success: true, meta: {}, data: {} }),
     });
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const selected = { id: "912345678901" };
     await saveNotificationRead(selected.id);
     await saveNotificationsReadAll();
@@ -42,7 +43,7 @@ describe("알림 상대경로 명령 계약", () => {
       status: 200,
       text: async () => JSON.stringify({ success: true, meta: {}, data: {} }),
     });
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await getNotifications(2);
     expect(fetcher.mock.calls[0][0]).toBe(
       "/api/notifications?page=2&size=20&sort=notifiedAt,desc;id,desc",

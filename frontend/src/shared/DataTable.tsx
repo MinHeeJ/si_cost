@@ -1,5 +1,6 @@
 import {
   Fragment,
+  useContext,
   useId,
   type CSSProperties,
   type Key,
@@ -7,6 +8,10 @@ import {
 } from "react";
 import { ErrorBanner } from "./Feedback";
 import { Icon } from "./Icon";
+import {
+  PermissionContext,
+  ScreenPermissionContext,
+} from "./permission/PermissionBoundary";
 
 export type Column<T> = {
   id: string;
@@ -56,7 +61,7 @@ export type DataTableProps<T> = {
 };
 export function DataTable<T>({
   rows,
-  columns,
+  columns: suppliedColumns,
   rowKey,
   loading,
   empty = "조회된 자료가 없습니다.",
@@ -81,6 +86,103 @@ export function DataTable<T>({
   testId = "data-table",
 }: DataTableProps<T>) {
   const instanceId = useId();
+  const screen = useContext(ScreenPermissionContext),
+    permissions = useContext(PermissionContext);
+  const fields = screen ? permissions?.fields?.[screen] : undefined;
+  const aliases: Record<string, string> =
+    screen === "UI-02"
+      ? {
+          rate: "monthlyRate",
+          pay: "monthlyPay",
+          monthlyRate: "monthlyRate",
+          monthlyPay: "monthlyPay",
+        }
+      : screen === "UI-12"
+        ? {
+            billingUnitPrice: "billingUnitPrice",
+            appliedUnitPrice: "appliedUnitPrice",
+            defaultUnitPrice: "defaultUnitPrice",
+            salesAmount: "salesAmount",
+          }
+        : {};
+  const declared = rows
+    .map((row) => row as { availableFields?: string[] })
+    .find((row) => Array.isArray(row.availableFields))?.availableFields;
+  const columns = suppliedColumns.filter((column) => {
+    if (fields && aliases[column.id] && !fields.includes(aliases[column.id]))
+      return false;
+    if (
+      screen === "UI-33" &&
+      column.id === "desiredRate" &&
+      fields &&
+      !fields.includes("desiredRate")
+    )
+      return false;
+    if (permissions?.sensitive === false) {
+      const key = (aliases[column.id] ?? column.id)
+        .replace(/_/g, "")
+        .toLowerCase();
+      const exception =
+        (["UI-01", "UI-31"].includes(screen ?? "") &&
+          [
+            "costusage",
+            "costusagerate",
+            "costusageratio",
+            "costusagepercent",
+            "costprogressgap",
+          ].includes(key)) ||
+        (screen === "UI-19" && key === "profitstatus") ||
+        (screen === "UI-32" &&
+          [
+            "marginrate",
+            "targetunitprice",
+            "requiredincreaserate",
+            "annualgain",
+          ].includes(key));
+      // Empty datasets have no row metadata: never expose a private header merely
+      // because there is not yet a first availableFields row to consult.
+      if (
+        !exception &&
+        (/salary|monthlypay|cost|profit|margin|insurance|retirement|allowance|incometax|withholdingtax|vendorsupply|overhead/.test(
+          key,
+        ) ||
+          (["UI-02", "UI-03", "UI-04"].includes(screen ?? "") &&
+            [
+              "pay",
+              "netpay",
+              "payamount",
+              "basepayamount",
+              "labor",
+              "laborallocated",
+              "teamexpense",
+              "projectexpense",
+            ].includes(key)))
+      )
+        return false;
+    }
+    if (
+      screen === "UI-15" &&
+      permissions &&
+      !permissions.sensitive &&
+      ["account", "bankCode", "bankName", "depositor"].includes(column.id)
+    )
+      return false;
+    if (!declared) return true;
+    const key = aliases[column.id] ?? column.id;
+    const metadataAliases: Record<string, string[]> = {
+      name: ["name", "developerName", "personName"],
+      person: ["developerName", "personName"],
+      project: ["projectName"],
+      start: ["startDate"],
+      end: ["endDate"],
+      mm: ["contractMm", "monthlyMm"],
+      status: ["status", "assignmentStatus"],
+    };
+    return (
+      declared.includes(key) ||
+      metadataAliases[key]?.some((name) => declared.includes(name)) === true
+    );
+  });
   if (error) return <ErrorBanner message={error} onRetry={onRetry} />;
   const pages = Math.max(1, Math.ceil(total / size));
   const span =

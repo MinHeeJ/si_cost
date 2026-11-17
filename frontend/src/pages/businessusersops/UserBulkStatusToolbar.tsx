@@ -6,6 +6,7 @@ import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { BusinessUser } from "../businessusers/businessUsersApi";
 import { notifyBusinessUsersCommitted } from "./businessUserOptionsApi";
 import * as api from "./userAdministrationApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 
 export function UserStatusResultsDialog({
   result,
@@ -85,12 +86,13 @@ export function UserBulkStatusToolbar({
   onSelectAll?(): Promise<void>;
   onCommitted(): Promise<void>;
 }) {
+  const allowed = usePermission("UI-23", "UPD");
   const [action, setAction] = useState<"STOP" | "RESUME">(),
     [result, setResult] = useState<api.UserStateResults>(),
     [error, setError] = useState<unknown>();
   const { commit, pending, message } = useCommitRefresh();
   async function save() {
-    if (!action) return;
+    if (!allowed || !action) return;
     setError(undefined);
     try {
       await commit(async () => {
@@ -109,35 +111,50 @@ export function UserBulkStatusToolbar({
       setError(e);
     }
   }
+  if (!allowed) return null;
   return (
     <section data-testid="user-bulk-status-toolbar">
-      {selected.length > 0 && <div className="businessusers-toolbar">
-        <span>선택 {selected.length}건</span>
-        {onSelectAll && <button type="button" disabled={pending} onClick={()=>void onSelectAll().catch(setError)}>조회전체 선택</button>}
-        <div>
-          <button
-            data-testid="user-bulk-stop"
-            disabled={pending || !selected.length || selected.length > 100}
-            onClick={() => {
-              setError(undefined);
-              setAction("STOP");
-            }}
-          >
-            일괄 사용 중지
-          </button>
-          <button
-            data-testid="user-bulk-resume"
-            disabled={pending || !selected.length || selected.length > 100}
-            onClick={() => {
-              setError(undefined);
-              setAction("RESUME");
-            }}
-          >
-            일괄 다시 사용
-          </button>
-          {onClear && <button type="button" disabled={pending} onClick={onClear}>선택 해제</button>}
+      {selected.length > 0 && (
+        <div className="businessusers-toolbar">
+          <span>선택 {selected.length}건</span>
+          {onSelectAll && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => void onSelectAll().catch(setError)}
+            >
+              조회전체 선택
+            </button>
+          )}
+          <div>
+            <button
+              data-testid="user-bulk-stop"
+              disabled={pending || !selected.length || selected.length > 100}
+              onClick={() => {
+                setError(undefined);
+                setAction("STOP");
+              }}
+            >
+              일괄 사용 중지
+            </button>
+            <button
+              data-testid="user-bulk-resume"
+              disabled={pending || !selected.length || selected.length > 100}
+              onClick={() => {
+                setError(undefined);
+                setAction("RESUME");
+              }}
+            >
+              일괄 다시 사용
+            </button>
+            {onClear && (
+              <button type="button" disabled={pending} onClick={onClear}>
+                선택 해제
+              </button>
+            )}
+          </div>
         </div>
-      </div>}
+      )}
       {message && !action && <p role="status">{message}</p>}
       {message?.includes("다시 불러오지") && (
         <button

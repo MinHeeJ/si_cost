@@ -52,7 +52,7 @@ class FinancialPreviewDatabaseTest {
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(FinancialReadMapper.class,()->session.getMapper(FinancialReadMapper.class));
         context.registerBean(FinancialMapper.class,()->session.getMapper(FinancialMapper.class));context.registerBean(MasterLockMapper.class,()->session.getMapper(MasterLockMapper.class));context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(FinancialRepository.class,ChangeHistoryWriter.class);
-        context.register(Transactions.class,CurrentUserProvider.class,RevisionService.class,FinancialPreviewRepository.class,FinancialPreviewService.class,FinancialReadRepository.class,FinancialReadService.class);context.refresh();
+        context.register(Transactions.class,CurrentUserProvider.class,RevisionService.class,FinancialPreviewRepository.class,FinancialPreviewService.class,FinancialReadRepository.class,FinancialReadService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         service=context.getBean(FinancialPreviewService.class);repository=context.getBean(FinancialPreviewRepository.class);reads=context.getBean(FinancialReadService.class);
         mvc=MockMvcBuilders.standaloneSetup(new FinancialPreviewController(service)).setControllerAdvice(new ApiExceptionHandler()).setMessageConverters(new MappingJackson2HttpMessageConverter(json)).addFilters(new RequestIdFilter()).build();
     }

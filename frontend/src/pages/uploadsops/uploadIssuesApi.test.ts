@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { getUploadIssues, getUploadIssuesXlsx } from "./uploadIssuesApi";
@@ -17,7 +18,7 @@ it("조회는 선택한 ID·severity·페이지를 사용하고 전체는 severi
       }),
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getUploadIssues(17, "WARN", 2, 20);
   expect(fetcher.mock.calls[0][0]).toBe(
     "/api/uploads/17/issues?page=2&size=20&severity=WARN",
@@ -46,7 +47,7 @@ it("다운로드는 페이지·선택 인자 없이 요청하고 XLSX와 서버 
       },
     }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const file = await getUploadIssuesXlsx(17, "WARN");
   expect(file.filename).toBe(filename);
   expect(file.blob.size).toBe(4);
@@ -71,7 +72,7 @@ it.each([400, 404, 500])(
         { status, headers: { "Content-Type": "application/json" } },
       ),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(getUploadIssuesXlsx(17, "")).rejects.toBeInstanceOf(ApiError);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0][0]).toBe("/api/uploads/17/issues.xlsx");
@@ -90,7 +91,7 @@ it("HTML 성공과 JSON 성공은 다운로드 파일로 저장하지 않는다"
         headers: { "Content-Type": "application/json" },
       }),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(getUploadIssuesXlsx(17, "ERR")).rejects.toThrow();
   await expect(getUploadIssuesXlsx(17, "ERR")).rejects.toThrow();
 });

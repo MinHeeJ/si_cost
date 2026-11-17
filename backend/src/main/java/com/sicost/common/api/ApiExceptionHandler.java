@@ -62,17 +62,30 @@ public class ApiExceptionHandler {
     }
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiError> database(DataAccessException e, HttpServletRequest request) {
+        ApiException policy=wrappedPolicyFailure(e);if(policy!=null)return application(policy,request);
         return error(500, "INTERNAL_ERROR", "자료 처리 중 오류가 발생했습니다.", null, null, request);
     }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> unexpected(Exception e, HttpServletRequest request) {
+        ApiException policy=wrappedPolicyFailure(e);if(policy!=null)return application(policy,request);
         return error(500, "INTERNAL_ERROR", "서버 처리 중 오류가 발생했습니다.", null, null, request);
+    }
+    private ApiException wrappedPolicyFailure(Throwable failure) {
+        java.util.Set<Throwable> visited=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while(failure!=null && visited.add(failure)) {
+            if(failure instanceof ApiException policy)return policy;
+            failure=failure.getCause();
+        }
+        return null;
     }
     private ResponseEntity<ApiError> error(int status, String code, String message,
                                             String field, Object details, HttpServletRequest request) {
         Object attribute = request.getAttribute(RequestIdFilter.ATTRIBUTE);
         String id = attribute instanceof String value ? value : UUID.randomUUID().toString();
-        return ResponseEntity.status(status).header("X-Request-Id", id)
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes && attributes.getResponse()!=null && !attributes.getResponse().isCommitted()) {
+            attributes.getResponse().setHeader("Content-Disposition",null);attributes.getResponse().setHeader("Content-Length",null);
+        }
+        return ResponseEntity.status(status).contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("Cache-Control","no-store").header("X-Request-Id", id)
                 .body(new ApiError(false, Map.of(), code, message, field, details, id));
     }
 }

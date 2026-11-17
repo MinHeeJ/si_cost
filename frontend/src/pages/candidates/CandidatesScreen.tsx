@@ -4,6 +4,10 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import {
+  useFieldPermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
 import { CandidateSummaryPanel } from "../candidatesops/CandidateSummaryPanel";
 import { CandidateShortagesPanel } from "../candidatesops/CandidateShortagesPanel";
 import { CandidatePositionsPanel } from "../candidatesops/CandidatePositionsPanel";
@@ -64,6 +68,10 @@ export function CandidatesScreen({
   onColumnsChange,
   onDensityChange,
 }: CandidatesScreenProps) {
+  const canRate = useFieldPermission("UI-33", "desiredRate");
+  const canRegister = usePermission("UI-33", "REG"),
+    canUpdate = usePermission("UI-33", "UPD"),
+    canDownload = usePermission("UI-33", "DNLD");
   const [mobile, setMobile] = useState(
     () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
   );
@@ -78,7 +86,11 @@ export function CandidatesScreen({
     consumedEntry.current = entryJob.key;
     setShortageContext(undefined);
     setDraft({ ...initialFilters, jobCode: entryJob.jobCode });
-    setFilters((previous) => ({ page: 1, size: previous.size, jobCode: entryJob.jobCode }));
+    setFilters((previous) => ({
+      page: 1,
+      size: previous.size,
+      jobCode: entryJob.jobCode,
+    }));
   }, [active, entryJob?.key, entryJob?.jobCode]);
   const [data, setData] = useState<api.CandidatesPage>(),
     [loading, setLoading] = useState(true),
@@ -107,9 +119,16 @@ export function CandidatesScreen({
     [downloading, setDownloading] = useState(false);
   useEffect(() => {
     const refresh = () => setVersion((v) => v + 1);
-    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed"];
+    const events = [
+      "sicost:sales-committed",
+      "sicost:assignments-committed",
+      "sicost:developers-committed",
+      "sicost:operating-standards-committed",
+      "sicost:codegroups-committed",
+    ];
     events.forEach((name) => window.addEventListener(name, refresh));
-    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+    return () =>
+      events.forEach((name) => window.removeEventListener(name, refresh));
   }, []);
   const sequence = useRef(0),
     scroll = useRef(0),
@@ -286,7 +305,8 @@ export function CandidatesScreen({
       size: filters.size,
     });
   }
-  const money = (value: string) => {
+  const money = (value: string | undefined) => {
+    if (value === undefined) return "";
     const divisor =
       amountUnit === "백만원" ? 1000000 : amountUnit === "천원" ? 1000 : 1;
     return (Number(value) / divisor).toLocaleString("ko-KR", {
@@ -391,6 +411,7 @@ export function CandidatesScreen({
     { id: "source", label: "출처", render: (r) => r.source },
   ];
   const visible = (columnView?.order ?? candidateColumnOrder)
+    .filter((k) => k !== "desiredRate" || canRate)
     .filter((k) => k === "name" || !columnView?.hidden.includes(k))
     .map((k) => columns.find((c) => c.id === k))
     .map((c) =>
@@ -422,7 +443,7 @@ export function CandidatesScreen({
         <button
           className="sicost-primary"
           data-testid="candidate-create"
-          disabled={Boolean(committed)}
+          disabled={!canRegister || Boolean(committed)}
           onClick={() =>
             setForm((f) =>
               f && !f.candidate
@@ -548,15 +569,15 @@ export function CandidatesScreen({
           {!mobile && (
             <button
               data-testid="candidate-export"
-              disabled={
-                downloading || Boolean(committed)
-              }
+              disabled={!canDownload || downloading || Boolean(committed)}
               onClick={async () => {
                 setDownloading(true);
                 setActionError(undefined);
                 try {
                   await api.downloadCandidates(
-                    shortageContext ? shortageCandidateFilters(filters, shortageContext) : filters,
+                    shortageContext
+                      ? shortageCandidateFilters(filters, shortageContext)
+                      : filters,
                     visible.map((c) => c.id),
                     amountUnit,
                   );
@@ -622,14 +643,16 @@ export function CandidatesScreen({
               data-testid={`candidate-card-${r.id.toLowerCase()}`}
               key={r.id}
             >
-              {columns.map((c) => (
-                <div
-                  data-testid={`candidate-card-field-${r.id.toLowerCase()}-${c.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-                  key={c.id}
-                >
-                  {c.render(r)}
-                </div>
-              ))}
+              {columns
+                .filter((c) => c.id !== "desiredRate" || canRate)
+                .map((c) => (
+                  <div
+                    data-testid={`candidate-card-field-${r.id.toLowerCase()}-${c.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+                    key={c.id}
+                  >
+                    {c.render(r)}
+                  </div>
+                ))}
             </article>
           ))}
           {data && data.items.length < data.total && (
@@ -706,7 +729,7 @@ export function CandidatesScreen({
             detail && (
               <button
                 data-testid="candidate-edit"
-                disabled={Boolean(committed)}
+                disabled={!canUpdate || Boolean(committed)}
                 onClick={() =>
                   setForm((f) =>
                     f?.candidate?.id === detail.id
@@ -781,15 +804,17 @@ export function CandidatesScreen({
                           : null,
                       ],
                       ["자체 메모", detail.memo],
-                    ].map(([k, v]) => (
-                      <div
-                        data-testid={`candidate-detail-field-${Array.from(k!, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                        key={k}
-                      >
-                        <dt>{k}</dt>
-                        <dd>{v ?? "–"}</dd>
-                      </div>
-                    ))}
+                    ]
+                      .filter(([k]) => k !== "희망 단가" || canRate)
+                      .map(([k, v]) => (
+                        <div
+                          data-testid={`candidate-detail-field-${Array.from(k!, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                          key={k}
+                        >
+                          <dt>{k}</dt>
+                          <dd>{v ?? "–"}</dd>
+                        </div>
+                      ))}
                   </dl>
                   <div className="candidate-skills">
                     {detail.skills.map((s) => (

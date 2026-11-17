@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/authenticatedTest";
 
 // Runner-owned real application and DB only; these flows never mutate business or seed data.
 async function open(page: Page) {

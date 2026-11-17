@@ -34,6 +34,9 @@ public class BusinessUserService {
     private MonthCloseBoundary closeBoundary;
     private CommitInvalidation invalidation;
     private ProjectPmRepository projects;
+    private com.sicost.authentication.AuthenticationMapper authentication;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthentication(com.sicost.authentication.AuthenticationMapper authentication) {this.authentication=authentication;}
     @org.springframework.beans.factory.annotation.Autowired(required=false)
     public void setWriteInfrastructure(SettlementSourceLocks locks,MonthCloseBoundary boundary,CommitInvalidation invalidation) {
         this.sourceLocks=locks;this.closeBoundary=boundary;this.invalidation=invalidation;
@@ -91,6 +94,7 @@ public class BusinessUserService {
             requireWrite(repository.link(new RoleLink(input.userId(),role,actor,now)));
             roleAudit(input.userId(),role,"NEW");
         });
+        if(authentication!=null)authentication.synchronizeMfa(input.userId());
         if(input.headOffice())headOffice(input.userId(),true,actor,now);
         for(var assignment:input.projectAssignments()) {
             String projectId=assignment.projectId();var old=oldProjects.get(projectId);
@@ -108,7 +112,7 @@ public class BusinessUserService {
         append(input.userId(),"NEW","등록",null,input.userId()+" "+input.name());
         access.append(new AccessLogWriter.Event("USER_REG","UI-23",input.userId(),null,null),request);
         Stored row=required(input.userId(),false);
-        return new Result(true,"등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.",view(row,repository.roles(input.userId())));
+        return new Result(true,"사용자를 등록했습니다.",view(row,repository.roles(input.userId())));
     }
     @Transactional
     public Result update(String id,Edit input) {
@@ -151,6 +155,7 @@ public class BusinessUserService {
             });
         }
         if(officeChanged)headOffice(id,input.headOffice(),actor,now);
+        if(roleChanged && authentication!=null)authentication.synchronizeMfa(id);
         if(roleChanged || officeChanged)access.append(new AccessLogWriter.Event("AUTH_CHG","UI-23",id,null,null),request());
         invalidate(List.of("USER:"+id));
         if (!Objects.equals(row.name(),input.name())) append(id,"UPD","이름",row.name(),input.name());

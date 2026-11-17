@@ -10,6 +10,9 @@ import static com.sicost.businessusersops.BusinessUserOptionsDtos.*;
 public class BusinessUserOptionsService {
     private final BusinessUserOptionsRepository repository;
     private final CurrentUserProvider users;
+    private com.sicost.permission.PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     public BusinessUserOptionsService(BusinessUserOptionsRepository repository, CurrentUserProvider users) {
         this.repository = repository;
         this.users = users;
@@ -18,5 +21,9 @@ public class BusinessUserOptionsService {
     public Options options(String roleId) {
         users.currentUser();
         return new Options(repository.eligible(roleId), repository.activeRoles());
+    }
+    @Transactional(readOnly=true)
+    public java.util.List<RoleOption> roleOptions() {
+        permissions.require("UI-23","INQ");return repository.allActiveRoles();
     }
 }

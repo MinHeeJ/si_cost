@@ -46,7 +46,7 @@ class FinancialImportDatabaseTest {
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));context.registerBean(MasterLockMapper.class,()->session.getMapper(MasterLockMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,ExcelImportService.class,FinancialImportDefinition.class,FinancialImportRepository.class,FinancialImportService.class);
-        context.refresh();service=context.getBean(FinancialImportService.class);file=FinancialWorkbook.valid();
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(FinancialImportService.class);file=FinancialWorkbook.valid();
     }
     @AfterEach void close() { if(context!=null)context.close(); }
     Result checked() { return service.validate(file,"2080-07"); }

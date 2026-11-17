@@ -10,4 +10,5 @@ public class BusinessUserOptionsRepository {
     public BusinessUserOptionsRepository(BusinessUserOptionsMapper mapper) { this.mapper = mapper; }
     public List<UserOption> eligible(String roleId) { return mapper.eligible(roleId); }
     public List<RoleOption> activeRoles() { return mapper.activeRoles(); }
+    public List<RoleOption> allActiveRoles() { return mapper.allActiveRoles(); }
 }

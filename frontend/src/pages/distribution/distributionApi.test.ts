@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -26,7 +27,7 @@ it("uses selected project identity, required viewed step and no extra year or au
     text: async () =>
       JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
   });
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getProjectDistribution("P-selected", "CTRT");
   await getProjectDistributionComparison("P-selected");
   await getProjectDistributionUploads("P-selected");
@@ -77,7 +78,7 @@ it("surfaces root ApiError with no automatic retries", async () => {
         requestId: "distribution-api",
       }),
   });
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     getProjectDistribution("P-selected", "EST"),
   ).rejects.toBeInstanceOf(ApiError);

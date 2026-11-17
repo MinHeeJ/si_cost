@@ -23,6 +23,9 @@ public class DashboardService {
     private final CashFlowService cash;
     private final MonthCloseReadService closes;
     private final Clock clock;
+    private com.sicost.permission.PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     public DashboardService(DashboardReadRepository repository,DashboardFinancialSources financial,DashboardOperationalSources operations,
         CashFlowService cash,MonthCloseReadService closes,Clock clock) {
         this.repository=repository;this.financial=financial;this.operations=operations;this.cash=cash;this.closes=closes;this.clock=clock;
@@ -35,21 +38,22 @@ public class DashboardService {
         YearMonth base=parseBase(repository.base()),selected=requested==null?current:ProjectAnalysisInput.month(requested);
         if(selected.isBefore(base)||selected.isAfter(current))throw new ApiException(400,"INVALID_PERIOD","운영 시작월부터 현재월까지 선택해 주세요.","month",null);
         Context c=new Context(selected,current,at.toLocalDate(),at);
+        var authorized=permissions.capabilities();boolean company=authorized.scope().all();
         var closeRows=section(c,selected,"MonthClose",()->repository.closes(db(base),db(current)));
         String last=closeRows.value()==null?null:closeRows.value().stream().filter(r->r.status().equals("CLOSE")).map(r->api(r.month())).max(String::compareTo).orElse(null);
         String closeStatus=closeRows.value()==null?"UNCONFIRMED":closeRows.value().stream().filter(r->r.month().equals(db(selected))).map(com.sicost.shared.SharedQueryDtos.CloseRow::status).findFirst().orElse("WORK");
-        var pl=section(c,selected,"OperatingProfit",()->financial.read(selected));
-        var targets=section(c,selected,"BusinessPlan",()->repository.targets(selected.getYear()));
+        var pl=section(c,selected,"OperatingProfit",company,()->financial.read(selected));
+        var targets=section(c,selected,"BusinessPlan",company,()->repository.targets(selected.getYear()));
         var receivables=section(c,current,"Receivables",()->repository.receivables(c.day()));
-        var tax=section(c,current,"CorporateTax",()->repository.taxes(c.day()));
+        var tax=section(c,current,"CorporateTax",company,()->repository.taxes(c.day()));
         var project=section(c,current,"ProjectCost/ProjectStatus",()->operations.projects(c.day()));
         var forecast=section(c,current,"WorkforceForecast/SalesPipeline",()->operations.forecast(c.day()));
         var withdrawal=section(c,current,"Withdrawal",()->operations.withdrawals(c.day()));
-        var close=section(c,selected,"MonthClose",()->closes.getMonthCloses(new MonthCloseReadDtos.Query(selected.toString(),1,20)));
+        var close=section(c,selected,"MonthClose",company,()->closes.getMonthCloses(new MonthCloseReadDtos.Query(selected.toString(),1,20)));
         YearMonth cashFrom=last==null?current:YearMonth.parse(last).plusMonths(1);if(cashFrom.isBefore(current))cashFrom=current;
         YearMonth start=cashFrom;
-        var cashRows=section(c,current,"CashFlow",()->cash.calculateContiguousRange(start,3));
-        var minimum=section(c,current,"OperatingStandards",()->repository.standard("MIN_CASH",current));
+        var cashRows=section(c,current,"CashFlow",company,()->cash.calculateContiguousRange(start,3));
+        var minimum=section(c,current,"OperatingStandards",company,()->repository.standard("MIN_CASH",current));
         var shortPeople=section(c,current,"OperatingStandards",()->repository.standard("SHORT_PERSON",current));
         var mmLimit=section(c,current,"OperatingStandards",()->repository.standard("MM_OVER",current));
         var targetUtil=section(c,selected,"OperatingStandards",()->repository.standard("TGT_UTIL_RT",selected));
@@ -77,7 +81,7 @@ public class DashboardService {
             String month=current.plusMonths(i).toString();var row=forecast.value()==null?null:forecast.value().workforce().totals().stream().filter(m->m.month().equals(month)).findFirst().orElse(null);
             supply.add(new Supply(month,row==null?null:row.demand(),row==null?null:row.supply(),row==null?null:row.difference()));
         }
-        List<Cash> cashForecast=new ArrayList<>();for(int i=0;i<3;i++) {
+        List<Cash> cashForecast=new ArrayList<>();for(int i=0;company && i<3;i++) {
             String month=start.plusMonths(i).toString();var row=cashRows.value()==null?null:cashRows.value().stream().filter(m->m.month().equals(month)).findFirst().orElse(null);
             List<String> reasons=row==null?List.of("자금 원천을 확인하지 못했습니다."):row.issues().stream().map(com.sicost.cashflowops.CashFlowDtos.Issue::message).distinct().toList();
             if(minimum.value()==null){var all=new ArrayList<>(reasons);all.add("최소자금 기준 미확인");reasons=List.copyOf(all);}
@@ -104,8 +108,15 @@ public class DashboardService {
         boolean actionComplete=List.of(receivables.basis(),tax.basis(),project.basis(),forecast.basis(),withdrawal.basis(),close.basis(),cashRows.basis(),minimum.basis(),shortPeople.basis(),mmLimit.basis()).stream().allMatch(b->b.status().equals("AVAILABLE"))&&minimum.value()!=null&&shortPeople.value()!=null&&mmLimit.value()!=null&&cashForecast.stream().allMatch(row->row.shortage()!=null);
         Basis actionsBasis=new Basis(current.toString(),c.day(),"Receivables/CorporateTax/CashFlow/Workforce/Project/MonthClose",at,actionComplete?(actions.isEmpty()?"EMPTY":"AVAILABLE"):"UNCONFIRMED",actionComplete?List.of():List.of("일부 할일 원천 미확인: 알려진 항목만 표시합니다."));
         Basis cashBasis=cashRows.basis();if(cashForecast.stream().anyMatch(row->row.closingBalance()==null||row.minimumCashAmount()==null))cashBasis=valueBasis(cashBasis,null);
-        return new Data(actionsBasis,project.basis(),selected.toString(),c.day(),current.toString(),base.toString(),last,closeStatus,!"CLOSE".equals(closeStatus),at,"ALL",metrics,List.copyOf(actions),actionComplete?actions.size():null,actionComplete?(int)actions.stream().filter(Action::urgent).count():null,progress,alerts,
+        if(!company)metrics=metrics.stream().filter(metric->metric.metricCode().equals("RECEIVABLE")).toList();
+        metrics=metrics.stream().filter(metric->authorized.screens().getOrDefault(metric.link().screenId(),Set.of()).contains("INQ")).toList();
+        actions.removeIf(action->!authorized.screens().getOrDefault(action.link().screenId(),Set.of()).contains("INQ"));
+        String scope=company?"ALL":authorized.scope().partIds().isEmpty()?(authorized.scope().projectIds().isEmpty()?"NONE":"PROJ"):(authorized.scope().projectIds().isEmpty()?"PART":"PART_PROJ");
+        return new Data(actionsBasis,project.basis(),selected.toString(),c.day(),current.toString(),base.toString(),last,closeStatus,!"CLOSE".equals(closeStatus),at,scope,metrics,List.copyOf(actions),actionComplete?actions.size():null,actionComplete?(int)actions.stream().filter(Action::urgent).count():null,progress,alerts,
             pl.basis(),List.copyOf(trend),forecast.basis(),List.copyOf(supply),pl.basis(),parts,"프로젝트 인식매출과 전체 프로젝트 원가 기준입니다. 판관비·대기비는 임의 안분하지 않습니다.",pipeline(forecast,c),cashBasis,List.copyOf(cashForecast));
+    }
+    private <T> Section<T> section(Context c,YearMonth month,String source,boolean allowed,Supplier<T> read) {
+        return allowed?section(c,month,source,read):new Section<>(null,new Basis(month.toString(),c.day(),source,c.at(),"RESTRICTED",List.of("전사 범위에서만 조회할 수 있습니다.")));
     }
     private <T> Section<T> section(Context c,YearMonth month,String source,Supplier<T> read) {
         var result=repository.section(read);return new Section<>(result.value(),new Basis(month.toString(),c.day(),source,c.at(),result.failed()?"FAILED":"AVAILABLE",result.failed()?List.of("원천 조회에 실패했습니다. 재조회해 주세요."):List.of()));

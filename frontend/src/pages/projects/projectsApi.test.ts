@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -8,8 +9,7 @@ import {
   getProjectDefaults,
 } from "./projectsApi";
 beforeEach(() =>
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi
       .fn()
       .mockResolvedValue(

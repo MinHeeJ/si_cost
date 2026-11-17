@@ -63,7 +63,7 @@ class ProjectPartDatabaseTest {
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,
             CommitInvalidation.class,ProjectBudgetRepository.class,ProjectPartRepository.class,ProjectPartService.class,
             AccessLogWriter.class,BusinessUserRepository.class,BusinessUserService.class);
-        context.refresh();service=context.getBean(ProjectPartService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(ProjectPartService.class);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectPartController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         id="P-"+UUID.randomUUID().toString().replace("-","").substring(0,16);
         a=part("A");b=part("B");c=part("C");d=part("D");e=part("E");

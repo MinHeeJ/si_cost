@@ -1,10 +1,11 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import {
   createFinancialPreview,
   getFinancialYearStatus,
 } from "./financialPreviewApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 it("연도현황은 상대경로 query와 취소 signal을 사용한다", async () => {
   const data = { year: "2026", months: [] };
   vi.mocked(fetch).mockResolvedValue(

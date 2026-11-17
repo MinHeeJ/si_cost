@@ -5,6 +5,7 @@ import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { BusinessUser } from "../businessusers/businessUsersApi";
 import { notifyBusinessUsersCommitted } from "./businessUserOptionsApi";
 import * as api from "./userAdministrationApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 
 export function UserStateActions({
   user,
@@ -13,12 +14,13 @@ export function UserStateActions({
   user: BusinessUser;
   onCommitted(): Promise<void>;
 }) {
+  const allowed = usePermission("UI-23", "UPD");
   const [confirm, setConfirm] = useState<"STOP" | "RESUME">(),
     [error, setError] = useState<unknown>();
   const saving = useRef(false);
   const { commit, pending, message } = useCommitRefresh();
   async function save(action: api.UserStateAction) {
-    if (saving.current) return;
+    if (!allowed || saving.current) return;
     saving.current = true;
     setError(undefined);
     try {
@@ -33,6 +35,7 @@ export function UserStateActions({
       saving.current = false;
     }
   }
+  if (!allowed) return null;
   return (
     <section data-testid="user-state-actions">
       <div className="businessusers-toolbar">
@@ -68,13 +71,6 @@ export function UserStateActions({
             잠금 해제
           </button>
         )}
-        <button
-          data-testid="user-password-preparation"
-          disabled
-          title="18번 인증 기능 적용 시 제공합니다."
-        >
-          비밀번호 초기화/발송 (18번 준비)
-        </button>
       </div>
       {message && !confirm && <p role="status">{message}</p>}
       {error != null && !confirm && (

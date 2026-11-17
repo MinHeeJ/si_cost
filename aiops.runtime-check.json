@@ -14,7 +14,7 @@
     }
   },
   "auth": {
-    "required": false
+    "required": true
   },
   "first_menu": {
     "route": "/UI-27",

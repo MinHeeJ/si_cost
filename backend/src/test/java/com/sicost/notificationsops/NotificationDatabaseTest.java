@@ -41,7 +41,12 @@ class NotificationDatabaseTest {
             other,"시험 수신자",other+"@example.test",new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode(UUID.randomUUID().toString()),actor);
         var users=mock(CurrentUserProvider.class);
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser(actor,"시험 수신자",List.of(),true));
-        service=new NotificationService(new NotificationRepository(mapper),users,Clock.fixed(now.atZone(ZoneId.of("Asia/Seoul")).toInstant(),ZoneOffset.UTC),new CommitInvalidation(event->{}));
+        var clock=Clock.fixed(now.atZone(ZoneId.of("Asia/Seoul")).toInstant(),ZoneOffset.UTC);
+        var policies=mock(com.sicost.permission.PermissionService.class);
+        when(policies.userId()).thenReturn(actor);
+        when(policies.capabilities()).thenReturn(new com.sicost.permission.PermissionService.Capabilities(Map.of("UI-13",Set.of("INQ"),"UI-14",Set.of("INQ")),new com.sicost.permission.PermissionService.Scope(true,Set.of(),Set.of()),true,Map.of(),Map.of(),Set.of()));
+        var projection=new com.sicost.permission.NotificationProjectionService(policies,mock(com.sicost.permission.PermissionMapper.class),mock(com.sicost.permission.NotificationTargetMapper.class),clock);
+        service=new NotificationService(new NotificationRepository(mapper),users,clock,new CommitInvalidation(event->{}),policies,projection);
     }
     @AfterEach void cleanup() {
         if(db!=null) {

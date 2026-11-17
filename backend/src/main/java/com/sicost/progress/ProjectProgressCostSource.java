@@ -25,7 +25,8 @@ public class ProjectProgressCostSource {
         boolean complete=true,revenue=true,estimated=false;
         if(start.isBefore(base)) {complete=false;revenue=false;issues.add(new MissingReason("BEFORE_OPERATION","운영 시작 전 원가 자료는 확인할 수 없습니다.",base.toString(),null,null,"cumulativeCost"));}
         for(int year=from.getYear();year<=end.getYear() && !from.isAfter(end);year++) {
-            var source=monthly.loadYear(year);var costs=monthly.calculate(source);
+            int selectedYear=year;
+            var source=com.sicost.permission.PermissionCalculationContext.source(()->monthly.loadYear(selectedYear));var costs=monthly.calculate(source);
             Set<String> expected=new HashSet<>();
             for(var a:source.assignments())if(project.projectId().equals(a.projectId()) && inRange(a.month(),from,end))expected.add(a.month()+":"+a.personId()+":"+a.assignmentId());
             Set<String> actual=new HashSet<>();

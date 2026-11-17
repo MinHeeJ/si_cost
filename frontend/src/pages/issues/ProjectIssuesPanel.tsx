@@ -8,14 +8,19 @@ import {
   type SharedCodeLookup,
   type PeriodContext,
 } from "../shared/sharedApi";
-import { notifyProjectsCommitted, getProjects } from "../projects/projectsApi";
+import { notifyProjectsCommitted } from "../projects/projectsApi";
+import { getProjectStatusBoard } from "../apiops/projectAnalysisApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   ProjectIssueDialog,
   type IssueProjectChoice,
 } from "./ProjectIssueDialog";
 import { ProjectIssueTable, type IssueColumnView } from "./ProjectIssueTable";
 import * as api from "./projectIssuesApi";
-import {useAnalysisSettings,analysisPageSize} from "../apiops/ProjectAnalysisParts";
+import {
+  useAnalysisSettings,
+  analysisPageSize,
+} from "../apiops/ProjectAnalysisParts";
 import "./issues.css";
 export type ProjectIssuesPanelProps = {
   projectId?: string;
@@ -27,9 +32,9 @@ export type ProjectIssuesPanelProps = {
   onDirtyChange?(dirty: boolean): void;
   columnView?: IssueColumnView;
   onColumnsChange?(): void;
-  pageSize?: 20|50|100;
-  onPageSizeChange?(size:20|50|100):void|Promise<void>;
-  dense?:boolean;
+  pageSize?: 20 | 50 | 100;
+  onPageSizeChange?(size: 20 | 50 | 100): void | Promise<void>;
+  dense?: boolean;
 };
 const defaults: api.IssueFilter = { status: "OPEN_ACTIVE", page: 1, size: 50 };
 export function ProjectIssuesPanel({
@@ -42,13 +47,27 @@ export function ProjectIssuesPanel({
   onDirtyChange,
   columnView,
   onColumnsChange,
-  pageSize=50, onPageSizeChange, dense,
+  pageSize = 50,
+  onPageSizeChange,
+  dense,
 }: ProjectIssuesPanelProps) {
-  const [filter, setFilter] = useState<api.IssueFilter>({...defaults,size:analysisPageSize(pageSize)}),
-    [draft, setDraft] = useState<api.IssueFilter>({...defaults,size:analysisPageSize(pageSize)});
-  const settings=useAnalysisSettings();
-  const previousSize=useRef(pageSize);
-  useEffect(()=>{if(previousSize.current!==pageSize){previousSize.current=pageSize;apply({...filter,size:analysisPageSize(pageSize),page:1});}},[pageSize]);
+  const canRegister = usePermission(board ? "UI-31" : "UI-01", "REG");
+  const [filter, setFilter] = useState<api.IssueFilter>({
+      ...defaults,
+      size: analysisPageSize(pageSize),
+    }),
+    [draft, setDraft] = useState<api.IssueFilter>({
+      ...defaults,
+      size: analysisPageSize(pageSize),
+    });
+  const settings = useAnalysisSettings();
+  const previousSize = useRef(pageSize);
+  useEffect(() => {
+    if (previousSize.current !== pageSize) {
+      previousSize.current = pageSize;
+      apply({ ...filter, size: analysisPageSize(pageSize), page: 1 });
+    }
+  }, [pageSize]);
   const [data, setData] = useState<api.ProjectIssuesPage>();
   const [period, setPeriod] = useState<PeriodContext>();
   const [codes, setCodes] = useState<SharedCodeLookup[]>([]);
@@ -102,25 +121,19 @@ export function ProjectIssuesPanel({
     let live = true;
     async function choices() {
       const values: IssueProjectChoice[] = [];
-      for (const status of ["ING", "PRE"] as const) {
-        let page = 1,
-          total = 0;
-        do {
-          const result = await getProjects({
-            year: Number(period!.currentDate.slice(0, 4)),
-            status,
-            page,
-            size: 100,
-          });
-          total = result.total;
-          values.push(
-            ...result.items
-              .filter((p) => p.endDate >= period!.currentDate)
-              .map((p) => ({ id: p.id, name: p.name })),
-          );
-          page++;
-        } while ((page - 1) * 100 < total);
-      }
+      let page = 1,
+        total = 0;
+      do {
+        const result = await getProjectStatusBoard({ page, size: 100 });
+        total = result.total;
+        values.push(
+          ...result.items.map((p) => ({
+            id: p.projectId,
+            name: p.projectName,
+          })),
+        );
+        page++;
+      } while ((page - 1) * 100 < total);
       if (live) setProjects(values);
     }
     void choices().catch((e) => {
@@ -172,7 +185,7 @@ export function ProjectIssuesPanel({
           type="button"
           className="sicost-primary"
           data-testid="issue-create"
-          disabled={locked || loading || refreshFailed}
+          disabled={!canRegister || locked || loading || refreshFailed}
           onClick={() => setEditing("new")}
         >
           이슈 등록
@@ -190,7 +203,7 @@ export function ProjectIssuesPanel({
         searchTestId="issues-search"
         disabled={loading}
         onSubmit={() => apply({ ...draft, page: 1 })}
-        onReset={() => apply({...defaults,size:analysisPageSize(pageSize)})}
+        onReset={() => apply({ ...defaults, size: analysisPageSize(pageSize) })}
       >
         <label className="sicost-field">
           상태
@@ -254,7 +267,16 @@ export function ProjectIssuesPanel({
         )}
       </FilterBar>
       <span className="cost-help">기준일 {data?.baseDate ?? "–"}</span>
-      {settings.error != null && <ErrorBanner message={settings.error instanceof Error ? settings.error.message : "설정을 저장하지 못했습니다."} onRetry={settings.clear} />}
+      {settings.error != null && (
+        <ErrorBanner
+          message={
+            settings.error instanceof Error
+              ? settings.error.message
+              : "설정을 저장하지 못했습니다."
+          }
+          onRetry={settings.clear}
+        />
+      )}
       {message && (
         <p
           role="status"
@@ -290,7 +312,7 @@ export function ProjectIssuesPanel({
         </button>
       )}
       <ProjectIssueTable
-        onReset={() => apply({...defaults,size:analysisPageSize(pageSize)})}
+        onReset={() => apply({ ...defaults, size: analysisPageSize(pageSize) })}
         data={data}
         dense={dense}
         loading={loading}
@@ -300,7 +322,12 @@ export function ProjectIssuesPanel({
           if (!refreshFailed) setEditing(r);
         }}
         onPageChange={(page) => apply({ ...filter, page })}
-        onSizeChange={(size) => {void settings.run(async()=>{if(window.innerWidth>767)await onPageSizeChange?.(size);apply({...filter,page:1,size});});}}
+        onSizeChange={(size) => {
+          void settings.run(async () => {
+            if (window.innerWidth > 767) await onPageSizeChange?.(size);
+            apply({ ...filter, page: 1, size });
+          });
+        }}
         view={columnView}
         onColumnsChange={onColumnsChange}
       />

@@ -9,4 +9,5 @@ import static com.sicost.businessusersops.BusinessUserOptionsDtos.*;
 public interface BusinessUserOptionsMapper {
     List<UserOption> eligible(@Param("roleId") String roleId);
     List<RoleOption> activeRoles();
+    List<RoleOption> allActiveRoles();
 }

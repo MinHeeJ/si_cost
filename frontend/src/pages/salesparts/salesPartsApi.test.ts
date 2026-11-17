@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   getSalesParts,
@@ -17,7 +18,7 @@ const envelope = () =>
   new Response(JSON.stringify({ success: true, meta: {}, data: {} }));
 it("전체 조회는 상태를 생략하고 선택 ID만 상세와 PATCH 경로에 쓴다", async () => {
   const fetcher = vi.fn().mockImplementation(async () => envelope());
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getSalesParts({ page: 1, size: 50, sort: "name", direction: "ASC" });
   expect(fetcher.mock.calls[0][0]).not.toContain("useYn");
   await getSalesPart("선택/파트");
@@ -32,7 +33,7 @@ it("전체 조회는 상태를 생략하고 선택 ID만 상세와 PATCH 경로�
 });
 it("등록은 다섯 입력을 십진 문자열로 보내고 선택월 기본값을 조회한다", async () => {
   const fetcher = vi.fn().mockImplementation(async () => envelope());
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const body = {
     name: "파트",
     effectiveMonth: "2026-06",
@@ -61,8 +62,7 @@ it("금액은 Number 변환 없이 원·천원·백만원까지 정확히 표시
   );
 });
 it("다운로드 JSON 오류는 파일 대신 같은 ApiError로 처리한다", async () => {
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -94,7 +94,7 @@ it("파트 다운로드도 공통 내보내기 계약의 서버 파일명과 고
       },
     }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const createObjectURL = vi.fn().mockReturnValue("blob:parts-export");
   const revokeObjectURL = vi.fn();
   vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });

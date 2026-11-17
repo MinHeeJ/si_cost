@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(MasterDataExportController.class)
 @ContextConfiguration(classes=MasterDataExportController.class)
 @Import({MasterDataExportService.class, MasterDataExportRepository.class, ExcelExportService.class,

@@ -5,11 +5,12 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApplicationRoutes, applicationRoutes } from "./router";
+import { installBusinessSession } from "../shared/testSupport/businessFixtures";
 import { screenRegistry } from "../pages/shared/screenRegistry";
 import * as shared from "../pages/shared/sharedApi";
 import * as roles from "../pages/roles/rolesApi";
@@ -429,6 +430,7 @@ const open = (path = "/UI-27") =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  installBusinessSession();
   vi.mocked(roles.getRoles).mockResolvedValue({
     items: [],
     developmentMode: true,
@@ -832,9 +834,9 @@ beforeEach(() => {
     size: 50,
   });
   vi.mocked(users.getManagedUserRoleOptions).mockResolvedValue([
-      { roleId: "PM", name: "프로젝트 담당" },
-      { roleId: "SALES_LDR", name: "영업 파트장" },
-    ]);
+    { roleId: "PM", name: "프로젝트 담당" },
+    { roleId: "SALES_LDR", name: "영업 파트장" },
+  ]);
   vi.mocked(parts.getSalesParts).mockResolvedValue({
     items: [],
     total: 0,

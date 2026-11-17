@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -8,7 +9,7 @@ import {
   planMmUnits,
   planMmDisplay,
 } from "./projectPlansApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 const data = {
   items: [],
   planMmTotal: "0.00",

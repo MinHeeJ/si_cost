@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 
@@ -94,7 +95,7 @@ describe("activity API registry", () => {
           status: test.method === "POST" ? 202 : 200,
         }),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       expect(await test.call()).toEqual(data);
       expect(fetcher).toHaveBeenCalledOnce();
       const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
@@ -122,7 +123,7 @@ describe("activity API registry", () => {
       const fetcher = vi
         .fn()
         .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       await expect(test.call()).rejects.toMatchObject({ status: 409, body });
       expect(fetcher).toHaveBeenCalledOnce();
     },
@@ -137,7 +138,7 @@ describe("activity API registry", () => {
         },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const create = vi.fn().mockReturnValue("blob:dashboard");
     const revoke = vi.fn();
     vi.stubGlobal(
@@ -177,7 +178,7 @@ describe("activity API registry", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const click = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {});

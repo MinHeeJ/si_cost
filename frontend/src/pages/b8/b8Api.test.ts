@@ -1,7 +1,8 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { createB8Validation, saveB8Apply, getB8Template } from "./b8Api";
 import { ApiError } from "../../shared/api";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 const summary = {
   totalRows: 1,
   successRows: 1,

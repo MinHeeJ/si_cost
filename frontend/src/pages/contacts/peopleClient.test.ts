@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./peopleClient";
@@ -9,7 +10,7 @@ function fetcher() {
       async () =>
         new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
     );
-  vi.stubGlobal("fetch", fn);
+  stubBusinessFetch(fn);
   return fn;
 }
 it("get uses selected candidate, relative path, default and explicit paging, and abort signal", async () => {

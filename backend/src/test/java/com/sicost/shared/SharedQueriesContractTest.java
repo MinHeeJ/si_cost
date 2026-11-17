@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(SharedQueriesController.class)
 @ContextConfiguration(classes=SharedQueriesController.class)
 @Import({SharedQueriesService.class, MenuService.class, ApiExceptionHandler.class, RequestIdFilter.class, JsonConfiguration.class})

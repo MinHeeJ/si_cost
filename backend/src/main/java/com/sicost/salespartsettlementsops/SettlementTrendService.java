@@ -34,7 +34,8 @@ public class SettlementTrendService {
             if(ym.isBefore(base)) {totals.add(new MonthTotal(month,null,null,null,List.of()));continue;}
             Result result=reads.previewSettlement(partId,month);results.put(month,result);issues.addAll(result.issues());
             result.items().stream().filter(r->r.mm()!=null&&new BigDecimal(r.mm()).signum()>0).forEach(r->union.put(r.developerId(),r));
-            totals.add(new MonthTotal(month,result.totals().personProfitShareAmount(),result.cardAmount(),result.totals().partProfitAmount(),result.issues()));
+            var total=new MonthTotal(month,result.totals().personProfitShareAmount(),result.cardAmount(),result.totals().partProfitAmount(),result.issues());
+            com.sicost.permission.PermissionViewMetadata.month(total,result);totals.add(total);
         }
         List<Person> all=new ArrayList<>();
         for(Row identity:union.values().stream().sorted(Comparator.comparing(Row::name).thenComparing(Row::developerId)).toList()) {

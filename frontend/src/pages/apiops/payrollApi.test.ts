@@ -1,7 +1,8 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./payrollApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 function response(data: unknown) {
   return new Response(JSON.stringify({ success: true, meta: {}, data }), {
     headers: { "Content-Type": "application/json" },

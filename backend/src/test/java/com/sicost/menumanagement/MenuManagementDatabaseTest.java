@@ -53,7 +53,7 @@ class MenuManagementDatabaseTest {
         context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             MenuManagementRepository.class,MenuManagementService.class,MenuService.class);
-        context.refresh();service=context.getBean(MenuManagementService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(MenuManagementService.class);
         mvc=MockMvcBuilders.standaloneSetup(new MenuManagementController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         sql.update("INSERT INTO tb_sy_menu(menu_id,menu_nm,menu_lvl,sort_ord,reg_user_id) VALUES ('TEST_ROOT_A','시험 대메뉴 A',1,90000,'admin'),('TEST_ROOT_B','시험 대메뉴 B',1,90001,'admin')");
         sql.update("INSERT INTO tb_sy_menu(menu_id,upper_menu_id,menu_nm,scrn_id,menu_lvl,sort_ord,reg_user_id) VALUES ('TEST_CHILD_A','TEST_ROOT_A','시험 서브 A','UI-01',2,1,'admin'),('TEST_CHILD_B','TEST_ROOT_B','시험 서브 B','UI-02',2,1,'admin')");

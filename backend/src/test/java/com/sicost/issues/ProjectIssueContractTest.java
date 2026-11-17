@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProjectIssueController.class)
+@com.sicost.common.BusinessMvcSlice
 @ContextConfiguration(classes=ProjectIssueController.class)
 @Import({ProjectIssueService.class,WriteCoordinator.class,RevisionService.class,
     ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

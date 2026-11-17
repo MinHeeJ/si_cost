@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "./businessUsersApi";
 import { ApiError } from "../../shared/api";
@@ -12,7 +13,7 @@ it("역할 선택은 필수 purpose를 기존 옵션 클라이언트로 전달�
       }),
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.getBusinessRoleOptions();
   expect(fetcher.mock.calls[0][0]).toBe(
     "/api/business-users/options?purpose=PM",
@@ -27,7 +28,7 @@ it("사용자 조회는 상대경로와 실제 필터만 전송한다", async ()
           JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
         ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.getBusinessUsers();
   expect(fetcher.mock.calls[0][0]).toBe("/api/business-users");
   await api.getBusinessUsers({
@@ -54,7 +55,7 @@ it("생성과 수정은 별도 payload이며 선택 아이디만 경로로 인�
       async () =>
         new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.createBusinessUser({
     userId: "ab12",
     name: "담당",
@@ -93,17 +94,41 @@ it("오류 envelope는 root field와 requestId를 유지하고 자동 재시도�
       { status: 409 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(api.getBusinessUser("ab12")).rejects.toBeInstanceOf(ApiError);
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
-it("관리 역할 선택지는 업무자격 옵션과 분리하고 전체 역할/중지포함 조건을 보낸다",async()=>{
-  const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({success:true,meta:{},data:{items:[{roleId:"FIN",name:"재무 담당"}]}})));
-  vi.stubGlobal("fetch",fetcher);
-  expect(await api.getManagedUserRoleOptions()).toEqual([{roleId:"FIN",name:"재무 담당"}]);
+it("관리 역할 선택지는 업무자격 옵션과 분리하고 전체 역할/중지포함 조건을 보낸다", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          meta: {},
+          data: { items: [{ roleId: "FIN", name: "재무 담당" }] },
+        }),
+      ),
+    );
+  stubBusinessFetch(fetcher);
+  expect(await api.getManagedUserRoleOptions()).toEqual([
+    { roleId: "FIN", name: "재무 담당" },
+  ]);
   expect(fetcher.mock.calls[0][0]).toBe("/api/roles");
-  fetcher.mockResolvedValue(new Response(JSON.stringify({success:true,meta:{},data:{items:[]}})));
-  await api.getBusinessUsers({role:"FIN",includeStopped:true,status:"USE"});
-  const query=new URL(fetcher.mock.calls[1][0],"http://test").searchParams;
-  expect(Object.fromEntries(query)).toEqual({role:"FIN",includeStopped:"true",status:"USE"});
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
+    ),
+  );
+  await api.getBusinessUsers({
+    role: "FIN",
+    includeStopped: true,
+    status: "USE",
+  });
+  const query = new URL(fetcher.mock.calls[1][0], "http://test").searchParams;
+  expect(Object.fromEntries(query)).toEqual({
+    role: "FIN",
+    includeStopped: "true",
+    status: "USE",
+  });
 });

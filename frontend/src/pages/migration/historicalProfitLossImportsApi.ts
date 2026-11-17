@@ -1,6 +1,7 @@
 import {
   ApiError,
   request,
+  authenticatedFetch,
   type ApiEnvelope,
   type ApiErrorBody,
 } from "../../shared/api";
@@ -71,7 +72,7 @@ async function upload<T>(
   body.append("file", file);
   if (context)
     for (const [key, value] of Object.entries(context)) body.append(key, value);
-  const response = await fetch(path, {
+  const response = await authenticatedFetch(path, {
     method: "POST",
     body,
     redirect: "error",

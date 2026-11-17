@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   getBills,
@@ -16,7 +17,7 @@ function fetcher(data: unknown = {}, status = 200) {
         status,
       }),
   );
-  vi.stubGlobal("fetch", fn);
+  stubBusinessFetch(fn);
   return fn;
 }
 it("uses relative bill paths with exact contract query values", async () => {
@@ -87,7 +88,7 @@ it("updates only the addressed bill and never automatically retries an error", a
       { status: 409 },
     ),
   );
-  vi.stubGlobal("fetch", fn);
+  stubBusinessFetch(fn);
   await expect(
     putBill("B-202607-001", {
       year: 2026,

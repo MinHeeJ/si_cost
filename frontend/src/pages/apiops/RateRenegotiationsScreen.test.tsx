@@ -4,7 +4,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Link, MemoryRouter } from "react-router-dom";
 import { PreferencesProvider } from "../me/usePreferences";
@@ -23,7 +23,9 @@ vi.mock("./rateRenegotiationsApi", async (original) => ({
   downloadRenegotiations: vi.fn(),
 }));
 vi.mock("../shared/sharedApi");
-vi.mock("../developers/DeveloperDrawer", () => ({DeveloperDrawer: () => <div role="dialog">인력 상세</div>}));
+vi.mock("../developers/DeveloperDrawer", () => ({
+  DeveloperDrawer: () => <div role="dialog">인력 상세</div>,
+}));
 vi.mock("../projects/projectsApi");
 function response(): api.RenegotiationsResult {
   return {
@@ -313,7 +315,7 @@ describe("단가 재협상 대상", () => {
 });
 
 it("row opens the actual developer once while project links do not open a developer", async () => {
-  const {onPerson} = mount();
+  const { onPerson } = mount();
   await screen.findByText(/^기준월 2080-07 · 계산시각/);
   fireEvent.click(screen.getByTestId("renegotiation-person-owned-0"));
   expect(onPerson).toHaveBeenCalledTimes(1);
@@ -322,25 +324,50 @@ it("row opens the actual developer once while project links do not open a develo
   fireEvent.click(screen.getByTestId("renegotiation-table-row-owned-1"));
   expect(onPerson).toHaveBeenCalledTimes(2);
 });
-it.each([[-1, "0"], [51, "50"], [0, "0"], [50, "50"]])("assumption boundary %s applies %s", async (input, expected) => {
-  mount(); await screen.findByText(/^기준월 2080-07 · 계산시각/);
-  fireEvent.change(screen.getByLabelText("인상률 %"), {target: {value: String(input)}});
+it.each([
+  [-1, "0"],
+  [51, "50"],
+  [0, "0"],
+  [50, "50"],
+])("assumption boundary %s applies %s", async (input, expected) => {
+  mount();
+  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  fireEvent.change(screen.getByLabelText("인상률 %"), {
+    target: { value: String(input) },
+  });
   fireEvent.click(screen.getByTestId("renegotiation-recalculate"));
-  await waitFor(() => expect(api.getRateRenegotiations).toHaveBeenLastCalledWith(expect.objectContaining({increaseRate: expected}), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getRateRenegotiations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ increaseRate: expected }),
+      expect.any(AbortSignal),
+    ),
+  );
 });
 
 it("closes a portal detail when the mounted screen changes route", async () => {
-  render(<MemoryRouter initialEntries={["/UI-32"]}><PreferencesProvider api={preferences}><Link to="/UI-19">정산 이동</Link><RateRenegotiationsScreen /></PreferencesProvider></MemoryRouter>);
+  render(
+    <MemoryRouter initialEntries={["/UI-32"]}>
+      <PreferencesProvider api={preferences}>
+        <Link to="/UI-19">정산 이동</Link>
+        <RateRenegotiationsScreen />
+      </PreferencesProvider>
+    </MemoryRouter>,
+  );
   await screen.findByText(/^기준월 2080-07 · 계산시각/);
   fireEvent.click(screen.getByTestId("renegotiation-person-owned-0"));
   expect(screen.getByRole("dialog")).toBeVisible();
-  fireEvent.click(screen.getByRole("link", {name: "정산 이동"}));
-  await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("link", { name: "정산 이동" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
 });
 it("formats the target criterion with one decimal instead of exposing stored four-decimal scale", async () => {
-  vi.mocked(api.getRateRenegotiations).mockResolvedValue({...response(), targetMarginRate: "20.0000"});
+  vi.mocked(api.getRateRenegotiations).mockResolvedValue({
+    ...response(),
+    targetMarginRate: "20.0000",
+  });
   mount();
-  await screen.findByRole("columnheader", {name: /목표 단가 \(20.0%\)/});
+  await screen.findByRole("columnheader", { name: /목표 단가 \(20.0%\)/ });
   expect(screen.getByText(/목표 이익률 20.0%/)).toBeVisible();
   expect(screen.queryByText(/20.0000%/)).not.toBeInTheDocument();
 });

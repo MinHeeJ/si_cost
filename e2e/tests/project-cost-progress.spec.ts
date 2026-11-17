@@ -5,7 +5,7 @@ import {
   type APIRequestContext,
   type APIResponse,
   type Page,
-} from "@playwright/test";
+} from "./support/authenticatedTest";
 import type { CostPage } from "../../frontend/src/pages/apiops/projectAnalysisApi";
 import type {
   Assignments,
@@ -86,8 +86,14 @@ test("원가 상세의 월별·실제 투입·원인 API와 화면 바인딩을 
     .click();
   await page.getByTestId("project-cost-unit").selectOption("원");
   await expect(page.getByTestId("project-cost-unit")).toHaveValue("원");
-  const preferences = await data<{items: {type: string; key: string; value: unknown}[]}>(await request.get("/api/me/preferences"));
-  expect(preferences.items.find(item=>item.type==="AMT_UNIT"&&item.key==="*")?.value).toBe("원");
+  const preferences = await data<{
+    items: { type: string; key: string; value: unknown }[];
+  }>(await request.get("/api/me/preferences"));
+  expect(
+    preferences.items.find(
+      (item) => item.type === "AMT_UNIT" && item.key === "*",
+    )?.value,
+  ).toBe("원");
   await page
     .getByTestId(`project-cost-open-${detail.projectId.toLowerCase()}`)
     .click();
@@ -342,7 +348,11 @@ test("독립 프로젝트에서 단계 초기화·미리보기·저장·완료�
   // that all later events fit the current UI page or that the host clock is monotonic.
   const historyItems = [...history.items];
   for (let next = 2; (next - 1) * history.size < history.total; next++) {
-    const more = await data<ProgressHistoryPage>(await request.get(`${base}/history`, {params: {page: next, size: history.size}}));
+    const more = await data<ProgressHistoryPage>(
+      await request.get(`${base}/history`, {
+        params: { page: next, size: history.size },
+      }),
+    );
     historyItems.push(...more.items);
   }
   expect(
@@ -359,7 +369,9 @@ test("독립 프로젝트에서 단계 초기화·미리보기·저장·완료�
         h.after === `${draft} 수정`,
     ),
   ).toBe(true);
-  await page.getByTestId("progress-history-table").selectOption("TB_PJ_WEEK_MEMO");
+  await page
+    .getByTestId("progress-history-table")
+    .selectOption("TB_PJ_WEEK_MEMO");
   await expect(page.getByTestId("progress-history-panel")).toContainText(
     "THIS_WEEK_CN",
   );
@@ -378,20 +390,34 @@ test("독립 프로젝트에서 단계 초기화·미리보기·저장·완료�
   ).toEqual(beforeProject.project);
 });
 
-test("현황판→프로젝트→원가 분석 이동은 세 폭에서 활성 상세 패널 하나만 표시한다", async ({page,request}) => {
-  const board = await data<{items: {projectId: string; contractType: string; sourceStatus: string}[]}>(await request.get("/api/project-status-board?size=100"));
-  const project = board.items.find(row=>row.contractType!=="IN"&&row.sourceStatus!=="PRE");
+test("현황판→프로젝트→원가 분석 이동은 세 폭에서 활성 상세 패널 하나만 표시한다", async ({
+  page,
+  request,
+}) => {
+  const board = await data<{
+    items: { projectId: string; contractType: string; sourceStatus: string }[];
+  }>(await request.get("/api/project-status-board?size=100"));
+  const project = board.items.find(
+    (row) => row.contractType !== "IN" && row.sourceStatus !== "PRE",
+  );
   expect(project).toBeDefined();
-  for (const width of [1900,1500,1280]) {
-    await page.setViewportSize({width,height:1000});
+  for (const width of [1900, 1500, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
     await page.goto("/UI-31");
-    await page.getByTestId(`status-project-${project!.projectId.toLowerCase()}`).click();
+    await page
+      .getByTestId(`status-project-${project!.projectId.toLowerCase()}`)
+      .click();
     await expect(page.getByTestId("project-progress-panel")).toBeVisible();
     await page.getByTestId("project-tab-basic").click();
-    await page.getByTestId("project-cost-summary").getByRole("link",{name:"원가 분석",exact:true}).click();
+    await page
+      .getByTestId("project-cost-summary")
+      .getByRole("link", { name: "원가 분석", exact: true })
+      .click();
     await expect(page.getByTestId("project-cost-detail")).toBeVisible();
     await expect(page.locator('[role="dialog"]:visible')).toHaveCount(1);
     await expect(page.getByTestId("project-detail")).not.toBeVisible();
-    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBe(width);
   }
 });

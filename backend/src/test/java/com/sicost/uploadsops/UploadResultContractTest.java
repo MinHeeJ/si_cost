@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(UploadResultController.class)
 @ContextConfiguration(classes=UploadResultController.class)
 @Import({UploadResultService.class,UploadResultRepository.class,B9Repository.class,RevisionService.class,
