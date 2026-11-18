@@ -39,7 +39,10 @@ export type IndividualProfitabilityScreenProps = {
     query: ProfitabilityQuery,
     data: IndividualProfitabilityData,
   ): ReactNode;
-  renderCalculationGuide?(data: IndividualProfitabilityData): ReactNode;
+  renderCalculationGuide?(
+    data: IndividualProfitabilityData,
+    query: ProfitabilityQuery,
+  ): ReactNode;
 };
 const sortable = new Set<string>([
   "name",
@@ -210,62 +213,56 @@ export function IndividualProfitabilityScreen({
         onEmployeeTypes={setEmployeeTypes}
       />
       <div className="profitability-toolbar">
-        <div className="profitability-view" role="group" aria-label="금액 보기">
-          {(
-            [
-              ["CUMULATIVE", "연 누계"],
-              ["MONTHLY_AVERAGE", "월 평균"],
-            ] as const
-          ).map(([view, label]) => (
-            <button
-              key={view}
-              type="button"
-              disabled={loading}
-              className={query.view === view ? "sicost-primary" : ""}
-              aria-pressed={query.view === view}
-              onClick={() => apply({ ...query, view })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <label>
-          단위
-          <select
-            data-testid="profitability-unit-select"
-            value={unit}
-            disabled={preferences.loading || preferences.pending}
-            onChange={(e) => {
-              setSettingsError("");
-              void preferences
-                .put("AMT_UNIT", "*", e.target.value)
-                .catch((e: unknown) =>
-                  setSettingsError(
-                    e instanceof Error ? e.message : "단위 저장 실패",
-                  ),
-                );
-            }}
+        <div className="profitability-toolbar-left">
+          <div
+            className="profitability-view"
+            role="group"
+            aria-label="금액 보기"
           >
-            <option>원</option>
-            <option>천원</option>
-            <option>백만원</option>
-          </select>
-        </label>
-        {canSensitive && (mobile || !data) && <ProfitabilityColumnSettings />}
-        {canDownload && !mobile && data && renderExport?.(query, data)}
-      </div>
-      {settingsError && <ErrorBanner message={settingsError} />}
-      {state.errorMessage && (
-        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
-      )}
-      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
-      {data && (
-        <>
-          {canSensitive && !mobile && (
-            <div
-              className="profitability-toolbar"
-              onClick={(event) => event.stopPropagation()}
+            {(
+              [
+                ["CUMULATIVE", "연 누계"],
+                ["MONTHLY_AVERAGE", "월 평균"],
+              ] as const
+            ).map(([view, label]) => (
+              <button
+                key={view}
+                type="button"
+                disabled={loading}
+                className={query.view === view ? "sicost-primary" : ""}
+                aria-pressed={query.view === view}
+                onClick={() => apply({ ...query, view })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label>
+            단위
+            <select
+              data-testid="profitability-unit-select"
+              value={unit}
+              disabled={preferences.loading || preferences.pending}
+              onChange={(e) => {
+                setSettingsError("");
+                void preferences
+                  .put("AMT_UNIT", "*", e.target.value)
+                  .catch((e: unknown) =>
+                    setSettingsError(
+                      e instanceof Error ? e.message : "단위 저장 실패",
+                    ),
+                  );
+              }}
             >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+        </div>
+        <div className="profitability-toolbar-right">
+          {canSensitive && !mobile && data && (
+            <>
               <button
                 type="button"
                 data-testid="profitability-expand-page"
@@ -284,8 +281,19 @@ export function IndividualProfitabilityScreen({
               >
                 모두 접기
               </button>
-            </div>
+            </>
           )}
+          {canSensitive && <ProfitabilityColumnSettings />}
+          {canDownload && !mobile && data && renderExport?.(query, data)}
+        </div>
+      </div>
+      {settingsError && <ErrorBanner message={settingsError} />}
+      {state.errorMessage && (
+        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
+      )}
+      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
+      {data && (
+        <>
           {mobile ? (
             <div
               data-testid="profitability-mobile-cards"
@@ -431,12 +439,7 @@ export function IndividualProfitabilityScreen({
               }}
             />
           )}
-          {canSensitive && renderCalculationGuide?.(data)}
-          {canSensitive && <p role="note">
-            월평균 N은 사람별 근무월입니다. 급여구성과 개인 원가는 원 단위
-            절사차이가 날 수 있습니다. 가동률은 투입달 ÷ 운영 이후 직접
-            재직달이며 보기와 무관합니다.
-          </p>}
+          {canSensitive && renderCalculationGuide?.(data, query)}
         </>
       )}
       {canPerson && !onPerson && details.personId && (

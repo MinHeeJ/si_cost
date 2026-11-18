@@ -141,20 +141,6 @@ export function ProfitabilityMonthlyLedger({
       onClick={(event) => event.stopPropagation()}
     >
       <h3>월별 원본 원장 · 월평균 전 금액</h3>
-      <details
-        data-testid={`profitability-ledger-help-panel-${marker(personId)}`}
-      >
-        <summary data-testid={`profitability-ledger-help-${marker(personId)}`}>
-          금액·분류 안내
-        </summary>
-        <p>
-          부모의 누계/평균 보기와 무관하게 월별 원본 금액입니다. 단위: {unit}.
-          개인 단가는 청구·입금액이 아닌 배분 참고액입니다. 원가 = 배분 노동비 +
-          팀비 + 프로젝트경비. 급여·공제 참고값은 투입마다 복제하지 않습니다.
-          IDLE 대기 행은 배분 후 남는 몫이며 실주 투입과 구별합니다. 미확인 값은
-          0이 아닌 –로 표시합니다.
-        </p>
-      </details>
 
       {error != null && (
         <ErrorBanner
@@ -230,25 +216,6 @@ export function ProfitabilityMonthlyLedger({
             ))}
           </ul>
 
-          <details
-            data-testid={`profitability-ledger-calculation-panel-${marker(personId)}`}
-          >
-            <summary
-              data-testid={`profitability-ledger-calculation-toggle-${marker(personId)}`}
-            >
-              이 월원장의 서버 계산 근거
-            </summary>
-            <ul>
-              {data.calculationBasis.map((basis, index) => (
-                <li
-                  key={`${index}:${basis}`}
-                  data-testid={`profitability-ledger-basis-${marker(personId)}-${index}`}
-                >
-                  {basis}
-                </li>
-              ))}
-            </ul>
-          </details>
           {data.issues.length > 0 && (
             <ul aria-label="월별 자료 확인 필요" role="note">
               {data.issues.map((issue, index) => (

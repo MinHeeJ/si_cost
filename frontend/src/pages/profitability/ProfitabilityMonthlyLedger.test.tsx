@@ -288,7 +288,12 @@ beforeEach(() => {
 });
 it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액/원가/노동비를 복제 없이 보여준다", async () => {
   render(
-    <ProfitabilityMonthlyLedger personId="owned" query={query} unit="원" jobLabels={{ DEV: "개발 직무" }} />,
+    <ProfitabilityMonthlyLedger
+      personId="owned"
+      query={query}
+      unit="원"
+      jobLabels={{ DEV: "개발 직무" }}
+    />,
   );
   const table = await screen.findByTestId(
     /^profitability-ledger-table-[a-f0-9-]+$/,
@@ -296,7 +301,9 @@ it("월 복합PK의 같은 프로젝트 두 투입을 정렬하고 원본 금액
   const rows = within(table).getAllByRole("row").slice(1);
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("2026-01");
-  expect(rows[0].querySelector('[data-column="project"]')).toHaveTextContent("└ 2026-01 원본 프로젝트 · 개발 직무");
+  expect(rows[0].querySelector('[data-column="project"]')).toHaveTextContent(
+    "└ 2026-01 원본 프로젝트 · 개발 직무",
+  );
   expect(rows[0]).toHaveTextContent("owned-a");
   expect(rows[1]).toHaveTextContent("owned-b");
   for (const item of rows) {
@@ -405,8 +412,10 @@ it("급여 구성과 계산 도움말은 상세 응답의 동일 출처를 사�
   expect(
     screen.getAllByTestId(/^profitability-labor-source-.*-202601$/),
   ).toHaveLength(1);
-  await userEvent.click(screen.getByText("이 월원장의 서버 계산 근거"));
-  expect(screen.getByText(data.calculationBasis[0])).toBeVisible();
+  expect(
+    screen.queryByText("이 월원장의 서버 계산 근거"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("금액·분류 안내")).not.toBeInTheDocument();
   expect(people.getDeveloper).not.toHaveBeenCalled();
 });
 it("현재페이지만 모두 펼치며 단일투입도 펼치고 도움말/열설정/접기는 개발자 상세를 열지 않는다", async () => {
@@ -427,10 +436,7 @@ it("현재페이지만 모두 펼치며 단일투입도 펼치고 도움말/열�
     expect.anything(),
     expect.anything(),
   );
-  await userEvent.click(screen.getByText("금액·분류 안내"));
-  await userEvent.click(
-    screen.getByTestId("profitability-table-columns-button"),
-  );
+  await userEvent.click(screen.getByTestId("profitability-columns-button"));
   expect(people.getDeveloper).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
   await userEvent.click(screen.getByTestId("profitability-collapse-all"));

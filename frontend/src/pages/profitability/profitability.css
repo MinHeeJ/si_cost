@@ -28,7 +28,18 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 12px;
+}
+.profitability-toolbar-left,
+.profitability-toolbar-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profitability-toolbar button {
+  min-height: 36px;
 }
 .profitability-toolbar label {
   display: flex;
@@ -121,6 +132,20 @@
 .profitability-calculation-guide summary {
   cursor: pointer;
   font-weight: 600;
+}
+.profitability-guide-table {
+  overflow-x: auto;
+}
+.profitability-guide-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.profitability-guide-table th,
+.profitability-guide-table td {
+  padding: 8px;
+  border: 1px solid var(--divider);
+  text-align: left;
+  vertical-align: top;
 }
 .profitability-calculation-guide p,
 .profitability-calculation-guide li {
