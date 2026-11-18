@@ -36,6 +36,86 @@ async function open(page: Page) {
   return data;
 }
 
+test("상단 버튼과 계산 방법 표·비고 근거는 실제 정산 응답을 표시한다", async ({
+  page,
+}) => {
+  const data = await open(page);
+  const header = page.getByTestId("settlement-header-actions");
+  await expect(header.getByRole("button")).toHaveText([
+    "변경 이력",
+    "엑셀 다운로드",
+    ...(data.canConfirm ? ["정산 확정"] : []),
+    ...(data.canCancel ? ["확정 취소"] : []),
+  ]);
+  const toolbar = page.getByTestId("settlement-month-toolbar");
+  await expect(toolbar.getByRole("heading")).toHaveCount(0);
+  await expect(toolbar).toHaveText(/단위\s*원\s*천원\s*백만원/);
+  for (const row of data.items) {
+    const id = row.developerId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const remark = page
+      .getByTestId(`settlement-person-${id}`)
+      .locator("xpath=ancestor::tr")
+      .locator(".settlement-remark");
+    await expect(remark.locator("details")).toHaveCount(0);
+    await expect(remark).toHaveAttribute(
+      "title",
+      new RegExp(`급여 원천: ${row.basis.paySource}`),
+    );
+    if (row.basis.firstMonthMissingPay)
+      await expect(remark).toContainText("⚠ 월 급여 없음(시작 달 급여 0)");
+  }
+  await page.getByTestId("settlement-guide-toggle").click();
+  const guide = page.getByRole("table", { name: "계산 방법", exact: true });
+  await expect(guide.getByRole("columnheader")).toHaveText([
+    "항목",
+    "계산식",
+    "참고",
+  ]);
+  await expect(guide.locator("tbody tr")).toHaveCount(10);
+  await expect(guide).toContainText(
+    `파트 기준값(${formatAmount(data.standard.salesExpenseAmount, "원")}원)`,
+  );
+  await expect(page.getByTestId("settlement-calculation-guide")).toContainText(
+    "확정 사본의 저장되지 않은 당시 근거는 현재 자료로 복원하지 않습니다.",
+  );
+});
+
+test("취소 창의 빈 사유는 서버 쓰기 없이 빨간 오류를 표시한다", async ({
+  page,
+}) => {
+  const data = await open(page);
+  test.skip(
+    !data.canCancel,
+    "runner의 취소 가능한 CNFM/AUTO 파트가 필요합니다",
+  );
+  await page.getByTestId("settlement-cancel-open").click();
+  const dialog = page.getByRole("dialog", {
+    name: "정산 확정을 취소할까요?",
+    exact: true,
+  });
+  await expect(dialog).toContainText(
+    "취소하면 이 달 파트 정산을 다시 고칠 수 있습니다. 사유는 기록에 남습니다.",
+  );
+  await expect(dialog.getByLabel("취소 사유 *")).toHaveAttribute(
+    "maxlength",
+    "500",
+  );
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith("/cancel")
+    )
+      writes.push(request.url());
+  });
+  await dialog.getByRole("button", { name: "확정 취소", exact: true }).click();
+  const error = page.getByTestId("settlement-reason-error");
+  await expect(error).toHaveText("취소 사유를 입력해 주세요.");
+  await expect(error).toHaveClass(/sicost-field-error/);
+  await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+  expect(writes).toEqual([]);
+});
+
 test("실제 추이 API의 과거 인력·5행·전체 기간 합계를 표시한다", async ({
   page,
 }) => {
@@ -55,14 +135,49 @@ test("실제 추이 API의 과거 인력·5행·전체 기간 합계를 표시�
   const trend = envelope.data as TrendResult;
   const panel = page.getByTestId("settlement-trend-panel");
   await expect(panel).toBeVisible();
+  await page.getByTestId("settlement-guide-toggle").click();
+  await expect(
+    page
+      .getByRole("table", { name: "계산 방법", exact: true })
+      .locator("tbody tr"),
+  ).toHaveCount(10);
   await expect(page.locator(".settlement-toolbar[hidden]")).toBeHidden();
   await panel.getByTestId("settlement-trend-unit").selectOption("원");
   await expect(
     panel.locator("tfoot tr td").nth(trend.months.length),
   ).toHaveText(formatAmount(trend.periodPartProfitAmount, "원"));
+  await expect(
+    panel.getByRole("columnheader", { name: `${trend.month.slice(5)}월` }),
+  ).toHaveClass(/settlement-base-month/);
+  const highlighted = panel.locator(".settlement-base-month");
+  await expect(highlighted).toHaveCount(trend.items.length * 5 + 2);
+  const selectedBackground = await panel.evaluate((element) =>
+    getComputedStyle(element).getPropertyValue("--primary-bg").trim(),
+  );
+  for (const cell of await highlighted.all()) {
+    expect(
+      await cell.evaluate((element, color) => {
+        const probe = document.createElement("span");
+        probe.style.backgroundColor = color;
+        element.appendChild(probe);
+        const expected = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return getComputedStyle(element).backgroundColor === expected;
+      }, selectedBackground),
+    ).toBe(true);
+  }
   for (const person of trend.items) {
     expect(person.metrics).toHaveLength(5);
     const id = person.developerId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    const remark = panel
+      .getByTestId(`settlement-trend-${id}-mm`)
+      .locator("td[rowspan]");
+    await expect(remark).toHaveAttribute("rowspan", "5");
+    await expect(remark).toHaveText(person.baseMonthRemark ?? "–");
+    const tooltip = [
+      ...new Set(person.metrics.map((metric) => metric.remark).filter(Boolean)),
+    ].join("\n");
+    if (tooltip) await expect(remark).toHaveAttribute("title", tooltip);
     for (const metric of person.metrics) {
       const row = panel.getByTestId(
         `settlement-trend-${id}-${metric.metric.toLowerCase()}`,
@@ -95,8 +210,16 @@ test("카드 초안 미리보기·확정창 취소는 업무 쓰기 없이 초�
     "저장 전",
   );
   await page.getByRole("button", { name: "정산 확정", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "정산 확정 미리보기" });
+  const dialog = page.getByRole("dialog", {
+    name: new RegExp(`${data.month} 정산을 확정할까요\\?`),
+  });
   await expect(dialog).toContainText(`전체 ${data.summary.personCount}명`);
+  await expect(dialog).toContainText(
+    "확정하면 이 달 파트 정산(법인카드 사용액 포함)이 잠깁니다.",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "확정하기", exact: true }),
+  ).toBeVisible();
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByLabel("법인카드 사용액", { exact: true })).toHaveValue(

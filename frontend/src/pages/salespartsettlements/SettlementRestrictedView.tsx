@@ -129,7 +129,10 @@ export function SettlementRestrictedView({
       )}
       {loading && <p role="status">정산 자료를 불러오는 중입니다.</p>}
       {tabs && !tabs.parts.length && (
-        <p>정산 대상 영업 파트가 없습니다. 본사는 정산 대상이 아닙니다</p>
+        <p>
+          맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이
+          아닙니다.
+        </p>
       )}
       {data && (
         <>

@@ -55,6 +55,7 @@ export type TrendResult = {
     name: string;
     managementNo: string;
     metrics: TrendMetric[];
+    baseMonthRemark: string | null;
   }[];
   pagination: { page: number; size: 20 | 50 | 100; total: number };
   monthlyTotals: {
@@ -112,10 +113,23 @@ export function parseSettlementCard(input: string): string {
   return value.toString();
 }
 
-export async function downloadSettlement(partId: string, query: import("../salespartsettlements/salesPartSettlementsApi").SettlementQuery, mode: "MONTH" | "TREND", amountUnit: AmountUnit) {
-  saveDownload(await downloadB7File("/api/exports/master-data", {
-    method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({view: "SALES_PART_SETTLEMENTS", filters: {partId, month: query.month, mode},
-      sort: mode === "TREND" ? "name" : query.sort, direction: mode === "TREND" ? "ASC" : query.direction, amountUnit}),
-  }));
+export async function downloadSettlement(
+  partId: string,
+  query: import("../salespartsettlements/salesPartSettlementsApi").SettlementQuery,
+  mode: "MONTH" | "TREND",
+  amountUnit: AmountUnit,
+) {
+  saveDownload(
+    await downloadB7File("/api/exports/master-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        view: "SALES_PART_SETTLEMENTS",
+        filters: { partId, month: query.month, mode },
+        sort: mode === "TREND" ? "name" : query.sort,
+        direction: mode === "TREND" ? "ASC" : query.direction,
+        amountUnit,
+      }),
+    }),
+  );
 }

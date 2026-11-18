@@ -10,11 +10,13 @@ export function SharedScreenFrame({
   children,
   periodBar,
   initialMonth,
+  headerActions,
 }: {
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
   initialMonth?: string;
+  headerActions?: ReactNode;
 }) {
   const location = useLocation();
   const canUpdate = usePermission(screenId, "UPD");
@@ -77,6 +79,7 @@ export function SharedScreenFrame({
             <small>{screenId}</small>
           </div>
         </div>
+        {headerActions}
       </div>
       {menu.pcOnly && (
         <div className="sicost-pc-notice" role="note">
