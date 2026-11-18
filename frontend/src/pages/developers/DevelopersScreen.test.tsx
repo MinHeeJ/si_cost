@@ -1,12 +1,14 @@
 import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import {
   fireEvent,
-  render,
+  render as testingRender,
   screen,
   waitFor,
   within,
 } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { DeveloperPoolScreen } from "./DeveloperPoolScreen";
 import { DeveloperForm, developerBanner, priceHelp } from "./DeveloperForm";
@@ -18,6 +20,8 @@ import * as parts from "../salespartsops/partStandardsApi";
 import * as areas from "../../shared/areaClient";
 import * as stateApi from "../states/developerStatesApi";
 import * as sharedApi from "../shared/sharedApi";
+const render = (ui: ReactElement) =>
+  testingRender(ui, { wrapper: MemoryRouter });
 vi.mock("./peopleClient");
 vi.mock("../clientsops/clientActionsApi");
 vi.mock("../salespartsops/partStandardsApi");

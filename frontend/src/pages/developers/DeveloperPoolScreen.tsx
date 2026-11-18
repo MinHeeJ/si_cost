@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -61,6 +62,8 @@ export function DeveloperPoolScreen({
   onExport,
   renderActions,
 }: DeveloperPoolProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [mobile, setMobile] = useState(
     () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
@@ -98,6 +101,45 @@ export function DeveloperPoolScreen({
     [downloading, setDownloading] = useState(false);
   const sequence = useRef(0),
     scroll = useRef(0);
+  useEffect(() => {
+    if (!active) return;
+    const params = new URLSearchParams(location.search);
+    const editId = params.get("editDeveloperId");
+    if (!editId) return;
+    params.delete("editDeveloperId");
+    const clearQuery = () =>
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString() ? `?${params}` : "",
+          hash: location.hash,
+        },
+        { replace: true, state: location.state },
+      );
+    if (form && !window.confirm("저장하지 않은 변경을 버릴까요?")) {
+      clearQuery();
+      return;
+    }
+    let current = true;
+    void api
+      .getDeveloper(editId)
+      .then((developer) => {
+        if (current) {
+          setId(undefined);
+          setForm({ developer });
+          clearQuery();
+        }
+      })
+      .catch((reason) => {
+        if (current) {
+          setActionError(reason);
+          clearQuery();
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [active, location.key]);
   useEffect(() => {
     const media = window.matchMedia?.("(max-width: 767px)");
     const update = () => {
