@@ -118,7 +118,7 @@ class TentativeAssignmentDatabaseTest {
         String request=body(revision());ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);
         try {
             Callable<Integer> work=()->{start.await();return mvc.perform(post(path()).contentType("application/json").content(request)).andReturn().getResponse().getStatus();};
-            var a=pool.submit(work);var b=pool.submit(work);start.countDown();
+            var a=pool.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(work));var b=pool.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(work));start.countDown();
             assertThat(List.of(a.get(30,TimeUnit.SECONDS),b.get(30,TimeUnit.SECONDS))).containsExactlyInAnyOrder(200,409);
             assertThat(tentative()).containsEntry("tent_stat_cd","REL");assertThat(audits()).hasSize(2);
         } finally {pool.shutdownNow();}

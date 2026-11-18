@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(PreferenceController.class)
 @ContextConfiguration(classes=PreferenceController.class)
 @Import({PreferenceService.class,PreferenceValidator.class,RevisionService.class,com.sicost.common.TimeConfiguration.class,

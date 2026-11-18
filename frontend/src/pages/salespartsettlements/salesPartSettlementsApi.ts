@@ -29,6 +29,7 @@ export type SettlementTab = {
   issues: SettlementIssue[];
 };
 export type SettlementTabsResult = {
+  projection?: "RESTRICTED";
   month: string;
   baseMonth: string;
   currentMonth: string;
@@ -58,6 +59,7 @@ export type SettlementBasis = {
   warnings: SettlementIssue[];
 };
 export type SettlementRow = {
+  profitStatus?: "SURPLUS" | "DEFICIT";
   developerId: string;
   name: string;
   managementNo: string;
@@ -87,12 +89,14 @@ export type SettlementTotals = Pick<
   | "profitAmount"
 > & {
   personCount: number;
+  surplusPersonCount?: number;
   deficitPersonCount: number;
   personProfitShareAmount: string | null;
   cardAmount: string | null;
   partProfitAmount: string | null;
 };
 export type SettlementResult = {
+  projection?: "RESTRICTED";
   partId: string;
   month: string;
   status: "WORK" | "CNFM" | "AUTO";

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(UploadResultController.class)
 @ContextConfiguration(classes=UploadResultController.class)
 @Import({UploadResultService.class,UploadResultRepository.class,B9Repository.class,RevisionService.class,
@@ -42,8 +43,13 @@ class UploadResultContractTest {
             form.equals("B6")?"P-result":null,form.equals("B6")?"CTRT":null,
             status.equals("APPLIED")?LocalDateTime.of(2026,6,15,9,0):null);
     }
+    @org.junit.jupiter.api.AfterEach void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @BeforeEach void setup() {
-        when(users.findAdministrator()).thenReturn("admin");
+        var context=org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("admin",null,java.util.List.of()));
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
         when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(mapper.find(17)).thenReturn(upload("B9","APPLIED"));
         when(projects.issues(17)).thenReturn(List.of(new Issue(1,"WARN",1,"[파일]","","추가 열"),
@@ -53,7 +59,7 @@ class UploadResultContractTest {
             new Receipt("{\"id\":\"P-a\",\"name\":\"최초 이름 A\"}","B9 업로드:17;행:3")));
         when(projects.context(17)).thenReturn("{\"year\":2026,\"contentSha256\":\"saved-digest\"}");
     }
-    @Test void publicRequestUsesAdminAndReturnsOriginalAuditRowsInPhysicalRowOrder() throws Exception {
+    @Test void authenticatedRequestReturnsOriginalAuditRowsInPhysicalRowOrder() throws Exception {
         mvc.perform(get("/api/uploads/17/result").header("X-Request-Id","upload-result-request"))
             .andExpect(status().isOk()).andExpect(header().string("X-Request-Id","upload-result-request"))
             .andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap())
@@ -67,7 +73,7 @@ class UploadResultContractTest {
             .andExpect(jsonPath("$.data.summary.warningRows").value(1)).andExpect(jsonPath("$.data.summary.errorRows").value(0))
             .andExpect(jsonPath("$.data.summary.fileWarningCount").value(1)).andExpect(jsonPath("$.data.summary.tableWarningCount").value(1))
             .andExpect(jsonPath("$.data.revision").isString()).andExpect(jsonPath("$.data.changed").value(true));
-        verify(users).findAdministrator();verifyNoInteractions(history,registration,locks);
+        verify(users,never()).findAdministrator();verifyNoInteractions(history,registration,locks);
         verify(projects,never()).lockUpload(anyLong());
     }
     @Test void b6UsesStoredTargetStageAndMetadataNotLiveProject() throws Exception {

@@ -4,7 +4,7 @@ import {
   within,
   fireEvent,
   waitFor,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { PermissionSettingsPanel } from "./PermissionSettingsPanel";
@@ -63,7 +63,12 @@ it("renders both scope sets, stored flags and seven independent read-only permis
     screen.queryByRole("button", { name: "저장" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "다시 조회" })).toBeEnabled();
-  expect(screen.getByText(/실제 메뉴·API 차단/)).toBeInTheDocument();
+  expect(
+    screen.getByText("저장된 역할·메뉴 권한과 담당 범위를 적용합니다."),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/실제 가림 미적용|실제 메뉴·API 차단/),
+  ).not.toBeInTheDocument();
 });
 it("does not collapse ALL to zero when no assignments exist", async () => {
   vi.mocked(api.getCurrentUserPermissionSettings).mockResolvedValue({

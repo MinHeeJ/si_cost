@@ -16,6 +16,9 @@ import com.sicost.b7.B7Dtos.CellValue;
 
 @Service
 public class ExcelImportService {
+    private org.springframework.beans.factory.ObjectProvider<com.sicost.permission.PermissionProjectionService> permissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissions(org.springframework.beans.factory.ObjectProvider<com.sicost.permission.PermissionProjectionService> permissions) {this.permissions=permissions;}
     public static final List<String> HEADERS = List.of("구분","상호","사업자등록번호","대표자","업종","담당자","연락처","세금계산서 이메일","은행","계좌번호","예금주");
     private static final Set<String> REQUIRED = Set.of("구분","상호","사업자등록번호");
     public String filename(MultipartFile file) {
@@ -99,6 +102,8 @@ public class ExcelImportService {
                         }
                     }
                     values.put(title,new CellValue(value,error));
+                    if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes && Set.of("계좌번호","은행","예금주").contains(title) && !value.isBlank() && !permissions.getObject().sensitive())
+                        throw new ApiException(400,"FIELD_NOT_EDITABLE","수정할 수 없는 항목입니다.",title,null);
                 }
                 rows.add(new SourceRow(row.getRowNum()+1,values));
             }

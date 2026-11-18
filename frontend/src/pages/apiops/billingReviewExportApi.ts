@@ -1,4 +1,8 @@
-import { ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 import type { ReviewAmountUnit } from "./billingReviewApi";
 export const billingCheckColumns = [
   "verdict",
@@ -51,7 +55,7 @@ export async function downloadBillingReview(input: {
 }) {
   const type =
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  const response = await fetch("/api/exports/master-data", {
+  const response = await authenticatedFetch("/api/exports/master-data", {
     method: "POST",
     redirect: "error",
     headers: {

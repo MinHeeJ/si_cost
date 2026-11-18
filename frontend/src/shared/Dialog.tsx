@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { usePermission } from "./permission/PermissionBoundary";
 
 export type DialogProps = {
   open: boolean;
@@ -19,6 +20,7 @@ export type DialogProps = {
   cancelActionId?: string;
   footerStart?: ReactNode;
   noValidate?: boolean;
+  permission?: { screen: string; action: string };
   hideCancel?: boolean;
 };
 const FOCUSABLE =
@@ -41,8 +43,14 @@ export function Dialog({
   cancelActionId,
   footerStart,
   noValidate,
+  permission,
   hideCancel = false,
 }: DialogProps) {
+  const granted = usePermission(
+    permission?.screen ?? "",
+    permission?.action ?? "INQ",
+  );
+  const readOnly = permission !== undefined && !granted;
   const ref = useRef<HTMLFormElement>(null);
   const inFlight = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -70,7 +78,7 @@ export function Dialog({
   });
   if (!open) return null;
   const confirm = async () => {
-    if (pending || confirmDisabled || inFlight.current) return;
+    if (readOnly || pending || confirmDisabled || inFlight.current) return;
     inFlight.current = true;
     setSubmitError(null);
     try {
@@ -121,6 +129,8 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-busy={pending}
+        data-permission-screen={permission?.screen}
+        data-permission-action={permission?.action}
         tabIndex={-1}
         onSubmit={(event) => {
           event.preventDefault();
@@ -129,41 +139,63 @@ export function Dialog({
       >
         <header>
           <h2 id={titleId}>{title}</h2>
+          {readOnly && (
+            <button type="button" onClick={onCancel} aria-label="닫기">
+              ×
+            </button>
+          )}
         </header>
         <div className="sicost-dialog-body">
-          {children}
+          {readOnly ? (
+            <>
+              <p role="note">
+                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
+                수정).
+              </p>
+              <fieldset
+                disabled
+                style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
+              >
+                {children}
+              </fieldset>
+            </>
+          ) : (
+            children
+          )}
           {submitError && (
             <p role="alert" className="sicost-field-error">
               {submitError}
             </p>
           )}
         </div>
-        <footer>
-          {footerStart}
-          {!hideCancel && (
+        {!readOnly && (
+          <footer>
+            {footerStart}
+            {!hideCancel && (
+              <button
+                type="button"
+                data-testid={cancelTestId}
+                data-action-id={cancelActionId}
+                disabled={pending}
+                onClick={() => {
+                  if (!inFlight.current) onCancel();
+                }}
+              >
+                {cancelLabel}
+              </button>
+            )}
             <button
-              type="button"
-              data-testid={cancelTestId}
-              data-action-id={cancelActionId}
-              disabled={pending}
-              onClick={() => {
-                if (!inFlight.current) onCancel();
-              }}
+              type="submit"
+              data-testid={confirmTestId}
+              data-action-id={confirmActionId}
+              data-confirm
+              className="sicost-primary"
+              disabled={pending || confirmDisabled}
             >
-              {cancelLabel}
+              {pending ? "처리 중…" : confirmLabel}
             </button>
-          )}
-          <button
-            type="submit"
-            data-testid={confirmTestId}
-            data-action-id={confirmActionId}
-            data-confirm
-            className="sicost-primary"
-            disabled={pending || confirmDisabled}
-          >
-            {pending ? "처리 중…" : confirmLabel}
-          </button>
-        </footer>
+          </footer>
+        )}
       </form>
     </div>,
     document.body,

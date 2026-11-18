@@ -1,4 +1,8 @@
-import { ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 
 export const clientExportColumns = [
   "type",
@@ -51,7 +55,7 @@ export async function createMasterDataExport(
 ): Promise<MasterDataDownload> {
   // Pick only wire fields: page, selection and processor fields never reach export.
   const { type, useYn, q } = input.filters;
-  const response = await fetch("/api/exports/master-data", {
+  const response = await authenticatedFetch("/api/exports/master-data", {
     method: "POST",
     redirect: "error",
     signal,

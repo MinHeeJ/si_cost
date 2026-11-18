@@ -34,7 +34,7 @@ public class RoleService {
         users.currentUser();
         var items=repository.roles().stream().filter(r->"Y".equals(r.useYn())).map(r->new ManagedRole(r.roleId(),r.name(),r.dataScope(),
             yes(r.sensitiveYn()),yes(r.systemYn()),true,r.sortOrder(),revision(r.roleId()))).toList();
-        return new ManagedRolesData(items,true,false,settingsRevision());
+        return new ManagedRolesData(items,false,true,settingsRevision());
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public ManagedRoleDetail get(String requested) {users.currentUser();return detail(RoleInput.id(requested));}
@@ -114,7 +114,7 @@ public class RoleService {
     private ManagedRoleDetail detail(String id) {
         Stored row=repository.required(id);
         return new ManagedRoleDetail(id,row.name(),row.dataScope(),yes(row.sensitiveYn()),yes(row.systemYn()),yes(row.useYn()),row.sortOrder(),
-            revision(id),repository.permissions(id),true,false,settingsRevision());
+            revision(id),repository.permissions(id),false,true,settingsRevision());
     }
     private String revision(String id) {return revisions.revision(repository.snapshot(id));}
     private String settingsRevision() {return revisions.revision(repository.settingsSnapshot());}

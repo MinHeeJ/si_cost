@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 import { saveDownload } from "../pages/b7/b7Api";
@@ -126,7 +127,7 @@ describe("회사 재무 API 등록", () => {
       .mockResolvedValue(
         new Response(JSON.stringify({ success: true, meta: {}, data })),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     expect(await test.call()).toEqual(data);
     expect(fetcher).toHaveBeenCalledOnce();
     const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
@@ -143,7 +144,7 @@ describe("회사 재무 API 등록", () => {
         .mockResolvedValue(
           new Response(JSON.stringify({ success: true, meta: {}, data })),
         );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "financial.xlsx");
       expect(await test.call(file)).toEqual(data);
       expect(fetcher).toHaveBeenCalledOnce();
@@ -173,7 +174,7 @@ describe("회사 재무 API 등록", () => {
         },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const result = await test.call();
     const download = test.saved
       ? vi.mocked(saveDownload).mock.calls[0]?.[0]
@@ -206,7 +207,7 @@ describe("회사 재무 API 등록", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).rejects.toMatchObject({ status: 409, body });
     expect(fetcher).toHaveBeenCalledOnce();
     expect(saveDownload).not.toHaveBeenCalled();

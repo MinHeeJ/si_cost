@@ -4,7 +4,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -137,7 +137,7 @@ it("DB 역할 탭·범위·민감·중지메뉴와 독립 7동작을 표시하�
   expect(screen.queryByTestId("role-stop-open")).not.toBeInTheDocument();
   expect(
     screen.getByText(
-      "권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.",
+      "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.",
     ),
   ).toHaveClass("sicost-tone-info");
   expect(screen.getByRole("checkbox", { name: "권한 수정" })).toBeChecked();

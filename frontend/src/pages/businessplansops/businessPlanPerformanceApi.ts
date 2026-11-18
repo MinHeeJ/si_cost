@@ -1,6 +1,7 @@
 import {
   ApiError,
   request,
+  authenticatedFetch,
   type ApiEnvelope,
   type ApiErrorBody,
 } from "../../shared/api";
@@ -155,11 +156,14 @@ async function send<T>(
   const body = new FormData();
   body.append("file", file);
   Object.entries(fields).forEach(([key, value]) => body.append(key, value));
-  const response = await fetch(`/api/business-plans/imports/${operation}`, {
-    method: "POST",
-    body,
-    redirect: "error",
-  });
+  const response = await authenticatedFetch(
+    `/api/business-plans/imports/${operation}`,
+    {
+      method: "POST",
+      body,
+      redirect: "error",
+    },
+  );
   const payload = (await response.json()) as ApiEnvelope<T> | ApiErrorBody;
   if (!response.ok) {
     if (payload.success === false) throw new ApiError(response.status, payload);

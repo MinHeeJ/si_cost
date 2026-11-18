@@ -6,7 +6,7 @@ export type DashboardBasis = {
   basisDate: string;
   sourceService: string;
   observedAt: string;
-  status: "AVAILABLE" | "EMPTY" | "UNCONFIRMED" | "FAILED";
+  status: "AVAILABLE" | "EMPTY" | "UNCONFIRMED" | "FAILED" | "RESTRICTED";
   reasons: string[];
 };
 export type DashboardMetric = {
@@ -91,13 +91,13 @@ export type DashboardData = {
   selectedMonthCloseStatus: string;
   provisional: boolean;
   observedAt: string;
-  scope: "ALL";
+  scope: "ALL" | "PART" | "PROJ" | "PART_PROJ" | "NONE";
   metrics: DashboardMetric[];
   actionsBasis: DashboardBasis;
   actions: DashboardAction[];
   actionTypeCount: number | null;
   urgentActionTypeCount: number | null;
-  closeProgress: {
+  closeProgress?: {
     basis: DashboardBasis;
     closeStatus: string;
     passedCheckCount: number | null;
@@ -112,13 +112,13 @@ export type DashboardData = {
     link: DashboardLink;
   };
   projectAlertsBasis: DashboardBasis;
-  projectAlerts: DashboardAlert[];
+  projectAlerts?: DashboardAlert[];
   salesCostTrendBasis: DashboardBasis;
-  salesCostTrend: DashboardTrend[];
+  salesCostTrend?: DashboardTrend[];
   supplyBasis: DashboardBasis;
   supplyForecast: DashboardSupply[];
   salesPartsBasis: DashboardBasis;
-  salesParts: DashboardPart[];
+  salesParts?: DashboardPart[];
   salesPartExplanation: string;
   pipeline: {
     basis: DashboardBasis;
@@ -134,7 +134,7 @@ export type DashboardData = {
     }[];
   };
   cashBasis: DashboardBasis;
-  cashForecast: DashboardCash[];
+  cashForecast?: DashboardCash[];
 };
 export const getDashboard = (month?: string, signal?: AbortSignal) =>
   request<DashboardData>(

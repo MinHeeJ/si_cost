@@ -10,6 +10,11 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import * as api from "./businessUsersApi";
+import { PasswordResetAction } from "../authentication/PasswordResetAction";
+import {
+  usePermission,
+  useFeaturePermission,
+} from "../../shared/permission/PermissionBoundary";
 
 function BusinessUserHistory({ id }: { id: string }) {
   const [data, setData] = useState<api.BusinessUserHistoryPage>(),
@@ -92,6 +97,8 @@ export function BusinessUserDetail({
   onDirtyChange?(dirty: boolean): void;
   onCommitted?(): Promise<void>;
 }) {
+  const canUpdate = usePermission("UI-23", "UPD");
+  const canAccessLogs = useFeaturePermission("userAccessLogs");
   const [user, setUser] = useState<api.BusinessUser>(),
     [error, setError] = useState<unknown>(),
     [refresh, setRefresh] = useState(0);
@@ -133,7 +140,7 @@ export function BusinessUserDetail({
       closeTestId="business-user-drawer-close"
       onClose={() => (dirty ? setLeaving("close") : onClose())}
       actions={
-        user ? (
+        user && canUpdate ? (
           <button
             type="button"
             className="sicost-primary"
@@ -182,20 +189,22 @@ export function BusinessUserDetail({
           >
             담당 프로젝트
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "activity"}
-            data-testid="business-user-activity-tab"
-            onClick={() => {
-              if (dirty) {
-                setNextTab("activity");
-                setLeaving("tab");
-              } else setTab("activity");
-            }}
-          >
-            접근 기록
-          </button>
+          {canAccessLogs && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "activity"}
+              data-testid="business-user-activity-tab"
+              onClick={() => {
+                if (dirty) {
+                  setNextTab("activity");
+                  setLeaving("tab");
+                } else setTab("activity");
+              }}
+            >
+              접근 기록
+            </button>
+          )}
           <button
             type="button"
             role="tab"
@@ -275,6 +284,12 @@ export function BusinessUserDetail({
             <UserScopesPanel
               key={`${user.userId}-${user.revision}`}
               id={user.userId}
+            />
+            <PasswordResetAction
+              id={user.userId}
+              email={user.email}
+              stopped={user.status === "STOP"}
+              onChanged={() => setRefresh((v) => v + 1)}
             />
             <UserStateActions
               user={user}

@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import {
   act,
   fireEvent,
@@ -5,7 +6,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -361,7 +362,7 @@ it("청구 목록 다운로드는 현재 조건·정렬 전체를 view=BILLS로 
       },
     }),
   );
-  vi.stubGlobal("fetch", fetchMock);
+  stubBusinessFetch(fetchMock);
   URL.createObjectURL = vi.fn(() => "blob:x");
   URL.revokeObjectURL = vi.fn();
   render(<BillsScreen />);
@@ -739,7 +740,7 @@ it("번호누락 이동 조건은 화면과 다운로드에 유지되고 초기�
       },
     }),
   );
-  vi.stubGlobal("fetch", fetchMock);
+  stubBusinessFetch(fetchMock);
   URL.createObjectURL = vi.fn(() => "blob:x");
   URL.revokeObjectURL = vi.fn();
   render(<BillsScreen initialMonth="2026-05" initialMissingInvoiceNo />);

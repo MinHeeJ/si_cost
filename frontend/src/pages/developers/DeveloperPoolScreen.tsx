@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -61,7 +62,7 @@ export function DeveloperPoolScreen({
   renderActions,
 }: DeveloperPoolProps) {
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const defaults = {
     employeeType: "",
@@ -234,7 +235,7 @@ export function DeveloperPoolScreen({
         direction,
         ...conditions
       } = filters;
-      const response = await fetch("/api/exports/master-data", {
+      const response = await authenticatedFetch("/api/exports/master-data", {
         method: "POST",
         redirect: "error",
         headers: { "Content-Type": "application/json" },
@@ -398,282 +399,280 @@ export function DeveloperPoolScreen({
           onDirtyChange={onDirtyChange}
         />
       )}
-        <>
-          <header className="developer-toolbar">
-            {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
-            <div />
-            <div className="developer-actions">
-              <PayrollActions onDirtyChange={onDirtyChange} />
-              {!mobile && (
-                <B8UploadActions
-                  onApplied={async () => {
-                    await load();
-                    setRefreshKey((v) => v + 1);
-                  }}
-                  onDirtyChange={onDirtyChange}
-                />
-              )}
+      <>
+        <header className="developer-toolbar">
+          {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
+          <div />
+          <div className="developer-actions">
+            <PayrollActions onDirtyChange={onDirtyChange} />
+            {!mobile && (
+              <B8UploadActions
+                onApplied={async () => {
+                  await load();
+                  setRefreshKey((v) => v + 1);
+                }}
+                onDirtyChange={onDirtyChange}
+              />
+            )}
+            <button
+              type="button"
+              className="sicost-primary"
+              data-testid="developer-create-button"
+              onClick={() => {
+                setId(undefined);
+                setForm({});
+              }}
+            >
+              + 등록
+            </button>
+          </div>
+        </header>
+        <FilterBar
+          className="developer-filters"
+          testId="developer-filter-form"
+          resetTestId="developer-reset-button"
+          searchTestId="developer-search-button"
+          onSubmit={() => apply()}
+          onReset={() => apply(true)}
+        >
+          {(
+            [
+              ["directClass", "직접/간접", "DRCT_CLS"],
+              ["employeeType", "직원구분", "EMP_TYPE"],
+              ["jobCode", "직무", "JOB"],
+              ["workStatus", "상태", "WORK_STAT"],
+            ] as const
+          ).map(([key, title, group]) => (
+            <label
+              data-testid={`developer-filter-label-${key.toLowerCase()}`}
+              className="sicost-field"
+              key={key}
+            >
+              {title}
+              <select
+                data-testid={`developer-filter-${key.toLowerCase()}`}
+                value={draft[key]}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, [key]: e.target.value }))
+                }
+              >
+                <option value="">전체</option>
+                {(codes[group] ?? []).map((c) => (
+                  <option
+                    data-testid={`developer-filter-option-${group.toLowerCase().replace(/_/g, "-")}-${c.code.toLowerCase().replace(/_/g, "-")}`}
+                    value={c.code}
+                    key={c.code}
+                  >
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <label className="sicost-field">
+            이름
+            <input
+              data-testid="developer-search-input"
+              placeholder="이름 또는 관리번호"
+              value={draft.q}
+              maxLength={100}
+              onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
+            />
+          </label>
+          <label className="developer-include-stopped">
+            <input
+              data-testid="developer-include-stopped"
+              type="checkbox"
+              checked={draft.includeStopped}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  includeStopped: e.target.checked,
+                }))
+              }
+            />
+            사용 중지 포함
+          </label>
+        </FilterBar>
+        {notice && (
+          <p role="status" className="sicost-banner sicost-tone-info">
+            {notice}
+            {committed && (
               <button
                 type="button"
-                className="sicost-primary"
-                data-testid="developer-create-button"
-                onClick={() => {
-                  setId(undefined);
-                  setForm({});
-                }}
+                data-testid="developer-committed-retry"
+                onClick={() => void retryCommitted()}
               >
-                + 등록
+                다시 조회
               </button>
-            </div>
-          </header>
-          <FilterBar
-            className="developer-filters"
-            testId="developer-filter-form"
-            resetTestId="developer-reset-button"
-            searchTestId="developer-search-button"
-            onSubmit={() => apply()}
-            onReset={() => apply(true)}
-          >
-            {(
-              [
-                ["directClass", "직접/간접", "DRCT_CLS"],
-                ["employeeType", "직원구분", "EMP_TYPE"],
-                ["jobCode", "직무", "JOB"],
-                ["workStatus", "상태", "WORK_STAT"],
-              ] as const
-            ).map(([key, title, group]) => (
-              <label
-                data-testid={`developer-filter-label-${key.toLowerCase()}`}
-                className="sicost-field"
-                key={key}
-              >
-                {title}
-                <select
-                  data-testid={`developer-filter-${key.toLowerCase()}`}
-                  value={draft[key]}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, [key]: e.target.value }))
-                  }
-                >
-                  <option value="">전체</option>
-                  {(codes[group] ?? []).map((c) => (
-                    <option
-                      data-testid={`developer-filter-option-${group.toLowerCase().replace(/_/g, "-")}-${c.code.toLowerCase().replace(/_/g, "-")}`}
-                      value={c.code}
-                      key={c.code}
-                    >
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-            <label className="sicost-field">
-              이름
-              <input
-                data-testid="developer-search-input"
-                placeholder="이름 또는 관리번호"
-                value={draft.q}
-                maxLength={100}
-                onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value }))}
-              />
-            </label>
-            <label className="developer-include-stopped">
-              <input
-                data-testid="developer-include-stopped"
-                type="checkbox"
-                checked={draft.includeStopped}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    includeStopped: e.target.checked,
-                  }))
-                }
-              />
-              사용 중지 포함
-            </label>
-          </FilterBar>
-          {notice && (
-            <p role="status" className="sicost-banner sicost-tone-info">
-              {notice}
-              {committed && (
-                <button
-                  type="button"
-                  data-testid="developer-committed-retry"
-                  onClick={() => void retryCommitted()}
-                >
-                  다시 조회
-                </button>
-              )}
-            </p>
-          )}
-          {actionError != null && (
-            <ErrorBanner
-              message={
-                actionError instanceof Error
-                  ? actionError.message
-                  : "요청하지 못했습니다."
-              }
-              requestId={
-                actionError instanceof ApiError
-                  ? actionError.body.requestId
-                  : undefined
-              }
-            />
-          )}
-          <div className="developer-toolbar">
-            {!mobile && selection.count > 0 ? (
-              <DeveloperStatusToolbar
-                selection={selection}
-                rows={(data?.items ?? []).map((r) => ({
-                  id: r.id,
-                  revision: r.revision,
-                  name: r.name,
-                  useYn: r.useYn,
-                }))}
-                total={data?.total ?? 0}
-                onCommitted={async () => {
-                  await load();
-                  setRefreshKey((v) => v + 1);
-                }}
-                onRefresh={async () => {
-                  await load();
-                  setRefreshKey((v) => v + 1);
-                }}
-              />
-            ) : (
-              <strong>총 {data?.total ?? 0}건</strong>
             )}
-            <div className="developer-actions">
-              {onColumnsChange && (
-                <button
-                  type="button"
-                  data-testid="developer-columns-button"
-                  onClick={onColumnsChange}
-                >
-                  열 설정
-                </button>
-              )}
-              {onDensityChange && (
-                <button
-                  type="button"
-                  data-testid="developer-density-button"
-                  onClick={onDensityChange}
-                >
-                  좁게 보기
-                </button>
-              )}
-              {!mobile && (
-                <button
-                  type="button"
-                  data-testid="developer-export-button"
-                  disabled={downloading}
-                  onClick={() => void exportList()}
-                >
-                  엑셀 다운로드
-                </button>
-              )}
-              {renderActions}
-            </div>
-          </div>
-          {error != null && (
-            <ErrorBanner
-              message={
-                error instanceof Error
-                  ? error.message
-                  : "목록을 조회하지 못했습니다."
-              }
-              requestId={
-                error instanceof ApiError ? error.body.requestId : undefined
-              }
-              onRetry={() => void load().catch(() => {})}
-            />
-          )}
-          {!mobile ? (
-            <DataTable
-              rows={data?.items ?? []}
-              columns={visible}
-              rowKey={(r) => r.id}
-              loading={loading}
-              dense={dense}
-              page={filters.page}
-              size={filters.size}
+          </p>
+        )}
+        {actionError != null && (
+          <ErrorBanner
+            message={
+              actionError instanceof Error
+                ? actionError.message
+                : "요청하지 못했습니다."
+            }
+            requestId={
+              actionError instanceof ApiError
+                ? actionError.body.requestId
+                : undefined
+            }
+          />
+        )}
+        <div className="developer-toolbar">
+          {!mobile && selection.count > 0 ? (
+            <DeveloperStatusToolbar
+              selection={selection}
+              rows={(data?.items ?? []).map((r) => ({
+                id: r.id,
+                revision: r.revision,
+                name: r.name,
+                useYn: r.useYn,
+              }))}
               total={data?.total ?? 0}
-              onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
-              onSizeChange={(size) =>
-                setFilters((f) => ({ ...f, size, page: 1 }))
-              }
-              sort={{
-                id: filters.sort ?? "name",
-                direction: filters.direction === "DESC" ? "DESC" : "ASC",
+              onCommitted={async () => {
+                await load();
+                setRefreshKey((v) => v + 1);
               }}
-              onSortChange={sort}
-              emptyAction={
-                <button
-                  type="button"
-                  data-testid="developer-empty-reset"
-                  onClick={() => apply(true)}
-                >
-                  조건 초기화
-                </button>
-              }
-              selectedKeys={[...selection.items.keys()]}
-              onSelectionChange={(keys) => {
-                const after = new Set(keys.map(String));
-                (data?.items ?? []).forEach((r) => {
-                  if (after.has(r.id) !== selection.items.has(r.id))
-                    selection.toggle(
-                      { id: r.id, revision: r.revision },
-                      after.has(r.id),
-                    );
-                });
+              onRefresh={async () => {
+                await load();
+                setRefreshKey((v) => v + 1);
               }}
-              onRowAction={(r) => open(r.id)}
             />
           ) : (
-            <div className="developer-cards">
-              {loading && <p role="status">불러오는 중입니다.</p>}
-              {!loading && !data?.items.length && (
-                <p className="sicost-empty">조회된 자료가 없습니다.</p>
-              )}
-              {data?.items.map((r) => (
-                <article
-                  className="developer-card"
-                  key={r.id}
-                  data-testid={`developer-card-${r.id.toLowerCase()}`}
-                >
-                  <button
-                    data-testid={`developer-card-open-${r.id.toLowerCase()}`}
-                    onClick={() => open(r.id)}
-                  >
-                    {r.name} · {r.managementNo}
-                  </button>
-                  <p>
-                    {r.companyName ?? "자사"} · {r.job}
-                  </p>
-                  <StatusBadge tone={tones[r.status] ?? "neutral"}>
-                    {label("WORK_STAT", r.status)}
-                  </StatusBadge>
-                  <p>
-                    {r.currentProjectLabel ?? "–"} · {r.monthlyMm} MM
-                  </p>
-                </article>
-              ))}
-              {(data?.items.length ?? 0) < (data?.total ?? 0) && (
-                <button
-                  type="button"
-                  data-testid="developer-more-button"
-                  disabled={loading}
-                  onClick={() =>
-                    setFilters((f) => ({ ...f, page: f.page + 1 }))
-                  }
-                >
-                  20개 더보기
-                </button>
-              )}
-            </div>
+            <strong>총 {data?.total ?? 0}건</strong>
           )}
-        </>
+          <div className="developer-actions">
+            {onColumnsChange && (
+              <button
+                type="button"
+                data-testid="developer-columns-button"
+                onClick={onColumnsChange}
+              >
+                열 설정
+              </button>
+            )}
+            {onDensityChange && (
+              <button
+                type="button"
+                data-testid="developer-density-button"
+                onClick={onDensityChange}
+              >
+                좁게 보기
+              </button>
+            )}
+            {!mobile && (
+              <button
+                type="button"
+                data-testid="developer-export-button"
+                disabled={downloading}
+                onClick={() => void exportList()}
+              >
+                엑셀 다운로드
+              </button>
+            )}
+            {renderActions}
+          </div>
+        </div>
+        {error != null && (
+          <ErrorBanner
+            message={
+              error instanceof Error
+                ? error.message
+                : "목록을 조회하지 못했습니다."
+            }
+            requestId={
+              error instanceof ApiError ? error.body.requestId : undefined
+            }
+            onRetry={() => void load().catch(() => {})}
+          />
+        )}
+        {!mobile ? (
+          <DataTable
+            rows={data?.items ?? []}
+            columns={visible}
+            rowKey={(r) => r.id}
+            loading={loading}
+            dense={dense}
+            page={filters.page}
+            size={filters.size}
+            total={data?.total ?? 0}
+            onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
+            onSizeChange={(size) =>
+              setFilters((f) => ({ ...f, size, page: 1 }))
+            }
+            sort={{
+              id: filters.sort ?? "name",
+              direction: filters.direction === "DESC" ? "DESC" : "ASC",
+            }}
+            onSortChange={sort}
+            emptyAction={
+              <button
+                type="button"
+                data-testid="developer-empty-reset"
+                onClick={() => apply(true)}
+              >
+                조건 초기화
+              </button>
+            }
+            selectedKeys={[...selection.items.keys()]}
+            onSelectionChange={(keys) => {
+              const after = new Set(keys.map(String));
+              (data?.items ?? []).forEach((r) => {
+                if (after.has(r.id) !== selection.items.has(r.id))
+                  selection.toggle(
+                    { id: r.id, revision: r.revision },
+                    after.has(r.id),
+                  );
+              });
+            }}
+            onRowAction={(r) => open(r.id)}
+          />
+        ) : (
+          <div className="developer-cards">
+            {loading && <p role="status">불러오는 중입니다.</p>}
+            {!loading && !data?.items.length && (
+              <p className="sicost-empty">조회된 자료가 없습니다.</p>
+            )}
+            {data?.items.map((r) => (
+              <article
+                className="developer-card"
+                key={r.id}
+                data-testid={`developer-card-${r.id.toLowerCase()}`}
+              >
+                <button
+                  data-testid={`developer-card-open-${r.id.toLowerCase()}`}
+                  onClick={() => open(r.id)}
+                >
+                  {r.name} · {r.managementNo}
+                </button>
+                <p>
+                  {r.companyName ?? "자사"} · {r.job}
+                </p>
+                <StatusBadge tone={tones[r.status] ?? "neutral"}>
+                  {label("WORK_STAT", r.status)}
+                </StatusBadge>
+                <p>
+                  {r.currentProjectLabel ?? "–"} · {r.monthlyMm} MM
+                </p>
+              </article>
+            ))}
+            {(data?.items.length ?? 0) < (data?.total ?? 0) && (
+              <button
+                type="button"
+                data-testid="developer-more-button"
+                disabled={loading}
+                onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
+              >
+                20개 더보기
+              </button>
+            )}
+          </div>
+        )}
+      </>
       {id && !form && (
         <DeveloperDrawer
           id={id}

@@ -53,12 +53,7 @@ export function ProfitabilitySummary({
         <p>확인분 적자 {s.confirmedLossCount}명</p>
       </article>
       <article data-testid="profitability-summary-utilization">
-        <h2>
-          회사 가동률 / 가득률{" "}
-          <span title="가동률 = 그 달 일하는(MM이 있는) 사람 비율 · 가득률 = 월단위·파견으로 청구되는 사람 비율">
-            ⓘ
-          </span>
-        </h2>
+        <h2>회사 가동률 / 가득률</h2>
         <strong>
           {formatRate(s.companyUtilization)} / {formatRate(s.companyEarnedRate)}
         </strong>

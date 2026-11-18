@@ -26,7 +26,7 @@ export function MasterDataExportButton({
   const [error, setError] = useState<unknown>();
   const [success, setSuccess] = useState(false);
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const active = useRef<AbortController>();
   const mounted = useRef(true);

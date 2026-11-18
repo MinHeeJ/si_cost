@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(PayrollUploadController.class)
 @ContextConfiguration(classes=PayrollUploadController.class)
 @Import({PayrollUploadService.class,PayrollUploadRepository.class,CurrentUserProvider.class,
@@ -26,12 +27,17 @@ class PayrollUploadContractTest {
     @Autowired MockMvc mvc;
     @MockBean PayrollUploadMapper mapper;
     @MockBean CurrentUserMapper users;
+    @org.junit.jupiter.api.AfterEach void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @BeforeEach void setup() {
-        when(users.findAdministrator()).thenReturn("admin");
+        var context=org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("admin",null,java.util.List.of()));
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
         when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(mapper.list(any())).thenReturn(List.of());
     }
-    @Test void publicRequestUsesServerActorAndStoredCountsWithDefaultPaging() throws Exception {
+    @Test void authenticatedRequestUsesServerActorAndStoredCountsWithDefaultPaging() throws Exception {
         Query query=new Query("202607",1,50,0);
         when(mapper.list(query)).thenReturn(List.of(new Stored(71,"202607","급여.xlsx","recorded-actor",
             LocalDateTime.of(2026,7,15,9,0),"APPLIED",LocalDateTime.of(2026,7,15,9,1),12,9,2,1,1,0)));
@@ -53,7 +59,7 @@ class PayrollUploadContractTest {
             .andExpect(jsonPath("$.data.items[0].summary.tableWarningCount").value(0))
             .andExpect(jsonPath("$.data.total").value(1)).andExpect(jsonPath("$.data.page").value(1))
             .andExpect(jsonPath("$.data.size").value(50));
-        verify(users).findAdministrator();verify(mapper).list(query);verify(mapper).count(query);verifyNoMoreInteractions(mapper);
+        verify(users,never()).findAdministrator();verify(mapper).list(query);verify(mapper).count(query);verifyNoMoreInteractions(mapper);
     }
     @Test void emptySourceIsAnEmptyPageNotNotFoundOrInventedRows() throws Exception {
         mvc.perform(get("/api/payroll/uploads").param("month","2026-07"))

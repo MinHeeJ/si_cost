@@ -65,7 +65,7 @@ class ProjectDatabaseTest {
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             ProjectBudgetRepository.class,ProjectRegistrationService.class,ProjectPlanRepository.class,ProjectPlanService.class,
             ProjectDistributionRepository.class,ProjectDistributionService.class,ProjectRepository.class,ProjectService.class,ProjectQueryService.class);
-        context.refresh();service=context.getBean(ProjectService.class);queries=context.getBean(ProjectQueryService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(ProjectService.class);queries=context.getBean(ProjectQueryService.class);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectController(queries,service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         customer="C-"+UUID.randomUUID().toString().substring(0,12);part="S-"+UUID.randomUUID().toString().substring(0,12);
         sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,use_yn,reg_user_id) VALUES (?,'CUST',?,'112-34-56789','Y','admin')",customer,"고객 "+customer);

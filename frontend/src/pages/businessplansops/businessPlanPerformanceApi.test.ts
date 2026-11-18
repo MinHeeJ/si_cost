@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -7,7 +8,7 @@ import {
   BUSINESS_PLAN_COMMITTED,
   type PlanValidation,
 } from "./businessPlanPerformanceApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 afterEach(() => vi.unstubAllGlobals());
 const json = (data: unknown) =>
   new Response(JSON.stringify({ success: true, meta: {}, data }));
@@ -25,7 +26,10 @@ it("validation sends original file and current year as multipart without JSON Co
   await validateBusinessPlan(file, 2026);
   const [path, options] = vi.mocked(fetch).mock.calls[0];
   expect(path).toBe("/api/business-plans/imports/validate");
-  expect(options?.headers).toBeUndefined();
+  expect(new Headers(options?.headers).has("Content-Type")).toBe(false);
+  expect(new Headers(options?.headers).get("X-CSRF-TOKEN")).toBe(
+    "synthetic-business-unit-csrf",
+  );
   expect([...(options?.body as FormData).keys()]).toEqual(["file", "year"]);
   expect((options?.body as FormData).get("file")).toBe(file);
 });

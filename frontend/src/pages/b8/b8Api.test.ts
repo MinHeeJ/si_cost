@@ -1,7 +1,8 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { createB8Validation, saveB8Apply, getB8Template } from "./b8Api";
 import { ApiError } from "../../shared/api";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 const summary = {
   totalRows: 1,
   successRows: 1,
@@ -29,7 +30,10 @@ it("검사에는 원본 File만 multipart로 보내며 JSON Content-Type을 지�
   expect(options?.body).toBeInstanceOf(FormData);
   expect((options?.body as FormData).get("file")).toBe(file);
   expect((options?.body as FormData).has("uploadId")).toBe(false);
-  expect(options?.headers).toBeUndefined();
+  expect(new Headers(options?.headers).has("Content-Type")).toBe(false);
+  expect(new Headers(options?.headers).get("X-CSRF-TOKEN")).toBe(
+    "synthetic-business-unit-csrf",
+  );
 });
 it("반영은 같은 파일·숫자 uploadId를 재전송하고 최종번호 DTO를 그대로 반환한다", async () => {
   const data = {

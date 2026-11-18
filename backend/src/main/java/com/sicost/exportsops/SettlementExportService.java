@@ -26,6 +26,10 @@ public class SettlementExportService {
     private final SettlementTrendService trends;
     private final RateRenegotiationService rates;
     private final Clock clock;
+    private com.sicost.permission.PermissionProjectionService projection;
+    private com.fasterxml.jackson.databind.ObjectMapper json;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection,com.fasterxml.jackson.databind.ObjectMapper json) {this.projection=projection;this.json=json;}
     public SettlementExportService(ExcelExportService excel,SalesPartSettlementService settlements,SettlementTrendService trends,RateRenegotiationService rates,Clock clock) {
         this.excel=excel;this.settlements=settlements;this.trends=trends;this.rates=rates;this.clock=clock;
     }
@@ -46,7 +50,12 @@ public class SettlementExportService {
         }});
         for(String key:List.of("sort","direction"))if(body.has(key))query.add(key,text(body,key,null));
         String kind=rate?"단가재협상":"영업파트이익금",screen=rate?"UI-32":"UI-19";
-        var spec=new Specification(kind,null,List.of(new Column("name","이름",CellType.TEXT)),body.toString(),unit,screen);
+        JsonNode conditions=body;
+        if(rate && projection!=null && !projection.sensitive()) {
+            var safe=(com.fasterxml.jackson.databind.node.ObjectNode)body.deepCopy();var selected=safe.putArray("columns");
+            for(var column:body.path("columns"))if(!Set.of("monthlyLaborCost","employeeType").contains(column.asText()))selected.add(column.asText());conditions=safe;
+        }
+        var spec=new Specification(kind,null,List.of(new Column("name","이름",CellType.TEXT)),conditions.toString(),unit,screen);
         if(rate) {
             var parsed=RateRenegotiationInput.query(query);List<String> columns=columns(body.get("columns"));
             return excel.generateWorkbook(spec,()->rateWorkbook(rates.export(parsed),columns,unit),request);
@@ -59,6 +68,7 @@ public class SettlementExportService {
         return excel.generateWorkbook(spec,()->settlementWorkbook(part,parsed,mode,unit),request);
     }
     private WorkbookData rateWorkbook(RateRenegotiationDtos.Result data,List<String> ids,String unit) {
+        if(projection!=null && !projection.sensitive())ids=ids.stream().filter(id->!Set.of("monthlyLaborCost","employeeType").contains(id)).toList();
         var columns=ids.stream().map(id->new Column(id,rateTitle(id),Set.of("name","employeeType","projectName","renewalDate").contains(id)?CellType.TEXT:CellType.NUMBER)).toList();
         List<List<Object>> values=new ArrayList<>();
         for(var r:data.items())values.add(ids.stream().map(id->rateValue(r,id,unit)).toList());
@@ -66,14 +76,18 @@ public class SettlementExportService {
         footer.set(ids.indexOf("name"),"합계");if(ids.contains("annualGain"))footer.set(ids.indexOf("annualGain"),amount(data.summary().annualGain(),unit));values.add(footer);
         var summary=data.summary();
         var info=new ArrayList<Information>(List.of(new Information("기준월",data.baseMonth()),new Information("단위",unit),new Information("적용 인상률",data.appliedIncreaseRate()),new Information("대상 인원",summary.personCount()),new Information("배정 건수",summary.assignmentCount()),new Information("대상 평균 이익률",number(summary.weightedMarginRate())),new Information("가정 연 증가 합",amount(summary.annualGain(),unit)),new Information("목표 연 증가 합",amount(summary.targetAnnualGain(),unit)),new Information("미평가 건수",data.unevaluatedCount())));
-        for(var r:data.items())info.add(new Information("배정 "+r.assignmentId()+" 계산 근거","기준월 MM "+r.monthlyMm()+" / 계약 MM "+r.contractMm()+(r.planned()?" / 예정 투입":"")));
-        data.unevaluatedAssignments().forEach(i->info.add(new Information("미평가 "+i.assignmentId(),i.message())));
-        data.issues().forEach(i->info.add(new Information("계산 근거",i.message())));
+        if(projection==null || projection.sensitive()) {
+            for(var r:data.items())info.add(new Information("배정 "+r.assignmentId()+" 계산 근거","기준월 MM "+r.monthlyMm()+" / 계약 MM "+r.contractMm()+(r.planned()?" / 예정 투입":"")));
+            data.unevaluatedAssignments().forEach(i->info.add(new Information("미평가 "+i.assignmentId(),i.message())));
+            data.issues().forEach(i->info.add(new Information("계산 근거",i.message())));
+        }
         String day=LocalDate.now(clock.withZone(com.sicost.common.TimeConfiguration.SEOUL)).format(DateTimeFormatter.BASIC_ISO_DATE);
-        return new WorkbookData(List.of(sheet("단가 재협상",columns,values),methods(true)),info,summary.assignmentCount(),day,"단가재협상_"+day+".xlsx");
+        return new WorkbookData(projection==null || projection.sensitive()?List.of(sheet("단가 재협상",columns,values),methods(true)):List.of(sheet("단가 재협상",columns,values)),info,summary.assignmentCount(),day,"단가재협상_"+day+".xlsx");
     }
     private WorkbookData settlementWorkbook(String part,SalesPartSettlementInput.Query query,String mode,String unit) {
-        var data=settlements.exportSettlement(part,query);List<Sheet> sheets=new ArrayList<>();List<Information> info=new ArrayList<>();
+        var data=settlements.exportSettlement(part,query);
+        if(projection!=null && !projection.sensitive())return restrictedSettlement(data,part,query,mode,unit);
+        List<Sheet> sheets=new ArrayList<>();List<Information> info=new ArrayList<>();
         info.add(new Information("파트",part));info.add(new Information("기준월",data.month()));info.add(new Information("단위",unit));
         info.add(new Information("상태",data.status()));info.add(new Information("배분율",number(data.standard().distributionRate())));
         info.add(new Information("공통관리비",amount(data.standard().salesExpenseAmount(),unit)));
@@ -119,6 +133,25 @@ public class SettlementExportService {
         data.issues().forEach(i->info.add(new Information("계산 근거 "+Objects.toString(i.developerId(),""),i.message())));
         sheets.add(methods(false));String ym=data.month().replace("-","");
         return new WorkbookData(sheets,info,people,ym,"영업파트이익금_"+part+"_"+ym+"_"+(mode.equals("MONTH")?"이번달":"추이")+".xlsx");
+    }
+    private WorkbookData restrictedSettlement(SalesPartSettlementDtos.Result data,String part,SalesPartSettlementInput.Query query,String mode,String unit) {
+        Object original=mode.equals("MONTH")?data:trends.get(part,new SalesPartSettlementInput.Query(data.month(),1,Integer.MAX_VALUE,"name","ASC"));
+        com.fasterxml.jackson.databind.node.ObjectNode view=json.valueToTree(original);com.sicost.permission.PermissionViews.settlement(view,original,json);
+        List<Information> info=new ArrayList<>(List.of(new Information("파트",part),new Information("기준월",data.month()),new Information("상태",data.status())));
+        List<Column> columns;List<List<Object>> rows=new ArrayList<>();
+        if(mode.equals("MONTH")) {
+            columns=List.of(new Column("name","이름",CellType.TEXT),new Column("projectNames","프로젝트",CellType.TEXT),new Column("mm","MM",CellType.NUMBER),new Column("unitPrice","단가",CellType.NUMBER),new Column("profitStatus","흑자·적자",CellType.TEXT));
+            for(var row:view.path("items")) {
+                List<String> projects=new ArrayList<>();row.path("projectNames").forEach(project->projects.add(project.asText()));
+                rows.add(Arrays.asList(row.path("name").asText(),String.join(" · ",projects),number(row.path("mm").textValue()),amount(row.path("unitPrice").textValue(),unit),row.path("profitStatus").isTextual()?row.path("profitStatus").asText():null));
+            }
+            info.add(new Information("파트장",view.path("standard").path("leaderName").asText("")));
+            for(String field:List.of("personCount","surplusPersonCount","deficitPersonCount"))if(view.path("totals").has(field))info.add(new Information(switch(field){case "personCount"->"정산 인원";case "surplusPersonCount"->"흑자 인원";default->"적자 인원";},view.path("totals").path(field).longValue()));
+        } else {
+            columns=List.of(new Column("month","월",CellType.TEXT),new Column("personCount","정산 인원",CellType.NUMBER),new Column("surplusPersonCount","흑자 인원",CellType.NUMBER),new Column("deficitPersonCount","적자 인원",CellType.NUMBER));
+            for(var row:view.path("monthlyTotals"))rows.add(Arrays.asList(row.path("month").asText(),row.has("personCount")?row.path("personCount").longValue():null,row.has("surplusPersonCount")?row.path("surplusPersonCount").longValue():null,row.has("deficitPersonCount")?row.path("deficitPersonCount").longValue():null));
+        }
+        String ym=data.month().replace("-","");return new WorkbookData(List.of(sheet(mode.equals("MONTH")?"이번 달":"기간 추이",columns,rows)),info,mode.equals("MONTH")?data.pagination().total():rows.size(),ym,"영업파트이익금_"+part+"_"+ym+"_"+(mode.equals("MONTH")?"이번달":"추이")+".xlsx");
     }
     private static Sheet sheet(String name,List<Column> columns,List<List<Object>> rows) {return new Sheet(name,columns,sink->rows.forEach(sink));}
     private static Sheet methods(boolean rate) {

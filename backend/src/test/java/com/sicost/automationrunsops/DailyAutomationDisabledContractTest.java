@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(DailyAutomationController.class)
 @ContextConfiguration(classes=DailyAutomationController.class)
 @Import({DailyAutomationService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

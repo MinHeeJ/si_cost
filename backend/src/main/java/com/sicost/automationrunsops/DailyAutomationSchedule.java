@@ -11,7 +11,10 @@ import static com.sicost.automationrunsops.DailyAutomationDtos.*;
 
 @Configuration
 @EnableScheduling
-public class DailyAutomationSchedule {
+public class DailyAutomationSchedule implements org.springframework.context.ApplicationContextAware {
+    private org.springframework.context.ApplicationContext context;
+    @Override public void setApplicationContext(org.springframework.context.ApplicationContext context) {this.context=context;}
+    private boolean operatorProcess() {return context!=null && !(context instanceof org.springframework.web.context.WebApplicationContext);}
     private final DailyAutomationService service;
     private final DailyAutomationRepository repository;
     private final DailyAutomationStages stages;
@@ -25,11 +28,12 @@ public class DailyAutomationSchedule {
         executor.setThreadNamePrefix("daily-automation-");executor.setWaitForTasksToCompleteOnShutdown(true);executor.setAwaitTerminationSeconds(30);return executor;
     }
     @Scheduled(cron="0 0 2 * * *",zone="Asia/Seoul")
-    public void daily() { service.scheduled("DAILY_OPERATIONS"); }
+    public void daily() { if(!operatorProcess())service.scheduled("DAILY_OPERATIONS"); }
     @Scheduled(cron="0 0 9 * * *",zone="Asia/Seoul")
-    public void receivables() { service.scheduled("RECEIVABLE_DUNNING"); }
+    public void receivables() { if(!operatorProcess())service.scheduled("RECEIVABLE_DUNNING"); }
     @EventListener(ApplicationReadyEvent.class)
     public void startup() {
+        if(operatorProcess())return;
         stages.recoverAbandonedSending();
         ZonedDateTime now=ZonedDateTime.now(clock.withZone(TimeConfiguration.SEOUL));
         if(now.toLocalTime().isBefore(LocalTime.of(2,0)))return;

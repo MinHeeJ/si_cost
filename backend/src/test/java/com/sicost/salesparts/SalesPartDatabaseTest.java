@@ -50,7 +50,7 @@ class SalesPartDatabaseTest {
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,CommitInvalidation.class,MasterIdService.class,SalesPartRepository.class,SalesPartService.class);
-        context.refresh();service=context.getBean(SalesPartService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(SalesPartService.class);
         sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_err_cnt,user_stat_cd,mfa_err_cnt,reg_user_id) SELECT 'leadercase','시험 파트장','leader@example.invalid',pwd_hash,0,'USE',0,'admin' FROM tb_sy_user WHERE user_id='admin'");
         sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES('leadercase','SALES_LDR','admin')");
     }

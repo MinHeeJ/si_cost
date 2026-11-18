@@ -6,6 +6,6 @@
       input_bgn_dt AS "startDate",input_end_dt AS "endDate",ctrt_mm AS "contractMm",bill_uprc AS "price",
       input_type_cd AS "inputType",ctrt_dev_id AS "contractDeveloperId",ext_psbl_cd AS "extensionPossibility",
       ext_cnt::int AS "extensionCount",early_wthdr_yn AS "earlyWithdrawal",asgn_stat_cd AS "status"
-    FROM tb_pj_asgn ORDER BY asgn_id
+    FROM tb_pj_asgn WHERE dev_id IN (SELECT dev_id FROM tb_hr_dev) ORDER BY asgn_id
   </select>
 </mapper>

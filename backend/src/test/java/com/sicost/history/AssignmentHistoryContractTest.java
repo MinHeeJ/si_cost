@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(AssignmentHistoryController.class)
 @ContextConfiguration(classes=AssignmentHistoryController.class)
 @Import({AssignmentHistoryService.class,WriteCoordinator.class,RevisionService.class,ChangeHistoryWriter.class,

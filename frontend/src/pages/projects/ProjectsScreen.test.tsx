@@ -4,7 +4,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ProjectForm } from "./ProjectForm";
@@ -715,16 +715,18 @@ it("등록 모달 뒤 목록을 유지하고 Escape 취소에서 미저장 확�
   render(<ProjectsScreen {...props} />);
   await screen.findByTestId("project-open-p-0042");
   await userEvent.click(screen.getByTestId("project-create"));
-  const dialog=screen.getByRole("dialog", {name: "프로젝트 등록"});
+  const dialog = screen.getByRole("dialog", { name: "프로젝트 등록" });
   expect(screen.getByTestId("project-open-p-0042")).toBeVisible();
   expect(dialog).toContainElement(screen.getByTestId("project-form"));
   await formReady();
-  fireEvent.change(screen.getByTestId("project-name"), {target: {value: "모달 초안"}});
-  fireEvent.keyDown(dialog, {key: "Escape"});
-  await userEvent.click(screen.getByRole("button", {name: "계속 작성"}));
+  fireEvent.change(screen.getByTestId("project-name"), {
+    target: { value: "모달 초안" },
+  });
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  await userEvent.click(screen.getByRole("button", { name: "계속 작성" }));
   expect(screen.getByTestId("project-name")).toHaveValue("모달 초안");
-  fireEvent.keyDown(dialog, {key: "Escape"});
-  await userEvent.click(screen.getByRole("button", {name: "나가기"}));
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  await userEvent.click(screen.getByRole("button", { name: "나가기" }));
   expect(screen.queryByTestId("project-form")).not.toBeInTheDocument();
   expect(api.createProject).not.toHaveBeenCalled();
 });

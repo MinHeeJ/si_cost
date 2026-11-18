@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import { useFieldPermission } from "../../shared/permission/PermissionBoundary";
 import { formatAmount, formatRate, type AmountUnit } from "../../shared/format";
 import {
   getCandidatePositions,
@@ -22,7 +23,7 @@ export function CandidatePositionsPanel({
   candidate: {
     id: string;
     jobCode: string;
-    desiredRate: string;
+    desiredRate?: string;
     availableDate: string;
     contactStatus: string;
     gradeCode?: string;
@@ -33,6 +34,7 @@ export function CandidatePositionsPanel({
   amountUnit?: AmountUnit;
   label?(group: string, code: string | null): string;
 }) {
+  const canRate = useFieldPermission("UI-33", "desiredRate");
   const [result, setResult] = useState<CandidateRead<CandidatePositions>>();
   const [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true),
@@ -69,7 +71,7 @@ export function CandidatePositionsPanel({
   if (!active) return null;
   const columns: Column<CandidatePosition>[] = [
     {
-      id: "opportunity",
+      id: "name",
       label: "기회 / 확률",
       render: (row) => (
         <>
@@ -84,7 +86,7 @@ export function CandidatePositionsPanel({
       ),
     },
     {
-      id: "job",
+      id: "jobCode",
       label: "직무 / 등급",
       render: (row) =>
         `${label("JOB", row.jobCode)} / ${label("GRADE", row.gradeCode)}`,
@@ -164,10 +166,16 @@ export function CandidatePositionsPanel({
             <DataTable
               testId="candidate-positions-table"
               rows={result.data.items}
-              columns={columns}
+              columns={columns.filter(
+                (column) => column.id !== "profitRate" || canRate,
+              )}
               rowKey={(row) => `${row.opportunityId}-${row.needSn}`}
               empty="조건에 맞는 자리가 없습니다."
-              emptyAction={<button type="button" onClick={() => setRetry((n) => n + 1)}>조건 초기화</button>}
+              emptyAction={
+                <button type="button" onClick={() => setRetry((n) => n + 1)}>
+                  조건 초기화
+                </button>
+              }
             />
           ) : null}
         </>

@@ -8,6 +8,7 @@ import type { AmountUnit } from "../../shared/format";
 import { ProfitabilityExportButton } from "../profitability/ProfitabilityExportButton";
 import type { ProfitabilityQuery } from "../profitability/individualProfitabilityApi";
 import * as api from "./projectStatusApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./projectStatus.css";
 
 // SCR-UI-03-EXPORT: preserve the existing UI-03 annual export implementation.
@@ -43,8 +44,9 @@ export function ProjectAnalysisDownload({
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
   const screenId = view === "statusBoard" ? "UI-31" : "UI-04";
+  const canDownload = usePermission(screenId, "DNLD");
   async function download() {
-    if (window.innerWidth <= 767 || active.current) return;
+    if (!canDownload || window.innerWidth <= 767 || active.current) return;
     const controller = new AbortController();
     active.current = controller;
     setPending(true);
@@ -101,6 +103,7 @@ export function ProjectAnalysisDownload({
         type="button"
         data-testid="project-download-button"
         disabled={
+          !canDownload ||
           pending ||
           preferences.loading ||
           preferences.pending ||

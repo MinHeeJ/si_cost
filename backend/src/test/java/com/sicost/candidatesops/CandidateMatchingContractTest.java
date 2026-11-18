@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(CandidateMatchingController.class)
 @ContextConfiguration(classes=CandidateMatchingController.class)
 @Import({CandidateMatchingService.class,CandidateMatchingRepository.class,WorkforceForecastService.class,

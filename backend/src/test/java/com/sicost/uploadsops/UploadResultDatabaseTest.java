@@ -56,7 +56,7 @@ class UploadResultDatabaseTest {
         context.registerBean(AggregateLockMapper.class,()->mock(AggregateLockMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,RevisionService.class,B9Repository.class,
             UploadResultRepository.class,UploadResultService.class);
-        context.refresh();service=context.getBean(UploadResultService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(UploadResultService.class);
         mvc=MockMvcBuilders.standaloneSetup(new UploadResultController(service,json))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }

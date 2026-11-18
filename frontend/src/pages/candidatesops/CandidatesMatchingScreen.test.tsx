@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CandidatesScreen } from "../candidates/CandidatesScreen";
@@ -137,7 +143,14 @@ it("places shortages under existing summary and exact cutoff view resets without
   ).toHaveTextContent("2027-06-30");
   await waitFor(() =>
     expect(people.getCandidates).toHaveBeenCalledWith(
-      { jobCode: "DEV", page: 1, size: 50, availability: undefined, availableUntil: "2027-06-30", activeOnly: true },
+      {
+        jobCode: "DEV",
+        page: 1,
+        size: 50,
+        availability: undefined,
+        availableUntil: "2027-06-30",
+        activeOnly: true,
+      },
       expect.any(AbortSignal),
     ),
   );
@@ -145,8 +158,16 @@ it("places shortages under existing summary and exact cutoff view resets without
   expect(screen.getByTestId("candidate-export")).toBeEnabled();
   await userEvent.click(screen.getByTestId("candidate-export"));
   expect(people.downloadCandidates).toHaveBeenCalledWith(
-    { jobCode: "DEV", page: 1, size: 50, availability: undefined, availableUntil: "2027-06-30", activeOnly: true },
-    expect.arrayContaining(["name"]), "원",
+    {
+      jobCode: "DEV",
+      page: 1,
+      size: 50,
+      availability: undefined,
+      availableUntil: "2027-06-30",
+      activeOnly: true,
+    },
+    expect.arrayContaining(["name"]),
+    "원",
   );
   await userEvent.click(screen.getByTestId("candidate-shortage-reset"));
   await waitFor(() =>
@@ -189,11 +210,17 @@ it("injects matching into real basic panel and re-reads after the existing save 
 
 it("다른 기회 저장 뒤 기존 후보의 부족직무·맞는자리를 다시 조회한다", async () => {
   render(<CandidatesScreen />);
-  await userEvent.click(await screen.findByRole("button", { name: candidate.name }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: candidate.name }),
+  );
   await screen.findByTestId("candidate-positions-panel");
   const shortages = vi.mocked(matching.getCandidateShortages).mock.calls.length;
   const positions = vi.mocked(matching.getCandidatePositions).mock.calls.length;
   act(() => window.dispatchEvent(new Event("sicost:sales-committed")));
-  await waitFor(() => expect(matching.getCandidateShortages).toHaveBeenCalledTimes(shortages + 1));
-  await waitFor(() => expect(matching.getCandidatePositions).toHaveBeenCalledTimes(positions + 1));
+  await waitFor(() =>
+    expect(matching.getCandidateShortages).toHaveBeenCalledTimes(shortages + 1),
+  );
+  await waitFor(() =>
+    expect(matching.getCandidatePositions).toHaveBeenCalledTimes(positions + 1),
+  );
 });

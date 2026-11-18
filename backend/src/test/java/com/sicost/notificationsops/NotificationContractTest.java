@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(NotificationController.class)
 @ContextConfiguration(classes=NotificationController.class)
 @Import({NotificationService.class,NotificationRepository.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

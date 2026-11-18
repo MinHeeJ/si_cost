@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./billOperationsApi";
@@ -8,7 +9,7 @@ it("six contracted operations use relative paths and selected identities without
     status: 200,
     text: async () => JSON.stringify({ success: true, meta: {}, data: {} }),
   });
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.getBillEstimate("selected project", "2026-08");
   await api.getBillsSummary(2026, false);
   await api.getBillSelection({
@@ -48,8 +49,7 @@ it("201 mutation result is consumed rather than treated as an empty acknowledgem
     revision: "after",
     warnings: [],
   };
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
@@ -77,7 +77,7 @@ it("409 is surfaced once without automatically replaying the write", async () =>
         requestId: "bill-request",
       }),
   });
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     api.createNextMonthBill("B-202607-011", {
       year: 2026,

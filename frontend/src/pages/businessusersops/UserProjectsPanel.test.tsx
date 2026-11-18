@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -357,19 +357,50 @@ it("existing detail basic information and history remain alongside assigned proj
   expect(screen.queryByText("계약 P-601")).not.toBeInTheDocument();
 });
 
-it.each([["2026-06-14",true],["2026-06-15",false],["2026-06-16",false]] as const)("신규 지정 계약 종료일 %s, 서버 오늘 경계",async(endDate,disabled)=>{
-  vi.mocked(api.searchUserProjects).mockResolvedValue({items:[{...project("P-602","ING"),endDate}],total:1,page:1,size:20,year:2026,unassignedCount:0});
-  const dialog=await open();
-  const choose=await within(dialog).findByRole("button",{name:"선택"});
-  if(disabled) expect(choose).toBeDisabled(); else expect(choose).not.toBeDisabled();
-});
+it.each([
+  ["2026-06-14", true],
+  ["2026-06-15", false],
+  ["2026-06-16", false],
+] as const)(
+  "신규 지정 계약 종료일 %s, 서버 오늘 경계",
+  async (endDate, disabled) => {
+    vi.mocked(api.searchUserProjects).mockResolvedValue({
+      items: [{ ...project("P-602", "ING"), endDate }],
+      total: 1,
+      page: 1,
+      size: 20,
+      year: 2026,
+      unassignedCount: 0,
+    });
+    const dialog = await open();
+    const choose = await within(dialog).findByRole("button", { name: "선택" });
+    if (disabled) expect(choose).toBeDisabled();
+    else expect(choose).not.toBeDisabled();
+  },
+);
 
-it("프로젝트 검색 빈 상태 안에서 조건을 초기화한다",async()=>{
-  vi.mocked(api.searchUserProjects).mockResolvedValue({items:[],total:0,page:1,size:20,year:2026,unassignedCount:0});
-  const dialog=await open();
-  fireEvent.change(within(dialog).getByLabelText("프로젝트 검색"),{target:{value:"없는 프로젝트"}});
-  await userEvent.click(within(dialog).getByRole("button",{name:"조회"}));
-  await userEvent.click(await within(dialog).findByRole("button",{name:"조건 초기화"}));
+it("프로젝트 검색 빈 상태 안에서 조건을 초기화한다", async () => {
+  vi.mocked(api.searchUserProjects).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 20,
+    year: 2026,
+    unassignedCount: 0,
+  });
+  const dialog = await open();
+  fireEvent.change(within(dialog).getByLabelText("프로젝트 검색"), {
+    target: { value: "없는 프로젝트" },
+  });
+  await userEvent.click(within(dialog).getByRole("button", { name: "조회" }));
+  await userEvent.click(
+    await within(dialog).findByRole("button", { name: "조건 초기화" }),
+  );
   expect(within(dialog).getByLabelText("프로젝트 검색")).toHaveValue("");
-  await waitFor(()=>expect(api.searchUserProjects).toHaveBeenLastCalledWith({year:2026,status:"ING",page:1},expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.searchUserProjects).toHaveBeenLastCalledWith(
+      { year: 2026, status: "ING", page: 1 },
+      expect.any(AbortSignal),
+    ),
+  );
 });

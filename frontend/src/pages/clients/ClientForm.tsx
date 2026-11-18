@@ -5,6 +5,10 @@ import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import * as api from "./clientsApi";
+import {
+  usePermission,
+  useSensitivePermission,
+} from "../../shared/permission/PermissionBoundary";
 import type {
   Client,
   ClientCode,
@@ -34,6 +38,8 @@ type Form = {
   accountAction: "KEEP" | "REPLACE";
 };
 export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
+  const canSave = usePermission("UI-15", client ? "UPD" : "REG");
+  const sensitive = useSensitivePermission();
   const [form, setForm] = useState<Form>(() => ({
     type: client?.type ?? "",
     name: client?.name ?? "",
@@ -121,7 +127,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
     return list;
   }
   async function save() {
-    if (busy.current || !form.type) return;
+    if (!canSave || busy.current || !form.type) return;
     busy.current = true;
     setPending(true);
     setError(undefined);
@@ -215,6 +221,11 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           {client ? "취소" : "목록"}
         </button>
       </header>
+      {!canSave && (
+        <p role="note">
+          수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
+        </p>
+      )}
       {codeError != null && (
         <ErrorBanner
           message="선택 항목을 불러오지 못했습니다."
@@ -237,12 +248,16 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
         data-testid="client-edit-form"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!canSave) return;
           if (client?.account && (!vendor || form.accountAction === "REPLACE"))
             setConfirm(true);
           else void save();
         }}
       >
-        <fieldset disabled={pending} className="clients-form-fields">
+        <fieldset
+          disabled={!canSave || pending}
+          className="clients-form-fields"
+        >
           <legend>기본 정보</legend>
           <CodeSelect
             label="구분"
@@ -272,13 +287,19 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           </p>
         )}
         {customer && (
-          <fieldset disabled={pending} className="clients-form-fields">
+          <fieldset
+            disabled={!canSave || pending}
+            className="clients-form-fields"
+          >
             <legend>세금계산서</legend>
             {text("taxEmail", "세금계산서 이메일", 100, true)}
           </fieldset>
         )}
-        {vendor && (
-          <fieldset disabled={pending} className="clients-form-fields">
+        {vendor && sensitive && (
+          <fieldset
+            disabled={!canSave || pending}
+            className="clients-form-fields"
+          >
             <legend>지급 계좌</legend>
             {client && (
               <>
@@ -335,24 +356,26 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
               )}
           </fieldset>
         )}
-        <footer className="clients-actions">
-          <button
-            type="button"
-            data-testid="client-form-cancel"
-            disabled={pending}
-            onClick={close}
-          >
-            취소
-          </button>
-          <button
-            type="submit"
-            data-testid="client-form-save"
-            className="sicost-primary"
-            disabled={pending || !form.type || Boolean(codeError)}
-          >
-            {pending ? "저장 중…" : "저장"}
-          </button>
-        </footer>
+        {canSave && (
+          <footer className="clients-actions">
+            <button
+              type="button"
+              data-testid="client-form-cancel"
+              disabled={pending}
+              onClick={close}
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              data-testid="client-form-save"
+              className="sicost-primary"
+              disabled={pending || !form.type || Boolean(codeError)}
+            >
+              {pending ? "저장 중…" : "저장"}
+            </button>
+          </footer>
+        )}
       </form>
       <Dialog
         open={confirm}

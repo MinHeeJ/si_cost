@@ -53,7 +53,7 @@ export function B6UploadDialog({
         appliedCount: result.summary.totalRows,
       })),
   };
-  if (window.matchMedia?.("(max-width: 767px)").matches)
+  if (window.matchMedia?.("(max-width: 767px)")?.matches)
     return (
       <section data-testid="b6-desktop-notice" data-screen-id="SCR-UI-01">
         <p>이 기능은 PC에서 사용해 주세요.</p>

@@ -17,15 +17,22 @@ public class NotificationService {
     private final CurrentUserProvider users;
     private final Clock clock;
     private final CommitInvalidation invalidation;
-    public NotificationService(NotificationRepository repository, CurrentUserProvider users, Clock clock, CommitInvalidation invalidation) {
-        this.repository=repository;this.users=users;this.clock=clock;this.invalidation=invalidation;
+    private final com.sicost.permission.PermissionService permissions;
+    private final com.sicost.permission.NotificationProjectionService projection;
+    public NotificationService(NotificationRepository repository, CurrentUserProvider users, Clock clock, CommitInvalidation invalidation,
+            com.sicost.permission.PermissionService permissions,com.sicost.permission.NotificationProjectionService projection) {
+        this.repository=repository;this.users=users;this.clock=clock;this.invalidation=invalidation;this.permissions=permissions;this.projection=projection;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public UnreadCount getNotificationUnreadCount() {
         String userId=users.currentUser().userId();
         var now=now();
         String month=YearMonth.from(now).format(DateTimeFormatter.ofPattern("yyyyMM"));
-        return new UnreadCount(repository.unreadCount(userId),repository.receivableCount(),repository.currentMonthUnclosed(month),now);
+
+        var granted=permissions.capabilities();
+        Long receivables=granted.screens().getOrDefault("UI-13",java.util.Set.of()).contains("INQ")?repository.receivableCount():null;
+        Boolean unclosed=granted.scope().all() && granted.screens().getOrDefault("UI-14",java.util.Set.of()).contains("INQ")?repository.currentMonthUnclosed(month):null;
+        return new UnreadCount(repository.unreadCount(userId),receivables,unclosed,now);
     }
     @Transactional
     public ReadResult saveNotificationRead(String id) {
@@ -42,8 +49,8 @@ public class NotificationService {
             if(repository.markRead(new ReadWrite(userId,key,readAt,time))!=1)throw new IllegalStateException("알림 읽음 결과를 확인할 수 없습니다.");
             invalidation.afterCommit("notifications:"+userId);
         }
-        return new ReadResult(new Item(row.id().toPlainString(),row.typeCode(),row.content(),row.sendMethodCode(),true,
-            offset(readAt),offset(row.notifiedAt()),link(row)),changed);
+        return new ReadResult(projection.project(new Item(row.id().toPlainString(),row.typeCode(),row.content(),row.sendMethodCode(),true,
+            offset(readAt),offset(row.notifiedAt()),link(row))),changed);
     }
     @Transactional
     public ReadAllResult saveNotificationsReadAll() {
@@ -56,7 +63,7 @@ public class NotificationService {
     private Link link(StoredNotification row) {
         String screen=row.screenId(),key=row.linkKey();
         if(screen==null||!screen.matches("UI-[0-9]{2}")||key!=null&&(key.length()>50||!key.matches("[A-Za-z0-9_-]+")))return null;
-        return repository.registeredScreen(screen)?new Link(screen,key):null;
+        return repository.registeredScreen(screen) && permissions.allows(screen,"INQ")?new Link(screen,key):null;
     }
     private OffsetDateTime now() { return OffsetDateTime.now(clock.withZone(TimeConfiguration.SEOUL)); }
     private OffsetDateTime offset(LocalDateTime value) { return value==null?null:value.atZone(TimeConfiguration.SEOUL).toOffsetDateTime(); }

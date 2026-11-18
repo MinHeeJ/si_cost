@@ -1,7 +1,8 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./payrollApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 function response(data: unknown) {
   return new Response(JSON.stringify({ success: true, meta: {}, data }), {
     headers: { "Content-Type": "application/json" },
@@ -37,7 +38,10 @@ it("B1 검사는 월과 File 및 재검사 uploadId만 multipart", async () => {
   expect([...body.keys()]).toEqual(["file", "month", "uploadId"]);
   expect(body.get("file")).toBe(file);
   expect(body.get("month")).toBe("2026-07");
-  expect(options?.headers).toBeUndefined();
+  expect(new Headers(options?.headers).has("Content-Type")).toBe(false);
+  expect(new Headers(options?.headers).get("X-CSRF-TOKEN")).toBe(
+    "synthetic-business-unit-csrf",
+  );
 });
 it("반영 exact multipart는 snapshot revision과 전량교체 명시, legacy project 필드 없음", async () => {
   const data = {

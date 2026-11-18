@@ -1,6 +1,7 @@
 import {
   ApiError,
   request,
+  authenticatedFetch,
   type ApiEnvelope,
   type ApiErrorBody,
 } from "../../shared/api";
@@ -101,7 +102,7 @@ export const getPayrollTemplate = () =>
   downloadB7File("/api/excel/B1/template");
 export { saveDownload };
 async function multipart<T>(path: string, body: FormData): Promise<T> {
-  const response = await fetch(path, {
+  const response = await authenticatedFetch(path, {
     method: "POST",
     body,
     redirect: "error",

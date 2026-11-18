@@ -48,7 +48,7 @@ class ProjectPmDatabaseTest {
     @BeforeEach void install() throws Exception {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
+        var configuration=new org.apache.ibatis.session.Configuration();configuration.addMapper(AggregateLockMapper.class);configuration.addMapper(com.sicost.authentication.AuthenticationMapper.class);configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());
@@ -59,6 +59,7 @@ class ProjectPmDatabaseTest {
         context.registerBean(ProjectBudgetMapper.class,()->session.getMapper(ProjectBudgetMapper.class));
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
+        context.registerBean(com.sicost.authentication.AuthenticationMapper.class,()->session.getMapper(com.sicost.authentication.AuthenticationMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.registerBean(BusinessUserMapper.class,()->session.getMapper(BusinessUserMapper.class));
         context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
@@ -163,7 +164,7 @@ class ProjectPmDatabaseTest {
             tx.execute(status -> {
                 context.getBean(AggregateLockMapper.class).lock("USER:"+chosen);
                 sql.update("DELETE FROM tb_sy_user_role WHERE user_id=? AND role_id='PM'",chosen);
-                future[0]=executor.submit(()-> {entered.countDown();return service.saveProjectPm(id,input);});
+                future[0]=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(()-> {entered.countDown();return service.saveProjectPm(id,input);}));
                 try {assertThat(entered.await(5,TimeUnit.SECONDS)).isTrue();} catch(InterruptedException e) {Thread.currentThread().interrupt();throw new IllegalStateException(e);}
                 return null;
             });

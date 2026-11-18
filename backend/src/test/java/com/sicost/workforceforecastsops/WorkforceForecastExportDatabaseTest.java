@@ -60,7 +60,7 @@ class WorkforceForecastExportDatabaseTest {
         context.register(Transactions.class, CurrentUserProvider.class, ChangeHistoryWriter.class, AssignmentMonthlyService.class,
             AccessLogWriter.class, ExcelExportService.class, SalesForecastRepository.class, SalesWorkforceProjectionService.class,
             WorkforceForecastExportService.class, WorkforceForecastExportController.class);
-        context.refresh();
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         mvc = MockMvcBuilders.standaloneSetup(context.getBean(WorkforceForecastExportController.class))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String id = "O" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);

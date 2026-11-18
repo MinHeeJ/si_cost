@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
 import { Dialog, ConfirmDialog } from "../../shared/Dialog";
 import { usePreferences } from "./usePreferences";
 import type { ScreenColumnPreferences, ColumnView } from "./preferencesApi";
@@ -25,6 +26,18 @@ export function ColumnPreferencesDialog({
 }) {
   const p = usePreferences();
   const pref = p.get("COLS", screenId);
+  const permissions = useContext(PermissionContext),
+    allowedFields = permissions?.fields?.[screenId];
+  const allowedColumns = columns.filter(
+    (column) =>
+      (allowedFields === undefined || allowedFields.includes(column.id)) &&
+      !(
+        screenId === "UI-15" &&
+        permissions &&
+        !permissions.sensitive &&
+        ["account", "bankCode", "bankName", "depositor"].includes(column.id)
+      ),
+  );
   const source = (pref?.value ?? {}) as ScreenColumnPreferences;
   const [draft, setDraft] = useState<ColumnView | null>(null);
   const [reset, setReset] = useState(false);
@@ -40,12 +53,18 @@ export function ColumnPreferencesDialog({
         }
       : storedView;
   const value = draft ?? applied;
+  const visibleOrder =
+    value?.order.filter((id) =>
+      allowedColumns.some((column) => column.id === id),
+    ) ?? [];
   const move = (index: number, delta: number) => {
     if (!value) return;
     const order = [...value.order];
     const target = index + delta;
-    if (target < 0 || target >= order.length) return;
-    [order[index], order[target]] = [order[target], order[index]];
+    if (target < 0 || target >= visibleOrder.length) return;
+    const from = order.indexOf(visibleOrder[index]),
+      to = order.indexOf(visibleOrder[target]);
+    [order[from], order[to]] = [order[to], order[from]];
     setDraft({ ...value, order });
   };
   return (
@@ -82,8 +101,8 @@ export function ColumnPreferencesDialog({
           ) : !value ? (
             <p role="alert">열 설정을 불러오지 못했습니다.</p>
           ) : (
-            value.order.map((id, index) => {
-              const column = columns.find((c) => c.id === id);
+            visibleOrder.map((id, index) => {
+              const column = allowedColumns.find((c) => c.id === id);
               if (!column) return null;
               return (
                 <div
@@ -105,7 +124,7 @@ export function ColumnPreferencesDialog({
                     type="button"
                     data-testid={`column-preferences-down-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
                     aria-label={`${column.label} 아래로`}
-                    disabled={p.pending || index === value.order.length - 1}
+                    disabled={p.pending || index === visibleOrder.length - 1}
                     onClick={() => move(index, 1)}
                   >
                     ▼
@@ -169,14 +188,26 @@ export function useTablePreferences(
   const cols = p.get("COLS", screenId)?.value as
     | ScreenColumnPreferences
     | undefined;
+  const permissions = useContext(PermissionContext),
+    allowedFields = permissions?.fields?.[screenId];
+  const allowedColumns = columns.filter(
+    (column) =>
+      (allowedFields === undefined || allowedFields.includes(column.id)) &&
+      !(
+        screenId === "UI-15" &&
+        permissions &&
+        !permissions.sensitive &&
+        ["account", "bankCode", "bankName", "depositor"].includes(column.id)
+      ),
+  );
   const view = cols?.[viewId];
   return {
     columns: view
       ? view.order.flatMap((id) => {
-          const c = columns.find((col) => col.id === id);
+          const c = allowedColumns.find((col) => col.id === id);
           return c && (!view.hidden.includes(id) || c.required) ? [c] : [];
         })
-      : columns,
+      : allowedColumns,
     pageSize: p.get("PAGE_SIZE")?.value as number | undefined,
     dense: p.get("DENSE")?.value === "좁게",
     amountUnit: p.get("AMT_UNIT")?.value as string | undefined,

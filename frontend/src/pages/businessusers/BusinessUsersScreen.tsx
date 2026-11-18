@@ -3,6 +3,7 @@ import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
 import { BusinessUserForm } from "./BusinessUserForm";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { BusinessUserDetail } from "./BusinessUserDetail";
 import { UserBulkStatusToolbar } from "../businessusersops/UserBulkStatusToolbar";
 import * as api from "./businessUsersApi";
@@ -31,25 +32,39 @@ export function BusinessUsersScreen({
   onDirtyChange,
   onCommitted,
 }: BusinessUsersScreenProps) {
-  const [draft, setDraft] = useState({ q: "", role: "", status: "", includeStopped: false });
+  const canRegister = usePermission("UI-23", "REG");
+  const [draft, setDraft] = useState({
+    q: "",
+    role: "",
+    status: "",
+    includeStopped: false,
+  });
   const [filters, setFilters] = useState<api.BusinessUserFilters>({
     page: 1,
     size: pageSize,
     sort: "name",
     direction: "ASC",
   });
-  const [roleOptions, setRoleOptions] = useState<{roleId:string;name:string}[]>([]);
+  const [roleOptions, setRoleOptions] = useState<
+    { roleId: string; name: string }[]
+  >([]);
   const [roleError, setRoleError] = useState<unknown>();
   async function loadRoles() {
     setRoleError(undefined);
-    try { setRoleOptions(await api.getManagedUserRoleOptions()); }
-    catch(e) { setRoleError(e); }
+    try {
+      setRoleOptions(await api.getManagedUserRoleOptions());
+    } catch (e) {
+      setRoleError(e);
+    }
   }
   useEffect(() => {
     void loadRoles();
-    const refresh = () => { void loadRoles(); };
+    const refresh = () => {
+      void loadRoles();
+    };
     window.addEventListener("sicost:configuration-committed", refresh);
-    return () => window.removeEventListener("sicost:configuration-committed", refresh);
+    return () =>
+      window.removeEventListener("sicost:configuration-committed", refresh);
   }, []);
   const [data, setData] = useState<api.BusinessUsersPage>(),
     [loading, setLoading] = useState(true),
@@ -68,11 +83,15 @@ export function BusinessUsersScreen({
   const requestSequence = useRef(0);
   const registrationKey = useRef<string>();
   useEffect(() => {
-    if (registration && registration.key !== registrationKey.current) {
+    if (
+      canRegister &&
+      registration &&
+      registration.key !== registrationKey.current
+    ) {
       registrationKey.current = registration.key;
       setForm({ registration });
     }
-  }, [registration?.key]);
+  }, [registration?.key, canRegister]);
   async function load() {
     const sequence = ++requestSequence.current;
     setLoading(true);
@@ -213,22 +232,33 @@ export function BusinessUsersScreen({
       <p className="businessusers-mobile">이 화면은 PC에서 사용해 주세요.</p>
       <div className="businessusers-desktop">
         <p className="sicost-banner sicost-tone-info">
-          권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.
+          저장된 역할·메뉴 권한과 담당 범위를 적용합니다.
         </p>
         <div className="businessusers-toolbar">
           <h2>사용자</h2>
-          <button
-            className="sicost-primary"
-            data-testid="business-user-register"
-            onClick={() => {
-              setNotice("");
-              setForm({});
-            }}
-          >
-            등록
-          </button>
+          {canRegister && (
+            <button
+              className="sicost-primary"
+              data-testid="business-user-register"
+              onClick={() => {
+                setNotice("");
+                setForm({});
+              }}
+            >
+              등록
+            </button>
+          )}
         </div>
-        {roleError != null && <ErrorBanner message={roleError instanceof Error ? roleError.message : "역할을 불러오지 못했습니다."} onRetry={() => void loadRoles()} />}
+        {roleError != null && (
+          <ErrorBanner
+            message={
+              roleError instanceof Error
+                ? roleError.message
+                : "역할을 불러오지 못했습니다."
+            }
+            onRetry={() => void loadRoles()}
+          />
+        )}
         <FilterBar
           testId="business-users-filter-form"
           resetTestId="business-users-reset"
@@ -241,12 +271,14 @@ export function BusinessUsersScreen({
             <select
               data-testid="business-users-role-filter"
               value={draft.role}
-              onChange={(e) =>
-                setDraft({ ...draft, role: e.target.value })
-              }
+              onChange={(e) => setDraft({ ...draft, role: e.target.value })}
             >
               <option value="">전체</option>
-              {roleOptions.map(option => <option key={option.roleId} value={option.roleId}>{option.name}</option>)}
+              {roleOptions.map((option) => (
+                <option key={option.roleId} value={option.roleId}>
+                  {option.name}
+                </option>
+              ))}
             </select>
           </label>
           <label className="sicost-field">
@@ -262,7 +294,16 @@ export function BusinessUsersScreen({
               <option value="STOP">중지</option>
             </select>
           </label>
-          <label className="sicost-field"><input type="checkbox" checked={draft.includeStopped} onChange={e => setDraft({...draft, includeStopped: e.target.checked})} />사용 중지 포함</label>
+          <label className="sicost-field">
+            <input
+              type="checkbox"
+              checked={draft.includeStopped}
+              onChange={(e) =>
+                setDraft({ ...draft, includeStopped: e.target.checked })
+              }
+            />
+            사용 중지 포함
+          </label>
           <label className="sicost-field businessusers-search">
             이름
             <input
@@ -275,27 +316,37 @@ export function BusinessUsersScreen({
           </label>
         </FilterBar>
         <div className="businessusers-toolbar">
-          {!Object.keys(selected).length && <span>총 {data?.total ?? 0}건</span>}
-        <UserBulkStatusToolbar
-          onClear={() => setSelected({})}
-          onSelectAll={async () => {
-            try {
-              const all: Record<string, api.BusinessUser> = {};
-              for(let page=1; ; page++) {
-                const result = await api.getBusinessUsers({...filters,page,size:100});
-                result.items.forEach(row => {all[row.userId]=row;});
-                if(page*100 >= result.total || !result.items.length) break;
+          {!Object.keys(selected).length && (
+            <span>총 {data?.total ?? 0}건</span>
+          )}
+          <UserBulkStatusToolbar
+            onClear={() => setSelected({})}
+            onSelectAll={async () => {
+              try {
+                const all: Record<string, api.BusinessUser> = {};
+                for (let page = 1; ; page++) {
+                  const result = await api.getBusinessUsers({
+                    ...filters,
+                    page,
+                    size: 100,
+                  });
+                  result.items.forEach((row) => {
+                    all[row.userId] = row;
+                  });
+                  if (page * 100 >= result.total || !result.items.length) break;
+                }
+                setSelected(all);
+              } catch (e) {
+                setError(e);
               }
-              setSelected(all);
-            } catch(e) { setError(e); }
-          }}
-          selected={Object.values(selected)}
-          onCommitted={async () => {
-            await load();
-            setSelected({});
-            await onCommitted?.();
-          }}
-        />
+            }}
+            selected={Object.values(selected)}
+            onCommitted={async () => {
+              await load();
+              setSelected({});
+              await onCommitted?.();
+            }}
+          />
 
           <div>
             {onColumnsChange && (
@@ -424,7 +475,11 @@ export function BusinessUsersScreen({
           onSaved={async (result) => {
             setForm(undefined);
             setDetail(result.user.userId);
-            setNotice(form.user ? result.message : "등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.");
+            setNotice(
+              form.user
+                ? result.message
+                : "등록했습니다. 로그인용 비밀번호 발급은 인증 기능 적용 시 제공합니다.",
+            );
             api.notifyBusinessUsersCommitted();
             try {
               await Promise.all([load(), Promise.resolve(onCommitted?.())]);

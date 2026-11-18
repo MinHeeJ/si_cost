@@ -1,6 +1,7 @@
 import {
   ApiError,
   request,
+  authenticatedFetch,
   type ApiEnvelope,
   type ApiErrorBody,
 } from "../../shared/api";
@@ -50,7 +51,7 @@ async function send<T>(
   );
   if (uploadId !== undefined) body.append("uploadId", String(uploadId));
   if (previewToken !== undefined) body.append("previewToken", previewToken);
-  const response = await fetch(path, {
+  const response = await authenticatedFetch(path, {
     method: "POST",
     body,
     redirect: "error",

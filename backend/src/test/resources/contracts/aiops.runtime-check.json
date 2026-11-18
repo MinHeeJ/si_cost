@@ -13,7 +13,7 @@
       ]
     }
   },
-  "auth": { "required": false },
+  "auth": { "required": true },
   "first_menu": {
     "route": "/UI-27",
     "operation_id": "getCodeGroups",

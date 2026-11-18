@@ -46,8 +46,8 @@ function ProfitabilityEntry({ children, ...slots }: EntryProps) {
             renderExport={(query) => (
               <ProfitabilityExportButton query={query} />
             )}
-            renderCalculationGuide={(data, query) => (
-              <ProfitabilityCalculationGuide data={data} view={query.view} />
+            renderCalculationGuide={(data) => (
+              <ProfitabilityCalculationGuide data={data} />
             )}
             {...slots}
           />

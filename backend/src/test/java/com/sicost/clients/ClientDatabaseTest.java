@@ -52,7 +52,7 @@ class ClientDatabaseTest {
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,CommitInvalidation.class,MasterIdService.class,AccountCipher.class,ClientRepository.class,ClientService.class);
         context.register(com.sicost.clientsops.ClientActionsRepository.class,com.sicost.clientsops.ClientActionsService.class,
                 com.sicost.clientsops.ClientStatusService.class,com.sicost.clientsops.ClientBulkStatusService.class);
-        context.refresh();service=context.getBean(ClientService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(ClientService.class);
     }
     @AfterEach void close(){if(context!=null)context.close();}
     Save request(Map<String,Object> body,boolean edit){return ClientInput.parse(json.valueToTree(body),edit);}

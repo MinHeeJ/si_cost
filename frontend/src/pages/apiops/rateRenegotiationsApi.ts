@@ -1,4 +1,9 @@
-import { ApiError, request, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  request,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { compareDecimal, type AmountUnit } from "../../shared/format";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 
@@ -113,7 +118,7 @@ export async function downloadRenegotiations(
     sort,
     direction,
   } = query;
-  const response = await fetch("/api/exports/master-data", {
+  const response = await authenticatedFetch("/api/exports/master-data", {
     method: "POST",
     redirect: "error",
     headers: {

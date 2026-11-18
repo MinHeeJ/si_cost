@@ -5,6 +5,7 @@ import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { FinancialUploadActions } from "../b2/FinancialUploadDialog";
@@ -32,9 +33,16 @@ export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   type Entry = { section?: string; month?: string; targetMonth?: string };
   const savedEntry = useRef<{ key: string; value: Entry }>();
   const routeEntry = location.state as Entry | null;
-  if (location.pathname === "/UI-10" && routeEntry?.month && savedEntry.current?.key !== location.key)
+  if (
+    location.pathname === "/UI-10" &&
+    routeEntry?.month &&
+    savedEntry.current?.key !== location.key
+  )
     savedEntry.current = { key: location.key, value: routeEntry };
-  const incoming = location.pathname === "/UI-10" ? routeEntry ?? savedEntry.current?.value : savedEntry.current?.value;
+  const incoming =
+    location.pathname === "/UI-10"
+      ? (routeEntry ?? savedEntry.current?.value)
+      : savedEntry.current?.value;
   const section = incoming?.section;
   const openAdjustments = section === "adjustments";
   return (
@@ -61,6 +69,8 @@ export function FinancialItemsEditor({
   initialMonth,
   initialAdjustmentTargetMonth,
 }: FinancialItemsScreenProps) {
+  const canUpdate = usePermission("UI-10", "UPD"),
+    canTaxConfirm = usePermission("UI-09", "CNFM");
   const [month, setMonth] = useState<string | undefined>(initialMonth);
   const state = useFinancialEditor(month, onDirtyChange),
     { editor, draft } = state;
@@ -210,7 +220,7 @@ export function FinancialItemsEditor({
         )}
       </section>
     );
-  const disabled = !editor.editable || state.pending;
+  const disabled = !canUpdate || !editor.editable || state.pending;
   const originals = (collection: api.Collection) =>
     api.draftRows(editor[collection], collection);
   const changed = (collection: api.Collection) =>
@@ -301,7 +311,7 @@ export function FinancialItemsEditor({
       collection={collection}
       rows={draft[collection]}
       originals={originals(collection)}
-      readOnly={!editor.editable}
+      readOnly={!canUpdate || !editor.editable}
       pending={state.pending}
       month={editor.month}
       targets={editor.adjustmentTargetMonths}
@@ -1055,26 +1065,28 @@ export function FinancialItemsEditor({
           refreshKey={editor.revision}
         />
       )}
-      <footer className="financial-footer">
-        <small>금액 입력은 원 정수 · 두 탭을 함께 저장합니다.</small>
-        <button
-          type="button"
-          data-testid="financial-cancel"
-          disabled={state.pending || !state.dirty}
-          onClick={state.discard}
-        >
-          취소
-        </button>
-        <button
-          type="button"
-          className="sicost-primary"
-          data-testid="financial-save"
-          disabled={disabled || !state.dirty}
-          onClick={() => void state.save()}
-        >
-          저장
-        </button>
-      </footer>
+      {canUpdate && (
+        <footer className="financial-footer">
+          <small>금액 입력은 원 정수 · 두 탭을 함께 저장합니다.</small>
+          <button
+            type="button"
+            data-testid="financial-cancel"
+            disabled={state.pending || !state.dirty}
+            onClick={state.discard}
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            className="sicost-primary"
+            data-testid="financial-save"
+            disabled={disabled || !state.dirty}
+            onClick={() => void state.save()}
+          >
+            저장
+          </button>
+        </footer>
+      )}
       {guard.request && (
         <Dialog
           open
@@ -1115,7 +1127,7 @@ export function FinancialItemsEditor({
           month={editor.month}
           today={editor.today}
           cashBaseMonth={editor.cashBaseMonth}
-          editable={editor.editable}
+          editable={canTaxConfirm && editor.editable}
           onClose={() => setPayment(undefined)}
           onSaved={async () => {
             await refresh();

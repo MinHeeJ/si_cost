@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(UploadIssuesController.class)
 @ContextConfiguration(classes=UploadIssuesController.class)
 @Import({UploadIssuesService.class,UploadIssuesRepository.class,ExcelExportService.class,CurrentUserProvider.class,AccessLogWriter.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class,B5IssuesContractTest.Time.class})

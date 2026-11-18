@@ -24,6 +24,8 @@ class NotificationPublisherTest {
     final NotificationRecipients.Recipient recipient=new NotificationRecipients.Recipient("pm","담당",null,List.of("PM"));
     final Event event=new Event("UPLD:123:APPLIED","UPLD_DONE","업로드 반영 완료",new Link("UI-13","123"),null);
     @BeforeEach void setup() {
+        var policy=mock(com.sicost.permission.NotificationRecipientPolicy.class);publisher.setRecipientPolicy(policy);
+        when(policy.review(event,"pm")).thenReturn(event);
         when(mapper.activeUsers()).thenReturn(List.of(new NotificationRecipients.Role("pm","현재 담당","current@example.test","PM")));
         when(mapper.registeredScreen("UI-13")).thenReturn(true);
         when(mapper.reserveSystem(any())).thenReturn(1);

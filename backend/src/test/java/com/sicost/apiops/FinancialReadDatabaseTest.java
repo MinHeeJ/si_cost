@@ -44,7 +44,7 @@ class FinancialReadDatabaseTest {
         ObjectMapper json=JsonMapper.builder().findAndAddModules().build();context.registerBean(ObjectMapper.class,()->json);
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2080-12-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(FinancialReadMapper.class,()->session.getMapper(FinancialReadMapper.class));context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
-        context.register(Transactions.class,CurrentUserProvider.class,FinancialReadRepository.class,FinancialReadService.class);context.refresh();service=context.getBean(FinancialReadService.class);
+        context.register(Transactions.class,CurrentUserProvider.class,FinancialReadRepository.class,FinancialReadService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(FinancialReadService.class);
         mvc=MockMvcBuilders.standaloneSetup(new FinancialReadController(service)).setControllerAdvice(new ApiExceptionHandler()).setMessageConverters(new MappingJackson2HttpMessageConverter(json)).addFilters(new RequestIdFilter()).build();
     }
     @AfterEach void close(){if(context!=null)context.close();}

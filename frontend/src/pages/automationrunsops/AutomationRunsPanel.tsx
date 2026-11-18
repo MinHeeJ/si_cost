@@ -67,23 +67,28 @@ function AutomationRunsContent({ onClose, onOpenReceivables }: Props) {
       request.current?.abort();
     };
   }, []);
-  const load = useCallback(async () => {
-    request.current?.abort();
-    const current = new AbortController();
-    request.current = current;
-    setLoading(true);
-    try {
-      const result = await getAutomationRuns({ page, size }, current.signal);
-      if (!current.signal.aborted && mounted.current) {
-        setData(result);
-        setError(undefined);
+  const load = useCallback(
+    async (background = false) => {
+      request.current?.abort();
+      const current = new AbortController();
+      request.current = current;
+      setLoading(true);
+      try {
+        const result = await (background
+          ? getAutomationRuns({ page, size }, current.signal, true)
+          : getAutomationRuns({ page, size }, current.signal));
+        if (!current.signal.aborted && mounted.current) {
+          setData(result);
+          setError(undefined);
+        }
+      } catch (failure) {
+        if (!current.signal.aborted && mounted.current) setError(failure);
+      } finally {
+        if (!current.signal.aborted && mounted.current) setLoading(false);
       }
-    } catch (failure) {
-      if (!current.signal.aborted && mounted.current) setError(failure);
-    } finally {
-      if (!current.signal.aborted && mounted.current) setLoading(false);
-    }
-  }, [page, size]);
+    },
+    [page, size],
+  );
   useEffect(() => {
     void load();
     return () => request.current?.abort();
@@ -91,7 +96,7 @@ function AutomationRunsContent({ onClose, onOpenReceivables }: Props) {
   useEffect(() => {
     if (loading || error || !data?.items.some((r) => r.state === "RUNNING"))
       return;
-    const timer = window.setTimeout(() => void load(), 2000);
+    const timer = window.setTimeout(() => void load(true), 2000);
     return () => window.clearTimeout(timer);
   }, [data, loading, error, load]);
   const run = async (jobCode: AutomationJobCode) => {
@@ -158,7 +163,17 @@ function AutomationRunsContent({ onClose, onOpenReceivables }: Props) {
             rowKey={(r) => `${r.jobCode}-${r.runDate}`}
             loading={loading}
             empty="자동 처리 실행 기록이 없습니다."
-            emptyAction={<button type="button" onClick={() => { setPage(1); void load(); }}>조건 초기화</button>}
+            emptyAction={
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  void load();
+                }}
+              >
+                조건 초기화
+              </button>
+            }
             page={page}
             size={size}
             total={data?.total ?? 0}

@@ -253,7 +253,7 @@ export function WorkforceCalendar({
   const lookup = (key: string, code: string) =>
     options[key]?.find((v) => v.code === code)?.name ?? code;
   async function download() {
-    if (pending || window.matchMedia?.("(max-width: 767px)").matches) return;
+    if (pending || window.matchMedia?.("(max-width: 767px)")?.matches) return;
     setPending(true);
     setNotice("");
     try {

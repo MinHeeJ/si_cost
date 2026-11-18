@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(MenuManagementController.class)
 @ContextConfiguration(classes=MenuManagementController.class)
 @Import({MenuManagementService.class,MenuManagementRepository.class,WriteCoordinator.class,RevisionService.class,
@@ -76,7 +77,7 @@ class MenuManagementContractTest {
         mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items.length()").value(5))
             .andExpect(jsonPath("$.data.items[2].use").value(false)).andExpect(jsonPath("$.data.items[4].locked").value(true))
             .andExpect(jsonPath("$.data.items[0].regUserId").doesNotExist()).andExpect(jsonPath("$.data.revision").value(before))
-            .andExpect(jsonPath("$.data.developmentMode").value(true)).andExpect(jsonPath("$.data.accessEnforcement").value(false));
+            .andExpect(jsonPath("$.data.developmentMode").value(false)).andExpect(jsonPath("$.data.accessEnforcement").value(true));
         assertThat(revision()).isEqualTo(before);verify(users).currentUser();noWrites();
     }
     @Test void emptyTreeIsReadOnly() throws Exception {rows.clear();mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());noWrites();}

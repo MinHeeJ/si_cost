@@ -80,8 +80,8 @@ class CodeGroupDatabaseTest {
     }
     @Test void concurrentSameNameSerializesAndOnlyOneGroupCommits() throws Exception {
         String first=key(),second=key(),name="동시 등록 "+key();CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->createAfter(start,new Create(first,name)));
-        var b=CompletableFuture.supplyAsync(()->createAfter(start,new Create(second,name)));
+        var a=asCaller(()->createAfter(start,new Create(first,name)));
+        var b=asCaller(()->createAfter(start,new Create(second,name)));
         start.countDown();assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("CREATED","DUPLICATE_GROUP_NAME");
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_code_grp WHERE code_grp_nm=?",Long.class,name)).isEqualTo(1);
     }
@@ -94,7 +94,7 @@ class CodeGroupDatabaseTest {
         Save first=CodeGroupInput.save(json.readTree("{\"expectedRevision\":\""+revision+"\",\"changes\":[{\"code\":\"A\",\"isNew\":false,\"name\":\"선행\"}]}"));
         Save second=CodeGroupInput.save(json.readTree("{\"expectedRevision\":\""+revision+"\",\"changes\":[{\"code\":\"A\",\"isNew\":false,\"name\":\"후행\"}]}"));
         CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->saveAfter(start,group,first));var b=CompletableFuture.supplyAsync(()->saveAfter(start,group,second));start.countDown();
+        var a=asCaller(()->saveAfter(start,group,first));var b=asCaller(()->saveAfter(start,group,second));start.countDown();
         assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("SAVED","STALE_WRITE");
         assertThat(history(group)).isEqualTo(before+1);
     }
@@ -129,4 +129,10 @@ class CodeGroupDatabaseTest {
         assertThat(service.save(group,request(group,"[{\"code\":\"A\",\"isNew\":false,\"name\":\"시험 코드\"}]")).changed()).isFalse();
         assertThat(sql.queryForMap("SELECT * FROM tb_sy_code WHERE code_grp_id=?",group)).isEqualTo(before);assertThat(history(group)).isEqualTo(count);
     }
+    <T> CompletableFuture<T> asCaller(java.util.function.Supplier<T> work) {
+        var executor=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(
+            ForkJoinPool.commonPool(),org.springframework.security.core.context.SecurityContextHolder.getContext());
+        return CompletableFuture.supplyAsync(work,executor);
+    }
+
 }

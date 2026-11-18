@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.sicost.operatingstandards.OperatingStandardsDtos.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(OperatingStandardsController.class)
 @org.springframework.test.context.ContextConfiguration(classes=com.sicost.common.CostManagementApplication.class)
 @Import({OperatingStandardsService.class,RevisionService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

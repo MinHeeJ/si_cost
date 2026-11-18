@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -26,7 +26,10 @@ import { SharedApplication, SharedRoutes } from "./SharedApplication";
 import { screenRegistry } from "./screenRegistry";
 import * as api from "./sharedApi";
 vi.mock("./sharedApi");
-vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
+vi.mock("../dashboardops/dashboardApi", async (original) => ({
+  ...(await original<typeof import("../dashboardops/dashboardApi")>()),
+  getDashboard: vi.fn(async () => dashboardFixture()),
+}));
 const context = {
   currentDate: "2026-11-10",
   currentMonth: "2026-11",
@@ -489,7 +492,9 @@ describe("공식 화면과 공통 틀", () => {
       ).toBeInTheDocument();
     } else if (id === "UI-16") {
       expect(await screen.findByTestId("dashboard-screen")).toBeVisible();
-      await waitFor(() => expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible());
+      await waitFor(() =>
+        expect(screen.getByTestId("dashboard-metric-sales")).toBeVisible(),
+      );
     } else if (id === "UI-10") {
       expect(screen.getByTestId("financial-editor")).toBeInTheDocument();
     } else if (id === "UI-04" || id === "UI-31") {
@@ -506,7 +511,9 @@ describe("공식 화면과 공통 틀", () => {
       expect(screen.getByRole("textbox", { name: "질문" })).toBeVisible();
       expect(screen.getByRole("region", { name: "AI 대화" })).toBeVisible();
     } else if (id === "UI-24" || id === "UI-25") {
-      expect(screen.getByTestId(id === "UI-24" ? "roles-screen" : "menus-screen")).toBeVisible();
+      expect(
+        screen.getByTestId(id === "UI-24" ? "roles-screen" : "menus-screen"),
+      ).toBeVisible();
     } else if (id !== "UI-27")
       expect(
         screen
@@ -615,27 +622,83 @@ describe("변경 이력", () => {
     await screen.findByText("조회된 변경 이력이 없습니다.");
   });
 });
-it.each(["UI-12", "UI-13", "UI-19"])("%s one-time close month is read without saving PERIOD", async (screenId) => {
-  const changed = vi.fn();
-  window.addEventListener("sicost:screen-period-changed", changed);
-  try {
-    render(<ScreenPeriodBar screenId={screenId} initialMonth="2026-05" />);
-    await waitFor(() => expect(changed).toHaveBeenCalled());
-    const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
-    expect(detail.value).toEqual(screenId === "UI-19" ? { type: "YEAR_MONTH", value: "2026-05" } : { type: "YEAR", value: "2026" });
-    expect(api.putSharedPreference).not.toHaveBeenCalled();
-  } finally { window.removeEventListener("sicost:screen-period-changed", changed); }
-});
+it.each(["UI-12", "UI-13", "UI-19"])(
+  "%s one-time close month is read without saving PERIOD",
+  async (screenId) => {
+    const changed = vi.fn();
+    window.addEventListener("sicost:screen-period-changed", changed);
+    try {
+      render(<ScreenPeriodBar screenId={screenId} initialMonth="2026-05" />);
+      await waitFor(() => expect(changed).toHaveBeenCalled());
+      const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
+      expect(detail.value).toEqual(
+        screenId === "UI-19"
+          ? { type: "YEAR_MONTH", value: "2026-05" }
+          : { type: "YEAR", value: "2026" },
+      );
+      expect(api.putSharedPreference).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("sicost:screen-period-changed", changed);
+    }
+  },
+);
 
-it.each(["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"])("%s 대시보드의 선택월 문맥을 일회 적용하고 설정에 저장하지 않는다", async (screenId) => {
- vi.mocked(api.getPeriodContext).mockResolvedValue({ ...context, cashBaseMonth: "2025-01" });
- vi.mocked(api.getSharedPreferences).mockResolvedValue({ items: [{ type: "PERIOD", key: screenId, value: screenId === "UI-18" ? {type:"YEAR_CUM",year:"2025",month:"2025-05"} : screenId === "UI-14" ? {type:"YEAR_MONTH",value:"2025-05"} : {type:"YEAR",value:"2025"}, stored:true, revision:"preserved-period" }] });
- const changed = vi.fn(); window.addEventListener("sicost:screen-period-changed", changed);
- try {
-  render(<MemoryRouter initialEntries={[{pathname:`/${screenId}`,state:{fromDashboard:true,month:"2026-06"}}]}><SharedScreenContext.Provider value={{menus,favorites:[],star:vi.fn(),pending:false}}><SharedScreenFrame screenId={screenId}><p>대상</p></SharedScreenFrame></SharedScreenContext.Provider></MemoryRouter>);
-  await waitFor(() => expect(changed).toHaveBeenCalled());
-  const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
-  expect(detail.value).toEqual(["UI-01", "UI-05", "UI-21", "UI-28"].includes(screenId) ? {type:"YEAR",value:"2026"} : screenId === "UI-18" ? {type:"YEAR_CUM",year:"2026",month:"2026-06"} : {type:"YEAR_MONTH",value:"2026-06"});
-  expect(api.putSharedPreference).not.toHaveBeenCalled();
- } finally { window.removeEventListener("sicost:screen-period-changed", changed); }
-});
+it.each(["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"])(
+  "%s 대시보드의 선택월 문맥을 일회 적용하고 설정에 저장하지 않는다",
+  async (screenId) => {
+    vi.mocked(api.getPeriodContext).mockResolvedValue({
+      ...context,
+      cashBaseMonth: "2025-01",
+    });
+    vi.mocked(api.getSharedPreferences).mockResolvedValue({
+      items: [
+        {
+          type: "PERIOD",
+          key: screenId,
+          value:
+            screenId === "UI-18"
+              ? { type: "YEAR_CUM", year: "2025", month: "2025-05" }
+              : screenId === "UI-14"
+                ? { type: "YEAR_MONTH", value: "2025-05" }
+                : { type: "YEAR", value: "2025" },
+          stored: true,
+          revision: "preserved-period",
+        },
+      ],
+    });
+    const changed = vi.fn();
+    window.addEventListener("sicost:screen-period-changed", changed);
+    try {
+      render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: `/${screenId}`,
+              state: { fromDashboard: true, month: "2026-06" },
+            },
+          ]}
+        >
+          <SharedScreenContext.Provider
+            value={{ menus, favorites: [], star: vi.fn(), pending: false }}
+          >
+            <SharedScreenFrame screenId={screenId}>
+              <p>대상</p>
+            </SharedScreenFrame>
+          </SharedScreenContext.Provider>
+        </MemoryRouter>,
+      );
+      await waitFor(() => expect(changed).toHaveBeenCalled());
+      const detail = (changed.mock.calls.at(-1)![0] as CustomEvent).detail;
+      expect(detail.value).toEqual(
+        ["UI-01", "UI-05", "UI-21", "UI-28"].includes(screenId)
+          ? { type: "YEAR", value: "2026" }
+          : screenId === "UI-18"
+            ? { type: "YEAR_CUM", year: "2026", month: "2026-06" }
+            : { type: "YEAR_MONTH", value: "2026-06" },
+      );
+      expect(api.putSharedPreference).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("sicost:screen-period-changed", changed);
+    }
+  },
+);

@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import {
   act,
   fireEvent,
@@ -5,7 +6,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { FinancialItemsEditor } from "./FinancialItemsScreen";
@@ -34,7 +35,7 @@ const failure = (
   );
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   data = financialEditorFixture();
   fetcher.mockImplementation(async (url, options) => {
     const path = String(url);

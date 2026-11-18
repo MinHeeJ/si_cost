@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createB9Validation,
@@ -18,7 +19,7 @@ it("검사와 반영은 파일·year·uploadId만 FormData로 전송하고 Conte
         ),
       ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const file = new File(["workbook"], "selected.xlsx");
   await createB9Validation(file, 2027);
   const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
@@ -55,7 +56,7 @@ it("422 API오류의 details와 requestId를 보존하고 자동재시도하지 
   const fetcher = vi
     .fn()
     .mockResolvedValue(new Response(JSON.stringify(body), { status: 422 }));
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     saveB9Apply(new File(["x"], "a.xlsx"), 71, 2026),
   ).rejects.toMatchObject({ status: 422, body });
@@ -79,15 +80,14 @@ it("결과는 실제 선택 uploadId 경로로 조회하고 양식에는 year �
         },
       }),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getUploadResult(82);
   await getB9Template();
   expect(fetcher.mock.calls[0][0]).toBe("/api/uploads/82/result");
   expect(fetcher.mock.calls[1][0]).toBe("/api/excel/B9/template");
 });
 it("실패 JSON을 파일로 저장하지 않는다", async () => {
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({

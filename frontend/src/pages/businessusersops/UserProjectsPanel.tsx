@@ -7,6 +7,7 @@ import type { BusinessUser } from "../businessusers/businessUsersApi";
 import { notifyBusinessUsersCommitted } from "./businessUserOptionsApi";
 import { UserProjectDialog, type UserProjectChoice } from "./UserProjectDialog";
 import * as api from "./userProjectsApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./userProjects.css";
 
 const labels: Record<
@@ -25,6 +26,7 @@ export function UserProjectsPanel({
   user: BusinessUser;
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const canUpdate = usePermission("UI-23", "UPD");
   const [rows, setRows] = useState<UserProjectChoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>();
@@ -71,6 +73,7 @@ export function UserProjectsPanel({
     action: () => Promise<api.UserProjectPmResult>,
     close = false,
   ) {
+    if (!canUpdate) return;
     try {
       await commit(
         async () => {
@@ -120,24 +123,25 @@ export function UserProjectsPanel({
     {
       id: "detach",
       label: "작업",
-      render: (row) => (
-        <button
-          type="button"
-          data-testid={`user-project-detach-${row.project.id}`}
-          disabled={pending || loading}
-          onClick={() => {
-            void save(() =>
-              api.detachUserProject(
-                row.project.id,
-                user.userId,
-                row.pm.revision,
-              ),
-            ).catch(() => {});
-          }}
-        >
-          해제
-        </button>
-      ),
+      render: (row) =>
+        canUpdate ? (
+          <button
+            type="button"
+            data-testid={`user-project-detach-${row.project.id}`}
+            disabled={pending || loading}
+            onClick={() => {
+              void save(() =>
+                api.detachUserProject(
+                  row.project.id,
+                  user.userId,
+                  row.pm.revision,
+                ),
+              ).catch(() => {});
+            }}
+          >
+            해제
+          </button>
+        ) : null,
     },
   ];
   return (
@@ -148,19 +152,21 @@ export function UserProjectsPanel({
     >
       <div className="businessusers-toolbar">
         <h3>담당 프로젝트</h3>
-        <button
-          type="button"
-          data-testid="user-project-add"
-          disabled={
-            pending ||
-            adding ||
-            user.status !== "USE" ||
-            !user.businessRoleIds.includes("PM")
-          }
-          onClick={() => setAdding(true)}
-        >
-          담당 프로젝트 추가
-        </button>
+        {canUpdate && (
+          <button
+            type="button"
+            data-testid="user-project-add"
+            disabled={
+              pending ||
+              adding ||
+              user.status !== "USE" ||
+              !user.businessRoleIds.includes("PM")
+            }
+            onClick={() => setAdding(true)}
+          >
+            담당 프로젝트 추가
+          </button>
+        )}
       </div>
       <p className="user-projects-help">
         한 사용자는 여러 프로젝트를 담당할 수 있으며 프로젝트 PM은 0~1명입니다.
@@ -202,7 +208,7 @@ export function UserProjectsPanel({
           empty="담당 프로젝트가 없습니다."
         />
       )}
-      {adding && (
+      {canUpdate && adding && (
         <UserProjectDialog
           user={user}
           pending={pending}

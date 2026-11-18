@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -442,12 +448,41 @@ it("stale preview requires a GET before any new command and never silently confi
   );
 });
 
-function LinkedLocation() { const location = useLocation(); return <p data-testid="linked-context">{JSON.stringify(location.state)}</p>; }
+function LinkedLocation() {
+  const location = useLocation();
+  return <p data-testid="linked-context">{JSON.stringify(location.state)}</p>;
+}
 it("allows past operating-year MM read-only navigation without changing destination PERIOD", async () => {
-  vi.mocked(api.getMonthCloses).mockResolvedValue({ ...data(), checks: checks.map(c => c.code === "MM_OVER" ? { ...c, linkScreenId: "UI-12" } : c) });
-  render(<MemoryRouter initialEntries={["/UI-14"]}><Routes><Route path="/UI-14" element={<MonthCloseScreen />} /><Route path="/UI-12" element={<LinkedLocation />} /></Routes></MemoryRouter>);
-  act(() => window.dispatchEvent(new CustomEvent("sicost:screen-period-changed", { detail: { screenId:"UI-14",value:{type:"YEAR_MONTH",value:"2026-01"},context:{currentMonth:"2027-07",cashBaseMonth:"2026-01"} } })));
+  vi.mocked(api.getMonthCloses).mockResolvedValue({
+    ...data(),
+    checks: checks.map((c) =>
+      c.code === "MM_OVER" ? { ...c, linkScreenId: "UI-12" } : c,
+    ),
+  });
+  render(
+    <MemoryRouter initialEntries={["/UI-14"]}>
+      <Routes>
+        <Route path="/UI-14" element={<MonthCloseScreen />} />
+        <Route path="/UI-12" element={<LinkedLocation />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+  act(() =>
+    window.dispatchEvent(
+      new CustomEvent("sicost:screen-period-changed", {
+        detail: {
+          screenId: "UI-14",
+          value: { type: "YEAR_MONTH", value: "2026-01" },
+          context: { currentMonth: "2027-07", cashBaseMonth: "2026-01" },
+        },
+      }),
+    ),
+  );
   await userEvent.click(await screen.findByTestId("month-close-link-mm-over"));
-  expect(await screen.findByTestId("linked-context")).toHaveTextContent('"month":"2026-01"');
-  expect(screen.getByTestId("linked-context")).toHaveTextContent('"fromMonthClose":true');
+  expect(await screen.findByTestId("linked-context")).toHaveTextContent(
+    '"month":"2026-01"',
+  );
+  expect(screen.getByTestId("linked-context")).toHaveTextContent(
+    '"fromMonthClose":true',
+  );
 });

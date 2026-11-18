@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 
@@ -167,7 +168,7 @@ describe("프로젝트 분석 API 등록", () => {
         .mockResolvedValue(
           new Response(JSON.stringify({ success: true, meta: {}, data })),
         );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       expect(await test.call()).toEqual(data);
       expect(fetcher).toHaveBeenCalledOnce();
       const [path, options] = fetcher.mock.calls[0] as [string, RequestInit];
@@ -190,7 +191,7 @@ describe("프로젝트 분석 API 등록", () => {
     const fetcher = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).rejects.toMatchObject({ status: 409, body });
     expect(fetcher).toHaveBeenCalledOnce();
   });
@@ -210,7 +211,7 @@ describe("프로젝트 분석 API 등록", () => {
           },
         }),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const result =
         view === "projectCost"
           ? await api.getProjectCostExport({ month: "2026-11", page: 2 })

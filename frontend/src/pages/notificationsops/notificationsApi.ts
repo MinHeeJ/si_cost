@@ -27,15 +27,19 @@ export type NotificationPage = {
 };
 export type NotificationUnreadCount = {
   unreadCount: number;
-  receivableCount: number;
-  currentMonthUnclosed: boolean;
+  receivableCount?: number;
+  currentMonthUnclosed?: boolean;
   observedAt: string;
 };
-export const getNotificationUnreadCount = () =>
-  request<NotificationUnreadCount>("/api/notifications/unread-count");
-export const getNotifications = (page = 1) =>
+export const getNotificationUnreadCount = (background = false) =>
+  request<NotificationUnreadCount>(
+    "/api/notifications/unread-count",
+    background ? { headers: { "X-Background-Request": "true" } } : {},
+  );
+export const getNotifications = (page = 1, background = false) =>
   request<NotificationPage>(
     `/api/notifications?page=${page}&size=20&sort=notifiedAt,desc;id,desc`,
+    background ? { headers: { "X-Background-Request": "true" } } : {},
   );
 export const saveNotificationRead = (id: string) =>
   request<{ notification: NotificationItem; changed: boolean }>(

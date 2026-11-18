@@ -44,7 +44,7 @@ class DeveloperDatabaseTest {
         context.registerBean(com.sicost.developersops.DeveloperActionsMapper.class,()->session.getMapper(com.sicost.developersops.DeveloperActionsMapper.class));
         context.register(com.sicost.developersops.DeveloperActionsRepository.class);
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,DeveloperAggregateRevision.class,MasterIdService.class,AddressRepository.class,AddressService.class,DeveloperRepository.class,DeveloperQueryService.class,DeveloperService.class);
-        context.refresh();service=context.getBean(DeveloperService.class);queries=context.getBean(DeveloperQueryService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(DeveloperService.class);queries=context.getBean(DeveloperQueryService.class);
     }
     @AfterEach void close(){if(context!=null)context.close();}
     Map<String,Object> body(){Map<String,Object> b=new LinkedHashMap<>();b.put("name","시험개발자");b.put("employeeType","FT");b.put("companyId",null);b.put("jobCode",sql.queryForObject("SELECT code FROM tb_sy_code WHERE code_grp_id='JOB' AND use_yn='Y' AND del_yn='N' ORDER BY code LIMIT 1",String.class));b.put("directClass","DRCT");b.put("partId",sql.queryForObject("SELECT part_id FROM tb_bs_part WHERE use_yn='Y' ORDER BY part_id LIMIT 1",String.class));return b;}

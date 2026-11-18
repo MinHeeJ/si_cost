@@ -174,7 +174,7 @@ export function WorkforceForecastPanel({
   const [downloadError, setDownloadError] = useState<unknown>();
   const [downloaded, setDownloaded] = useState(false);
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   useEffect(() => {
     const media = window.matchMedia?.("(max-width: 767px)");
@@ -216,7 +216,7 @@ export function WorkforceForecastPanel({
       disabled ||
       loading ||
       !data ||
-      window.matchMedia?.("(max-width: 767px)").matches
+      window.matchMedia?.("(max-width: 767px)")?.matches
     )
       return;
     downloadActive.current = true;

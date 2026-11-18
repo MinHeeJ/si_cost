@@ -19,6 +19,9 @@ public class DunningDeliveryService {
     private final RevisionService revisions;
     private final DunningDeliveryMail mail;
     private final Clock clock;
+    private com.sicost.permission.NotificationRecipientPolicy permission;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRecipientPolicy(com.sicost.permission.NotificationRecipientPolicy value) {permission=value;}
     public DunningDeliveryService(DunningDeliveryRepository repository, BillingReviewRepository billing, NotificationPublicationMapper recipients,
         RevisionService revisions,DunningDeliveryMail mail,Clock clock) {
         this.repository=repository;this.billing=billing;this.recipients=recipients;this.revisions=revisions;this.mail=mail;this.clock=clock;
@@ -38,7 +41,8 @@ public class DunningDeliveryService {
         var part=billing.part(bill.projectId(),month);
         var groups=NotificationRecipients.dunning(bill.projectId(),part==null?null:new NotificationRecipients.Part(part.partId(),part.headquarters(),part.leaderId()),recipients.eligibleRoles(),recipients.recipientScopes());
         var selected=step==0?null:groups.get(step-1);
-        List<DeliveryRecipient> people=selected==null?Collections.emptyList():selected.recipients().stream().map(r->new DeliveryRecipient(r.userId(),r.name(),r.emailAddress(),r.emailAddress()==null||r.emailAddress().isBlank(),r.qualifications())).toList();
+        if(permission==null)throw new IllegalStateException("수신 권한 정책이 연결되지 않았습니다.");
+        List<DeliveryRecipient> people=selected==null?Collections.emptyList():selected.recipients().stream().filter(r->permission.dunning(r.userId(),billId)).map(r->new DeliveryRecipient(r.userId(),r.name(),r.emailAddress(),r.emailAddress()==null||r.emailAddress().isBlank(),r.qualifications())).toList();
         boolean inProgress=repository.tasks(billId).stream().anyMatch(t->!DunningDeliveryDtos.terminal(t.state()));
         var reasons=new ArrayList<String>();
         if(bill.cancelled())reasons.add("취소된 청구입니다.");

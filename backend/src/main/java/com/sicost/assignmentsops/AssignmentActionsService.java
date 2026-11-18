@@ -24,6 +24,9 @@ import static com.sicost.common.assignments.AssignmentMonthlyService.*;
 
 @Service
 public class AssignmentActionsService {
+    private com.sicost.permission.PermissionProjectionService projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
     private final AssignmentActionsRepository repository;
     private final AssignmentMonthlyService months;
     private final AggregateLockMapper locks;
@@ -115,7 +118,10 @@ public class AssignmentActionsService {
                 var candidate=mapper().candidates(new CandidateQuery(create.projectId(),create.developerId())).stream().filter(c->c.developerId().equals(create.contractDeveloperId())).findFirst().orElseThrow(()->invalid("contractDeveloperId"));
                 Source previous=repository.required(candidate.lastAssignmentId());price=ProjectAssignmentMonths.value(months.mapper().histories(previous.id()),YearMonth.from(previous.endDate()),false,previous.price());
             } else price=mapper().price(new PriceQuery(create.developerId(),db(YearMonth.from(create.startDate()).toString())));
-            if(price==null||price.signum()<=0)throw invalid("billingUnitPrice");
+            if(price==null||price.signum()<=0) {
+                if(projection!=null && org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes && !projection.billingRate())throw new ApiException(409,"ASSIGNMENT_RATE_REQUIRED","월 단가가 없어 배정할 수 없습니다. 파트장·재무에게 요청해 주세요.");
+                throw invalid("billingUnitPrice");
+            }
         } else if(supplied!=null)throw invalid("billingUnitPrice");
         Source row=new Source("",create.projectId(),create.developerId(),create.jobCode(),create.startDate(),create.endDate(),create.contractMm(),price,create.inputType(),create.contractDeveloperId(),null,0,"N","ACT");
         if(mapper().duplicate(row))throw conflict("DUPLICATE_ASSIGNMENT","동일한 배정이 있습니다.");return row;

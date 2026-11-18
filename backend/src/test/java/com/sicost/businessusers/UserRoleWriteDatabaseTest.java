@@ -66,8 +66,14 @@ class UserRoleWriteDatabaseTest {
         context.register(SettlementSourceLocks.class,MonthCloseBoundary.class,CommitInvalidation.class,ProjectPmRepository.class,ProjectBudgetRepository.class);
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AccessLogWriter.class,
             RevisionService.class,BusinessUserRepository.class,BusinessUserService.class);
-        context.refresh();service=context.getBean(BusinessUserService.class);
-        mvc=MockMvcBuilders.standaloneSetup(new BusinessUserController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(BusinessUserService.class);
+        var passwords=context.getBean(com.sicost.authentication.AuthenticationPasswordService.class);
+        // Isolate role persistence from SMTP; retain the explicit failed-delivery response, never fake mail acceptance.
+        org.mockito.Mockito.when(passwords.initial(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.eq("admin")))
+            .thenReturn(new com.sicost.authentication.AuthenticationPasswordService.Delivery(false,"FAILED",false,null,"시험: SMTP 미연결"));
+        var controller=new BusinessUserController(service);
+        controller.authentication(passwords,context.getBean(com.sicost.permission.PermissionService.class));
+        mvc=MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }
     @AfterEach void close() {if(context!=null)context.close();}
 
@@ -84,7 +90,9 @@ class UserRoleWriteDatabaseTest {
     String projectRevision(String id) {return context.getBean(RevisionService.class).revision(context.getBean(ProjectPmRepository.class).snapshot(id));}
     @Test void wholeRolesAndHeadOfficeAreStoredAndPartialEditPreservesFinance() throws Exception {
         mvc.perform(post("/api/business-users").contentType("application/json").content("{\"userId\":\"full01\",\"name\":\"전체 사용자\",\"email\":\"full@example.test\",\"roleIds\":[\"PM\",\"FIN\"],\"headOffice\":true}"))
-            .andExpect(status().isCreated()).andExpect(jsonPath("$.data.user.headOffice").value(true));
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.data.user.headOffice").value(true))
+            .andExpect(jsonPath("$.data.passwordDelivery.mailStatus").value("FAILED"))
+            .andExpect(jsonPath("$.data.passwordDelivery.passwordIssued").value(false));
         User user=service.get("full01");assertThat(user.roleIds()).containsExactly("FIN","PM");
         assertThat(sql.queryForMap("SELECT scope_type_cd,part_id,proj_id FROM tb_sy_user_scope WHERE user_id='full01'"))
             .containsEntry("scope_type_cd","PART").containsEntry("part_id","HQ").containsEntry("proj_id",null);
@@ -145,7 +153,7 @@ class UserRoleWriteDatabaseTest {
             .andExpect(status().isOk());
         assertThat(sql.queryForObject("SELECT reg_user_id FROM tb_sy_chg_hist WHERE trgt_key='admin:ADMIN' AND chg_type_cd='DEL'",String.class)).isEqualTo("admin");
         assertThat(sql.queryForObject("SELECT user_id FROM tb_sy_accs_log WHERE act_type_cd='AUTH_CHG' ORDER BY log_id DESC LIMIT 1",String.class)).isEqualTo("admin");
-        assertThat(context.getBean(CurrentUserProvider.class).userId()).isEqualTo("admin02");
+        assertThat(new CurrentUserProvider(context.getBean(CurrentUserMapper.class)).userId()).isEqualTo("admin");
         assertThat(service.get("admin").roleIds()).containsExactly("FIN");
     }
     @Test void failedAuthLogRollsBackWholeRoleAndOfficeUpdate() {

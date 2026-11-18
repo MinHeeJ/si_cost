@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.poi.ss.usermodel.Row;
@@ -32,6 +33,9 @@ public class ExcelExportService {
     private final AccessLogWriter logs;
     private final Clock clock;
     private final PlatformTransactionManager transactions;
+    private com.sicost.permission.PermissionExportProjection projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionExportProjection projection) {this.projection=projection;}
     public ExcelExportService(CurrentUserProvider users, AccessLogWriter logs, Clock clock, PlatformTransactionManager transactions) {
         this.users = users; this.logs = logs; this.clock = clock; this.transactions = transactions;
     }
@@ -73,10 +77,11 @@ public class ExcelExportService {
             } else if (data.filename() != null) throw InputValidator.invalid("filename");
             for (Sheet sheet : data.sheets()) {
                 validate(new Specification(specification.kind(), null, sheet.columns(), specification.conditions(), specification.amountUnit(), specification.screenId()));
-                SheetRows writer = new SheetRows(workbook, sheet.columns(), sheet.name(), !Set.of("UI-21", "UI-26").contains(specification.screenId()));
-                sheet.rows().read(writer::append);
+                var plan=projection==null?null:projection.plan(specification.screenId(),sheet.columns());
+                SheetRows writer = new SheetRows(workbook, plan==null?sheet.columns():plan.columns(), sheet.name(), !Set.of("UI-21", "UI-26").contains(specification.screenId()));
+                sheet.rows().read(values->writer.append(plan==null?values:plan.values(values)));
             }
-            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), data.information(), data.filename());
+            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), projection==null?data.information():data.information().stream().filter(info->!projection.privateMetadata(specification.screenId(),info.label()) && !projection.privateMetadata(specification.screenId(),Objects.toString(info.value(),""))).toList(), data.filename());
         });
     }
     private record Generated(long count, String qualifier, List<Information> information, String filename) {}
@@ -96,12 +101,13 @@ public class ExcelExportService {
             for (int i = 0; i < columns.size(); i++) workbook.getSheetAt(0).setDefaultColumnStyle(i,
                 "재무_등록양식".equals(specification.kind()) && columns.get(i).type() == CellType.NUMBER ? number : text);
             var guide = workbook.createSheet("입력안내");
-            for (int i = 0; i < instructions.size(); i++) guide.createRow(i).createCell(0).setCellValue(instructions.get(i));
+            int line=0;for(String instruction:instructions)if(projection==null || !projection.privateText(instruction))guide.createRow(line++).createCell(0).setCellValue(instruction);
         });
     }
     private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {
         if (Set.of("UI-19", "UI-32").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         validate(specification);
+        Runnable release=projection==null?()->{}:projection.guard(specification,request);
         Path file = null;
         try {
             file = Files.createTempFile("sicost-export-", ".xlsx");
@@ -115,14 +121,15 @@ public class ExcelExportService {
                 SXSSFWorkbook workbook = new SXSSFWorkbook(100);
                 workbook.setCompressTempFiles(true);
                 try (workbook; OutputStream output = Files.newOutputStream(destination)) {
-                    SheetRows writer = new SheetRows(workbook, specification.columns());
-                    rows.read(writer::append);
+                    var plan=projection==null?null:projection.plan(specification.screenId(),specification.columns());
+                    SheetRows writer = new SheetRows(workbook, plan==null?specification.columns():plan.columns());
+                    rows.read(values->writer.append(plan==null?values:plan.values(values)));
                     customize.accept(workbook);
                     var info = workbook.createSheet("다운로드정보");
                     information(info.createRow(0), "처리자ID", actor.userId());
                     information(info.createRow(1), "처리자명", actor.name());
                     information(info.createRow(2), "생성시각", now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                    information(info.createRow(3), "조건", specification.conditions());
+                    information(info.createRow(3), "조건", safeConditions(specification));
                     information(info.createRow(4), "단위", specification.amountUnit());
                     Row count = info.createRow(5); count.createCell(0).setCellValue("총건수"); count.createCell(1).setCellValue(writer.total);
                     workbook.write(output);
@@ -132,6 +139,7 @@ public class ExcelExportService {
             });
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            release.run();
             audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), total), request));
             String prefix = switch (specification.kind()) {
                 case "개발자" -> "개발자목록";
@@ -142,7 +150,7 @@ public class ExcelExportService {
                 default -> specification.kind();
             };
             String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
-            return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx");
+            return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx",release);
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
             if (e instanceof ApiException api) throw api;
@@ -151,6 +159,7 @@ public class ExcelExportService {
     }
     private Download generateFile(Specification specification, HttpServletRequest request, Writer writer) {
         validate(specification);
+        Runnable release=projection==null?()->{}:projection.guard(specification,request);
         Path file = null;
         try {
             file = Files.createTempFile("sicost-export-", ".xlsx");
@@ -169,7 +178,7 @@ public class ExcelExportService {
                     information(info.createRow(0), "처리자ID", actor.userId());
                     information(info.createRow(1), "처리자명", actor.name());
                     information(info.createRow(2), "생성시각", now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                    information(info.createRow(3), "조건", specification.conditions());
+                    information(info.createRow(3), "조건", safeConditions(specification));
                     information(info.createRow(4), "단위", result.information().stream().filter(i -> "단위".equals(i.label()))
                         .map(i -> i.value().toString()).findFirst().orElse(specification.amountUnit()));
                     Row count = info.createRow(5); count.createCell(0).setCellValue("총건수"); count.createCell(1).setCellValue(result.count());
@@ -187,6 +196,7 @@ public class ExcelExportService {
             });
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            release.run();
             audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), generated.count(), generated.filename()), request));
             String prefix = switch (specification.kind()) {
                 case "개발자" -> "개발자목록";
@@ -198,7 +208,7 @@ public class ExcelExportService {
             };
             String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
             String filename = generated.filename() == null ? kind + (Set.of("UI-07", "UI-08", "UI-09").contains(specification.screenId()) ? "" : "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))) + ".xlsx" : generated.filename();
-            return new Download(file, filename);
+            return new Download(file, filename,release);
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
             if (e instanceof ApiException api) throw api;
@@ -243,6 +253,9 @@ public class ExcelExportService {
             if (column.id().equals("account") && column.type() != CellType.MASKED_ACCOUNT) throw InputValidator.invalid("columns");
         }
         if (!Set.of("원", "천원", "백만원").contains(specification.amountUnit())) throw InputValidator.invalid("amountUnit");
+    }
+    private String safeConditions(Specification specification) {
+        return projection!=null && projection.privateMetadata(specification.screenId(),specification.conditions())?"현재 허용된 조회 조건":specification.conditions();
     }
     private void information(Row row, String label, String value) {
         row.createCell(0).setCellValue(label); row.createCell(1).setCellValue(value == null ? "" : value);
@@ -302,11 +315,13 @@ public class ExcelExportService {
     public static final class Download implements AutoCloseable {
         private final Path file;
         private final String filename;
-        Download(Path file, String filename) { this.file = file; this.filename = filename; }
+        private final Runnable release;
+        Download(Path file, String filename) {this(file,filename,()->{});}
+        Download(Path file, String filename,Runnable release) { this.file = file; this.filename = filename;this.release=release; }
         public String filename() { return filename; }
-        public long size() throws IOException { return Files.size(file); }
+        public long size() throws IOException {release.run();return Files.size(file); }
         public void transferTo(OutputStream output) throws IOException {
-            try { Files.copy(file, output); }
+            try {release.run();Files.copy(file, output); }
             finally { close(); }
         }
         @Override public void close() throws IOException { Files.deleteIfExists(file); }

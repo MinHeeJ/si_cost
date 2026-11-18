@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(RoleStopController.class)
 @ContextConfiguration(classes=RoleStopController.class)
 @Import({RoleStopService.class,RoleStopRepository.class,RoleConfigurationRevision.class,WriteCoordinator.class,
@@ -72,8 +73,8 @@ class RoleStopContractTest {
         stop("R-801",body()).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.meta").isMap()).andExpect(jsonPath("$.data.changed").value(true))
             .andExpect(jsonPath("$.data.value.use").value(false)).andExpect(jsonPath("$.data.value.roleId").value("R-801"))
-            .andExpect(jsonPath("$.data.value.sortOrder").value(801)).andExpect(jsonPath("$.data.value.accessEnforcement").value(false))
-            .andExpect(jsonPath("$.data.value.developmentMode").value(true)).andExpect(jsonPath("$.data.value.menuPermissions[0].inquire").value(false))
+            .andExpect(jsonPath("$.data.value.sortOrder").value(801)).andExpect(jsonPath("$.data.value.accessEnforcement").value(true))
+            .andExpect(jsonPath("$.data.value.developmentMode").value(false)).andExpect(jsonPath("$.data.value.menuPermissions[0].inquire").value(false))
             .andExpect(jsonPath("$.data.revision").value(revisions.revision("R-801")));
         for(String key:before.keySet())if(!Set.of("use","modUserId","modDttm").contains(key))assertThat(role.get(key)).isEqualTo(before.get(key));
         assertThat(permissions).isEqualTo(authBefore);

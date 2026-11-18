@@ -1,4 +1,5 @@
 import "../pages/shared/financialDisplay.css";
+import { AuthenticationBoundary } from "../pages/authentication/AuthenticationBoundary";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBanner } from "../shared/Feedback";
 import {
@@ -1293,9 +1294,11 @@ function RegisteredRoutes() {
 }
 export function ApplicationRoutes() {
   return (
-    <PreferencesProvider>
-      <RegisteredRoutes />
-    </PreferencesProvider>
+    <AuthenticationBoundary>
+      <PreferencesProvider>
+        <RegisteredRoutes />
+      </PreferencesProvider>
+    </AuthenticationBoundary>
   );
 }
 export function ApplicationRouter() {

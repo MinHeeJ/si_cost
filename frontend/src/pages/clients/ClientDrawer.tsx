@@ -3,6 +3,11 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
+import {
+  useSensitivePermission,
+  useFeaturePermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
 import { ChangeHistoryTable } from "../apiops/ChangeHistoryTable";
 import { ClientForm } from "./ClientForm";
 import * as api from "./clientsApi";
@@ -55,6 +60,10 @@ function ClientDrawerContent({
   onBasisChanged,
   onDirtyChange,
 }: Props) {
+  const sensitive = useSensitivePermission(),
+    managePartners = useFeaturePermission("managePartners"),
+    canUpdate = usePermission("UI-15", "UPD");
+  const canReveal = sensitive && managePartners;
   const [client, setClient] = useState<Client>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
@@ -180,7 +189,7 @@ function ClientDrawerContent({
       pending={pending}
       onClose={close}
       actions={
-        client && !editing ? (
+        client && canUpdate && !editing ? (
           <>
             <button
               type="button"
@@ -291,52 +300,59 @@ function ClientDrawerContent({
                         `${client.account ?? "–"}${client.bankActive === false ? " (중지)" : ""}`,
                       ],
                       ["예금주", client.depositor],
-                    ].map(([label, value]) => (
-                      <div
-                        data-testid={`client-detail-field-${["사업자번호", "대표자", "업종", "담당자", "연락처", "세금계산서 이메일", "지급 계좌", "예금주"].indexOf(label ?? "")}`}
-                        key={label}
-                      >
-                        <dt>{label}</dt>
-                        <dd>
-                          {label === "지급 계좌" && client.account ? (
-                            <span className="clients-account-row">
-                              {number === undefined ? (
-                                <span>{value}</span>
-                              ) : (
-                                <output data-testid="client-account-number">
-                                  {`${(client.account ?? "").split(" ")[0]} ${number}`}
-                                </output>
-                              )}
-                              {number === undefined ? (
-                                <button
-                                  type="button"
-                                  className="clients-account-toggle"
-                                  data-testid="client-account-show"
-                                  disabled={pending}
-                                  onClick={() => void reveal()}
-                                >
-                                  계좌 전체보기
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="clients-account-toggle"
-                                  data-testid="client-account-hide"
-                                  onClick={() => {
-                                    accountGeneration.current++;
-                                    setNumber(undefined);
-                                  }}
-                                >
-                                  숨기기
-                                </button>
-                              )}
-                            </span>
-                          ) : (
-                            (value ?? "–")
-                          )}
-                        </dd>
-                      </div>
-                    ))}
+                    ]
+                      .filter(
+                        ([label]) =>
+                          sensitive ||
+                          !["지급 계좌", "예금주"].includes(label ?? ""),
+                      )
+                      .map(([label, value]) => (
+                        <div
+                          data-testid={`client-detail-field-${["사업자번호", "대표자", "업종", "담당자", "연락처", "세금계산서 이메일", "지급 계좌", "예금주"].indexOf(label ?? "")}`}
+                          key={label}
+                        >
+                          <dt>{label}</dt>
+                          <dd>
+                            {label === "지급 계좌" && client.account ? (
+                              <span className="clients-account-row">
+                                {number === undefined ? (
+                                  <span>{value}</span>
+                                ) : (
+                                  <output data-testid="client-account-number">
+                                    {`${(client.account ?? "").split(" ")[0]} ${number}`}
+                                  </output>
+                                )}
+                                {canReveal &&
+                                  (number === undefined ? (
+                                    <button
+                                      type="button"
+                                      className="clients-account-toggle"
+                                      data-testid="client-account-show"
+                                      disabled={pending}
+                                      onClick={() => void reveal()}
+                                    >
+                                      계좌 전체보기
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="clients-account-toggle"
+                                      data-testid="client-account-hide"
+                                      onClick={() => {
+                                        accountGeneration.current++;
+                                        setNumber(undefined);
+                                      }}
+                                    >
+                                      숨기기
+                                    </button>
+                                  ))}
+                              </span>
+                            ) : (
+                              (value ?? "–")
+                            )}
+                          </dd>
+                        </div>
+                      ))}
                   </dl>
                   <p>집계 기준일 {client.basisDate}</p>
                 </>

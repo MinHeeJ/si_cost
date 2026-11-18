@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -357,7 +363,11 @@ it("pipeline displays loading, empty, failure and refresh without mutation", asy
 it("견적 미리보기 버튼은 등록/수정 폼 저장을 제출하지 않는다", async () => {
   vi.mocked(api.createSalesOpportunityQuotePreview).mockResolvedValue(quote());
   const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
-  render(<form onSubmit={submit}><SalesQuotePanel needs={[{ jobCode: "BE" }]} /></form>);
+  render(
+    <form onSubmit={submit}>
+      <SalesQuotePanel needs={[{ jobCode: "BE" }]} />
+    </form>,
+  );
   await userEvent.click(screen.getByTestId("quote-preview-button"));
   await screen.findByTestId("quote-row-1");
   expect(submit).not.toHaveBeenCalled();
@@ -366,41 +376,93 @@ it("견적 미리보기 버튼은 등록/수정 폼 저장을 제출하지 않�
 it("후보 맞는 자리의 query 링크는 해당 기회 상세를 연다", async () => {
   const value = opportunity();
   vi.mocked(api.getSalesOpportunity).mockResolvedValue(value);
-  vi.mocked(api.getSalesOpportunities).mockResolvedValue({ items: [value], total: 1, page: 1, size: 50, stageTotals: [], summary: { opportunityCount: 1, staleCount: 0, amount: "10000000", weightedAmount: "3000000", weightedPeople: "0.3" } });
-  render(<MemoryRouter initialEntries={["/UI-29?opportunityId=O-0101"]}><SalesPipelinePanel /></MemoryRouter>);
+  vi.mocked(api.getSalesOpportunities).mockResolvedValue({
+    items: [value],
+    total: 1,
+    page: 1,
+    size: 50,
+    stageTotals: [],
+    summary: {
+      opportunityCount: 1,
+      staleCount: 0,
+      amount: "10000000",
+      weightedAmount: "3000000",
+      weightedPeople: "0.3",
+    },
+  });
+  render(
+    <MemoryRouter initialEntries={["/UI-29?opportunityId=O-0101"]}>
+      <SalesPipelinePanel />
+    </MemoryRouter>,
+  );
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
-  await waitFor(() => expect(api.getSalesOpportunity).toHaveBeenCalledWith("O-0101"));
-  expect(await screen.findByTestId("opportunity-edit-button")).toBeInTheDocument();
+  await waitFor(() =>
+    expect(api.getSalesOpportunity).toHaveBeenCalledWith("O-0101"),
+  );
+  expect(
+    await screen.findByTestId("opportunity-edit-button"),
+  ).toBeInTheDocument();
 });
 
 it("수주 모달은 서버 견적 수량의 직무합계와 큰 원정수 차이를 정확히 표시한다", async () => {
-  const o = opportunity(); o.approvalStatus = "OK";
+  const o = opportunity();
+  o.approvalStatus = "OK";
   o.amount = "999999999999999";
   o.quote.revenue = "900719925474099";
-  o.quote.rows = [{ ...o.quote.rows[0], quantityMm: "1.25" }, { ...o.quote.rows[0], needSn: 2, quantityMm: "0.10" }];
+  o.quote.rows = [
+    { ...o.quote.rows[0], quantityMm: "1.25" },
+    { ...o.quote.rows[0], needSn: 2, quantityMm: "0.10" },
+  ];
   mount(o);
   await userEvent.click(screen.getByTestId("win-open-button"));
-  expect(screen.getByTestId("win-plan-totals")).toHaveTextContent("BE: 1.35 MM");
-  expect(screen.getByTestId("win-amount-difference")).toHaveTextContent("99,280,074,525,900 원");
+  expect(screen.getByTestId("win-plan-totals")).toHaveTextContent(
+    "BE: 1.35 MM",
+  );
+  expect(screen.getByTestId("win-amount-difference")).toHaveTextContent(
+    "99,280,074,525,900 원",
+  );
   await userEvent.clear(screen.getByTestId("win-amount-input"));
   await userEvent.type(screen.getByTestId("win-amount-input"), " 1,234,567 ");
   await userEvent.click(screen.getByRole("button", { name: "수주 확정" }));
-  await waitFor(() => expect(api.createSalesOpportunityWin).toHaveBeenCalledWith(o, expect.objectContaining({ contractAmount: "1234567" })));
+  await waitFor(() =>
+    expect(api.createSalesOpportunityWin).toHaveBeenCalledWith(
+      o,
+      expect.objectContaining({ contractAmount: "1234567" }),
+    ),
+  );
 });
-it.each(["12,34", "1e6", "1000000000000000", "0", "-1"])("수주 금액 잘못된 구분/경계 %s는 저장하지 않는다", async (amount) => {
-  const o = opportunity(); o.approvalStatus = "OK"; mount(o);
-  await userEvent.click(screen.getByTestId("win-open-button"));
-  await userEvent.clear(screen.getByTestId("win-amount-input"));
-  await userEvent.type(screen.getByTestId("win-amount-input"), amount);
-  await userEvent.click(screen.getByRole("button", { name: "수주 확정" }));
-  expect(api.createSalesOpportunityWin).not.toHaveBeenCalled();
-  expect(screen.getByRole("alert")).toHaveTextContent("양수 원정수");
-});
-it.each([["1", "1"], ["999,999,999,999,999", "999999999999999"]])("수주 금액 양수 경계 %s는 정확한 원문자로 전송한다", async (amount, expected) => {
-  const o = opportunity(); o.approvalStatus = "OK"; mount(o);
-  await userEvent.click(screen.getByTestId("win-open-button"));
-  await userEvent.clear(screen.getByTestId("win-amount-input"));
-  await userEvent.type(screen.getByTestId("win-amount-input"), amount);
-  await userEvent.click(screen.getByRole("button", { name: "수주 확정" }));
-  await waitFor(() => expect(api.createSalesOpportunityWin).toHaveBeenCalledWith(o, expect.objectContaining({ contractAmount: expected })));
-});
+it.each(["12,34", "1e6", "1000000000000000", "0", "-1"])(
+  "수주 금액 잘못된 구분/경계 %s는 저장하지 않는다",
+  async (amount) => {
+    const o = opportunity();
+    o.approvalStatus = "OK";
+    mount(o);
+    await userEvent.click(screen.getByTestId("win-open-button"));
+    await userEvent.clear(screen.getByTestId("win-amount-input"));
+    await userEvent.type(screen.getByTestId("win-amount-input"), amount);
+    await userEvent.click(screen.getByRole("button", { name: "수주 확정" }));
+    expect(api.createSalesOpportunityWin).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("양수 원정수");
+  },
+);
+it.each([
+  ["1", "1"],
+  ["999,999,999,999,999", "999999999999999"],
+])(
+  "수주 금액 양수 경계 %s는 정확한 원문자로 전송한다",
+  async (amount, expected) => {
+    const o = opportunity();
+    o.approvalStatus = "OK";
+    mount(o);
+    await userEvent.click(screen.getByTestId("win-open-button"));
+    await userEvent.clear(screen.getByTestId("win-amount-input"));
+    await userEvent.type(screen.getByTestId("win-amount-input"), amount);
+    await userEvent.click(screen.getByRole("button", { name: "수주 확정" }));
+    await waitFor(() =>
+      expect(api.createSalesOpportunityWin).toHaveBeenCalledWith(
+        o,
+        expect.objectContaining({ contractAmount: expected }),
+      ),
+    );
+  },
+);

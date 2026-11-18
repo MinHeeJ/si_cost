@@ -137,7 +137,7 @@ export function RoleStopAction({
           목록에서 제외되며 재개하거나 삭제할 수 없습니다.
         </p>
         <p className="sicost-banner sicost-tone-info">
-          실제 접근권한 적용 전인 개발·검증 모드입니다.
+          중지된 역할은 다음 요청부터 권한 합집합에서 제외됩니다.
         </p>
         {error != null && (
           <>

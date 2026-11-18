@@ -61,7 +61,7 @@ class ProjectPlanDatabaseTest {
         context.registerBean(ChangeHistoryMapper.class, () -> session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class, CurrentUserProvider.class, ChangeHistoryWriter.class, RevisionService.class,
             WriteCoordinator.class, CommitInvalidation.class, ProjectBudgetRepository.class, ProjectPlanRepository.class, ProjectPlanService.class);
-        context.refresh(); service = context.getBean(ProjectPlanService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh(); service = context.getBean(ProjectPlanService.class);
         mvc = MockMvcBuilders.standaloneSetup(new ProjectPlanController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String key = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         id = "P-" + key; part = "S-" + key; developer = "D-" + key;

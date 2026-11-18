@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
+import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
@@ -167,11 +168,7 @@ function SharedApplicationContent({
   useEffect(() => {
     let live = true;
     setError("");
-    void Promise.all([
-      getMenus(),
-      getCurrentUser(),
-      getMenuManagement().catch(() => null),
-    ])
+    void Promise.all([getMenus(), getCurrentUser(), Promise.resolve(null)])
       .then(([menuData, actor, metadata]) => {
         if (live) {
           setUser(actor);
@@ -744,7 +741,7 @@ function SharedApplicationContent({
                             {child.name}
                             {child.screenId === "UI-13" &&
                               notificationBadges &&
-                              notificationBadges.receivableCount > 0 && (
+                              (notificationBadges.receivableCount ?? 0) > 0 && (
                                 <small data-testid="receivable-menu-count">
                                   {notificationBadges.receivableCount}
                                 </small>
@@ -815,7 +812,7 @@ function SharedApplicationContent({
               </p>
             )}
             {!restriction && screenRegistry[active] && !byScreen(active) && (
-              <p role="alert">등록된 메뉴를 사용할 수 없습니다.</p>
+              <p role="alert">이 화면을 볼 권한이 없습니다.</p>
             )}
             {tabs
               .filter((id) => byScreen(id))
@@ -827,7 +824,9 @@ function SharedApplicationContent({
                     hidden={id !== active || Boolean(restriction)}
                     className="sicost-screen-host"
                   >
-                    {screens?.[id] ?? <Component />}
+                    <ScreenPermissionContext.Provider value={id}>
+                      {screens?.[id] ?? <Component />}
+                    </ScreenPermissionContext.Provider>
                   </div>
                 );
               })}

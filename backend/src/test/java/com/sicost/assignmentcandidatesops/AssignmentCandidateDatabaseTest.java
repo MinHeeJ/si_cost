@@ -49,7 +49,7 @@ class AssignmentCandidateDatabaseTest {
         context.registerBean(AssignmentActionsMapper.class,()->session.getMapper(AssignmentActionsMapper.class));context.registerBean(AssignmentMapper.class,()->session.getMapper(AssignmentMapper.class));context.registerBean(AssignmentMonthlyMapper.class,()->session.getMapper(AssignmentMonthlyMapper.class));
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));context.registerBean(MasterIdMapper.class,()->session.getMapper(MasterIdMapper.class));
         context.registerBean(AssignmentCandidateMapper.class,()->session.getMapper(AssignmentCandidateMapper.class));context.registerBean(SettlementSourceLockMapper.class,()->session.getMapper(SettlementSourceLockMapper.class));
-        context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,CommitInvalidation.class,MasterIdService.class,AssignmentMonthlyService.class,AssignmentActionsRepository.class,AssignmentActionsService.class,AssignmentRepository.class,AssignmentService.class,SettlementSourceLocks.class,AssignmentCandidateRepository.class,AssignmentCandidateService.class);context.refresh();
+        context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,CommitInvalidation.class,MasterIdService.class,AssignmentMonthlyService.class,AssignmentActionsRepository.class,AssignmentActionsService.class,AssignmentRepository.class,AssignmentService.class,SettlementSourceLocks.class,AssignmentCandidateRepository.class,AssignmentCandidateService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         mvc=MockMvcBuilders.standaloneSetup(new AssignmentCandidateController(context.getBean(AssignmentCandidateService.class))).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String key=UUID.randomUUID().toString().replace("-","").substring(0,12);project="P-"+key;developer="D-"+key;part="T-"+key;opportunity="O-"+key;
         sql.update("INSERT INTO tb_bs_part(part_id,part_nm,reg_user_id) VALUES (?,?,'admin')",part,part);
@@ -103,14 +103,14 @@ class AssignmentCandidateDatabaseTest {
         mvc.perform(post(path("confirm")).contentType("application/json").content(body().toString())).andExpect(status().isInternalServerError());unchanged();
     }
     @Test void sameCandidateRaceReturnsOneIdAndSingleAssignment() throws Exception {
-        String request=body().toString();ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);
+        String request=body().toString();ExecutorService pool=new org.springframework.security.concurrent.DelegatingSecurityContextExecutorService(Executors.newFixedThreadPool(2),org.springframework.security.core.context.SecurityContextHolder.getContext());CountDownLatch start=new CountDownLatch(1);
         try {
             Callable<String> work=()->{start.await();var response=mvc.perform(post(path("confirm")).contentType("application/json").content(request)).andExpect(status().isOk()).andReturn();return json.readTree(response.getResponse().getContentAsString()).path("data").path("assignmentId").asText();};
             var a=pool.submit(work);var b=pool.submit(work);start.countDown();assertThat(a.get(30,TimeUnit.SECONDS)).isEqualTo(b.get(30,TimeUnit.SECONDS));assertThat(count("tb_pj_asgn")).isEqualTo(1);
         } finally {pool.shutdownNow();}
     }
     @Test void simultaneousDropChecksRevisionAfterLockAndStoresOnce() throws Exception {
-        String request=json.createObjectNode().put("expectedRevision",revision()).toString();ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);
+        String request=json.createObjectNode().put("expectedRevision",revision()).toString();ExecutorService pool=new org.springframework.security.concurrent.DelegatingSecurityContextExecutorService(Executors.newFixedThreadPool(2),org.springframework.security.core.context.SecurityContextHolder.getContext());CountDownLatch start=new CountDownLatch(1);
         try {
             Callable<Integer> work=()->{start.await();return mvc.perform(post(path("drop")).contentType("application/json").content(request)).andReturn().getResponse().getStatus();};
             var a=pool.submit(work);var b=pool.submit(work);start.countDown();assertThat(List.of(a.get(30,TimeUnit.SECONDS),b.get(30,TimeUnit.SECONDS))).containsExactlyInAnyOrder(200,409);assertThat(count("tb_pj_asgn")).isZero();assertThat(state()).isEqualTo("DROP");

@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -259,7 +265,9 @@ it("locked snapshot has read-only card and hides save/confirm/cancel when CLOSE"
     canConfirm: false,
     canCancel: false,
   });
-  expect(screen.queryByRole("textbox", {name: "법인카드 사용액"})).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("textbox", { name: "법인카드 사용액" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByText("법인카드 사용액 5")).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "카드 저장" }),

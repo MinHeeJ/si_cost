@@ -27,7 +27,14 @@ public class DailyAutomationRepository {
     }
     public Stored find(Key key) { return mapper.run(key); }
     public <T> T item(Collection<String> keys,Supplier<T> action) {
-        return transactions.execute(status->{boundary.shared();locks.lock(keys);return action.get();});
+        return transactions.execute(status->{
+            boundary.shared();locks.lock(keys);com.sicost.permission.PermissionTaskContext.checkpoint();
+            if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void beforeCommit(boolean readOnly) {com.sicost.permission.PermissionTaskContext.checkpoint();}
+                });
+            T result=action.get();com.sicost.permission.PermissionTaskContext.checkpoint();return result;
+        });
     }
     public Stored prepare(Key key) {
         return item(List.of("AUTOMATION:"+key.jobCode()+":"+key.runDate()),()->{

@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   confirmAssignmentCandidate,
@@ -38,7 +39,7 @@ it("sends reviewed NEW values with path TENT, sourceTentId and expectedRevision,
       { status: 200 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await confirmAssignmentCandidate(candidate, {
     year: 2026,
     projectId: candidate.projectId,
@@ -78,7 +79,7 @@ it("drop sends only revision and no client actor", async () => {
       { status: 200 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await dropAssignmentCandidate(candidate);
   expect(fetcher.mock.calls[0][0]).toBe("/api/assignment-candidates/201/drop");
   expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
@@ -87,7 +88,7 @@ it("drop sends only revision and no client actor", async () => {
 });
 it("network failure is returned without automatic mutation retry", async () => {
   const fetcher = vi.fn().mockRejectedValue(new Error("연결 실패"));
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(dropAssignmentCandidate(candidate)).rejects.toThrow("연결 실패");
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
@@ -102,7 +103,7 @@ it("candidate list paging does not send assignment year", async () => {
       { status: 200 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getAssignmentCandidates(2);
   expect(fetcher.mock.calls[0][0]).toBe(
     "/api/assignment-candidates?page=2&size=50",

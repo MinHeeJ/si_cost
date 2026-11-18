@@ -50,7 +50,7 @@ class RateRenegotiationDatabaseTest {
         context.register(Transactions.class,RevisionService.class,DeveloperAggregateRevision.class,CurrentUserProvider.class,DeveloperRepository.class,SharedQueriesService.class,MenuService.class,
             MonthlyCostRepository.class,MonthlyCostService.class,MonthlyCostCalculation.class,EstimatedPayrollAdapter.class,TurnkeyRevenueCalculation.class,ChangeHistoryWriter.class,AssignmentMonthlyService.class,
             RateRenegotiationRepository.class,RateRenegotiationCalculator.class,RateRenegotiationService.class);
-        context.refresh();service=context.getBean(RateRenegotiationService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(RateRenegotiationService.class);
         String key=UUID.randomUUID().toString().replace("-","").substring(0,12);developer="D"+key;project="P"+key;assignment="A"+key;
         sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FL','BE','DRCT','HQ','WORK','admin')",developer,developer,developer);
         sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES (?,?,'MO','ING','2080-07-01','2081-01-01',6000000,0,0,'admin')",project,project);

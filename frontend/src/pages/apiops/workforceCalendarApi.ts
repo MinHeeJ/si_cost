@@ -1,4 +1,9 @@
-import { request, ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  request,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 export type CalendarFilter = {
   year: number;
@@ -94,13 +99,16 @@ export async function downloadWorkforceCalendar(
   q.delete("size");
   q.set("tab", tab);
   q.set("amountUnit", amountUnit);
-  const response = await fetch(`/api/workforce-operations/export?${q}`, {
-    headers: {
-      Accept:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  const response = await authenticatedFetch(
+    `/api/workforce-operations/export?${q}`,
+    {
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      redirect: "error",
     },
-    redirect: "error",
-  });
+  );
   if (response.headers.get("Content-Type")?.includes("application/json")) {
     const body = (await response.json()) as ApiErrorBody;
     throw new ApiError(response.status, body);
