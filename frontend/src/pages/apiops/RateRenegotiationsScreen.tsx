@@ -1,3 +1,5 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -336,40 +338,46 @@ export function RateRenegotiationsScreen({
           기준월 {data?.baseMonth ?? "–"} · 계산시각{" "}
           {formatDateTime(data?.calculatedAt)}
         </span>
-        {canDownload && <button
-          className="sicost-button renegotiation-download"
-          data-testid="renegotiation-download"
-          type="button"
-          disabled={!canDownload || !data || loading || exporting}
-          onClick={async () => {
-            if (exporting) return;
-            setExporting(true);
-            setExportError("");
-            try {
-              await api.downloadRenegotiations(
-                applied,
-                view.order.filter(
-                  (id) =>
-                    !view.hidden.includes(id) &&
-                    (canCost ||
-                      !["monthlyLaborCost", "employeeType"].includes(id)),
-                ),
-                unit,
-              );
-            } catch (e) {
-              if (alive.current)
-                setExportError(
-                  e instanceof Error ? e.message : "다운로드에 실패했습니다.",
-                );
-            } finally {
-              if (alive.current) setExporting(false);
-            }
-          }}
-        >
-          {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
-        </button>}
+        {canDownload && (
+          <ScreenTitleActions>
+            <button
+              className="sicost-button renegotiation-download"
+              data-testid="renegotiation-download"
+              type="button"
+              disabled={!canDownload || !data || loading || exporting}
+              onClick={async () => {
+                if (exporting) return;
+                setExporting(true);
+                setExportError("");
+                try {
+                  await api.downloadRenegotiations(
+                    applied,
+                    view.order.filter(
+                      (id) =>
+                        !view.hidden.includes(id) &&
+                        (canCost ||
+                          !["monthlyLaborCost", "employeeType"].includes(id)),
+                    ),
+                    unit,
+                  );
+                } catch (e) {
+                  if (alive.current)
+                    setExportError(
+                      e instanceof Error
+                        ? e.message
+                        : "다운로드에 실패했습니다.",
+                    );
+                } finally {
+                  if (alive.current) setExporting(false);
+                }
+              }}
+            >
+              {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
+            </button>
+          </ScreenTitleActions>
+        )}
       </div>
-      <div className="renegotiation-summary">
+      <KpiStrip className="renegotiation-summary">
         <article>
           <h2>대상 인원</h2>
           <strong>{data?.summary.personCount ?? "–"}명</strong>
@@ -399,7 +407,7 @@ export function RateRenegotiationsScreen({
             목표 이익률 {formatRate(data?.targetMarginRate)} · {unit}
           </small>
         </article>
-      </div>
+      </KpiStrip>
       <form
         data-testid="renegotiation-assumption-form"
         className="renegotiation-assumption"

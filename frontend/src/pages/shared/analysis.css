@@ -1,8 +1,10 @@
 .analysis-workspace {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  gap: 24px;
-  padding: 24px;
+
+  gap: 20px;
+
+  padding: 0;
   align-items: start;
   min-width: 0;
 }
@@ -13,6 +15,10 @@
   top: 16px;
   max-height: 80vh;
   overflow: auto;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  padding: 10px;
 }
 .analysis-history header {
   display: flex;
@@ -64,17 +70,25 @@
 }
 .analysis-user-message {
   margin-left: auto;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--primary-bg);
+
+  padding: 11px 16px;
+
+  border-radius: 8px 8px 2px 8px;
+
+  background: var(--primary);
   max-width: 90%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  color: #fff;
 }
 .analysis-answer {
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+
+  border: 0;
+
+  box-shadow: var(--e1);
+
+  border-radius: 2px 8px 8px 8px;
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -146,8 +160,9 @@
 }
 .analysis-composer {
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -212,9 +227,11 @@
 .analysis-side-panel {
   position: fixed;
   right: 0;
-  top: 56px;
+
+  top: 64px;
   bottom: 0;
-  width: min(780px, 100vw);
+
+  width: min(640px, 100vw);
   background: var(--bg);
   border-left: 1px solid var(--divider);
   box-shadow: var(--shadow-lg);
@@ -290,6 +307,7 @@
   }
   .analysis-side-panel {
     width: 100vw;
+    top: 56px;
   }
   .analysis-safety {
     align-items: start;

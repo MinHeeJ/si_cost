@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
@@ -247,29 +248,29 @@ export function ReopenDialog({
           원 · 적용월 {preview.adjustmentMonths.join(", ") || "없음"}
         </p>
         <div className="month-close-adjustments">
-        <table aria-label="후속조정">
-          <thead>
-            <tr>
-              {["ID", "대상월", "적용월", "금액", "사유"].map((h) => (
-                <th key={h}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {preview.adjustments.map((a) => (
-              <tr
-                key={a.adjustmentId}
-                data-testid={`month-close-adjustment-${a.adjustmentId}`}
-              >
-                <td>{a.adjustmentId}</td>
-                <td>{a.targetMonth}</td>
-                <td>{a.applyMonth}</td>
-                <td>{a.amount}</td>
-                <td>{a.reason}</td>
+          <table aria-label="후속조정">
+            <thead>
+              <tr>
+                {["ID", "대상월", "적용월", "금액", "사유"].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {preview.adjustments.map((a) => (
+                <tr
+                  key={a.adjustmentId}
+                  data-testid={`month-close-adjustment-${a.adjustmentId}`}
+                >
+                  <td>{a.adjustmentId}</td>
+                  <td>{a.targetMonth}</td>
+                  <td>{a.applyMonth}</td>
+                  <td>{a.amount}</td>
+                  <td>{a.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <p>
           기존 조정은 자동 삭제·상계하지 않습니다. UI-10에서 중복 보정 여부를
@@ -445,7 +446,10 @@ export function MonthCloseScreen() {
   };
   const link = (check: api.CloseCheck) => {
     if (!check.linkScreenId || !context) return;
-    if (["SETL", "BILL_MISS"].includes(check.code) && check.linkMonth.slice(0, 4) !== context.currentMonth.slice(0, 4)) {
+    if (
+      ["SETL", "BILL_MISS"].includes(check.code) &&
+      check.linkMonth.slice(0, 4) !== context.currentMonth.slice(0, 4)
+    ) {
       setError(
         "해당 업무 화면의 과거 연도는 조회 전용입니다. 기존 화면의 기간 범위를 확인해 주세요.",
       );
@@ -530,67 +534,69 @@ export function MonthCloseScreen() {
             <section className="month-close-card">
               <div className="month-close-heading">
                 <h2>마감 점검</h2>
-                <div className="month-close-actions">
-                  {data.status === "WORK" && (
-                    <>
-                      <button
-                        data-testid="month-close-check-button"
-                        data-action-id="B143-14-CHECK"
-                        disabled={
-                          blocked ||
-                          loading ||
-                          !data.managementAllowed ||
-                          !data.canCheck
-                        }
-                        onClick={() =>
-                          void save(() =>
-                            api.saveMonthCloseChecks(month, data.revision),
-                          ).catch(() => {})
-                        }
-                      >
-                        다시 점검
-                      </button>
-                      <button
-                        className="sicost-primary"
-                        data-testid="month-close-close-button"
-                        data-action-id="B143-14-CLOSE-OPEN"
-                        disabled={
-                          blocked ||
-                          loading ||
-                          !data.managementAllowed ||
-                          !data.canClose
-                        }
-                        onClick={() => void open("close")}
-                      >
-                        마감하기
-                      </button>
-                    </>
-                  )}
-                  {data.status === "CLOSE" && (
-                    <>
-                      {data.canReopen && (
+                <ScreenTitleActions>
+                  <div className="month-close-actions">
+                    {data.status === "WORK" && (
+                      <>
                         <button
-                          data-testid="month-close-reopen-button"
-                          data-action-id="B143-14-REOPEN-OPEN"
+                          data-testid="month-close-check-button"
+                          data-action-id="B143-14-CHECK"
                           disabled={
-                            blocked || loading || !data.managementAllowed
+                            blocked ||
+                            loading ||
+                            !data.managementAllowed ||
+                            !data.canCheck
                           }
-                          onClick={() => void open("reopen")}
+                          onClick={() =>
+                            void save(() =>
+                              api.saveMonthCloseChecks(month, data.revision),
+                            ).catch(() => {})
+                          }
                         >
-                          마감 해제
+                          다시 점검
                         </button>
-                      )}
-                      <button
-                        data-testid="month-close-adjust-button"
-                        data-action-id="B143-14-ADJUST"
-                        disabled={blocked}
-                        onClick={() => void adjust()}
-                      >
-                        전월 조정 입력
-                      </button>
-                    </>
-                  )}
-                </div>
+                        <button
+                          className="sicost-primary"
+                          data-testid="month-close-close-button"
+                          data-action-id="B143-14-CLOSE-OPEN"
+                          disabled={
+                            blocked ||
+                            loading ||
+                            !data.managementAllowed ||
+                            !data.canClose
+                          }
+                          onClick={() => void open("close")}
+                        >
+                          마감하기
+                        </button>
+                      </>
+                    )}
+                    {data.status === "CLOSE" && (
+                      <>
+                        {data.canReopen && (
+                          <button
+                            data-testid="month-close-reopen-button"
+                            data-action-id="B143-14-REOPEN-OPEN"
+                            disabled={
+                              blocked || loading || !data.managementAllowed
+                            }
+                            onClick={() => void open("reopen")}
+                          >
+                            마감 해제
+                          </button>
+                        )}
+                        <button
+                          data-testid="month-close-adjust-button"
+                          data-action-id="B143-14-ADJUST"
+                          disabled={blocked}
+                          onClick={() => void adjust()}
+                        >
+                          전월 조정 입력
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </ScreenTitleActions>
               </div>
               <p>
                 점검 6개 중 {data.warningCount}개 확인 필요 ·{" "}
@@ -606,7 +612,16 @@ export function MonthCloseScreen() {
               {data.history.items.length === 0 ? (
                 <div className="month-close-empty">
                   <p>선택연도 마감 이력이 없습니다.</p>
-                  <button type="button" onClick={() => window.dispatchEvent(new Event("sicost:month-close-reset-period"))}>조건 초기화</button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new Event("sicost:month-close-reset-period"),
+                      )
+                    }
+                  >
+                    조건 초기화
+                  </button>
                 </div>
               ) : (
                 <div className="month-close-table">

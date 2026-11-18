@@ -26,12 +26,18 @@
 .operating-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .operating-card {
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   min-width: 0;
 }
@@ -94,8 +100,9 @@
 .operating-table-scroll {
   max-width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: var(--e1);
   background: var(--surface);
 }
 .operating-profit table {
@@ -106,16 +113,19 @@
 }
 .operating-profit th,
 .operating-profit td {
-  padding: 10px 12px;
-  height: 40px;
-  min-width: 100px;
+  padding: 0 10px;
+  height: 44px;
+  min-width: 76px;
   text-align: right;
   white-space: nowrap;
   border-bottom: 1px solid var(--divider);
 }
 .operating-profit thead th {
-  background: var(--head-bg);
-  font-weight: 600;
+  background: var(--surface);
+  font-weight: 700;
+  color: var(--text-sub);
+  font-size: 12px;
+  box-shadow: inset 0 -2px 0 #cdd4de;
 }
 .operating-profit tr > th:first-child {
   position: sticky;
@@ -126,7 +136,7 @@
   background: var(--surface);
 }
 .operating-profit thead tr > th:first-child {
-  background: var(--head-bg);
+  background: var(--surface);
   z-index: 2;
 }
 .operating-profit .operating-detail th {
@@ -145,6 +155,14 @@
 .operating-profit .operating-cumulative {
   background: var(--head-bg);
 }
+.operating-profit thead .operating-current {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+.operating-profit thead .sicost-badge {
+  height: 18px;
+  font-size: 10px;
+  margin-left: 4px;
+}
 @media (max-width: 1100px) {
   .operating-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -154,4 +172,14 @@
   .operating-summary {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.operating-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

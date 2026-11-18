@@ -341,6 +341,8 @@ export function SalesOpportunityForm({
     >
       <FormPage
         title={detail ? "영업 기회 수정" : "영업 기회 등록"}
+        breadcrumb="인력 계획 › 영업 파이프라인"
+        screenId="UI-29"
         actions={
           <button
             type="button"

@@ -22,7 +22,12 @@ export function PasswordResetAction({
     masked = at < 0 ? "***" : `${email.slice(0, 1)}***${email.slice(at)}`;
   return (
     <>
-      <button type="button" disabled={stopped} onClick={() => setOpen(true)}>
+      <button
+        data-testid="password-reset-open"
+        type="button"
+        disabled={stopped}
+        onClick={() => setOpen(true)}
+      >
         새 비밀번호 다시 발급
       </button>
       {message && <p role="status">{message}</p>}

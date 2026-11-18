@@ -1,3 +1,5 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -368,22 +370,24 @@ export function WithdrawalContent({ year }: { year: number }) {
   ];
   return (
     <div className="withdrawal-screen" data-testid="withdrawal-content">
-      <div className="withdrawal-toolbar">
-        <button
-          className="withdrawal-download"
-          data-testid="withdrawal-download"
-          disabled={loading || pending || !data || Boolean(error)}
-          onClick={() => {
-            setNotice("");
-            void api
-              .downloadWithdrawals(query)
-              .then(() => setNotice("다운로드했습니다."))
-              .catch(setError);
-          }}
-        >
-          엑셀 다운로드
-        </button>
-      </div>
+      <ScreenTitleActions>
+        <div className="withdrawal-toolbar">
+          <button
+            className="withdrawal-download"
+            data-testid="withdrawal-download"
+            disabled={loading || pending || !data || Boolean(error)}
+            onClick={() => {
+              setNotice("");
+              void api
+                .downloadWithdrawals(query)
+                .then(() => setNotice("다운로드했습니다."))
+                .catch(setError);
+            }}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
+      </ScreenTitleActions>
       {data?.guidance.visible && (
         <div
           className="sicost-banner sicost-tone-info"
@@ -402,10 +406,10 @@ export function WithdrawalContent({ year }: { year: number }) {
           </button>
         </div>
       )}
-      <p className="withdrawal-help">
+      <HelpTooltip label="안내" testId="withdrawal-help">
         연장가능성 변경은 인력 운영 보드/수요 예측에 반영됩니다. 연도 경계의
         다른 연도 자료는 연도를 바꿔 조회하세요.
-      </p>
+      </HelpTooltip>
       {data && year < Number(data.serverDate.slice(0, 4)) && (
         <p className="sicost-banner sicost-tone-lock">
           지난 연도는 조회만 할 수 있습니다.

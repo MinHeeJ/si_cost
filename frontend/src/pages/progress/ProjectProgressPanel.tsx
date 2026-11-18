@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -201,7 +202,7 @@ export function ProjectProgressPanel({
               ))}
             </aside>
           )}
-          <div className="project-progress-metrics">
+          <KpiStrip className="project-progress-metrics">
             <div>
               <span>계획</span>
               <strong>{status.planProgress}%</strong>
@@ -245,7 +246,7 @@ export function ProjectProgressPanel({
                 </strong>
               </div>
             )}
-          </div>
+          </KpiStrip>
           <p>
             현재 단계{" "}
             {status.allStepsCompleted

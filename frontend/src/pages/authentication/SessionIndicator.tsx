@@ -111,7 +111,10 @@ export function SessionIndicator({
     };
   }, [remaining]);
   return (
-    <div className="authentication-session">
+    <div
+      className="authentication-session"
+      data-testid="authentication-session"
+    >
       {error && <ErrorBanner message={error} />}
       {!logoutOnly && (
         <>
@@ -122,6 +125,7 @@ export function SessionIndicator({
               : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}
           </span>
           <button
+            data-testid="authentication-session-extend"
             type="button"
             disabled={busy}
             onClick={async () => {
@@ -141,12 +145,17 @@ export function SessionIndicator({
           >
             연장
           </button>
-          <button type="button" onClick={() => setChange(true)}>
+          <button
+            data-testid="authentication-session-password-change"
+            type="button"
+            onClick={() => setChange(true)}
+          >
             비밀번호 변경
           </button>
         </>
       )}
       <button
+        data-testid="authentication-session-logout"
         type="button"
         disabled={busy}
         onClick={async () => {

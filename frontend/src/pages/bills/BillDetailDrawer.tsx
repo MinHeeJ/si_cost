@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
@@ -196,7 +197,12 @@ export function BillDetailDrawer({
       {loading && <p role="status">청구 상세를 불러오는 중입니다.</p>}
       {detail && bill && (
         <>
-          <div role="tablist" aria-label="청구 상세 탭" className="bill-tabs">
+          <SegmentedTabList
+            as="div"
+            role="tablist"
+            aria-label="청구 상세 탭"
+            className="bill-tabs"
+          >
             <button
               type="button"
               role="tab"
@@ -215,9 +221,13 @@ export function BillDetailDrawer({
             >
               입금 내역 ({detail.receipts.total})
             </button>
-          </div>
+          </SegmentedTabList>
           <p>정상 입금 {detail.receipts.normalCount}건</p>
-          <ReceivableDeliveryActions billId={bill.id} onChanged={refresh} onPanelChange={setDeliveryOpen} />
+          <ReceivableDeliveryActions
+            billId={bill.id}
+            onChanged={refresh}
+            onPanelChange={setDeliveryOpen}
+          />
           {protectedBill && (
             <p className="sicost-banner sicost-tone-lock">
               청구월·TK 매출월이 마감·이관·지난해이면 청구 수정은 할 수

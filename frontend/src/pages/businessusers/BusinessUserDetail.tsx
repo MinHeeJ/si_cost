@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { UserProjectsPanel } from "../businessusersops/UserProjectsPanel";
@@ -161,7 +162,8 @@ export function BusinessUserDetail({
       }
     >
       <div className="businessusers-detail" data-testid="business-user-detail">
-        <div
+        <SegmentedTabList
+          as="div"
           role="tablist"
           aria-label="사용자 상세 탭"
           className="businessusers-tabs"
@@ -219,7 +221,7 @@ export function BusinessUserDetail({
           >
             변경이력
           </button>
-        </div>
+        </SegmentedTabList>
         {error != null && (
           <ErrorBanner
             message={

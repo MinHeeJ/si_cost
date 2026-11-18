@@ -1,3 +1,5 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -395,7 +397,8 @@ export function SalesPartnerProfitScreen({
           </p>
         )}
         {tabs && (
-          <div
+          <SegmentedTabList
+            as="div"
             role="tablist"
             aria-label="영업 파트"
             className="settlement-tabs"
@@ -420,7 +423,7 @@ export function SalesPartnerProfitScreen({
                 {part.historyOnly ? " (확정 이력)" : ""}
               </button>
             ))}
-          </div>
+          </SegmentedTabList>
         )}
         {error != null && (
           <ErrorBanner
@@ -436,7 +439,7 @@ export function SalesPartnerProfitScreen({
         ))}
         {data && (
           <>
-            <div
+            <KpiStrip
               className="settlement-summary"
               data-testid="settlement-summary"
             >
@@ -480,7 +483,7 @@ export function SalesPartnerProfitScreen({
                   법인카드 {amount(data.cardAmount)}
                 </p>
               </article>
-            </div>
+            </KpiStrip>
             <div
               className={`settlement-banner ${data.status === "WORK" ? "info" : "lock"}`}
             >

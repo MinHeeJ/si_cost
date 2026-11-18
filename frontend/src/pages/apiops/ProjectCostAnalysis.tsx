@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
@@ -87,6 +88,15 @@ export function ProjectCostAnalysis({
 }: ProjectCostAnalysisProps = {}) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
+  const activePath = useRef(location.pathname);
+  activePath.current = location.pathname;
+  useEffect(() => {
+    activePath.current = location.pathname;
+    return () => {
+      activePath.current = "";
+    };
+  }, [location.pathname]);
+  const [sizeOverride, setSizeOverride] = useState<20 | 50 | 100>();
   const initial = Object.fromEntries(params.entries());
   const query: api.AnalysisQuery = Object.fromEntries(
     Object.entries(initial).filter(([key]) =>
@@ -115,15 +125,20 @@ export function ProjectCostAnalysis({
   if (initial.alertOnly === "true" || initial.alertOnly === "false")
     query.alertOnly = initial.alertOnly === "true";
   if (pageSize !== undefined) query.size ??= analysisPageSize(pageSize);
+  if (sizeOverride !== undefined)
+    Object.assign(query, { size: sizeOverride, page: 1 });
   if (initialMonth !== undefined) query.month ??= initialMonth;
   const settings = useAnalysisSettings();
   const previousSize = useRef(pageSize);
   useEffect(() => {
     if (previousSize.current !== pageSize) {
       previousSize.current = pageSize;
-      apply({ ...query, size: analysisPageSize(pageSize ?? 50), page: 1 });
+      setSizeOverride(analysisPageSize(pageSize ?? 50));
     }
   }, [pageSize]);
+  useEffect(() => {
+    if (location.pathname === "/UI-04") setSizeOverride(undefined);
+  }, [location.key]);
   const queryKey = api.analysisQuery(query);
   const [draft, setDraft] = useState(query),
     [context, setContext] = useState<PeriodContext>(),
@@ -194,7 +209,9 @@ export function ProjectCostAnalysis({
     };
   }, [month]);
   function apply(next: api.AnalysisQuery) {
+    setSizeOverride(undefined);
     setDraft(next);
+    if (activePath.current !== "/UI-04") return;
     const url = new URLSearchParams(api.analysisQuery(next));
     if (selected) {
       url.set("detailProjectId", selected);
@@ -362,39 +379,41 @@ export function ProjectCostAnalysis({
           }}
         />
       )}
-      <div className="project-analysis-toolbar">
-        <label>
-          단위{" "}
-          <select
-            aria-label="금액 단위"
-            data-testid="project-cost-unit"
-            value={unit}
-            disabled={settings.pending}
-            onChange={(e) => {
-              const value = e.target.value as AnalysisUnit;
-              if (!onAmountUnitChange) {
-                setUnit(value);
-                return;
-              }
-              void settings.run(async () => {
-                await onAmountUnitChange?.(value);
-                setUnit(value);
-              });
-            }}
-          >
-            {["원", "천원", "백만원"].map((value) => (
-              <option
-                data-testid={`project-cost-unit-option-${Array.from(value, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                key={value}
-              >
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-        {renderColumns?.()}
-        {renderExport?.(query, unit)}
-      </div>
+      <ScreenTitleActions>
+        <div className="project-analysis-toolbar">
+          <label>
+            단위{" "}
+            <select
+              aria-label="금액 단위"
+              data-testid="project-cost-unit"
+              value={unit}
+              disabled={settings.pending}
+              onChange={(e) => {
+                const value = e.target.value as AnalysisUnit;
+                if (!onAmountUnitChange) {
+                  setUnit(value);
+                  return;
+                }
+                void settings.run(async () => {
+                  await onAmountUnitChange?.(value);
+                  setUnit(value);
+                });
+              }}
+            >
+              {["원", "천원", "백만원"].map((value) => (
+                <option
+                  data-testid={`project-cost-unit-option-${Array.from(value, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={value}
+                >
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          {renderColumns?.()}
+          {renderExport?.(query, unit)}
+        </div>
+      </ScreenTitleActions>
       {result.data && (
         <>
           <AnalysisSummary

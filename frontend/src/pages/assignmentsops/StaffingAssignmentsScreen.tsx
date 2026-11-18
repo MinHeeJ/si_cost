@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -399,35 +400,27 @@ export function AssignmentsContent({
   }
   return (
     <div data-testid="assignments-content" className="assignments-content">
-      <AssignmentCandidatesPanel
-        year={year}
-        today={context.currentDate}
-        readOnly={readonly}
-        onDirtyChange={onDirtyChange}
-        onChanged={refreshed}
-        onConfirmed={async (id) => {
-          setDetail(id);
-        }}
-      />
-      <div className="assignment-head">
-        <div className="assignment-head-actions">
-          <B5Actions
-            year={year}
-            readOnly={readonly}
-            onApplied={refreshed}
-            onDirtyChange={dirtyChanged}
-          />
-          <button
-            type="button"
-            data-testid="assignment-new"
-            disabled={readonly || loading || Boolean(error)}
-            onClick={() => setCreating(true)}
-            className="sicost-primary"
-          >
-            신규 배정
-          </button>
+      <ScreenTitleActions>
+        <div className="assignment-head">
+          <div className="assignment-head-actions">
+            <B5Actions
+              year={year}
+              readOnly={readonly}
+              onApplied={refreshed}
+              onDirtyChange={dirtyChanged}
+            />
+            <button
+              type="button"
+              data-testid="assignment-new"
+              disabled={readonly || loading || Boolean(error)}
+              onClick={() => setCreating(true)}
+              className="sicost-primary"
+            >
+              신규 배정
+            </button>
+          </div>
         </div>
-      </div>
+      </ScreenTitleActions>
       {readonly && (
         <p className="sicost-banner sicost-tone-lock">
           지난 해·읽기 전용: 조회와 다운로드만 가능합니다.
@@ -736,6 +729,16 @@ export function AssignmentsContent({
       >
         <p>확인 전까지 작성 내용과 현재 기간을 유지합니다.</p>
       </Dialog>
+      <AssignmentCandidatesPanel
+        year={year}
+        today={context.currentDate}
+        readOnly={readonly}
+        onDirtyChange={onDirtyChange}
+        onChanged={refreshed}
+        onConfirmed={async (id) => {
+          setDetail(id);
+        }}
+      />
     </div>
   );
 }

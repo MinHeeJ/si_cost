@@ -5,7 +5,9 @@ import { ScreenPermissionContext } from "../../shared/permission/PermissionBound
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
+import { Brand } from "../../shared/Brand";
 import { HeaderActions } from "./HeaderActions";
+import { SessionIndicator } from "../authentication/SessionIndicator";
 import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
 import {
@@ -516,7 +518,12 @@ function SharedApplicationContent({
           <button
             type="button"
             aria-label="메뉴 열기·접기"
+            data-testid="workspace-menu-toggle"
             className="sicost-icon-button"
+            disabled={
+              !mobile &&
+              (pending || !prefsReady || Boolean(preferences?.pending))
+            }
             onClick={() => {
               if (window.innerWidth < 768) setMobileOpen((open) => !open);
               else fold();
@@ -527,14 +534,25 @@ function SharedApplicationContent({
           <Link
             to="/UI-16"
             className="sicost-brand-link"
+            aria-label="프로젝트·원가 관리"
+            data-testid="workspace-home"
             onClick={(event) => {
               event.preventDefault();
               go("UI-16");
             }}
           >
-            <span className="sicost-logo">SI</span>
-            <strong className="sicost-brand">프로젝트·원가 관리</strong>
+            <Brand />
           </Link>
+          <button
+            type="button"
+            className="sicost-workspace-search"
+            data-testid="workspace-search"
+            onClick={() => setUtility("search")}
+          >
+            <Icon name="search" size={17} />
+            <span>화면 이름이나 화면 ID로 찾기</span>
+            <kbd>Ctrl K</kbd>
+          </button>
           <span className="sicost-header-spacer" />
           <HeaderActions
             onBadges={setNotificationBadges}
@@ -569,47 +587,46 @@ function SharedApplicationContent({
               <span className="sicost-user-name">{user.name}</span>
               <Icon name="chevron" size={12} className="sicost-chevron-down" />
             </button>
-            {userMenu && (
-              <div className="sicost-user-menu">
-                <button
-                  type="button"
-                  data-testid="profile-menu-button"
-                  onClick={() => {
-                    userButton.current?.focus();
-                    setDialog("profile");
-                    setUserMenu(false);
-                  }}
-                >
-                  내 정보
-                </button>
-                <button
-                  onClick={() => {
-                    setDialog("settings");
-                    setUserMenu(false);
-                  }}
-                >
-                  화면 설정
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUtility("search");
-                    setUserMenu(false);
-                  }}
-                >
-                  메뉴 찾기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUtility("help");
-                    setUserMenu(false);
-                  }}
-                >
-                  단축키 보기
-                </button>
-              </div>
-            )}
+            <div className="sicost-user-menu" hidden={!userMenu}>
+              <SessionIndicator />
+              <button
+                type="button"
+                data-testid="profile-menu-button"
+                onClick={() => {
+                  userButton.current?.focus();
+                  setDialog("profile");
+                  setUserMenu(false);
+                }}
+              >
+                내 정보
+              </button>
+              <button
+                onClick={() => {
+                  setDialog("settings");
+                  setUserMenu(false);
+                }}
+              >
+                화면 설정
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUtility("search");
+                  setUserMenu(false);
+                }}
+              >
+                메뉴 찾기
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUtility("help");
+                  setUserMenu(false);
+                }}
+              >
+                단축키 보기
+              </button>
+            </div>
           </div>
         </header>
         <div className="sicost-app-body">
@@ -625,15 +642,21 @@ function SharedApplicationContent({
             aria-label="주 메뉴"
           >
             <div className="sicost-quick">
-              <div className="sicost-quick-title">
-                <Icon name="star" size={13} /> 즐겨찾기{" "}
-                <button onClick={() => setDialog("favorites")}>편집</button>
-              </div>
-              {favorites.length ? (
-                favorites.filter(visibleOnDevice).map((id) => (
+              <section
+                className="sicost-quick-recent"
+                aria-label="최근 본 화면"
+              >
+                <div className="sicost-quick-title">
+                  <Icon name="clock" size={13} />
+                  최근 본 화면
+                  <small>{recent.filter(visibleOnDevice).length}</small>
+                </div>
+                {recent.filter(visibleOnDevice).map((id) => (
                   <Link
                     key={id}
                     to={`/${id}`}
+                    data-testid={`recent-${id.toLowerCase()}`}
+                    aria-current={active === id ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
                       go(id);
@@ -641,26 +664,34 @@ function SharedApplicationContent({
                   >
                     {byScreen(id)?.name}
                   </Link>
-                ))
-              ) : (
-                <p>별을 눌러 화면을 추가하세요.</p>
-              )}
-              <div className="sicost-quick-title">
-                <Icon name="clock" size={13} />
-                최근 본 화면
-              </div>
-              {recent.filter(visibleOnDevice).map((id) => (
-                <Link
-                  key={id}
-                  to={`/${id}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    go(id);
-                  }}
-                >
-                  {byScreen(id)?.name}
-                </Link>
-              ))}
+                ))}
+                {!recent.filter(visibleOnDevice).length && (
+                  <p>아직 없습니다.</p>
+                )}
+              </section>
+              <section className="sicost-quick-favorites" aria-label="즐겨찾기">
+                <div className="sicost-quick-title">
+                  <Icon name="star" size={13} /> 즐겨찾기{" "}
+                  <button onClick={() => setDialog("favorites")}>편집</button>
+                </div>
+                {favorites.length ? (
+                  favorites.filter(visibleOnDevice).map((id) => (
+                    <Link
+                      key={id}
+                      to={`/${id}`}
+                      data-testid={`favorite-${id.toLowerCase()}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        go(id);
+                      }}
+                    >
+                      {byScreen(id)?.name}
+                    </Link>
+                  ))
+                ) : (
+                  <p>별을 눌러 화면을 추가하세요.</p>
+                )}
+              </section>
             </div>
             <nav>
               {menus.items.map((parent) => {
@@ -763,7 +794,7 @@ function SharedApplicationContent({
             <button
               className="sicost-collapse"
               onClick={fold}
-              disabled={pending}
+              disabled={pending || !prefsReady || Boolean(preferences?.pending)}
             >
               <Icon name="menu" size={16} />
               <span>{folded ? "펼치기" : "메뉴 접기"}</span>

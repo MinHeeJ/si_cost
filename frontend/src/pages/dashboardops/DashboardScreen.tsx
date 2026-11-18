@@ -10,6 +10,12 @@ import {
   type AmountUnit,
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { SectionCard } from "../../shared/Surface";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { Icon } from "../../shared/Icon";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import { flattenMenus, useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./dashboardApi";
 import { DashboardTrendChart } from "./DashboardTrendChart";
@@ -57,12 +63,23 @@ const events = [
 const testKey = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9-]/g, "-");
 const count = (value: number | null) => (value == null ? "–" : String(value));
-export function DashboardBasis({ basis }: { basis: api.DashboardBasis }) {
+export function DashboardBasis({
+  basis,
+  compact = false,
+}: {
+  basis: api.DashboardBasis;
+  compact?: boolean;
+}) {
   return (
     <div className="dashboard-basis">
-      <span>
+      <span
+        className={compact ? "sicost-sr-only" : undefined}
+        title={`${basis.basisMonth ?? basis.basisDate} · ${basis.sourceService} · ${formatDateTime(basis.observedAt)}`}
+      >
         {basis.basisMonth ?? basis.basisDate} · {basis.sourceService} ·{" "}
-        {formatDateTime(basis.observedAt)}
+        <span className="sicost-sr-only">
+          {formatDateTime(basis.observedAt)}
+        </span>
       </span>
       {basis.status === "FAILED" && (
         <StatusBadge tone="bad">조회 실패</StatusBadge>
@@ -89,10 +106,9 @@ function Panel({
   testId: string;
 }) {
   return (
-    <section className="dashboard-panel" data-testid={testId}>
-      <h2>{title}</h2>
+    <SectionCard title={title} className="dashboard-panel" testId={testId}>
       {children}
-    </section>
+    </SectionCard>
   );
 }
 export function DashboardScreen({
@@ -211,21 +227,23 @@ export function DashboardScreen({
         data-testid="dashboard-screen"
         aria-busy={loading}
       >
-        <div className="dashboard-toolbar">
-          <small>
-            {data?.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} · 단위:{" "}
-            {amountUnit}
-          </small>
-          {!mobile && (
-            <button
-              data-testid="dashboard-export"
-              disabled={loading || exporting || !data || !!error}
-              onClick={() => void download()}
-            >
-              {exporting ? "파일 생성 중…" : "엑셀 다운로드"}
-            </button>
-          )}
-        </div>
+        <ScreenTitleActions>
+          <div className="dashboard-toolbar">
+            <small>
+              {data?.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} · 단위:{" "}
+              {amountUnit}
+            </small>
+            {!mobile && (
+              <button
+                data-testid="dashboard-export"
+                disabled={loading || exporting || !data || !!error}
+                onClick={() => void download()}
+              >
+                {exporting ? "파일 생성 중…" : "엑셀 다운로드"}
+              </button>
+            )}
+          </div>
+        </ScreenTitleActions>
         {loading && <p role="status">대시보드를 불러오는 중입니다.</p>}
         {error != null && failure(error)}
         {downloadError != null && (
@@ -245,8 +263,11 @@ export function DashboardScreen({
         {notice && <p role="status">{notice}</p>}
         {data && !loading && !error && (
           <>
-            <p className="dashboard-dates">
-              오늘 {data.today} · 선택월 Q {data.selectedMonth}{" "}
+            <div className="dashboard-dates">
+              <span>
+                기준일 <b>{data.today}</b>
+              </span>
+              <span>선택월 Q {data.selectedMonth}</span>
               <StatusBadge
                 tone={
                   data.selectedMonthCloseStatus === "CLOSE" ? "lock" : "info"
@@ -254,12 +275,28 @@ export function DashboardScreen({
               >
                 {data.selectedMonthCloseStatus === "CLOSE" ? "마감" : "작업중"}
               </StatusBadge>{" "}
-              · 마지막 마감 {data.lastClosedMonth ?? "–"}{" "}
+              <span>
+                마감 완료 <b>{data.lastClosedMonth ?? "–"}</b>
+              </span>
               {data.provisional && <StatusBadge tone="warn">잠정</StatusBadge>}
-              <br />
-              현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M{" "}
-              {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
-            </p>
+              <span className="dashboard-date-note sicost-sr-only">
+                현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M{" "}
+                {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
+              </span>
+              <HelpTooltip label="숫자 기준" testId="dashboard-basis-help">
+                현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} / 현재월{" "}
+                {data.currentMonth} 기준입니다.
+                <br />
+                조회 시각 {formatDateTime(data.observedAt)}
+                {data.metrics.map((card) => (
+                  <p key={card.metricCode}>
+                    {metricLabels[card.metricCode]} ·{" "}
+                    {card.basis.basisMonth ?? card.basis.basisDate} ·{" "}
+                    {card.basis.sourceService}
+                  </p>
+                ))}
+              </HelpTooltip>
+            </div>
             <div className="dashboard-metrics">
               {data.metrics.map((card) => (
                 <button
@@ -320,7 +357,7 @@ export function DashboardScreen({
                       {money(card.overdueAmount)} {amountUnit}
                     </small>
                   )}
-                  <DashboardBasis basis={card.basis} />
+                  <DashboardBasis basis={card.basis} compact />
                 </button>
               ))}
             </div>
@@ -374,7 +411,9 @@ export function DashboardScreen({
                         )
                       }
                     >
-                      <span className="dashboard-row-icon">△</span>
+                      <span className="dashboard-row-icon">
+                        <Icon name="warning" size={18} />
+                      </span>
                       <span>
                         <strong>
                           {actionLabels[action.actionCode] ?? action.actionCode}{" "}
@@ -395,9 +434,14 @@ export function DashboardScreen({
                             {count(action.recommendedPlacementCount)}명
                           </small>
                         )}
-                        <DashboardBasis basis={action.basis} />
+                        <DashboardBasis basis={action.basis} compact />
                       </span>
-                      <span>›</span>
+                      <span className="dashboard-row-target">
+                        {flattenMenus(menus).find(
+                          (menu) => menu.screenId === action.link.screenId,
+                        )?.name ?? "원천 보기"}{" "}
+                        ›
+                      </span>
                     </button>
                   ))}
               </Panel>
@@ -536,6 +580,34 @@ export function DashboardScreen({
                     : "허용된 담당 범위의 인력"}{" "}
                   · 미충원 포함 · 단위: 명
                 </p>
+                <ChartHost
+                  option={seriesChartOptions({
+                    categories: data.supplyForecast.map((row) => row.month),
+                    series: [
+                      {
+                        name: "필요",
+                        type: "bar",
+                        values: data.supplyForecast.map(
+                          (row) => row.requiredPersons,
+                        ),
+                      },
+                      {
+                        name: "가용",
+                        type: "bar",
+                        values: data.supplyForecast.map(
+                          (row) => row.availablePersons,
+                        ),
+                      },
+                    ],
+                    formatValue: (value) => `${formatFixedDecimal(value, 1)}명`,
+                    axisUnit: "명",
+                  })}
+                >
+                  <p className="dashboard-empty">
+                    차트 대신 아래 숫자표에서 인력 수급 예측을 확인할 수
+                    있습니다.
+                  </p>
+                </ChartHost>
                 <div className="sicost-table-viewport">
                   <table
                     className="sicost-table"

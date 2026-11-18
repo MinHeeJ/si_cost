@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -178,7 +179,8 @@ export function ReceiptDetailDrawer({
           className="receipt-detail"
           data-testid="receipt-detail"
         >
-          <nav
+          <SegmentedTabList
+            as="nav"
             className="receipt-tabs"
             role="tablist"
             aria-label="청구 상세 탭"
@@ -205,7 +207,7 @@ export function ReceiptDetailDrawer({
             >
               입금 내역 ({detail?.receipts.total ?? 0})
             </button>
-          </nav>
+          </SegmentedTabList>
           {loading && <p role="status">불러오는 중입니다.</p>}
           {Boolean(error) && (
             <ErrorBanner

@@ -1,7 +1,9 @@
 .menu-management {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+
+  gap: 20px;
+
+  padding: 0;
   min-width: 0;
 }
 .menu-management-heading,
@@ -23,6 +25,15 @@
 }
 .menu-management-actions > :first-child {
   margin-right: auto;
+}
+.menu-management > footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 14px 20px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+  box-shadow: 0 -10px 24px -18px rgba(17, 24, 39, 0.35);
 }
 .menu-management-root td {
   background: var(--head-bg);
@@ -54,8 +65,9 @@
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .menu-management-history details {

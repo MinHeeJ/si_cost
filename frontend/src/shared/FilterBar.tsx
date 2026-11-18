@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 export type FilterBarProps = {
   /** 조회 버튼/Enter. 화면이 입력 중인 조건을 실제 조회 조건으로 확정한다. */
@@ -35,39 +35,62 @@ export function FilterBar({
   extra,
 }: FilterBarProps) {
   const Container = embedded ? "div" : "form";
+  const id = useId();
+  const [expanded, setExpanded] = useState(false);
   return (
-    <Container
-      className={`sicost-filterbar ${className}`.trim()}
-      data-testid={testId}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && event.nativeEvent.isComposing) event.preventDefault();
-        else if (embedded && event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!disabled) onSubmit();
-        }
-      }}
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      {children}
-      <div className="sicost-filterbar-actions">
-        {extra}
-        <button type="button" data-testid={resetTestId} onClick={onReset} disabled={disabled}>
-          초기화
-        </button>
+    <>
+      {!embedded && (
         <button
-          type={embedded ? "button" : "submit"}
-          onClick={embedded ? onSubmit : undefined}
-          className="sicost-primary"
-          data-testid={searchTestId}
-          disabled={disabled}
+          type="button"
+          className="sicost-filter-toggle"
+          data-testid={`${testId ?? `filter-${id.replace(/:/g, "")}`}-toggle`}
+          aria-expanded={expanded}
+          aria-controls={id}
+          onClick={() => setExpanded((value) => !value)}
         >
-          조회
+          조건
         </button>
-      </div>
-    </Container>
+      )}
+      <Container
+        id={id}
+        className={`sicost-filterbar${!embedded ? " sicost-filterbar-mobile" : ""}${expanded ? " sicost-filterbar-open" : ""} ${className}`.trim()}
+        data-testid={testId}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && event.nativeEvent.isComposing)
+            event.preventDefault();
+          else if (embedded && event.key === "Enter") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!disabled) onSubmit();
+          }
+        }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        {children}
+        <div className="sicost-filterbar-actions">
+          {extra}
+          <button
+            type="button"
+            data-testid={resetTestId}
+            onClick={onReset}
+            disabled={disabled}
+          >
+            초기화
+          </button>
+          <button
+            type={embedded ? "button" : "submit"}
+            onClick={embedded ? onSubmit : undefined}
+            className="sicost-primary"
+            data-testid={searchTestId}
+            disabled={disabled}
+          >
+            조회
+          </button>
+        </div>
+      </Container>
+    </>
   );
 }

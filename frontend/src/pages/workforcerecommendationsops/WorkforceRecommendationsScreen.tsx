@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
@@ -258,13 +259,15 @@ export function WorkforceRecommendationsScreen({
     >
       <header className="recommendation-heading">
         <h2>AI 인력 추천</h2>
-        <button
-          type="button"
-          data-testid="recommendation-history-open"
-          onClick={() => setHistory(true)}
-        >
-          추천 기록
-        </button>
+        <ScreenTitleActions>
+          <button
+            type="button"
+            data-testid="recommendation-history-open"
+            onClick={() => setHistory(true)}
+          >
+            추천 기록
+          </button>
+        </ScreenTitleActions>
       </header>
       <RecommendationBrowseError
         error={targetError}
@@ -429,7 +432,12 @@ export function WorkforceRecommendationsScreen({
               target: selected,
               serverDate: targets.serverDate,
               onReset: () => {
-                if (targets && selected) void recommend(initialCondition(selected), selected, targets.baseMonth);
+                if (targets && selected)
+                  void recommend(
+                    initialCondition(selected),
+                    selected,
+                    targets.baseMonth,
+                  );
               },
               onRefresh: async () => {
                 if (!result.rcmdId) return;
@@ -447,16 +455,32 @@ export function WorkforceRecommendationsScreen({
         </fieldset>
       )}
       {result?.exclusions && (
-        <section className="recommendation-card" data-testid="recommendation-exclusions">
+        <section
+          className="recommendation-card"
+          data-testid="recommendation-exclusions"
+        >
           <h2>후보 제외 진단</h2>
-          <p>전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외 {result.exclusions.excludedUniqueCount}명</p>
-          <p>한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은 다를 수 있습니다.</p>
-          <div>{result.exclusions.byReason.map((r) => (
-            <span className="sicost-badge sicost-tone-neutral" key={r.reason}>{r.reason} {r.count}명</span>
-          ))}</div>
-          <details><summary>개인 진단</summary>
+          <p>
+            전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외{" "}
+            {result.exclusions.excludedUniqueCount}명
+          </p>
+          <p>
+            한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은
+            다를 수 있습니다.
+          </p>
+          <div>
+            {result.exclusions.byReason.map((r) => (
+              <span className="sicost-badge sicost-tone-neutral" key={r.reason}>
+                {r.reason} {r.count}명
+              </span>
+            ))}
+          </div>
+          <details>
+            <summary>개인 진단</summary>
             {result.exclusions.diagnostics.map((d) => (
-              <p key={d.developerId}>{d.developerId}: {d.reasons.join(" · ")}</p>
+              <p key={d.developerId}>
+                {d.developerId}: {d.reasons.join(" · ")}
+              </p>
             ))}
           </details>
         </section>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
+import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -62,6 +63,7 @@ export function ProjectForm({
   const initial = useRef(form),
     node = useRef<HTMLFormElement>(null),
     busy = useRef(false);
+  const topmost = useOverlayLayer(node, modal && visible, 24);
   const [codes, setCodes] = useState<
     Record<string, { code: string; name: string }[]>
   >({});
@@ -187,9 +189,10 @@ export function ProjectForm({
   useEffect(() => {
     if (!modal || !visible || leaving) return;
     const previous = document.activeElement as HTMLElement | null;
-    node.current?.querySelector<HTMLInputElement>("input")?.focus();
+    if (topmost())
+      node.current?.querySelector<HTMLInputElement>("input")?.focus();
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && topmost()) {
         event.preventDefault();
         close();
       }
@@ -323,6 +326,8 @@ export function ProjectForm({
   const content = (
     <FormPage
       title={p ? "프로젝트 수정" : "프로젝트 등록"}
+      breadcrumb="프로젝트·투입 › 프로젝트"
+      screenId="UI-01"
       actions={
         <button
           type="button"
@@ -575,7 +580,7 @@ export function ProjectForm({
           style={visible ? undefined : { display: "none" }}
         >
           <div
-            className="sicost-dialog sicost-dialog-wide"
+            className="sicost-dialog sicost-dialog-page project-form-dialog"
             role="dialog"
             aria-modal="true"
             aria-label={p ? "프로젝트 수정" : "프로젝트 등록"}

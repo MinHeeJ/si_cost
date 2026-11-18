@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -596,7 +597,11 @@ export function CommonCodesScreen({
             <Icon name="plus" size={16} /> 그룹 추가
           </button>
         </header>
-        <nav className="codegroups-tabs" aria-label="공통코드 하위 탭">
+        <SegmentedTabList
+          as="nav"
+          className="codegroups-tabs"
+          aria-label="공통코드 하위 탭"
+        >
           {tabs.map((item) => (
             <button
               data-testid={`common-codes-tab-${item.id}`}
@@ -610,7 +615,7 @@ export function CommonCodesScreen({
               {item.label}
             </button>
           ))}
-        </nav>
+        </SegmentedTabList>
         {error != null && (
           <ErrorBanner
             message={

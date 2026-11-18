@@ -6,6 +6,10 @@
   margin: 16px 0;
   color: var(--text-sub);
   font-size: 13px;
+  background: var(--surface);
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: var(--e1);
 }
 .staffing-comparison .sicost-filterbar label {
   display: flex;

@@ -1,3 +1,6 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { useOverlayLayer } from "../../shared/useOverlayLayer";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
@@ -45,19 +48,27 @@ export function SalesPipelinePanel() {
   const [tab, setTab] = useState<"ING" | "CLOSED" | "FORECAST">("ING"),
     [result, setResult] = useState<"WIN" | "LOSE" | "STOP">("WIN"),
     [includeStopped, setIncludeStopped] = useState(false);
-  const [ordering, setOrdering] = useState<{ sort: "amount" | "resultDate"; direction: "ASC" | "DESC" }>();
+  const [ordering, setOrdering] = useState<{
+    sort: "amount" | "resultDate";
+    direction: "ASC" | "DESC";
+  }>();
   const [page, setPage] = useState(1),
     [data, setData] = useState<api.OpportunityPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const [selectedId, setSelectedId] = useState<string | undefined>(
     (location.state as { opportunityId?: string } | null)?.opportunityId ??
-      new URLSearchParams(location.search).get("opportunityId") ?? undefined,
+      new URLSearchParams(location.search).get("opportunityId") ??
+      undefined,
   );
   useEffect(() => {
-    const id = (location.state as { opportunityId?: string } | null)?.opportunityId
-      ?? new URLSearchParams(location.search).get("opportunityId");
-    if (id) { setSelectedId(id); setDetailTab("기본 정보"); }
+    const id =
+      (location.state as { opportunityId?: string } | null)?.opportunityId ??
+      new URLSearchParams(location.search).get("opportunityId");
+    if (id) {
+      setSelectedId(id);
+      setDetailTab("기본 정보");
+    }
   }, [location.key, location.search]);
   const [detail, setDetail] = useState<api.Opportunity>(),
     [detailError, setDetailError] = useState<unknown>(),
@@ -189,16 +200,40 @@ export function SalesPipelinePanel() {
           />
         </OpportunityModal>
       )}
-      <div className="sales-command-toolbar">
-        <button
-          className="sicost-primary"
-          data-testid="pipeline-create-button"
-          onClick={() => setEditing("new")}
-        >
-          기회 등록
-        </button>
-      </div>
-      <div
+      <ScreenTitleActions>
+        <div className="sales-command-toolbar">
+          <button
+            className="sicost-primary"
+            data-testid="pipeline-create-button"
+            onClick={() => setEditing("new")}
+          >
+            기회 등록
+          </button>
+        </div>
+      </ScreenTitleActions>
+      {data && tab !== "FORECAST" && (
+        <dl className="sales-command-summary">
+          <div>
+            <dt>진행 기회</dt>
+            <dd>{data.summary.opportunityCount}건</dd>
+            <p>14일 초과 미갱신 {data.summary.staleCount}건</p>
+          </div>
+          <div>
+            <dt>예상 금액 합계</dt>
+            <dd>{formatAmount(data.summary.amount, "천원")} 천원</dd>
+          </div>
+          <div>
+            <dt>확률 반영 금액</dt>
+            <dd>{formatAmount(data.summary.weightedAmount, "천원")} 천원</dd>
+          </div>
+          <div>
+            <dt>확률 반영 필요 인력</dt>
+            <dd>{formatFixedDecimal(data.summary.weightedPeople, 1)}명</dd>
+          </div>
+        </dl>
+      )}
+      <SegmentedTabList
+        as="div"
         className="sales-command-tabs"
         role="tablist"
         aria-label="영업 파이프라인 보기"
@@ -220,15 +255,22 @@ export function SalesPipelinePanel() {
             {label}
           </button>
         ))}
-      </div>
+      </SegmentedTabList>
       {tab === "FORECAST" ? (
         <SalesForecastPanel />
       ) : (
         <>
-          <FilterBar onSubmit={() => setGeneration((v) => v + 1)} onReset={() => {
-            setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1);
-          }}>
-            <button type="button"
+          <FilterBar
+            onSubmit={() => setGeneration((v) => v + 1)}
+            onReset={() => {
+              setResult("WIN");
+              setIncludeStopped(false);
+              setPage(1);
+              setGeneration((v) => v + 1);
+            }}
+          >
+            <button
+              type="button"
               data-testid="pipeline-retry-button"
               disabled={loading}
               onClick={() => setGeneration((v) => v + 1)}
@@ -273,27 +315,6 @@ export function SalesPipelinePanel() {
           {error != null && <SalesCommandError error={error} />}
           {data && (
             <>
-              <dl className="sales-command-summary">
-                <div>
-                  <dt>진행 기회</dt>
-                  <dd>{data.summary.opportunityCount}건</dd>
-                  <p>14일 초과 미갱신 {data.summary.staleCount}건</p>
-                </div>
-                <div>
-                  <dt>예상 금액 합계</dt>
-                  <dd>{formatAmount(data.summary.amount, "천원")} 천원</dd>
-                </div>
-                <div>
-                  <dt>확률 반영 금액</dt>
-                  <dd>{formatAmount(data.summary.weightedAmount, "천원")} 천원</dd>
-                </div>
-                <div>
-                  <dt>확률 반영 필요 인력</dt>
-                  <dd>
-                    {formatFixedDecimal(data.summary.weightedPeople, 1)}명
-                  </dd>
-                </div>
-              </dl>
               {tab === "ING" ? (
                 <div className="sales-command-kanban">
                   {(Object.keys(stageNames) as api.Stage[]).map((stage) => (
@@ -317,7 +338,18 @@ export function SalesPipelinePanel() {
                         ))}
                       {!loading &&
                         data.items.every((o) => o.stage !== stage) && (
-                          <div className="sales-command-empty"><p>기회 없음</p><button type="button" onClick={() => { setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
+                          <div className="sales-command-empty">
+                            <p>기회 없음</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPage(1);
+                                setGeneration((v) => v + 1);
+                              }}
+                            >
+                              조건 초기화
+                            </button>
+                          </div>
                         )}
                       {data.items
                         .filter((o) => o.stage === stage)
@@ -410,12 +442,49 @@ export function SalesPipelinePanel() {
                         <th>기회명</th>
                         <th>고객</th>
                         <th>결과</th>
-                        {([['amount', '예상액 (천원)'], ['resultDate', '결과일']] as const).map(([key, title]) => {
-                          const selected = ordering?.sort === key || !ordering && key === "resultDate";
+                        {(
+                          [
+                            ["amount", "예상액 (천원)"],
+                            ["resultDate", "결과일"],
+                          ] as const
+                        ).map(([key, title]) => {
+                          const selected =
+                            ordering?.sort === key ||
+                            (!ordering && key === "resultDate");
                           const direction = ordering?.direction ?? "DESC";
-                          return <th key={key} aria-sort={selected ? direction === "ASC" ? "ascending" : "descending" : "none"}>
-                            <button type="button" onClick={() => { setPage(1); setOrdering({ sort: key, direction: selected && direction === "ASC" ? "DESC" : "ASC" }); }}>{title} {selected ? direction === "ASC" ? "↑" : "↓" : "↕"}</button>
-                          </th>;
+                          return (
+                            <th
+                              key={key}
+                              aria-sort={
+                                selected
+                                  ? direction === "ASC"
+                                    ? "ascending"
+                                    : "descending"
+                                  : "none"
+                              }
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPage(1);
+                                  setOrdering({
+                                    sort: key,
+                                    direction:
+                                      selected && direction === "ASC"
+                                        ? "DESC"
+                                        : "ASC",
+                                  });
+                                }}
+                              >
+                                {title}{" "}
+                                {selected
+                                  ? direction === "ASC"
+                                    ? "↑"
+                                    : "↓"
+                                  : "↕"}
+                              </button>
+                            </th>
+                          );
                         })}
                         <th>프로젝트 / 실주 사유</th>
                       </tr>
@@ -456,7 +525,20 @@ export function SalesPipelinePanel() {
                     </tbody>
                   </table>
                   {data.items.length === 0 && (
-                    <div className="sales-command-empty"><p>종료 기회 없음</p><button type="button" onClick={() => { setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
+                    <div className="sales-command-empty">
+                      <p>종료 기회 없음</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResult("WIN");
+                          setIncludeStopped(false);
+                          setPage(1);
+                          setGeneration((v) => v + 1);
+                        }}
+                      >
+                        조건 초기화
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -521,7 +603,8 @@ export function SalesPipelinePanel() {
                 opportunity={detail}
                 refresh={refresh}
               />
-              <div
+              <SegmentedTabList
+                as="div"
                 className="sales-command-tabs"
                 role="tablist"
                 aria-label="기회 상세 탭"
@@ -537,7 +620,7 @@ export function SalesPipelinePanel() {
                     {t}
                   </button>
                 ))}
-              </div>
+              </SegmentedTabList>
               <div role="tabpanel" data-testid="opportunity-detail-panel">
                 {detailTab === "기본 정보" && (
                   <>
@@ -619,34 +702,60 @@ function isStale(opportunity: api.Opportunity, today?: string) {
 
 function OpportunityModal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const topmost = useOverlayLayer(ref, true, 55);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+    if (topmost()) ref.current?.focus();
     return () => previous?.focus();
   }, []);
   return createPortal(
     <div className="sicost-scrim sales-opportunity-scrim">
-      <div ref={ref} role="dialog" aria-modal="true" aria-label="영업 기회 입력"
-        tabIndex={-1} className="sicost-dialog sales-opportunity-dialog"
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label="영업 기회 입력"
+        tabIndex={-1}
+        className="sicost-dialog sicost-dialog-page sales-opportunity-dialog"
         onKeyDown={(event) => {
+          if (!topmost()) return;
           if (!ref.current?.contains(event.target as Node)) return;
           if (event.key === "Escape") {
             event.preventDefault();
-            ref.current?.querySelector<HTMLButtonElement>('[data-testid="opportunity-form-back"]')?.click();
+            ref.current
+              ?.querySelector<HTMLButtonElement>(
+                '[data-testid="opportunity-form-back"]',
+              )
+              ?.click();
           }
           if (event.key === "Tab") {
-            const nodes = [...(ref.current?.querySelectorAll<HTMLElement>(
-              'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]',
-            ) ?? [])].filter((node) => node.getClientRects().length > 0);
-            const first = nodes[0], last = nodes[nodes.length - 1];
-            if (!first) { event.preventDefault(); ref.current?.focus(); }
-            else if (event.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
-              event.preventDefault(); last?.focus();
+            const nodes = [
+              ...(ref.current?.querySelectorAll<HTMLElement>(
+                "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]",
+              ) ?? []),
+            ].filter((node) => node.getClientRects().length > 0);
+            const first = nodes[0],
+              last = nodes[nodes.length - 1];
+            if (!first) {
+              event.preventDefault();
+              ref.current?.focus();
+            } else if (
+              event.shiftKey &&
+              (document.activeElement === first ||
+                document.activeElement === ref.current)
+            ) {
+              event.preventDefault();
+              last?.focus();
             } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault(); first.focus();
+              event.preventDefault();
+              first.focus();
             }
           }
-        }}>{children}</div>
-    </div>, document.body,
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   );
 }

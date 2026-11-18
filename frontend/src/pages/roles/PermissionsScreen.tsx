@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -342,7 +343,12 @@ export function PermissionsScreen({
         </p>
       ))}
       <div className="roles-toolbar">
-        <div role="tablist" aria-label="역할" className="roles-tabs">
+        <SegmentedTabList
+          as="div"
+          role="tablist"
+          aria-label="역할"
+          className="roles-tabs"
+        >
           {roles.map((role) => (
             <button
               role="tab"
@@ -361,7 +367,7 @@ export function PermissionsScreen({
               {role.name}
             </button>
           ))}
-        </div>
+        </SegmentedTabList>
         <button
           data-testid="role-refresh"
           disabled={pending || loading}
@@ -495,7 +501,7 @@ export function PermissionsScreen({
             확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
             마감해제는 별도 관리자 자격을 검사합니다.
           </p>
-          <div className="roles-toolbar">
+          <div className="roles-toolbar roles-savebar">
             <div>
               <button
                 data-testid="role-page-previous"

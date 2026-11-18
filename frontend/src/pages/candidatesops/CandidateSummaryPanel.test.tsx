@@ -34,6 +34,7 @@ it("renders all five API counts with global boundary wording, never list-only to
     screen.getByText(/목록의 ‘다음 달까지’는 다음 달 말일/),
   ).toHaveTextContent("다음 달 1일");
   expect(metric("in-progress")).toHaveAttribute("title", "보류·계약 완료 제외");
+  expect(metric("total")).toContainElement(metric("in-progress"));
   expect(metric("overdue-contact")).toHaveAttribute(
     "title",
     expect.stringContaining("정확히 30일은 제외"),

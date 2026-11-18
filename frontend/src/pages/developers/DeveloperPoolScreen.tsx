@@ -8,6 +8,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -442,33 +443,35 @@ export function DeveloperPoolScreen({
         />
       )}
       <>
-        <header className="developer-toolbar">
-          {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
-          <div />
-          <div className="developer-actions">
-            <PayrollActions onDirtyChange={onDirtyChange} />
-            {!mobile && (
-              <B8UploadActions
-                onApplied={async () => {
-                  await load();
-                  setRefreshKey((v) => v + 1);
+        <ScreenTitleActions active={active && !form}>
+          <header className="developer-toolbar">
+            {/* 화면 제목은 공통 틀(SharedScreenFrame)이 그린다. 여기서 또 그리면 제목 블록이 두 번 나온다. */}
+            <div />
+            <div className="developer-actions">
+              <PayrollActions onDirtyChange={onDirtyChange} />
+              {!mobile && (
+                <B8UploadActions
+                  onApplied={async () => {
+                    await load();
+                    setRefreshKey((v) => v + 1);
+                  }}
+                  onDirtyChange={onDirtyChange}
+                />
+              )}
+              <button
+                type="button"
+                className="sicost-primary"
+                data-testid="developer-create-button"
+                onClick={() => {
+                  setId(undefined);
+                  setForm({});
                 }}
-                onDirtyChange={onDirtyChange}
-              />
-            )}
-            <button
-              type="button"
-              className="sicost-primary"
-              data-testid="developer-create-button"
-              onClick={() => {
-                setId(undefined);
-                setForm({});
-              }}
-            >
-              + 등록
-            </button>
-          </div>
-        </header>
+              >
+                + 등록
+              </button>
+            </div>
+          </header>
+        </ScreenTitleActions>
         <FilterBar
           className="developer-filters"
           testId="developer-filter-form"

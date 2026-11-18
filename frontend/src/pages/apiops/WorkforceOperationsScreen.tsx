@@ -1,3 +1,5 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -88,7 +90,7 @@ export function WorkforceOperationsScreen() {
   const next = context ? nextMonth(context.currentMonth) : "";
   return (
     <section
-      className="workforce-calendar"
+      className="workforce-calendar workforce-calendar-workspace"
       data-testid="workforce-operations-screen"
       data-screen-id="SCR-UI-28"
     >
@@ -98,7 +100,7 @@ export function WorkforceOperationsScreen() {
       {!context && !error && <p role="status">기간을 불러오는 중입니다.</p>}
       {context && year && (
         <>
-          <div role="tablist" aria-label="인력 운영 보기">
+          <SegmentedTabList as="div" role="tablist" aria-label="인력 운영 보기">
             <button
               role="tab"
               data-testid="calendar-tab"
@@ -115,7 +117,7 @@ export function WorkforceOperationsScreen() {
             >
               수요·공급
             </button>
-          </div>
+          </SegmentedTabList>
           <div
             role="tabpanel"
             aria-label="달력"
@@ -277,36 +279,43 @@ export function WorkforceCalendar({
           : "조회 전용"}
       </p>
       {data && (
-        <div className="workforce-calendar-summary">
+        <KpiStrip className="workforce-calendar-summary">
           <button
             data-testid="calendar-available-card"
+            aria-label={`현재 비는인원 ${data.summary.availablePeople}명 / 남는 MM ${decimal(data.summary.remainingMm)}`}
             onClick={() => {
               setDraft((d) => ({ ...d, remainingOnly: true }));
               setFilter((f) => ({ ...f, remainingOnly: true }));
               setPage(1);
             }}
           >
-            현재 비는인원 {data.summary.availablePeople}명 / 남는 MM{" "}
-            {decimal(data.summary.remainingMm)}
+            <span>현재 비는인원</span>
+            <strong>{data.summary.availablePeople}명</strong>
+            <small>남는 MM {decimal(data.summary.remainingMm)}</small>
           </button>
           <Link
             data-testid="calendar-withdrawal-card"
+            aria-label={`3개월 안 철수 예정 ${data.summary.leavingSoonPeople}명 · 연장 가능성 높음 ${data.summary.highExtensionPeople}명`}
             to={`/UI-05?${new URLSearchParams({ context: "withdrawal", year: String(year), jobCode: filter.jobCode })}`}
           >
-            3개월 안 철수 예정 {data.summary.leavingSoonPeople}명 · 연장 가능성
-            높음 {data.summary.highExtensionPeople}명
+            <span>3개월 안 철수 예정</span>
+            <strong>{data.summary.leavingSoonPeople}명</strong>
+            <small>연장 가능성 높음 {data.summary.highExtensionPeople}명</small>
           </Link>
           <Link
             data-testid="calendar-concurrent-card"
+            aria-label={`동시 투입 ${data.summary.concurrentPeople}명 · 1.0 초과 ${data.summary.overAssignedPeople}명`}
             to={`/UI-12?${new URLSearchParams({ year: String(year), warning: "CONCURRENT", jobCode: filter.jobCode })}`}
           >
-            동시 투입 {data.summary.concurrentPeople}명 · 1.0 초과{" "}
-            {data.summary.overAssignedPeople}명
+            <span>동시 투입</span>
+            <strong>{data.summary.concurrentPeople}명</strong>
+            <small>1.0 초과 {data.summary.overAssignedPeople}명</small>
           </Link>
           <article>
-            M+3 남는 MM {decimal(data.summary.thirdMonthRemainingMm)}
+            <span>M+3 남는 MM</span>
+            <strong>{decimal(data.summary.thirdMonthRemainingMm)}</strong>
           </article>
-        </div>
+        </KpiStrip>
       )}
       <FilterBar
         testId="calendar-filters"

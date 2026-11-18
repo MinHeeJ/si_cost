@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePermission } from "./permission/PermissionBoundary";
+import { useOverlayLayer } from "./useOverlayLayer";
 
 export type DialogProps = {
   open: boolean;
@@ -22,6 +23,9 @@ export type DialogProps = {
   noValidate?: boolean;
   permission?: { screen: string; action: string };
   hideCancel?: boolean;
+  /** Full-page editing surface using the same submit, permission and focus controller. */
+  fullPage?: boolean;
+  fullPageBreadcrumb?: string;
 };
 const FOCUSABLE =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
@@ -45,6 +49,8 @@ export function Dialog({
   noValidate,
   permission,
   hideCancel = false,
+  fullPage = false,
+  fullPageBreadcrumb,
 }: DialogProps) {
   const granted = usePermission(
     permission?.screen ?? "",
@@ -52,6 +58,7 @@ export function Dialog({
   );
   const readOnly = permission !== undefined && !granted;
   const ref = useRef<HTMLFormElement>(null);
+  const topmost = useOverlayLayer(ref, open, fullPage ? 24 : 60);
   const inFlight = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const titleId = useId();
@@ -67,7 +74,7 @@ export function Dialog({
       ) ??
       ref.current?.querySelector<HTMLElement>(FOCUSABLE) ??
       ref.current;
-    target?.focus();
+    if (topmost()) target?.focus();
     return () => {
       previous?.focus();
     };
@@ -97,6 +104,9 @@ export function Dialog({
     <div
       className="sicost-scrim"
       onKeyDown={(event) => {
+        if (!topmost()) return;
+        if (event.key === "Escape" || event.key === "Tab")
+          event.stopPropagation();
         if (event.key === "Escape" && !pending && !inFlight.current) {
           event.preventDefault();
           onCancel();
@@ -124,7 +134,7 @@ export function Dialog({
         noValidate={noValidate}
         ref={ref}
         data-testid={testId}
-        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}`}
+        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}${fullPage ? " sicost-dialog-page" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -138,7 +148,27 @@ export function Dialog({
         }}
       >
         <header>
-          <h2 id={titleId}>{title}</h2>
+          {fullPage && !hideCancel && (
+            <button
+              type="button"
+              data-testid={`${testId ?? "full-page-form"}-back`}
+              disabled={pending}
+              onClick={() => {
+                if (!inFlight.current) onCancel();
+              }}
+            >
+              ‹ 목록
+            </button>
+          )}
+          <div>
+            {fullPage && fullPageBreadcrumb && (
+              <p className="sicost-breadcrumb">{fullPageBreadcrumb}</p>
+            )}
+            <div className={fullPage ? "sicost-title-row" : undefined}>
+              <h2 id={titleId}>{title}</h2>
+              {fullPage && permission && <small>{permission.screen}</small>}
+            </div>
+          </div>
           {readOnly && (
             <button type="button" onClick={onCancel} aria-label="닫기">
               ×

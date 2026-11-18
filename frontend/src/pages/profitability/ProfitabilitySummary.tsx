@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import {
   formatAmount,
   formatFixedDecimal,
@@ -5,6 +6,7 @@ import {
   type AmountUnit,
 } from "../../shared/format";
 import type { ProfitabilitySummaryData } from "./individualProfitabilityApi";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 export function ProfitabilitySummary({
   summary: s,
@@ -14,7 +16,8 @@ export function ProfitabilitySummary({
   unit: AmountUnit;
 }) {
   return (
-    <section
+    <KpiStrip
+      as="section"
       className="profitability-summary"
       data-testid="profitability-summary"
       aria-label="개인 원가 수익 요약"
@@ -55,9 +58,13 @@ export function ProfitabilitySummary({
       <article data-testid="profitability-summary-utilization">
         <h2>
           회사 가동률 / 가득률{" "}
-          <span title="가동률 = 그 달 일하는(MM이 있는) 사람 비율 · 가득률 = 월단위·파견으로 청구되는 사람 비율">
-            ⓘ
-          </span>
+          <HelpTooltip
+            label="가동률·가득률 계산 기준"
+            testId="profitability-utilization-help"
+          >
+            가동률 = 그 달 일하는(MM이 있는) 사람 비율 · 가득률 =
+            월단위·파견으로 청구되는 사람 비율
+          </HelpTooltip>
         </h2>
         <strong>
           {formatRate(s.companyUtilization)} / {formatRate(s.companyEarnedRate)}
@@ -65,6 +72,6 @@ export function ProfitabilitySummary({
         <p>월평균 재직 {formatFixedDecimal(s.averageHeadcount, 1)}명</p>
         <small>회사 지표는 검색조건과 무관합니다.</small>
       </article>
-    </section>
+    </KpiStrip>
   );
 }

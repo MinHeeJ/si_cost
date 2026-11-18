@@ -290,7 +290,10 @@ it("released AUTO opens cancellation and validates reason without truncation", a
     name: /^확정 취소$/,
   });
   expect(submit).toBeDisabled();
-  await userEvent.type(reason, "가".repeat(501));
+  const user = userEvent.setup();
+  await user.click(reason);
+  await user.paste("가".repeat(501));
+  expect(reason).toHaveValue("가".repeat(501));
   expect(submit).toBeDisabled();
   await userEvent.clear(reason);
   await userEvent.type(reason, " 정산 재검토 ");

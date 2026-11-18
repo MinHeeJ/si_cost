@@ -2,6 +2,8 @@ import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
 import { formatAmount, formatMm, type AmountUnit } from "../../shared/format";
 import { ErrorBanner } from "../../shared/Feedback";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import {
   getSalesPartSettlementTrend,
   type TrendResult,
@@ -72,7 +74,11 @@ export function SettlementTrendPanel({
               <select
                 data-testid="settlement-trend-unit"
                 value={displayUnit}
-                onChange={(e) => { const next = e.target.value as AmountUnit; if (onAmountUnitChange) onAmountUnitChange(next); else setUnit(next); }}
+                onChange={(e) => {
+                  const next = e.target.value as AmountUnit;
+                  if (onAmountUnitChange) onAmountUnitChange(next);
+                  else setUnit(next);
+                }}
               >
                 <option>원</option>
                 <option>천원</option>
@@ -80,8 +86,29 @@ export function SettlementTrendPanel({
               </select>
             </label>
           </div>
+          <ChartHost
+            option={seriesChartOptions({
+              categories: data.monthlyTotals.map((row) => row.month),
+              series: [
+                {
+                  name: "파트 이익금",
+                  values: data.monthlyTotals.map((row) => row.partProfitAmount),
+                  type: "bar",
+                },
+              ],
+              formatValue: (value) =>
+                `${formatAmount(value, displayUnit)} ${displayUnit}`,
+              axisUnit: "백만원",
+            })}
+          >
+            <p className="settlement-guide">
+              차트를 표시할 수 없는 환경에서는 아래 월별 정산표를 이용해 주세요.
+            </p>
+          </ChartHost>
           <div className="sicost-table-viewport">
-            <table className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}>
+            <table
+              className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}
+            >
               <thead>
                 <tr>
                   <th>이름</th>
@@ -122,7 +149,13 @@ export function SettlementTrendPanel({
                             : formatAmount(cell.value, displayUnit)}
                         </td>
                       ))}
-                      <td className={metric.total?.startsWith("-") ? "settlement-negative" : undefined}>
+                      <td
+                        className={
+                          metric.total?.startsWith("-")
+                            ? "settlement-negative"
+                            : undefined
+                        }
+                      >
                         {metric.metric === "MM"
                           ? formatMm(metric.total)
                           : formatAmount(metric.total, displayUnit)}
@@ -145,13 +178,25 @@ export function SettlementTrendPanel({
                   {data.monthlyTotals.map((total) => (
                     <td
                       key={total.month}
-                      className={total.partProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}
+                      className={
+                        total.partProfitAmount?.startsWith("-")
+                          ? "settlement-negative"
+                          : undefined
+                      }
                       title={`인력 이익금 ${total.personProfitShareAmount ?? "미확인"} · 카드 ${total.cardAmount ?? "미확인"}`}
                     >
                       {formatAmount(total.partProfitAmount, displayUnit)}
                     </td>
                   ))}
-                  <td className={data.periodPartProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}>{formatAmount(data.periodPartProfitAmount, displayUnit)}</td>
+                  <td
+                    className={
+                      data.periodPartProfitAmount?.startsWith("-")
+                        ? "settlement-negative"
+                        : undefined
+                    }
+                  >
+                    {formatAmount(data.periodPartProfitAmount, displayUnit)}
+                  </td>
                   <td>카드는 월 1회 차감</td>
                 </tr>
               </tfoot>
@@ -189,7 +234,12 @@ export function SettlementTrendPanel({
                 value={size}
                 onChange={(e) => {
                   const next = Number(e.target.value) as 20 | 50 | 100;
-                  void (shared.savePageSize?.(next) ?? Promise.resolve()).then(() => { setSize(next); setPage(1); }).catch(setError);
+                  void (shared.savePageSize?.(next) ?? Promise.resolve())
+                    .then(() => {
+                      setSize(next);
+                      setPage(1);
+                    })
+                    .catch(setError);
                 }}
               >
                 <option value={20}>20건씩</option>

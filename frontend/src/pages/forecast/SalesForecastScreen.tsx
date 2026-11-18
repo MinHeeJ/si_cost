@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -7,6 +8,8 @@ import {
   type AmountUnit,
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import { SalesForecastDownloadPanel } from "./SalesForecastDownloadPanel";
 import * as api from "./salesForecastApi";
 import "./salesForecast.css";
@@ -51,9 +54,20 @@ export function SalesForecastPanel() {
   }, [revision]);
   useEffect(() => {
     const refresh = () => setRevision((v) => v + 1);
-    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:projects-committed", "sicost:project-plans-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed", "sicost:bills-committed", "sicost:payroll-committed"];
+    const events = [
+      "sicost:sales-committed",
+      "sicost:assignments-committed",
+      "sicost:developers-committed",
+      "sicost:projects-committed",
+      "sicost:project-plans-committed",
+      "sicost:operating-standards-committed",
+      "sicost:codegroups-committed",
+      "sicost:bills-committed",
+      "sicost:payroll-committed",
+    ];
     events.forEach((name) => window.addEventListener(name, refresh));
-    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+    return () =>
+      events.forEach((name) => window.removeEventListener(name, refresh));
   }, []);
   const unit = unitNames[amountUnit];
   const money = (value: string | null | undefined) => formatAmount(value, unit);
@@ -134,7 +148,7 @@ export function SalesForecastPanel() {
               ))}
             </div>
           )}
-          <div className="sales-forecast-summary">
+          <KpiStrip className="sales-forecast-summary">
             <article data-testid="forecast-revenue-card">
               <p>6개월 예상매출</p>
               <strong>
@@ -163,7 +177,7 @@ export function SalesForecastPanel() {
                 {data.summary.hiringJobCount} <small>개</small>
               </strong>
             </article>
-          </div>
+          </KpiStrip>
           <div className="sales-forecast-charts">
             <ForecastBars
               title="월별 예상매출"
@@ -193,7 +207,9 @@ export function SalesForecastPanel() {
             {identities.length === 0 && (
               <div className="sales-forecast-empty">
                 <p>예측 대상 프로젝트·기회가 없습니다.</p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>
+                  조건 초기화
+                </button>
               </div>
             )}
             <div className="sicost-table-viewport">
@@ -303,10 +319,14 @@ export function SalesForecastPanel() {
             <h2>채용·외부인력 검토</h2>
             {data.workforce.hiring.length === 0 ? (
               <div className="sales-forecast-empty">
-                <p>{data.workforce.issues.length
-                  ? "미확인 기준과 원천을 확인해 주세요."
-                  : "채용 검토가 필요한 직무가 없습니다."}</p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+                <p>
+                  {data.workforce.issues.length
+                    ? "미확인 기준과 원천을 확인해 주세요."
+                    : "채용 검토가 필요한 직무가 없습니다."}
+                </p>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>
+                  조건 초기화
+                </button>
               </div>
             ) : (
               <div className="sicost-table-viewport">
@@ -416,54 +436,79 @@ function ForecastBars({
         <span className="sales-forecast-legend-info">■ {labels[1]}</span> ·{" "}
         {unit ?? "명"}
       </p>
-      <svg viewBox="0 0 600 225" role="img" aria-label={title}>
-        {rows.map((r, i) => {
-          const a = (Number(r.first ?? 0) / maximum) * 145,
-            b = (Number(r.second ?? 0) / maximum) * 145,
-            x = 25 + i * 96;
-          return (
-            <g key={r.month}>
-              <title>
-                {r.month} · {labels[0]}{" "}
-                {unit
-                  ? formatAmount(r.first, unit)
-                  : formatFixedDecimal(r.first, 1)}{" "}
-                · {labels[1]}{" "}
-                {unit
-                  ? formatAmount(r.second, unit)
-                  : formatFixedDecimal(r.second, 1)}
-              </title>
-              {r.first != null && (
-                <rect
-                  x={x}
-                  y={175 - a}
-                  width={stacked ? 45 : 23}
-                  height={a}
-                  fill="var(--primary)"
-                />
-              )}
-              {r.second != null && (
-                <rect
-                  x={stacked ? x : x + 27}
-                  y={175 - b - (stacked ? a : 0)}
-                  width={stacked ? 45 : 23}
-                  height={b}
-                  fill="var(--info)"
-                />
-              )}
-              <text x={x} y="200">
-                {r.month}
-              </text>
-              {(r.first == null || r.second == null) && (
-                <text x={x} y="25">
-                  미확인
-                </text>
-              )}
-            </g>
-          );
+      <ChartHost
+        option={seriesChartOptions({
+          categories: rows.map((row) => row.month),
+          series: [
+            {
+              name: labels[0],
+              type: "bar",
+              values: rows.map((row) => row.first),
+              stack: stacked ? "forecast" : undefined,
+            },
+            {
+              name: labels[1],
+              type: "bar",
+              values: rows.map((row) => row.second),
+              stack: stacked ? "forecast" : undefined,
+            },
+          ],
+          formatValue: (value) =>
+            unit
+              ? `${formatAmount(value, unit)} ${unit}`
+              : `${formatFixedDecimal(value, 1)}명`,
+          axisUnit: unit ? "백만원" : "MM",
         })}
-        <line x1="15" x2="590" y1="175" y2="175" stroke="var(--divider)" />
-      </svg>
+      >
+        <svg viewBox="0 0 600 225" role="img" aria-label={title}>
+          {rows.map((r, i) => {
+            const a = (Number(r.first ?? 0) / maximum) * 145,
+              b = (Number(r.second ?? 0) / maximum) * 145,
+              x = 25 + i * 96;
+            return (
+              <g key={r.month}>
+                <title>
+                  {r.month} · {labels[0]}{" "}
+                  {unit
+                    ? formatAmount(r.first, unit)
+                    : formatFixedDecimal(r.first, 1)}{" "}
+                  · {labels[1]}{" "}
+                  {unit
+                    ? formatAmount(r.second, unit)
+                    : formatFixedDecimal(r.second, 1)}
+                </title>
+                {r.first != null && (
+                  <rect
+                    x={x}
+                    y={175 - a}
+                    width={stacked ? 45 : 23}
+                    height={a}
+                    fill="var(--primary)"
+                  />
+                )}
+                {r.second != null && (
+                  <rect
+                    x={stacked ? x : x + 27}
+                    y={175 - b - (stacked ? a : 0)}
+                    width={stacked ? 45 : 23}
+                    height={b}
+                    fill="var(--info)"
+                  />
+                )}
+                <text x={x} y="200">
+                  {r.month}
+                </text>
+                {(r.first == null || r.second == null) && (
+                  <text x={x} y="25">
+                    미확인
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          <line x1="15" x2="590" y1="175" y2="175" stroke="var(--divider)" />
+        </svg>
+      </ChartHost>
     </section>
   );
 }

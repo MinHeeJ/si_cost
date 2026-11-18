@@ -1,6 +1,8 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -374,32 +376,34 @@ export function FinancialItemsEditor({
           disabled: state.pending,
         }}
       />
-      <div className="financial-actions">
-        <button
-          type="button"
-          data-testid="financial-load-previous"
-          disabled={disabled}
-          onClick={() => void state.preview("LOAD_PREVIOUS")}
-        >
-          지난달 항목 불러오기
-        </button>
-        <FinancialUploadActions
-          month={editor.month}
-          readOnly={disabled}
-          beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
-          onApplied={async () => {
-            await refresh();
-          }}
-        />
-        <button
-          type="button"
-          data-testid="financial-history-toggle"
-          aria-expanded={history}
-          onClick={() => setHistory((value) => !value)}
-        >
-          변경 이력 {history ? "접기" : "펼침"}
-        </button>
-      </div>
+      <ScreenTitleActions>
+        <div className="financial-actions">
+          <button
+            type="button"
+            data-testid="financial-load-previous"
+            disabled={disabled}
+            onClick={() => void state.preview("LOAD_PREVIOUS")}
+          >
+            지난달 항목 불러오기
+          </button>
+          <FinancialUploadActions
+            month={editor.month}
+            readOnly={disabled}
+            beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
+            onApplied={async () => {
+              await refresh();
+            }}
+          />
+          <button
+            type="button"
+            data-testid="financial-history-toggle"
+            aria-expanded={history}
+            onClick={() => setHistory((value) => !value)}
+          >
+            변경 이력 {history ? "접기" : "펼침"}
+          </button>
+        </div>
+      </ScreenTitleActions>
       <section
         className="financial-months"
         data-testid="financial-month-status"
@@ -503,7 +507,11 @@ export function FinancialItemsEditor({
           )}
         </div>
       )}
-      <nav className="financial-tabs" aria-label="재무 항목 탭">
+      <SegmentedTabList
+        as="nav"
+        className="financial-tabs"
+        aria-label="재무 항목 탭"
+      >
         <button
           type="button"
           data-testid="financial-tab-financial"
@@ -534,7 +542,7 @@ export function FinancialItemsEditor({
             <option>백만원</option>
           </select>
         </label>
-      </nav>
+      </SegmentedTabList>
       {state.error != null && (
         <ErrorBanner
           message={

@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import { request } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -27,7 +28,12 @@ export function CommonCodesScreen() {
     return <SharedScreenFrame screenId="UI-27">{codes}</SharedScreenFrame>;
   return (
     <SharedScreenFrame screenId="UI-27">
-      <nav className="sicost-code-tabs" aria-label="공통코드 탭" role="tablist">
+      <SegmentedTabList
+        as="nav"
+        className="sicost-code-tabs"
+        aria-label="공통코드 탭"
+        role="tablist"
+      >
         {[
           ["codes", "코드"],
           ["mappings", "엑셀 표기 대응"],
@@ -45,7 +51,7 @@ export function CommonCodesScreen() {
             {label}
           </button>
         ))}
-      </nav>
+      </SegmentedTabList>
       {error && <ErrorBanner message={error} onRetry={loadGroups} />}
       {(
         [

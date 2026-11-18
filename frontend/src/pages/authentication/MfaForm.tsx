@@ -74,12 +74,13 @@ export function MfaForm({
   }, [state]);
   return (
     <form
+      data-testid="mfa-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!busy) void act("mfa/verify");
       }}
     >
-      <h1>이메일 인증</h1>
+      <h1 aria-label="이메일 인증">인증번호 확인</h1>
       <p>{current.maskedEmail} 등록 이메일로 보낸 인증번호를 입력해 주세요.</p>
 
       {error && <ErrorBanner message={error} />}
@@ -90,6 +91,7 @@ export function MfaForm({
       <label>
         인증번호
         <input
+          data-testid="mfa-code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           inputMode="numeric"
@@ -100,17 +102,28 @@ export function MfaForm({
           autoFocus
         />
       </label>
-      <button className="authentication-primary" disabled={busy}>
-        인증 확인
+      <button
+        data-testid="mfa-submit"
+        aria-label="인증 확인"
+        className="authentication-primary"
+        disabled={busy}
+      >
+        확인
       </button>
       <button
         type="button"
+        data-testid="mfa-resend"
         disabled={busy}
         onClick={() => void act("mfa/resend")}
       >
         다시 보내기
       </button>
-      <button type="button" disabled={busy} onClick={() => void act("restart")}>
+      <button
+        type="button"
+        data-testid="mfa-restart"
+        disabled={busy}
+        onClick={() => void act("restart")}
+      >
         처음으로
       </button>
     </form>

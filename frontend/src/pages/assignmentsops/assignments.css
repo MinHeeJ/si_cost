@@ -48,11 +48,16 @@
   max-width: 880px;
   padding: 24px;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
 }
 .assignment-form textarea {
   min-height: 72px;
+}
+[data-testid="assignment-candidates-panel"] {
+  max-width: none;
+  width: 100%;
 }
 .assignment-form input,
 .assignment-form select {
@@ -112,9 +117,16 @@
 
 .assignment-tabs {
   display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--divider);
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .assignment-tabs button {
   height: 40px;
@@ -182,4 +194,27 @@
 .assignment-create-grid .assignment-search .sicost-field {
   flex: 1;
   min-width: 0;
+}
+
+.assignment-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.assignment-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
 }

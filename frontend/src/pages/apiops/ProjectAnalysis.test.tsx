@@ -1,5 +1,6 @@
 import {
   businessCapabilities,
+  act,
   fireEvent,
   render,
   screen,
@@ -144,6 +145,44 @@ function board(): api.BoardPage {
 }
 const mount = (ui: React.ReactElement, path = "/UI-04") =>
   render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
+function RetainedLocation() {
+  const location = useLocation();
+  return (
+    <output data-testid="retained-location">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
+it.each(["cost", "board"] as const)(
+  "retained %s settings cannot overwrite another active screen URL",
+  async (kind) => {
+    const view = (size: 20 | 50) => (
+      <MemoryRouter initialEntries={["/UI-11"]}>
+        {kind === "cost" ? (
+          <ProjectCostAnalysis pageSize={size} />
+        ) : (
+          <ProjectStatusBoard pageSize={size} />
+        )}
+        <RetainedLocation />
+      </MemoryRouter>
+    );
+    const { rerender } = render(view(20));
+    const load =
+      kind === "cost" ? api.getProjectCosts : api.getProjectStatusBoard;
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    rerender(view(50));
+    await waitFor(() =>
+      expect(load).toHaveBeenLastCalledWith(
+        expect.objectContaining({ size: 50 }),
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(screen.getByTestId("retained-location")).toHaveTextContent(
+      /^\/UI-11$/,
+    );
+  },
+);
 function CostNavigation() {
   const location = useLocation();
   return (
@@ -155,6 +194,52 @@ function CostNavigation() {
     </>
   );
 }
+it.each(["cost", "board"] as const)(
+  "late %s page-size saves cannot navigate away from a newly active screen",
+  async (kind) => {
+    let finish!: () => void;
+    const save = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(
+      <MemoryRouter initialEntries={[kind === "cost" ? "/UI-04" : "/UI-31"]}>
+        {kind === "cost" ? (
+          <ProjectCostAnalysis onPageSizeChange={save} />
+        ) : (
+          <ProjectStatusBoard onPageSizeChange={save} />
+        )}
+        <Link to="/UI-12">다른 업무로 이동</Link>
+        <RetainedLocation />
+      </MemoryRouter>,
+    );
+    const load =
+      kind === "cost" ? api.getProjectCosts : api.getProjectStatusBoard;
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    fireEvent.change(screen.getByRole("combobox", { name: "한 화면 건수" }), {
+      target: { value: "100" },
+    });
+    await waitFor(() => expect(save).toHaveBeenCalledWith(100));
+    fireEvent.click(screen.getByRole("link", { name: "다른 업무로 이동" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("retained-location")).toHaveTextContent(
+        /^\/UI-12$/,
+      ),
+    );
+    await act(async () => finish());
+    await waitFor(() =>
+      expect(load).toHaveBeenLastCalledWith(
+        expect.objectContaining({ size: 100 }),
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(screen.getByTestId("retained-location")).toHaveTextContent(
+      /^\/UI-12$/,
+    );
+  },
+);
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getProjectCosts).mockResolvedValue(costs());
@@ -436,7 +521,9 @@ describe("프로젝트 현황판", () => {
     );
     await screen.findByText("진행 프로젝트");
     expect(screen.getByText("기본 단계 미생성")).toBeInTheDocument();
-    expect(screen.queryByTestId("status-project-owned")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("status-project-owned"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId("status-stage-owned")).not.toBeInTheDocument();
     expect(screen.queryByTestId("status-cost-owned")).not.toBeInTheDocument();
   });

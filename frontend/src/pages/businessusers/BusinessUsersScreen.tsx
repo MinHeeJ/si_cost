@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -237,16 +238,18 @@ export function BusinessUsersScreen({
         <div className="businessusers-toolbar">
           <h2>사용자</h2>
           {canRegister && (
-            <button
-              className="sicost-primary"
-              data-testid="business-user-register"
-              onClick={() => {
-                setNotice("");
-                setForm({});
-              }}
-            >
-              등록
-            </button>
+            <ScreenTitleActions>
+              <button
+                className="sicost-primary"
+                data-testid="business-user-register"
+                onClick={() => {
+                  setNotice("");
+                  setForm({});
+                }}
+              >
+                등록
+              </button>
+            </ScreenTitleActions>
           )}
         </div>
         {roleError != null && (

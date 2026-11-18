@@ -17,8 +17,9 @@
 }
 .recommendation-card {
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 20px 24px;
   display: grid;
   gap: 16px;

@@ -16,7 +16,17 @@
   margin-right: auto;
 }
 .sales-command-tabs {
-  border-bottom: 1px solid var(--divider);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .sales-command-tabs button {
   border: 0;
@@ -32,13 +42,19 @@
 .sales-command-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .sales-command-summary > div,
 .sales-command-quote {
   padding: 20px 24px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   min-width: 0;
 }
@@ -48,20 +64,22 @@
 }
 .sales-command-summary dd {
   margin: 6px 0 0;
-  font-size: 20px;
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.035em;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 .sales-command-kanban {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
   align-items: start;
 }
 .sales-command-column {
-  background: var(--head-bg);
-  border-radius: 8px;
-  padding: 12px;
+  background: #eef1f4;
+  border-radius: 10px;
+  padding: 10px;
   min-width: 0;
 }
 .sales-command-column h2 {
@@ -74,10 +92,11 @@
 }
 .sales-command-card {
   background: var(--surface);
-  border: 1px solid var(--divider);
+  border: 0;
+  box-shadow: var(--e1);
   border-radius: 8px;
-  padding: 12px;
-  margin-top: 12px;
+  padding: 13px 14px;
+  margin-top: 8px;
   overflow-wrap: anywhere;
   display: grid;
   gap: 8px;
@@ -179,4 +198,37 @@
 }
 .sales-command-quote .sales-command-summary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sales-command-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
+}
+
+.sales-command-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.sales-command-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
 }

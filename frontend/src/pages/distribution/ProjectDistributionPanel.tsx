@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -214,7 +215,8 @@ export function ProjectDistributionPanel({
               조회 전용입니다. 배분표는 열람·다운로드할 수 있습니다.
             </p>
           )}
-          <nav
+          <SegmentedTabList
+            as="nav"
             className="distribution-tabs"
             aria-label="배분표 조회 단계"
             role="tablist"
@@ -232,7 +234,7 @@ export function ProjectDistributionPanel({
                 {item.label}
               </button>
             ))}
-          </nav>
+          </SegmentedTabList>
           <div className="distribution-toolbar">
             <p>
               계산에 쓰는 단계{" "}

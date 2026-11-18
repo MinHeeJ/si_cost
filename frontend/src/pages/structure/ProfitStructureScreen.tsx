@@ -1,3 +1,6 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -147,7 +150,11 @@ function RevenueComposition({
   );
 }
 // SCR-UI-07 — same materialized buckets drive cards, charts, compositions and numeric tables.
-export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function ProfitStructureScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -276,7 +283,7 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
         data-screen-id="SCR-UI-07"
       >
         <div className="profit-structure-toolbar">
-          <div role="tablist" aria-label="기간 단위">
+          <SegmentedTabList as="div" role="tablist" aria-label="기간 단위">
             {tabs.map(([value, label]) => (
               <button
                 key={value}
@@ -289,43 +296,45 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                 {label}
               </button>
             ))}
-          </div>
-          <label>
-            단위{" "}
-            <select
-              data-testid="structure-unit"
-              value={unit}
-              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+          </SegmentedTabList>
+          <ScreenTitleActions>
+            <label>
+              단위{" "}
+              <select
+                data-testid="structure-unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value as AmountUnit)}
+              >
+                <option>원</option>
+                <option>천원</option>
+                <option>백만원</option>
+              </select>
+            </label>
+            <button
+              data-testid="structure-numbers"
+              type="button"
+              aria-expanded={numbers}
+              onClick={() => setNumbers(!numbers)}
             >
-              <option>원</option>
-              <option>천원</option>
-              <option>백만원</option>
-            </select>
-          </label>
-          <button
-            data-testid="structure-numbers"
-            type="button"
-            aria-expanded={numbers}
-            onClick={() => setNumbers(!numbers)}
-          >
-            숫자로 보기
-          </button>
-          <button
-            data-testid="structure-methods"
-            type="button"
-            aria-expanded={methods}
-            onClick={() => setMethods(!methods)}
-          >
-            계산 방법
-          </button>
-          <button
-            data-testid="structure-export"
-            type="button"
-            disabled={!data || loading || download || mobile}
-            onClick={() => void exportFile()}
-          >
-            엑셀 다운로드
-          </button>
+              숫자로 보기
+            </button>
+            <button
+              data-testid="structure-methods"
+              type="button"
+              aria-expanded={methods}
+              onClick={() => setMethods(!methods)}
+            >
+              계산 방법
+            </button>
+            <button
+              data-testid="structure-export"
+              type="button"
+              disabled={!data || loading || download || mobile}
+              onClick={() => void exportFile()}
+            >
+              엑셀 다운로드
+            </button>
+          </ScreenTitleActions>
         </div>
         {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
@@ -344,34 +353,40 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
             data-testid="structure-panel"
             aria-label={tabs.find(([v]) => v === aggregation)?.[1]}
           >
-            <p className="profit-structure-muted">
-              {data.context.month} 기준 · 회사 전체 · 읽기 전용 · 조회{" "}
-              {formatDateTime(data.context.snapshotAt)}
-            </p>
-            {data.context.year < Number(data.context.nowMonth.slice(0, 4)) && (
-              <StatusBadge tone="lock">지난 해·읽기 전용</StatusBadge>
-            )}
-            {last && (
-              <p>
-                {bucketLabel(last, quarterly)}{" "}
-                <StatusBadge tone={last.provisional ? "warn" : "lock"}>
-                  {last.provisional ? "잠정 · 작업중" : "확정/이관"}
-                </StatusBadge>
-                {last.completeness.estimated.length > 0 && (
-                  <StatusBadge tone="info">예정 포함</StatusBadge>
-                )}
+            <div
+              className="financial-basis-strip"
+              aria-label="조회 기준과 자료 상태"
+            >
+              <p className="profit-structure-muted">
+                {data.context.month} 기준 · 회사 전체 · 읽기 전용 · 조회{" "}
+                {formatDateTime(data.context.snapshotAt)}
               </p>
-            )}
-            {data.notices.map((notice, index) => (
-              <p
-                className="profit-structure-banner"
-                role="note"
-                key={index}
-                data-testid={`structure-notice-${index}`}
-              >
-                {notice}
-              </p>
-            ))}
+              {data.context.year <
+                Number(data.context.nowMonth.slice(0, 4)) && (
+                <StatusBadge tone="lock">지난 해·읽기 전용</StatusBadge>
+              )}
+              {last && (
+                <p>
+                  {bucketLabel(last, quarterly)}{" "}
+                  <StatusBadge tone={last.provisional ? "warn" : "lock"}>
+                    {last.provisional ? "잠정 · 작업중" : "확정/이관"}
+                  </StatusBadge>
+                  {last.completeness.estimated.length > 0 && (
+                    <StatusBadge tone="info">예정 포함</StatusBadge>
+                  )}
+                </p>
+              )}
+              {data.notices.map((notice, index) => (
+                <p
+                  className="profit-structure-banner"
+                  role="note"
+                  key={index}
+                  data-testid={`structure-notice-${index}`}
+                >
+                  {notice}
+                </p>
+              ))}
+            </div>
             {!data.months.some(
               (m) => m.sourceKind !== "MISSING" && m.sourceKind !== "FUTURE",
             ) && (
@@ -381,7 +396,7 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                 <FinancialEmptyReset screenId="UI-07" />
               </p>
             )}
-            <div className="profit-structure-summary">
+            <KpiStrip className="profit-structure-summary">
               {data.summary.map((card) => (
                 <article
                   className="profit-structure-card"
@@ -400,7 +415,9 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                       {formatAmount(card.amount, unit)} {unit}
                     </button>
                   ) : (
-                    <strong data-financial-negative={card.amount?.startsWith("-")}>
+                    <strong
+                      data-financial-negative={card.amount?.startsWith("-")}
+                    >
                       {card.metric === "idleCostAmt"
                         ? formatRate(card.rate)
                         : `${formatAmount(card.amount, unit)} ${unit}`}
@@ -420,7 +437,7 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                   <Change comparison={card.previousYear} label="전년 동기" />
                 </article>
               ))}
-            </div>
+            </KpiStrip>
             <div className="profit-structure-charts">
               <StructureWaterfall steps={data.waterfall} unit={unit} />
               <StructureTrend

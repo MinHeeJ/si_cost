@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import { usePreferences } from "../me/usePreferences";
@@ -57,23 +58,38 @@ export function ProfitabilityExportButton({
     }
   };
   return (
-    <div data-testid="profitability-export" className="profitability-toolbar profitability-export">
-      <button
-        type="button"
-        className="sicost-button"
-        data-testid="profitability-export-button"
-        disabled={pending || preferences.loading || preferences.pending}
-        onClick={() => void download()}
+    <ScreenTitleActions>
+      <div
+        data-testid="profitability-export"
+        className="profitability-toolbar profitability-export"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4" /></svg>
-        {pending ? "엑셀 생성 중…" : "엑셀 다운로드"}
-      </button>
-      {message &&
-        (message === "전체 결과 엑셀을 내려받았습니다." ? (
-          <span role="status">{message}</span>
-        ) : (
-          <ErrorBanner message={message} />
-        ))}
-    </div>
+        <button
+          type="button"
+          className="sicost-button"
+          data-testid="profitability-export-button"
+          disabled={pending || preferences.loading || preferences.pending}
+          onClick={() => void download()}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden="true"
+          >
+            <path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4" />
+          </svg>
+          {pending ? "엑셀 생성 중…" : "엑셀 다운로드"}
+        </button>
+        {message &&
+          (message === "전체 결과 엑셀을 내려받았습니다." ? (
+            <span role="status">{message}</span>
+          ) : (
+            <ErrorBanner message={message} />
+          ))}
+      </div>
+    </ScreenTitleActions>
   );
 }

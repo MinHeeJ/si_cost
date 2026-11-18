@@ -1,0 +1,265 @@
+:root {
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-page: 420ms;
+  --motion-tab: 340ms;
+  --motion-menu: 280ms;
+  --motion-drawer: 260ms;
+  --motion-dialog: 220ms;
+}
+.sicost-screen-host:not([hidden]) .sicost-screen-content > * {
+  animation: sicost-rise var(--motion-page) var(--ease) both;
+}
+.sicost-screen-host:not([hidden])
+  .sicost-screen-content
+  > :is(:has(.sicost-title-actions-positioned), :has(.codegroups-title)) {
+  animation: none;
+}
+.sicost-screen-host:not([hidden])
+  :is(
+    .sicost-filterbar,
+    .sicost-table-viewport,
+    .sicost-kpi-strip,
+    .sicost-title-action-group
+  ) {
+  animation: sicost-rise var(--motion-page) var(--ease) both;
+}
+.sicost-screen-host:not([hidden]) .sicost-title-actions-positioned {
+  animation-name: sicost-fade;
+}
+.sicost-screen-content > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.sicost-screen-content > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.sicost-screen-content > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.sicost-screen-content > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.sicost-screen-content > :nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+.sicost-sidebar {
+  transition:
+    width var(--motion-menu) var(--ease),
+    transform var(--motion-menu) var(--ease);
+}
+.sicost-drawer {
+  animation: sicost-drawer-in var(--motion-drawer) var(--ease);
+}
+.sicost-scrim {
+  animation: sicost-fade 180ms var(--ease);
+}
+.sicost-dialog {
+  animation: sicost-dialog-in var(--motion-dialog) var(--ease);
+}
+.sicost-segmented-tabs::before {
+  transition:
+    transform var(--motion-tab) var(--ease),
+    width var(--motion-tab) var(--ease);
+}
+.sicost-brand-mark .lb {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: sicost-bars-in 700ms var(--ease) both;
+}
+.sicost-brand-mark .lb2 {
+  animation-delay: 80ms;
+}
+.sicost-brand-mark .lb3 {
+  animation-delay: 160ms;
+}
+.sicost-brand-mark .ll {
+  stroke-dasharray: 50;
+  animation: sicost-logo-line 700ms 280ms var(--ease) both;
+}
+.sicost-brand-mark .ld {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sicost-pop 450ms 850ms var(--ease) both;
+}
+.authentication-brand .sicost-wordmark-characters i {
+  animation: sicost-rise 500ms var(--ease) both;
+  animation-delay: calc(var(--character) * 45ms + 120ms);
+}
+.sicost-star[aria-pressed="true"] svg {
+  animation: sicost-pop 500ms var(--ease);
+}
+.sicost-toast svg {
+  animation: sicost-pop 300ms var(--ease);
+}
+.notification-trigger:has(.notification-count) > svg {
+  transform-origin: 50% 18%;
+  animation: sicost-bell 650ms var(--ease);
+}
+.analysis-side-panel {
+  animation: sicost-drawer-in var(--motion-drawer) var(--ease);
+}
+.analysis-progress .active::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: sicost-step 900ms ease-in-out infinite;
+}
+.sicost-kpi-strip strong,
+.dashboard-metric > strong {
+  animation: sicost-number-in 700ms var(--ease) both;
+}
+.sales-command-card {
+  transition:
+    box-shadow 140ms var(--ease),
+    transform 140ms var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sales-command-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+@keyframes sicost-number-in {
+  from {
+    opacity: 0.2;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sicost-drawer-in {
+  from {
+    opacity: 0.3;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-bars-in {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes sicost-logo-line {
+  from {
+    stroke-dashoffset: 50;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sicost-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sicost-bell {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(12deg);
+  }
+  40%,
+  80% {
+    transform: rotate(-10deg);
+  }
+}
+@keyframes sicost-step {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes lbUp {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes dPop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .lh-line {
+    stroke-dashoffset: 0 !important;
+  }
+  .lh-area,
+  .lh-dot {
+    opacity: 1 !important;
+  }
+}
