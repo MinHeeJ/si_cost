@@ -17,6 +17,7 @@ import { IndividualProfitabilityScreen } from "../shared/IndividualProfitability
 import { SharedApplication } from "../shared/SharedApplication";
 import * as shared from "../shared/sharedApi";
 import { ProfitabilityTable } from "./ProfitabilityTable";
+import { ProfitabilityColumnSettings } from "./ProfitabilityColumnSettings";
 import { ProfitabilityValue } from "./ProfitabilityValue";
 import {
   profitabilityColumns,
@@ -137,6 +138,7 @@ function Body() {
       : "천원";
   return (
     <>
+      <ProfitabilityColumnSettings />
       <ProfitabilityTable
         rows={[row]}
         rowKey={(item) => item.personId}
