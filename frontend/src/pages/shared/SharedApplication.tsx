@@ -5,6 +5,7 @@ import { ScreenPermissionContext } from "../../shared/permission/PermissionBound
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
+import { BrandMark } from "../../shared/BrandMark";
 import { HeaderActions } from "./HeaderActions";
 import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
@@ -21,12 +22,14 @@ import { screenRegistry } from "./screenRegistry";
 import {
   deleteSharedPreference,
   getCurrentUser,
+  getPeriodContext,
   getMenus,
   getSharedPreferences,
   putSharedPreference,
   type CurrentUser,
   type MenusData,
   type SharedPreference,
+  type PeriodContext,
 } from "./sharedApi";
 import "../../shared/common.css";
 import "./shared.css";
@@ -77,6 +80,27 @@ function SharedApplicationContent({
   isDirty,
 }: SharedApplicationProps) {
   const [utility, setUtility] = useState<"search" | "help" | null>(null);
+  const [basis, setBasis] = useState<PeriodContext>();
+  useEffect(() => {
+    let live = true;
+    const read = () => {
+      void Promise.resolve(getPeriodContext())
+        .then((value) => {
+          if (live) setBasis(value);
+        })
+        .catch(() => {
+          if (live) setBasis(undefined);
+        });
+    };
+    read();
+    window.addEventListener("focus", read);
+    window.addEventListener("sicost:month-close-committed", read);
+    return () => {
+      live = false;
+      window.removeEventListener("focus", read);
+      window.removeEventListener("sicost:month-close-committed", read);
+    };
+  }, []);
   useEffect(() => {
     const open = () => setUtility("search");
     window.addEventListener("sicost:menu-search", open);
@@ -511,12 +535,17 @@ function SharedApplicationContent({
         },
       }}
     >
-      <div className="sicost-app" data-screen-id="SCR-UI">
+      <div
+        className={`sicost-app${folded ? " sicost-menu-folded" : ""}`}
+        data-screen-id="SCR-UI"
+        data-testid="application-workspace"
+      >
         <header className="sicost-header">
           <button
             type="button"
             aria-label="메뉴 열기·접기"
             className="sicost-icon-button"
+            data-testid="workspace-menu-toggle"
             onClick={() => {
               if (window.innerWidth < 768) setMobileOpen((open) => !open);
               else fold();
@@ -527,15 +556,35 @@ function SharedApplicationContent({
           <Link
             to="/UI-16"
             className="sicost-brand-link"
+            data-testid="workspace-brand-home"
             onClick={(event) => {
               event.preventDefault();
               go("UI-16");
             }}
           >
-            <span className="sicost-logo">SI</span>
+            <BrandMark />
             <strong className="sicost-brand">프로젝트·원가 관리</strong>
           </Link>
+          <button
+            type="button"
+            className="sicost-workspace-search"
+            data-testid="workspace-menu-search"
+            onClick={() => setUtility("search")}
+          >
+            <Icon name="search" size={18} />
+            <span>메뉴 찾기</span>
+            <kbd>Ctrl K</kbd>
+          </button>
           <span className="sicost-header-spacer" />
+          <span
+            className="sicost-header-basis"
+            data-testid="workspace-server-basis"
+          >
+            <Icon name="calendar" size={15} />
+            {basis?.currentDate
+              ? `기준일 ${basis.currentDate}`
+              : "기준일 미확인"}
+          </span>
           <HeaderActions
             onBadges={setNotificationBadges}
             onOpenTarget={(link) => {
@@ -561,6 +610,7 @@ function SharedApplicationContent({
             <button
               type="button"
               aria-label={user.name}
+              data-testid="workspace-user-menu"
               ref={userButton}
               onClick={() => setUserMenu((open) => !open)}
               aria-expanded={userMenu}
@@ -617,6 +667,7 @@ function SharedApplicationContent({
             <button
               className="sicost-nav-scrim"
               aria-label="메뉴 닫기"
+              data-testid="workspace-mobile-menu-close"
               onClick={() => setMobileOpen(false)}
             />
           )}
@@ -762,6 +813,7 @@ function SharedApplicationContent({
             </nav>
             <button
               className="sicost-collapse"
+              data-testid="workspace-menu-collapse"
               onClick={fold}
               disabled={pending}
             >
@@ -774,14 +826,23 @@ function SharedApplicationContent({
               {tabs
                 .filter((id) => byScreen(id))
                 .map((id) => (
-                  <div key={id} className={id === active ? "active" : ""}>
-                    <button onClick={() => go(id)}>
+                  <div
+                    key={id}
+                    className={id === active ? "active" : ""}
+                    data-testid={`workspace-tab-${id.toLowerCase()}`}
+                  >
+                    <button
+                      data-testid={`workspace-open-${id.toLowerCase()}`}
+                      aria-current={id === active ? "page" : undefined}
+                      onClick={() => go(id)}
+                    >
                       {isDirty?.(id) && "● "}
                       {byScreen(id)?.name}
                     </button>
                     {id !== "UI-16" && (
                       <button
                         aria-label={`${byScreen(id)?.name} 탭 닫기`}
+                        data-testid={`workspace-close-${id.toLowerCase()}`}
                         onClick={() => close(id)}
                       >
                         ×

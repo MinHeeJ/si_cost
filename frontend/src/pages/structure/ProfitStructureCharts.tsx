@@ -1,4 +1,10 @@
 import { formatAmount, type AmountUnit } from "../../shared/format";
+import { useMemo } from "react";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import {
+  seriesOption,
+  waterfallOption,
+} from "../../shared/charts/chartAdapters";
 import type { StructureBucket, WaterfallStep } from "./profitStructureApi";
 const colors = ["var(--primary)", "var(--warn)", "var(--ok)", "var(--info)"];
 export function bucketLabel(bucket: StructureBucket, quarterly: boolean) {
@@ -30,6 +36,23 @@ export function StructureTrend({
         ? b.referenceRevenue.amount
         : null
       : b.amounts[metric];
+  const metricsKey = JSON.stringify(metrics),
+    labelsKey = JSON.stringify(labels);
+  const option = useMemo(
+    () =>
+      seriesOption(
+        buckets.map((bucket) => bucketLabel(bucket, quarterly)),
+        metrics.map((metric, index) => ({
+          name: labels[index],
+          values: buckets.map((bucket) => raw(bucket, metric)),
+          type: quarterly || stacked ? "bar" : "line",
+          stack: stacked ? "cost" : undefined,
+          dashed: metric === "referenceRevenue",
+        })),
+        unit,
+      ),
+    [buckets, metricsKey, labelsKey, quarterly, stacked, unit],
+  );
   const values = buckets
     .flatMap((b) => metrics.map((m) => raw(b, m)))
     .filter((v): v is string => v != null)
@@ -43,107 +66,116 @@ export function StructureTrend({
     <section className="profit-structure-card">
       <h2>{title}</h2>
       <p className="profit-structure-muted">축: 백만원 · 툴팁: {unit}</p>
-      <div className="profit-structure-chart-scroll">
-        <svg viewBox="0 0 800 285" role="img" aria-label={title}>
-          <line
-            x1="55"
-            x2="785"
-            y1="140"
-            y2="140"
-            className="profit-structure-axis"
-          />
-          {[maximum, 0, -maximum].map((value) => (
-            <text key={value} x="5" y={y(value)}>
-              {(value / 1000000).toLocaleString("ko-KR", {
-                maximumSignificantDigits: 4,
-              })}
-            </text>
-          ))}
-          {metrics.map((metric, series) => {
-            let segment = "";
-            const segments: string[] = [];
-            buckets.forEach((bucket, index) => {
-              const v = raw(bucket, metric);
-              if (v == null) {
-                if (segment) segments.push(segment);
-                segment = "";
-              } else
-                segment += `${segment ? " L" : "M"}${x(index)},${y(Number(v))}`;
-            });
-            if (segment) segments.push(segment);
-            return (
-              <g key={metric} style={{ color: colors[series % colors.length] }}>
-                {!quarterly &&
-                  !stacked &&
-                  segments.map((path, index) => (
-                    <path
-                      key={index}
-                      d={path}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeDasharray={
-                        metric === "referenceRevenue" ? "6 5" : undefined
-                      }
-                    />
-                  ))}
-                {buckets.map((bucket, index) => {
-                  const v = raw(bucket, metric);
-                  if (v == null) return null;
-                  const value = Number(v);
-                  let base = 0;
-                  if (stacked)
-                    for (let k = 0; k < series; k++) {
-                      const previous = raw(bucket, metrics[k]);
-                      if (previous == null) return null;
-                      const n = Number(previous);
-                      if (n < 0 === value < 0) base += n;
-                    }
-                  const bar = quarterly || stacked;
-                  return (
-                    <g
-                      key={bucket.key}
-                      data-testid={`structure-chart-${title.includes("하위") ? "costs" : title.includes("총이익") ? "profits" : "revenue"}-${metric.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}-${index}`}
-                    >
-                      <title>
-                        {bucketLabel(bucket, quarterly)} · {labels[series]}:{" "}
-                        {formatAmount(v, unit)} {unit}
-                      </title>
-                      {bar ? (
-                        <rect
-                          x={x(index) + (stacked ? 0 : series * 9)}
-                          y={Math.min(y(base), y(base + value))}
-                          width={stacked ? 22 : 8}
-                          height={Math.abs(y(base + value) - y(base))}
-                          fill="currentColor"
-                        />
-                      ) : (
-                        <circle
-                          cx={x(index)}
-                          cy={y(value)}
-                          r="3"
-                          fill="currentColor"
-                        />
-                      )}
-                    </g>
-                  );
+      <ChartHost
+        testId={`structure-chart-${metrics.join("-").replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+        label={title}
+        option={option}
+      >
+        <div className="profit-structure-chart-scroll">
+          <svg viewBox="0 0 800 285" role="img" aria-label={title}>
+            <line
+              x1="55"
+              x2="785"
+              y1="140"
+              y2="140"
+              className="profit-structure-axis"
+            />
+            {[maximum, 0, -maximum].map((value) => (
+              <text key={value} x="5" y={y(value)}>
+                {(value / 1000000).toLocaleString("ko-KR", {
+                  maximumSignificantDigits: 4,
                 })}
-              </g>
-            );
-          })}
-          {buckets.map((bucket, index) => (
-            <text
-              key={bucket.key}
-              x={x(index)}
-              y="265"
-              fontSize="10"
-              textAnchor="middle"
-            >
-              {bucket.key}
-            </text>
-          ))}
-        </svg>
-      </div>
+              </text>
+            ))}
+            {metrics.map((metric, series) => {
+              let segment = "";
+              const segments: string[] = [];
+              buckets.forEach((bucket, index) => {
+                const v = raw(bucket, metric);
+                if (v == null) {
+                  if (segment) segments.push(segment);
+                  segment = "";
+                } else
+                  segment += `${segment ? " L" : "M"}${x(index)},${y(Number(v))}`;
+              });
+              if (segment) segments.push(segment);
+              return (
+                <g
+                  key={metric}
+                  style={{ color: colors[series % colors.length] }}
+                >
+                  {!quarterly &&
+                    !stacked &&
+                    segments.map((path, index) => (
+                      <path
+                        key={index}
+                        d={path}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeDasharray={
+                          metric === "referenceRevenue" ? "6 5" : undefined
+                        }
+                      />
+                    ))}
+                  {buckets.map((bucket, index) => {
+                    const v = raw(bucket, metric);
+                    if (v == null) return null;
+                    const value = Number(v);
+                    let base = 0;
+                    if (stacked)
+                      for (let k = 0; k < series; k++) {
+                        const previous = raw(bucket, metrics[k]);
+                        if (previous == null) return null;
+                        const n = Number(previous);
+                        if (n < 0 === value < 0) base += n;
+                      }
+                    const bar = quarterly || stacked;
+                    return (
+                      <g
+                        key={bucket.key}
+                        data-testid={`structure-chart-${title.includes("하위") ? "costs" : title.includes("총이익") ? "profits" : "revenue"}-${metric.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}-${index}`}
+                      >
+                        <title>
+                          {bucketLabel(bucket, quarterly)} · {labels[series]}:{" "}
+                          {formatAmount(v, unit)} {unit}
+                        </title>
+                        {bar ? (
+                          <rect
+                            x={x(index) + (stacked ? 0 : series * 9)}
+                            y={Math.min(y(base), y(base + value))}
+                            width={stacked ? 22 : 8}
+                            height={Math.abs(y(base + value) - y(base))}
+                            fill="currentColor"
+                          />
+                        ) : (
+                          <circle
+                            cx={x(index)}
+                            cy={y(value)}
+                            r="3"
+                            fill="currentColor"
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+            {buckets.map((bucket, index) => (
+              <text
+                key={bucket.key}
+                x={x(index)}
+                y="265"
+                fontSize="10"
+                textAnchor="middle"
+              >
+                {bucket.key}
+              </text>
+            ))}
+          </svg>
+        </div>
+      </ChartHost>
       <div className="profit-structure-legend">
         {labels.map((label, i) => (
           <span key={label} style={{ color: colors[i] }}>
@@ -174,6 +206,20 @@ export function StructureWaterfall({
     total = to;
     return { step, from, to };
   });
+  const option = useMemo(
+    () =>
+      waterfallOption(
+        positions.map(({ step, from, to }) => ({
+          label: step.label,
+          amount: step.amount,
+          from,
+          to,
+          subtotal: step.kind === "SUBTOTAL",
+        })),
+        unit,
+      ),
+    [steps, unit],
+  );
   const maximum = Math.max(
     1,
     ...positions
@@ -188,63 +234,69 @@ export function StructureWaterfall({
       <p className="profit-structure-muted">
         백만원 · 소계는 재가산하지 않습니다
       </p>
-      <div className="profit-structure-chart-scroll">
-        <svg viewBox="0 0 900 290" role="img" aria-label="수익 구조 폭포">
-          <line
-            x1="10"
-            x2="885"
-            y1="145"
-            y2="145"
-            className="profit-structure-axis"
-          />
-          {positions.map(({ step, from, to }, index) => (
-            <g
-              key={step.metric}
-              data-testid={`structure-waterfall-${step.metric.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-            >
-              <title>
-                {step.label}: {formatAmount(step.amount, unit)} {unit}
-              </title>
-              {from != null && to != null ? (
-                <>
-                  <rect
-                    x={index * 97 + 15}
-                    y={Math.min(y(from), y(to))}
-                    width="63"
-                    height={Math.max(1, Math.abs(y(to) - y(from)))}
-                    fill={
-                      step.kind === "SUBTOTAL"
-                        ? "var(--primary)"
-                        : BigInt(step.amount!) < 0n
-                          ? "var(--bad)"
-                          : "var(--ok)"
-                    }
-                  />
-                  <text
-                    x={index * 97 + 46}
-                    y={Math.min(y(from), y(to)) - 6}
-                    textAnchor="middle"
-                  >
-                    {formatAmount(step.amount, "백만원")}
-                  </text>
-                </>
-              ) : (
-                <text x={index * 97 + 46} y="120" textAnchor="middle">
-                  미확인
-                </text>
-              )}
-              <text
-                x={index * 97 + 46}
-                y="275"
-                textAnchor="middle"
-                fontSize="11"
+      <ChartHost
+        testId="structure-waterfall-chart"
+        label="수익 구조 폭포"
+        option={option}
+      >
+        <div className="profit-structure-chart-scroll">
+          <svg viewBox="0 0 900 290" role="img" aria-label="수익 구조 폭포">
+            <line
+              x1="10"
+              x2="885"
+              y1="145"
+              y2="145"
+              className="profit-structure-axis"
+            />
+            {positions.map(({ step, from, to }, index) => (
+              <g
+                key={step.metric}
+                data-testid={`structure-waterfall-${step.metric.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
               >
-                {step.label}
-              </text>
-            </g>
-          ))}
-        </svg>
-      </div>
+                <title>
+                  {step.label}: {formatAmount(step.amount, unit)} {unit}
+                </title>
+                {from != null && to != null ? (
+                  <>
+                    <rect
+                      x={index * 97 + 15}
+                      y={Math.min(y(from), y(to))}
+                      width="63"
+                      height={Math.max(1, Math.abs(y(to) - y(from)))}
+                      fill={
+                        step.kind === "SUBTOTAL"
+                          ? "var(--primary)"
+                          : BigInt(step.amount!) < 0n
+                            ? "var(--bad)"
+                            : "var(--ok)"
+                      }
+                    />
+                    <text
+                      x={index * 97 + 46}
+                      y={Math.min(y(from), y(to)) - 6}
+                      textAnchor="middle"
+                    >
+                      {formatAmount(step.amount, "백만원")}
+                    </text>
+                  </>
+                ) : (
+                  <text x={index * 97 + 46} y="120" textAnchor="middle">
+                    미확인
+                  </text>
+                )}
+                <text
+                  x={index * 97 + 46}
+                  y="275"
+                  textAnchor="middle"
+                  fontSize="11"
+                >
+                  {step.label}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </ChartHost>
     </section>
   );
 }

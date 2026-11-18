@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
 
 import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -238,35 +239,34 @@ export function ProjectDetailPanel({
                 실주 또는 지난 연도는 조회만 할 수 있습니다.
               </p>
             )}
-            <nav
-              role="tablist"
-              aria-label="프로젝트 상세 영역"
-              className="project-tabs"
-            >
-              {[
+            <SegmentedTabs
+              value={tab}
+              onChange={setTab}
+              label="프로젝트 상세 영역"
+              testId="project-detail-tabs"
+              items={[
                 ["basic", "기본 정보"],
+                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
+                ...(registration?.issues ? [["issues", "이슈"]] : []),
                 ["plans", "인원 계획"],
                 ["assignments", "투입 인력"],
                 ["history", "계약 변경 이력"],
-                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
-                ...(registration?.issues ? [["issues", "이슈"]] : []),
-              ].map(([key, label]) => (
-                <button
-                  type="button"
-                  role="tab"
-                  key={key}
-                  data-testid={`project-tab-${key}`}
-                  aria-selected={tab === key}
-                  disabled={dirty && tab !== key}
-                  onClick={() => setTab(key)}
-                >
-                  {key === "issues" && context && registration?.issuesTitle
+              ].map(([key, label]) => ({
+                key,
+                testId: `project-tab-${key}`,
+                panelId: `project-panel-${key}`,
+                disabled: dirty && tab !== key,
+                label:
+                  key === "issues" && context && registration?.issuesTitle
                     ? registration.issuesTitle(context)
-                    : label}
-                </button>
-              ))}
-            </nav>
-            <div role="tabpanel" data-testid={`project-panel-${tab}`}>
+                    : label,
+              }))}
+            />
+            <div
+              role="tabpanel"
+              id={`project-panel-${tab}`}
+              data-testid={`project-panel-${tab}`}
+            >
               {tab === "progress" &&
                 context &&
                 registration?.progress?.(context)}

@@ -428,6 +428,9 @@ const open = (path = "/UI-27") =>
       <ApplicationRoutes />
     </MemoryRouter>,
   );
+// Full-shell, multi-step flows can exceed Vitest's 5s default under integration load.
+// Keep the individual query/waitFor deadlines and all behavior assertions unchanged.
+const shellFlowTimeout = 15000;
 beforeEach(() => {
   vi.resetAllMocks();
   installBusinessSession();
@@ -860,50 +863,56 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
-  it("UI-30은 현재 자리와 원래 revision으로 행동하고 조회 실패 뒤 GET만 재시도한다", async () => {
-    open("/UI-30");
-    await screen.findByTestId("recommendation-candidates");
-    expect(
-      screen.queryByRole("combobox", { name: "기간" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "엑셀 다운로드" }),
-    ).not.toBeInTheDocument();
-    await userEvent.selectOptions(
-      screen.getByTestId("recommendation-need"),
-      "19",
-    );
-    fireEvent.change(screen.getByTestId("recommendation-start-month"), {
-      target: { value: "2027-01" },
-    });
-    vi.mocked(
-      recommendations.getRecommendationHistorySnapshot,
-    ).mockRejectedValueOnce(new Error("사본 조회 실패"));
-    await userEvent.click(screen.getByTestId("recommendation-assign-1"));
-    await screen.findByText("저장됐지만 다시 불러오지 못했습니다");
-    expect(
-      recommendationActions.createWorkforceRecommendationTentativeAssignment,
-    ).toHaveBeenCalledWith("42", 1, {
-      needSn: "19",
-      expectedRevision: "choice-original",
-      targetRevision: "target-original",
-      candidateRevision: "candidate-original",
-      confirmedWarnings: [],
-    });
-    await userEvent.click(screen.getByTestId("recommendation-refresh"));
-    await waitFor(() =>
+  it(
+    "UI-30은 현재 자리와 원래 revision으로 행동하고 조회 실패 뒤 GET만 재시도한다",
+    async () => {
+      open("/UI-30");
+      await screen.findByTestId("recommendation-candidates");
       expect(
+        screen.queryByRole("combobox", { name: "기간" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "엑셀 다운로드" }),
+      ).not.toBeInTheDocument();
+      await userEvent.selectOptions(
+        screen.getByTestId("recommendation-need"),
+        "19",
+      );
+      fireEvent.change(screen.getByTestId("recommendation-start-month"), {
+        target: { value: "2027-01" },
+      });
+      vi.mocked(
         recommendations.getRecommendationHistorySnapshot,
-      ).toHaveBeenCalledTimes(2),
-    );
-    expect(
-      recommendationActions.createWorkforceRecommendationTentativeAssignment,
-    ).toHaveBeenCalledOnce();
-    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("recommendation-card-1")).toHaveTextContent(
-      "2026-11",
-    );
-  });
+      ).mockRejectedValueOnce(new Error("사본 조회 실패"));
+      await userEvent.click(screen.getByTestId("recommendation-assign-1"));
+      await screen.findByText("저장됐지만 다시 불러오지 못했습니다");
+      expect(
+        recommendationActions.createWorkforceRecommendationTentativeAssignment,
+      ).toHaveBeenCalledWith("42", 1, {
+        needSn: "19",
+        expectedRevision: "choice-original",
+        targetRevision: "target-original",
+        candidateRevision: "candidate-original",
+        confirmedWarnings: [],
+      });
+      await userEvent.click(screen.getByTestId("recommendation-refresh"));
+      await waitFor(() =>
+        expect(
+          recommendations.getRecommendationHistorySnapshot,
+        ).toHaveBeenCalledTimes(2),
+      );
+      expect(
+        recommendationActions.createWorkforceRecommendationTentativeAssignment,
+      ).toHaveBeenCalledOnce();
+      expect(
+        recommendations.requestTargetRecommendation,
+      ).toHaveBeenCalledOnce();
+      expect(screen.getByTestId("recommendation-card-1")).toHaveTextContent(
+        "2026-11",
+      );
+    },
+    shellFlowTimeout,
+  );
   it("UI-30의 기록은 기존 drawer에서 GET만 사용하고 닫아도 추천을 재실행하지 않는다", async () => {
     open("/UI-30");
     await screen.findByTestId("recommendation-candidates");
@@ -1369,22 +1378,26 @@ describe("공식 진입점 합성", () => {
     await screen.findByText("조회된 투입 배정이 없습니다.");
     expect(assignments.getAssignments).toHaveBeenCalledTimes(2);
   });
-  it("프로젝트 편집을 보존하고 셸 탭 닫기 취소에 dirty를 전달한다", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    open("/UI-01");
-    await userEvent.click(await screen.findByTestId("project-create"));
-    const name = await screen.findByTestId("project-name");
-    fireEvent.change(name, { target: { value: "보존 프로젝트" } });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
-    expect(name).toHaveValue("보존 프로젝트");
-    await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-01 탭 닫기" }),
-    );
-    expect(confirm).toHaveBeenCalledOnce();
-    expect(name).toHaveValue("보존 프로젝트");
-    confirm.mockRestore();
-  });
+  it(
+    "프로젝트 편집을 보존하고 셸 탭 닫기 취소에 dirty를 전달한다",
+    async () => {
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      open("/UI-01");
+      await userEvent.click(await screen.findByTestId("project-create"));
+      const name = await screen.findByTestId("project-name");
+      fireEvent.change(name, { target: { value: "보존 프로젝트" } });
+      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+      expect(name).toHaveValue("보존 프로젝트");
+      await userEvent.click(
+        screen.getByRole("button", { name: "DB UI-01 탭 닫기" }),
+      );
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(name).toHaveValue("보존 프로젝트");
+      confirm.mockRestore();
+    },
+    shellFlowTimeout,
+  );
   it("프로젝트 목록 오류는 실제 화면의 재조회로 복구한다", async () => {
     vi.mocked(projects.getProjects).mockRejectedValueOnce(
       new Error("프로젝트 통신 오류"),
@@ -2123,6 +2136,7 @@ describe("공식 진입점 합성", () => {
       expect(name).toHaveValue("보존 인력");
       confirm.mockRestore();
     },
+    shellFlowTimeout,
   );
   it.each(["UI-02", "UI-33"] as const)(
     "%s 열·밀도·페이지 설정을 업무 화면에 연결한다",
@@ -2216,5 +2230,6 @@ describe("공식 진입점 합성", () => {
         ),
       );
     },
+    shellFlowTimeout,
   );
 });

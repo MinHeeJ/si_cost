@@ -1,4 +1,7 @@
 import { formatAmount } from "../../shared/format";
+import { useMemo } from "react";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesOption } from "../../shared/charts/chartAdapters";
 import type { DashboardTrend } from "./dashboardApi";
 export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
   const series = [
@@ -6,6 +9,18 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
     { key: "salesCostAmount", label: "매출원가", style: "cost" },
     { key: "salesTargetAmount", label: "ALL 매출목표", style: "target" },
   ] as const;
+  const option = useMemo(
+    () =>
+      seriesOption(
+        rows.map((row) => row.month),
+        series.map((item) => ({
+          name: item.label,
+          values: rows.map((row) => row[item.key]),
+          dashed: item.style === "target",
+        })),
+      ),
+    [rows],
+  );
   const values = rows.flatMap((row) =>
     series.flatMap((s) => (row[s.key] == null ? [] : [BigInt(row[s.key]!)])),
   );
@@ -21,64 +36,70 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
       <small>
         단위: 백만원 · 실적 실선 / ALL 매출목표 점선 · 미확인은 연결하지 않음
       </small>
-      <svg
-        viewBox="0 0 560 215"
-        role="img"
-        aria-label="매출·매출원가 실선과 ALL 매출목표 점선"
+      <ChartHost
+        testId="dashboard-trend-chart"
+        label="매출·매출원가 실선과 ALL 매출목표 점선"
+        option={option}
       >
-        {[low, high].map((value, index) => (
-          <g key={index}>
-            <text x="72" y={y(String(value))} textAnchor="end">
-              {formatAmount(String(value), "백만원")}
-            </text>
-            <line
-              x1="80"
-              x2="530"
-              y1={y(String(value))}
-              y2={y(String(value))}
-              className="dashboard-chart-grid"
-            />
-          </g>
-        ))}
-        {series.map((s) => (
-          <g key={s.key} className={`dashboard-chart-${s.style}`}>
-            {rows.map((row, index) => (
-              <g key={row.month}>
-                {index > 0 &&
-                  row[s.key] !== null &&
-                  rows[index - 1][s.key] !== null && (
-                    <line
-                      x1={x(index - 1)}
-                      x2={x(index)}
-                      y1={y(rows[index - 1][s.key]!)}
-                      y2={y(row[s.key]!)}
-                    />
+        <svg
+          viewBox="0 0 560 215"
+          role="img"
+          aria-label="매출·매출원가 실선과 ALL 매출목표 점선"
+        >
+          {[low, high].map((value, index) => (
+            <g key={index}>
+              <text x="72" y={y(String(value))} textAnchor="end">
+                {formatAmount(String(value), "백만원")}
+              </text>
+              <line
+                x1="80"
+                x2="530"
+                y1={y(String(value))}
+                y2={y(String(value))}
+                className="dashboard-chart-grid"
+              />
+            </g>
+          ))}
+          {series.map((s) => (
+            <g key={s.key} className={`dashboard-chart-${s.style}`}>
+              {rows.map((row, index) => (
+                <g key={row.month}>
+                  {index > 0 &&
+                    row[s.key] !== null &&
+                    rows[index - 1][s.key] !== null && (
+                      <line
+                        x1={x(index - 1)}
+                        x2={x(index)}
+                        y1={y(rows[index - 1][s.key]!)}
+                        y2={y(row[s.key]!)}
+                      />
+                    )}
+                  {row[s.key] !== null && (
+                    <circle cx={x(index)} cy={y(row[s.key]!)} r="3">
+                      <title>
+                        {row.month} {s.label}{" "}
+                        {formatAmount(row[s.key], "백만원")} 백만원
+                      </title>
+                    </circle>
                   )}
-                {row[s.key] !== null && (
-                  <circle cx={x(index)} cy={y(row[s.key]!)} r="3">
-                    <title>
-                      {row.month} {s.label} {formatAmount(row[s.key], "백만원")}{" "}
-                      백만원
-                    </title>
-                  </circle>
-                )}
-              </g>
-            ))}
-          </g>
-        ))}
-        {rows.map((row, index) => (
-          <text key={row.month} x={x(index)} y="199" textAnchor="middle">
-            {row.month.slice(5)}월
-          </text>
-        ))}
-      </svg>
-      <div className="dashboard-chart-legend">
-        {series.map((s) => (
-          <span key={s.key} className={`dashboard-chart-${s.style}`}>
-            {s.style === "target" ? "┄" : "━"} {s.label}
-          </span>
-        ))}
-      </div>
+                </g>
+              ))}
+            </g>
+          ))}
+          {rows.map((row, index) => (
+            <text key={row.month} x={x(index)} y="199" textAnchor="middle">
+              {row.month.slice(5)}월
+            </text>
+          ))}
+        </svg>
+        <div className="dashboard-chart-legend">
+          {series.map((s) => (
+            <span key={s.key} className={`dashboard-chart-${s.style}`}>
+              {s.style === "target" ? "┄" : "━"} {s.label}
+            </span>
+          ))}
+        </div>
+      </ChartHost>
     </div>
   );
 }

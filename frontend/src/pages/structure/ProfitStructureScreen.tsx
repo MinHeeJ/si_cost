@@ -1,8 +1,10 @@
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { ratioOption } from "../../shared/charts/chartAdapters";
 import {
   formatAmount,
   formatDateTime,
@@ -87,6 +89,17 @@ function RevenueComposition({
   unit: AmountUnit;
   id: string;
 }) {
+  const chartRows = useMemo(
+    () =>
+      groups
+        .filter((group) => group.showBar)
+        .map((group) => ({
+          label: group.groupName,
+          share: group.revenueShare,
+        })),
+    [groups],
+  );
+  const option = useMemo(() => ratioOption(chartRows), [chartRows]);
   const maximum = Math.max(
     1,
     ...groups.map((g) => Math.abs(Number(g.salesAmt ?? "0"))),
@@ -94,6 +107,18 @@ function RevenueComposition({
   return (
     <section className="profit-structure-card">
       <h2>{title}</h2>
+      {chartRows.length > 0 && (
+        <ChartHost
+          testId={`structure-${id}-ratio-chart`}
+          label={`${title} 비중`}
+          option={option}
+          height={220}
+        >
+          <p className="profit-structure-muted">
+            아래 매출 비중과 숫자표에서 같은 원천값을 확인할 수 있습니다.
+          </p>
+        </ChartHost>
+      )}
       {groups.length === 0 ? (
         <p className="profit-structure-empty">표시할 구성 자료가 없습니다.</p>
       ) : (
@@ -147,7 +172,11 @@ function RevenueComposition({
   );
 }
 // SCR-UI-07 — same materialized buckets drive cards, charts, compositions and numeric tables.
-export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function ProfitStructureScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -400,7 +429,9 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                       {formatAmount(card.amount, unit)} {unit}
                     </button>
                   ) : (
-                    <strong data-financial-negative={card.amount?.startsWith("-")}>
+                    <strong
+                      data-financial-negative={card.amount?.startsWith("-")}
+                    >
                       {card.metric === "idleCostAmt"
                         ? formatRate(card.rate)
                         : `${formatAmount(card.amount, unit)} ${unit}`}

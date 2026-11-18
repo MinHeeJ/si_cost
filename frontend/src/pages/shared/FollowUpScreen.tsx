@@ -10,11 +10,13 @@ export function SharedScreenFrame({
   children,
   periodBar,
   initialMonth,
+  periodContext,
 }: {
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
   initialMonth?: string;
+  periodContext?: ReactNode;
 }) {
   const location = useLocation();
   const canUpdate = usePermission(screenId, "UPD");
@@ -42,6 +44,7 @@ export function SharedScreenFrame({
   return (
     <section
       data-screen-id={`SCR-${screenId}`}
+      data-testid={`screen-${screenId.toLowerCase()}`}
       className={`sicost-screen${screenId === "UI-27" ? " sicost-workspace-screen" : ""}`}
     >
       <div className="sicost-titlebar" data-screen-id={`SCR-${screenId}-ENTRY`}>
@@ -55,6 +58,7 @@ export function SharedScreenFrame({
             <h1>{menu.name}</h1>
             <button
               data-screen-id={`SCR-${screenId}-STAR`}
+              data-testid={`screen-${screenId.toLowerCase()}-favorite`}
               className={
                 favorites.includes(screenId)
                   ? "sicost-star selected"
@@ -96,7 +100,24 @@ export function SharedScreenFrame({
       <div
         className={`sicost-screen-content${menu.pcOnly ? " sicost-pc-body" : ""}`}
       >
-        {periodBar === undefined ? (
+        {periodContext !== undefined ? (
+          <div
+            className="sicost-period-line"
+            data-testid={`${screenId.toLowerCase()}-period-line`}
+          >
+            {periodBar === undefined ? (
+              <ScreenPeriodBar
+                screenId={screenId}
+                initialMonth={
+                  analysisEntry?.month ?? initialMonth ?? dashboardMonth
+                }
+              />
+            ) : (
+              periodBar
+            )}
+            {periodContext}
+          </div>
+        ) : periodBar === undefined ? (
           <ScreenPeriodBar
             screenId={screenId}
             initialMonth={

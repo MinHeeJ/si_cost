@@ -1,15 +1,22 @@
+@import "./surfaces.css";
+@import "./motion.css";
+
 :root {
   --primary: #1d4ed8;
   --primary-hover: #1e40af;
-  --primary-bg: #eff6ff;
+  --primary-bg: #eef3ff;
   --text: #111827;
   --text-sub: #4b5563;
   --text-dis: #9ca3af;
-  --border: #d1d5db;
-  --divider: #e5e7eb;
-  --bg: #f9fafb;
+  --border: #d5dae1;
+  --divider: #e7eaee;
+  --bg: #f7f8fa;
   --surface: #fff;
-  --head-bg: #f3f4f6;
+  --head-bg: #f9fafb;
+  --nav-bg: #0f1e4a;
+  --radius-card: 10px;
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05),
+    0 6px 16px rgba(17, 24, 39, 0.04);
   --ok: #15803d;
   --ok-bg: #f0fdf4;
   --warn: #b45309;
@@ -20,13 +27,14 @@
   --info-bg: #f0f9ff;
   --lock: #4b5563;
   --lock-bg: #f3f4f6;
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
-  font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic",
-    "Apple SD Gothic Neo", system-ui, sans-serif;
+  --shadow-lg: 0 24px 56px rgba(17, 24, 39, 0.18),
+    0 4px 10px rgba(17, 24, 39, 0.07);
+  font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR",
+    "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
   font-size: 14px;
-  line-height: 20px;
+  line-height: 21px;
 }
 * {
   box-sizing: border-box;
@@ -44,8 +52,9 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 20px;
-  line-height: 28px;
+  font-size: 26px;
+  line-height: 34px;
+  letter-spacing: -0.032em;
 }
 h2 {
   font-size: 16px;
@@ -58,10 +67,10 @@ textarea {
   font-family: inherit;
 }
 button {
-  height: 36px;
+  height: 38px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--text);
   font-size: 14px;
@@ -104,10 +113,10 @@ button:disabled {
 }
 .sicost-field input,
 .sicost-field select {
-  height: 36px;
+  height: 38px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--text);
   max-width: 100%;
@@ -153,7 +162,7 @@ button:disabled {
 }
 .sicost-table th,
 .sicost-table td {
-  height: 40px;
+  height: 44px;
   padding: 0 12px;
   border-bottom: 1px solid var(--divider);
   text-align: left;
@@ -214,7 +223,7 @@ button:disabled {
 }
 .sicost-dense td,
 .sicost-dense th {
-  height: 32px;
+  height: 34px;
 }
 .sicost-empty {
   padding: 48px 16px;
@@ -294,7 +303,7 @@ button:disabled {
   flex-wrap: wrap;
   gap: 10px;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
 }
 .sicost-banner > span {
@@ -326,7 +335,7 @@ button:disabled {
   max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   box-shadow: var(--shadow-lg);
 }
@@ -489,7 +498,7 @@ button[aria-pressed="true"] {
   position: fixed;
   inset: 0 0 0 auto;
   z-index: 50;
-  width: min(560px, 100vw);
+  width: min(640px, 100vw);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -600,19 +609,68 @@ button[aria-pressed="true"] {
 
 /* 요구15 §7.2: 기기 테마와 현재 활성 화면 인쇄. */
 @media (prefers-color-scheme: dark) {
-  :root { --primary: #3b82f6; --primary-hover: #2563eb; --primary-bg: #172554;
-    --text: #f3f4f6; --text-sub: #cbd5e1; --text-dis: #94a3b8; --border: #475569;
-    --divider: #334155; --bg: #0f172a; --surface: #1e293b; --head-bg: #334155;
-    --ok: #86efac; --ok-bg: #14532d; --warn: #fcd34d; --warn-bg: #422006;
-    --bad: #fca5a5; --bad-bg: #450a0a; --info: #7dd3fc; --info-bg: #082f49;
-    --lock: #cbd5e1; --lock-bg: #334155; }
+  :root {
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --primary-bg: #172554;
+    --text: #f3f4f6;
+    --text-sub: #cbd5e1;
+    --text-dis: #94a3b8;
+    --border: #475569;
+    --divider: #334155;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --head-bg: #334155;
+    --ok: #86efac;
+    --ok-bg: #14532d;
+    --warn: #fcd34d;
+    --warn-bg: #422006;
+    --bad: #fca5a5;
+    --bad-bg: #450a0a;
+    --info: #7dd3fc;
+    --info-bg: #082f49;
+    --lock: #cbd5e1;
+    --lock-bg: #334155;
+  }
 }
 @media print {
-  html, body, #root, .sicost-app, .sicost-app-body, .sicost-main, .sicost-screen-host { height: auto; overflow: visible; display: block; }
-  .sicost-screen-host[hidden], .sicost-header, .sicost-sidebar, .sicost-screen-tabs,
-  .sicost-scrim, .sicost-drawer, .sicost-drawer-scrim, .sicost-filterbar, button, input, select, textarea { display: none !important; }
-  .sicost-screen-host:not([hidden])::after { content: "현재 조회된 목록 페이지 · 필터 전체는 엑셀 다운로드"; display: block; margin-top: 16px; }
-  .sicost-table-wrap { overflow: visible; }
-  thead { display: table-header-group; }
-  tr { break-inside: avoid; }
+  html,
+  body,
+  #root,
+  .sicost-app,
+  .sicost-app-body,
+  .sicost-main,
+  .sicost-screen-host {
+    height: auto;
+    overflow: visible;
+    display: block;
+  }
+  .sicost-screen-host[hidden],
+  .sicost-header,
+  .sicost-sidebar,
+  .sicost-screen-tabs,
+  .sicost-scrim,
+  .sicost-drawer,
+  .sicost-drawer-scrim,
+  .sicost-filterbar,
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+  .sicost-screen-host:not([hidden])::after {
+    content: "현재 조회된 목록 페이지 · 필터 전체는 엑셀 다운로드";
+    display: block;
+    margin-top: 16px;
+  }
+  .sicost-table-wrap {
+    overflow: visible;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    break-inside: avoid;
+  }
 }

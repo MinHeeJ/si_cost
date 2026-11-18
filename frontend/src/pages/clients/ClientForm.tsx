@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
+import { FormSection } from "../../shared/FormSection";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -254,11 +255,12 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           else void save();
         }}
       >
-        <fieldset
+        <FormSection
+          title="기본 정보"
+          testId="client-basic-section"
           disabled={!canSave || pending}
           className="clients-form-fields"
         >
-          <legend>기본 정보</legend>
           <CodeSelect
             label="구분"
             value={form.type}
@@ -279,7 +281,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           />
           {text("contactName", "담당자", 20)}
           {text("phone", "연락처", 20)}
-        </fieldset>
+        </FormSection>
         {!form.type && (
           <p className="sicost-banner sicost-tone-info">
             구분을 선택하면 세금계산서 이메일 또는 지급 계좌를 입력할 수
@@ -287,20 +289,22 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           </p>
         )}
         {customer && (
-          <fieldset
+          <FormSection
+            title="세금계산서"
+            testId="client-tax-section"
             disabled={!canSave || pending}
             className="clients-form-fields"
           >
-            <legend>세금계산서</legend>
             {text("taxEmail", "세금계산서 이메일", 100, true)}
-          </fieldset>
+          </FormSection>
         )}
         {vendor && sensitive && (
-          <fieldset
+          <FormSection
+            title="지급 계좌"
+            testId="client-account-section"
             disabled={!canSave || pending}
             className="clients-form-fields"
           >
-            <legend>지급 계좌</legend>
             {client && (
               <>
                 <label className="sicost-field">
@@ -354,7 +358,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
                   placeholder="등록 계좌 유지 — 새 계좌로 교체할 때 입력"
                 />
               )}
-          </fieldset>
+          </FormSection>
         )}
         {canSave && (
           <footer className="clients-actions">

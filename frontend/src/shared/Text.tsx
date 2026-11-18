@@ -8,6 +8,7 @@ export type TextProps = Omit<
   value: string;
   onChange(value: string): void;
   error?: string;
+  "data-testid"?: string;
 };
 export function Text({
   label,
@@ -27,6 +28,10 @@ export function Text({
       </label>
       <input
         {...props}
+        data-testid={
+          props["data-testid"] ??
+          `text-field-${generated.replace(/:/g, "").toLowerCase()}`
+        }
         id={inputId}
         value={value}
         onChange={(event) => onChange(event.target.value)}

@@ -1,0 +1,833 @@
+/* Shared ledger presentation. No selectors change business visibility or editable matrix layout. */
+.sicost-section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px 24px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.sicost-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sicost-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.sicost-kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: auto;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 20px 24px;
+  background: transparent;
+  text-align: left;
+}
+.sicost-kpi-item + .sicost-kpi-item {
+  border-left: 1px solid var(--divider);
+}
+.sicost-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.sicost-kpi-value {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.sicost-kpi-value small {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-sub);
+}
+.sicost-kpi-comparison {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-sub);
+}
+.sicost-detail-description {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+.sicost-detail-description > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divider);
+}
+.sicost-detail-description dt {
+  color: var(--text-sub);
+}
+.sicost-detail-description dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+:root .sicost-form-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 20px 24px;
+  min-width: 0;
+  padding: 24px;
+  margin: 20px 0;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.sicost-form-section legend {
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+.sicost-form-section-description,
+.sicost-form-section .sicost-address {
+  grid-column: 1 / -1;
+}
+.sicost-form-section-description {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+:root .sicost-segmented-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  margin: 0;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--head-bg);
+}
+:root .sicost-segmented-tabs > button {
+  position: relative;
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13px;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-tab) var(--motion-ease),
+    box-shadow var(--motion-tab) var(--motion-ease);
+}
+:root .sicost-segmented-tabs > button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px #11182715;
+}
+:root .sicost-segmented-tabs > button:disabled {
+  color: var(--text-dis);
+}
+.sicost-help-anchor {
+  display: inline-flex;
+}
+.sicost-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  color: var(--text-sub);
+  background: var(--surface);
+  font-size: 12px;
+}
+.sicost-help-trigger:hover {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+.sicost-help-popup {
+  position: fixed;
+  z-index: 100;
+  width: max-content;
+  max-width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e5e9f0;
+  box-shadow: var(--shadow-lg);
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.sicost-help-popup a {
+  color: #93c5fd;
+}
+:root .sicost-table thead th {
+  box-shadow: inset 0 -2px 0 var(--border);
+}
+:root .sicost-table tfoot td {
+  box-shadow: inset 0 2px 0 var(--border);
+}
+:root .sicost-filterbar {
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  gap: 12px 20px;
+  box-shadow: var(--shadow-sm);
+}
+:root .sicost-filterbar .sicost-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.sicost-filterbar .sicost-field label {
+  white-space: nowrap;
+  color: var(--text-sub);
+  font-size: 12.5px;
+}
+.sicost-filterbar .sicost-field-error {
+  grid-column: 2;
+}
+:root .sicost-dialog header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--bg);
+  border-radius: 10px 10px 0 0;
+}
+:root .sicost-dialog-body {
+  padding: 20px 24px;
+}
+:root .sicost-dialog footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--divider);
+  background: var(--bg);
+  border-radius: 0 0 10px 10px;
+}
+:root .sicost-drawer-header {
+  background: var(--bg);
+  padding: 20px 24px 16px;
+}
+:root .sicost-drawer-heading h2 {
+  font-size: 20px;
+  line-height: 28px;
+}
+:root .sicost-drawer-body {
+  padding: 20px 24px 24px;
+  overscroll-behavior: contain;
+}
+:root .sicost-dialog-full-page {
+  container: workspace / inline-size;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: var(--bg);
+}
+:root .sicost-form-scrim {
+  padding: 0;
+}
+:root .sicost-dialog-full-page > header {
+  border-radius: 0;
+  padding: 20px max(24px, calc((100vw - 1080px) / 2));
+  background: var(--surface);
+}
+:root .sicost-dialog-full-page > header h2 {
+  font-size: 26px;
+  line-height: 34px;
+}
+:root .sicost-dialog-full-page > .sicost-dialog-body {
+  padding: 24px max(24px, calc((100vw - 1080px) / 2));
+  flex: 1;
+  color: var(--text);
+}
+:root .sicost-dialog-full-page > footer {
+  border-radius: 0;
+  padding: 14px max(24px, calc((100vw - 1080px) / 2));
+  background: var(--surface);
+}
+:root .sicost-form-page {
+  min-width: 0;
+}
+:root .sicost-form-page-actions,
+:root .clients-form-page .clients-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 14px 24px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Existing screen-owned cards inherit the same visual layer; their data and state stay local. */
+:root
+  :is(
+    .dashboard-panel,
+    .profit-structure-card,
+    .workforce-forecast-card,
+    .recommendation-card,
+    .candidate-card,
+    .cash-chart,
+    .business-plan-chart,
+    .financial-months,
+    .month-close-card,
+    .project-analysis-card
+  ) {
+  border-radius: var(--radius-card);
+  border-color: var(--divider);
+  box-shadow: var(--shadow-sm);
+}
+:root
+  :is(
+    .dashboard-metrics,
+    .project-analysis-summary,
+    .profitability-summary,
+    .renegotiation-summary,
+    .workforce-forecast-summary,
+    .billing-review-cards
+  ) {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+:root
+  :is(
+    .project-analysis-summary,
+    .profitability-summary,
+    .renegotiation-summary,
+    .workforce-forecast-summary,
+    .billing-review-cards
+  )
+  > :is(div, article, button) {
+  border: 0;
+  border-right: 1px solid var(--divider);
+  border-radius: 0;
+  padding: 18px 20px;
+  background: transparent;
+}
+:root
+  :is(
+    .project-analysis-summary,
+    .profitability-summary,
+    .renegotiation-summary,
+    .workforce-forecast-summary,
+    .billing-review-cards
+  )
+  > :last-child {
+  border-right: 0;
+}
+:root
+  :is(
+    .project-analysis-summary,
+    .profitability-summary,
+    .renegotiation-summary,
+    .workforce-forecast-summary,
+    .billing-review-cards
+  )
+  strong {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.03em;
+}
+:root .dashboard-metric {
+  border: 0;
+  border-right: 1px solid var(--divider);
+  border-radius: 0;
+  padding: 20px 24px;
+}
+:root .dashboard-metric:last-child {
+  border-right: 0;
+}
+:root .dashboard-metric > strong {
+  font-size: 28px;
+  line-height: 34px;
+}
+:root :is(.clients-filter, .profitability-filters) {
+  align-items: center;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+:root .clients-filter .sicost-field {
+  flex-direction: row;
+  align-items: center;
+}
+:root .clients-filter .sicost-field label {
+  white-space: nowrap;
+  color: var(--text-sub);
+}
+:root .clients-search {
+  flex: 1 1 260px;
+}
+:root :is(.developer-form-fields, .clients-form-fields) {
+  border-radius: var(--radius-card);
+  gap: 20px 24px;
+}
+:root .financial-month-strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  overflow: visible;
+}
+:root .financial-month-strip button {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+}
+:root .financial-month-strip button small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:root .financial-tabs {
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--head-bg);
+}
+:root .financial-tabs button {
+  border: 0;
+  border-radius: 5px;
+  height: 32px;
+}
+:root .financial-tabs button[aria-pressed="true"] {
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+:root .financial-footer {
+  box-shadow: 0 -4px 16px #11182708;
+}
+.sicost-chart-host {
+  position: relative;
+  min-width: 0;
+}
+.sicost-chart-canvas {
+  width: 100%;
+  height: 300px;
+}
+.sicost-chart-fallback[hidden] {
+  display: none;
+}
+.profit-structure-card:has(.sicost-chart-canvas[role="img"])
+  .profit-structure-group
+  > svg {
+  display: none;
+}
+
+/* Screen and detail tabs keep their existing keys, handlers, panels and permission checks. */
+:root
+  :is(.sicost-screen, .sicost-drawer, .sicost-dialog)
+  :is([role="tablist"], .codegroups-tabs, .candidate-tabs, .financial-tabs) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--head-bg);
+}
+:root
+  :is(.sicost-screen, .sicost-drawer, .sicost-dialog)
+  :is([role="tablist"], .codegroups-tabs, .candidate-tabs, .financial-tabs)
+  > button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--text-sub);
+  background: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-tab) var(--motion-ease),
+    box-shadow var(--motion-tab) var(--motion-ease);
+}
+:root
+  :is(.sicost-screen, .sicost-drawer, .sicost-dialog)
+  :is([role="tablist"], .codegroups-tabs, .candidate-tabs, .financial-tabs)
+  > button:is([aria-selected="true"], [aria-pressed="true"], .active) {
+  color: var(--primary);
+  background: var(--surface);
+  font-weight: 700;
+  box-shadow: 0 1px 4px #11182715;
+}
+:root
+  :is(
+    .operating-summary,
+    .profit-structure-summary,
+    .business-plan-summary,
+    .settlement-summary,
+    .sales-command-summary,
+    .candidate-summary-metrics,
+    .bill-summary-grid
+  ) {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+:root
+  :is(
+    .operating-summary,
+    .profit-structure-summary,
+    .business-plan-summary,
+    .settlement-summary,
+    .sales-command-summary,
+    .candidate-summary-metrics,
+    .bill-summary-grid
+  )
+  > :is(article, div, button) {
+  border: 0;
+  border-right: 1px solid var(--divider);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px 24px;
+  background: transparent;
+  min-width: 0;
+}
+:root
+  :is(
+    .operating-summary,
+    .profit-structure-summary,
+    .business-plan-summary,
+    .settlement-summary,
+    .sales-command-summary,
+    .candidate-summary-metrics,
+    .bill-summary-grid
+  )
+  > :last-child {
+  border-right: 0;
+}
+:root
+  :is(
+    .operating-summary,
+    .profit-structure-summary,
+    .business-plan-summary,
+    .settlement-summary,
+    .sales-command-summary,
+    .bill-summary-grid
+  )
+  :is(strong, dd) {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+:root
+  :is(.operating-summary, .profit-structure-summary, .settlement-summary)
+  h2 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
+}
+:root .operating-table-scroll {
+  max-height: min(70vh, 800px);
+  border-radius: var(--radius-card);
+}
+:root .operating-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--head-bg);
+  box-shadow: inset 0 -2px 0 var(--border);
+}
+:root .operating-table-scroll thead th:first-child {
+  z-index: 4;
+}
+:root .operating-table-scroll :is(td, th) {
+  height: 44px;
+}
+:root .financial-display-dense .operating-table-scroll :is(td, th) {
+  height: 34px;
+}
+:root .operating-table-scroll .operating-current {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+:root
+  :is(
+    .project-form-grid,
+    .candidate-form-grid,
+    .sales-opportunity-form-grid,
+    .menu-management-history,
+    .settlement-card,
+    .settlement-guide
+  ) {
+  border-radius: var(--radius-card);
+}
+:root .month-close-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+:root .month-close-check {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) 80px minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 8px 20px;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  border-radius: 0;
+  padding: 16px 20px;
+}
+:root .month-close-check:last-child {
+  border-bottom: 0;
+}
+:root .month-close-check .month-close-heading {
+  grid-row: 1 / 3;
+}
+:root .month-close-check > strong {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+:root .month-close-check > p {
+  grid-column: 3;
+  grid-row: 1;
+}
+:root .month-close-check > small {
+  grid-column: 3;
+  grid-row: 2;
+}
+:root .month-close-check > button {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  margin: 0;
+}
+:root .month-close-check.warn {
+  background: var(--warn-bg);
+}
+:root .roles-settings {
+  display: flex;
+  padding: 20px 24px;
+  margin: 0;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+:root .menu-management {
+  padding: 0;
+}
+:root footer.menu-management-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding: 14px 24px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
+}
+:root .sales-command-column {
+  background: var(--head-bg);
+  border-radius: var(--radius-card);
+  padding: 16px;
+}
+:root .sales-command-card {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+:root .recommendation-results .recommendation-card {
+  border-left: 3px solid var(--primary);
+}
+
+@container workspace (max-width: 1060px) {
+  .sicost-screen-content > .sicost-period-bar {
+    width: 100%;
+  }
+  :root .financial-month-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+@container workspace (max-width: 1000px) {
+  :root .sicost-form-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :root .sicost-titlebar {
+    position: static;
+  }
+}
+@media (max-width: 767px) {
+  :root
+    :is(.sicost-screen, .sicost-drawer, .sicost-dialog)
+    :is([role="tablist"], .codegroups-tabs, .candidate-tabs, .financial-tabs)
+    > button {
+    min-height: 44px;
+    height: auto;
+  }
+  :root .month-close-check {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+  :root .month-close-check > button {
+    align-self: flex-end;
+  }
+  :root
+    :is(
+      .operating-summary,
+      .profit-structure-summary,
+      .business-plan-summary,
+      .settlement-summary,
+      .sales-command-summary,
+      .candidate-summary-metrics,
+      .bill-summary-grid
+    )
+    > :is(article, div, button) {
+    padding: 16px;
+    border-bottom: 1px solid var(--divider);
+  }
+  :root
+    :is(
+      .operating-summary,
+      .profit-structure-summary,
+      .business-plan-summary,
+      .settlement-summary,
+      .sales-command-summary,
+      .bill-summary-grid
+    )
+    :is(strong, dd) {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  :root .sicost-section-card {
+    padding: 16px;
+  }
+  .sicost-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sicost-kpi-item {
+    padding: 16px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .sicost-kpi-item:nth-child(odd) {
+    border-left: 0;
+  }
+  .sicost-kpi-value {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  :root .sicost-form-section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+  :root .sicost-segmented-tabs > button {
+    height: 44px;
+    padding: 0 12px;
+  }
+  :root .sicost-scrim:not(.sicost-form-scrim) {
+    align-items: end;
+    padding: 16px 0 0;
+  }
+  :root .sicost-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 14px 14px 0 0;
+  }
+  :root .sicost-dialog header {
+    padding: 20px 16px 16px;
+  }
+  :root .sicost-dialog-body {
+    padding: 16px;
+  }
+  :root .sicost-dialog footer {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    flex-wrap: wrap;
+  }
+  :root .sicost-dialog-full-page {
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+  :root .sicost-dialog-full-page > header {
+    padding: 16px;
+  }
+  :root .sicost-dialog-full-page > .sicost-dialog-body {
+    padding: 16px;
+  }
+  :root .sicost-drawer-header {
+    padding: 16px;
+  }
+  :root .sicost-drawer-body {
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  :root .sicost-filterbar .sicost-field {
+    flex: 1 1 100%;
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  :root .sicost-filterbar .sicost-field :is(input, select) {
+    width: 100%;
+  }
+  :root .clients-filter .sicost-field {
+    flex: 1 1 100%;
+  }
+  :root .clients-filter .sicost-field label {
+    min-width: 72px;
+  }
+  :root .financial-month-strip {
+    display: flex;
+    overflow-x: auto;
+  }
+  :root .financial-month-strip button {
+    flex: 0 0 84px;
+  }
+  :root .financial-tabs button {
+    height: 44px;
+  }
+  :root .sicost-detail-description > div {
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 12px;
+  }
+  :root .dashboard-metric {
+    padding: 16px;
+    border-bottom: 1px solid var(--divider);
+  }
+  :root .sicost-form-page-actions {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}

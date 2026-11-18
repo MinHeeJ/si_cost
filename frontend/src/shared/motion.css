@@ -1,0 +1,154 @@
+:root {
+  --motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-page: 420ms;
+  --motion-tab: 340ms;
+  --motion-menu: 280ms;
+  --motion-drawer: 260ms;
+  --motion-dialog: 220ms;
+  --motion-chart: 700ms;
+  --motion-chart-update: 400ms;
+}
+.sicost-screen-host:not([hidden]) > .sicost-screen > .sicost-screen-content {
+  animation: sicost-content-in var(--motion-page) var(--motion-ease) both;
+}
+.sicost-screen-content > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.sicost-drawer {
+  animation: sicost-drawer-in var(--motion-drawer) var(--motion-ease);
+}
+.sicost-dialog {
+  animation: sicost-dialog-in var(--motion-dialog) var(--motion-ease);
+}
+.sicost-star.selected svg {
+  animation: sicost-star-in 340ms var(--motion-ease);
+}
+.sicost-kpi-value,
+.dashboard-metric > strong,
+.profitability-summary article > strong,
+.operating-summary article > strong,
+.bill-summary-card > strong {
+  animation: sicost-number-in 700ms var(--motion-ease) both;
+}
+.sicost-brand-mark rect {
+  transform-origin: center bottom;
+  animation: sicost-brand-bar 700ms var(--motion-ease) both;
+}
+.sicost-brand-mark rect:nth-child(2) {
+  animation-delay: 100ms;
+}
+.sicost-brand-mark rect:nth-child(3) {
+  animation-delay: 200ms;
+}
+.sicost-brand-mark path {
+  stroke-dasharray: 60;
+  animation: sicost-brand-line 700ms var(--motion-ease) both;
+}
+.sicost-grid[aria-busy="true"] .sicost-loading-state .sicost-loading-lines i,
+.analysis-progress .active {
+  animation: sicost-pending 1.4s ease-in-out infinite alternate;
+}
+@keyframes sicost-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-drawer-in {
+  from {
+    opacity: 0.3;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-number-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-star-in {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes sicost-brand-bar {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes sicost-brand-line {
+  from {
+    stroke-dashoffset: 60;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes sicost-pending {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .sicost-dialog {
+    animation-name: sicost-sheet-in;
+  }
+}
+@keyframes sicost-sheet-in {
+  from {
+    transform: translateY(28px);
+    opacity: 0.3;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .sicost-brand-mark path {
+    stroke-dashoffset: 0;
+  }
+}

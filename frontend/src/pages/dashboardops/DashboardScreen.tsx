@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { KpiStrip, SectionCard } from "../../shared/Surface";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { quantityOption } from "../../shared/charts/chartAdapters";
 import {
   formatAmount,
   formatDateTime,
@@ -89,10 +93,9 @@ function Panel({
   testId: string;
 }) {
   return (
-    <section className="dashboard-panel" data-testid={testId}>
-      <h2>{title}</h2>
+    <SectionCard title={title} testId={testId} className="dashboard-panel">
       {children}
-    </section>
+    </SectionCard>
   );
 }
 export function DashboardScreen({
@@ -112,6 +115,26 @@ export function DashboardScreen({
     { menus } = useSharedScreen("UI-16");
   const money = (value: string | null) => formatAmount(value, amountUnit);
   const closeProgress = data?.closeProgress;
+  const supplyChart = useMemo(
+    () =>
+      data
+        ? quantityOption(
+            data.supplyForecast.map((row) => row.month),
+            [
+              {
+                name: "가용",
+                values: data.supplyForecast.map((row) => row.availablePersons),
+              },
+              {
+                name: "필요",
+                values: data.supplyForecast.map((row) => row.requiredPersons),
+              },
+            ],
+            "명",
+          )
+        : {},
+    [data],
+  );
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -205,7 +228,26 @@ export function DashboardScreen({
     />
   );
   return (
-    <SharedScreenFrame screenId="UI-16">
+    <SharedScreenFrame
+      screenId="UI-16"
+      periodContext={
+        data && !loading && !error ? (
+          <p className="dashboard-dates">
+            오늘 {data.today} · 선택월 Q {data.selectedMonth}{" "}
+            <StatusBadge
+              tone={data.selectedMonthCloseStatus === "CLOSE" ? "lock" : "info"}
+            >
+              {data.selectedMonthCloseStatus === "CLOSE" ? "마감" : "작업중"}
+            </StatusBadge>{" "}
+            · 마지막 마감 {data.lastClosedMonth ?? "–"}{" "}
+            {data.provisional && <StatusBadge tone="warn">잠정</StatusBadge>}
+            <br />
+            현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M{" "}
+            {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
+          </p>
+        ) : null
+      }
+    >
       <div
         className="dashboard-content"
         data-testid="dashboard-screen"
@@ -216,6 +258,13 @@ export function DashboardScreen({
             {data?.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} · 단위:{" "}
             {amountUnit}
           </small>
+          {data && (
+            <HelpTooltip label="지표 기준" testId="dashboard-basis-help">
+              선택월 {data.selectedMonth} · 서버 기준일 {data.today} · 현재월{" "}
+              {data.currentMonth}. 지표별 집계 범위와 미확인 이유는 각 값
+              아래에서 확인할 수 있습니다.
+            </HelpTooltip>
+          )}
           {!mobile && (
             <button
               data-testid="dashboard-export"
@@ -245,22 +294,11 @@ export function DashboardScreen({
         {notice && <p role="status">{notice}</p>}
         {data && !loading && !error && (
           <>
-            <p className="dashboard-dates">
-              오늘 {data.today} · 선택월 Q {data.selectedMonth}{" "}
-              <StatusBadge
-                tone={
-                  data.selectedMonthCloseStatus === "CLOSE" ? "lock" : "info"
-                }
-              >
-                {data.selectedMonthCloseStatus === "CLOSE" ? "마감" : "작업중"}
-              </StatusBadge>{" "}
-              · 마지막 마감 {data.lastClosedMonth ?? "–"}{" "}
-              {data.provisional && <StatusBadge tone="warn">잠정</StatusBadge>}
-              <br />
-              현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M{" "}
-              {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
-            </p>
-            <div className="dashboard-metrics">
+            <KpiStrip
+              className="dashboard-metrics"
+              label="대시보드 주요 지표"
+              testId="dashboard-kpi-strip"
+            >
               {data.metrics.map((card) => (
                 <button
                   className="dashboard-metric"
@@ -323,7 +361,7 @@ export function DashboardScreen({
                   <DashboardBasis basis={card.basis} />
                 </button>
               ))}
-            </div>
+            </KpiStrip>
             <div className="dashboard-main-grid">
               <Panel
                 title={`확인할 일 ${count(data.actionTypeCount)}유형 · 급함 ${count(data.urgentActionTypeCount)}유형`}
@@ -536,6 +574,15 @@ export function DashboardScreen({
                     : "허용된 담당 범위의 인력"}{" "}
                   · 미충원 포함 · 단위: 명
                 </p>
+                <ChartHost
+                  testId="dashboard-supply-chart"
+                  label="앞으로 6개월 인력 수급 예측"
+                  option={supplyChart}
+                >
+                  <p className="dashboard-empty">
+                    인력 수급은 아래 숫자표에서 확인할 수 있습니다.
+                  </p>
+                </ChartHost>
                 <div className="sicost-table-viewport">
                   <table
                     className="sicost-table"

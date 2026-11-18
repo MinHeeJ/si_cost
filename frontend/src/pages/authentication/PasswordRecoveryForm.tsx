@@ -9,6 +9,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
     [busy, setBusy] = useState(false);
   return (
     <form
+      data-testid="password-recovery-form"
       onSubmit={async (e) => {
         e.preventDefault();
         if (busy) return;
@@ -36,6 +37,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
       <label>
         아이디
         <input
+          data-testid="password-recovery-id-input"
           value={userId}
           onChange={(e) => setId(e.target.value)}
           maxLength={30}
@@ -45,6 +47,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
       <label>
         등록 이메일
         <input
+          data-testid="password-recovery-email-input"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}

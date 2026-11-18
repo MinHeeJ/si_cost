@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useModalLayer } from "./useModalLayer";
 
 export type DetailDrawerProps = {
   /** 접근성 이름. 비우면 제목을 쓴다. */
@@ -38,16 +39,17 @@ export function DetailDrawer({
 }: DetailDrawerProps) {
   const titleId = useId();
   const closeButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (hidden) return;
-    const previous = document.activeElement as HTMLElement | null;
-    closeButton.current?.focus();
-    return () => {
-      previous?.focus?.();
-    };
-  }, [hidden]);
+  const panel = useRef<HTMLElement>(null);
+  const isTop = useModalLayer(
+    panel,
+    !hidden,
+    () => {
+      if (!pending) onClose();
+    },
+    () => closeButton.current,
+  );
   const close = () => {
-    if (!pending) onClose();
+    if (!pending && isTop()) onClose();
   };
   return createPortal(
     <>
@@ -58,6 +60,8 @@ export function DetailDrawer({
         onClick={close}
       />
       <aside
+        ref={panel}
+        tabIndex={-1}
         className="sicost-drawer"
         style={hidden ? { display: "none" } : undefined}
         role="dialog"
@@ -65,12 +69,6 @@ export function DetailDrawer({
         aria-label={label}
         aria-labelledby={label ? undefined : titleId}
         data-testid={testId}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            close();
-          }
-        }}
       >
         <header className="sicost-drawer-header">
           <div className="sicost-drawer-heading">
