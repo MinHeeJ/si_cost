@@ -114,7 +114,7 @@ it("관리 역할 선택지는 업무자격 옵션과 분리하고 전체 역할
   expect(await api.getManagedUserRoleOptions()).toEqual([
     { roleId: "FIN", name: "재무 담당" },
   ]);
-  expect(fetcher.mock.calls[0][0]).toBe("/api/roles");
+  expect(fetcher.mock.calls[0][0]).toBe("/api/business-users/role-options");
   fetcher.mockResolvedValue(
     new Response(
       JSON.stringify({ success: true, meta: {}, data: { items: [] } }),

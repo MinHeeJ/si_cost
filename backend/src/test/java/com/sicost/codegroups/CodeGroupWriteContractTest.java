@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(CodeGroupController.class)
 @ContextConfiguration(classes=CodeGroupController.class)
 @Import({CodeGroupService.class, CodeGroupValidator.class, CodeReferenceGuard.class, RevisionService.class,

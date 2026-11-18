@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   authenticate,
   session,
@@ -32,7 +32,10 @@ export function MfaForm({
         1000,
     ),
   );
+  const inFlight = useRef(false);
   async function act(path: string) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -59,6 +62,7 @@ export function MfaForm({
       }
     } finally {
       setCode("");
+      inFlight.current = false;
       setBusy(false);
     }
   }

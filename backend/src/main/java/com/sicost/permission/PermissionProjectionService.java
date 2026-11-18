@@ -23,7 +23,7 @@ public class PermissionProjectionService {
         if(Set.of("UI-01","UI-31").contains(screen) && Set.of("costusage","costusagerate","costusageratio","costusagepercent","costprogressgap").contains(normalized))return false;
         if(screen.equals("UI-19") && normalized.equals("profitstatus"))return false;
         if(screen.equals("UI-32") && Set.of("marginrate","targetunitprice","requiredincreaserate","annualgain").contains(normalized))return false;
-        if(screen.equals("UI-03") && Set.of("pay","netpay","teamexpense","projectexpense","labor","laborallocated").contains(normalized))return true;
+        if(screen.equals("UI-03") && Set.of("pay","netpay","teamexpense","projectexpense","labor","laborallocated","knownlaborallocated").contains(normalized))return true;
         if(normalized.equals("taxemail"))return false;
         if(normalized.equals("payamount") && !Set.of("UI-02","UI-03","UI-04").contains(screen))return false;
         return normalized.contains("salary") || normalized.contains("monthlypay") || normalized.contains("payamount") || normalized.contains("cost") || normalized.contains("profit") || normalized.contains("margin") || normalized.contains("insurance") || normalized.contains("retirement") || normalized.contains("allowance") || normalized.contains("incometax") || normalized.contains("withholdingtax") || normalized.contains("vendorsupply") || normalized.contains("overhead") || Set.of("bankcode","bankname","bankactive","accountnumber","depositor","account","cardamount").contains(normalized);

@@ -130,7 +130,7 @@ class ProjectExpenseDatabaseTest {
     }
     @Test void concurrentSameRevisionCommitsOneExpenseAndOneSetOfAuditFields() throws Exception {
         var command=input("2080-07");CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->concurrent(start,command));var b=CompletableFuture.supplyAsync(()->concurrent(start,command));start.countDown();
+        var authenticated=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(ForkJoinPool.commonPool());var a=CompletableFuture.supplyAsync(()->concurrent(start,command),authenticated);var b=CompletableFuture.supplyAsync(()->concurrent(start,command),authenticated);start.countDown();
         assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","STALE_WRITE");assertThat(rows()).hasSize(1);assertThat(audits()).hasSize(4);
     }
     String concurrent(CountDownLatch start,CreateProjectExpenseRequest input) {

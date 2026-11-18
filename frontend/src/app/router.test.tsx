@@ -1685,7 +1685,8 @@ describe("공식 진입점 합성", () => {
             id === "UI-24" ? "roles-screen" : "menus-screen",
           ),
         ).toBeVisible();
-        expect(managedMenus.getMenuManagement).toHaveBeenCalled();
+        if (id === "UI-24") expect(roles.getRoleMenus).toHaveBeenCalled();
+        else expect(managedMenus.getMenuManagement).toHaveBeenCalled();
         if (id === "UI-24") {
           expect(roles.getRoles).toHaveBeenCalled();
           expect(

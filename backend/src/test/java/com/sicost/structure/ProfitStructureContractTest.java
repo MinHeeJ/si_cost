@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.nullValue;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(ProfitStructureController.class)
 @ContextConfiguration(classes=ProfitStructureController.class)
 @org.springframework.transaction.annotation.EnableTransactionManagement

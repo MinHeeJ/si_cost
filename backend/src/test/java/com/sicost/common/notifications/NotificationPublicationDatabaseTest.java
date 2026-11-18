@@ -22,21 +22,27 @@ import static org.mockito.Mockito.*;
 
 @EnabledIfEnvironmentVariable(named="SICOST_TEST_DB_URL",matches=".+")
 class NotificationPublicationDatabaseTest {
+    com.sicost.permission.NotificationRecipientPolicy recipientPolicy;
     PostgreSqlDatabase db;
     NotificationPublicationMapper mapper;
     ChangeHistoryMapper audits;
     Clock clock=Clock.fixed(Instant.parse("2026-07-14T15:00:00Z"),ZoneOffset.UTC);
     TransactionTemplate transaction;
     NotificationRecipients.Recipient recipient;
-    final Event event=new Event(NotificationEventKeys.cash(LocalDate.of(2026,7,15)),"CASH_SHORT","자금 부족",null,null);
+    final Event event=new Event(NotificationEventKeys.cash(LocalDate.of(2026,7,15)),"CASH_SHORT","자금 부족",new Link("UI-21","2026-07-15"),null);
     @BeforeEach void install() throws Exception {
         db=new PostgreSqlDatabase();db.install();
         var factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
         var configuration=new org.apache.ibatis.session.Configuration();
+        configuration.addMapper(com.sicost.permission.PermissionMapper.class);configuration.addMapper(com.sicost.permission.NotificationTargetMapper.class);
         configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(configuration);factory.setPlugins(new PersistenceBoundary());
         factory.setMapperLocations(new ClassPathResource("mappers/common/NotificationPublicationMapper.xml"),new ClassPathResource("mappers/common/ChangeHistoryMapper.xml"));
         var session=new SqlSessionTemplate(factory.getObject());
+        // Re-evaluate the recipient against real saved roles, menus and target scope.
+        var permissions=new com.sicost.permission.PermissionService(session.getMapper(com.sicost.permission.PermissionMapper.class),clock);
+        recipientPolicy=new com.sicost.permission.NotificationRecipientPolicy(permissions,session.getMapper(com.sicost.permission.PermissionMapper.class),session.getMapper(com.sicost.permission.NotificationTargetMapper.class),clock);
+        recipientPolicy.setPublication(session.getMapper(NotificationPublicationMapper.class),new DataSourceTransactionManager(db.source));
         mapper=session.getMapper(NotificationPublicationMapper.class);audits=session.getMapper(ChangeHistoryMapper.class);
         transaction=new TransactionTemplate(new DataSourceTransactionManager(db.source));
         var role=mapper.eligibleRoles().get(0);
@@ -51,7 +57,7 @@ class NotificationPublicationDatabaseTest {
     }
     NotificationPublisher publisher(ChangeHistoryMapper historyMapper) {
         var writer=new ChangeHistoryWriter(historyMapper,mock(CurrentUserProvider.class),clock,JsonMapper.builder().findAndAddModules().build());
-        return new NotificationPublisher(mapper,writer,clock);
+        var publisher=new NotificationPublisher(mapper,writer,clock);publisher.setRecipientPolicy(recipientPolicy);return publisher;
     }
     @Test void realMapperMaterializesEmailAndSystemPublicationRetainsDedupAfterCleanup() {
         var publisher=publisher(audits);

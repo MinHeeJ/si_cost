@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(B7Controller.class)
 @ContextConfiguration(classes=B7Controller.class)
 @Import({B7Service.class,B7Repository.class,ExcelImportService.class,B7ImportDefinition.class,ExcelExportService.class,

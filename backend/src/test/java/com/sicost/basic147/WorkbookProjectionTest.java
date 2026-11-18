@@ -19,12 +19,15 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 /** Actual authenticated HTTP downloads, real database audit, and byte-level workbook inspection. */
+@org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable(named="BASIC147_INTEGRATION",matches="true")
 class WorkbookProjectionTest extends AuthenticationIntegrationTest {
     @Autowired java.time.Clock clock;
     @SpyBean AccessLogWriter downloadAudit;
-    String developer,name,role;
+    @SpyBean com.sicost.permission.PermissionExportProjection releasePolicy;
+    String developer,name,role,part;
     @AfterEach void removeOnlyOwnedBusinessFixture() {
         if(developer!=null) {sql.update("DELETE FROM tb_hr_dev_prc WHERE dev_id=? AND reg_user_id=?",developer,id);sql.update("DELETE FROM tb_hr_dev WHERE dev_id=? AND reg_user_id=?",developer,id);}
+        if(part!=null)sql.update("DELETE FROM tb_bs_part WHERE part_id=? AND reg_user_id=?",part,id);
     }
     @Test void realDownloadContainsOnlySyntheticAllowedRowsAndCommittedActualActorMetadata() throws Exception {
         prepare();var session=authenticated();var result=download(session);
@@ -55,16 +58,51 @@ class WorkbookProjectionTest extends AuthenticationIntegrationTest {
     }
     @Test void requiredAuditFailureReleasesZeroWorkbookBytes() throws Exception {
         prepare();var session=authenticated();
-        doThrow(new IllegalStateException("합성 다운로드 기록 장애")).when(downloadAudit).append(any(AccessLogWriter.Event.class),any());
+        AccessLogWriter auditTarget=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(downloadAudit);
+        doThrow(new IllegalStateException("합성 다운로드 기록 장애")).when(auditTarget).append(any(AccessLogWriter.Event.class),any());
         var result=download(session);assertThat(result.getResponse().getStatus()).isEqualTo(500);assertJsonNotWorkbook(result);
         assertThat(downloadCount()).isZero();
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"DNLD","SCOPE","SENSITIVE"})
+    void lateRevocationBeforeFirstByteMustRemoveAttachmentHeaders(String kind) throws Exception {
+        prepare();
+        if(kind.equals("SENSITIVE"))sql.update("UPDATE tb_sy_role SET snstv_view_yn='Y' WHERE role_id=?",role);
+        var session=authenticated();
+        doAnswer(call -> {
+            Runnable original=(Runnable)call.callRealMethod();
+            return (Runnable)() -> {
+                switch(kind) {
+                    case "DNLD" -> sql.update("UPDATE tb_sy_role_menu_auth SET dnld_yn='N' WHERE role_id=?",role);
+                    case "SCOPE" -> sql.update("UPDATE tb_sy_role SET data_scope_cd='PART' WHERE role_id=?",role);
+                    case "SENSITIVE" -> sql.update("UPDATE tb_sy_role SET snstv_view_yn='N' WHERE role_id=?",role);
+                }
+                original.run();
+            };
+        }).when(releasePolicy).guard(any(),any());
+        var result=download(session);
+        assertThat(result.getResponse().getStatus()).isEqualTo(403);
+        assertJsonNotWorkbook(result);
+        assertThat(result.getResponse().getHeader("Content-Length")).isNull();
+    }
+    @Test void personalCostDetailOmitsKnownLaborEvenWhenRenegotiationIsAllowed() throws Exception {
+        prepare();
+        sql.update("INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id) SELECT ?,menu_id,'Y','N','N','N','N','N','N',? FROM tb_sy_menu WHERE scrn_id IN ('UI-03','UI-32')",role,id);
+        var session=authenticated();
+        var result=mvc.perform(get("/api/individual-profitability/"+developer).session(session)).andReturn();
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
+        var data=json.readTree(result.getResponse().getContentAsByteArray()).path("data");
+        assertThat(data.path("months").isEmpty()).isFalse();
+        assertThat(data.toString()).doesNotContain("knownLaborAllocated","laborAllocated","laborCost","87654321");
+        assertThat(sql.queryForObject("SELECT mon_pay_amt FROM tb_hr_dev_prc WHERE dev_id=?",String.class,developer)).isEqualTo("87654321");
     }
     private void prepare() {
         var fixtures=new AuthenticationFixtures(sql,clock);role=fixtures.role("ALL",false,true);
         var account=fixtures.account(List.of("PM",role),"USE",1,false);id=account.id();password=account.password();
         sql.update("INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id,reg_dttm) SELECT ?,menu_id,'Y','N','N','N','N','Y','N',?,CURRENT_TIMESTAMP FROM tb_sy_menu WHERE scrn_id='UI-02'",role,id);
         String digits=Long.toString(new java.security.SecureRandom().nextLong(100000000000L,999999999999L));developer="DEV-"+digits;name="합성파일"+digits;
-        String part=sql.queryForObject("SELECT part_id FROM tb_bs_part WHERE use_yn='Y' AND hq_yn='N' ORDER BY part_id LIMIT 1",String.class);
+        part="P-"+digits;
+        sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id,reg_dttm) VALUES (?,?,'N','Y',?,CURRENT_TIMESTAMP)",part,"합성파트"+digits,id);
         String job=sql.queryForObject("SELECT code FROM tb_sy_code WHERE code_grp_id='JOB' AND use_yn='Y' AND del_yn='N' ORDER BY sort_ord,code LIMIT 1",String.class);
         sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,jbps_cd,drct_cls_cd,part_id,jncmp_dt,work_stat_cd,use_yn,reg_user_id,reg_dttm) VALUES (?,?,?,'FT',?,'MEMBER','DRCT',?,'2026-01-01','IDLE','Y',?,CURRENT_TIMESTAMP)",developer,"ZIP"+digits,name,job,part,id);
         sql.update("INSERT INTO tb_hr_dev_prc(dev_id,aply_bgn_ym,mon_uprc,mon_pay_amt,reg_user_id,reg_dttm) VALUES (?,'202601',76543210,87654321,?,CURRENT_TIMESTAMP)",developer,id);
@@ -87,12 +125,19 @@ class WorkbookProjectionTest extends AuthenticationIntegrationTest {
     }
     private String inspect(byte[] bytes) throws Exception {
         StringBuilder xml=new StringBuilder();
-        try(var zip=new ZipInputStream(new ByteArrayInputStream(bytes))) {
-            for(ZipEntry entry;(entry=zip.getNextEntry())!=null;) {
-                assertThat(entry.getName()).doesNotContain("comments","vbaProject","externalLinks");
-                if(entry.getName().endsWith(".xml") || entry.getName().endsWith(".rels"))xml.append(new String(zip.readAllBytes(),StandardCharsets.UTF_8));
+        var temporary=java.nio.file.Files.createTempFile("synthetic-workbook-", ".xlsx");
+        try {
+            java.nio.file.Files.write(temporary,bytes);
+            try(var zip=new ZipFile(temporary.toFile())) {
+                var entries=zip.entries();
+                while(entries.hasMoreElements()) {
+                    var entry=entries.nextElement();
+                    assertThat(entry.getName()).doesNotContain("comments","vbaProject","externalLinks");
+                    if(entry.getName().endsWith(".xml") || entry.getName().endsWith(".rels"))
+                        try(var input=zip.getInputStream(entry)) {xml.append(new String(input.readAllBytes(),StandardCharsets.UTF_8));}
+                }
             }
-        }
+        } finally {java.nio.file.Files.deleteIfExists(temporary);}
         try(var workbook=new XSSFWorkbook(new ByteArrayInputStream(bytes))) {
             for(int i=0;i<workbook.getNumberOfSheets();i++) {
                 assertThat(workbook.getSheetVisibility(i)).isEqualTo(SheetVisibility.VISIBLE);

@@ -30,16 +30,22 @@ class UploadNotificationDatabaseTest {
         var provider=mock(ObjectProvider.class);
         var quoteProvider=mock(ObjectProvider.class);
         var factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var config=new org.apache.ibatis.session.Configuration();config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
+        var config=new org.apache.ibatis.session.Configuration();config.addMapper(com.sicost.permission.PermissionMapper.class);config.addMapper(com.sicost.permission.NotificationTargetMapper.class);config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);
         factory.setConfiguration(config);factory.setPlugins(new PersistenceBoundary(),new UploadNotificationInterceptor(provider),new QuoteNotificationInterceptor(quoteProvider));
         factory.setMapperLocations(new ClassPathResource("mappers/b7/B7Mapper.xml"),new ClassPathResource("mappers/salescommands/SalesCommandMapper.xml"),new ClassPathResource("mappers/common/NotificationPublicationMapper.xml"),new ClassPathResource("mappers/common/ChangeHistoryMapper.xml"));
         var session=new SqlSessionTemplate(factory.getObject());upload=session.getMapper(B7Mapper.class);
         sales=session.getMapper(com.sicost.salesopportunitiesops.SalesCommandMapper.class);
         var mapper=session.getMapper(NotificationPublicationMapper.class);
         var history=new ChangeHistoryWriter(session.getMapper(ChangeHistoryMapper.class),mock(CurrentUserProvider.class),clock,JsonMapper.builder().findAndAddModules().build());
-        when(provider.getObject()).thenReturn(new UploadNotificationService(mapper,new NotificationPublisher(mapper,history,clock)));
-        when(quoteProvider.getObject()).thenReturn(new QuoteNotificationService(mapper,new NotificationPublisher(mapper,history,clock)));
-        transaction=new TransactionTemplate(new DataSourceTransactionManager(db.source));
+        var manager=new DataSourceTransactionManager(db.source);
+        var permissions=new com.sicost.permission.PermissionService(session.getMapper(com.sicost.permission.PermissionMapper.class),clock);
+        permissions.setTransactions(manager);
+        var recipients=new com.sicost.permission.NotificationRecipientPolicy(permissions,session.getMapper(com.sicost.permission.PermissionMapper.class),session.getMapper(com.sicost.permission.NotificationTargetMapper.class),clock);
+        recipients.setPublication(mapper,manager);
+        var publisher=new NotificationPublisher(mapper,history,clock);publisher.setRecipientPolicy(recipients);
+        when(provider.getObject()).thenReturn(new UploadNotificationService(mapper,publisher));
+        when(quoteProvider.getObject()).thenReturn(new QuoteNotificationService(mapper,publisher));
+        transaction=new TransactionTemplate(manager);
         db.sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_err_cnt,mfa_err_cnt,user_stat_cd,reg_user_id) VALUES ('uploader','업로더','local@example.invalid','unusable',0,0,'USE','SYSTEM')");
         db.sql.update("INSERT INTO tb_sy_upld(upld_id,form_type_cd,scrn_id,file_nm,file_size,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id) VALUES (123,'B7','UI-15','test.xlsx',1,1,1,0,0,'CHECKED','uploader')");
     }
@@ -50,7 +56,7 @@ class UploadNotificationDatabaseTest {
     @Test void appliedIsAtomicAndExplicitRolelessUploaderGetsExactlyOneNotification() {
         assertThat(db.count("tb_sy_noti")).isZero();
         transaction.executeWithoutResult(s->apply());
-        assertThat(db.sql.queryForMap("SELECT rcvr_user_id,noti_type_cd,send_mthd_cd,link_scrn_id,link_key FROM tb_sy_noti")).containsEntry("rcvr_user_id","uploader").containsEntry("noti_type_cd","UPLD_DONE").containsEntry("send_mthd_cd","SYS").containsEntry("link_key","123");
+        assertThat(db.sql.queryForMap("SELECT rcvr_user_id,noti_type_cd,send_mthd_cd,link_scrn_id,link_key FROM tb_sy_noti")).containsEntry("rcvr_user_id","uploader").containsEntry("noti_type_cd","UPLD_DONE").containsEntry("send_mthd_cd","SYS").containsEntry("link_key",null).containsEntry("link_scrn_id",null);
         transaction.executeWithoutResult(s->assertThat(upload.markApplied(123,"uploader",LocalDateTime.now(clock))).isEqualTo(1));
         assertThat(db.count("tb_sy_noti")).isEqualTo(1);assertThat(db.count("tb_sy_delivery_task")).isEqualTo(1);
     }
@@ -67,6 +73,8 @@ class UploadNotificationDatabaseTest {
         transaction.executeWithoutResult(s->apply());assertThat(db.count("tb_sy_noti")).isEqualTo(1);
     }
     @Test void actualQuoteRejectionReplacesOldDirectInsertAndDeduplicatesByHistory() {
+        // Quote rejection is a business notification: its recipient needs current UI-29 inquiry and scope.
+        db.sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES ('uploader','FIN','SYSTEM')");
         String part=db.sql.queryForObject("SELECT part_id FROM tb_bs_part ORDER BY part_id LIMIT 1",String.class);
         db.sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_nm,clnt_type_cd,biz_reg_no,use_yn,reg_user_id) VALUES ('QUOTE-C','견적 고객','CUST','0123456789','Y','uploader')");
         db.sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,expct_prft_rt,aprv_stat_cd,reg_user_id) VALUES ('QUOTE-O','견적','QUOTE-C',?,'PROP',30,100,'202611','ING',10,'REJ','uploader')",part);

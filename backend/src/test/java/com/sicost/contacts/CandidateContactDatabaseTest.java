@@ -120,7 +120,7 @@ class CandidateContactDatabaseTest {
         assertThat(candidates()).isEqualTo(parent);assertThat(contacts()).isEqualTo(events);assertThat(histories()).isEqualTo(audit);
     }
     @Test void concurrentSameRevisionCreatesExactlyOneEvent() throws Exception {
-        Create input=request(id,"DONE","동시 연락");var start=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
+        Create input=request(id,"DONE","동시 연락");var start=new CountDownLatch(1);var pool=new org.springframework.security.concurrent.DelegatingSecurityContextExecutorService(Executors.newFixedThreadPool(2),org.springframework.security.core.context.SecurityContextHolder.getContext());
         Callable<String> work=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();try{service.create(id,input);return "OK";}catch(ApiException e){return e.code();}};
         try {var first=pool.submit(work);var second=pool.submit(work);start.countDown();assertThat(List.of(first.get(20,TimeUnit.SECONDS),second.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","STALE_WRITE");}
         finally{pool.shutdownNow();}

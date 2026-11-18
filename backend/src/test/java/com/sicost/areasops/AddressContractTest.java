@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(AddressController.class)
 @ContextConfiguration(classes=AddressController.class)
 @Import({AddressService.class,AddressRepository.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

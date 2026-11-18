@@ -67,7 +67,7 @@ class WorkforceOperationsExportDatabaseTest {
             AccessLogWriter.class, ExcelExportService.class, SalesForecastRepository.class, SalesWorkforceProjectionService.class,
             WorkforceCalendarService.class, WorkforceForecastExportService.class, WorkforceOperationsExportService.class,
             WorkforceOperationsExportController.class);
-        context.refresh();
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         mvc = MockMvcBuilders.standaloneSetup(context.getBean(WorkforceOperationsExportController.class))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         developerId = "D" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);

@@ -34,7 +34,9 @@ class OperatingStandardsDatabaseTest {
     static class Transactions {
         @Bean PlatformTransactionManager transactionManager(DataSource source) {return new DataSourceTransactionManager(source);}
     }
+    org.springframework.security.core.context.SecurityContext caller;
     @BeforeEach void install() throws Exception {
+        caller=org.springframework.security.core.context.SecurityContextHolder.getContext();
         // Every method owns an isolated installed schema; no shared actor or application seed is modified.
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
@@ -121,5 +123,5 @@ class OperatingStandardsDatabaseTest {
         var a=CompletableFuture.supplyAsync(()->writeAfter(start,input));var b=CompletableFuture.supplyAsync(()->writeAfter(start,input));start.countDown();
         assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","STALE_WRITE");assertThat(history()).hasSize(1);
     }
-    String writeAfter(CountDownLatch start,Save input){try{if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.save(input);return "OK";}catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}}
+    String writeAfter(CountDownLatch start,Save input){org.springframework.security.core.context.SecurityContextHolder.setContext(caller);try{if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.save(input);return "OK";}catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}}
 }

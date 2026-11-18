@@ -51,7 +51,7 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     }
   }
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const usableScreens = permissions
     ? Object.keys(permissions.screens).filter(
@@ -166,13 +166,15 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     if (!permissions) return;
     const screens = usableScreens,
       first = screens.includes("UI-16") ? "UI-16" : screens[0];
-    const active = location.pathname.slice(1);
+    const active = location.hash.match(/^#(UI-\d{2})$/)?.[1] ?? location.pathname.slice(1);
     if (first && !screens.includes(active)) {
       if (active && active !== "UI-22")
         setError("이 화면을 볼 권한이 없습니다.");
       navigate(`/${first}`, { replace: true, state: null });
+    } else if (location.hash && screens.includes(active)) {
+      navigate(`/${active}`, { replace: true, state: null });
     }
-  }, [permissions, location.pathname, mobile]);
+  }, [permissions, location.pathname, location.hash, mobile]);
   if (!state) return <p role="status">인증 정보를 확인하는 중입니다.</p>;
   if (state.nextStep !== "AUTHENTICATED")
     return (

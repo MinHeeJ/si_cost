@@ -70,7 +70,7 @@ class MenuManagementDatabaseTest {
     List<Map<String,Object>> treeRows() {return sql.queryForList("SELECT * FROM tb_sy_menu ORDER BY menu_id");}
     @Test void getReturnsStoredSourceWithoutMutatingAnySourceOrHistory() throws Exception {
         var before=treeRows();var history=sql.queryForList("SELECT * FROM tb_sy_chg_hist");var access=sql.queryForList("SELECT * FROM tb_sy_accs_log");
-        mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.developmentMode").value(true));
+        mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.developmentMode").value(false));
         assertThat(service.getMenuManagement().items()).hasSize(before.size());assertThat(treeRows()).isEqualTo(before);
         assertThat(sql.queryForList("SELECT * FROM tb_sy_chg_hist")).isEqualTo(history);assertThat(sql.queryForList("SELECT * FROM tb_sy_accs_log")).isEqualTo(access);
     }

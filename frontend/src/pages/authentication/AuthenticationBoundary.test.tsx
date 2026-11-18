@@ -32,6 +32,9 @@ const empty = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.clearAuthentication).mockImplementation(() => {
+    window.dispatchEvent(new Event("sicost:authentication-cleared"));
+  });
   vi.mocked(api.session).mockResolvedValue(authenticated);
   vi.mocked(api.capabilities).mockResolvedValue(empty);
 });
@@ -59,6 +62,22 @@ describe("authentication consumer boundaries", () => {
     expect(
       screen.getAllByRole("button").map((button) => button.textContent),
     ).toEqual(["로그아웃"]);
+  });
+  it("rejects a direct URL absent from allowed menus and selects the allowed dashboard", async () => {
+    vi.mocked(api.capabilities).mockResolvedValue({
+      ...empty,
+      screens: { "UI-16": ["INQ"] },
+    });
+    function Consumer() {
+      return <output data-testid="allowed-route">{useLocation().pathname}</output>;
+    }
+    application(<Consumer />);
+    expect(
+      await screen.findByText("이 화면을 볼 권한이 없습니다."),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("allowed-route")).toHaveTextContent("/UI-16"),
+    );
   });
   it("does not recursively fetch an expired session after a 401 session event", async () => {
     application();
@@ -144,7 +163,7 @@ describe("authentication consumer boundaries", () => {
     );
   });
   it("rechecks the server instead of clearing other tabs on a stale zero countdown", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance"] });
     const base = Date.parse(authenticated.serverTime);
     vi.setSystemTime(base);
     vi.mocked(api.session)
@@ -199,4 +218,11 @@ describe("authentication consumer boundaries", () => {
     expect(api.clearAuthentication).not.toHaveBeenCalled();
     expect(api.authenticate).toHaveBeenCalledTimes(1);
   });
+});
+
+it.each([['UI-01', '/UI-01'], ['UI-33', '/UI-01']])('honors only a permitted legacy hash target (%s)', async (allowed, expected) => {
+  vi.mocked(api.capabilities).mockResolvedValue({ ...empty, screens: { 'UI-01': ['INQ'] } });
+  function Location() { const value = useLocation(); return <p data-testid="hash-location">{value.pathname + value.hash}</p>; }
+  render(<MemoryRouter initialEntries={['/#' + allowed]}><AuthenticationBoundary><Location /></AuthenticationBoundary></MemoryRouter>);
+  await waitFor(() => expect(screen.getByTestId('hash-location')).toHaveTextContent(expected));
 });

@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @EnabledIfEnvironmentVariable(named="SICOST_TEST_DB_URL",matches=".+")
 @SpringBootTest(classes=CostManagementApplication.class)
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print=org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint.NONE)
 class CodeMappingsDatabaseTest {
     static PostgreSqlDatabase database;
     @DynamicPropertySource static void database(DynamicPropertyRegistry properties) throws Exception {
@@ -37,12 +37,19 @@ class CodeMappingsDatabaseTest {
         properties.add("spring.datasource.username",database.source::getUsername);
         properties.add("spring.datasource.password",database.source::getPassword);
     }
+    @org.springframework.boot.test.mock.mockito.MockBean com.sicost.authentication.AuthenticationMailService mail;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    org.springframework.test.web.servlet.request.RequestPostProcessor authenticated;
+    org.springframework.test.web.servlet.ResultActions perform(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request) throws Exception {
+        return mvc.perform(request.with(authenticated));
+    }
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate sql;
     @SpyBean ChangeHistoryMapper history;
     String group;
-    @BeforeEach void fixture() {
+    @BeforeEach void fixture() throws Exception {
+        authenticated=com.sicost.common.LegacyDbLogin.admin(mvc,json,sql,transactions,mail);
         group="T"+UUID.randomUUID().toString().replace("-","").substring(0,20).toUpperCase(java.util.Locale.ROOT);
         sql.update("INSERT INTO TB_SY_CODE_GRP (CODE_GRP_ID,CODE_GRP_NM,SORT_ORD,REG_USER_ID) VALUES (?, '독립 시험',1,'admin')",group);
         for(String code:List.of("A","B","STOP","DELETED"))
@@ -56,11 +63,11 @@ class CodeMappingsDatabaseTest {
         sql.update("DELETE FROM TB_SY_CODE_GRP WHERE CODE_GRP_ID LIKE ?",group+"%");
     }
     private void create(String source,String groupId,String code,int expected) throws Exception {
-        mvc.perform(post("/api/code-mappings").contentType("application/json").content(json.writeValueAsString(java.util.Map.of("sourceText",source,"groupId",groupId,"code",code))))
+        perform(post("/api/code-mappings").contentType("application/json").content(json.writeValueAsString(java.util.Map.of("sourceText",source,"groupId",groupId,"code",code))))
                 .andExpect(status().is(expected));
     }
     private com.fasterxml.jackson.databind.JsonNode page(String source,int page,int size) throws Exception {
-        var response=mvc.perform(get("/api/code-mappings").param("groupId",group).param("sourceText",source)
+        var response=perform(get("/api/code-mappings").param("groupId",group).param("sourceText",source)
                 .param("page",String.valueOf(page)).param("size",String.valueOf(size)))
                 .andExpect(status().isOk()).andReturn().getResponse();
         return json.readTree(response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8)).get("data");
@@ -121,7 +128,7 @@ class CodeMappingsDatabaseTest {
         var business=businessSnapshot();
         create("가",group,"A",201); create("나",group,"B",201);
         var rows=page("",1,50).get("items");
-        mvc.perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows))).andExpect(status().isNoContent());
+        perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows))).andExpect(status().isNoContent());
         assertThat(page("",1,50).get("total").asLong()).isZero(); assertThat(historyCount("DEL")).isEqualTo(2);
         var audits=sql.queryForList("SELECT TRGT_KEY,BFR_VAL,AFT_VAL,REG_USER_ID FROM TB_SY_CHG_HIST WHERE TRGT_KEY LIKE ? AND CHG_TYPE_CD='DEL'",group+":%");
         for(var audit:audits) {
@@ -134,7 +141,7 @@ class CodeMappingsDatabaseTest {
         create("가",group,"A",201); create("나",group,"B",201);
         var rows=page("",1,50).get("items");
         sql.update("UPDATE TB_SY_CODE_MAP SET SRC_TEXT='변경' WHERE MAP_ID=?",rows.get(1).get("mapId").asLong());
-        mvc.perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows)))
+        perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows)))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));
         assertThat(page("",1,50).get("total").asInt()).isEqualTo(2); assertThat(historyCount("DEL")).isZero();
     }
@@ -142,7 +149,7 @@ class CodeMappingsDatabaseTest {
         create("가",group,"A",201); create("나",group,"B",201);
         var rows=page("",1,50).get("items");
         sql.update("DELETE FROM TB_SY_CODE_MAP WHERE MAP_ID=?",rows.get(1).get("mapId").asLong());
-        mvc.perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows))).andExpect(status().isConflict());
+        perform(post("/api/code-mappings/delete").contentType("application/json").content(selection(rows))).andExpect(status().isConflict());
         assertThat(page("",1,50).get("total").asInt()).isEqualTo(1); assertThat(historyCount("DEL")).isZero();
     }
     @Test void historyFailureRollsBackInsertedMapping() throws Exception {

@@ -164,7 +164,7 @@ class RoleDatabaseTest {
         try {
             Callable<ManagedRoleDetail> first=()->{ready.countDown();start.await();return create("동시 역할 A");};
             Callable<ManagedRoleDetail> second=()->{ready.countDown();start.await();return create("동시 역할 B");};
-            var a=executor.submit(first);var b=executor.submit(second);assertThat(ready.await(10,TimeUnit.SECONDS)).isTrue();start.countDown();
+            var a=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(first));var b=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(second));assertThat(ready.await(10,TimeUnit.SECONDS)).isTrue();start.countDown();
             var av=a.get(20,TimeUnit.SECONDS);var bv=b.get(20,TimeUnit.SECONDS);assertThat(av.roleId()).isNotEqualTo(bv.roleId());
             assertThat(av.sortOrder()).isNotEqualTo(bv.sortOrder());assertThat(av.menuPermissions()).hasSameSizeAs(bv.menuPermissions());
             assertThat(access()).hasSize(2);

@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.nullValue;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(BusinessPlanPerformanceController.class)
 @ContextConfiguration(classes=BusinessPlanPerformanceController.class)
 @Import({BusinessPlanPerformanceService.class,BusinessPlanPerformanceRepository.class,BusinessPlanActuals.class,

@@ -41,6 +41,7 @@ class UploadIssuesDatabaseTest {
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules());
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(UploadIssuesMapper.class,()->session.getMapper(UploadIssuesMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));

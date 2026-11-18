@@ -13,7 +13,8 @@ public class CurrentUserProvider {
     }
     private final CurrentUserMapper mapper;
     private com.sicost.permission.PermissionService permissions;
-    @org.springframework.beans.factory.annotation.Autowired
+    /** Optional only for hand-assembled contexts: without it the scope is computed as RESTRICTED (fail-closed). */
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
     public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     private static final String REQUEST_USER = CurrentUserProvider.class.getName() + ".currentUser";
     public CurrentUserProvider(CurrentUserMapper mapper) { this.mapper = mapper; }

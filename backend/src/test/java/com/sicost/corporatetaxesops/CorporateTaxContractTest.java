@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(CorporateTaxController.class)
 @ContextConfiguration(classes=CorporateTaxController.class)
 @Import({CorporateTaxService.class,CorporateTaxCommands.class,CorporateTaxViews.class,CorporateTaxRepository.class,CorporateTaxAllocationService.class,

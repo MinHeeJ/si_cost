@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(PermissionSettingsController.class)
 @ContextConfiguration(classes=PermissionSettingsController.class)
 @Import({PermissionSettingsService.class,PermissionSettingsRepository.class,RevisionService.class,
@@ -55,8 +56,8 @@ class PermissionSettingsContractTest {
             .andExpect(jsonPath("$.data.rowScope.all").value(false))
             .andExpect(jsonPath("$.data.rowScope.partIds[0]").value("part"))
             .andExpect(jsonPath("$.data.rowScope.projectIds[0]").value("project"))
-            .andExpect(jsonPath("$.data.developmentMode").value(true))
-            .andExpect(jsonPath("$.data.accessEnforcement").value(false))
+            .andExpect(jsonPath("$.data.developmentMode").value(false))
+            .andExpect(jsonPath("$.data.accessEnforcement").value(true))
             .andExpect(jsonPath("$.data.settingsRevision").isNotEmpty())
             .andExpect(jsonPath("$.data.name").doesNotExist());
         verify(users,times(1)).currentUser();verify(mapper).assignedParts("admin","202607");

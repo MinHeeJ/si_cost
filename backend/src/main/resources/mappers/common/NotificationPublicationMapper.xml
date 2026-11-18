@@ -35,8 +35,11 @@
     ON CONFLICT (event_key,rcvr_user_id,channel_cd) DO NOTHING
   </insert>
   <insert id="reserveSkipped">
-    INSERT INTO tb_sy_delivery_task (task_id,event_key,rcvr_user_id,rcvr_nm,channel_cd,state_cd,noti_type_cd,noti_cn,error_cd,error_cn,reg_user_id,reg_dttm)
-    VALUES (CAST(#{taskId,typeHandler=com.sicost.common.notifications.NotificationTaskUuidTypeHandler} AS uuid),#{event.key},#{recipient.userId},#{recipient.name},'SYS','SKIPPED',#{event.type},'PERMISSION_REVOKED','PERMISSION_REVOKED',#{event.content},'SYSTEM',#{at})
+    INSERT INTO tb_sy_delivery_task (task_id,event_key,rcvr_user_id,rcvr_nm,channel_cd,state_cd,noti_type_cd,noti_cn,bill_id,dun_step,dun_sn,resend_yn,error_cd,error_cn,reg_user_id,reg_dttm)
+    VALUES (CAST(#{taskId,typeHandler=com.sicost.common.notifications.NotificationTaskUuidTypeHandler} AS uuid),#{event.key},#{recipient.userId},#{recipient.name},'SYS','SKIPPED',#{event.type},'PERMISSION_REVOKED',
+      #{event.dunning.billId},#{event.dunning.step},#{event.dunning.serial},
+      <choose><when test="event.dunning != null and event.dunning.resend">'Y'</when><otherwise>'N'</otherwise></choose>,
+      'PERMISSION_REVOKED',#{event.content},'SYSTEM',#{at})
     ON CONFLICT (event_key,rcvr_user_id,channel_cd) DO NOTHING
   </insert>
   <select id="insertNotification" resultType="java.math.BigDecimal" affectData="true" flushCache="true">

@@ -24,6 +24,32 @@ public class LegacyBusinessPolicyFixtures {
             Map.of("UI-33",Set.of("desiredRate"),"UI-32",Set.of("name","projectName","renewalDate","contractMm","unitPrice","monthlyLaborCost","employeeType","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain")),
             Map.of("managePartners",true,"automationLogs",true,"analysisPanel",true,"userAccessLogs",true,"roleStop",true),Set.of());
     }
+    /** The mocks below are inert stand-ins: skip property population so their @Autowired setters never demand real collaborators. */
+    @Bean static org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor legacyBusinessInertMocks() {
+        return new org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor() {
+            @Override public boolean postProcessAfterInstantiation(Object bean,String name) {
+                return !(name.startsWith("legacyBusiness") && org.mockito.Mockito.mockingDetails(bean).isMock());
+            }
+        };
+    }
+    @Bean PermissionRowPolicy legacyBusinessRows() {return mock(PermissionRowPolicy.class);}
+    @Bean com.sicost.common.history.AccessLogWriter legacyBusinessAccessLog() {return mock(com.sicost.common.history.AccessLogWriter.class);}
+    /** A slice that imports a real collaborator must win over the stand-in of the same type (@ConditionalOnMissingBean cannot see later imports). */
+    @Bean static org.springframework.beans.factory.config.BeanFactoryPostProcessor legacyBusinessYieldToRealBeans() {
+        class Yield implements org.springframework.beans.factory.config.BeanFactoryPostProcessor,org.springframework.core.PriorityOrdered {
+            @Override public int getOrder() {return org.springframework.core.Ordered.LOWEST_PRECEDENCE;}
+            @Override public void postProcessBeanFactory(org.springframework.beans.factory.config.ConfigurableListableBeanFactory factory) {
+                var registry=(org.springframework.beans.factory.support.BeanDefinitionRegistry)factory;
+                for(String name:factory.getBeanDefinitionNames()) {
+                    if(!name.startsWith("legacyBusiness") || name.equals("legacyBusinessYieldToRealBeans") || name.equals("legacyBusinessInertMocks") || name.equals("legacyBusinessCaller"))continue;
+                    Class<?> type=factory.getType(name,false);if(type==null)continue;
+                    for(String other:factory.getBeanNamesForType(type,true,false))
+                        if(!other.startsWith("legacyBusiness") && !other.equals(name)) {registry.removeBeanDefinition(name);break;}
+                }
+            }
+        }
+        return new Yield();
+    }
     @Bean @ConditionalOnMissingBean PermissionService legacyBusinessPermissions() {
         var policy=mock(PermissionService.class);
         when(policy.capabilities()).thenReturn(grants());when(policy.userId()).thenReturn("admin");
@@ -70,7 +96,7 @@ public class LegacyBusinessPolicyFixtures {
         when(value.project(org.mockito.ArgumentMatchers.<com.sicost.notificationsops.NotificationDtos.Item>any())).thenAnswer(call->call.getArgument(0));
         when(value.project(org.mockito.ArgumentMatchers.<List<com.sicost.notificationsops.NotificationDtos.Item>>any())).thenAnswer(call->call.getArgument(0));return value;
     }
-    @Bean @ConditionalOnMissingBean com.sicost.common.concurrent.RevisionService legacyBusinessRevisions(com.fasterxml.jackson.databind.ObjectMapper json) {return new com.sicost.common.concurrent.RevisionService(json);}
+    @Bean com.sicost.common.concurrent.RevisionService legacyBusinessRevisions(com.fasterxml.jackson.databind.ObjectMapper json) {return new com.sicost.common.concurrent.RevisionService(json);}
     @Bean @ConditionalOnMissingBean com.sicost.currentuserops.PermissionSettingsService legacyBusinessSettings() {
         var value=mock(com.sicost.currentuserops.PermissionSettingsService.class);
         when(value.getCurrentUserPermissionSettings()).thenReturn(new com.sicost.currentuserops.PermissionSettingsDtos.Settings("admin",List.of("ADMIN"),List.of(),true,new com.sicost.currentuserops.PermissionSettingsDtos.ScopeUnion(true,List.of(),List.of()),List.of(),List.of(),false,true,"business-unit-fixture"));return value;

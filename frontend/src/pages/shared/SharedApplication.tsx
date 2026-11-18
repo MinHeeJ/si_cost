@@ -812,7 +812,7 @@ function SharedApplicationContent({
               </p>
             )}
             {!restriction && screenRegistry[active] && !byScreen(active) && (
-              <p role="alert">등록된 메뉴를 사용할 수 없습니다.</p>
+              <p role="alert">이 화면을 볼 권한이 없습니다.</p>
             )}
             {tabs
               .filter((id) => byScreen(id))

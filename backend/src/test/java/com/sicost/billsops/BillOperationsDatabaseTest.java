@@ -103,8 +103,14 @@ class BillOperationsDatabaseTest {
     }
     @Test void sameConcurrentRequestCreatesOnce() throws Exception {
         var input=command();CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->concurrent(start,input));var b=CompletableFuture.supplyAsync(()->concurrent(start,input));start.countDown();
+        var a=asCaller(()->concurrent(start,input));var b=asCaller(()->concurrent(start,input));start.countDown();
         assertThat(List.of(a.get(25,TimeUnit.SECONDS),b.get(25,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","INVALID_BILL_STATE");assertThat(billCount()).isEqualTo(2);
     }
     String concurrent(CountDownLatch start,MutationRequest input) {try{if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.createNextMonthBill(id,input);return "OK";}catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}}
+    <T> CompletableFuture<T> asCaller(java.util.function.Supplier<T> work) {
+        var executor=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(
+            ForkJoinPool.commonPool(),org.springframework.security.core.context.SecurityContextHolder.getContext());
+        return CompletableFuture.supplyAsync(work,executor);
+    }
+
 }

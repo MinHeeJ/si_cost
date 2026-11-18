@@ -20,7 +20,7 @@ public class AuthenticationAuditService {
     public void append(String actor,String action,HttpServletRequest request) {
         if(!Set.of("LOGIN","LOGIN_FAIL","LOGOUT").contains(action))throw new IllegalArgumentException();
         String ip=request.getRemoteAddr();if(ip==null || !ip.matches("[0-9A-Fa-f:.%]{1,45}"))ip=null;
-        String description="인증; requestId="+request.getAttribute(com.sicost.common.api.RequestIdFilter.ATTRIBUTE);
+        String description="인증; requestId="+request.getAttribute(com.sicost.common.api.RequestIdFilter.SERVER_ATTRIBUTE);
         if(action.equals("LOGIN_FAIL") && request.getAttribute(ATTEMPTED_ID) instanceof String id) {
             try {description+="; attemptedIdDigest="+java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(id.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}
             catch(java.security.NoSuchAlgorithmException impossible) {throw new IllegalStateException("인증 실패 기록을 생성하지 못했습니다.");}

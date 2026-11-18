@@ -371,3 +371,21 @@ it("formats the target criterion with one decimal instead of exposing stored fou
   expect(screen.getByText(/목표 이익률 20.0%/)).toBeVisible();
   expect(screen.queryByText(/20.0000%/)).not.toBeInTheDocument();
 });
+
+it.each([false, true])("renders restricted PART results without private diagnostic arrays (empty=%s)", async empty => {
+  const { PermissionContext, ScreenPermissionContext } = await import("../../shared/permission/PermissionBoundary");
+  const result = response();
+  const { issues, unevaluatedAssignments, ...restricted } = result;
+  restricted.items = empty ? [] : result.items.map(({ issues, monthlyLaborCost, employeeType, managementNo, ...row }) => ({ ...row, availableFields: Object.keys(row) })) as unknown as api.RenegotiationRow[];
+  restricted.pagination.total = restricted.items.length;
+  vi.mocked(api.getRateRenegotiations).mockResolvedValue(restricted as api.RenegotiationsResult);
+  render(<PermissionContext.Provider value={{ screens: { "UI-32": ["INQ"] }, sensitive: false, scope: { all: false, partIds: ["own-part"], projectIds: [] }, fields: { "UI-32": ["marginRate", "targetUnitPrice", "annualGain"] } }}>
+    <ScreenPermissionContext.Provider value="UI-32"><MemoryRouter><PreferencesProvider api={preferences}><RateRenegotiationsScreen /></PreferencesProvider></MemoryRouter></ScreenPermissionContext.Provider>
+  </PermissionContext.Provider>);
+  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  expect(screen.queryByRole("columnheader", { name: /월 원가/ })).not.toBeInTheDocument();
+  expect(screen.queryByText(/원가·매출 미확인 근거/)).not.toBeInTheDocument();
+  expect(screen.queryByTestId("renegotiation-download")).not.toBeInTheDocument();
+  if (empty) expect(screen.getByTestId("renegotiation-empty-reset")).toBeVisible();
+  else expect(screen.getByRole("columnheader", { name: /필요 인상률/ })).toBeVisible();
+});

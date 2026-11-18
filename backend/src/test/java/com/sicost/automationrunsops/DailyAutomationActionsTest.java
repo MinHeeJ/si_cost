@@ -35,12 +35,16 @@ class DailyAutomationActionsTest {
         row=new Assignment("A","P","D",today.minusMonths(1),today.plusMonths(2),"ACT","ING",new BigDecimal("1.00"),new BigDecimal("100"));
         when(mapper.assignmentIdentity("A")).thenReturn(new Item("A","P","D"));when(mapper.assignment("A")).thenAnswer(i->row);when(mapper.pointer(any())).thenReturn(1);
     }
+    void process(int stage,String id,LocalDate date) {
+        com.sicost.permission.PermissionTaskContext.system(com.sicost.permission.PermissionTaskContext.Command.DAILY_OPERATIONS,
+            ()->{actions.process(stage,id,date);return null;});
+    }
     @Test void monthFirstUsesEffectiveHistoryOnlyAndAuditsOnlyPointersNotMonthlyRows() {
         when(mapper.valueHistory("A")).thenReturn(List.of(
             new ValueHistory(1,"INPUT",today.minusMonths(1),new BigDecimal("1.00"),new BigDecimal("100"),"N",null),
             new ValueHistory(2,"RATE",today,new BigDecimal("0.50"),null,"N",null),
             new ValueHistory(3,"UPRC",today.plusMonths(1),null,new BigDecimal("999"),"N",null)));
-        actions.process(4,"A",today);
+        process(4,"A",today);
         verify(mapper).pointer(argThat(p->p.mm().compareTo(new BigDecimal("0.50"))==0&&p.price().compareTo(new BigDecimal("100"))==0));
         verify(history).appendAsSystem(argThat(c->c.item().equals("CTRT_MM")&&c.before().equals("1.00")&&c.after().equals("0.50")));
         verifyNoMoreInteractions(history);
@@ -48,17 +52,17 @@ class DailyAutomationActionsTest {
     }
     @Test void unchangedPointersAreNoOpWithoutRepeatedAudit() {
         when(mapper.valueHistory("A")).thenReturn(List.of(new ValueHistory(1,"INPUT",today.minusMonths(1),new BigDecimal("1.0"),new BigDecimal("100.00"),"N",null)));
-        actions.process(4,"A",today);verify(mapper,never()).pointer(any());verifyNoInteractions(history);
+        process(4,"A",today);verify(mapper,never()).pointer(any());verifyNoInteractions(history);
     }
     @Test void protectedMonthIsNotModified() {
-        when(mapper.protectedMonth("202608")).thenReturn(true);actions.process(4,"A",today);verify(mapper,never()).pointer(any());verifyNoInteractions(history);
+        when(mapper.protectedMonth("202608")).thenReturn(true);process(4,"A",today);verify(mapper,never()).pointer(any());verifyNoInteractions(history);
     }
     @Test void nonFirstDayDoesNotAdvancePointers() {
-        actions.process(4,"A",today.plusDays(1));verify(mapper,never()).pointer(any());verifyNoInteractions(history);
+        process(4,"A",today.plusDays(1));verify(mapper,never()).pointer(any());verifyNoInteractions(history);
     }
     @Test void missingOriginalInputFailsInsteadOfMakingHistory() {
         when(mapper.valueHistory("A")).thenReturn(List.of(new ValueHistory(2,"RATE",today,new BigDecimal("0.5"),null,"N",null)));
-        assertThatThrownBy(()->actions.process(4,"A",today)).isInstanceOf(IllegalStateException.class);verify(mapper,never()).pointer(any());verifyNoInteractions(history);verify(manager).rollback(any());
+        assertThatThrownBy(()->process(4,"A",today)).isInstanceOf(IllegalStateException.class);verify(mapper,never()).pointer(any());verifyNoInteractions(history);verify(manager).rollback(any());
     }
     @Test void cancelledFutureAndEndedAssignmentsAreIneligible() {
         for(Assignment candidate:List.of(
@@ -66,12 +70,12 @@ class DailyAutomationActionsTest {
             new Assignment("A","P","D",today.plusDays(1),today.plusMonths(1),"ACT","ING",row.mm(),row.price()),
             new Assignment("A","P","D",today.minusMonths(1),today.minusDays(1),"ACT","ING",row.mm(),row.price()),
             new Assignment("A","P","D",today.minusMonths(1),today.plusDays(1),"ACT","END",row.mm(),row.price()))) {
-            row=candidate;actions.process(4,"A",today);
+            row=candidate;process(4,"A",today);
         }
         verify(mapper,never()).pointer(any());verifyNoInteractions(history);
     }
     @Test void developerItemUsesSharedCloseBoundaryBeforeAggregateAndCommonSystemCommand() {
-        actions.process(1,"D",today);
+        process(1,"D",today);
         var order=inOrder(boundary,locks,developers);order.verify(boundary).shared();order.verify(locks).lock(List.of("DEV:D"));order.verify(developers).synchronize("D",true);
     }
     @Test void retirementIsStrictlyAfterFinalWorkingDayAndManualStopDoesNotChangeCalculation() {

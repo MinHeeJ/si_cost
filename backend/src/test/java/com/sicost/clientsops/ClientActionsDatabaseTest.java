@@ -160,7 +160,7 @@ class ClientActionsDatabaseTest {
     }
     @Test void concurrentSameRevisionStatusLocksExactlyOneAppliedAndOneStale() throws Exception {
         String id=client(900901,"CUST","Y");Target target=target(id);CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->after(start,target));var b=CompletableFuture.supplyAsync(()->after(start,target));start.countDown();
+        var a=asCaller(()->after(start,target));var b=asCaller(()->after(start,target));start.countDown();
         var results=List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS));
         assertThat(results).containsExactlyInAnyOrder("applied","STALE_WRITE");assertThat(histories(id)).isEqualTo(1);
     }
@@ -168,4 +168,10 @@ class ClientActionsDatabaseTest {
         try { if(!start.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("timeout");var item=change("N",target).items().get(0);return item.error()==null?item.result():item.error().code(); }
         catch(InterruptedException e) { Thread.currentThread().interrupt();throw new IllegalStateException(e); }
     }
+    <T> CompletableFuture<T> asCaller(java.util.function.Supplier<T> work) {
+        var executor=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(
+            ForkJoinPool.commonPool(),org.springframework.security.core.context.SecurityContextHolder.getContext());
+        return CompletableFuture.supplyAsync(work,executor);
+    }
+
 }

@@ -59,7 +59,12 @@ class BusinessUserDatabaseTest {
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AccessLogWriter.class,
             RevisionService.class,BusinessUserRepository.class,BusinessUserService.class);
         context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(BusinessUserService.class);
-        mvc=MockMvcBuilders.standaloneSetup(new BusinessUserController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
+        var controller=new BusinessUserController(service);
+        var passwords=context.getBean(com.sicost.authentication.AuthenticationPasswordService.class);
+        org.mockito.Mockito.when(passwords.initial(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.eq("admin")))
+            .thenReturn(new com.sicost.authentication.AuthenticationPasswordService.Delivery(true,"ACCEPTED",false,"a***@example.org","발송 완료"));
+        controller.authentication(passwords,context.getBean(com.sicost.permission.PermissionService.class));
+        mvc=MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }
     @AfterEach void close() {if(context!=null)context.close();}
     Create input(String id,List<String> roles) {return new Create(id,"사용자 "+id,id+"@example.org",roles);}
@@ -116,8 +121,10 @@ class BusinessUserDatabaseTest {
         assertThat(changed.changed()).isTrue();assertThat(changed.user().name()).isEqualTo("새 이름");
         assertThat(sql.queryForList("SELECT role_id FROM tb_sy_user_role WHERE user_id='ab12' ORDER BY role_id",String.class)).containsExactly("ADMIN","SALES_LDR");
         var after=sql.queryForMap("SELECT * FROM tb_sy_user WHERE user_id='ab12'");
-        for(String field:List.of("pwd_hash","pwd_chg_dttm","pwd_err_cnt","mfa_err_cnt","mfa_use_yn","mfa_code_hash","mfa_expr_dttm","last_login_dttm","temp_pwd_yn","user_stat_cd"))
+        for(String field:List.of("pwd_hash","pwd_chg_dttm","pwd_err_cnt","mfa_err_cnt","mfa_code_hash","mfa_expr_dttm","last_login_dttm","temp_pwd_yn","user_stat_cd"))
             assertThat(Objects.equals(original.get(field),after.get(field))).isTrue();
+        // Requirement 18 §5: active ADMIN always derives MFA=Y.
+        assertThat(after.get("mfa_use_yn")).isEqualTo("Y");
         assertThat(sql.queryForList("SELECT chg_item_nm FROM tb_sy_chg_hist ORDER BY hist_id",String.class)).containsExactly("ROLE_ID","ROLE_ID","이름");
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_accs_log WHERE act_type_cd='AUTH_CHG'",Long.class)).isEqualTo(1);
         assertThat(service.update("ab12",edit(changed.user(),"새 이름",List.of("SALES_LDR"))).changed()).isFalse();
@@ -152,12 +159,18 @@ class BusinessUserDatabaseTest {
     }
     @Test void concurrentUpdatesWithOneRevisionCommitExactlyOnce() throws Exception {
         User user=create("ab12",List.of("PM"));cleanHistory();CountDownLatch start=new CountDownLatch(1);
-        var a=CompletableFuture.supplyAsync(()->concurrent(start,edit(user,"이름1",List.of("PM"))));
-        var b=CompletableFuture.supplyAsync(()->concurrent(start,edit(user,"이름2",List.of("PM"))));start.countDown();
+        var a=asCaller(()->concurrent(start,edit(user,"이름1",List.of("PM"))));
+        var b=asCaller(()->concurrent(start,edit(user,"이름2",List.of("PM"))));start.countDown();
         assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","STALE_WRITE");assertThat(count("tb_sy_chg_hist","ab12")).isEqualTo(1);
     }
     String concurrent(CountDownLatch latch,Edit edit) {
         try {if(!latch.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.update("ab12",edit);return "OK";}
         catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}
     }
+    <T> CompletableFuture<T> asCaller(java.util.function.Supplier<T> work) {
+        var executor=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(
+            ForkJoinPool.commonPool(),org.springframework.security.core.context.SecurityContextHolder.getContext());
+        return CompletableFuture.supplyAsync(work,executor);
+    }
+
 }

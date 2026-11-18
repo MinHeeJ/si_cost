@@ -53,8 +53,16 @@ it("다운로드는 페이지·선택 인자 없이 요청하고 XLSX와 서버 
   expect(file.blob.size).toBe(4);
   expect(fetcher).toHaveBeenCalledWith(
     "/api/uploads/17/issues.xlsx?severity=WARN",
-    { redirect: "error" },
+    {
+      headers: expect.any(Headers),
+      credentials: "same-origin",
+      redirect: "error",
+      cache: "no-store",
+    },
   );
+  expect(
+    new Headers(fetcher.mock.calls[0][1].headers).has("Content-Type"),
+  ).toBe(false);
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
 it.each([400, 404, 500])(

@@ -54,7 +54,12 @@ public class MenuService {
         List<MenuNode> roots=children.getOrDefault(null,Collections.emptyList()).stream()
             .filter(row -> row.screenId()!=null || !children.getOrDefault(row.menuId(),Collections.emptyList()).isEmpty())
             .map(row -> node(row,children)).toList();
-        return new MenusData(roots,List.of(),revisions.revision(rows),false,true);
+        // Preserve configuration diagnostics for authorized menu administrators only.
+        // Ordinary navigation must not disclose stopped or forbidden menu identities.
+        List<MenuDiagnostic> diagnostics=permissions!=null && permissions.hasRole("ADMIN") && permissions.allows("UI-25","INQ")
+            ? excluded.entrySet().stream().map(entry->new MenuDiagnostic(entry.getKey(),entry.getValue())).toList()
+            : List.of();
+        return new MenusData(roots,diagnostics,revisions.revision(rows),false,true);
     }
     private String invalid(MenuRow row,Map<String,MenuRow> byId) {
         Set<String> visited=new HashSet<>();

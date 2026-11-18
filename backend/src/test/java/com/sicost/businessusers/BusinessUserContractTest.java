@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(BusinessUserController.class)
 @ContextConfiguration(classes=BusinessUserController.class)
 @Import({BusinessUserService.class,BusinessUserRepository.class,RevisionService.class,ChangeHistoryWriter.class,
@@ -32,14 +33,22 @@ class BusinessUserContractTest {
     @Autowired ObjectMapper json;
     @Autowired RevisionService revisions;
     @MockBean BusinessUserMapper mapper;
+    @MockBean com.sicost.authentication.AuthenticationPasswordService passwords;
     @MockBean CurrentUserProvider users;
     @MockBean ChangeHistoryMapper history;
     @MockBean AccessLogMapper access;
     @MockBean Clock clock;
     Stored original;
     List<Role> roles;
+    @org.junit.jupiter.api.AfterEach void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @BeforeEach void setup() {
+        var context=org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("admin",null,java.util.List.of()));
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
         when(users.userId()).thenReturn("admin");
+        when(passwords.initial("ab12","admin")).thenReturn(new com.sicost.authentication.AuthenticationPasswordService.Delivery(true,"ACCEPTED",false,"u***@example.org","임시 비밀번호를 발송했습니다."));
         when(clock.instant()).thenReturn(Instant.parse("2026-06-15T00:00:00Z"));
         when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));
         original=new Stored("ab12","사용자","user@example.org","USE",null,"admin",LocalDateTime.of(2026,1,1,0,0,0,123456000),null,null);
@@ -57,11 +66,12 @@ class BusinessUserContractTest {
     ObjectNode edit() {ObjectNode body=create();body.remove("userId");body.put("expectedRevision",revision());return body;}
     String revision() {return revisions.revision(mapper.snapshot(original.userId()));}
     void noWrites() {verify(mapper,never()).insert(any());verify(mapper,never()).update(any());verify(mapper,never()).link(any());verify(mapper,never()).unlink(any());verifyNoInteractions(history,access);}
-    @Test void createWithoutAuthenticationUsesServerActorAndSecretFreeEnvelope() throws Exception {
+    @Test void authenticatedCreateUsesServerActorAndSecretFreeEnvelope() throws Exception {
         mvc.perform(post("/api/business-users").contentType("application/json").content(create().toString()))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").isMap())
             .andExpect(jsonPath("$.data.user.status").value("USE")).andExpect(jsonPath("$.data.user.businessRoleIds[0]").value("PM"))
             .andExpect(jsonPath("$.data.user.pwdHash").doesNotExist()).andExpect(jsonPath("$.data.user.mfaCodeHash").doesNotExist());
+        verify(passwords).initial("ab12","admin");
         verify(mapper).insert(argThat(row->row.actor().equals("admin") && row.passwordHash().startsWith("$2a$10$")));
         verify(history).insert(argThat(row->row.type().equals("NEW") && row.targetKey().equals("ab12") && row.userId().equals("admin")));
         verify(access).insert(argThat(row->row.action().equals("USER_REG") && row.userId().equals("admin")));

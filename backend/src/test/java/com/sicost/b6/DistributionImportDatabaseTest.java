@@ -86,7 +86,8 @@ class DistributionImportDatabaseTest {
     @Test void sameUploadConcurrentApplyReturnsOneResultAndOneReplacement() throws Exception {
         var file=DistributionWorkbook.valid();var checked=service.validate(file,validateRequest("PLAN"));var request=applyRequest("PLAN",checked);
         var start=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
-        Callable<com.sicost.b9.B9Dtos.Result> command=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();return service.apply(file,request);};
+        var caller=org.springframework.security.core.context.SecurityContextHolder.getContext();
+        Callable<com.sicost.b9.B9Dtos.Result> command=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();org.springframework.security.core.context.SecurityContextHolder.setContext(caller);try{return service.apply(file,request);}finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}};
         try {var a=pool.submit(command);var b=pool.submit(command);start.countDown();assertThat(a.get(30,TimeUnit.SECONDS)).isEqualTo(b.get(30,TimeUnit.SECONDS));}finally{pool.shutdownNow();}
         assertThat(db.count("tb_pj_tk_dstrb")).isEqualTo(2);assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_sy_chg_hist WHERE chg_item_nm='배분표 업로드 PLAN'",Long.class)).isEqualTo(1);
     }

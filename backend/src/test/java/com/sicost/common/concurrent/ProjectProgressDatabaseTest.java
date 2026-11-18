@@ -194,18 +194,19 @@ class ProjectProgressDatabaseTest {
     }
     @Test void concurrentNewMemosWithSameRevisionCommitOnce() throws Exception {
         String token = aggregate.revision(id); var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        var executor = new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(ForkJoinPool.commonPool());
         var first = CompletableFuture.supplyAsync(() -> write(token, () -> {
             entered.countDown();
             try { if (!release.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("timeout"); }
             catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
             children.memo(row(1)); audit("TB_PJ_WEEK_MEMO", id + ":1", "NEW", "THIS_WEEK_CN", null, "내용");
-        }));
+        }), executor);
         try {
             assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
             var second = CompletableFuture.supplyAsync(() -> {
                 try { write(token, () -> children.memo(row(2))); return "unexpected"; }
                 catch (ApiException e) { return e.code(); }
-            });
+            }, executor);
             release.countDown();
             assertThat(first.get(15, TimeUnit.SECONDS).changed()).isTrue();
             assertThat(second.get(15, TimeUnit.SECONDS)).isEqualTo("STALE_WRITE");

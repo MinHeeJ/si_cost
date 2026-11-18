@@ -11,7 +11,7 @@ export function SalesForecastDownloadPanel({
   const [error, setError] = useState<unknown>();
   const [complete, setComplete] = useState(false);
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   useEffect(() => {
     const media = window.matchMedia?.("(max-width: 767px)");
@@ -20,7 +20,7 @@ export function SalesForecastDownloadPanel({
     return () => media?.removeEventListener?.("change", change);
   }, []);
   const download = async () => {
-    if (pending || window.matchMedia?.("(max-width: 767px)").matches) return;
+    if (pending || window.matchMedia?.("(max-width: 767px)")?.matches) return;
     setPending(true);
     setError(undefined);
     setComplete(false);

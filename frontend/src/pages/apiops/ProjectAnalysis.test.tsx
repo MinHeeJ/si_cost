@@ -1,4 +1,5 @@
 import {
+  businessCapabilities,
   fireEvent,
   render,
   screen,
@@ -8,6 +9,7 @@ import {
 import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
 import * as api from "./projectAnalysisApi";
 import * as shared from "../shared/sharedApi";
 import * as parts from "../salespartsops/partStandardsApi";
@@ -419,6 +421,24 @@ describe("프로젝트 현황판", () => {
       "href",
       expect.stringContaining("tab=progress"),
     );
+  });
+  it("UI-01과 UI-04 조회권한이 없으면 현황은 표시하고 상세·원가 링크는 숨긴다", async () => {
+    const data = board();
+    data.items[0] = { ...data.items[0], currentStep: null };
+    vi.mocked(api.getProjectStatusBoard).mockResolvedValue(data);
+    mount(
+      <PermissionContext.Provider
+        value={{ ...businessCapabilities, screens: { "UI-31": ["INQ"] } }}
+      >
+        <ProjectStatusBoard />
+      </PermissionContext.Provider>,
+      "/UI-31",
+    );
+    await screen.findByText("진행 프로젝트");
+    expect(screen.getByText("기본 단계 미생성")).toBeInTheDocument();
+    expect(screen.queryByTestId("status-project-owned")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-stage-owned")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-cost-owned")).not.toBeInTheDocument();
   });
   it("part options use actual HQ id and submitted light filter is server-driven", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");

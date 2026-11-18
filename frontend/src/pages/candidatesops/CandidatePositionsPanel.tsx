@@ -71,7 +71,7 @@ export function CandidatePositionsPanel({
   if (!active) return null;
   const columns: Column<CandidatePosition>[] = [
     {
-      id: "opportunity",
+      id: "name",
       label: "기회 / 확률",
       render: (row) => (
         <>
@@ -86,7 +86,7 @@ export function CandidatePositionsPanel({
       ),
     },
     {
-      id: "job",
+      id: "jobCode",
       label: "직무 / 등급",
       render: (row) =>
         `${label("JOB", row.jobCode)} / ${label("GRADE", row.gradeCode)}`,

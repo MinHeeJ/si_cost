@@ -26,7 +26,13 @@ class PermissionViewsTest {
     }
     @Test void settlementCalculatesSummaryBeforePaginationAndOmitsAllMoneyEvidence() {
         var rows=List.of(row("allowed-positive","50"),row("allowed-negative","150"));
+        // CT: 100-(50+10)=40, 40*50%=20; 100-(150+10)=-60, -60*50%=-30.
+        assertThat(rows.get(0).profitAmount()).isEqualTo("40");
+        assertThat(rows.get(0).profitShareAmount()).isEqualTo("20");
+        assertThat(rows.get(1).profitAmount()).isEqualTo("-60");
+        assertThat(rows.get(1).profitShareAmount()).isEqualTo("-30");
         Totals totals=SalesPartSettlementCalculator.totals(rows,"17",null,false);
+        assertThat(totals.partProfitAmount()).isEqualTo("-27");
         PermissionViewMetadata.totals(totals,rows);
         Result source=result(totals,List.of(rows.get(0)));
         ObjectNode view=json.valueToTree(source);PermissionViews.settlement(view,source,json);

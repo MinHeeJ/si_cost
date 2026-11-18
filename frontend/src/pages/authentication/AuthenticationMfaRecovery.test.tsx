@@ -89,3 +89,21 @@ describe("recoverable MFA", () => {
     expect(screen.getByLabelText("인증번호")).toHaveValue("");
   });
 });
+
+it("blocks repeated resend and verification while a resend is pending, then allows retry", async () => {
+  let finish!: (value: api.AuthenticationSession) => void;
+  vi.mocked(api.authenticate).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  render(<MfaForm state={pending} onAuthenticated={vi.fn()} />);
+  const resend = screen.getByRole("button", { name: "다시 보내기" });
+  // Two events in the same React batch must still issue exactly one request.
+  const { act } = await import("@testing-library/react");
+  act(() => { resend.click(); resend.click(); });
+  expect(api.authenticate).toHaveBeenCalledTimes(1);
+  expect(resend).toBeDisabled();
+  expect(screen.getByRole("button", { name: "인증 확인" })).toBeDisabled();
+  await act(async () => finish(pending));
+  expect(resend).toBeEnabled();
+  vi.mocked(api.authenticate).mockResolvedValue(pending);
+  fireEvent.click(resend);
+  await waitFor(() => expect(api.authenticate).toHaveBeenCalledTimes(2));
+});

@@ -46,7 +46,8 @@ class DeveloperImportDatabaseTest {
     }
     @Test void concurrentSameUploadProducesOneCompleteSet() throws Exception {
         var file=DeveloperWorkbook.valid();var checked=service.validate(file);var start=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
-        Callable<B8Dtos.Applied> command=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();return service.apply(file,checked.uploadId());};
+        var caller=org.springframework.security.core.context.SecurityContextHolder.getContext();
+        Callable<B8Dtos.Applied> command=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();org.springframework.security.core.context.SecurityContextHolder.setContext(caller);try{return service.apply(file,checked.uploadId());}finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}};
         try{var first=pool.submit(command);var second=pool.submit(command);start.countDown();assertThat(first.get(30,TimeUnit.SECONDS)).isEqualTo(second.get(30,TimeUnit.SECONDS));}finally{pool.shutdownNow();}
         assertThat(db.count("tb_hr_dev")).isEqualTo(1);assertThat(db.count("tb_hr_dev_prc")).isEqualTo(1);assertThat(db.count("tb_hr_dev_skill")).isEqualTo(2);
     }

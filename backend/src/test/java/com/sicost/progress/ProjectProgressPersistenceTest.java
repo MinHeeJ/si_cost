@@ -98,7 +98,7 @@ class ProjectProgressPersistenceTest {
         var input=memo("동시 등록",0);var start=new CountDownLatch(1);var executor=Executors.newFixedThreadPool(2);
         try {
             Callable<String> action=()->{start.await();try{service.createProjectWeekMemo(id,input);return "saved";}catch(ApiException e){return e.code();}};
-            var one=executor.submit(action);var two=executor.submit(action);start.countDown();assertThat(List.of(one.get(20,TimeUnit.SECONDS),two.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("saved","STALE_WRITE");
+            var one=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(action));var two=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(action));start.countDown();assertThat(List.of(one.get(20,TimeUnit.SECONDS),two.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("saved","STALE_WRITE");
             assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_week_memo WHERE proj_id=?",Integer.class,id)).isEqualTo(1);
         } finally {executor.shutdownNow();}
     }
@@ -106,7 +106,7 @@ class ProjectProgressPersistenceTest {
         var input=token();var start=new CountDownLatch(1);var executor=Executors.newFixedThreadPool(2);
         try {
             Callable<String> action=()->{start.await();try{service.createProjectProgressSteps(id,input);return "saved";}catch(ApiException e){return e.code();}};
-            var one=executor.submit(action);var two=executor.submit(action);start.countDown();assertThat(List.of(one.get(20,TimeUnit.SECONDS),two.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("saved","STALE_WRITE");
+            var one=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(action));var two=executor.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(action));start.countDown();assertThat(List.of(one.get(20,TimeUnit.SECONDS),two.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("saved","STALE_WRITE");
             assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_step WHERE proj_id=?",Integer.class,id)).isEqualTo(7);
         } finally {executor.shutdownNow();}
     }

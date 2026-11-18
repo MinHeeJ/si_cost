@@ -77,7 +77,7 @@ export function ProjectsScreen({
   onAmountUnitChange,
 }: ProjectsScreenProps) {
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const defaults = { contractType: "", status: "", partId: "", q: "" };
   const [draft, setDraft] = useState(defaults),

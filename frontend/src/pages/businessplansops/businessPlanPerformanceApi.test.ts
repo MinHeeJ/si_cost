@@ -26,7 +26,10 @@ it("validation sends original file and current year as multipart without JSON Co
   await validateBusinessPlan(file, 2026);
   const [path, options] = vi.mocked(fetch).mock.calls[0];
   expect(path).toBe("/api/business-plans/imports/validate");
-  expect(options?.headers).toBeUndefined();
+  expect(new Headers(options?.headers).has("Content-Type")).toBe(false);
+  expect(new Headers(options?.headers).get("X-CSRF-TOKEN")).toBe(
+    "synthetic-business-unit-csrf",
+  );
   expect([...(options?.body as FormData).keys()]).toEqual(["file", "year"]);
   expect((options?.body as FormData).get("file")).toBe(file);
 });

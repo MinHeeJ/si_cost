@@ -9,8 +9,6 @@ import {
   type PartOption,
 } from "../salespartsops/partStandardsApi";
 import * as api from "./projectAnalysisApi";
-import { DetailDrawer } from "../../shared/DetailDrawer";
-import { ProjectProgressPanel } from "../progress/ProjectProgressPanel";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   AnalysisSummary,
@@ -49,7 +47,7 @@ export function ProjectStatusBoard({
   pageSize,
   onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
-  const [detail, setDetail] = useState<api.BoardRow>();
+  const canProjects = usePermission("UI-01", "INQ");
   const canCosts = usePermission("UI-04", "INQ");
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState<api.AnalysisQuery>(
@@ -164,14 +162,16 @@ export function ProjectStatusBoard({
       sortable: true,
       render: (row) => (
         <>
-          <button
-            type="button"
-            className="sicost-link"
-            data-testid={`status-project-${row.projectId.toLowerCase()}`}
-            onClick={() => setDetail(row)}
-          >
-            {row.projectName}
-          </button>
+          {canProjects ? (
+            <Link
+              data-testid={`status-project-${row.projectId.toLowerCase()}`}
+              to={projectLink(row)}
+            >
+              {row.projectName}
+            </Link>
+          ) : (
+            row.projectName
+          )}
           <small>
             {row.projectId} · {types[row.contractType]}
           </small>
@@ -216,13 +216,15 @@ export function ProjectStatusBoard({
                 {row.currentStep.status}
               </StatusBadge>
             </>
-          ) : (
+          ) : canProjects ? (
             <Link
               data-testid={`status-stage-${row.projectId.toLowerCase()}`}
               to={projectLink(row)}
             >
               기본 단계 미생성
             </Link>
+          ) : (
+            "기본 단계 미생성"
           )}
           <small>{row.planBasis}</small>
         </>
@@ -522,21 +524,6 @@ export function ProjectStatusBoard({
             </section>
           ))}
       </details>
-      {detail && (
-        <DetailDrawer
-          title={detail.projectName}
-          onClose={() => setDetail(undefined)}
-        >
-          <ProjectProgressPanel
-            permissionScreen="UI-31"
-            projectId={detail.projectId}
-            year={Number(result.data?.baseDate.slice(0, 4))}
-            onChanged={async () => {
-              result.retry();
-            }}
-          />
-        </DetailDrawer>
-      )}
     </div>
   );
 }

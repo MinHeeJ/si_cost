@@ -106,7 +106,7 @@ export function PermissionSettingsPanel() {
               <StatusBadge tone={settings.sensitiveView ? "info" : "neutral"}>
                 {settings.sensitiveView ? "허용 설정" : "허용 안 함"}
               </StatusBadge>{" "}
-              급여·지급단가·개인별원가·거래처 지급계좌 (실제 가림 미적용)
+              급여·지급단가·개인별원가·거래처 지급계좌
             </dd>
             <dt>저장 데이터범위</dt>
             <dd>

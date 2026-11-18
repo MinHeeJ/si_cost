@@ -50,7 +50,8 @@ public class NotificationPublisher {
             if(permission==null)throw new IllegalStateException("수신 권한 정책이 연결되지 않았습니다.");
             Event authorized=active.containsKey(recipient.userId())?permission.review(event,recipient.userId()):null;
             if(authorized==null) {
-                Event omitted=new Event(event.key(),event.type(),"현재 상태·역할·메뉴 또는 담당 범위 변경으로 전달하지 않았습니다.",null,null);
+                // DUN identity is mandatory delivery evidence even when its content/link is withheld.
+                Event omitted=new Event(event.key(),event.type(),"현재 상태·역할·메뉴 또는 담당 범위 변경으로 전달하지 않았습니다.",null,event.dunning());
                 if(mapper.reserveSkipped(new Publication(taskId,omitted,recipient,at))==1)
                     audit("TB_SY_DELIVERY_TASK",taskId.toString(),Map.of("STATE_CD","SKIPPED","ERROR_CD","PERMISSION_REVOKED","ERROR_CN",omitted.content()));
                 continue;

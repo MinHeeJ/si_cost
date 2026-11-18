@@ -65,10 +65,8 @@ it("template sends only projectId while export dispatch uses approved view and e
   expect(downloads.saveDownload).toHaveBeenCalledTimes(2);
 });
 it("surfaces root ApiError with no automatic retries", async () => {
-  const fetcher = vi.fn().mockResolvedValue({
-    ok: false,
-    status: 400,
-    text: async () =>
+  const fetcher = vi.fn().mockImplementation(async () =>
+    new Response(
       JSON.stringify({
         success: false,
         meta: {},
@@ -77,10 +75,22 @@ it("surfaces root ApiError with no automatic retries", async () => {
         message: "단계 오류",
         requestId: "distribution-api",
       }),
-  });
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    ),
+  );
   stubBusinessFetch(fetcher);
-  await expect(
-    getProjectDistribution("P-selected", "EST"),
-  ).rejects.toBeInstanceOf(ApiError);
+  const error = await getProjectDistribution("P-selected", "EST").catch(
+    (error: unknown) => error,
+  );
+  expect(error).toBeInstanceOf(ApiError);
+  expect(error).toMatchObject({
+    status: 400,
+    body: {
+      code: "INVALID_INPUT",
+      field: "step",
+      message: "단계 오류",
+      requestId: "distribution-api",
+    },
+  });
   expect(fetcher).toHaveBeenCalledOnce();
 });

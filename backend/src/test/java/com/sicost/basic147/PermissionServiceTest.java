@@ -17,6 +17,20 @@ class PermissionServiceTest {
     PermissionMapper.Menu menu(String id,String parent,String screen,String use,int order,boolean inquiry,boolean registration,boolean update) {return new PermissionMapper.Menu(id,parent,screen,use,order,false,inquiry,registration,update,false,false,false,false);}
     @BeforeEach void principal() {SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated("real-user",null,List.of()));}
     @AfterEach void clear() {SecurityContextHolder.clearContext();}
+    @Test void renegotiationExceptionDoesNotExposeLaborTotalsInPersonalCostDetails() throws Exception {
+        when(mapper.roles("real-user")).thenReturn(List.of(new PermissionMapper.Role("SALES_LDR","PART","N")));
+        var projection=new PermissionProjectionService(policy);var json=new ObjectMapper();
+        var source=json.readTree("{\"knownLaborAllocated\":\"7312345\",\"laborAllocated\":\"0\",\"pay\":null,\"knownPersonalRevenue\":\"9000000\",\"availableFields\":[\"knownLaborAllocated\",\"knownPersonalRevenue\"]}");
+        var result=projection.publicView("UI-03",source.deepCopy());
+        assertThat(result.has("knownLaborAllocated")).isFalse();
+        assertThat(result.has("laborAllocated")).isFalse();assertThat(result.has("pay")).isFalse();
+        assertThat(result.path("availableFields").toString()).doesNotContain("knownLaborAllocated");
+        assertThat(result.path("knownPersonalRevenue").asText()).isEqualTo("9000000");
+        assertThat(source.path("knownLaborAllocated").asText()).isEqualTo("7312345");
+        assertThat(projection.publicView("UI-32",json.readTree("{\"marginRate\":\"10\",\"monthlyLaborCost\":\"7312345\"}")).toString()).contains("marginRate").doesNotContain("monthlyLaborCost");
+        when(mapper.roles("real-user")).thenReturn(List.of(new PermissionMapper.Role("FIN","ALL","Y")));
+        assertThat(projection.publicView("UI-03",source.deepCopy()).path("knownLaborAllocated").asText()).isEqualTo("7312345");
+    }
     @Test void administratorAndAllDoNotInventAMissingMenuGrant() {
         when(mapper.roles("real-user")).thenReturn(List.of(new PermissionMapper.Role("ADMIN","ALL","Y")));
         assertThat(policy.capabilities().screens()).isEmpty();assertThat(policy.allows("UI-23","UPD")).isFalse();assertThatThrownBy(()->policy.require("UI-23","INQ")).isInstanceOf(ApiException.class);

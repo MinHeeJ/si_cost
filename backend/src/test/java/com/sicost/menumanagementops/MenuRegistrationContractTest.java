@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(MenuRegistrationController.class)
 @ContextConfiguration(classes=MenuRegistrationController.class)
 @Import({MenuRegistrationService.class,MenuRegistrationRepository.class,MenuManagementService.class,MenuManagementRepository.class,
@@ -98,7 +99,7 @@ class MenuRegistrationContractTest {
     }
     @Test void rootCreateWithoutAuthIssuesIdAndDefaultsAtTreeEndWithNoPermissionOrAccessRows() throws Exception {
         create(root()).andExpect(status().isCreated()).andExpect(jsonPath("$.data.changed").value(true))
-            .andExpect(jsonPath("$.data.value.developmentMode").value(true)).andExpect(jsonPath("$.data.value.accessEnforcement").value(false));
+            .andExpect(jsonPath("$.data.value.developmentMode").value(false)).andExpect(jsonPath("$.data.value.accessEnforcement").value(true));
         Stored n=rows.get(rows.size()-1);assertThat(n.menuId()).isEqualTo("G002");assertThat(n.name()).isEqualTo("신규");
         assertThat(n.icon()).isEqualTo("folder");assertThat(n.screenId()).isNull();assertThat(n.parentId()).isNull();
         assertThat(n.pcOnly()).isFalse();assertThat(n.locked()).isFalse();assertThat(n.use()).isTrue();assertThat(n.sortOrder()).isEqualTo(2);

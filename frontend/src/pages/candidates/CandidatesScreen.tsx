@@ -73,7 +73,7 @@ export function CandidatesScreen({
     canUpdate = usePermission("UI-33", "UPD"),
     canDownload = usePermission("UI-33", "DNLD");
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const [draft, setDraft] = useState(initialFilters),
     [filters, setFilters] = useState<api.CandidateFilters>({

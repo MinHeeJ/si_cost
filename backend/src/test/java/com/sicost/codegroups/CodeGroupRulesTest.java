@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.sicost.codegroups.CodeGroupDtos.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(CodeGroupController.class)
 @org.springframework.test.context.ContextConfiguration(classes=com.sicost.common.CostManagementApplication.class)
 @Import({CodeGroupService.class,CodeGroupValidator.class,CodeReferenceGuard.class,RevisionService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

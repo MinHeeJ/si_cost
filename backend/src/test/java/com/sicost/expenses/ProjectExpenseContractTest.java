@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(ProjectExpenseController.class)
 @ContextConfiguration(classes=ProjectExpenseController.class)
 @Import({ProjectExpenseService.class,ProjectExpenseRepository.class,ProjectBudgetRepository.class,WriteCoordinator.class,

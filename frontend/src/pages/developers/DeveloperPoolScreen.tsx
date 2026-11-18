@@ -62,7 +62,7 @@ export function DeveloperPoolScreen({
   renderActions,
 }: DeveloperPoolProps) {
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const defaults = {
     employeeType: "",

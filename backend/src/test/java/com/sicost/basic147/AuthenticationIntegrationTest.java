@@ -306,7 +306,7 @@ class AuthenticationIntegrationTest {
         var activity=state.getClass().getDeclaredField("activity");activity.setAccessible(true);
         var old=Instant.parse("2026-11-17T02:59:00Z");activity.set(state,old);
         mvc.perform(get("/api/auth/session").session(session)).andExpect(status().isOk());assertThat(activity.get(state)).isEqualTo(old);
-        activity.set(state,Instant.parse("2026-11-16T00:00:00Z"));var token=csrf(session);
+        var token=csrf(session);activity.set(state,Instant.parse("2026-11-16T00:00:00Z"));
         mvc.perform(post("/api/auth/logout").session(session).header(token.header(),token.token())).andExpect(status().isOk());assertThat(session.isInvalid()).isTrue();
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_accs_log WHERE user_id=? AND act_type_cd='LOGOUT'",Long.class,id)).isZero();
     }

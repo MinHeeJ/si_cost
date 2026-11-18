@@ -47,7 +47,7 @@ export function B6DistributionPanel({
     [actionError, setActionError] = useState<unknown>(),
     [result, setResult] =
       useState<Awaited<ReturnType<typeof api.getUploadResult>>>();
-  const mobile = window.matchMedia?.("(max-width: 767px)").matches ?? false;
+  const mobile = window.matchMedia?.("(max-width: 767px)")?.matches ?? false;
   useEffect(() => {
     let active = true;
     if (mobile) return;

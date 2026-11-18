@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(SharedQueriesController.class)
 @ContextConfiguration(classes=SharedQueriesController.class)
 @Import({MenuService.class,SharedQueriesService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
@@ -26,6 +27,7 @@ class MenusContractTest {
     @MockBean SharedQueriesMapper mapper;
     @MockBean CurrentUserProvider users;
     @MockBean Clock clock;
+    @Autowired com.sicost.permission.PermissionService permissions;
     MenuRow row(String id,String parent,String screen,int level,int order) { return new MenuRow(id,parent,"DB "+id,screen,level,order,"Y","database",true); }
     @Test void validHierarchyKeepsDatabasePresentationAndStableOrder() throws Exception {
         when(mapper.menus()).thenReturn(List.of(row("G",null,null,1,1),row("B","G","UI-01",2,1),row("A","G","UI-16",2,1)));
@@ -56,6 +58,14 @@ class MenusContractTest {
     @Test void invalidDuplicateCannotDefeatValidHierarchy() throws Exception {
         when(mapper.menus()).thenReturn(List.of(row("G",null,null,1,1),row("GOOD","G","UI-16",2,9),row("BAD","NO","UI-16",2,0)));
         mvc.perform(get("/api/menus")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].children[0].menuId").value("GOOD"));
+    }
+    @Test void navigationWithoutMenuAdministrationCannotReadExcludedMenuDiagnostics() throws Exception {
+        when(mapper.menus()).thenReturn(List.of(row("PRIVATE","MISSING","UI-23",2,1)));
+        when(permissions.hasRole("ADMIN")).thenReturn(false);
+        try {
+            mvc.perform(get("/api/menus")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.diagnostics").isEmpty());
+        } finally {when(permissions.hasRole("ADMIN")).thenReturn(true);}
     }
     @Test void emptyDatabaseReturnsEmptyAndDoesNotSeedMenus() throws Exception {
         when(mapper.menus()).thenReturn(List.of());

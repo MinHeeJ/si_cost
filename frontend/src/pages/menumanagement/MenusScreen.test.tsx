@@ -88,9 +88,9 @@ async function open() {
   render(<MenusScreen />);
   await screen.findByLabelText("M1 메뉴이름");
 }
-it("전체 중지포함 트리와 개발모드·불변화면·루트 체크없음·잠금에서 PC편집 가능", async () => {
+it("전체 중지포함 트리와 실제 권한 안내·불변화면·루트 체크없음·잠금에서 PC편집 가능", async () => {
   await open();
-  expect(screen.getByText(/권한 설정을 저장합니다/)).toBeInTheDocument();
+  expect(screen.getByText("저장된 역할·메뉴 권한과 담당 범위를 적용합니다.")).toBeInTheDocument();
   expect(screen.getByLabelText("M2 사용")).not.toBeChecked();
   expect(screen.queryByLabelText("G1 사용")).not.toBeInTheDocument();
   expect(screen.getByLabelText("M3 사용")).toBeDisabled();

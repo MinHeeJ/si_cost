@@ -16,6 +16,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> method(org.springframework.web.HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        var result = error(405, "METHOD_NOT_ALLOWED", "허용되지 않은 요청 방식입니다.", null, null, request);
+        return ResponseEntity.status(405).headers(result.getHeaders()).allow(e.getSupportedHttpMethods() == null
+                ? new org.springframework.http.HttpMethod[0] : e.getSupportedHttpMethods().toArray(org.springframework.http.HttpMethod[]::new))
+                .body(result.getBody());
+    }
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiError> mediaType(org.springframework.web.HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
         return error(415, "UNSUPPORTED_MEDIA_TYPE", "요청 콘텐츠 형식을 확인해 주세요.", null, null, request);

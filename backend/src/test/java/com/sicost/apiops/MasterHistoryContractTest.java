@@ -21,6 +21,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(MasterHistoryController.class)
 @ContextConfiguration(classes=MasterHistoryController.class)
 @Import({MasterHistoryService.class, MasterHistoryRepository.class, ApiExceptionHandler.class,

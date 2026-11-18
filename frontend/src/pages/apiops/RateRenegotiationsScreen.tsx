@@ -336,7 +336,7 @@ export function RateRenegotiationsScreen({
           기준월 {data?.baseMonth ?? "–"} · 계산시각{" "}
           {formatDateTime(data?.calculatedAt)}
         </span>
-        <button
+        {canDownload && <button
           className="sicost-button renegotiation-download"
           data-testid="renegotiation-download"
           type="button"
@@ -367,7 +367,7 @@ export function RateRenegotiationsScreen({
           }}
         >
           {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
-        </button>
+        </button>}
       </div>
       <div className="renegotiation-summary">
         <article>

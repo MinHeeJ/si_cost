@@ -70,6 +70,11 @@
   border-color: #2563eb;
   font-weight: 600;
 }
+.authentication-card .authentication-primary:not(:disabled):hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: white;
+}
 .authentication-card button:disabled {
   opacity: 0.55;
   cursor: wait;

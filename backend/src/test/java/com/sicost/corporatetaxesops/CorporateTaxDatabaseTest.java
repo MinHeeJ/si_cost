@@ -60,7 +60,7 @@ class CorporateTaxDatabaseTest {
     void closed(String month){sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES (?,'CLOSE','admin')",month);}
     @Test void concurrentInitializeInsertsEachMissingRowOnlyOnceAndReplayPreservesTimes()throws Exception{
         annual("2079","18400000");CountDownLatch start=new CountDownLatch(1);
-        var first=CompletableFuture.supplyAsync(()->initialize(start));var second=CompletableFuture.supplyAsync(()->initialize(start));start.countDown();
+        var first=asCaller(()->initialize(start));var second=asCaller(()->initialize(start));start.countDown();
         assertThat(List.of(first.get(20,TimeUnit.SECONDS),second.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
         assertThat(payments()).hasSize(2);assertThat(annuals()).hasSize(2);assertThat(annuals().get(1).get("est_tax_amt")).isEqualTo(new BigDecimal("18400000"));
         assertThat(payments()).extracting(r->r.get("pay_due_dt").toString()).containsExactly("2081-03-31","2080-08-31");
@@ -83,4 +83,10 @@ class CorporateTaxDatabaseTest {
         mvc.perform(get("/api/corporate-taxes/2080/allocation")).andExpect(status().isOk()).andExpect(jsonPath("$.data.months[9].amount").value("2066667")).andExpect(jsonPath("$.data.months[11].amount").value("2066669"));
         assertThat(sql.queryForList("SELECT * FROM tb_co_mon_pl ORDER BY pl_ym")).isEqualTo(snapshots);assertThat(annuals()).isEqualTo(annual);assertThat(audits()).isEqualTo(history);assertThat(payments()).isEmpty();assertThat(sql.queryForMap("SELECT last_value,is_called FROM sq_tb_sy_chg_hist")).isEqualTo(sequence);
     }
+    <T> CompletableFuture<T> asCaller(java.util.function.Supplier<T> work) {
+        var executor=new org.springframework.security.concurrent.DelegatingSecurityContextExecutor(
+            ForkJoinPool.commonPool(),org.springframework.security.core.context.SecurityContextHolder.getContext());
+        return CompletableFuture.supplyAsync(work,executor);
+    }
+
 }

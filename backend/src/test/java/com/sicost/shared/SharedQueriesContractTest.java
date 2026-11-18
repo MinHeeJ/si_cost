@@ -39,7 +39,7 @@ class SharedQueriesContractTest {
         mvc.perform(get("/api/current-user")).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.meta").isMap()).andExpect(jsonPath("$.data.userId").value("admin"))
             .andExpect(jsonPath("$.data.roleIds[0]").value("ADMIN")).andExpect(jsonPath("$.data.name").value("임시 관리자"))
-            .andExpect(jsonPath("$.data.developmentMode").value(true)).andExpect(jsonPath("$.data.password").doesNotExist())
+            .andExpect(jsonPath("$.data.developmentMode").value(false)).andExpect(jsonPath("$.data.password").doesNotExist())
             .andExpect(jsonPath("$.data.email").doesNotExist());
     }
     @Test void validationCurrentUserRejectsForgedContext() throws Exception {
