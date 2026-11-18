@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import { formatShortDate } from "../../shared/format";
 import {
   getCurrentUser,
   getSharedCodes,
@@ -322,11 +323,9 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
             )}
           </div>
           {issue && (
-            <p>
-              등록 {issue.registeredAt} · {issue.registeredBy.userName}
-              <br />
-              수정 {issue.modifiedAt ?? "–"} ·{" "}
-              {issue.modifiedBy?.userName ?? "–"}
+            <p data-testid="issue-audit">
+              {formatShortDate(issue.registeredAt)} {issue.registeredBy.userName} 등록
+              {issue.modifiedAt && ` · ${formatShortDate(issue.modifiedAt)} ${issue.modifiedBy?.userName ?? "–"} 고침`}
             </p>
           )}
         </section>

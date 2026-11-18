@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
-import { formatAmount, formatFixedDecimal } from "../../shared/format";
+import { formatAmount, formatFixedDecimal, formatShortDateTime } from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
 import { SALES_COMMITTED } from "../assignmentcandidatesops/assignmentCandidatesApi";
 import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
@@ -591,7 +591,7 @@ export function SalesPipelinePanel() {
                         data-testid={`approval-history-${h.histSn}`}
                         key={h.histSn}
                       >
-                        {h.registeredAt} · {h.action} · {h.profitRate}% ·{" "}
+                        {formatShortDateTime(h.registeredAt)} · {h.action} · {h.profitRate}% ·{" "}
                         {h.reason} · {h.registeredBy}
                       </article>
                     ))}

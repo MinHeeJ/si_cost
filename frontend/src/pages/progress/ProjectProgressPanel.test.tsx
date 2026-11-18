@@ -163,6 +163,13 @@ async function openMemo() {
   );
   return screen.getByRole("dialog", { name: "이번 주 상태 적기" });
 }
+it("주간 메모 작성일을 유지하고 수정일을 짧게 따로 표시한다", async () => {
+  draw({ ...original, memos: [{ ...memo, modifiedAt: "2026-06-02T17:37:16.791679+09:00", modifiedBy: actor }] });
+  const card = await screen.findByTestId("progress-memo-3");
+  expect(card).toHaveTextContent("06-01 작성, 06-02 고침");
+  expect(card).not.toHaveTextContent("T09:00");
+  expect(card).not.toHaveTextContent("+09:00");
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getProjectProgressHistory).mockResolvedValue({

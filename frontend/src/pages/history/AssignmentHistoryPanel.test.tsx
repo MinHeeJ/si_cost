@@ -86,6 +86,11 @@ async function open() {
   );
   await screen.findByRole("option", { name: "기타" });
 }
+it("처리시각은 연도·초·오프셋 없는 월일 시분으로 표시한다", async () => {
+  draw();
+  expect(await screen.findByText("admin / 07-01 09:00")).toBeInTheDocument();
+  expect(screen.queryByText(new RegExp(row.registeredAt))).not.toBeInTheDocument();
+});
 async function fill(content = "감사 보완") {
   fireEvent.change(screen.getByLabelText("바른 내용 *"), {
     target: { value: content },

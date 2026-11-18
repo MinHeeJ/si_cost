@@ -418,9 +418,9 @@ it("empty recommendations offer the supplied condition reset without writing an 
 });
 
 it.each([
-  ["천원", "1000.001", "1,000.001"],
+  ["천원", "1000.001", "1,000"],
   ["원", "1000001", "1,000,001"],
-  ["백만원", "1.000001", "1.000001"],
+  ["백만원", "1.000001", "1"],
 ] as const)("cost evidence displays integer won exactly in %s without changing the saved score", (unit, _decimal, expected) => {
   render(<WorkforceRecommendationCandidates {...props} amountUnit={unit} candidates={[{ ...candidate,
     scoreDetail: { m: "202611", c: "1000001", u: "0", f: 1 },
@@ -439,7 +439,7 @@ it("cost evidence keeps unknown distinct from zero", () => {
   expect(screen.getByText(/인건비 – 천원/)).toHaveTextContent("단가 0 천원 · 원천 미확인");
 });
 
-it.each([["1000000", "1,000"], ["-1000001", "−1,000.001"]])("cost evidence preserves %s and trims only trailing zeros", (value, expected) => {
+it.each([["1000000", "1,000"], ["-1000001", "−1,000"], ["5561666", "5,562"]])("cost evidence rounds %s for display without changing saved values", (value, expected) => {
   render(<WorkforceRecommendationCandidates {...props} candidates={[{ ...candidate,
     scoreDetail: { c: value, u: "8000000" },
     scoreItems: [{ itemCode: "COST", baseScore: "5", weight: "5", score: "5", basis: "raw" }],

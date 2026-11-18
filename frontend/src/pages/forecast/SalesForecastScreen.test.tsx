@@ -135,7 +135,7 @@ it("renders the forecast screen, four authoritative cards, six month tables and 
     ),
   ).toBeInTheDocument();
   expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent(
-    "9,007,199,254,740.993",
+    "9,007,199,254,741",
   );
   expect(screen.getByTestId("forecast-people-card")).toHaveTextContent(
     "1.1 / 0.5",

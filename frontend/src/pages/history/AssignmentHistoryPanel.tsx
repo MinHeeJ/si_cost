@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
+import { formatShortDateTime } from "../../shared/format";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -214,7 +215,7 @@ function AssignmentHistoryContent({
     {
       id: "actor",
       label: "처리자 / 처리시각",
-      render: (row) => `${row.actor} / ${row.registeredAt}`,
+      render: (row) => `${row.actor} / ${formatShortDateTime(row.registeredAt)}`,
     },
     {
       id: "action",
