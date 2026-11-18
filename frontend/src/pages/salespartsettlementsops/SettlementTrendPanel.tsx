@@ -72,7 +72,11 @@ export function SettlementTrendPanel({
               <select
                 data-testid="settlement-trend-unit"
                 value={displayUnit}
-                onChange={(e) => { const next = e.target.value as AmountUnit; if (onAmountUnitChange) onAmountUnitChange(next); else setUnit(next); }}
+                onChange={(e) => {
+                  const next = e.target.value as AmountUnit;
+                  if (onAmountUnitChange) onAmountUnitChange(next);
+                  else setUnit(next);
+                }}
               >
                 <option>원</option>
                 <option>천원</option>
@@ -81,13 +85,22 @@ export function SettlementTrendPanel({
             </label>
           </div>
           <div className="sicost-table-viewport">
-            <table className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}>
+            <table
+              className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}
+            >
               <thead>
                 <tr>
                   <th>이름</th>
                   <th>구분</th>
                   {data.months.map((m) => (
-                    <th key={m}>{m.slice(5)}월</th>
+                    <th
+                      key={m}
+                      className={
+                        m === data.month ? "settlement-base-month" : undefined
+                      }
+                    >
+                      {m.slice(5)}월
+                    </th>
                   ))}
                   <th>합계</th>
                   <th>비고</th>
@@ -112,9 +125,16 @@ export function SettlementTrendPanel({
                           key={cell.month}
                           title={`${cell.employeeType ?? ""} · ${cell.source} ${cell.issues.map((issue) => issue.message).join(" / ")}`}
                           className={
-                            cell.value?.startsWith("-")
-                              ? "settlement-negative"
-                              : undefined
+                            [
+                              cell.month === data.month
+                                ? "settlement-base-month"
+                                : "",
+                              cell.value?.startsWith("-")
+                                ? "settlement-negative"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ") || undefined
                           }
                         >
                           {metric.metric === "MM"
@@ -122,12 +142,34 @@ export function SettlementTrendPanel({
                             : formatAmount(cell.value, displayUnit)}
                         </td>
                       ))}
-                      <td className={metric.total?.startsWith("-") ? "settlement-negative" : undefined}>
+                      <td
+                        className={
+                          metric.total?.startsWith("-")
+                            ? "settlement-negative"
+                            : undefined
+                        }
+                      >
                         {metric.metric === "MM"
                           ? formatMm(metric.total)
                           : formatAmount(metric.total, displayUnit)}
                       </td>
-                      <td>{metric.remark ?? "–"}</td>
+                      {i === 0 && (
+                        <td
+                          rowSpan={person.metrics.length}
+                          className="settlement-remark"
+                          title={
+                            [
+                              ...new Set(
+                                person.metrics
+                                  .map((item) => item.remark)
+                                  .filter(Boolean),
+                              ),
+                            ].join("\n") || undefined
+                          }
+                        >
+                          {person.baseMonthRemark ?? "–"}
+                        </td>
+                      )}
                     </tr>
                   )),
                 )}
@@ -145,13 +187,32 @@ export function SettlementTrendPanel({
                   {data.monthlyTotals.map((total) => (
                     <td
                       key={total.month}
-                      className={total.partProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}
+                      className={
+                        [
+                          total.month === data.month
+                            ? "settlement-base-month"
+                            : "",
+                          total.partProfitAmount?.startsWith("-")
+                            ? "settlement-negative"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
                       title={`인력 이익금 ${total.personProfitShareAmount ?? "미확인"} · 카드 ${total.cardAmount ?? "미확인"}`}
                     >
                       {formatAmount(total.partProfitAmount, displayUnit)}
                     </td>
                   ))}
-                  <td className={data.periodPartProfitAmount?.startsWith("-") ? "settlement-negative" : undefined}>{formatAmount(data.periodPartProfitAmount, displayUnit)}</td>
+                  <td
+                    className={
+                      data.periodPartProfitAmount?.startsWith("-")
+                        ? "settlement-negative"
+                        : undefined
+                    }
+                  >
+                    {formatAmount(data.periodPartProfitAmount, displayUnit)}
+                  </td>
                   <td>카드는 월 1회 차감</td>
                 </tr>
               </tfoot>
@@ -189,7 +250,12 @@ export function SettlementTrendPanel({
                 value={size}
                 onChange={(e) => {
                   const next = Number(e.target.value) as 20 | 50 | 100;
-                  void (shared.savePageSize?.(next) ?? Promise.resolve()).then(() => { setSize(next); setPage(1); }).catch(setError);
+                  void (shared.savePageSize?.(next) ?? Promise.resolve())
+                    .then(() => {
+                      setSize(next);
+                      setPage(1);
+                    })
+                    .catch(setError);
                 }}
               >
                 <option value={20}>20건씩</option>

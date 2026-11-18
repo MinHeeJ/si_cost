@@ -1591,7 +1591,7 @@ describe("공식 진입점 합성", () => {
           await screen.findByTestId("sales-part-settlement-screen"),
         ).toBeVisible();
         await screen.findByText(
-          "정산 대상 영업 파트가 없습니다. 본사는 정산 대상이 아닙니다",
+          "맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이 아닙니다.",
         );
         expect(settlements.getSalesPartSettlements).toHaveBeenCalledWith(
           undefined,

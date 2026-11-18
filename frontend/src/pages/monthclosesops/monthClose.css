@@ -70,6 +70,18 @@
   color: var(--lock);
   background: var(--lock-bg);
 }
+.month-close-check-banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+.month-close-check-banner.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.month-close-check-banner.info {
+  color: var(--info);
+  background: var(--info-bg);
+}
 .month-close-impact {
   margin: 12px 0;
   padding: 12px 16px;
@@ -116,9 +128,21 @@
   }
 }
 
-.month-close-adjustments { overflow-x: auto; }
-.month-close-adjustments table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+.month-close-adjustments {
+  overflow-x: auto;
+}
+.month-close-adjustments table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
 .month-close-adjustments th:nth-child(-n + 4),
-.month-close-adjustments td:nth-child(-n + 4) { white-space: nowrap; overflow-wrap: normal; }
+.month-close-adjustments td:nth-child(-n + 4) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
 .month-close-adjustments th:last-child,
-.month-close-adjustments td:last-child { min-width: 240px; }
+.month-close-adjustments td:last-child {
+  min-width: 240px;
+}

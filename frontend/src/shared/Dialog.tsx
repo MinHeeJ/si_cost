@@ -10,6 +10,7 @@ export type DialogProps = {
   onConfirm(): void | Promise<void>;
   onCancel(): void;
   confirmLabel?: string;
+  confirmClassName?: string;
   confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
@@ -33,6 +34,7 @@ export function Dialog({
   onConfirm,
   onCancel,
   confirmLabel = "확인",
+  confirmClassName = "sicost-primary",
   confirmDisabled = false,
   cancelLabel = "취소",
   wide,
@@ -189,7 +191,7 @@ export function Dialog({
               data-testid={confirmTestId}
               data-action-id={confirmActionId}
               data-confirm
-              className="sicost-primary"
+              className={confirmClassName}
               disabled={pending || confirmDisabled}
             >
               {pending ? "처리 중…" : confirmLabel}

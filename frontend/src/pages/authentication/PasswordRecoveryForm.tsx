@@ -9,6 +9,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
     [busy, setBusy] = useState(false);
   return (
     <form
+      data-testid="authentication-password-recovery-form"
       onSubmit={async (e) => {
         e.preventDefault();
         if (busy) return;
@@ -36,6 +37,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
       <label>
         아이디
         <input
+          data-testid="authentication-password-recovery-user-id-input"
           value={userId}
           onChange={(e) => setId(e.target.value)}
           maxLength={30}
@@ -45,6 +47,7 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
       <label>
         등록 이메일
         <input
+          data-testid="authentication-password-recovery-email-input"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -52,10 +55,19 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
           required
         />
       </label>
-      <button className="authentication-primary" disabled={busy}>
+      <button
+        data-testid="authentication-password-recovery-submit-button"
+        className="authentication-primary"
+        disabled={busy}
+      >
         임시 비밀번호 요청
       </button>
-      <button type="button" onClick={onClose} disabled={busy}>
+      <button
+        data-testid="authentication-password-recovery-back-button"
+        type="button"
+        onClick={onClose}
+        disabled={busy}
+      >
         로그인으로 돌아가기
       </button>
     </form>

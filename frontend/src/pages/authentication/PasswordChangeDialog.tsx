@@ -44,6 +44,7 @@ export function PasswordChangeDialog({
       <label>
         현재 비밀번호
         <input
+          data-testid="authentication-password-change-current-input"
           type="password"
           autoComplete="current-password"
           value={currentPassword}
@@ -54,6 +55,7 @@ export function PasswordChangeDialog({
       <label>
         새 비밀번호
         <input
+          data-testid="authentication-password-change-new-input"
           type="password"
           autoComplete="new-password"
           value={newPassword}
@@ -64,6 +66,7 @@ export function PasswordChangeDialog({
       <label>
         새 비밀번호 확인
         <input
+          data-testid="authentication-password-change-confirm-input"
           type="password"
           autoComplete="new-password"
           value={confirmPassword}

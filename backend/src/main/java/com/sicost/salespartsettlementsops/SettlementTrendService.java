@@ -16,7 +16,9 @@ public class SettlementTrendService {
     public record Cell(String month,String value,String employeeType,String source,List<Issue> issues) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Metric(String metric,List<Cell> months,String total,String remark) {}
-    public record Person(String developerId,String name,String managementNo,List<Metric> metrics) {}
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record Person(String developerId,String name,String managementNo,List<Metric> metrics,
+        String baseMonthRemark) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record MonthTotal(String month,String personProfitShareAmount,String cardAmount,String partProfitAmount,List<Issue> issues) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
@@ -56,7 +58,17 @@ public class SettlementTrendService {
                 }
                 metrics.add(new Metric(metric,List.copyOf(cells),unknown?null:sum.toPlainString(),problems.isEmpty()?null:"미확인 월: "+String.join(", ",problems)));
             }
-            all.add(new Person(identity.developerId(),identity.name(),identity.managementNo(),List.copyOf(metrics)));
+            Result selectedResult = results.get(tabs.month());
+            String baseMonthRemark = selectedResult == null ? null : selectedResult.items().stream()
+                .filter(row -> row.developerId().equals(identity.developerId()))
+                .filter(row -> row.mm() != null && new BigDecimal(row.mm()).signum() > 0)
+                .map(Row::remark)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+            all.add(new Person(
+                identity.developerId(), identity.name(), identity.managementNo(),
+                List.copyOf(metrics), baseMonthRemark
+            ));
         }
         BigDecimal period=BigDecimal.ZERO;boolean unknown=false;
         for(MonthTotal total:totals)if(results.containsKey(total.month())) {if(total.partProfitAmount()==null)unknown=true;else period=period.add(new BigDecimal(total.partProfitAmount()));}

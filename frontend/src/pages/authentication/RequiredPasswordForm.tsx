@@ -12,6 +12,7 @@ export function RequiredPasswordForm({
     [busy, setBusy] = useState(false);
   return (
     <form
+      data-testid="authentication-required-password-form"
       onSubmit={async (e) => {
         e.preventDefault();
         if (busy) return;
@@ -45,6 +46,7 @@ export function RequiredPasswordForm({
       <label>
         새 비밀번호
         <input
+          data-testid="authentication-required-password-new-input"
           type="password"
           autoComplete="new-password"
           value={newPassword}
@@ -56,6 +58,7 @@ export function RequiredPasswordForm({
       <label>
         새 비밀번호 확인
         <input
+          data-testid="authentication-required-password-confirm-input"
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
@@ -63,7 +66,11 @@ export function RequiredPasswordForm({
           required
         />
       </label>
-      <button className="authentication-primary" disabled={busy}>
+      <button
+        data-testid="authentication-required-password-submit-button"
+        className="authentication-primary"
+        disabled={busy}
+      >
         변경 후 로그인
       </button>
     </form>
