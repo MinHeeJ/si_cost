@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   compareDecimal,
   formatAmount,
+  formatIntegerAmount,
+  formatShortDate,
+  formatShortDateTime,
   formatDate,
   formatMm,
   formatRate,
@@ -12,6 +15,37 @@ import {
 } from "./format";
 
 describe("정밀한 공통 표시와 입력", () => {
+  it("짧은 날짜도 서울 시간대와 결측값을 보존하고 ISO 초를 숨긴다", () => {
+    for (const value of ["2026-11-16T17:05:14.951915", "2026-11-16T17:05:14.951915+09:00", "2026-11-16T08:05:14Z"]) {
+      expect(formatShortDate(value)).toBe("11-16");
+      expect(formatShortDateTime(value)).toBe("11-16 17:05");
+      expect(formatDateTime(value)).toBe("2026-11-16 17:05");
+      expect(formatDate(value)).toBe("2026-11-16");
+    }
+    expect(formatShortDate("2026-11-16")).toBe("11-16");
+    expect(formatShortDateTime("2025-12-31T16:00:00Z")).toBe("01-01 01:00");
+    for (const value of [null, undefined]) {
+      expect(formatShortDate(value)).toBe("–");
+      expect(formatShortDateTime(value)).toBe("–");
+    }
+  });
+  it.each([
+    ["784349997", "천원", "784,350"],
+    ["4666666", "천원", "4,667"],
+    ["5561666", "천원", "5,562"],
+    ["1499", "천원", "1"],
+    ["1500", "천원", "2"],
+    ["-1500", "천원", "−2"],
+    ["-499", "천원", "0"],
+    ["0", "원", "0"],
+    ["1500000", "백만원", "2"],
+    ["999999999999999999999999", "천원", "1,000,000,000,000,000,000,000"],
+    ["9007199254740993", "원", "9,007,199,254,740,993"],
+    [null, "천원", "–"],
+    [undefined, "원", "–"],
+  ] as const)("정수 금액 표시 %s %s", (value, unit, expected) => {
+    expect(formatIntegerAmount(value, unit)).toBe(expected);
+  });
   it("원 정수를 비파괴 이동하여 단위를 바꾸며 추가 반올림하지 않는다", () => {
     const row = Object.freeze({
       amount: "999999999999999999999999",

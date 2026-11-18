@@ -160,7 +160,9 @@ it("전체 이력·담당자·수정자·날짜와 서로 다른 상태 색을 �
   expect(
     screen.getByText("기한 지남", { selector: "span.sicost-badge" }),
   ).toHaveClass("sicost-tone-bad");
-  expect(screen.getByText(row.registeredAt)).toBeInTheDocument();
+  expect(screen.getByText("2026-06-01")).toBeInTheDocument();
+  expect(screen.getByText("2026-06-02")).toBeInTheDocument();
+  expect(screen.queryByText(row.registeredAt)).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "삭제" }),
   ).not.toBeInTheDocument();
@@ -261,6 +263,10 @@ it("수정 종료는 최초 소속과 담당자를 전송하지 않고 PUT 후 �
   draw();
   await ready();
   await userEvent.click(screen.getByRole("button", { name: row.title }));
+  const audit = screen.getByTestId("issue-audit");
+  expect(audit).toHaveTextContent("06-01 최초 담당자 등록 · 06-02 다른 수정자 고침");
+  expect(audit.querySelector("br")).toBeNull();
+  expect(audit).not.toHaveTextContent("+09:00");
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "저장" })).not.toBeDisabled(),
   );

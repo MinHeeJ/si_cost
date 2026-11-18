@@ -3,6 +3,7 @@ import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "../apiops/AnalysisTable";
 import "../apiops/projectAnalysis.css";
 import { StatusBadge } from "../../shared/Feedback";
+import { formatDate } from "../../shared/format";
 import type { ProjectIssue, ProjectIssuesPage } from "./projectIssuesApi";
 
 export const issueColumnIds = [
@@ -143,13 +144,13 @@ export function ProjectIssueTable({
         </StatusBadge>
       ),
     },
-    { id: "registeredAt", label: "등록일", render: (r) => r.registeredAt },
+    { id: "registeredAt", label: "등록일", render: (r) => formatDate(r.registeredAt) },
     {
       id: "modifiedBy",
       label: "수정자",
       render: (r) => r.modifiedBy?.userName ?? "–",
     },
-    { id: "modifiedAt", label: "수정일", render: (r) => r.modifiedAt ?? "–" },
+    { id: "modifiedAt", label: "수정일", render: (r) => formatDate(r.modifiedAt) },
   ];
   const visible = view
     ? view.order

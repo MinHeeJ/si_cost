@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import {
-  formatAmount,
+  formatIntegerAmount,
   formatFixedDecimal,
   type AmountUnit,
 } from "../../shared/format";
@@ -56,7 +56,7 @@ export function SalesForecastPanel() {
     return () => events.forEach((name) => window.removeEventListener(name, refresh));
   }, []);
   const unit = unitNames[amountUnit];
-  const money = (value: string | null | undefined) => formatAmount(value, unit);
+  const money = (value: string | null | undefined) => formatIntegerAmount(value, unit);
   const people = (value: string | null | undefined) =>
     formatFixedDecimal(value, 1);
   const identities = data
@@ -426,11 +426,11 @@ function ForecastBars({
               <title>
                 {r.month} · {labels[0]}{" "}
                 {unit
-                  ? formatAmount(r.first, unit)
+                  ? formatIntegerAmount(r.first, unit)
                   : formatFixedDecimal(r.first, 1)}{" "}
                 · {labels[1]}{" "}
                 {unit
-                  ? formatAmount(r.second, unit)
+                  ? formatIntegerAmount(r.second, unit)
                   : formatFixedDecimal(r.second, 1)}
               </title>
               {r.first != null && (

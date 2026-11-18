@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
-import { formatDecimal } from "../../shared/format";
+import { formatDecimal, formatShortDateTime } from "../../shared/format";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import {
   AssignmentError,
@@ -303,7 +303,7 @@ export function AssignmentDrawer({
               {
                 id: "actor",
                 label: "입력자/시각",
-                render: (h) => `${h.actor} / ${h.registeredAt}`,
+                render: (h) => `${h.actor} / ${formatShortDateTime(h.registeredAt)}`,
               },
               {
                 id: "badge",
