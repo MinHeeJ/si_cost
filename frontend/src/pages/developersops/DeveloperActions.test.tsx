@@ -8,6 +8,8 @@ import {
 } from "./DeveloperStatusToolbar";
 import { useDeveloperSelection } from "./useDeveloperSelection";
 import * as api from "./peopleClient";
+import * as developers from "../developers/peopleClient";
+vi.mock("../developers/peopleClient", () => ({ getDeveloper: vi.fn() }));
 vi.mock("./peopleClient", async (original) => ({
   ...(await original<typeof api>()),
   getDeveloperAssignments: vi.fn(),
@@ -28,6 +30,12 @@ const empty: api.DeveloperAssignmentsPage = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(developers.getDeveloper).mockImplementation(
+    async (id) =>
+      ({ ...row, id, managementNo: "K-0901" }) as Awaited<
+        ReturnType<typeof developers.getDeveloper>
+      >,
+  );
   vi.mocked(api.getDeveloperAssignments).mockResolvedValue(empty);
   vi.mocked(api.getDeveloperSelection).mockResolvedValue({ items: [] });
   vi.mocked(api.saveDeveloperBulkStatus).mockResolvedValue({
@@ -165,7 +173,7 @@ it("select all freezes real IDs/revisions and retains across pages", async () =>
   view.rerender(<Host page={2} />);
   expect(screen.getByText("선택 122건")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
   expect(api.saveDeveloperBulkStatus).toHaveBeenCalledWith("N", items.slice(1));
 });
 it.each(["filter", "sort", "size"])(
@@ -233,11 +241,11 @@ it("single status confirms and cancellation preserves selection without writing"
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "취소" }));
+  await userEvent.click(await screen.findByRole("button", { name: "취소" }));
   expect(api.saveDeveloperBulkStatus).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
-  await screen.findByText("적용 1건 · 변경 없음 0건 · 거부 0건");
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
+  await screen.findByText("1명의 사용을 중지했습니다.");
   expect(api.saveDeveloperBulkStatus).toHaveBeenCalledWith("N", [
     { id: row.id, revision: row.revision },
   ]);
@@ -269,7 +277,7 @@ it("network failure blocks resubmit until explicit reload with fresh data", asyn
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
   expect(await screen.findByRole("alert")).toHaveTextContent("통신 실패");
   expect(screen.getByRole("button", { name: "사용 중지" })).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
@@ -285,14 +293,14 @@ it("committed update refreshes immediately and refresh failure offers only reque
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "저장됐지만 다시 불러오지 못했습니다",
   );
   await userEvent.click(screen.getByRole("button", { name: "재조회" }));
   expect(api.saveDeveloperBulkStatus).toHaveBeenCalledTimes(1);
 });
-it("blocked result displays project identity, period and count with error tone", async () => {
+it("blocked result displays returned project in the stop warning", async () => {
   vi.mocked(api.saveDeveloperBulkStatus).mockResolvedValue({
     applied: [],
     noChange: [],
@@ -326,12 +334,11 @@ it("blocked result displays project identity, period and count with error tone",
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
-  expect(await screen.findByText("거부")).toHaveClass("sicost-tone-bad");
-  expect(screen.getByText("차단 1건")).toBeInTheDocument();
-  expect(screen.getByText(/동명 프로젝트 \(P-901\)/)).toHaveTextContent(
-    "2026-07-01 ~ 2026-08-01",
-  );
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
+  expect(
+    await screen.findByRole("dialog", { name: "사용을 중지할 수 없습니다" }),
+  ).toHaveTextContent("검증 개발자 (K-0901) — 동명 프로젝트 ~2026-08-01");
+  expect(screen.queryByText("개발자 처리 결과")).not.toBeInTheDocument();
 });
 it("invalid result totals never report success", async () => {
   vi.mocked(api.saveDeveloperBulkStatus).mockResolvedValue({
@@ -351,9 +358,139 @@ it("invalid result totals never report success", async () => {
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  await userEvent.click(await screen.findByTestId("developer-status-confirm"));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "처리 결과를 확인할 수 없습니다",
   );
   expect(committed).not.toHaveBeenCalled();
 });
+
+const activeAssignment: api.DeveloperAssignment = {
+  id: "A-1",
+  projectId: "P-1",
+  projectName: "진행 프로젝트",
+  jobCode: "DEV",
+  jobName: "개발",
+  startDate: "2026-01-01",
+  endDate: "9999-12-31",
+  contractMm: "1",
+  assignmentStatus: "ACT",
+};
+
+it("checks later assignment pages and ignores cancelled assignments", async () => {
+  vi.mocked(api.getDeveloperAssignments)
+    .mockResolvedValueOnce({
+      ...empty,
+      size: 100,
+      total: 101,
+      items: [{ ...activeAssignment, assignmentStatus: "CNCL" }],
+    })
+    .mockResolvedValueOnce({
+      ...empty,
+      size: 100,
+      page: 2,
+      total: 101,
+      items: [activeAssignment],
+    });
+  render(
+    <DeveloperSingleStatus
+      row={row}
+      onCommitted={vi.fn()}
+      onRefresh={vi.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
+  expect(
+    await screen.findByRole("dialog", { name: "사용을 중지할 수 없습니다" }),
+  ).toHaveTextContent("진행 프로젝트");
+  expect(api.getDeveloperAssignments).toHaveBeenCalledWith(row.id, 2, 100);
+});
+
+it("does not offer confirmation if the assignment lookup fails", async () => {
+  vi.mocked(api.getDeveloperAssignments).mockRejectedValue(
+    new Error("투입 조회 실패"),
+  );
+  render(
+    <DeveloperSingleStatus
+      row={row}
+      onCommitted={vi.fn()}
+      onRefresh={vi.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("투입 조회 실패");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(api.saveDeveloperBulkStatus).not.toHaveBeenCalled();
+});
+
+it("single active assignment opens a one-button warning without saving", async () => {
+  vi.mocked(api.getDeveloperAssignments).mockResolvedValue({
+    ...empty,
+    items: [activeAssignment],
+    total: 1,
+  });
+  render(
+    <DeveloperSingleStatus
+      row={row}
+      onCommitted={vi.fn()}
+      onRefresh={vi.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
+  const dialog = await screen.findByRole("dialog", {
+    name: "사용을 중지할 수 없습니다",
+  });
+  expect(dialog).toHaveTextContent(
+    "검증 개발자 (K-0901) — 진행 프로젝트 ~9999-12-31",
+  );
+  expect(dialog.querySelectorAll("button")).toHaveLength(1);
+  expect(api.saveDeveloperBulkStatus).not.toHaveBeenCalled();
+});
+
+it.each([true, false])(
+  "bulk stop handles blocked-only or mixed selection: blocked-only=%s",
+  async (allBlocked) => {
+    const second = { id: "DEV-000902", revision: "next" };
+    vi.mocked(api.getDeveloperSelection).mockResolvedValue({
+      items: [row, second],
+    });
+    vi.mocked(api.getDeveloperAssignments).mockImplementation(async (id) =>
+      id === row.id || allBlocked
+        ? { ...empty, items: [activeAssignment], total: 1 }
+        : empty,
+    );
+    vi.mocked(api.saveDeveloperBulkStatus).mockResolvedValue({
+      applied: [{ id: second.id }],
+      noChange: [],
+      rejected: [],
+      appliedCount: 1,
+      noChangeCount: 0,
+      rejectedCount: 0,
+    });
+    render(<Host />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "조회된 123건 모두 선택" }),
+    );
+    await screen.findByText("선택 2건");
+    await userEvent.click(screen.getByRole("button", { name: "사용 중지" }));
+    if (allBlocked) {
+      expect(
+        await screen.findByRole("dialog", {
+          name: "사용을 중지할 수 없습니다",
+        }),
+      ).toBeInTheDocument();
+      expect(api.saveDeveloperBulkStatus).not.toHaveBeenCalled();
+    } else {
+      expect(
+        await screen.findByText("중지할 수 없는 개발자"),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByTestId("developer-status-confirm"));
+      expect(api.saveDeveloperBulkStatus).toHaveBeenCalledWith("N", [second]);
+      expect(
+        await screen.findByText(
+          "1명의 사용을 중지했습니다. (1명은 투입 중이라 제외)",
+        ),
+      ).toBeInTheDocument();
+    }
+  },
+);

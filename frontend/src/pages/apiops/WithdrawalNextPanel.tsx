@@ -216,6 +216,7 @@ export function WithdrawalNextPanel({
                     </p>
                     {candidate.scoreItems.map((item) => (
                       <div
+                        data-testid={`withdrawal-score-${candidate.rank}-${Array.from(item.itemCode, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                         className="withdrawal-score"
                         key={item.itemCode}
                         title={item.basis}
@@ -261,6 +262,7 @@ export function WithdrawalNextPanel({
               })}
               {data.shortageMonths.map((month) => (
                 <p
+                  data-testid={`withdrawal-shortage-${Array.from(`${month.month}-${month.jobCode}`, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                   className="sicost-banner sicost-tone-warn"
                   key={`${month.month}-${month.jobCode}`}
                 >
@@ -293,7 +295,14 @@ export function WithdrawalNextPanel({
               선택 기회 {confirmation?.candidate.nextPosition?.opportunityName}{" "}
               · 자리 {confirmation?.candidate.needSn}
             </p>
-            {confirmation?.warnings.map((w) => <p key={w.code}>{w.message}</p>)}
+            {confirmation?.warnings.map((w) => (
+              <p
+                data-testid={`withdrawal-confirmation-warning-${Array.from(w.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={w.code}
+              >
+                {w.message}
+              </p>
+            ))}
             <WithdrawalError error={error} />
           </div>
         </Dialog>

@@ -21,6 +21,7 @@ export type DialogProps = {
   footerStart?: ReactNode;
   noValidate?: boolean;
   permission?: { screen: string; action: string };
+  hideCancel?: boolean;
 };
 const FOCUSABLE =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
@@ -43,6 +44,7 @@ export function Dialog({
   footerStart,
   noValidate,
   permission,
+  hideCancel = false,
 }: DialogProps) {
   const granted = usePermission(
     permission?.screen ?? "",
@@ -169,17 +171,19 @@ export function Dialog({
         {!readOnly && (
           <footer>
             {footerStart}
-            <button
-              type="button"
-              data-testid={cancelTestId}
-              data-action-id={cancelActionId}
-              disabled={pending}
-              onClick={() => {
-                if (!inFlight.current) onCancel();
-              }}
-            >
-              {cancelLabel}
-            </button>
+            {!hideCancel && (
+              <button
+                type="button"
+                data-testid={cancelTestId}
+                data-action-id={cancelActionId}
+                disabled={pending}
+                onClick={() => {
+                  if (!inFlight.current) onCancel();
+                }}
+              >
+                {cancelLabel}
+              </button>
+            )}
             <button
               type="submit"
               data-testid={confirmTestId}
