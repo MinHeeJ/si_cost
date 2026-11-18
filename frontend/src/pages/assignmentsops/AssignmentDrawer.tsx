@@ -89,7 +89,9 @@ export function AssignmentDrawer({
     type === "EXTP" || type === "KIND" ? kindName(v) : (v ?? "–");
   return (
     <DetailDrawer
-      title={row ? `${row.developerName} · ${row.projectName}` : `투입 배정 ${id}`}
+      title={
+        row ? `${row.developerName} · ${row.projectName}` : `투입 배정 ${id}`
+      }
       subtitle={
         row ? `${id} · ${row.managementNo} · ${row.jobName}` : undefined
       }
@@ -112,7 +114,11 @@ export function AssignmentDrawer({
         retry={() => void load().catch(() => {})}
       />
       {message && <p role="status">{message}</p>}
-      <nav className="assignment-tabs" role="tablist" aria-label="투입 배정 상세 영역">
+      <nav
+        className="assignment-tabs"
+        role="tablist"
+        aria-label="투입 배정 상세 영역"
+      >
         <button
           type="button"
           role="tab"
@@ -138,7 +144,10 @@ export function AssignmentDrawer({
             {(
               [
                 ["프로젝트", `${row.projectName} (${row.projectId})`],
-                ["실제 투입자", `${row.developerName} (${row.managementNo}) · ${row.developerId}`],
+                [
+                  "실제 투입자",
+                  `${row.developerName} (${row.managementNo}) · ${row.developerId}`,
+                ],
                 ["계약상 인력", row.contractDeveloperId ?? "–"],
                 ["직무", row.jobName],
                 ["투입 기간", `${row.startDate} ~ ${row.endDate}`],
@@ -149,14 +158,20 @@ export function AssignmentDrawer({
                 ["계약 월MM", row.contractMm],
                 [
                   "청구 단가",
-                  unitPriceNote(row.inputType, row.billingUnitPrice, contractType) ??
-                    `${formatDecimal(row.billingUnitPrice)} 원`,
+                  unitPriceNote(
+                    row.inputType,
+                    row.billingUnitPrice,
+                    contractType,
+                  ) ?? `${formatDecimal(row.billingUnitPrice)} 원`,
                 ],
                 ["투입 구분", kindName(row.inputType)],
                 ["연장 가능성", kindName(row.extensionPossibility)],
               ] as const
             ).map(([label, v]) => (
-              <div key={label}>
+              <div
+                data-testid={`assignment-detail-field-${Array.from(label, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                key={label}
+              >
                 <dt>{label}</dt>
                 <dd>{v}</dd>
               </div>
@@ -200,7 +215,11 @@ export function AssignmentDrawer({
                 label: "단가 (원)",
                 render: (m) =>
                   (row &&
-                    unitPriceNote(row.inputType, row.billingUnitPrice, contractType)) ||
+                    unitPriceNote(
+                      row.inputType,
+                      row.billingUnitPrice,
+                      contractType,
+                    )) ||
                   formatDecimal(m.appliedUnitPrice),
                 align: "right",
               },
