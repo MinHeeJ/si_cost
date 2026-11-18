@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../../shared/api";
 import { formatFixedDecimal } from "../../shared/format";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { quantityOption } from "../../shared/charts/chartAdapters";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { PeriodSelector } from "../shared/PeriodSelector";
 import {
@@ -330,7 +332,9 @@ export function WorkforceForecastPanel({
           {data.totals.length === 0 ? (
             <div className="workforce-forecast-empty">
               <p>선택 기간에 예측 자료가 없습니다.</p>
-              <button type="button" onClick={() => setReload((n) => n + 1)}>조건 초기화</button>
+              <button type="button" onClick={() => setReload((n) => n + 1)}>
+                조건 초기화
+              </button>
             </div>
           ) : (
             <>
@@ -442,6 +446,24 @@ function difference(value: string | null, status: string) {
   return `${zero ? "맞음" : `${people(value.replace(/^-/, ""))}명 ${value.startsWith("-") ? "부족" : "남음"}`}${status === "UNKNOWN" ? " · 판정 미확인" : ""}`;
 }
 function WorkforceBars({ data }: { data: api.WorkforceForecast }) {
+  const option = useMemo(
+    () =>
+      quantityOption(
+        data.totals.map((month) => month.month),
+        [
+          { name: "가용", values: data.totals.map((month) => month.supply) },
+          { name: "필요", values: data.totals.map((month) => month.demand) },
+          {
+            name: "그중 미충원",
+            values: data.totals.map((month) => month.unfilledDemand),
+            type: "line",
+            dashed: true,
+          },
+        ],
+        "명",
+      ),
+    [data],
+  );
   const maximum = Math.max(
     1,
     ...data.totals.flatMap((m) => [
@@ -456,51 +478,57 @@ function WorkforceBars({ data }: { data: api.WorkforceForecast }) {
         <span className="workforce-forecast-available">■ 가용</span>{" "}
         <span className="workforce-forecast-needed">■ 필요</span>
       </p>
-      <svg
-        role="img"
-        aria-label="월별 가용 vs 필요"
-        viewBox={`0 0 ${Math.max(600, data.months * 80)} 240`}
+      <ChartHost
+        testId="workforce-forecast-chart"
+        label="월별 가용 vs 필요"
+        option={option}
       >
-        {data.totals.map((m, i) => {
-          const a = (Number(m.supply ?? 0) / maximum) * 160,
-            b = (Number(m.demand ?? 0) / maximum) * 160,
-            x = 25 + i * Math.max(80, 550 / data.months);
-          return (
-            <g key={m.month}>
-              <title>
-                {m.month} · 가용 {people(m.supply)} · 필요 {people(m.demand)} ·
-                그중 미충원 {people(m.unfilledDemand)}
-              </title>
-              {m.supply != null && (
-                <rect
-                  x={x}
-                  y={190 - a}
-                  width="20"
-                  height={a}
-                  fill="var(--primary)"
-                />
-              )}
-              {m.demand != null && (
-                <rect
-                  x={x + 24}
-                  y={190 - b}
-                  width="20"
-                  height={b}
-                  fill="var(--warn)"
-                />
-              )}
-              <text x={x} y="215">
-                {m.month}
-              </text>
-              {(m.supply == null || m.demand == null) && (
-                <text x={x} y="25">
-                  미확인
+        <svg
+          role="img"
+          aria-label="월별 가용 vs 필요"
+          viewBox={`0 0 ${Math.max(600, data.months * 80)} 240`}
+        >
+          {data.totals.map((m, i) => {
+            const a = (Number(m.supply ?? 0) / maximum) * 160,
+              b = (Number(m.demand ?? 0) / maximum) * 160,
+              x = 25 + i * Math.max(80, 550 / data.months);
+            return (
+              <g key={m.month}>
+                <title>
+                  {m.month} · 가용 {people(m.supply)} · 필요 {people(m.demand)}{" "}
+                  · 그중 미충원 {people(m.unfilledDemand)}
+                </title>
+                {m.supply != null && (
+                  <rect
+                    x={x}
+                    y={190 - a}
+                    width="20"
+                    height={a}
+                    fill="var(--primary)"
+                  />
+                )}
+                {m.demand != null && (
+                  <rect
+                    x={x + 24}
+                    y={190 - b}
+                    width="20"
+                    height={b}
+                    fill="var(--warn)"
+                  />
+                )}
+                <text x={x} y="215">
+                  {m.month}
                 </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
+                {(m.supply == null || m.demand == null) && (
+                  <text x={x} y="25">
+                    미확인
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </ChartHost>
     </section>
   );
 }

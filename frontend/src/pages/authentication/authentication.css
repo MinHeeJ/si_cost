@@ -1,19 +1,85 @@
 .authentication-page {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  background: #f3f5f9;
-  color: #182230;
-  font-family: Inter, "Noto Sans KR", sans-serif;
-  padding: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+  align-items: center;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0;
+}
+.authentication-introduction {
+  position: relative;
+  align-self: stretch;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  padding: clamp(32px, 6vw, 100px);
+  background: radial-gradient(ellipse at 10% 100%, #21458b, transparent 70%),
+    #0f1e4a;
+  color: #fff;
+}
+.authentication-introduction .sicost-brand-mark {
+  width: 56px;
+  height: 56px;
+}
+.authentication-introduction .authentication-wordmark {
+  color: #bfdbfe;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.authentication-introduction h2 {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(26px, 3vw, 44px);
+  line-height: 1.45;
+  letter-spacing: -0.04em;
+}
+.authentication-introduction > p:last-of-type {
+  color: #cbd5e1;
+  line-height: 1.8;
+}
+.authentication-ledger-art {
+  display: flex;
+  align-items: end;
+  gap: 20px;
+  position: absolute;
+  bottom: 0;
+  right: 5%;
+  width: 65%;
+  height: 42%;
+  opacity: 0.16;
+  transform: skewY(-12deg);
+  pointer-events: none;
+}
+.authentication-ledger-art i {
+  flex: 1;
+  height: 30%;
+  border: 1px solid #93c5fd;
+  background: linear-gradient(#60a5fa, transparent);
+  border-radius: 8px 8px 0 0;
+}
+.authentication-ledger-art i:nth-child(2) {
+  height: 47%;
+}
+.authentication-ledger-art i:nth-child(3) {
+  height: 60%;
+}
+.authentication-ledger-art i:nth-child(4) {
+  height: 80%;
+}
+.authentication-ledger-art i:nth-child(5) {
+  height: 100%;
 }
 .authentication-card {
   width: min(420px, 100%);
-  background: white;
-  border: 1px solid #e3e8ef;
-  border-radius: 16px;
-  padding: 36px;
-  box-shadow: 0 12px 40px #172b4d0d;
+  justify-self: center;
+  background: var(--surface);
+  border: 0;
+  padding: 36px 28px;
 }
 .authentication-brand {
   font-size: 25px;
@@ -55,12 +121,43 @@
   font-size: 15px;
 }
 .authentication-card button {
+  min-height: 44px;
+  height: auto;
   padding: 11px 14px;
   border-radius: 7px;
   background: white;
   border: 1px solid #d8e0ec;
   cursor: pointer;
   margin: 4px 5px 4px 0;
+}
+.authentication-password-field {
+  position: relative;
+  display: block;
+}
+.authentication-password-group {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+.authentication-card .authentication-password-group label {
+  margin: 0;
+}
+.authentication-password-field input {
+  padding-right: 72px;
+}
+.authentication-card .authentication-password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 10px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  background: transparent;
 }
 .authentication-card .authentication-primary {
   display: block;
@@ -101,7 +198,10 @@
   box-shadow: 0 8px 24px #172b4d22;
   z-index: 1000;
 }
-@media (max-width: 600px) {
+@media (max-width: 767px) {
+  .authentication-introduction {
+    display: none;
+  }
   .authentication-card {
     padding: 24px;
   }
@@ -109,6 +209,7 @@
     font-size: 11px;
   }
   .authentication-page {
-    padding: 12px;
+    padding: 16px;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

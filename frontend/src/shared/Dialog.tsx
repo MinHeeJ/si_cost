@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePermission } from "./permission/PermissionBoundary";
+import { useModalLayer } from "./useModalLayer";
 
 export type DialogProps = {
   open: boolean;
@@ -13,6 +14,7 @@ export type DialogProps = {
   confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
+  fullPage?: boolean;
   testId?: string;
   confirmTestId?: string;
   cancelTestId?: string;
@@ -36,6 +38,7 @@ export function Dialog({
   confirmDisabled = false,
   cancelLabel = "취소",
   wide,
+  fullPage = false,
   testId,
   confirmTestId,
   cancelTestId,
@@ -55,25 +58,29 @@ export function Dialog({
   const inFlight = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const titleId = useId();
+  const dialogTestId =
+    testId ?? `confirmation-dialog-${titleId.replace(/:/g, "").toLowerCase()}`;
+  const isTop = useModalLayer(
+    ref,
+    open,
+    () => {
+      if (!pending && !inFlight.current) onCancel();
+    },
+    () => {
+      const target =
+        ref.current?.querySelector<HTMLElement>(
+          '[aria-invalid="true"],input:not(:disabled),textarea:not(:disabled),select:not(:disabled)',
+        ) ??
+        ref.current?.querySelector<HTMLElement>(
+          "[data-confirm]:not(:disabled)",
+        ) ??
+        ref.current?.querySelector<HTMLElement>(FOCUSABLE) ??
+        ref.current;
+      return target;
+    },
+  );
   useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const target =
-      ref.current?.querySelector<HTMLElement>(
-        '[aria-invalid="true"],input:not(:disabled),textarea:not(:disabled),select:not(:disabled)',
-      ) ??
-      ref.current?.querySelector<HTMLElement>(
-        "[data-confirm]:not(:disabled)",
-      ) ??
-      ref.current?.querySelector<HTMLElement>(FOCUSABLE) ??
-      ref.current;
-    target?.focus();
-    return () => {
-      previous?.focus();
-    };
-  }, [open]);
-  useEffect(() => {
-    if (open)
+    if (open && isTop())
       ref.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   });
   if (!open) return null;
@@ -94,37 +101,12 @@ export function Dialog({
     }
   };
   return createPortal(
-    <div
-      className="sicost-scrim"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && !pending && !inFlight.current) {
-          event.preventDefault();
-          onCancel();
-        }
-        if (event.key === "Tab") {
-          const nodes = [
-            ...(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []),
-          ];
-          const first = nodes[0],
-            last = nodes[nodes.length - 1];
-          if (!first) {
-            event.preventDefault();
-            ref.current?.focus();
-          } else if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last?.focus();
-          } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-          }
-        }
-      }}
-    >
+    <div className={`sicost-scrim${fullPage ? " sicost-form-scrim" : ""}`}>
       <form
         noValidate={noValidate}
         ref={ref}
-        data-testid={testId}
-        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}`}
+        data-testid={dialogTestId}
+        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}${fullPage ? " sicost-dialog-full-page sicost-form-page" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -140,7 +122,12 @@ export function Dialog({
         <header>
           <h2 id={titleId}>{title}</h2>
           {readOnly && (
-            <button type="button" onClick={onCancel} aria-label="닫기">
+            <button
+              type="button"
+              data-testid={`${dialogTestId}-close`}
+              onClick={onCancel}
+              aria-label="닫기"
+            >
               ×
             </button>
           )}
@@ -174,7 +161,7 @@ export function Dialog({
             {!hideCancel && (
               <button
                 type="button"
-                data-testid={cancelTestId}
+                data-testid={cancelTestId ?? `${dialogTestId}-cancel`}
                 data-action-id={cancelActionId}
                 disabled={pending}
                 onClick={() => {
@@ -186,7 +173,7 @@ export function Dialog({
             )}
             <button
               type="submit"
-              data-testid={confirmTestId}
+              data-testid={confirmTestId ?? `${dialogTestId}-confirm`}
               data-action-id={confirmActionId}
               data-confirm
               className="sicost-primary"

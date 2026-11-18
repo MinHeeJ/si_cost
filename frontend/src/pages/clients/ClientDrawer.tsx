@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
+import { DetailDescription } from "../../shared/Surface";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
@@ -284,7 +285,10 @@ function ClientDrawerContent({
                       {client.useYn === "Y" ? "사용" : "중지"}
                     </StatusBadge>
                   </p>
-                  <dl className="clients-details">
+                  <DetailDescription
+                    className="clients-details"
+                    testId="client-basic-description"
+                  >
                     {[
                       ["사업자번호", client.businessNo],
                       ["대표자", client.ceo],
@@ -353,7 +357,7 @@ function ClientDrawerContent({
                           </dd>
                         </div>
                       ))}
-                  </dl>
+                  </DetailDescription>
                   <p>집계 기준일 {client.basisDate}</p>
                 </>
               )}

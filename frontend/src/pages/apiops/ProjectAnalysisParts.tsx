@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { KpiStrip, KpiItem } from "../../shared/Surface";
 import { projectAmount } from "../projects/projectFormat";
 import { formatDecimal } from "../../shared/format";
 import type { Completeness } from "./projectAnalysisApi";
@@ -27,28 +28,25 @@ export function AnalysisSummary({
   unit?: AnalysisUnit;
 }) {
   return (
-    <div
+    <KpiStrip
       className="project-analysis-summary"
-      data-testid="analysis-summary-root"
+      testId="analysis-summary-root"
+      label="분석 요약"
     >
       {fields.map(([key, label, money]) => (
-        <section
+        <KpiItem
           key={key}
-          data-testid={`analysis-summary-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-        >
-          <span>{label}</span>
-          <strong
-            className={
-              String(summary[key] ?? "").startsWith("-")
-                ? "analysis-negative"
-                : undefined
-            }
-          >
-            {analysisDisplay(summary[key], money ? "amount" : "text", unit)}
-          </strong>
-        </section>
+          testId={`analysis-summary-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+          label={label}
+          value={analysisDisplay(summary[key], money ? "amount" : "text", unit)}
+          valueClassName={
+            String(summary[key] ?? "").startsWith("-")
+              ? "analysis-negative"
+              : undefined
+          }
+        />
       ))}
-    </div>
+    </KpiStrip>
   );
 }
 export function AnalysisCompleteness({ value }: { value: Completeness }) {

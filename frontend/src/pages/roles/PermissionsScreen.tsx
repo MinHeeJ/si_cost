@@ -495,7 +495,7 @@ export function PermissionsScreen({
             확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
             마감해제는 별도 관리자 자격을 검사합니다.
           </p>
-          <div className="roles-toolbar">
+          <div className="roles-toolbar roles-savebar">
             <div>
               <button
                 data-testid="role-page-previous"

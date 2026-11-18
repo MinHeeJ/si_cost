@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
+import { FormSection } from "../../shared/FormSection";
 import { Decimal } from "../../shared/Decimal";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { SkillsInput } from "../../shared/SkillsInput";
@@ -268,6 +269,8 @@ export function DeveloperForm({
         open={open}
         permission={{ screen: "UI-02", action: developer ? "UPD" : "REG" }}
         wide
+        fullPage
+        testId="developer-form-page"
         noValidate
         title={developer ? "개발자 수정" : "개발자 등록"}
         pending={pending}
@@ -303,8 +306,12 @@ export function DeveloperForm({
         )}
         <div ref={container} data-testid="developer-edit-form">
           {!developer && <ResumeExtractionFeedback state={resume} />}
-          <fieldset disabled={pending} className="developer-form-fields">
-            <legend>기본 정보</legend>
+          <FormSection
+            disabled={pending}
+            title="기본 정보"
+            testId="developer-basic-section"
+            className="developer-form-fields"
+          >
             {text("name", "이름", 50, true)}
             {text("managementNo", "관리번호", 20)}
             {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
@@ -349,10 +356,14 @@ export function DeveloperForm({
             {text("hireDate", "입사일", 10)}
             {select("positionCode", "직위", codes.JBPS ?? [])}
             {select("directClass", "직접/간접", codes.DRCT_CLS ?? [], true)}
-          </fieldset>
+          </FormSection>
           {(canRate || canPay) && (
-            <fieldset disabled={pending} className="developer-form-fields">
-              <legend>금액</legend>
+            <FormSection
+              disabled={pending}
+              title="금액"
+              testId="developer-price-section"
+              className="developer-form-fields"
+            >
               {canRate && (
                 <Decimal
                   label="월 단가 (원/월)"
@@ -378,7 +389,7 @@ export function DeveloperForm({
                 </p>
               )}
               <p>{canPay ? priceHelp : "단가 변경은 저장월부터 적용됩니다."}</p>
-            </fieldset>
+            </FormSection>
           )}
         </div>
       </Dialog>

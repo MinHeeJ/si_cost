@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ClientForm } from "./ClientForm";
@@ -345,28 +346,28 @@ export function ClientsScreen({
       data-testid="clients-screen"
     >
       <div hidden={creating}>
-        <nav className="clients-tabs" aria-label="기준정보 탭" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={workspaceTab === "clients"}
-            data-testid="clients-workspace-tab"
-            onClick={() => changeTab("clients")}
-          >
-            거래처
-          </button>
-          {renderParts && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={workspaceTab === "parts"}
-              data-testid="parts-workspace-tab"
-              onClick={() => changeTab("parts")}
-            >
-              영업 파트
-            </button>
-          )}
-        </nav>
+        <SegmentedTabs
+          value={workspaceTab}
+          onChange={changeTab}
+          label="기준정보 탭"
+          testId="clients-workspace-tabs"
+          items={[
+            {
+              key: "clients",
+              label: "거래처",
+              testId: "clients-workspace-tab",
+            },
+            ...(renderParts
+              ? [
+                  {
+                    key: "parts" as const,
+                    label: "영업 파트",
+                    testId: "parts-workspace-tab",
+                  },
+                ]
+              : []),
+          ]}
+        />
         <div
           hidden={workspaceTab !== "clients"}
           role="tabpanel"

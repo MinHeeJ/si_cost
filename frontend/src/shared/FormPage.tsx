@@ -13,9 +13,9 @@ export function FormPage({
     <section className="sicost-form-page" data-testid="people-form-page">
       <header className="developer-toolbar">
         <h1>{title}</h1>
-        {actions}
       </header>
       {children}
+      <footer className="sicost-form-page-actions">{actions}</footer>
     </section>
   );
 }

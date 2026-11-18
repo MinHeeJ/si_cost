@@ -1,3 +1,9 @@
-[data-financial-negative="true"] { color: var(--bad) !important; }
+[data-financial-negative="true"] {
+  color: var(--bad) !important;
+}
 .financial-display-dense table td,
-.financial-display-dense table th { height: 32px; padding-top: 4px; padding-bottom: 4px; }
+.financial-display-dense table th {
+  height: 34px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}

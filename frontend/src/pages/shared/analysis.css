@@ -1,12 +1,16 @@
 .analysis-workspace {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  gap: 24px;
-  padding: 24px;
+  gap: 20px;
+  padding: 0;
   align-items: start;
   min-width: 0;
 }
 .analysis-history {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-card);
   font-size: 13px;
   min-width: 0;
   position: sticky;
@@ -65,7 +69,7 @@
 .analysis-user-message {
   margin-left: auto;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 12px 12px 2px 12px;
   background: var(--primary-bg);
   max-width: 90%;
   white-space: pre-wrap;
@@ -74,7 +78,8 @@
 .analysis-answer {
   padding: 20px;
   border: 1px solid var(--divider);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
   background: var(--surface);
   display: flex;
   flex-direction: column;
@@ -147,7 +152,8 @@
 .analysis-composer {
   background: var(--surface);
   border: 1px solid var(--divider);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -212,7 +218,7 @@
 .analysis-side-panel {
   position: fixed;
   right: 0;
-  top: 56px;
+  top: 64px;
   bottom: 0;
   width: min(780px, 100vw);
   background: var(--bg);
@@ -290,6 +296,7 @@
   }
   .analysis-side-panel {
     width: 100vw;
+    top: 56px;
   }
   .analysis-safety {
     align-items: start;

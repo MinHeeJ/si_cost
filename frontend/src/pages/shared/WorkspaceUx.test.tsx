@@ -128,6 +128,25 @@ afterEach(() => {
 });
 
 describe("레퍼런스 공통 UX", () => {
+  it("헤더 기준일은 서버 응답을 표시하고 메뉴 찾기는 기존 단축키와 같은 창을 연다", async () => {
+    render(
+      <MemoryRouter initialEntries={["/UI-16"]}>
+        <SharedApplication />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByTestId("workspace-server-basis"),
+    ).toHaveTextContent("2026-11-10");
+    await userEvent.click(screen.getByTestId("workspace-menu-search"));
+    expect(
+      screen.getByRole("dialog", { name: "메뉴 찾기" }),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(
+      screen.queryByRole("dialog", { name: "메뉴 찾기" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("workspace-menu-search")).toHaveFocus();
+  });
   it("미수 메뉴는 전체 현재 미수건수·마감 메뉴는 현재월 미마감 경고를 표시한다", async () => {
     vi.mocked(api.getMenus).mockResolvedValue({
       items: [

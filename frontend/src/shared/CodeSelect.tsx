@@ -10,6 +10,7 @@ export type CodeSelectProps = {
   error?: string;
   disabled?: boolean;
   onSelectionConfirmed?(): void;
+  testId?: string;
 };
 export function CodeSelect({
   label,
@@ -18,6 +19,7 @@ export function CodeSelect({
   onChange,
   error,
   onSelectionConfirmed,
+  testId,
   ...props
 }: CodeSelectProps) {
   const id = useId();
@@ -26,6 +28,9 @@ export function CodeSelect({
       <label htmlFor={id}>{label}</label>
       <select
         {...props}
+        data-testid={
+          testId ?? `code-select-${id.replace(/:/g, "").toLowerCase()}`
+        }
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}

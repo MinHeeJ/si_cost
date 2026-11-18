@@ -21,8 +21,17 @@ import { SharedScreenContext } from "../shared/SharedScreenContext";
 import { dashboardFixture } from "./dashboardFixture";
 import * as api from "./dashboardApi";
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({
+    children,
+    periodContext,
+  }: {
+    children: ReactNode;
+    periodContext?: ReactNode;
+  }) => (
+    <section>
+      {periodContext}
+      {children}
+    </section>
   ),
 }));
 vi.mock("./dashboardApi", () => ({
