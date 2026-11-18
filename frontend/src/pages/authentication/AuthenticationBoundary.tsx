@@ -166,7 +166,8 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     if (!permissions) return;
     const screens = usableScreens,
       first = screens.includes("UI-16") ? "UI-16" : screens[0];
-    const active = location.hash.match(/^#(UI-\d{2})$/)?.[1] ?? location.pathname.slice(1);
+    const active =
+      location.hash.match(/^#(UI-\d{2})$/)?.[1] ?? location.pathname.slice(1);
     if (first && !screens.includes(active)) {
       if (active && active !== "UI-22")
         setError("이 화면을 볼 권한이 없습니다.");
@@ -178,7 +179,7 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
   if (!state) return <p role="status">인증 정보를 확인하는 중입니다.</p>;
   if (state.nextStep !== "AUTHENTICATED")
     return (
-      <main className="authentication-page">
+      <main data-testid="authentication-page" className="authentication-page">
         <section className="authentication-card">
           <div className="authentication-brand">
             SI COST<span>프로젝트 원가관리</span>
@@ -209,7 +210,7 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     );
   if (!permissions)
     return (
-      <main>
+      <main data-testid="authentication-permissions-loading">
         {error ? (
           <ErrorBanner message={error} />
         ) : (
@@ -219,14 +220,14 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     );
   if (!Object.keys(permissions.screens).length)
     return (
-      <main>
+      <main data-testid="authentication-no-permissions">
         <p>볼 수 있는 화면이 없습니다. 관리자에게 권한을 요청해 주세요.</p>
         <SessionIndicator logoutOnly />
       </main>
     );
   if (!usableScreens.length)
     return (
-      <main>
+      <main data-testid="authentication-pc-required">
         <p>이 화면은 PC에서 이용해 주세요.</p>
         <SessionIndicator logoutOnly />
       </main>
@@ -236,9 +237,12 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
   return (
     <PermissionContext.Provider value={permissions}>
       {error && <ErrorBanner message={error} />}
-      <div key={version}>{children}</div>
+      <div data-testid="authentication-content" key={version}>
+        {children}
+      </div>
       {recommend && (
         <div
+          data-testid="authentication-password-recommendation-dialog"
           role="dialog"
           aria-label="비밀번호 변경 권장"
           className="authentication-recommend"
@@ -249,12 +253,14 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
               : "변경일 정보 없음. 비밀번호 변경을 권장합니다."}
           </p>
           <button
+            data-testid="authentication-password-recommendation-change-button"
             disabled={recommendPending}
             onClick={() => void chooseRecommendation(true)}
           >
             변경
           </button>
           <button
+            data-testid="authentication-password-recommendation-later-button"
             disabled={recommendPending}
             onClick={() => void chooseRecommendation(false)}
           >

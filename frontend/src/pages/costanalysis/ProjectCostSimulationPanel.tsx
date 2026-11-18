@@ -163,15 +163,59 @@ export function ProjectCostSimulationPanel({
         <section data-testid="cost-simulation-result" role="status">
           <dl>
             <dt>변경 전 마진</dt>
-            <dd className={result.beforeMargin?.startsWith("-") ? "cost-negative" : undefined}>{result.beforeMargin}%</dd>
+            <dd
+              className={
+                result.beforeMargin?.startsWith("-")
+                  ? "cost-negative"
+                  : undefined
+              }
+            >
+              {result.beforeMargin}%
+            </dd>
             <dt>변경 후 마진</dt>
-            <dd className={result.afterMargin?.startsWith("-") ? "cost-negative" : undefined}>{result.afterMargin}%</dd>
+            <dd
+              className={
+                result.afterMargin?.startsWith("-")
+                  ? "cost-negative"
+                  : undefined
+              }
+            >
+              {result.afterMargin}%
+            </dd>
             <dt>차이</dt>
-            <dd className={result.differencePp?.startsWith("-") ? "cost-negative" : undefined}>{result.differencePp}%p</dd>
+            <dd
+              className={
+                result.differencePp?.startsWith("-")
+                  ? "cost-negative"
+                  : undefined
+              }
+            >
+              {result.differencePp}%p
+            </dd>
             <dt>변경 전 목표 대비</dt>
-            <dd className={result.beforeTargetGap?.startsWith("-") ? "cost-negative" : undefined}>{result.beforeTargetGap ?? "–"}</dd>
+            <dd
+              className={
+                result.beforeTargetGap?.startsWith("-")
+                  ? "cost-negative"
+                  : undefined
+              }
+            >
+              {result.beforeTargetGap == null
+                ? "–"
+                : `${result.beforeTargetGap}%p`}
+            </dd>
             <dt>변경 후 목표 대비</dt>
-            <dd className={result.afterTargetGap?.startsWith("-") ? "cost-negative" : undefined}>{result.afterTargetGap ?? "–"}</dd>
+            <dd
+              className={
+                result.afterTargetGap?.startsWith("-")
+                  ? "cost-negative"
+                  : undefined
+              }
+            >
+              {result.afterTargetGap == null
+                ? "–"
+                : `${result.afterTargetGap}%p`}
+            </dd>
           </dl>
           <p>{result.message}</p>
         </section>

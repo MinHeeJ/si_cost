@@ -13,8 +13,11 @@ export function useAnalysisMobile() {
 }
 
 /** Desktop keeps DataTable; the same columns/actions form 20-row mobile cards. */
-export function AnalysisTable<T>(props: DataTableProps<T>) {
+export function AnalysisTable<T>(
+  props: DataTableProps<T> & { mobileRowAction?: boolean },
+) {
   const mobile = useAnalysisMobile();
+  const mobileAction = props.mobileRowAction ? props.onRowAction : undefined;
   const callbacks = useRef(props);
   callbacks.current = props;
   const previousMobile = useRef(false),
@@ -74,6 +77,19 @@ export function AnalysisTable<T>(props: DataTableProps<T>) {
           key={props.rowKey(row)}
           className="analysis-mobile-card"
           data-testid={`analysis-mobile-card-${Array.from(String(props.rowKey(row)), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+          tabIndex={mobileAction ? 0 : undefined}
+          onClick={mobileAction ? () => mobileAction(row) : undefined}
+          onKeyDown={
+            mobileAction
+              ? (event) => {
+                  if (
+                    event.key === "Enter" &&
+                    event.target === event.currentTarget
+                  )
+                    mobileAction(row);
+                }
+              : undefined
+          }
         >
           <dl>
             {columns.map((column) => (
