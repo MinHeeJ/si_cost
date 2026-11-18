@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(CodeMappingsController.class)
 @ContextConfiguration(classes = CodeMappingsController.class)
 @Import({CodeMappingsService.class, RevisionService.class, ChangeHistoryWriter.class,

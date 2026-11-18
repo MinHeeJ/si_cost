@@ -5,6 +5,10 @@ import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { MasterHistoryPage } from "../apiops/masterHistoryApi";
 import * as api from "./rolesApi";
+import {
+  usePermission,
+  useFeaturePermission,
+} from "../../shared/permission/PermissionBoundary";
 import "./roles.css";
 
 const actions = [
@@ -21,15 +25,18 @@ function ScopeSelect({
   value,
   onChange,
   testId,
+  disabled,
 }: {
   value: api.DataScope;
   onChange(value: api.DataScope): void;
   testId: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       aria-label="데이터범위"
       data-testid={testId}
+      disabled={disabled}
       value={value}
       onChange={(e) => onChange(e.target.value as api.DataScope)}
     >
@@ -46,6 +53,9 @@ export function PermissionsScreen({
 }: {
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const canRegister = usePermission("UI-24", "REG"),
+    canUpdate = usePermission("UI-24", "UPD"),
+    canStop = useFeaturePermission("roleStop");
   const [roles, setRoles] = useState<api.ManagedRole[]>([]),
     [menus, setMenus] = useState<api.RoleMenu[]>([]);
   const [saved, setSaved] = useState<api.ManagedRoleDetail>(),
@@ -178,6 +188,7 @@ export function PermissionsScreen({
     else action();
   }
   function open(mode: "NEW" | "COPY" | "STOP") {
+    if (mode === "STOP" ? !canStop : !canRegister) return;
     setModalError(undefined);
     setLocalFields({});
     setName("");
@@ -197,7 +208,7 @@ export function PermissionsScreen({
       window.dispatchEvent(new Event(`sicost:${resource}-committed`));
   }
   async function save() {
-    if (!draft || pending) return;
+    if (!canUpdate || !draft || pending) return;
     setError(undefined);
     try {
       await commit(
@@ -214,6 +225,7 @@ export function PermissionsScreen({
     }
   }
   async function create() {
+    if (!canRegister) return;
     setModalError(undefined);
     setLocalFields({});
     const normalized = name.trim();
@@ -249,7 +261,7 @@ export function PermissionsScreen({
     }
   }
   async function stop() {
-    if (!saved) return;
+    if (!canStop || !saved) return;
     try {
       await commit(
         async () => {
@@ -282,26 +294,30 @@ export function PermissionsScreen({
       <div className="roles-toolbar">
         <h2>역할별 권한 설정</h2>
         <div>
-          <button
-            data-testid="role-new-open"
-            data-action-id="R-NEW-OPEN"
-            disabled={pending || loading}
-            onClick={() => open("NEW")}
-          >
-            역할 추가
-          </button>
-          <button
-            data-testid="role-copy-open"
-            data-action-id="R-COPY-OPEN"
-            disabled={pending || loading || !saved}
-            onClick={() => open("COPY")}
-          >
-            역할 복사
-          </button>
+          {canRegister && (
+            <button
+              data-testid="role-new-open"
+              data-action-id="R-NEW-OPEN"
+              disabled={pending || loading}
+              onClick={() => open("NEW")}
+            >
+              역할 추가
+            </button>
+          )}
+          {canRegister && (
+            <button
+              data-testid="role-copy-open"
+              data-action-id="R-COPY-OPEN"
+              disabled={pending || loading || !saved}
+              onClick={() => open("COPY")}
+            >
+              역할 복사
+            </button>
+          )}
         </div>
       </div>
       <p role="note" className="sicost-banner sicost-tone-info">
-        권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.
+        저장된 역할·메뉴 권한과 담당 범위를 적용합니다.
       </p>
       {message && (
         <p role="status" className="sicost-banner sicost-tone-info">
@@ -375,10 +391,17 @@ export function PermissionsScreen({
             </StatusBadge>
           </div>
           <div className="roles-settings">
+            {!canUpdate && (
+              <p role="note">
+                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
+                수정).
+              </p>
+            )}
             <label className="sicost-field">
               데이터범위
               <ScopeSelect
                 testId="role-scope"
+                disabled={!canUpdate || pending}
                 value={draft.dataScope}
                 onChange={(value) => setDraft({ ...draft, dataScope: value })}
               />
@@ -386,6 +409,7 @@ export function PermissionsScreen({
             <label>
               <input
                 data-testid="role-sensitive"
+                disabled={!canUpdate || pending}
                 type="checkbox"
                 checked={draft.sensitiveView}
                 onChange={(e) =>
@@ -395,7 +419,8 @@ export function PermissionsScreen({
               민감항목 보기
             </label>
             <span>
-              급여·지급단가·개인별원가·거래처 지급계좌 (저장 설정만 적용)
+              급여·지급단가·개인별원가·거래처 지급계좌는 허용된 업무와 담당
+              범위에서만 표시됩니다.
             </span>
           </div>
           <div className="sicost-table-viewport">
@@ -440,7 +465,7 @@ export function PermissionsScreen({
                                 aria-label={`${row.name} ${label}`}
                                 data-testid={`role-${row.menuId}-${key}`}
                                 checked={row[key]}
-                                disabled={pending}
+                                disabled={!canUpdate || pending}
                                 onChange={(e) =>
                                   setDraft({
                                     ...draft,
@@ -466,9 +491,9 @@ export function PermissionsScreen({
             )}
           </div>
           <p className="roles-hint">
-            각 동작은 독립적으로 저장됩니다. 확정: 월마감/해제·영업파트
-            정산확정/취소·견적승인/반려. 실제 권한 적용과 민감항목 가림은
-            적용하지 않습니다.
+            각 동작은 독립적으로 저장되며 업무 접근에는 조회 권한도 필요합니다.
+            확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
+            마감해제는 별도 관리자 자격을 검사합니다.
           </p>
           <div className="roles-toolbar">
             <div>
@@ -502,7 +527,7 @@ export function PermissionsScreen({
               >
                 변경 이력
               </button>
-              {!draft.systemRole && (
+              {canStop && !draft.systemRole && (
                 <button
                   data-testid="role-stop-open"
                   disabled={pending}
@@ -511,21 +536,25 @@ export function PermissionsScreen({
                   사용 중지
                 </button>
               )}
-              <button
-                data-testid="role-cancel"
-                disabled={pending || !dirty}
-                onClick={() => setDraft(saved)}
-              >
-                취소
-              </button>
-              <button
-                data-testid="role-save"
-                className="sicost-primary"
-                disabled={pending || !dirty}
-                onClick={() => void save()}
-              >
-                저장
-              </button>
+              {canUpdate && (
+                <button
+                  data-testid="role-cancel"
+                  disabled={pending || !dirty}
+                  onClick={() => setDraft(saved)}
+                >
+                  취소
+                </button>
+              )}
+              {canUpdate && (
+                <button
+                  data-testid="role-save"
+                  className="sicost-primary"
+                  disabled={pending || !dirty}
+                  onClick={() => void save()}
+                >
+                  저장
+                </button>
+              )}
             </div>
           </div>
           <details>

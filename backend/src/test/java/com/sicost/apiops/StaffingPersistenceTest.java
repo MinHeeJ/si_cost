@@ -33,7 +33,7 @@ class StaffingPersistenceTest {
     @BeforeEach void install()throws Exception{
         db=new PostgreSqlDatabase();db.install();
         var factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
-        var config=new org.apache.ibatis.session.Configuration();config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);config.setLocalCacheScope(org.apache.ibatis.session.LocalCacheScope.STATEMENT);factory.setConfiguration(config);factory.setPlugins(new PersistenceBoundary());
+        var config=new org.apache.ibatis.session.Configuration();config.addMapper(AggregateLockMapper.class);config.setArgNameBasedConstructorAutoMapping(true);config.setMapUnderscoreToCamelCase(true);config.setLocalCacheScope(org.apache.ibatis.session.LocalCacheScope.STATEMENT);factory.setConfiguration(config);factory.setPlugins(new PersistenceBoundary());
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));session=new SqlSessionTemplate(Objects.requireNonNull(factory.getObject()));
         users=new CurrentUserProvider(session.getMapper(CurrentUserMapper.class));var actor=users.userId();
         tx=new TransactionTemplate(new DataSourceTransactionManager(db.source));
@@ -45,8 +45,10 @@ class StaffingPersistenceTest {
         selections=new TentativeSelectionService(session.getMapper(TentativeSelectionMapper.class),revisions,locks,monthly,history,users,invalidation,clock);
         String part=db.sql.queryForObject("SELECT part_id FROM tb_bs_part WHERE use_yn='Y' ORDER BY part_id LIMIT 1",String.class);
         db.sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES('D-staff','M-staff','인력 검증','FT','DEV','DRCT',?,'WORK',?)",part,actor);
+        // The installation seed has no business customers; make this test's opportunity source explicit.
+        db.sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_nm,clnt_type_cd,biz_reg_no,use_yn,reg_user_id) VALUES ('C-staff','인력 검증 고객','CUST','0123456789','Y',?)",actor);
         for(String id:List.of("O-staff1","O-staff2")){
-            db.sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id) SELECT ?,?,clnt_id,?,'FIND',50,100,'202607','ING','NONE',? FROM tb_bs_clnt ORDER BY clnt_id LIMIT 1",id,id,part,actor);
+            assertThat(db.sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id) VALUES (?,?,'C-staff',?,'FIND',50,100,'202607','ING','NONE',?)",id,id,part,actor)).isEqualTo(1);
             db.sql.update("INSERT INTO tb_sl_opp_need(opp_id,need_sn,job_cd,need_cnt,bgn_ym,prd_mcnt,mon_mm,reg_user_id) VALUES(?,1,'DEV',2,'202607',3,0.5,?)",id,actor);
         }
     }

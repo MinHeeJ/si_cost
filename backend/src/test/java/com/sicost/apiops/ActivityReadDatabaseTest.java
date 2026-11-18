@@ -38,7 +38,11 @@ class ActivityReadDatabaseTest {
         other="N-"+UUID.randomUUID().toString().replace("-","").substring(0,20);
         db.sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_err_cnt,user_stat_cd,mfa_err_cnt,reg_user_id) VALUES (?,?,?, ?,0,'USE',0,?)",other,"시험 수신자",other+"@example.test",new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode(UUID.randomUUID().toString()),actor);
         var users=mock(CurrentUserProvider.class);when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser(actor,"임시 관리자",List.of("ADMIN"),true));
-        service=new ActivityReadService(new ActivityReadRepository(mapper),users,Clock.fixed(at.atZone(ZoneId.of("Asia/Seoul")).toInstant(),ZoneOffset.UTC),false);
+        var clock=Clock.fixed(at.atZone(ZoneId.of("Asia/Seoul")).toInstant(),ZoneOffset.UTC);
+        var policies=mock(com.sicost.permission.PermissionService.class);when(policies.userId()).thenReturn(actor);
+        when(policies.capabilities()).thenReturn(new com.sicost.permission.PermissionService.Capabilities(Map.of(),new com.sicost.permission.PermissionService.Scope(false,Set.of(),Set.of()),false,Map.of(),Map.of(),Set.of()));
+        var projection=new com.sicost.permission.NotificationProjectionService(policies,mock(com.sicost.permission.PermissionMapper.class),mock(com.sicost.permission.NotificationTargetMapper.class),clock);
+        service=new ActivityReadService(new ActivityReadRepository(mapper),users,clock,false,projection);
     }
     @AfterEach void cleanup() {
         if(db!=null){String schema=db.sql.queryForObject("SELECT current_schema()",String.class);if(schema==null||!schema.matches("sicost_test_[a-f0-9]{32}"))throw new IllegalStateException("시험 스키마만 정리합니다.");db.sql.execute("DROP SCHEMA "+schema+" CASCADE");}

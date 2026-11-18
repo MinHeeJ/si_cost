@@ -15,12 +15,16 @@ public class SharedQueriesController {
     private final SharedQueriesService service;
     private final MenuService menus;
     private final CurrentUserProvider users;
+    private com.sicost.currentuserops.PermissionSettingsService settings;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionSettings(com.sicost.currentuserops.PermissionSettingsService settings) {this.settings=settings;}
     public SharedQueriesController(SharedQueriesService service,MenuService menus,CurrentUserProvider users) {
         this.service=service; this.menus=menus; this.users=users;
     }
     @GetMapping("/current-user")
-    public ApiResponse<CurrentUserProvider.CurrentUser> getCurrentUser(@RequestParam MultiValueMap<String,String> query) {
-        validate(query,Set.of()); return ApiResponse.ok(users.currentUser());
+    public ApiResponse<CurrentUserData> getCurrentUser(@RequestParam MultiValueMap<String,String> query) {
+        validate(query,Set.of());var user=users.currentUser();
+        return ApiResponse.ok(new CurrentUserData(user.userId(),user.name(),user.roleIds(),false,true,settings.getCurrentUserPermissionSettings()));
     }
     @GetMapping("/menus")
     public ApiResponse<MenusData> getMenus(@RequestParam MultiValueMap<String,String> query) {

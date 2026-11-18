@@ -46,6 +46,8 @@ public class DunningDeliveryState {
         }
         return List.copyOf(accepted);
     }
+    @Transactional(readOnly=true,propagation=org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public List<DeliveryRecipient> finalRecipients(String billId) {return service.preview(billId).recipients();}
     @Transactional
     public void complete(String billId,String eventKey,List<TaskSource> selected,DunningDeliveryMail.MailResult result) {
         locks.acquire(billId);

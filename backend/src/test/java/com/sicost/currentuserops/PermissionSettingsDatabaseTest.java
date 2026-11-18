@@ -43,6 +43,7 @@ class PermissionSettingsDatabaseTest {
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
         var configuration=new org.apache.ibatis.session.Configuration();
+        configuration.addMapper(com.sicost.permission.PermissionMapper.class);
         configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
         configuration.addInterceptor(new PersistenceBoundary());factory.setConfiguration(configuration);
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
@@ -50,12 +51,15 @@ class PermissionSettingsDatabaseTest {
         user="p"+UUID.randomUUID().toString().replace("-","").substring(0,15);
         sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_err_cnt,user_stat_cd,mfa_err_cnt,reg_user_id) VALUES(?,?,?,'not-a-login-value',0,'USE',0,'admin')",user,"권한 시험",user+"@example.org");
         CurrentUserProvider users=mock(CurrentUserProvider.class);
-        when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser(user,"권한 시험",List.of("RP","RJ"),true));
+        when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser(user,"권한 시험",List.of("RP","RJ"),false));
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);
         context.registerBean(ObjectMapper.class,()->JsonMapper.builder().findAndAddModules().build());
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2026-06-30T15:00:00Z"),ZoneOffset.UTC));
         context.registerBean(CurrentUserProvider.class,()->users);
         context.registerBean(PermissionSettingsMapper.class,()->mapper);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(user,null,List.of()));
+        context.registerBean(com.sicost.permission.PermissionMapper.class,()->session.getMapper(com.sicost.permission.PermissionMapper.class));
+        context.register(com.sicost.permission.PermissionService.class);
         context.register(Transactions.class,RevisionService.class,PermissionSettingsRepository.class,PermissionSettingsService.class);
         context.refresh();service=context.getBean(PermissionSettingsService.class);
         mvc=MockMvcBuilders.standaloneSetup(new PermissionSettingsController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
@@ -80,12 +84,12 @@ class PermissionSettingsDatabaseTest {
         return result;
     }
     @Test void sevenIndependentFlagsAndSensitiveViewUnionExcludeStoppedRoles() {
-        sql.update("INSERT INTO tb_sy_menu(menu_id,menu_nm,menu_lvl,sort_ord,reg_user_id) VALUES('PERMTEST','시험 메뉴',2,99,'admin')");
-        sql.update("INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id) VALUES('RP','PERMTEST','Y','N','Y','N','Y','N','Y','admin'),('RJ','PERMTEST','N','Y','N','Y','N','Y','N','admin')");
+        // Use the real registered project menu; duplicate screens are not independent permission targets.
+        sql.update("INSERT INTO tb_sy_role_menu_auth(role_id,menu_id,inq_yn,reg_yn,upd_yn,del_yn,upld_yn,dnld_yn,cnfm_yn,reg_user_id) VALUES('RP','M004','Y','N','Y','N','Y','N','Y','admin'),('RJ','M004','N','Y','N','Y','N','Y','N','admin')");
         var before=snapshot();var result=service.getCurrentUserPermissionSettings();
         assertThat(result.roleIds()).containsExactly("RJ","RP");assertThat(result.sensitiveView()).isTrue();
         assertThat(result.rowScope().all()).isFalse();
-        var permission=result.menuPermissions().stream().filter(p->p.menuId().equals("PERMTEST")).findFirst().orElseThrow();
+        var permission=result.menuPermissions().stream().filter(p->p.menuId().equals("M004")).findFirst().orElseThrow();
         assertThat(List.of(permission.inquire(),permission.register(),permission.update(),permission.delete(),permission.upload(),permission.download(),permission.confirm())).containsOnly(true);
         assertThat(snapshot()).isEqualTo(before);
         sql.update("UPDATE tb_sy_role SET use_yn='N' WHERE role_id='RJ'");

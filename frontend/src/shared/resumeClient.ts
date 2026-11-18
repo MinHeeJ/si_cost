@@ -1,4 +1,4 @@
-import { ApiError, type ApiErrorBody } from "./api";
+import { authenticatedFetch, ApiError, type ApiErrorBody } from "./api";
 export type ResumeValues = Partial<{
   name: string;
   employeeType: string;
@@ -44,7 +44,7 @@ export async function extractResume(
   const body = new FormData();
   body.append("file", file);
   body.append("targetType", targetType);
-  const response = await fetch("/api/resume-extractions", {
+  const response = await authenticatedFetch("/api/resume-extractions", {
     method: "POST",
     body,
     signal,

@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(ProjectPmController.class)
 @ContextConfiguration(classes=ProjectPmController.class)
 @Import({ProjectPmService.class,ProjectPmRepository.class,ProjectBudgetRepository.class,WriteCoordinator.class,

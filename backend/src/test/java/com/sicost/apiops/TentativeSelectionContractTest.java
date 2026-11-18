@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.sicost.apiops.TentativeSelectionDtos.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(TentativeSelectionController.class)
 @org.springframework.transaction.annotation.EnableTransactionManagement
 @ContextConfiguration(classes=TentativeSelectionController.class)

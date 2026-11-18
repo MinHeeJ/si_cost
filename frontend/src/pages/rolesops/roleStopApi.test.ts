@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { saveRoleStop, roleSettingsCommittedEvent } from "./roleStopApi";
 import { businessUsersCommittedEvent } from "../businessusersops/businessUserOptionsApi";
@@ -13,7 +14,7 @@ it("POST uses selected encoded ID, revision only, and invalidates only after suc
         { status: 200 },
       ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const roles = vi.fn(),
     users = vi.fn();
   window.addEventListener(roleSettingsCommittedEvent, roles);
@@ -52,8 +53,7 @@ it("POST uses selected encoded ID, revision only, and invalidates only after suc
   }
 });
 it("no-op causes no invalidation", async () => {
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi
       .fn()
       .mockResolvedValue(

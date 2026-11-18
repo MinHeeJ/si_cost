@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -183,7 +189,10 @@ it.each(["HOLD", "CTRT"])(
       await screen.findByText("조건에 맞는 자리가 없습니다."),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "조건 초기화" })).toHaveAttribute("type", "button");
+    expect(screen.getByRole("button", { name: "조건 초기화" })).toHaveAttribute(
+      "type",
+      "button",
+    );
   },
 );
 it("positions fail visibly and retry without mutating candidate", async () => {
@@ -267,9 +276,38 @@ it("inactive retained regions do not fetch and become fresh on activation", asyn
 });
 
 it("부족 직무 빈 상태 안에서 조건을 초기화할 수 있다", async () => {
-  vi.mocked(api.getCandidateShortages).mockResolvedValue({ data: { from: "2027-01", months: 6, includeUnfilled: false, items: [], total: 0, page: 1, size: 50 }, issues: [] });
+  vi.mocked(api.getCandidateShortages).mockResolvedValue({
+    data: {
+      from: "2027-01",
+      months: 6,
+      includeUnfilled: false,
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+    },
+    issues: [],
+  });
   render(<CandidateShortagesPanel onView={vi.fn()} />);
   await screen.findByText("부족 직무가 없습니다.");
   await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
   expect(api.getCandidateShortages).toHaveBeenCalledTimes(2);
+});
+
+it("keeps opportunity and job columns for a PM's server-projected position", async () => {
+  const { PermissionContext, ScreenPermissionContext } = await import("../../shared/permission/PermissionBoundary");
+  const { candidateCost, profitRate, belowApprovalThreshold, ...visible } = position;
+  vi.mocked(api.getCandidatePositions).mockResolvedValue({
+    data: { candidateId: candidate.id, items: [{ ...visible, availableFields: Object.keys(visible) }], total: 1, limit: 4 },
+    issues: [],
+  } as unknown as api.CandidateRead<api.CandidatePositions>);
+  render(<PermissionContext.Provider value={{ screens: { "UI-33": ["INQ"] }, sensitive: false, scope: { all: false, partIds: [], projectIds: [] }, fields: { "UI-33": [] } }}>
+    <ScreenPermissionContext.Provider value="UI-33"><CandidatePositionsPanel candidate={candidate} /></ScreenPermissionContext.Provider>
+  </PermissionContext.Provider>);
+  expect(await screen.findByRole("link", { name: "실제 기회명" })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "기회 / 확률" })).toBeVisible();
+  expect(screen.getByRole("columnheader", { name: "직무 / 등급" })).toBeVisible();
+  expect(screen.getByText("DEV / MD")).toBeVisible();
+  expect(screen.queryByRole("columnheader", { name: "예상 이익률" })).not.toBeInTheDocument();
+  expect(document.body.textContent).not.toContain("후보 원가");
 });

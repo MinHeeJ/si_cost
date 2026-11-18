@@ -1,4 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
+import {
+  render,
+  screen,
+  waitFor,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
@@ -18,7 +23,7 @@ const response = (data: unknown) =>
   new Response(JSON.stringify({ success: true, meta: {}, data }));
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   fetcher.mockImplementation(async (url) => {
     const path = String(url),
       data = financialEditorFixture();
@@ -90,15 +95,49 @@ it("uses one-time financial source month without saving destination PERIOD", asy
 
 function EntryButtons() {
   const navigate = useNavigate();
-  return <><button onClick={() => navigate("/UI-13", { state: { fromMonthClose: true, month: "2026-05" } })}>다른 화면</button><button onClick={() => navigate("/UI-10", { state: { fromCashFlow: true, month: "2026-03" } })}>재무 다시</button><FinancialItemsScreen /></>;
+  return (
+    <>
+      <button
+        onClick={() =>
+          navigate("/UI-13", {
+            state: { fromMonthClose: true, month: "2026-05" },
+          })
+        }
+      >
+        다른 화면
+      </button>
+      <button
+        onClick={() =>
+          navigate("/UI-10", {
+            state: { fromCashFlow: true, month: "2026-03" },
+          })
+        }
+      >
+        재무 다시
+      </button>
+      <FinancialItemsScreen />
+    </>
+  );
 }
 it("retains a cached financial tab when another screen receives month context, then applies reentry context", async () => {
-  render(<MemoryRouter initialEntries={[{ pathname: "/UI-10", state: { fromCashFlow: true, month: "2026-02" } }]}><EntryButtons /></MemoryRouter>);
+  render(
+    <MemoryRouter
+      initialEntries={[
+        { pathname: "/UI-10", state: { fromCashFlow: true, month: "2026-02" } },
+      ]}
+    >
+      <EntryButtons />
+    </MemoryRouter>,
+  );
   await screen.findByTestId("financial-items-panel");
   expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
   await userEvent.click(screen.getByRole("button", { name: "다른 화면" }));
   expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
   await userEvent.click(screen.getByRole("button", { name: "재무 다시" }));
-  await waitFor(() => expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-03"));
-  expect(fetcher.mock.calls.some(([url]) => String(url).includes("preferences"))).toBe(false);
+  await waitFor(() =>
+    expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-03"),
+  );
+  expect(
+    fetcher.mock.calls.some(([url]) => String(url).includes("preferences")),
+  ).toBe(false);
 });

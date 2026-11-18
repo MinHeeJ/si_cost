@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { sendQuestion } from "./analysisClient";
 function response(text: string, splitEveryByte = false) {
@@ -38,7 +39,7 @@ describe("analysis SSE transport", () => {
           true,
         ),
       );
-    vi.stubGlobal("fetch", fetch);
+    stubBusinessFetch(fetch);
     const onProgress = vi.fn();
     expect(
       await sendQuestion(
@@ -63,15 +64,14 @@ describe("analysis SSE transport", () => {
           'event:progress\ndata:{"success":true,"data":{"phase":"FINDING_DATA"}}\n\n',
         ),
       );
-    vi.stubGlobal("fetch", fetch);
+    stubBusinessFetch(fetch);
     await expect(sendQuestion("매출", {}, () => {})).rejects.toThrow(
       "자동 재전송하지 않습니다",
     );
     expect(fetch).toHaveBeenCalledOnce();
   });
   it("does not call a non-2xx response a completed SSE question", async () => {
-    vi.stubGlobal(
-      "fetch",
+    stubBusinessFetch(
       vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({

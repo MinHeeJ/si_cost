@@ -67,7 +67,7 @@ function Contacts({
   onDirtyChange,
 }: CandidateContactsPanelProps) {
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const [page, setPage] = useState(1);
   const [size, setSize] = useState<20 | 50 | 100>(mobile ? 20 : 50);

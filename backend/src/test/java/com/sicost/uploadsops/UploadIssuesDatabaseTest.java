@@ -41,12 +41,13 @@ class UploadIssuesDatabaseTest {
         factory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath*:mappers/**/*.xml"));
         var session=new SqlSessionTemplate(factory.getObject());
         context=new AnnotationConfigApplicationContext();context.registerBean(DataSource.class,()->db.source);
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules());
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(UploadIssuesMapper.class,()->session.getMapper(UploadIssuesMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,AccessLogWriter.class,ExcelExportService.class,UploadIssuesRepository.class,UploadIssuesService.class);
-        context.refresh();service=context.getBean(UploadIssuesService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(UploadIssuesService.class);
         uploadId=db.sql.queryForObject("INSERT INTO tb_sy_upld(form_type_cd,scrn_id,file_nm,file_size,tot_row_cnt,succ_cnt,warn_cnt,err_cnt,upld_stat_cd,reg_user_id) VALUES('B7','UI-15','검사.xlsx',100,120,0,119,1,'CHECKED','admin') RETURNING upld_id",Long.class);
         issue(1,"WARN",1,"추가 열","","알 수 없는 열");
         issue(2,"ERR",2,"계좌번호","[비공개]","계좌번호 형식 오류");

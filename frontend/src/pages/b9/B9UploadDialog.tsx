@@ -22,7 +22,7 @@ export function B9UploadDialog({ year, readOnly = false, ...props }: Props) {
     apply: (file, uploadId) => api.saveB9Apply(file, uploadId, year),
     result: api.getUploadResult,
   };
-  if (window.matchMedia?.("(max-width: 767px)").matches)
+  if (window.matchMedia?.("(max-width: 767px)")?.matches)
     return (
       <section data-testid="b9-desktop-notice" data-screen-id="SCR-UI-01">
         <p>이 기능은 PC에서 사용해 주세요.</p>
@@ -57,7 +57,7 @@ export function B9UploadActions({
   const [open, setOpen] = useState(false),
     [pending, setPending] = useState(false),
     [error, setError] = useState("");
-  if (window.matchMedia?.("(max-width: 767px)").matches) return null;
+  if (window.matchMedia?.("(max-width: 767px)")?.matches) return null;
   async function download() {
     if (pending) return;
     setPending(true);

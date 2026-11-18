@@ -34,19 +34,22 @@ export function DeliveryStatusPanel({
   useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    async function load() {
+    async function load(background = false) {
       try {
-        const value = await api.getReceivableDeliveries(
-          billId,
-          page,
-          size,
-          controller.signal,
-        );
+        const value = await (background
+          ? api.getReceivableDeliveries(
+              billId,
+              page,
+              size,
+              controller.signal,
+              true,
+            )
+          : api.getReceivableDeliveries(billId, page, size, controller.signal));
         if (controller.signal.aborted) return;
         setData(value);
         setError(undefined);
         if (value.rounds.some((round) => !round.terminal))
-          timer = setTimeout(() => void load(), 2000);
+          timer = setTimeout(() => void load(true), 2000);
       } catch (e) {
         if (!controller.signal.aborted) setError(e);
       } finally {

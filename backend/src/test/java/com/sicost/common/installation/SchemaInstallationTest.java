@@ -11,10 +11,15 @@ import static org.assertj.core.api.Assertions.*;
 class SchemaInstallationTest {
     @Test void fullCatalogMatchesEveryOriginalColumnAndKey() throws Exception {
         PostgreSqlDatabase db = new PostgreSqlDatabase(); db.install();
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(68);
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(836);
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(19);
-        for (var expected : java.util.Map.of("f",73L,"c",46L,"u",5L,"p",68L).entrySet()) {
+        // V9 adds the two automation/delivery tables (37 columns, 3 FKs, 9 checks, 1 unique, 2 PKs).
+        // V8 also adds sq_tb_sl_opp_id, bringing the sequence count to 20.
+        // The original catalog's per-column/default/key contract is still checked below.
+        assertThat(db.sql.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema=? AND table_name IN ('tb_sy_automation_run','tb_sy_delivery_task') ORDER BY table_name",String.class,db.schema))
+            .containsExactly("tb_sy_automation_run","tb_sy_delivery_task");
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(70);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(873);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(20);
+        for (var expected : java.util.Map.of("f",76L,"c",55L,"u",6L,"p",70L).entrySet()) {
             assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=? AND c.contype::text=? AND c.conrelid::regclass::text NOT LIKE '%flyway%'", Long.class, db.schema, expected.getKey())).isEqualTo(expected.getValue());
         }
         assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname=? AND indexname LIKE 'ix_tb_%'", Long.class, db.schema)).isEqualTo(78);

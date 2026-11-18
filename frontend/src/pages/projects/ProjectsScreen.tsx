@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
 
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -76,7 +77,7 @@ export function ProjectsScreen({
   onAmountUnitChange,
 }: ProjectsScreenProps) {
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const defaults = { contractType: "", status: "", partId: "", q: "" };
   const [draft, setDraft] = useState(defaults),
@@ -265,7 +266,7 @@ export function ProjectsScreen({
         direction,
         ...conditions
       } = filters;
-      const response = await fetch("/api/exports/master-data", {
+      const response = await authenticatedFetch("/api/exports/master-data", {
         method: "POST",
         redirect: "error",
         headers: { "Content-Type": "application/json" },

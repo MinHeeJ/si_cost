@@ -173,7 +173,7 @@ function BillsContent({
   const currentYear = Number(period.currentMonth.slice(0, 4)),
     readonly = year < currentYear;
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const [mobileRows, setMobileRows] = useState<api.Bill[]>([]);
   const [tab, setTab] = useState<"list" | "checks" | "receivables">(

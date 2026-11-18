@@ -16,6 +16,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> method(org.springframework.web.HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        var result = error(405, "METHOD_NOT_ALLOWED", "허용되지 않은 요청 방식입니다.", null, null, request);
+        return ResponseEntity.status(405).headers(result.getHeaders()).allow(e.getSupportedHttpMethods() == null
+                ? new org.springframework.http.HttpMethod[0] : e.getSupportedHttpMethods().toArray(org.springframework.http.HttpMethod[]::new))
+                .body(result.getBody());
+    }
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiError> mediaType(org.springframework.web.HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
         return error(415, "UNSUPPORTED_MEDIA_TYPE", "요청 콘텐츠 형식을 확인해 주세요.", null, null, request);
@@ -62,17 +69,30 @@ public class ApiExceptionHandler {
     }
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiError> database(DataAccessException e, HttpServletRequest request) {
+        ApiException policy=wrappedPolicyFailure(e);if(policy!=null)return application(policy,request);
         return error(500, "INTERNAL_ERROR", "자료 처리 중 오류가 발생했습니다.", null, null, request);
     }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> unexpected(Exception e, HttpServletRequest request) {
+        ApiException policy=wrappedPolicyFailure(e);if(policy!=null)return application(policy,request);
         return error(500, "INTERNAL_ERROR", "서버 처리 중 오류가 발생했습니다.", null, null, request);
+    }
+    private ApiException wrappedPolicyFailure(Throwable failure) {
+        java.util.Set<Throwable> visited=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while(failure!=null && visited.add(failure)) {
+            if(failure instanceof ApiException policy)return policy;
+            failure=failure.getCause();
+        }
+        return null;
     }
     private ResponseEntity<ApiError> error(int status, String code, String message,
                                             String field, Object details, HttpServletRequest request) {
         Object attribute = request.getAttribute(RequestIdFilter.ATTRIBUTE);
         String id = attribute instanceof String value ? value : UUID.randomUUID().toString();
-        return ResponseEntity.status(status).header("X-Request-Id", id)
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes && attributes.getResponse()!=null && !attributes.getResponse().isCommitted()) {
+            attributes.getResponse().setHeader("Content-Disposition",null);attributes.getResponse().setHeader("Content-Length",null);
+        }
+        return ResponseEntity.status(status).contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("Cache-Control","no-store").header("X-Request-Id", id)
                 .body(new ApiError(false, Map.of(), code, message, field, details, id));
     }
 }

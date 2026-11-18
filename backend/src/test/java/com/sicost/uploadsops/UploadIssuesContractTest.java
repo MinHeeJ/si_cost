@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(UploadIssuesController.class)
 @ContextConfiguration(classes=UploadIssuesController.class)
 @Import({UploadIssuesService.class, UploadIssuesRepository.class, ExcelExportService.class, CurrentUserProvider.class,
@@ -45,12 +46,18 @@ class UploadIssuesContractTest {
         new Issue(1,"WARN",1,"알 수 없는 열","","알 수 없는 열입니다."),
         new Issue(2,"ERR",2,"계좌번호","[비공개]","계좌번호 형식을 확인해 주세요."),
         new Issue(3,"WARN",3,"상호","저장된 발췌…","같은 상호입니다."));
+    @org.junit.jupiter.api.AfterEach void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @BeforeEach void setup() {
-        when(users.findAdministrator()).thenReturn("admin");
+        var context=org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("admin",null,java.util.List.of()));
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
         when(users.findName("admin")).thenReturn("임시 관리자");when(users.findActiveRoles("admin")).thenReturn(List.of("ADMIN"));
         when(transactions.getTransaction(any())).thenAnswer(call -> new SimpleTransactionStatus());
         when(logs.insert(any())).thenReturn(1);
         when(mapper.exists(17)).thenReturn(true);
+        when(mapper.formType(17)).thenReturn("B3");
         when(mapper.issues(any())).thenAnswer(call -> {
             Query q=call.getArgument(0);
             return stored.stream().filter(i->q.severity()==null || q.severity().equals(i.severity())).skip(q.offset()).limit(q.limit()).toList();
@@ -59,7 +66,7 @@ class UploadIssuesContractTest {
             Query q=call.getArgument(0);return stored.stream().filter(i->q.severity()==null || q.severity().equals(i.severity())).count();
         });
     }
-    @Test void noAuthenticationDownloadsRealFiveColumnWorkbookAllIssuesAndOneAdminAudit() throws Exception {
+    @Test void authenticatedUserDownloadsRealFiveColumnWorkbookAllIssuesAndOneAdminAudit() throws Exception {
         byte[] bytes=mvc.perform(get("/api/uploads/17/issues.xlsx"))
             .andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
             .andExpect(header().exists("X-Request-Id")).andExpect(header().string("Content-Disposition",org.hamcrest.Matchers.containsString("filename*=UTF-8''")))

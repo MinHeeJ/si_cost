@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(RoleController.class)
 @ContextConfiguration(classes=RoleController.class)
 @Import({RoleService.class,RoleRepository.class,RevisionService.class,WriteCoordinator.class,ChangeHistoryWriter.class,
@@ -81,8 +82,8 @@ class RoleContractTest {
     void noWrites() {verify(mapper,never()).insert(any());verify(mapper,never()).update(any());verify(mapper,never()).insertPermission(any());verify(mapper,never()).updatePermission(any());verifyNoInteractions(history,access);}
     @Test void activeListUsesStoredOrderAndValuesWithoutAuthenticationOrWrites() throws Exception {
         mvc.perform(get("/api/roles")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].roleId").value("ADMIN"))
-            .andExpect(jsonPath("$.data.items[1].name").value("프로젝트 담당")).andExpect(jsonPath("$.data.developmentMode").value(true))
-            .andExpect(jsonPath("$.data.accessEnforcement").value(false)).andExpect(jsonPath("$.data.settingsRevision").isString());noWrites();
+            .andExpect(jsonPath("$.data.items[1].name").value("프로젝트 담당")).andExpect(jsonPath("$.data.developmentMode").value(false))
+            .andExpect(jsonPath("$.data.accessEnforcement").value(true)).andExpect(jsonPath("$.data.settingsRevision").isString());noWrites();
     }
     @Test void emptySourceReturnsEmptyListWithoutCreatingDefaults() throws Exception {
         rows.clear();mvc.perform(get("/api/roles")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty());noWrites();

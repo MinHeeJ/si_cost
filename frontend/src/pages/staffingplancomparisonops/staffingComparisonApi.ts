@@ -1,4 +1,4 @@
-import { ApiError, request } from "../../shared/api";
+import { authenticatedFetch, ApiError, request } from "../../shared/api";
 import { downloadFilename } from "../shared/downloadFilename";
 import { getProjects } from "../projects/projectsApi";
 
@@ -60,7 +60,7 @@ export async function downloadStaffingComparison(
   amountUnit: "WON" | "THOUSAND" | "MILLION",
   signal: AbortSignal,
 ) {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/api/staffing-plan-comparison/export?${query({ year: filters.year, projectId: filters.projectId, difference: filters.difference, amountUnit })}`,
     {
       signal,

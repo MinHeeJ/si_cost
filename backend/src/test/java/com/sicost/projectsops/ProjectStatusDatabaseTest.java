@@ -57,7 +57,7 @@ class ProjectStatusDatabaseTest {
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(AssignmentMonthlyService.class,Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
-            ProjectBudgetRepository.class,ProjectStatusRepository.class,ProjectStatusService.class);context.refresh();
+            ProjectBudgetRepository.class,ProjectStatusRepository.class,ProjectStatusService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         service=context.getBean(ProjectStatusService.class);repository=context.getBean(ProjectStatusRepository.class);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectStatusController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String key=UUID.randomUUID().toString().replace("-","").substring(0,14);id="P-"+key;developer="D-"+key;part="T-"+key;

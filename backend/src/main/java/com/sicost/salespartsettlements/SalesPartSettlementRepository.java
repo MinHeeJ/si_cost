@@ -17,9 +17,12 @@ public class SalesPartSettlementRepository {
         this.monthly=monthly; this.mapper=mapper;
     }
     public Snapshot load(String month, boolean withSources) {
-        Sources sources=monthly.loadRange(month);
-        String selected=sources.period().toMonth();
-        return new Snapshot(sources,mapper.parts(),mapper.standards(),mapper.useHistory(),mapper.parents(selected),
-            mapper.details(selected),withSources?mapper.firstInputs():List.of(),withSources?mapper.revisionSources(selected):List.of());
+        var visible=mapper.parts();
+        return com.sicost.permission.PermissionCalculationContext.source(()->{
+            Sources sources=monthly.loadRange(month);
+            String selected=sources.period().toMonth();
+            return new Snapshot(sources,visible,mapper.standards(),mapper.useHistory(),mapper.parents(selected),
+                mapper.details(selected),withSources?mapper.firstInputs():List.of(),withSources?mapper.revisionSources(selected):List.of());
+        });
     }
 }

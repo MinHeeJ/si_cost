@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -148,10 +154,14 @@ it("저장 pcOnly=false면 UI25도 모바일 진입·고정6개 판정 없음", 
   open();
   expect(await screen.findByText("메뉴 편집 본문")).toBeVisible();
 });
-it("중지 직접주소는 대시보드로 우회하지 않고 중지 안내·선호 저장0", async () => {
+it("중지 직접주소는 권한 거부 안내·본문과 탐색에서 제외·선호 저장0", async () => {
   tree.items[2].use = false;
   open();
-  await screen.findByText("사용 중지된 메뉴입니다.");
+  await screen.findByText("이 화면을 볼 권한이 없습니다.");
+  expect(screen.queryByText("메뉴 편집 본문")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "메뉴 편집" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-25");
   expect(shared.putSharedPreference).not.toHaveBeenCalled();
 });

@@ -30,15 +30,16 @@ public class RateRenegotiationRepository {
     public record Snapshot(Sources sources, List<Candidate> candidates, MonthlyCostsData costs) {}
     public Snapshot load() {
         YearMonth current = YearMonth.now(clock.withZone(TimeConfiguration.SEOUL));
-        Sources s = costs.loadMonth(current.getYear(), current.getMonthValue());
+        Sources s = com.sicost.permission.PermissionCalculationContext.source(()->costs.loadMonth(current.getYear(), current.getMonthValue()));
+        Set<String> visible=mapper.assignments(s.asOfDate()).stream().map(Source::id).collect(java.util.stream.Collectors.toSet());
         var candidates = new ArrayList<Candidate>();
         var projected = new ArrayList<Assignment>();
         Map<String, Project> projects = new HashMap<>();
         s.projects().forEach(p -> projects.put(p.projectId(), p));
-        for (Source source : mapper.assignments(s.asOfDate())) {
+        for (Source source : com.sicost.permission.PermissionCalculationContext.source(()->mapper.assignments(s.asOfDate()))) {
             Project project = projects.get(source.projectId());
             if (project == null) continue;
-            var histories = monthly.mapper().histories(source.id());
+            var histories = com.sicost.permission.PermissionCalculationContext.source(()->monthly.mapper().histories(source.id()));
             var months = monthly.preview(source, histories, project.status(), project.contractType());
             boolean present = false;
             for (Month month : months) {
@@ -47,9 +48,9 @@ public class RateRenegotiationRepository {
                 projected.add(new Assignment(current.toString().replace("-", ""), source.developerId(), source.projectId(), source.id(),
                     decimal(month.monthlyMm()), decimal(month.appliedUnitPrice()), decimal(month.salesAmount()), month.fixed(),
                     source.jobCode(), source.inputType(), source.contractDeveloperId(), source.status(), source.startDate(), source.endDate()));
-                candidates.add(new Candidate(source, month));
+                if(visible.contains(source.id()))candidates.add(new Candidate(source, month));
             }
-            if (!present && !current.isBefore(YearMonth.from(source.startDate())) && !current.isAfter(YearMonth.from(source.endDate()))
+            if (visible.contains(source.id()) && !present && !current.isBefore(YearMonth.from(source.startDate())) && !current.isAfter(YearMonth.from(source.endDate()))
                 && "ACT".equals(source.status())) {
                 BigDecimal contract = com.sicost.projectsops.ProjectAssignmentMonths.value(histories, current, true, source.contractMm());
                 candidates.add(new Candidate(source, new Month(current.toString(), source.projectId(), source.developerId(), 0,

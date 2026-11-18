@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static com.sicost.apiops.StaffingReadDtos.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest({AssignmentCandidateQueryController.class,StaffingPlanComparisonController.class,WorkforceForecastController.class,WorkforceOperationsController.class})
 @ContextConfiguration(classes={AssignmentCandidateQueryController.class,StaffingPlanComparisonController.class,WorkforceForecastController.class,WorkforceOperationsController.class})
 @Import({AssignmentCandidateQueryService.class,StaffingPlanComparisonService.class,WorkforceForecastService.class,WorkforceCalendarService.class,

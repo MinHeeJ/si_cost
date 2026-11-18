@@ -1,4 +1,9 @@
-import { ApiError, request, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  request,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 import {
   analysisQuery,
@@ -97,7 +102,7 @@ export async function getProjectAnalysisDownload(
   if (options.unit) params.set("unit", options.unit);
   const mime =
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${view === "statusBoard" ? "/api/project-status-board/export" : "/api/project-costs/export"}?${params}`,
     {
       method: "GET",

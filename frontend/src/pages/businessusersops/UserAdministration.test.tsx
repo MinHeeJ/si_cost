@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -107,12 +107,29 @@ it("중지는 대상 확인 후 한 번만 전송하고 취소는 쓰지 않는�
   );
 });
 it.each(["USE", "STOP", "LOCK"] as const)(
-  "상태 %s에 맞는 명령만 보이고 비밀번호 준비는 비활성이다",
+  "상태 %s에 맞는 명령과 실제 비밀번호 재발급을 제공한다",
   async (status) => {
+    vi.mocked(users.getBusinessUser).mockResolvedValue({ ...user, status });
     render(
-      <UserStateActions user={{ ...user, status }} onCommitted={vi.fn()} />,
+      <BusinessUserDetail id={user.userId} onClose={vi.fn()} onEdit={vi.fn()} />,
     );
-    expect(screen.getByTestId("user-password-preparation")).toBeDisabled();
+    const reset = await screen.findByRole("button", {
+      name: "새 비밀번호 다시 발급",
+    });
+    if (status === "STOP") expect(reset).toBeDisabled();
+    else {
+      expect(reset).toBeEnabled();
+      await userEvent.click(reset);
+      const dialog = screen.getByRole("dialog", { name: "비밀번호 초기화" });
+      expect(dialog).toHaveTextContent("u***@example.org");
+      expect(dialog).toHaveTextContent(
+        "이전 비밀번호와 모든 로그인 세션은 무효화됩니다",
+      );
+      expect(
+        within(dialog).getByRole("button", { name: "새 비밀번호 발급" }),
+      ).toBeEnabled();
+      await userEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+    }
     expect(screen.queryByRole("button", { name: "잠금 해제" }) !== null).toBe(
       status === "LOCK",
     );
@@ -380,5 +397,5 @@ it("목록 선택은 조회 조건 변경에 해제되고 과거 열설정 끝�
   await waitFor(() =>
     expect(screen.queryByTestId("user-bulk-stop")).not.toBeInTheDocument(),
   );
-  expect(screen.getByText(/실제 접근권한 적용 전인/)).toBeInTheDocument();
+  expect(screen.queryByText(/실제 접근권한 적용 전인/)).not.toBeInTheDocument();
 });

@@ -169,8 +169,8 @@ export function AssignmentDrawer({
               ] as const
             ).map(([label, v]) => (
               <div
+                data-testid={`assignment-detail-field-${Array.from(label, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                 key={label}
-                data-testid={`assignment-detail-${Array.from(label, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
               >
                 <dt>{label}</dt>
                 <dd>{v}</dd>

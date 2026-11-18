@@ -1,5 +1,12 @@
 server:
   port: 8080
+  servlet:
+    session:
+      tracking-modes: cookie
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:true}
   error:
     include-message: never
     include-stacktrace: never

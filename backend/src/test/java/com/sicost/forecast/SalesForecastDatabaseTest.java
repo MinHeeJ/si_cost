@@ -46,7 +46,7 @@ class SalesForecastDatabaseTest {
         context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AssignmentMonthlyService.class,AccessLogWriter.class,
             ExcelExportService.class,SalesForecastRepository.class,SalesWorkforceProjectionService.class,SalesRevenueForecastService.class,SalesForecastExportService.class);
-        context.refresh();
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         String key=UUID.randomUUID().toString().replace("-","").substring(0,12);project="P"+key;opportunity="O"+key;bill="B"+key;
         sql.update("INSERT INTO tb_bs_clnt(clnt_id,clnt_type_cd,clnt_nm,biz_reg_no,reg_user_id) VALUES ('C-export','CUST','다운로드 시험 고객','1234567890','admin')");
         sql.update("INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id) SELECT ?,?,clnt_id,'HQ','FIND',50,600,'208008','WIN','WAIT','admin' FROM tb_bs_clnt ORDER BY clnt_id LIMIT 1",opportunity,opportunity);

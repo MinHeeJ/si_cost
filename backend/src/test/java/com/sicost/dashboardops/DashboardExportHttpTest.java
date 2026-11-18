@@ -34,6 +34,7 @@ import static org.mockito.Mockito.*;
 /** Real servlet query handling: MockMvc/dispatcher mocks do not merge include parameters. */
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT, classes=DashboardExportHttpTest.Application.class)
 class DashboardExportHttpTest {
+    @com.sicost.common.BusinessMvcSlice
     @Configuration(proxyBeanMethods=false)
     @TestComponent
     @EnableAutoConfiguration(exclude=DataSourceAutoConfiguration.class)

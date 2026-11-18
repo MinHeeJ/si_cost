@@ -39,8 +39,9 @@ class BusinessUserOptionsDatabaseTest {
         context = new AnnotationConfigApplicationContext(); context.registerBean(DataSource.class, () -> db.source);
         context.registerBean(BusinessUserOptionsMapper.class, () -> session.getMapper(BusinessUserOptionsMapper.class));
         context.registerBean(CurrentUserMapper.class, () -> session.getMapper(CurrentUserMapper.class));
+        context.registerBean(com.fasterxml.jackson.databind.ObjectMapper.class,()->com.fasterxml.jackson.databind.json.JsonMapper.builder().findAndAddModules().build());
         context.register(Transactions.class, CurrentUserProvider.class, BusinessUserOptionsRepository.class, BusinessUserOptionsService.class);
-        context.refresh(); service = context.getBean(BusinessUserOptionsService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh(); service = context.getBean(BusinessUserOptionsService.class);
     }
     @AfterEach void close() { if (context != null) context.close(); }
     String actor(String name, String status, String... roles) {

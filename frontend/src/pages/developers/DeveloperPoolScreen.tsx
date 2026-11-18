@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -64,7 +65,7 @@ export function DeveloperPoolScreen({
   const location = useLocation();
   const navigate = useNavigate();
   const [mobile, setMobile] = useState(
-    () => window.matchMedia?.("(max-width: 767px)").matches ?? false,
+    () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
   const defaults = {
     employeeType: "",
@@ -276,7 +277,7 @@ export function DeveloperPoolScreen({
         direction,
         ...conditions
       } = filters;
-      const response = await fetch("/api/exports/master-data", {
+      const response = await authenticatedFetch("/api/exports/master-data", {
         method: "POST",
         redirect: "error",
         headers: { "Content-Type": "application/json" },

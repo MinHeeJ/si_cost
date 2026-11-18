@@ -262,7 +262,7 @@ export function WithdrawalNextPanel({
               })}
               {data.shortageMonths.map((month) => (
                 <p
-                  data-testid={`withdrawal-shortage-${Array.from(`${month.month}:${month.jobCode}`, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  data-testid={`withdrawal-shortage-${Array.from(`${month.month}-${month.jobCode}`, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                   className="sicost-banner sicost-tone-warn"
                   key={`${month.month}-${month.jobCode}`}
                 >
@@ -297,8 +297,8 @@ export function WithdrawalNextPanel({
             </p>
             {confirmation?.warnings.map((w) => (
               <p
+                data-testid={`withdrawal-confirmation-warning-${Array.from(w.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                 key={w.code}
-                data-testid={`withdrawal-warning-${Array.from(w.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
               >
                 {w.message}
               </p>

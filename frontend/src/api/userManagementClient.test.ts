@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 
@@ -132,7 +133,7 @@ it.each(cases)(
         async () =>
           new Response(JSON.stringify({ success: true, meta: {}, data })),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).resolves.toEqual(data);
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [url, options] = fetcher.mock.calls[0];
@@ -158,7 +159,7 @@ it.each(cases)(
           { status: 409 },
         ),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).rejects.toBeInstanceOf(api.ApiError);
     expect(fetcher).toHaveBeenCalledTimes(1);
   },

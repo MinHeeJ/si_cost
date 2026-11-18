@@ -27,13 +27,17 @@ export type AutomationCommandResult = {
 export function getAutomationRuns(
   query: { page: number; size: 20 | 50 | 100 },
   signal?: AbortSignal,
+  background = false,
 ) {
   const params = new URLSearchParams({
     page: String(query.page),
     size: String(query.size),
     sort: "runDate,desc;jobCode,asc",
   });
-  return request<AutomationPage>(`/api/automation-runs?${params}`, { signal });
+  return request<AutomationPage>(`/api/automation-runs?${params}`, {
+    signal,
+    ...(background ? { headers: { "X-Background-Request": "true" } } : {}),
+  });
 }
 export function createAutomationRunToday(jobCode: AutomationJobCode) {
   return request<AutomationCommandResult>(

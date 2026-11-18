@@ -72,7 +72,7 @@ class B7DatabaseTest {
     @Test void concurrentSameUploadCommitsOneClientAndNewSet() throws Exception {
         var file=B7Workbook.valid();var checked=service.validate(file);var start=new CountDownLatch(1);
         Callable<Integer> apply=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();return service.apply(file,checked.uploadId()).appliedCount();};
-        var pool=Executors.newFixedThreadPool(2);
+        var pool=new org.springframework.security.concurrent.DelegatingSecurityContextExecutorService(Executors.newFixedThreadPool(2),org.springframework.security.core.context.SecurityContextHolder.getContext());
         try {var first=pool.submit(apply);var second=pool.submit(apply);start.countDown();assertThat(first.get(20,TimeUnit.SECONDS)).isEqualTo(1);assertThat(second.get(20,TimeUnit.SECONDS)).isEqualTo(1);}
         finally {pool.shutdownNow();}
         assertThat(db.count("tb_bs_clnt")).isEqualTo(1);assertThat(db.count("tb_sy_chg_hist")).isEqualTo(1);

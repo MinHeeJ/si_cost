@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -6,7 +7,7 @@ import {
   putDeveloperStateEnd,
   saveDeveloperStateCancel,
 } from "./developerStatesApi";
-beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
+beforeEach(() => stubBusinessFetch(vi.fn()));
 const reply = (data: unknown) =>
   new Response(JSON.stringify({ success: true, meta: {}, data }));
 it("전체 이력은 페이지·actor 없이 선택한 개발자의 상대경로로 조회한다", async () => {

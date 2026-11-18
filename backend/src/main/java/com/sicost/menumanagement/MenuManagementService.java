@@ -113,6 +113,6 @@ public class MenuManagementService {
         });
         rows.stream().filter(row->!ordered.contains(row)).forEach(ordered::add);
         return new ManagedMenuTree(ordered.stream().map(row->new ManagedMenu(row.menuId(),row.parentId(),row.name(),row.level(),row.screenId(),
-            row.sortOrder(),row.use(),row.pcOnly(),row.locked(),row.icon())).toList(),revisions.revision(rows),true,false);
+            row.sortOrder(),row.use(),row.pcOnly(),row.locked(),row.icon())).toList(),revisions.revision(rows),false,true);
     }
 }

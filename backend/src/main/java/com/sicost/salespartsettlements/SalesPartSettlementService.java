@@ -63,6 +63,7 @@ public class SalesPartSettlementService {
         String card=parent==null?"0":money(parent.cardAmount());
         Totals totals=totals(all,card,parent==null?null:money(parent.partProfitAmount()),confirmed);
         if(!confirmed&&(closed||!tab.eligible()))totals=new Totals(0,0,null,null,null,null,null,null,null,null,card,null);
+        com.sicost.permission.PermissionViewMetadata.totals(totals,all);
         if(confirmed&&(totals.personProfitShareAmount()==null||parent.partProfitAmount()==null||decimal(totals.personProfitShareAmount()).subtract(parent.cardAmount()).compareTo(parent.partProfitAmount())!=0))
             issues.add(issue("SNAPSHOT_MISMATCH","정산 사본 불일치", "partProfitAmount",null,month,"TB_CO_PART_SETL",false));
         issues.addAll(all.stream().flatMap(r->r.issues().stream()).toList());

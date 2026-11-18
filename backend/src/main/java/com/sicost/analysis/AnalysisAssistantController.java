@@ -15,15 +15,19 @@ import static com.sicost.analysis.AnalysisAssistantDtos.*;
 @RequestMapping("/api/analysis/questions")
 public class AnalysisAssistantController {
     private final AnalysisAssistantService service;private final ExcelExportService excel;
+    private com.sicost.authentication.AuthenticationTaskService tasks;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthenticationTasks(com.sicost.authentication.AuthenticationTaskService tasks) {this.tasks=tasks;}
     private final ExecutorService executor=new ThreadPoolExecutor(2,4,60,TimeUnit.SECONDS,new ArrayBlockingQueue<>(32),r->{var t=new Thread(r,"analysis-question");t.setDaemon(true);return t;});
     public AnalysisAssistantController(AnalysisAssistantService service,ExcelExportService excel){this.service=service;this.excel=excel;}
     @jakarta.annotation.PreDestroy public void close(){executor.shutdown();}
     @PostMapping(produces=MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter create(@RequestBody com.fasterxml.jackson.databind.JsonNode input,HttpServletRequest request) {
         requireQuery(request,Set.of());
-        var accepted=service.accept(AnalysisQuestionInput.parse(input));var emitter=new SseEmitter(180_000L);
+        var proof=tasks.capture(request);
+        var accepted=tasks.run(proof,()->service.accept(AnalysisQuestionInput.parse(input)));var emitter=new SseEmitter(180_000L);
         try{executor.execute(()->{
-            try{var result=service.execute(accepted,p->send(emitter,"progress",p));send(emitter,"final",result);emitter.complete();}
+            try{tasks.run(proof,()->{var result=service.execute(accepted,p->send(emitter,"progress",p));tasks.checkpoint(proof);send(emitter,"final",service.projectFinal(result));emitter.complete();return null;});}
             catch(Exception e){emitter.completeWithError(new IllegalStateException("질문 처리 연결이 종료되었습니다. 기록을 확인해 주세요."));}
         });}catch(RejectedExecutionException e){throw new ApiException(503,"ANALYSIS_BUSY","질문 처리가 많습니다. 잠시 후 다시 시도해 주세요.");}
         return emitter;

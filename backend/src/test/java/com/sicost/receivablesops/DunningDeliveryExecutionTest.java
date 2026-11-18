@@ -37,6 +37,10 @@ class DunningDeliveryExecutionTest {
         when(service.preview("B")).thenAnswer(c->preview);
         doAnswer(c->{((Runnable)c.getArgument(1)).run();return null;}).when(sessions).withLock(anyString(),any());
     }
+    void deliver(DunningDeliveryWorker worker) {
+        com.sicost.permission.PermissionTaskContext.system(com.sicost.permission.PermissionTaskContext.Command.RECEIVABLE_DUNNING,
+            ()->{worker.deliver("B",event);return null;});
+    }
     @Test void pendingCommitsSendingInUserOrderBeforeReturningToNetworkWorker() {
         tasks.add(task("z","SAME@example.invalid","PENDING"));tasks.add(task("a","same@example.invalid","PENDING"));
         var selected=state.prepare("B",event,"same@example.invalid");assertThat(selected).extracting(TaskSource::userId).containsExactly("a","z");
@@ -57,8 +61,8 @@ class DunningDeliveryExecutionTest {
     @Test void oneNormalizedAddressUsesMinimumUserRepresentativeAndOneSmtpCall() {
         var stateAdapter=mock(DunningDeliveryState.class);var worker=new DunningDeliveryWorker(repository,stateAdapter,mail,sessions,new SyncTaskExecutor());
         var a=task("a","same@example.invalid","PENDING");var z=task("z"," SAME@example.invalid ","PENDING");tasks.add(z);tasks.add(a);
-        when(stateAdapter.prepare("B",event,"same@example.invalid")).thenReturn(List.of(a,z));var result=new DunningDeliveryMail.MailResult("SENT",null,null);when(mail.send(a)).thenReturn(result);
-        worker.deliver("B",event);var order=inOrder(stateAdapter,mail);order.verify(stateAdapter).prepare("B",event,"same@example.invalid");order.verify(mail).send(a);order.verify(stateAdapter).complete("B",event,List.of(a,z),result);verify(mail,times(1)).send(any());
+        when(stateAdapter.prepare("B",event,"same@example.invalid")).thenReturn(List.of(a,z));when(stateAdapter.finalRecipients("B")).thenReturn(preview.recipients());var result=new DunningDeliveryMail.MailResult("SENT",null,null);when(mail.send(a)).thenReturn(result);
+        deliver(worker);var order=inOrder(stateAdapter,mail);order.verify(stateAdapter).prepare("B",event,"same@example.invalid");order.verify(mail).send(a);order.verify(stateAdapter).complete("B",event,List.of(a,z),result);verify(mail,times(1)).send(any());
     }
     @ParameterizedTest @ValueSource(strings={"SENT","FAILED","UNKNOWN"})
     void completionPersistsExactTransportClassification(String status) {
@@ -71,9 +75,9 @@ class DunningDeliveryExecutionTest {
     }
     @Test void lostDatabaseReceiptCannotBecomeSafeRetry() {
         var stateAdapter=mock(DunningDeliveryState.class);var task=task("a","same@example.invalid","PENDING");tasks.add(task);
-        when(stateAdapter.prepare("B",event,"same@example.invalid")).thenReturn(List.of(task));var success=new DunningDeliveryMail.MailResult("SENT",null,null);when(mail.send(task)).thenReturn(success);
+        when(stateAdapter.prepare("B",event,"same@example.invalid")).thenReturn(List.of(task));when(stateAdapter.finalRecipients("B")).thenReturn(preview.recipients());var success=new DunningDeliveryMail.MailResult("SENT",null,null);when(mail.send(task)).thenReturn(success);
         doThrow(new IllegalStateException("receipt unavailable")).when(stateAdapter).complete("B",event,List.of(task),success);
-        new DunningDeliveryWorker(repository,stateAdapter,mail,sessions,new SyncTaskExecutor()).deliver("B",event);
+        deliver(new DunningDeliveryWorker(repository,stateAdapter,mail,sessions,new SyncTaskExecutor()));
         verify(mail,times(1)).send(task);verify(stateAdapter).complete(eq("B"),eq(event),eq(List.of(task)),argThat(r->r.state().equals("UNKNOWN")));
     }
     @Test void missingOptionalMailSettingsNeverPreventStartupOrClaimSuccess() {

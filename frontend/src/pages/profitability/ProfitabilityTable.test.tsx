@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +17,6 @@ import { IndividualProfitabilityScreen } from "../shared/IndividualProfitability
 import { SharedApplication } from "../shared/SharedApplication";
 import * as shared from "../shared/sharedApi";
 import { ProfitabilityTable } from "./ProfitabilityTable";
-import { ProfitabilityColumnSettings } from "./ProfitabilityColumnSettings";
 import { ProfitabilityValue } from "./ProfitabilityValue";
 import {
   profitabilityColumns,
@@ -138,7 +137,6 @@ function Body() {
       : "천원";
   return (
     <>
-      <ProfitabilityColumnSettings />
       <ProfitabilityTable
         rows={[row]}
         rowKey={(item) => item.personId}

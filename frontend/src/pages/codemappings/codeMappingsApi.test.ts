@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createCodeMapping,
@@ -14,7 +15,7 @@ describe("표기 대응 HTTP 연결", () => {
       .mockResolvedValue(
         new Response(JSON.stringify({ success: true, meta: {}, data })),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     expect(
       await getCodeMappings({
         sourceText: "표기 & %",
@@ -37,7 +38,7 @@ describe("표기 대응 HTTP 연결", () => {
         }),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const create = { sourceText: "표기", groupId: "GROUP", code: "A" };
     await createCodeMapping(create);
     const deletion = { items: [{ mapId: 42, expectedRevision: "revision" }] };
@@ -54,7 +55,7 @@ describe("표기 대응 HTTP 연결", () => {
           JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
         ),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await getMappingCodes("GROUP");
     expect(fetcher.mock.calls[0][0]).toBe(
       "/api/codes/GROUP?includeInactive=false",

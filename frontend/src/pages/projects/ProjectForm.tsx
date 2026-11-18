@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { Dialog } from "../../shared/Dialog";
@@ -40,6 +41,7 @@ export function ProjectForm({
   onDirtyChange,
 }: Props) {
   const p = detail?.project;
+  const canSave = usePermission("UI-01", p ? "UPD" : "REG");
   const [form, setForm] = useState({
     name: p?.name ?? "",
     customerId: p?.customerId ?? "",
@@ -184,11 +186,19 @@ export function ProjectForm({
   };
   useEffect(() => {
     if (!modal || !visible || leaving) return;
-    const previous=document.activeElement as HTMLElement | null;
+    const previous = document.activeElement as HTMLElement | null;
     node.current?.querySelector<HTMLInputElement>("input")?.focus();
-    const escape=(event: KeyboardEvent) => { if(event.key === "Escape") { event.preventDefault(); close(); } };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    };
     document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("keydown", escape); previous?.focus?.(); };
+    return () => {
+      document.removeEventListener("keydown", escape);
+      previous?.focus?.();
+    };
   }, [modal, visible, leaving, dirty, pending]);
   async function refresh(result: api.SaveProjectResult) {
     try {
@@ -199,7 +209,7 @@ export function ProjectForm({
     }
   }
   async function save() {
-    if (busy.current || committed) return;
+    if (!canSave || busy.current || committed) return;
     const errors: Record<string, string> = {};
     if (!form.name.trim() || [...form.name.trim()].length > 100)
       errors.name = "프로젝트명은 1~100자로 입력해 주세요.";
@@ -364,9 +374,15 @@ export function ProjectForm({
         >
           <fieldset
             className="project-form-grid"
-            disabled={pending || Boolean(committed)}
+            disabled={!canSave || pending || Boolean(committed)}
           >
             <legend>기본 정보</legend>
+            {!canSave && (
+              <p role="note">
+                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
+                수정).
+              </p>
+            )}
             <div className="project-wide">
               {input("name", "프로젝트명", { required: true, maxLength: 100 })}
             </div>
@@ -431,7 +447,7 @@ export function ProjectForm({
           </fieldset>
           <fieldset
             className="project-form-grid"
-            disabled={pending || Boolean(committed)}
+            disabled={!canSave || pending || Boolean(committed)}
           >
             <legend>금액 (원)</legend>
             {input("estimateAmount", "견적 금액")}
@@ -492,7 +508,7 @@ export function ProjectForm({
           </fieldset>
           <fieldset
             className="project-form-grid"
-            disabled={pending || Boolean(committed)}
+            disabled={!canSave || pending || Boolean(committed)}
           >
             <legend>특징</legend>
             <div className="project-wide">
@@ -513,26 +529,31 @@ export function ProjectForm({
               onRetry={() => committed && void refresh(committed)}
             />
           )}
-          <footer className="project-toolbar">
-            <button
-              type="button"
-              data-testid="project-form-cancel"
-              disabled={pending}
-              onClick={close}
-            >
-              취소
-            </button>
-            <button
-              type="submit"
-              className="sicost-primary"
-              data-testid="project-form-save"
-              disabled={
-                pending || loading || Boolean(lookupError) || Boolean(committed)
-              }
-            >
-              {pending ? "저장 중…" : "저장"}
-            </button>
-          </footer>
+          {canSave && (
+            <footer className="project-toolbar">
+              <button
+                type="button"
+                data-testid="project-form-cancel"
+                disabled={pending}
+                onClick={close}
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                className="sicost-primary"
+                data-testid="project-form-save"
+                disabled={
+                  pending ||
+                  loading ||
+                  Boolean(lookupError) ||
+                  Boolean(committed)
+                }
+              >
+                {pending ? "저장 중…" : "저장"}
+              </button>
+            </footer>
+          )}
         </form>
       </section>
       <Dialog
@@ -547,11 +568,22 @@ export function ProjectForm({
       </Dialog>
     </FormPage>
   );
-  return modal ? createPortal(
-    <div className="sicost-scrim" style={visible ? undefined : {display: "none"}}>
-      <div className="sicost-dialog sicost-dialog-wide" role="dialog" aria-modal="true" aria-label={p ? "프로젝트 수정" : "프로젝트 등록"}>
-        <div className="sicost-dialog-body">{content}</div>
-      </div>
-    </div>, document.body,
-  ) : content;
+  return modal
+    ? createPortal(
+        <div
+          className="sicost-scrim"
+          style={visible ? undefined : { display: "none" }}
+        >
+          <div
+            className="sicost-dialog sicost-dialog-wide"
+            role="dialog"
+            aria-modal="true"
+            aria-label={p ? "프로젝트 수정" : "프로젝트 등록"}
+          >
+            <div className="sicost-dialog-body">{content}</div>
+          </div>
+        </div>,
+        document.body,
+      )
+    : content;
 }

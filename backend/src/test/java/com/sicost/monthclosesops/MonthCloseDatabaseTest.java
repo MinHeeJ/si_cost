@@ -43,10 +43,47 @@ class MonthCloseDatabaseTest {
     @Autowired JdbcTemplate sql;
     @SpyBean AccessLogWriter access;
     @SpyBean MonthCloseRepository repository;
+    @org.springframework.boot.test.mock.mockito.MockBean com.sicost.authentication.AuthenticationMailService authenticationMail;
     String month,dbMonth,part;
+    org.springframework.mock.web.MockHttpSession loginSession;
+    String csrfHeader,csrfToken;
+    void login() throws Exception {
+        // Reopen requires ADMIN. Exercise password + MFA and real session/CSRF
+        // filters; only the SMTP transport is replaced by an in-memory collector.
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        String user="close"+UUID.randomUUID().toString().replace("-","").substring(0,15);
+        String password="Aa1!"+UUID.randomUUID();
+        sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_chg_dttm,temp_pwd_yn,pwd_err_cnt,user_stat_cd,mfa_use_yn,mfa_err_cnt,reg_user_id) VALUES (?,?,?, ?,CURRENT_TIMESTAMP,'N',0,'USE','N',0,'SYSTEM')",user,"월마감 시험",user+"@example.test",new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(10).encode(password));
+        sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES (?,'ADMIN','SYSTEM')",user);
+        var receivedCode=new java.util.concurrent.atomic.AtomicReference<String>();
+        org.mockito.Mockito.when(authenticationMail.send(anyString(),anyString(),anyString())).thenAnswer(call->{
+            var matcher=java.util.regex.Pattern.compile("[0-9]{6}").matcher((String)call.getArgument(2));
+            if(!matcher.find())throw new AssertionError("MFA mail must contain a generated code");
+            receivedCode.set(matcher.group());return "ACCEPTED";
+        });
+        refreshCsrf();
+        var logged=mvc.perform(post("/api/auth/login").session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsBytes(Map.of("userId",user,"password",password))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.nextStep").value("MFA")).andReturn();
+        loginSession=(org.springframework.mock.web.MockHttpSession)logged.getRequest().getSession(false);
+        refreshCsrf();
+        assertThat(receivedCode.get()).isNotNull();
+        var verified=mvc.perform(post("/api/auth/mfa/verify").session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsBytes(Map.of("code",receivedCode.get()))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.nextStep").value("AUTHENTICATED")).andReturn();
+        receivedCode.set(null);
+        loginSession=(org.springframework.mock.web.MockHttpSession)verified.getRequest().getSession(false);
+        refreshCsrf();
+    }
+    void refreshCsrf() throws Exception {
+        var request=get("/api/auth/csrf");if(loginSession!=null)request.session(loginSession);
+        var response=mvc.perform(request).andExpect(status().isOk()).andReturn();
+        loginSession=(org.springframework.mock.web.MockHttpSession)response.getRequest().getSession(false);
+        var token=json.readTree(response.getResponse().getContentAsString()).path("data");
+        csrfHeader=token.path("headerName").asText();csrfToken=token.path("token").asText();
+    }
 
     @BeforeEach void ownSources()throws Exception {
-        var context=json.readTree(mvc.perform(get("/api/period-context")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("data");
+        login();
+        var context=json.readTree(mvc.perform(get("/api/period-context").session(loginSession)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("data");
         month=context.path("cashBaseMonth").asText();dbMonth=month.replace("-","");
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_cl_close",Integer.class)).isZero();
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_fi_corp_tax WHERE tax_yr=?",Integer.class,month.substring(0,4))).isZero();
@@ -92,22 +129,22 @@ class MonthCloseDatabaseTest {
         String revision=revision();Map<String,String> before=state();
         AccessLogWriter target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(access);
         doThrow(new IllegalStateException("private SQL must not leak")).when(target).appendMonthClose(any(),anyString(),any(),any());
-        var response=mvc.perform(post("/api/month-closes/"+month+"/close").contentType("application/json").content(json.writeValueAsString(Map.of("expectedRevision",revision,"operationId",UUID.randomUUID().toString(),"acceptWarnings",true))))
+        var response=mvc.perform(post("/api/month-closes/"+month+"/close").session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsString(Map.of("expectedRevision",revision,"operationId",UUID.randomUUID().toString(),"acceptWarnings",true))))
             .andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andReturn().getResponse();
         assertThat(response.getContentAsString()).doesNotContain("private SQL");assertThat(state()).isEqualTo(before);
     }
     @Test void thirdCheckFailureRollsBackTheNewParentAndEarlierCheckRows()throws Exception {
         String revision=revision();Map<String,String> before=state();
         doThrow(new IllegalStateException("check save failed")).when(repository).save(eq("TB_CL_CLOSE_CHK"),argThat(row->"BILL".equals(row.get("chk_item_cd"))),any(),anyBoolean());
-        mvc.perform(post("/api/month-closes/"+month+"/checks").contentType("application/json").content(json.writeValueAsString(Map.of("expectedRevision",revision))))
+        mvc.perform(post("/api/month-closes/"+month+"/checks").session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsString(Map.of("expectedRevision",revision))))
             .andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
         assertThat(state()).isEqualTo(before);
     }
     private String revision()throws Exception {
-        return json.readTree(mvc.perform(get("/api/month-closes").param("month",month)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("data").path("revision").asText();
+        return json.readTree(mvc.perform(get("/api/month-closes").session(loginSession).param("month",month)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("data").path("revision").asText();
     }
     private JsonNode postCommand(String action,Map<String,Object> body,int expected)throws Exception {
-        var response=mvc.perform(post("/api/month-closes/"+month+"/"+action).contentType("application/json").content(json.writeValueAsString(body)))
+        var response=mvc.perform(post("/api/month-closes/"+month+"/"+action).session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsString(body)))
             .andExpect(status().is(expected)).andReturn().getResponse();
         return json.readTree(response.getContentAsString()).path("data");
     }

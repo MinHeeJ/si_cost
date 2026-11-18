@@ -1,9 +1,9 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./projectProgressApi";
 beforeEach(() =>
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockImplementation(
       async () =>
         new Response(

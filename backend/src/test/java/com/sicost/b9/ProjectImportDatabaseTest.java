@@ -74,7 +74,7 @@ class ProjectImportDatabaseTest {
     @Test void simultaneousSameUploadAppliesOnceAndReturnsSameImmutableResults() throws Exception {
         var file=ProjectWorkbook.valid();var check=service.validate(file,2026);var start=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
         Callable<B9Dtos.Result> command=()->{assertThat(start.await(10,TimeUnit.SECONDS)).isTrue();return service.apply(file,check.uploadId(),2026);};
-        try{var a=pool.submit(command);var b=pool.submit(command);start.countDown();assertThat(a.get(30,TimeUnit.SECONDS)).isEqualTo(b.get(30,TimeUnit.SECONDS));}finally{pool.shutdownNow();}
+        try{var a=pool.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(command));var b=pool.submit(new org.springframework.security.concurrent.DelegatingSecurityContextCallable<>(command));start.countDown();assertThat(a.get(30,TimeUnit.SECONDS)).isEqualTo(b.get(30,TimeUnit.SECONDS));}finally{pool.shutdownNow();}
         assertThat(db.count("tb_pj_proj")).isEqualTo(1);assertThat(db.count("tb_pj_proj_part")).isEqualTo(1);assertThat(db.count("tb_pj_proj_chg")).isEqualTo(1);
     }
     @Test void contextAuditFailureRollsBackCheckedAndIssuesTogether() throws Exception {

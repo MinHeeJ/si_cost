@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { releaseTentativeAssignment } from "./tentativeAssignmentsApi";
@@ -15,7 +16,7 @@ it("posts selected TENT and full revision with no client actor", async () => {
       status: 200,
     }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     releaseTentativeAssignment(
       result.tentativeId,
@@ -45,7 +46,7 @@ it("omits absent optional reason and broadcasts successful real changes", async 
           { status: 200 },
         ),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await releaseTentativeAssignment(result.tentativeId, "revision");
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
       expectedRevision: "revision",
@@ -58,7 +59,7 @@ it("omits absent optional reason and broadcasts successful real changes", async 
 });
 it("network failure is propagated with no mutation retry", async () => {
   const fetcher = vi.fn().mockRejectedValue(new Error("연결 실패"));
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(releaseTentativeAssignment("201", "revision")).rejects.toThrow(
     "연결 실패",
   );
@@ -77,7 +78,7 @@ it("stale-write envelope is preserved and never retried", async () => {
       { status: 409 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(releaseTentativeAssignment("201", "old")).rejects.toBeInstanceOf(
     ApiError,
   );

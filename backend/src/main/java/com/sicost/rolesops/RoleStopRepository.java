@@ -24,6 +24,6 @@ public class RoleStopRepository {
         Map<String,Object> row=snapshot(id).role();
         return new Detail(id,(String)row.get("name"),(String)row.get("dataScope"),"Y".equals(row.get("sensitiveView")),
             "Y".equals(row.get("systemRole")),"Y".equals(row.get("use")),((Number)row.get("sortOrder")).intValue(),
-            revision,mapper.menuPermissions(id),true,false,revisions.settingsRevision());
+            revision,mapper.menuPermissions(id),false,true,revisions.settingsRevision());
     }
 }

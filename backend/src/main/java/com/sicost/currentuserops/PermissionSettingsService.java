@@ -17,6 +17,9 @@ public class PermissionSettingsService {
     private final CurrentUserProvider users;
     private final RevisionService revisions;
     private final Clock clock;
+    private com.sicost.permission.PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     public PermissionSettingsService(PermissionSettingsRepository repository,CurrentUserProvider users,
                                      RevisionService revisions,Clock clock) {
         this.repository=repository;this.users=users;this.revisions=revisions;this.clock=clock;
@@ -33,8 +36,13 @@ public class PermissionSettingsService {
             .map(AssignedPart::partId).distinct().sorted().toList();
         List<String> projectIds=projects.stream().filter(project->roles.stream().anyMatch(role->"PROJ".equals(role.dataScope())))
             .map(AssignedProject::projectId).distinct().sorted().toList();
-        return new Settings(userId,roles.stream().map(Role::roleId).distinct().sorted().toList(),repository.menuPermissions(userId),
-            roles.stream().anyMatch(Role::sensitiveView),new ScopeUnion(all,partIds,projectIds),parts,projects,true,false,
+        List<MenuPermission> menus=repository.menuPermissions(userId);
+        if(permissions!=null) {
+            var allowed=permissions.menuActions();
+            menus=menus.stream().map(menu->{var actions=allowed.getOrDefault(menu.menuId(),java.util.Set.of());return new MenuPermission(menu.menuId(),actions.contains("INQ"),actions.contains("REG"),actions.contains("UPD"),actions.contains("DEL"),actions.contains("UPLD"),actions.contains("DNLD"),actions.contains("CNFM"));}).toList();
+        }
+        return new Settings(userId,roles.stream().map(Role::roleId).distinct().sorted().toList(),menus,
+            roles.stream().anyMatch(Role::sensitiveView),new ScopeUnion(all,partIds,projectIds),parts,projects,false,true,
             revisions.revision(new Snapshot(repository.snapshot(userId),parts,projects)));
     }
 }

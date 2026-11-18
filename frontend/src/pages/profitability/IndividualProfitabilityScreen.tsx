@@ -1,3 +1,4 @@
+import { useSensitivePermission, usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -38,10 +39,7 @@ export type IndividualProfitabilityScreenProps = {
     query: ProfitabilityQuery,
     data: IndividualProfitabilityData,
   ): ReactNode;
-  renderCalculationGuide?(
-    data: IndividualProfitabilityData,
-    query: ProfitabilityQuery,
-  ): ReactNode;
+  renderCalculationGuide?(data: IndividualProfitabilityData): ReactNode;
 };
 const sortable = new Set<string>([
   "name",
@@ -55,16 +53,6 @@ const sortable = new Set<string>([
   "profit",
   "profitRate",
 ]);
-const headerHelp: Record<string, string> = {
-  utilization:
-    "투입된 달 ÷ 재직한 달. 조회 연도 1월(그 해 입사면 입사한 달)부터 이번 달(퇴사자는 퇴사한 달)까지",
-  personalCost: "월 급여 + 수당 + 4대보험(회사) + 퇴직금 적립 (엑셀 Q열)",
-  teamExpense: "팀비(1인당 월) × 그 사람 MM. 외주 0(식-11)",
-  projectExpense:
-    "프로젝트경비(1인당 월) × 그 사람 MM(식-11). 추가 직접 경비(출장비 등)는 사람에게 나누지 않고 프로젝트 원가에만 들어감",
-  totalCost: "개인별 원가 + 팀비 + 프로젝트경비 (엑셀 T열)",
-  profit: "단가 − 원가합계 (엑셀 U열)",
-};
 export function IndividualProfitabilityScreen({
   analysisEntry,
   onPerson,
@@ -72,6 +60,9 @@ export function IndividualProfitabilityScreen({
   renderExport,
   renderCalculationGuide,
 }: IndividualProfitabilityScreenProps = {}) {
+  const canSensitive = useSensitivePermission();
+  const canDownload = usePermission("UI-03", "DNLD");
+  const canPerson = usePermission("UI-02", "INQ");
   const preferences = usePreferences();
   const pageSize = preferences.get("PAGE_SIZE")?.value;
   const initialSize = pageSize === 20 || pageSize === 100 ? pageSize : 50;
@@ -82,9 +73,9 @@ export function IndividualProfitabilityScreen({
   const { query, data, loading, mobile } = state;
   const details = useProfitabilityDetails(query, mobile);
   useEffect(() => {
-    if (analysisEntry?.developerId)
+    if (canPerson && analysisEntry?.developerId)
       details.openPerson(analysisEntry.developerId);
-  }, [analysisEntry?.key, analysisEntry?.developerId, query]);
+  }, [analysisEntry?.key, analysisEntry?.developerId, query, canPerson]);
   useAnalysisScreenContext("UI-03", { developerId: details.personId });
   const { expandedKeys, setExpandedKeys } = details;
   const openPerson = onPerson ?? details.openPerson;
@@ -115,7 +106,7 @@ export function IndividualProfitabilityScreen({
 
   const name = (person: ProfitabilityPerson) => (
     <>
-      <button
+      {canPerson ? <button
         type="button"
         className="sicost-link"
         data-testid={`profitability-person-${person.personId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
@@ -125,7 +116,7 @@ export function IndividualProfitabilityScreen({
         }}
       >
         {person.name ?? person.personId} ({person.managementNo ?? "–"})
-      </button>
+      </button> : <span>{person.name ?? person.personId} ({person.managementNo ?? "–"})</span>}
       <ProfitabilityBadges person={person} />
     </>
   );
@@ -133,19 +124,9 @@ export function IndividualProfitabilityScreen({
     (def) => ({
       id: def.id,
       label:
-        def.id === "pay" && query.view === "CUMULATIVE" ? (
-          "급여(누계)"
-        ) : (
-          <>
-            {def.label}
-            {headerHelp[def.id] && (
-              <>
-                {" "}
-                <span title={headerHelp[def.id]}>ⓘ</span>
-              </>
-            )}
-          </>
-        ),
+        def.id === "pay" && query.view === "CUMULATIVE"
+          ? "급여(누계)"
+          : def.label,
       sortable: sortable.has(def.id),
       align: [
         "name",
@@ -207,17 +188,17 @@ export function IndividualProfitabilityScreen({
             배분 참고액 · 계산{" "}
             {formatDateTime(data.context.period.calculatedAt)}
           </p>
-          <ProfitabilitySummary summary={data.summary} unit={unit} />
-          {(data.unknownCount > 0 || data.estimatedCount > 0) && (
+          {canSensitive && <ProfitabilitySummary summary={data.summary} unit={unit} />}
+          {canSensitive && (data.unknownCount > 0 || data.estimatedCount > 0) && (
             <p role="note">
               자료 미확인 {data.unknownCount}명 · 급여 미업로드·예정{" "}
               {data.estimatedCount}명. 미확인 금액은 0으로 계산하지 않습니다.
             </p>
           )}
-          <ProfitabilityContributionTable
+          {canSensitive && <ProfitabilityContributionTable
             cells={data.contributions}
             unit={unit}
-          />
+          />}
         </>
       )}
       <ProfitabilityFilters
@@ -229,56 +210,62 @@ export function IndividualProfitabilityScreen({
         onEmployeeTypes={setEmployeeTypes}
       />
       <div className="profitability-toolbar">
-        <div className="profitability-toolbar-left">
-          <div
-            className="profitability-view"
-            role="group"
-            aria-label="금액 보기"
-          >
-            {(
-              [
-                ["CUMULATIVE", "연 누계"],
-                ["MONTHLY_AVERAGE", "월 평균"],
-              ] as const
-            ).map(([view, label]) => (
-              <button
-                key={view}
-                type="button"
-                disabled={loading}
-                className={query.view === view ? "sicost-primary" : ""}
-                aria-pressed={query.view === view}
-                onClick={() => apply({ ...query, view })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <label>
-            단위
-            <select
-              data-testid="profitability-unit-select"
-              value={unit}
-              disabled={preferences.loading || preferences.pending}
-              onChange={(e) => {
-                setSettingsError("");
-                void preferences
-                  .put("AMT_UNIT", "*", e.target.value)
-                  .catch((e: unknown) =>
-                    setSettingsError(
-                      e instanceof Error ? e.message : "단위 저장 실패",
-                    ),
-                  );
-              }}
+        <div className="profitability-view" role="group" aria-label="금액 보기">
+          {(
+            [
+              ["CUMULATIVE", "연 누계"],
+              ["MONTHLY_AVERAGE", "월 평균"],
+            ] as const
+          ).map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              disabled={loading}
+              className={query.view === view ? "sicost-primary" : ""}
+              aria-pressed={query.view === view}
+              onClick={() => apply({ ...query, view })}
             >
-              <option>원</option>
-              <option>천원</option>
-              <option>백만원</option>
-            </select>
-          </label>
+              {label}
+            </button>
+          ))}
         </div>
-        <div className="profitability-toolbar-right">
-          {!mobile && data && (
-            <>
+        <label>
+          단위
+          <select
+            data-testid="profitability-unit-select"
+            value={unit}
+            disabled={preferences.loading || preferences.pending}
+            onChange={(e) => {
+              setSettingsError("");
+              void preferences
+                .put("AMT_UNIT", "*", e.target.value)
+                .catch((e: unknown) =>
+                  setSettingsError(
+                    e instanceof Error ? e.message : "단위 저장 실패",
+                  ),
+                );
+            }}
+          >
+            <option>원</option>
+            <option>천원</option>
+            <option>백만원</option>
+          </select>
+        </label>
+        {canSensitive && (mobile || !data) && <ProfitabilityColumnSettings />}
+        {canDownload && !mobile && data && renderExport?.(query, data)}
+      </div>
+      {settingsError && <ErrorBanner message={settingsError} />}
+      {state.errorMessage && (
+        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
+      )}
+      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
+      {data && (
+        <>
+          {canSensitive && !mobile && (
+            <div
+              className="profitability-toolbar"
+              onClick={(event) => event.stopPropagation()}
+            >
               <button
                 type="button"
                 data-testid="profitability-expand-page"
@@ -297,19 +284,8 @@ export function IndividualProfitabilityScreen({
               >
                 모두 접기
               </button>
-            </>
+            </div>
           )}
-          <ProfitabilityColumnSettings />
-          {!mobile && data && renderExport?.(query, data)}
-        </div>
-      </div>
-      {settingsError && <ErrorBanner message={settingsError} />}
-      {state.errorMessage && (
-        <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
-      )}
-      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
-      {data && (
-        <>
           {mobile ? (
             <div
               data-testid="profitability-mobile-cards"
@@ -322,17 +298,17 @@ export function IndividualProfitabilityScreen({
                 >
                   <h2>{name(person)}</h2>
                   <p>
-                    개인 단가 {value(person.metrics, "revenue")} · 원가{" "}
-                    {value(person.metrics, "totalCost")}
+                    개인 단가 {value(person.metrics, "revenue")}
+                    {canSensitive && <> · 원가 {value(person.metrics, "totalCost")}</>}
                   </p>
                   <p>
-                    이익 {value(person.metrics, "profit")} · 가동률{" "}
+                    {canSensitive && <>이익 {value(person.metrics, "profit")} · </>}가동률{" "}
                     <ProfitabilityValue
                       value={person.utilization}
                       kind="rate"
                     />
                   </p>
-                  <button
+                  {canSensitive && <button
                     type="button"
                     data-testid={`profitability-card-detail-${index}`}
                     aria-expanded={expandedKeys.includes(person.personId)}
@@ -344,8 +320,8 @@ export function IndividualProfitabilityScreen({
                     }}
                   >
                     월별 상세
-                  </button>
-                  {expandedKeys.includes(person.personId) && (
+                  </button>}
+                  {canSensitive && expandedKeys.includes(person.personId) && (
                     <div data-testid={`profitability-card-panel-${index}`}>
                       {ledger(person, query)}
                     </div>
@@ -388,7 +364,7 @@ export function IndividualProfitabilityScreen({
               size={data.size}
               total={data.total}
               stickyColumns={[{ id: "name", width: 220 }]}
-              onRowAction={(person) => openPerson(person.personId)}
+              onRowAction={canPerson ? (person) => openPerson(person.personId) : undefined}
               onPageChange={(page) => state.setQuery((q) => ({ ...q, page }))}
               onSizeChange={(size) => {
                 apply({ ...query, size });
@@ -432,12 +408,12 @@ export function IndividualProfitabilityScreen({
                   조건 초기화
                 </button>
               }
-              expandableRow={{
+              expandableRow={canSensitive ? {
                 expandedKeys,
                 onExpandedChange: setExpandedKeys,
                 label: (p) => p.name ?? p.personId,
                 render: (p) => ledger(p, query),
-              }}
+              } : undefined}
               footer={{
                 label: "필터 전체 합계",
                 render: (column) =>
@@ -455,10 +431,15 @@ export function IndividualProfitabilityScreen({
               }}
             />
           )}
-          {renderCalculationGuide?.(data, query)}
+          {canSensitive && renderCalculationGuide?.(data)}
+          {canSensitive && <p role="note">
+            월평균 N은 사람별 근무월입니다. 급여구성과 개인 원가는 원 단위
+            절사차이가 날 수 있습니다. 가동률은 투입달 ÷ 운영 이후 직접
+            재직달이며 보기와 무관합니다.
+          </p>}
         </>
       )}
-      {!onPerson && details.personId && (
+      {canPerson && !onPerson && details.personId && (
         <ProfitabilityDetails
           personId={details.personId}
           onClose={details.closePerson}

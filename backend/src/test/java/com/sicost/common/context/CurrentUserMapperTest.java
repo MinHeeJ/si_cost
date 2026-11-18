@@ -16,11 +16,10 @@ class CurrentUserMapperTest {
         }
         return configuration;
     }
-    @Test void principalSelectionUsesEligibleDatabaseAdminAndDeterministicFallbackWithoutCreatingAccounts() throws Exception {
-        String sql=configuration().getMappedStatement(CurrentUserMapper.class.getName()+".findAdministrator")
-            .getBoundSql(null).getSql().replaceAll("\\s+"," ");
-        assertThat(sql).contains("u.user_stat_cd='USE'", "r.role_id='ADMIN'", "r.use_yn='Y'", "ur.user_id=u.user_id",
-            "ORDER BY CASE WHEN u.user_id='admin' THEN 0 ELSE 1 END,u.user_id LIMIT 1").doesNotContain("INSERT", "UPDATE");
+    @Test void automaticAdministratorSelectionIsNotMapped() throws Exception {
+        var config=configuration();
+        assertThat(config.hasStatement(CurrentUserMapper.class.getName()+".findAdministrator")).isFalse();
+        assertThat(config.hasStatement(CurrentUserMapper.class.getName()+".findAdministratorRoles")).isFalse();
     }
     @Test void nameAndRolesAreBoundToTheChosenUserAndRolesRemainActiveOnly() throws Exception {
         var configuration=configuration();

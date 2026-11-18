@@ -1,4 +1,8 @@
-import { ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 import type { AmountUnit } from "../../shared/format";
 import type { ColumnView } from "../me/preferencesApi";
@@ -21,7 +25,7 @@ export async function getProfitabilityExport(
   if (options.order) params.set("order", options.order.join(","));
   if (options.hidden) params.set("hidden", options.hidden.join(","));
   if (options.unit) params.set("unit", options.unit);
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/api/individual-profitability/export?${params}`,
     {
       method: "GET",

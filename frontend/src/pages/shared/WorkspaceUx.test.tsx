@@ -9,7 +9,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,12 +20,19 @@ import { AnalysisAssistantProvider } from "./AnalysisAssistantContext";
 import * as analysis from "./analysisClient";
 vi.mock("./analysisClient", async (original) => ({
   ...(await original<typeof import("./analysisClient")>()),
-  listQuestions: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
+  listQuestions: vi.fn(async () => ({
+    items: [],
+    nextCursor: null,
+    hasMore: false,
+  })),
 }));
 import * as api from "./sharedApi";
 import * as notices from "../notificationsops/notificationsApi";
 vi.mock("./sharedApi");
-vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
+vi.mock("../dashboardops/dashboardApi", async (original) => ({
+  ...(await original<typeof import("../dashboardops/dashboardApi")>()),
+  getDashboard: vi.fn(async () => dashboardFixture()),
+}));
 vi.mock("../notificationsops/notificationsApi", async (original) => ({
   ...(await original<typeof import("../notificationsops/notificationsApi")>()),
   getNotificationUnreadCount: vi.fn(),
@@ -163,10 +170,22 @@ describe("레퍼런스 공통 UX", () => {
     );
   });
   it("AI 대화창을 열고 알림은 실제 조회 결과를 표시한다", async () => {
-    vi.mocked(analysis.listQuestions).mockResolvedValue({ items: [], nextCursor: null, hasMore: false });
-    render(<MemoryRouter><AnalysisAssistantProvider><HeaderActions /></AnalysisAssistantProvider></MemoryRouter>);
+    vi.mocked(analysis.listQuestions).mockResolvedValue({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    });
+    render(
+      <MemoryRouter>
+        <AnalysisAssistantProvider>
+          <HeaderActions />
+        </AnalysisAssistantProvider>
+      </MemoryRouter>,
+    );
     await userEvent.click(screen.getByRole("button", { name: "AI에게 묻기" }));
-    expect(screen.getByRole("dialog", { name: "AI에게 묻기 대화창" })).toHaveTextContent("조회·해석 전용");
+    expect(
+      screen.getByRole("dialog", { name: "AI에게 묻기 대화창" }),
+    ).toHaveTextContent("조회·해석 전용");
     await userEvent.click(screen.getByRole("button", { name: "알림" }));
     expect(await screen.findByText("알림이 없습니다.")).toBeInTheDocument();
     expect(notices.getNotifications).toHaveBeenCalledWith(1);
@@ -270,8 +289,25 @@ describe("레퍼런스 공통 UX", () => {
   });
 });
 
-const render = (ui: ReactElement) => renderUi(<PreferencesProvider api={{
-  getPreferences: () => api.getSharedPreferences() as ReturnType<import("../me/preferencesApi").PreferenceApi["getPreferences"]>,
-  putPreference: async (...args) => { const saved = await api.putSharedPreference(...args); return { ...saved, preference: saved.preference as import("../me/preferencesApi").Preference }; },
-  deletePreference: api.deleteSharedPreference,
-}}>{ui}</PreferencesProvider>);
+const render = (ui: ReactElement) =>
+  renderUi(
+    <PreferencesProvider
+      api={{
+        getPreferences: () =>
+          api.getSharedPreferences() as ReturnType<
+            import("../me/preferencesApi").PreferenceApi["getPreferences"]
+          >,
+        putPreference: async (...args) => {
+          const saved = await api.putSharedPreference(...args);
+          return {
+            ...saved,
+            preference:
+              saved.preference as import("../me/preferencesApi").Preference,
+          };
+        },
+        deletePreference: api.deleteSharedPreference,
+      }}
+    >
+      {ui}
+    </PreferencesProvider>,
+  );

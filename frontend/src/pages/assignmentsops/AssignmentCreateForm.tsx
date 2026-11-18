@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
+import {
+  useFieldPermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
 import { getDeveloper } from "../developers/peopleClient";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import {
@@ -30,6 +34,8 @@ export function AssignmentCreateForm({
   submitAssignment?(value: api.Create): Promise<{ assignmentId: string }>;
   onCandidateSaved?(id: string): Promise<void>;
 }) {
+  const canRate = useFieldPermission("UI-12", "billingUnitPrice"),
+    canReadDeveloper = usePermission("UI-02");
   const [form, setForm] = useState<api.Create>({
     year,
     projectId: "",
@@ -112,7 +118,14 @@ export function AssignmentCreateForm({
   }, [form.projectId, form.developerId, form.inputType]);
   useEffect(() => {
     const version = ++generation.current;
-    if (!paid || form.inputType === "SUB" || !form.developerId) return;
+    if (
+      !canRate ||
+      !canReadDeveloper ||
+      !paid ||
+      form.inputType === "SUB" ||
+      !form.developerId
+    )
+      return;
     void getDeveloper(form.developerId)
       .then((d) => {
         if (version !== generation.current) return;
@@ -133,7 +146,14 @@ export function AssignmentCreateForm({
     return () => {
       generation.current++;
     };
-  }, [form.developerId, form.startDate, form.inputType, paid]);
+  }, [
+    form.developerId,
+    form.startDate,
+    form.inputType,
+    paid,
+    canRate,
+    canReadDeveloper,
+  ]);
   function update<K extends keyof api.Create>(key: K, value: api.Create[K]) {
     setPreview(undefined);
     setSub(undefined);
@@ -147,7 +167,9 @@ export function AssignmentCreateForm({
             billingUnitPrice: "",
           }
         : {}),
-      ...(["projectId", "developerId"].includes(key) ? { recommendationRef: null } : {}),
+      ...(["projectId", "developerId"].includes(key)
+        ? { recommendationRef: null }
+        : {}),
     }));
   }
   function payload(): api.Create {
@@ -155,7 +177,7 @@ export function AssignmentCreateForm({
     return {
       ...body,
       year,
-      ...(paid && billingUnitPrice ? { billingUnitPrice } : {}),
+      ...(canRate && paid && billingUnitPrice ? { billingUnitPrice } : {}),
       contractDeveloperId:
         form.inputType === "SUB" ? form.contractDeveloperId : null,
     };
@@ -430,7 +452,7 @@ export function AssignmentCreateForm({
           {field("투입일 *", "startDate", "date")}
           {field("철수일 *", "endDate", "date")}
           {field("계약 월MM (빈칸 1.00)", "contractMm")}
-          {paid && (
+          {paid && canRate && (
             <>
               {field("청구 단가 (원) *", "billingUnitPrice")}
               <p className="assignment-create-wide">

@@ -24,6 +24,9 @@ public class CandidateMatchingService {
     private final WorkforceForecastService forecasts;
     private final CurrentUserProvider users;
     private final Clock clock;
+    private com.sicost.permission.PermissionProjectionService projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
     public CandidateMatchingService(CandidateMatchingRepository repository,WorkforceForecastService forecasts,CurrentUserProvider users,Clock clock) {
         this.repository=repository;this.forecasts=forecasts;this.users=users;this.clock=clock;
     }
@@ -99,6 +102,7 @@ public class CandidateMatchingService {
         rows.sort(Comparator.comparing((Ranked r)->r.position().gradeDistance(),Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing((a,b)->b.numerator().multiply(a.denominator()).compareTo(a.numerator().multiply(b.denominator())))
             .thenComparing(r->r.position().opportunityId()).thenComparingInt(r->r.position().needSn()));
+        if(projection!=null && !projection.candidateRate())rows.sort(Comparator.comparing((Ranked r)->r.position().gradeDistance(),Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(r->r.position().opportunityId()).thenComparingInt(r->r.position().needSn()));
         List<Position> items=rows.stream().limit(4).map(Ranked::position).toList();
         return new Read<>(new PositionsResult(id,items,items.size(),4),List.copyOf(issues));
     }

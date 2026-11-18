@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.sicost.common.context.CurrentUserMapper">
-  <select id="findAdministrator" resultType="string">
-    SELECT u.user_id FROM tb_sy_user u
-    WHERE u.user_stat_cd='USE' AND EXISTS (
-      SELECT 1 FROM tb_sy_user_role ur JOIN tb_sy_role r ON r.role_id=ur.role_id
-      WHERE ur.user_id=u.user_id AND r.role_id='ADMIN' AND r.use_yn='Y')
-    ORDER BY CASE WHEN u.user_id='admin' THEN 0 ELSE 1 END,u.user_id LIMIT 1
-  </select>
-  <select id="findAdministratorRoles" resultType="string">
-    SELECT r.role_id FROM tb_sy_role r
-    JOIN tb_sy_user_role ur ON ur.role_id = r.role_id
-    WHERE ur.user_id = 'admin' AND r.role_id = 'ADMIN' AND r.use_yn='Y' ORDER BY r.role_id
-  </select>
+
   <select id="findName" resultType="string">
     SELECT user_nm FROM tb_sy_user WHERE user_id=#{userId}
   </select>

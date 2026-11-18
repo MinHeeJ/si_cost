@@ -3,7 +3,8 @@ import type {
   DashboardData,
   DashboardMetric,
 } from "./dashboardApi";
-export function dashboardFixture(): DashboardData {
+export function dashboardFixture(): DashboardData &
+  Required<Pick<DashboardData, "closeProgress" | "projectAlerts">> {
   const basis: DashboardBasis = {
     basisMonth: "2026-07",
     basisDate: "2026-07-15",
@@ -29,7 +30,17 @@ export function dashboardFixture(): DashboardData {
     overdueCount: 2,
     overdueAmount: "1001",
     basis,
-    link: { screenId: metricCode === "UTILIZATION" ? "UI-28" : metricCode === "YTD_OPERATING_PROFIT" ? "UI-18" : metricCode === "RECEIVABLE" ? "UI-13" : "UI-08", linkKey: metricCode === "RECEIVABLE" ? null : basis.basisMonth },
+    link: {
+      screenId:
+        metricCode === "UTILIZATION"
+          ? "UI-28"
+          : metricCode === "YTD_OPERATING_PROFIT"
+            ? "UI-18"
+            : metricCode === "RECEIVABLE"
+              ? "UI-13"
+              : "UI-08",
+      linkKey: metricCode === "RECEIVABLE" ? null : basis.basisMonth,
+    },
   });
   return {
     selectedMonth: "2026-07",

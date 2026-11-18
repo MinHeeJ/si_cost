@@ -29,7 +29,7 @@ class RuntimeCheckContractTest {
         }
     }
 
-    @Test void unauthenticatedRuntimeContractMatchesDurableOpenApi() throws IOException {
+    @Test void authenticatedRuntimeContractMatchesDurableOpenApi() throws IOException {
         var yaml = new YamlMapFactoryBean() {
             @Override protected org.yaml.snakeyaml.Yaml createYaml() {
                 var options = new org.yaml.snakeyaml.LoaderOptions();
@@ -43,7 +43,11 @@ class RuntimeCheckContractTest {
         Map<String, Object> openApi = yaml.getObject();
         assertThat(openApi).isNotNull();
         Object schemes = ((Map<?, ?>) openApi.get("components")).get("securitySchemes");
-        assertThat(schemes == null || schemes instanceof Map<?, ?> map && map.isEmpty()).isTrue();
+        assertThat(schemes).isInstanceOf(Map.class);
+        Map<?, ?> session = (Map<?, ?>) ((Map<?, ?>) schemes).get("sessionAuth");
+        assertThat(session).isNotNull();
+        assertThat(session.get("in")).isEqualTo("cookie");
+        assertThat(session.get("name")).isEqualTo("JSESSIONID");
         assertThat((Iterable<?>) openApi.get("security")).isEmpty();
 
         JsonNode runtime = resource("aiops.runtime-check.json", 65536);
@@ -51,7 +55,7 @@ class RuntimeCheckContractTest {
         assertThat(runtime.path("schema_version").asInt()).isEqualTo(1);
         assertThat(fields(runtime.path("auth"))).containsExactly("required");
         assertThat(runtime.path("auth").path("required").isBoolean()).isTrue();
-        assertThat(runtime.path("auth").path("required").asBoolean()).isFalse();
+        assertThat(runtime.path("auth").path("required").asBoolean()).isTrue();
         JsonNode backend = runtime.path("backend");
         assertThat(fields(backend)).containsExactlyInAnyOrder("service", "container_port", "health");
         assertThat(backend.path("service").asText()).isEqualTo("backend");
@@ -61,12 +65,12 @@ class RuntimeCheckContractTest {
         assertThat(runtime.path("first_menu").path("route").asText()).isEqualTo("/UI-27");
     }
 
-    @Test void firstUseGuideDoesNotInventAuthenticationOrCredentials() throws IOException {
+    @Test void firstUseGuideRequiresAuthenticationWithoutInventingCredentials() throws IOException {
         JsonNode guide = resource("aiops.initial-login.json", 16384);
         assertThat(fields(guide)).containsExactlyInAnyOrder("schema_version", "auth_required", "guide_path");
         assertThat(guide.path("schema_version").asInt()).isEqualTo(1);
         assertThat(guide.path("auth_required").isBoolean()).isTrue();
-        assertThat(guide.path("auth_required").asBoolean()).isFalse();
+        assertThat(guide.path("auth_required").asBoolean()).isTrue();
         assertThat(guide.path("guide_path").asText()).isEqualTo("README.md");
     }
 

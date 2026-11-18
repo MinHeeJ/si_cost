@@ -62,11 +62,12 @@ export function PermissionSettingsPanel() {
         </button>
       </div>
       <p className="sicost-banner sicost-tone-info" role="note">
-        권한 설정을 저장합니다. 실제 접근권한 적용 전인 개발·검증 모드입니다.
+        저장된 역할·메뉴 권한과 담당 범위를 적용합니다.
       </p>
       <p>
-        활성 역할의 저장 설정 합집합입니다. 실제 메뉴·API 차단, 행 필터와
-        민감항목 가림은 적용하지 않습니다.
+        활성 역할의 저장 설정 합집합입니다. 각 업무는 메뉴·동작·담당 범위와
+        민감항목 자격을 서버에서 검사하며 연결이 완료되지 않은 경로는
+        거부합니다.
       </p>
       {pending && <p role="status">저장 권한을 조회하고 있습니다.</p>}
       {error != null && (
@@ -105,7 +106,7 @@ export function PermissionSettingsPanel() {
               <StatusBadge tone={settings.sensitiveView ? "info" : "neutral"}>
                 {settings.sensitiveView ? "허용 설정" : "허용 안 함"}
               </StatusBadge>{" "}
-              급여·지급단가·개인별원가·거래처 지급계좌 (실제 가림 미적용)
+              급여·지급단가·개인별원가·거래처 지급계좌
             </dd>
             <dt>저장 데이터범위</dt>
             <dd>

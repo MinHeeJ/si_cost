@@ -36,7 +36,9 @@ class PartStandardDatabaseTest {
     static class Transactions {
         @Bean PlatformTransactionManager transactionManager(DataSource source) {return new DataSourceTransactionManager(source);}
     }
+    org.springframework.security.core.context.SecurityContext caller;
     @BeforeEach void install() throws Exception {
+        caller=org.springframework.security.core.context.SecurityContextHolder.getContext();
         PostgreSqlDatabase db=new PostgreSqlDatabase();db.install();sql=db.sql;
         SqlSessionFactoryBean factory=new SqlSessionFactoryBean();factory.setDataSource(db.source);
         var configuration=new org.apache.ibatis.session.Configuration();configuration.setArgNameBasedConstructorAutoMapping(true);configuration.setMapUnderscoreToCamelCase(true);
@@ -116,5 +118,5 @@ class PartStandardDatabaseTest {
         var a=CompletableFuture.supplyAsync(()->write(start,input));var b=CompletableFuture.supplyAsync(()->write(start,input));start.countDown();
         assertThat(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS))).containsExactlyInAnyOrder("OK","STALE_WRITE");assertThat(history()).hasSize(2);
     }
-    String write(CountDownLatch start,ObjectNode input){try{if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.save("PART-test",input);return "OK";}catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}}
+    String write(CountDownLatch start,ObjectNode input){org.springframework.security.core.context.SecurityContextHolder.setContext(caller);try{if(!start.await(10,TimeUnit.SECONDS))throw new IllegalStateException("timeout");service.save("PART-test",input);return "OK";}catch(ApiException e){return e.code();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}finally{org.springframework.security.core.context.SecurityContextHolder.clearContext();}}
 }

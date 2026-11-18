@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
 import type {
@@ -1500,7 +1501,7 @@ describe("승인 API 등록", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(
       api.getWithdrawalExport(withdrawalQuery),
     ).rejects.toMatchObject({ status: 500, body });
@@ -1521,7 +1522,7 @@ describe("승인 API 등록", () => {
           }),
         ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "financial.xlsx");
       const result =
         operation === "validate"
@@ -1567,7 +1568,7 @@ describe("승인 API 등록", () => {
       const fetcher = vi
         .fn()
         .mockResolvedValue(new Response(JSON.stringify(body), { status: 422 }));
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "financial.xlsx");
       await expect(
         operation === "validate"
@@ -1595,7 +1596,7 @@ describe("승인 API 등록", () => {
             }),
           ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "upload.xlsx");
       if (form === "B1") {
         await api.createB1Validation(file, "2026-11", 123);
@@ -1667,7 +1668,7 @@ describe("승인 API 등록", () => {
     const fetcher = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify(body), { status: 422 }));
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(call()).rejects.toMatchObject({ status: 422, body });
     expect(fetcher).toHaveBeenCalledOnce();
   });
@@ -1689,7 +1690,7 @@ describe("승인 API 등록", () => {
     const fetcher = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify(body), { status: 409 }));
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(test.call()).rejects.toMatchObject({ status: 409, body });
     expect(fetcher).toHaveBeenCalledOnce();
   });
@@ -1706,7 +1707,7 @@ describe("승인 API 등록", () => {
             }),
           ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "projects.xlsx");
       if (form === "B9") {
         await api.createB9Validation(file, 2026);
@@ -1756,7 +1757,7 @@ describe("승인 API 등록", () => {
           }),
         ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "developers.xlsx");
       if (operation === "validate") await api.createB8Validation(file);
       else await api.saveB8Apply(file, 123);
@@ -1783,7 +1784,7 @@ describe("승인 API 등록", () => {
           { headers: { "Content-Type": "application/json" } },
         ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       const file = new File(["workbook"], "clients.xlsx");
       if (operation === "validate") await api.createB7Validation(file);
       else await api.saveB7Apply(file, 123);
@@ -1900,7 +1901,7 @@ describe("승인 API 등록", () => {
         },
       }),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     const result = await test.call();
     expect(result.filename).toBe(test.filename);
     expect(result.blob.size).toBeGreaterThan(0);
@@ -1937,7 +1938,7 @@ describe("승인 API 등록", () => {
           headers: { "Content-Type": "application/json" },
         }),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       await expect(call()).rejects.toMatchObject({ status: 409, body });
       expect(fetcher).toHaveBeenCalledTimes(1);
     },
@@ -1957,7 +1958,7 @@ describe("승인 API 등록", () => {
           { status: test.status ?? 200 },
         ),
       );
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       expect(await test.call()).toEqual(
         test.status ? undefined : { value: "1.2300" },
       );
@@ -1981,7 +1982,7 @@ describe("승인 API 등록", () => {
           JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
         ),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await api.getCodes("A/B");
     expect(fetcher.mock.calls[0][0]).toBe(
       "/api/codes/A%2FB?includeInactive=false",
@@ -2002,7 +2003,7 @@ describe("승인 API 등록", () => {
       const fetcher = vi
         .fn()
         .mockResolvedValue(new Response(JSON.stringify(body), { status }));
-      vi.stubGlobal("fetch", fetcher);
+      stubBusinessFetch(fetcher);
       await expect(api.getParameter("DUN_D1")).rejects.toMatchObject({
         status,
         body,

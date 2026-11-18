@@ -88,7 +88,7 @@ export function PayrollDialog({
   >({});
   const sequence = useRef(0);
   const actionBusy = useRef(false);
-  const mobile = window.matchMedia?.("(max-width: 767px)").matches ?? false;
+  const mobile = window.matchMedia?.("(max-width: 767px)")?.matches ?? false;
   useEffect(() => {
     let current = true;
     setContextError(undefined);
@@ -541,7 +541,7 @@ export function PayrollActions({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const busy = useRef(false);
-  const mobile = window.matchMedia?.("(max-width: 767px)").matches ?? false;
+  const mobile = window.matchMedia?.("(max-width: 767px)")?.matches ?? false;
   async function template() {
     if (busy.current) return;
     busy.current = true;

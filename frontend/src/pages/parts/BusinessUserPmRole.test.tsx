@@ -1,4 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { BusinessUserForm } from "../businessusers/BusinessUserForm";
@@ -8,9 +12,9 @@ vi.mock("../businessusers/businessUsersApi");
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getManagedUserRoleOptions).mockResolvedValue([
-      { roleId: "PM", name: "프로젝트 담당" },
-      { roleId: "SALES_LDR", name: "영업 파트장" },
-    ]);
+    { roleId: "PM", name: "프로젝트 담당" },
+    { roleId: "SALES_LDR", name: "영업 파트장" },
+  ]);
 });
 it("UI-23 연결잔존409는 해제안내와 다른역할·입력을 유지한다", async () => {
   vi.mocked(api.putBusinessUser).mockRejectedValue(

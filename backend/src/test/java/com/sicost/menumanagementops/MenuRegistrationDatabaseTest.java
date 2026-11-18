@@ -54,7 +54,7 @@ class MenuRegistrationDatabaseTest {
         context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             MenuManagementRepository.class,MenuManagementService.class,MenuRegistrationRepository.class,MenuRegistrationService.class,MenuService.class);
-        context.refresh();service=context.getBean(MenuRegistrationService.class);trees=context.getBean(MenuManagementService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(MenuRegistrationService.class);trees=context.getBean(MenuManagementService.class);
         mvc=MockMvcBuilders.standaloneSetup(new MenuRegistrationController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }
     @AfterEach void close() {if(context!=null)context.close();}

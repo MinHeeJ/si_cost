@@ -57,7 +57,7 @@ class DeveloperActionsDatabaseTest {
         context.registerBean(DeveloperRevisionMapper.class,()->session.getMapper(DeveloperRevisionMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,DeveloperAggregateRevision.class,DeveloperActionsRepository.class,
             DeveloperActionsQueryService.class,DeveloperUseStatusService.class,DeveloperBulkStatusService.class,DeveloperStatusRecalculationService.class,DeveloperActionsController.class);
-        context.refresh();mapper=context.getBean(DeveloperActionsMapper.class);repository=context.getBean(DeveloperActionsRepository.class);states=context.getBean(DeveloperStatusRecalculationService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();mapper=context.getBean(DeveloperActionsMapper.class);repository=context.getBean(DeveloperActionsRepository.class);states=context.getBean(DeveloperStatusRecalculationService.class);
         mvc=MockMvcBuilders.standaloneSetup(context.getBean(DeveloperActionsController.class)).setControllerAdvice(new ApiExceptionHandler())
             .setMessageConverters(new MappingJackson2HttpMessageConverter(json)).addFilters(new RequestIdFilter()).build();
     }

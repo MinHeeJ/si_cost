@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CandidatesScreen } from "./CandidatesScreen";
@@ -419,8 +425,20 @@ it("HOLD does not get overdue warning while active candidates do", async () => {
 });
 
 it("예측에서 전달한 주직무 필터는 첫 진입에 적용하고 초기화로 해제한다", async () => {
-  render(<CandidatesScreen entryJob={{ key: "forecast-entry", jobCode: "BE" }} />);
-  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith(expect.objectContaining({ jobCode: "BE", page: 1 }), expect.any(AbortSignal)));
+  render(
+    <CandidatesScreen entryJob={{ key: "forecast-entry", jobCode: "BE" }} />,
+  );
+  await waitFor(() =>
+    expect(api.getCandidates).toHaveBeenLastCalledWith(
+      expect.objectContaining({ jobCode: "BE", page: 1 }),
+      expect.any(AbortSignal),
+    ),
+  );
   await userEvent.click(screen.getByTestId("candidate-reset"));
-  await waitFor(() => expect(api.getCandidates).toHaveBeenLastCalledWith({ page: 1, size: 50 }, expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getCandidates).toHaveBeenLastCalledWith(
+      { page: 1, size: 50 },
+      expect.any(AbortSignal),
+    ),
+  );
 });

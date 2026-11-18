@@ -1,8 +1,21 @@
-import { ApiError, request, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  request,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 
 export type WithdrawalQuery = {
-  sort?: "name" | "project" | "job" | "date" | "days" | "history" | "extension" | "next";
+  sort?:
+    | "name"
+    | "project"
+    | "job"
+    | "date"
+    | "days"
+    | "history"
+    | "extension"
+    | "next";
   direction?: "ASC" | "DESC";
   year?: number;
   period: "ALL" | "SOON" | "LATER" | "PAST";
@@ -169,7 +182,7 @@ export async function downloadWithdrawals(query: WithdrawalQuery) {
   if (!window.matchMedia("(min-width: 1024px)").matches)
     throw new Error("다운로드는 PC에서 이용해 주세요.");
   const { year, period, extension, job, sort, direction } = query;
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/api/withdrawals/export?${params({ year, period, extension, ...(job ? { job } : {}), sort, direction })}`,
     {
       redirect: "error",

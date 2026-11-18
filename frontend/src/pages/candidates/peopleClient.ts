@@ -1,5 +1,5 @@
 import { downloadFilename } from "../shared/downloadFilename";
-import { request } from "../../shared/api";
+import { authenticatedFetch, request } from "../../shared/api";
 import { ApiError } from "../../shared/api";
 import type { PeopleAreaPath } from "../../shared/areaClient";
 
@@ -29,7 +29,8 @@ export type CandidateItem = {
   grade: string;
   skills: string[];
   homeAddress: string | null;
-  desiredRate: string;
+  desiredRate?: string;
+  availableFields?: string[];
   availableDate: string;
   contactStatus: "BEFORE" | "DONE" | "ITVW" | "HOLD" | "CTRT";
   lastContactDate: string | null;
@@ -37,7 +38,7 @@ export type CandidateItem = {
   revision: string;
 };
 export type CandidateDetail = CandidateItem &
-  CandidateFields & {
+  Omit<CandidateFields, "desiredRate"> & {
     addressPath: PeopleAreaPath;
     consentDate: string | null;
     consentUserId: string | null;
@@ -102,7 +103,7 @@ export async function downloadCandidates(
   amountUnit: string,
 ) {
   const { page: _page, size: _size, sort, direction, ...conditions } = filters;
-  const response = await fetch("/api/exports/master-data", {
+  const response = await authenticatedFetch("/api/exports/master-data", {
     method: "POST",
     redirect: "error",
     headers: { "Content-Type": "application/json" },

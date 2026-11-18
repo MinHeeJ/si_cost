@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./corporateTaxApi";
@@ -8,7 +9,7 @@ function response(data: unknown) {
     .mockResolvedValue(
       new Response(JSON.stringify({ success: true, meta: {}, data })),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   return fetcher;
 }
 it("allocation uses only selected year and public relative GET", async () => {
@@ -52,7 +53,7 @@ it("conflict preserves request id and has no automatic retry", async () => {
       { status: 409 },
     ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     api.saveCorporateTaxPaymentConfirmation("2025", "CNFM", {
       month: "2026-10",

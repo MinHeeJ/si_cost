@@ -1,4 +1,9 @@
-import { ApiError, request, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  ApiError,
+  request,
+  type ApiErrorBody,
+} from "../../shared/api";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 import type { SalesForecast } from "../forecast/salesForecastApi";
 
@@ -23,13 +28,16 @@ export async function getWorkforceForecastExport(
 ) {
   const params = parameters(query);
   params.set("amountUnit", amountUnit);
-  const response = await fetch(`/api/workforce-forecasts/export?${params}`, {
-    headers: {
-      Accept:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  const response = await authenticatedFetch(
+    `/api/workforce-forecasts/export?${params}`,
+    {
+      headers: {
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      redirect: "error",
     },
-    redirect: "error",
-  });
+  );
   const type = response.headers.get("Content-Type")?.split(";")[0].trim();
   if (type === "application/json") {
     const error = (await response.json()) as ApiErrorBody;

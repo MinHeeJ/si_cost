@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./support/authenticatedTest";
 import type { MonthCloses } from "../../frontend/src/pages/monthclosesops/monthCloseApi";
 
 // Runner-owned app and database only. These scenarios never close or reopen shared months.

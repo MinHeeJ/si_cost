@@ -16,4 +16,10 @@
     WHERE role_id IN ('PM', 'SALES_LDR') AND use_yn = 'Y'
     ORDER BY sort_ord, role_id
   </select>
+  <resultMap id="roleLabel" type="com.sicost.businessusersops.BusinessUserOptionsDtos$RoleOption">
+    <constructor><arg column="role_id" javaType="java.lang.String"/><arg column="role_nm" javaType="java.lang.String"/></constructor>
+  </resultMap>
+  <select id="allActiveRoles" resultMap="roleLabel">
+    SELECT role_id,role_nm FROM tb_sy_role WHERE use_yn='Y' ORDER BY sort_ord,role_id
+  </select>
 </mapper>

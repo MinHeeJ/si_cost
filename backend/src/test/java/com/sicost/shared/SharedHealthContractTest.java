@@ -15,6 +15,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(HealthController.class)
 @ContextConfiguration(classes=HealthController.class)
 @Import({HealthService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

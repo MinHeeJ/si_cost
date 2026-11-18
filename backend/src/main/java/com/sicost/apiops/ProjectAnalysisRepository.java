@@ -22,7 +22,14 @@ public class ProjectAnalysisRepository {
         this.mapper=mapper;this.source=source;this.costs=costs;this.monthly=monthly;this.assignments=assignments;
     }
     public Snapshot load(YearMonth month) {
-        var sources=source.loadRange(month);
+        var evidence=mapper.evidence();
+        Set<String> visible=evidence.stream().map(ProjectEvidence::projectId).collect(java.util.stream.Collectors.toSet());
+        var completeSources=com.sicost.permission.PermissionCalculationContext.source(()->source.loadRange(month));
+        var calculated=costs.calculate(completeSources);
+        var sources=new com.sicost.profitability.MonthlyCostDtos.Sources(completeSources.period(),completeSources.actor(),completeSources.asOfDate(),
+            completeSources.people(),completeSources.prices(),completeSources.states(),completeSources.payroll(),completeSources.assignments(),completeSources.projectMonths(),
+            completeSources.projects().stream().filter(p->visible.contains(p.projectId())).toList(),completeSources.projectParts(),completeSources.turnkey(),completeSources.storedCosts(),
+            completeSources.standards(),completeSources.parts(),completeSources.closes(),completeSources.allowanceCodes());
         var future=new ArrayList<ForecastMonth>();
         for (String id:mapper.assignmentIds()) {
             var assignment=assignments.source(id);
@@ -35,7 +42,7 @@ public class ProjectAnalysisRepository {
             for(var value:monthly.calculate(bounded,assignments.histories(id),project.status(),project.contractType()))
                 if(YearMonth.parse(value.month()).isAfter(month)) future.add(new ForecastMonth(project.projectId(),id,assignment.developerId(),value.month(),new BigDecimal(value.monthlyMm())));
         }
-        return new Snapshot(sources,costs.calculate(sources),mapper.evidence(),mapper.expenses(),mapper.stages(),
+        return new Snapshot(sources,calculated,evidence,mapper.expenses(),mapper.stages(),
             mapper.memos(),mapper.issues(),mapper.managers(),List.copyOf(future),mapper.templates());
     }
 }

@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 public class DashboardSnapshotReader {
     private final ObjectMapper json;
     private final DashboardService dashboard;
+    private com.sicost.permission.PermissionProjectionService projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
     public DashboardSnapshotReader(ObjectMapper json, DashboardService dashboard) {
         this.json = json;
         this.dashboard = dashboard;
@@ -22,6 +25,6 @@ public class DashboardSnapshotReader {
         var data = dashboard.getDashboard(month);
         if (data == null || !month.equals(data.selectedMonth()))
             throw new ApiException(500, "INTERNAL_ERROR", "대시보드 전체 조회를 불러오지 못했습니다. 다시 시도해 주세요.");
-        return json.valueToTree(data);
+        return projection.publicView("UI-16",projection.dashboardView(json.valueToTree(data)));
     }
 }

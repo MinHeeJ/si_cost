@@ -20,6 +20,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(ProfileController.class)
 @ContextConfiguration(classes=ProfileController.class)
 @Import({ProfileService.class,ProfileRepository.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

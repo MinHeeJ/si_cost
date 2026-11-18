@@ -27,6 +27,15 @@ public class AccessLogWriter {
     public record Entry(String userId, String action, String screenId, String description, String clientIp, LocalDateTime now) {}
 
     public record MonthCloseEvent(String action, String month, int historySequence) {}
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void appendSensitiveRead(String screenId,HttpServletRequest request) {
+        if(!Set.of("UI-02","UI-03","UI-04","UI-19","UI-32").contains(screenId))throw InputValidator.invalid("screenId");
+        String ip=request.getRemoteAddr();
+        if(ip==null || ip.length()>45 || !ip.matches("[0-9A-Fa-f:.%]+"))ip=null;
+        if(mapper.insert(new Entry(users.userId(),"SNSTV_VIEW",screenId,"민감자료 조회",ip,
+                LocalDateTime.ofInstant(clock.instant(),TimeConfiguration.SEOUL)))!=1)
+            throw new IllegalStateException("민감자료 접근기록을 저장하지 못했습니다.");
+    }
     @Transactional(propagation = Propagation.MANDATORY)
     public void appendMonthClose(MonthCloseEvent event, String actor, LocalDateTime at, HttpServletRequest request) {
         if (event == null || !Set.of("CLOSE","UNCLOSE").contains(event.action())

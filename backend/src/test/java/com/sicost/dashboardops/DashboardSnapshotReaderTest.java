@@ -15,6 +15,15 @@ class DashboardSnapshotReaderTest {
     final DashboardService dashboard = mock(DashboardService.class);
     final DashboardSnapshotReader reader = new DashboardSnapshotReader(json, dashboard);
 
+    @org.junit.jupiter.api.BeforeEach void projection() {
+        var policy=mock(com.sicost.permission.PermissionService.class);
+        when(policy.capabilities()).thenReturn(new com.sicost.permission.PermissionService.Capabilities(
+            java.util.Map.of("UI-16",java.util.Set.of("INQ","DNLD")),
+            new com.sicost.permission.PermissionService.Scope(true,java.util.Set.of(),java.util.Set.of()),true,
+            java.util.Map.of(),java.util.Map.of(),java.util.Set.of()));
+        when(policy.allows(anyString(),anyString())).thenReturn(true);
+        reader.setProjection(new com.sicost.permission.PermissionProjectionService(policy));
+    }
     @Test void readsSelectedMonthOnceWithoutIncludingTheOriginalExportQuery() throws Exception {
         var request = new MockHttpServletRequest("GET", "/api/dashboard/export");
         request.setParameter("month", "2026-07");

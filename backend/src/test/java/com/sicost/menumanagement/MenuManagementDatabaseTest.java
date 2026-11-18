@@ -53,7 +53,7 @@ class MenuManagementDatabaseTest {
         context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             MenuManagementRepository.class,MenuManagementService.class,MenuService.class);
-        context.refresh();service=context.getBean(MenuManagementService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(MenuManagementService.class);
         mvc=MockMvcBuilders.standaloneSetup(new MenuManagementController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         sql.update("INSERT INTO tb_sy_menu(menu_id,menu_nm,menu_lvl,sort_ord,reg_user_id) VALUES ('TEST_ROOT_A','시험 대메뉴 A',1,90000,'admin'),('TEST_ROOT_B','시험 대메뉴 B',1,90001,'admin')");
         sql.update("INSERT INTO tb_sy_menu(menu_id,upper_menu_id,menu_nm,scrn_id,menu_lvl,sort_ord,reg_user_id) VALUES ('TEST_CHILD_A','TEST_ROOT_A','시험 서브 A','UI-01',2,1,'admin'),('TEST_CHILD_B','TEST_ROOT_B','시험 서브 B','UI-02',2,1,'admin')");
@@ -70,7 +70,7 @@ class MenuManagementDatabaseTest {
     List<Map<String,Object>> treeRows() {return sql.queryForList("SELECT * FROM tb_sy_menu ORDER BY menu_id");}
     @Test void getReturnsStoredSourceWithoutMutatingAnySourceOrHistory() throws Exception {
         var before=treeRows();var history=sql.queryForList("SELECT * FROM tb_sy_chg_hist");var access=sql.queryForList("SELECT * FROM tb_sy_accs_log");
-        mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.developmentMode").value(true));
+        mvc.perform(get("/api/menu-management")).andExpect(status().isOk()).andExpect(jsonPath("$.data.developmentMode").value(false));
         assertThat(service.getMenuManagement().items()).hasSize(before.size());assertThat(treeRows()).isEqualTo(before);
         assertThat(sql.queryForList("SELECT * FROM tb_sy_chg_hist")).isEqualTo(history);assertThat(sql.queryForList("SELECT * FROM tb_sy_accs_log")).isEqualTo(access);
     }

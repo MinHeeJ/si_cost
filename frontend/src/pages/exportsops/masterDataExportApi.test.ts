@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import {
@@ -27,7 +28,7 @@ it("posts applied filters and visible columns without page/selection or auth and
       },
     }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const controller = new AbortController();
   const result = await createMasterDataExport(
     {
@@ -57,7 +58,7 @@ it("전체 omits status predicate instead of sending Y or 전체", async () => {
   const fetcher = vi
     .fn()
     .mockResolvedValue(new Response("failure", { status: 500 }));
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     createMasterDataExport({ ...input, filters: {} }),
   ).rejects.toThrow();
@@ -82,7 +83,7 @@ it.each([400, 500])(
         },
       ),
     );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await expect(createMasterDataExport(input)).rejects.toBeInstanceOf(
       ApiError,
     );
@@ -105,7 +106,7 @@ it("rejects HTML and malformed download names", async () => {
         },
       }),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(createMasterDataExport(input)).rejects.toThrow(
     "파일을 내려받지 못했습니다.",
   );

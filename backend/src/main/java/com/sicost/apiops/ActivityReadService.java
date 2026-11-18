@@ -15,9 +15,10 @@ public class ActivityReadService {
     private final CurrentUserProvider users;
     private final Clock clock;
     private final boolean manualRunEnabled;
+    private final com.sicost.permission.NotificationProjectionService projection;
     public ActivityReadService(ActivityReadRepository repository,CurrentUserProvider users,Clock clock,
-        @Value("${AUTOMATION_MANUAL_RUN_ENABLED:false}") boolean manualRunEnabled) {
-        this.repository=repository;this.users=users;this.clock=clock;this.manualRunEnabled=manualRunEnabled;
+        @Value("${AUTOMATION_MANUAL_RUN_ENABLED:false}") boolean manualRunEnabled,com.sicost.permission.NotificationProjectionService projection) {
+        this.repository=repository;this.users=users;this.clock=clock;this.manualRunEnabled=manualRunEnabled;this.projection=projection;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Notifications getNotifications(ActivityQueryInput.Query query) {
@@ -26,7 +27,7 @@ public class ActivityReadService {
         long total=repository.notificationCount(user);
         var items=rows.stream().map(r->new Item(r.id().toPlainString(),r.typeCode(),r.content(),r.sendMethodCode(),r.read(),
             offset(r.readAt()),offset(r.notifiedAt()),r.screenId()!=null&&(r.linkKey()==null||r.linkKey().matches("[A-Za-z0-9_-]{1,50}"))?new Link(r.screenId(),r.linkKey()):null)).toList();
-        return new Notifications(items,query.page(),query.size(),total,query.offset()+items.size()<total,now());
+        return new Notifications(projection.project(items),query.page(),query.size(),total,query.offset()+items.size()<total,now());
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public AutomationRuns getAutomationRuns(ActivityQueryInput.Query query) {

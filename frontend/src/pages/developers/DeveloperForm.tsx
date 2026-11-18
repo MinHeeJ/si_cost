@@ -6,6 +6,7 @@ import { SkillsInput } from "../../shared/SkillsInput";
 import { AddressSelector } from "../../shared/AddressSelector";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
+import { useFieldPermission } from "../../shared/permission/PermissionBoundary";
 import { ApiError } from "../../shared/api";
 import {
   getClientOptions,
@@ -40,6 +41,8 @@ export function DeveloperForm({
   onSaved,
   onDirtyChange,
 }: Props) {
+  const canRate = useFieldPermission("UI-02", "monthlyRate"),
+    canPay = useFieldPermission("UI-02", "monthlyPay");
   const [form, setForm] = useState(() => ({
     name: developer?.name ?? "",
     managementNo: developer?.managementNo ?? "",
@@ -61,7 +64,13 @@ export function DeveloperForm({
     container = useRef<HTMLDivElement>(null),
     busy = useRef(false);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial.current);
-  const resume = useResumeExtraction("DEVELOPER", form, setForm, undefined, open);
+  const resume = useResumeExtraction(
+    "DEVELOPER",
+    form,
+    setForm,
+    undefined,
+    open,
+  );
   const [codes, setCodes] = useState<
     Record<string, { code: string; name: string }[]>
   >({});
@@ -163,10 +172,12 @@ export function DeveloperForm({
         hireDate: form.hireDate || null,
         homeAreaCode: form.homeAreaCode,
         skills: form.skills,
-        ...(!developer || form.monthlyRate !== initial.current.monthlyRate
+        ...(canRate &&
+        (!developer || form.monthlyRate !== initial.current.monthlyRate)
           ? { monthlyRate: form.monthlyRate || null }
           : {}),
-        ...(!developer || form.monthlyPay !== initial.current.monthlyPay
+        ...(canPay &&
+        (!developer || form.monthlyPay !== initial.current.monthlyPay)
           ? { monthlyPay: form.monthlyPay || null }
           : {}),
       };
@@ -255,6 +266,7 @@ export function DeveloperForm({
     <>
       <Dialog
         open={open}
+        permission={{ screen: "UI-02", action: developer ? "UPD" : "REG" }}
         wide
         noValidate
         title={developer ? "개발자 수정" : "개발자 등록"}
@@ -265,100 +277,110 @@ export function DeveloperForm({
         confirmDisabled={loading || Boolean(lookupError) || resume.pending}
         confirmTestId="developer-form-save"
         cancelTestId="developer-form-cancel"
-        footerStart={!developer ? <ResumeUploadButton state={resume} disabled={pending || loading} /> : undefined}
+        footerStart={
+          !developer ? (
+            <ResumeUploadButton state={resume} disabled={pending || loading} />
+          ) : undefined
+        }
       >
-      <p className="sicost-banner sicost-tone-info">{developerBanner}</p>
-      {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
-      {lookupError != null && (
-        <ErrorBanner
-          message="선택 항목을 불러오지 못했습니다."
-          onRetry={() => void load()}
-        />
-      )}
-      {error != null && (
-        <ErrorBanner
-          message={
-            error instanceof Error ? error.message : "저장하지 못했습니다."
-          }
-          requestId={
-            error instanceof ApiError ? error.body.requestId : undefined
-          }
-        />
-      )}
-      <div ref={container} data-testid="developer-edit-form">
-        {!developer && <ResumeExtractionFeedback state={resume} />}
-        <fieldset disabled={pending} className="developer-form-fields">
-          <legend>기본 정보</legend>
-          {text("name", "이름", 50, true)}
-          {text("managementNo", "관리번호", 20)}
-          {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
-          {select(
-            "companyId",
-            "소속",
-            [
-              { code: "__own__", name: "자사" },
-              ...companies.map((c) => ({ code: c.id, name: c.name })),
-            ],
-            true,
+        <p className="sicost-banner sicost-tone-info">{developerBanner}</p>
+        {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
+        {lookupError != null && (
+          <ErrorBanner
+            message="선택 항목을 불러오지 못했습니다."
+            onRetry={() => void load()}
+          />
+        )}
+        {error != null && (
+          <ErrorBanner
+            message={
+              error instanceof Error ? error.message : "저장하지 못했습니다."
+            }
+            requestId={
+              error instanceof ApiError ? error.body.requestId : undefined
+            }
+          />
+        )}
+        <div ref={container} data-testid="developer-edit-form">
+          {!developer && <ResumeExtractionFeedback state={resume} />}
+          <fieldset disabled={pending} className="developer-form-fields">
+            <legend>기본 정보</legend>
+            {text("name", "이름", 50, true)}
+            {text("managementNo", "관리번호", 20)}
+            {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
+            {select(
+              "companyId",
+              "소속",
+              [
+                { code: "__own__", name: "자사" },
+                ...companies.map((c) => ({ code: c.id, name: c.name })),
+              ],
+              true,
+            )}
+            {select("gradeCode", "등급", codes.GRADE ?? [])}
+            {select("jobCode", "주 직무", codes.JOB ?? [], true)}
+            {select("subJobCode", "보조 직무", codes.JOB ?? [])}
+            <SkillsInput
+              value={form.skills}
+              onChange={(v) => change("skills", v)}
+              disabled={pending}
+              error={fields.skills}
+            />
+            <AddressSelector
+              value={form.homeAreaCode}
+              onChange={(v) => change("homeAreaCode", v)}
+              maxLevel="EMD"
+              disabled={pending}
+              error={fields.homeAreaCode}
+            />
+            {select(
+              "partId",
+              "영업 파트",
+              parts.map((p) => ({
+                code: p.id,
+                name:
+                  p.name +
+                  (p.firstEffectiveMonth
+                    ? ` · 시작 ${p.firstEffectiveMonth}`
+                    : ""),
+              })),
+              true,
+            )}
+            {text("hireDate", "입사일", 10)}
+            {select("positionCode", "직위", codes.JBPS ?? [])}
+            {select("directClass", "직접/간접", codes.DRCT_CLS ?? [], true)}
+          </fieldset>
+          {(canRate || canPay) && (
+            <fieldset disabled={pending} className="developer-form-fields">
+              <legend>금액</legend>
+              {canRate && (
+                <Decimal
+                  label="월 단가 (원/월)"
+                  data-testid="developer-rate-input"
+                  value={form.monthlyRate}
+                  onChange={(v) => change("monthlyRate", v)}
+                  error={fields.monthlyRate}
+                />
+              )}
+              {canPay && (
+                <Decimal
+                  label="월 급여·지급액 (원/월)"
+                  data-testid="developer-pay-input"
+                  value={form.monthlyPay}
+                  onChange={(v) => change("monthlyPay", v)}
+                  error={fields.monthlyPay}
+                />
+              )}
+              {developer?.editPrice && (
+                <p>
+                  편집 가격 시작월: {developer.editPrice.effectiveMonth} (현재
+                  또는 가장 가까운 예정값)
+                </p>
+              )}
+              <p>{canPay ? priceHelp : "단가 변경은 저장월부터 적용됩니다."}</p>
+            </fieldset>
           )}
-          {select("gradeCode", "등급", codes.GRADE ?? [])}
-          {select("jobCode", "주 직무", codes.JOB ?? [], true)}
-          {select("subJobCode", "보조 직무", codes.JOB ?? [])}
-          <SkillsInput
-            value={form.skills}
-            onChange={(v) => change("skills", v)}
-            disabled={pending}
-            error={fields.skills}
-          />
-          <AddressSelector
-            value={form.homeAreaCode}
-            onChange={(v) => change("homeAreaCode", v)}
-            maxLevel="EMD"
-            disabled={pending}
-            error={fields.homeAreaCode}
-          />
-          {select(
-            "partId",
-            "영업 파트",
-            parts.map((p) => ({
-              code: p.id,
-              name:
-                p.name +
-                (p.firstEffectiveMonth
-                  ? ` · 시작 ${p.firstEffectiveMonth}`
-                  : ""),
-            })),
-            true,
-          )}
-          {text("hireDate", "입사일", 10)}
-          {select("positionCode", "직위", codes.JBPS ?? [])}
-          {select("directClass", "직접/간접", codes.DRCT_CLS ?? [], true)}
-        </fieldset>
-        <fieldset disabled={pending} className="developer-form-fields">
-          <legend>금액</legend>
-          <Decimal
-            label="월 단가 (원/월)"
-            data-testid="developer-rate-input"
-            value={form.monthlyRate}
-            onChange={(v) => change("monthlyRate", v)}
-            error={fields.monthlyRate}
-          />
-          <Decimal
-            label="월 급여·지급액 (원/월)"
-            data-testid="developer-pay-input"
-            value={form.monthlyPay}
-            onChange={(v) => change("monthlyPay", v)}
-            error={fields.monthlyPay}
-          />
-          {developer?.editPrice && (
-            <p>
-              편집 가격 시작월: {developer.editPrice.effectiveMonth} (현재 또는
-              가장 가까운 예정값)
-            </p>
-          )}
-          <p>{priceHelp}</p>
-        </fieldset>
-      </div>
+        </div>
       </Dialog>
       <Dialog
         open={open && leaving}

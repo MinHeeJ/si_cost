@@ -261,5 +261,5 @@ export const projectOptions = (q: string) =>
   );
 export const developerOptions = (q: string) =>
   request<Page<DeveloperOption>>(
-    `/api/developers?${query({ directClass: "DRCT", q, page: 1, size: 50 })}`,
+    `/api/assignment-people/options?${query({ q })}`,
   );

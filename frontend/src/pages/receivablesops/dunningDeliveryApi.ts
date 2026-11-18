@@ -85,10 +85,14 @@ export const getReceivableDeliveries = (
   page = 1,
   size: 20 | 50 | 100 = 50,
   signal?: AbortSignal,
+  background = false,
 ) =>
   request<DeliveryPage>(
     `${base(billId)}/deliveries?${new URLSearchParams({ page: String(page), size: String(size), sort: "reservedSn,asc" })}`,
-    { signal },
+    {
+      signal,
+      ...(background ? { headers: { "X-Background-Request": "true" } } : {}),
+    },
   );
 export const createReceivableReminder = (
   billId: string,

@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import * as api from "./userAdministrationApi";
@@ -9,7 +10,7 @@ it("담당과 활동은 선택ID를 인코딩하고 계약의 페이지 인자�
       async () =>
         new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await api.getBusinessUserScopes("선택/아이디");
   await api.getBusinessUserAccessLogs("선택/아이디", 2, 20);
   expect(fetcher.mock.calls[0][0]).toBe(
@@ -28,7 +29,7 @@ it.each(["STOP", "RESUME", "UNLOCK"] as const)(
         async () =>
           new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
       );
-    vi.stubGlobal("fetch", fetcher);
+    stubBusinessFetch(fetcher);
     await api.changeBusinessUserState("selected", action, "snapshot");
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0][0]).toBe(
@@ -47,7 +48,7 @@ it("일괄은 action과 전체 선택 snapshot을 한 요청으로 전송한다"
       async () =>
         new Response(JSON.stringify({ success: true, meta: {}, data: {} })),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const items = [{ userId: "selected", expectedRevision: "r" }];
   await api.saveBusinessUserStatusChanges("STOP", items);
   expect(fetcher.mock.calls[0][0]).toBe("/api/business-users/status-changes");
@@ -70,7 +71,7 @@ it("쓰기 실패는 ApiError를 보존하고 자동 재전송하지 않는다",
         { status: 409 },
       ),
   );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await expect(
     api.changeBusinessUserState("selected", "STOP", "old"),
   ).rejects.toBeInstanceOf(ApiError);

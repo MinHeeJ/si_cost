@@ -4,6 +4,10 @@ import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { PeopleChangeHistoryTable } from "../apiops/PeopleChangeHistoryTable";
 import { ApiError } from "../../shared/api";
+import {
+  useFieldPermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
 import { ConfirmDialog } from "../../shared/Dialog";
 import { DeveloperStatesPanel } from "../states/DeveloperStatesPanel";
 import { getPeriodContext } from "../shared/sharedApi";
@@ -37,6 +41,9 @@ export function DeveloperDrawer({
   onChanged?(): void | Promise<void>;
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const canRate = useFieldPermission("UI-02", "monthlyRate"),
+    canPay = useFieldPermission("UI-02", "monthlyPay"),
+    canUpdate = usePermission("UI-02", "UPD");
   const [data, setData] = useState<api.DeveloperDetail>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
@@ -147,7 +154,7 @@ export function DeveloperDrawer({
                 await load();
               }}
             />
-            {onEdit && (
+            {onEdit && canUpdate && (
               <button
                 type="button"
                 data-testid="developer-edit-button"
@@ -216,8 +223,10 @@ export function DeveloperDrawer({
                     "현재 프로젝트": data.currentProjectLabel,
                     "철수 예정일": data.withdrawalDate,
                     "이번 달 MM": data.monthlyMm,
-                    "월 단가": won(data.monthlyRate),
-                    "월 급여·지급액": won(data.monthlyPay),
+                    ...(canRate ? { "월 단가": won(data.monthlyRate) } : {}),
+                    ...(canPay
+                      ? { "월 급여·지급액": won(data.monthlyPay) }
+                      : {}),
                     "보유 스킬": data.skills.join(", "),
                     거주지: data.homeAddress,
                   }).map(([key, value]) => (
@@ -233,15 +242,23 @@ export function DeveloperDrawer({
                 {data.retirementScheduled && (
                   <StatusBadge tone="warn">퇴사 예정</StatusBadge>
                 )}
-                <p className="sicost-banner sicost-tone-info">{priceHelp}</p>
-                <button
-                  type="button"
-                  data-testid="developer-price-toggle"
-                  aria-expanded={prices}
-                  onClick={() => setPrices((v) => !v)}
-                >
-                  가격 이력 {prices ? "접기" : "펼치기"}
-                </button>
+                {(canRate || canPay) && (
+                  <>
+                    <p className="sicost-banner sicost-tone-info">
+                      {canPay
+                        ? priceHelp
+                        : "단가 변경은 저장월부터 적용됩니다."}
+                    </p>
+                    <button
+                      type="button"
+                      data-testid="developer-price-toggle"
+                      aria-expanded={prices}
+                      onClick={() => setPrices((v) => !v)}
+                    >
+                      가격 이력 {prices ? "접기" : "펼치기"}
+                    </button>
+                  </>
+                )}
                 {prices && (
                   <DataTable
                     rows={data.priceHistory}
@@ -251,24 +268,38 @@ export function DeveloperDrawer({
                       {
                         id: "effectiveMonth",
                         label: "시작월",
-                        render: (p) => p.effectiveMonth,
+                        render: (
+                          p: api.DeveloperDetail["priceHistory"][number],
+                        ) => p.effectiveMonth,
                       },
                       {
                         id: "endMonth",
                         label: "종료월",
-                        render: (p) => p.endMonth ?? "–",
+                        render: (
+                          p: api.DeveloperDetail["priceHistory"][number],
+                        ) => p.endMonth ?? "–",
                       },
                       {
                         id: "rate",
                         label: "월 단가",
-                        render: (p) => won(p.monthlyRate) ?? "–",
+                        render: (
+                          p: api.DeveloperDetail["priceHistory"][number],
+                        ) => won(p.monthlyRate) ?? "–",
                       },
                       {
                         id: "pay",
                         label: "월 급여·지급액",
-                        render: (p) => won(p.monthlyPay) ?? "–",
+                        render: (
+                          p: api.DeveloperDetail["priceHistory"][number],
+                        ) => won(p.monthlyPay) ?? "–",
                       },
-                    ]}
+                    ].filter((column) =>
+                      column.id === "rate"
+                        ? canRate
+                        : column.id === "pay"
+                          ? canPay
+                          : true,
+                    )}
                   />
                 )}
               </>

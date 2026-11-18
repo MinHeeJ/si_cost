@@ -32,6 +32,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(BusinessPlanImportController.class)
 @ContextConfiguration(classes=BusinessPlanImportController.class)
 @Import({BusinessPlanImportService.class,BusinessPlanImportRepository.class,BusinessPlanImportDefinition.class,ExcelImportService.class,

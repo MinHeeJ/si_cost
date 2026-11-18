@@ -53,7 +53,7 @@ class CandidateMatchingDatabaseTest {
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,AssignmentMonthlyService.class,
             SalesForecastRepository.class,SalesWorkforceProjectionService.class,WorkforceForecastService.class,
-            CandidateMatchingRepository.class,CandidateMatchingService.class);context.refresh();
+            CandidateMatchingRepository.class,CandidateMatchingService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();
         mvc=MockMvcBuilders.standaloneSetup(new CandidateMatchingController(context.getBean(CandidateMatchingService.class)))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter())
             .setMessageConverters(new MappingJackson2HttpMessageConverter(json)).build();

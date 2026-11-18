@@ -5,7 +5,38 @@ import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import type { DeveloperSelectionState } from "./useDeveloperSelection";
 import * as api from "./peopleClient";
+import { getDeveloper } from "../developers/peopleClient";
 import "./developerActions.css";
+
+type StopPerson = api.DeveloperSelectionItem & {
+  name: string;
+  managementNo: string;
+  projects: { name: string; endDate: string }[];
+};
+
+function BlockedList({ people }: { people: StopPerson[] }) {
+  return (
+    <>
+      <p>
+        아래 개발자는 투입 중인 배정이 있어 중지할 수 없습니다. 먼저 투입 배정의
+        [변경 기록]에서 조기 철수로 배정을 끝내 주세요.
+      </p>
+      <ul>
+        {people.map((person) => (
+          <li
+            key={person.id}
+            data-testid={`developer-blocked-${person.id.toLowerCase()}`}
+          >
+            {person.name} ({person.managementNo}) —{" "}
+            {person.projects
+              .map((project) => `${project.name} ~${project.endDate}`)
+              .join(", ")}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
 
 export type DeveloperStatusRow = api.DeveloperSelectionItem & {
   name: string;
@@ -122,16 +153,85 @@ function DeveloperStatusAction({
     target: "Y" | "N";
     items: api.DeveloperSelectionItem[];
     context: string;
+    people?: StopPerson[];
+    blocked?: StopPerson[];
   }>();
+  const [blocked, setBlocked] = useState<StopPerson[]>([]);
+  const [notice, setNotice] = useState("");
   const [result, setResult] = useState<api.DeveloperBulkResult>(),
     [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(),
     [refreshRequired, setRefreshRequired] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
   const saving = useRef(false);
+  const currentSelection = useRef("");
+  currentSelection.current = JSON.stringify([context, targets]);
   useEffect(() => {
     setConfirm(undefined);
   }, [context]);
+  async function prepare(target: "Y" | "N") {
+    setError(undefined);
+    setNotice("");
+    const items = targets.map((item) => ({ ...item }));
+    if (target === "Y") {
+      setConfirm({ target, items, context });
+      return;
+    }
+    if (saving.current) return;
+    saving.current = true;
+    setPending(true);
+    const selection = currentSelection.current;
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+      const part = (type: string) =>
+        parts.find((value) => value.type === type)?.value;
+      const today = `${part("year")}-${part("month")}-${part("day")}`;
+      const people = await Promise.all(
+        items.map(async (item) => {
+          const [detail, first] = await Promise.all([
+            getDeveloper(item.id),
+            api.getDeveloperAssignments(item.id, 1, 100),
+          ]);
+          const assignments = [...first.items];
+          for (let page = 2; (page - 1) * first.size < first.total; page++) {
+            assignments.push(
+              ...(await api.getDeveloperAssignments(item.id, page, 100)).items,
+            );
+          }
+          return {
+            ...item,
+            name: detail.name,
+            managementNo: detail.managementNo,
+            projects: assignments
+              .filter((a) => a.assignmentStatus === "ACT" && a.endDate >= today)
+              .map((a) => ({ name: a.projectName, endDate: a.endDate })),
+          };
+        }),
+      );
+      if (selection !== currentSelection.current) return;
+      const unavailable = people.filter((person) => person.projects.length);
+      const available = people.filter((person) => !person.projects.length);
+      if (!available.length) setBlocked(unavailable);
+      else
+        setConfirm({
+          target,
+          items: available.map(({ id, revision }) => ({ id, revision })),
+          context,
+          people: available,
+          blocked: unavailable,
+        });
+    } catch (reason) {
+      if (selection === currentSelection.current) setError(reason);
+    } finally {
+      saving.current = false;
+      setPending(false);
+    }
+  }
   async function save() {
     if (
       !confirm ||
@@ -162,7 +262,28 @@ function DeveloperStatusAction({
         throw new Error(
           "처리 결과를 확인할 수 없습니다. 다시 조회한 뒤 수동으로 요청해 주세요.",
         );
-      setResult(data);
+      const inUse =
+        confirm.target === "N"
+          ? data.rejected.filter((item) => item.code === "DEVELOPER_IN_USE")
+          : [];
+      if (inUse.length) {
+        setBlocked(
+          inUse.map((item) => ({
+            ...confirm.people!.find((person) => person.id === item.id)!,
+            projects: item.details.projects ?? [],
+          })),
+        );
+      }
+      if (
+        confirm.target === "Y" ||
+        data.rejected.some((item) => item.code !== "DEVELOPER_IN_USE") ||
+        data.noChangeCount
+      )
+        setResult(data);
+      if (confirm.target === "N" && data.appliedCount)
+        setNotice(
+          `${data.appliedCount}명의 사용을 중지했습니다.${confirm.blocked?.length ? ` (${confirm.blocked.length}명은 투입 중이라 제외)` : ""}`,
+        );
       setConfirm(undefined);
       setRefreshRequired(true);
       try {
@@ -214,14 +335,7 @@ function DeveloperStatusAction({
             data-testid={`developer-status-${target.toLowerCase()}`}
             type="button"
             disabled={disabled || pending || refreshRequired || !targets.length}
-            onClick={() => {
-              setError(undefined);
-              setConfirm({
-                target,
-                items: targets.map((item) => ({ ...item })),
-                context,
-              });
-            }}
+            onClick={() => void prepare(target)}
           >
             {label(target)}
           </button>
@@ -238,6 +352,7 @@ function DeveloperStatusAction({
           }
         />
       )}
+      {notice && <p role="status">{notice}</p>}
       {refreshRequired && (
         <button
           data-testid="developer-status-refresh"
@@ -250,21 +365,59 @@ function DeveloperStatusAction({
       )}
       <ConfirmDialog
         open={!!confirm}
-        title={`개발자 ${confirm ? label(confirm.target) : "상태 변경"}`}
+        title={
+          confirm?.target === "N"
+            ? `${confirm.items.length}명의 사용을 중지할까요?`
+            : `개발자 ${confirm ? label(confirm.target) : "상태 변경"}`
+        }
+        confirmLabel={confirm?.target === "N" ? "사용 중지" : "확인"}
+        confirmTestId="developer-status-confirm"
+        cancelTestId="developer-status-cancel"
         pending={pending}
         onConfirm={save}
         onCancel={() => setConfirm(undefined)}
       >
-        <p>
-          {confirm?.items.length}명의 개발자를{" "}
-          {confirm ? label(confirm.target) : "변경"}하시겠습니까?
-        </p>
-        <p className="developer-secondary">
-          현재·예정 투입이 있는 개발자는 사용을 중지할 수 없습니다. 퇴사한
-          개발자는 다시 사용할 수 없습니다.
-        </p>
+        {confirm?.target === "N" ? (
+          <>
+            <p>
+              {confirm.people?.map((person) => person.name).join(", ")} — 삭제가
+              아니라 배정 후보에서 빼는 것이며 기록은 남습니다.
+            </p>
+            {!!confirm.blocked?.length && (
+              <>
+                <h3>중지할 수 없는 개발자</h3>
+                <BlockedList people={confirm.blocked} />
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <p>
+              {confirm?.items.length}명의 개발자를{" "}
+              {confirm ? label(confirm.target) : "변경"}하시겠습니까?
+            </p>
+            <p className="developer-secondary">
+              현재·예정 투입이 있는 개발자는 사용을 중지할 수 없습니다. 퇴사한
+              개발자는 다시 사용할 수 없습니다.
+            </p>
+          </>
+        )}
       </ConfirmDialog>
-      <BulkResultDialog result={result} onClose={() => setResult(undefined)} />
+      <Dialog
+        open={!!blocked.length}
+        title="사용을 중지할 수 없습니다"
+        hideCancel
+        testId="developer-stop-blocked-dialog"
+        confirmTestId="developer-stop-blocked-confirm"
+        onConfirm={() => setBlocked([])}
+        onCancel={() => setBlocked([])}
+      >
+        <BlockedList people={blocked} />
+      </Dialog>
+      <BulkResultDialog
+        result={blocked.length ? undefined : result}
+        onClose={() => setResult(undefined)}
+      />
     </div>
   );
 }

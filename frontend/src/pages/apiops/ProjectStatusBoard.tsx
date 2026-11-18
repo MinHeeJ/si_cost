@@ -9,6 +9,7 @@ import {
   type PartOption,
 } from "../salespartsops/partStandardsApi";
 import * as api from "./projectAnalysisApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   AnalysisSummary,
   AnalysisCompleteness,
@@ -46,6 +47,8 @@ export function ProjectStatusBoard({
   pageSize,
   onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
+  const canProjects = usePermission("UI-01", "INQ");
+  const canCosts = usePermission("UI-04", "INQ");
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState<api.AnalysisQuery>(
     Object.assign(
@@ -159,12 +162,16 @@ export function ProjectStatusBoard({
       sortable: true,
       render: (row) => (
         <>
-          <Link
-            data-testid={`status-project-${row.projectId.toLowerCase()}`}
-            to={projectLink(row)}
-          >
-            {row.projectName}
-          </Link>
+          {canProjects ? (
+            <Link
+              data-testid={`status-project-${row.projectId.toLowerCase()}`}
+              to={projectLink(row)}
+            >
+              {row.projectName}
+            </Link>
+          ) : (
+            row.projectName
+          )}
           <small>
             {row.projectId} · {types[row.contractType]}
           </small>
@@ -176,14 +183,14 @@ export function ProjectStatusBoard({
                 확인하세요.
               </small>
             </>
-          ) : (
+          ) : canCosts ? (
             <Link
               data-testid={`status-cost-${row.projectId.toLowerCase()}`}
               to={`/UI-04?${new URLSearchParams({ month: result.data?.currentMonth ?? "", projectId: row.projectId, detailProjectId: row.projectId, returnTo: `/UI-31?${params}` })}`}
             >
               원가 분석
             </Link>
-          )}
+          ) : null}
         </>
       ),
     },
@@ -209,13 +216,15 @@ export function ProjectStatusBoard({
                 {row.currentStep.status}
               </StatusBadge>
             </>
-          ) : (
+          ) : canProjects ? (
             <Link
               data-testid={`status-stage-${row.projectId.toLowerCase()}`}
               to={projectLink(row)}
             >
               기본 단계 미생성
             </Link>
+          ) : (
+            "기본 단계 미생성"
           )}
           <small>{row.planBasis}</small>
         </>

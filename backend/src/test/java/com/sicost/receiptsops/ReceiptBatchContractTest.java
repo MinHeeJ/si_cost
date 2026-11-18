@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(ReceiptBatchController.class)
 @ContextConfiguration(classes=ReceiptBatchController.class)
 @Import({ReceiptBatchService.class,ReceiptBatchRepository.class,WriteCoordinator.class,RevisionService.class,

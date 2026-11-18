@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createSalesPartStandard,
@@ -18,7 +19,7 @@ it("기본값은 월생략 또는 단일월을 상대경로로 조회한다", as
   const fetcher = vi
     .fn()
     .mockImplementation(async () => response({ items: [] }));
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getSalesPartDefaults();
   await getSalesPartDefaults("2026-09");
   await getSalesPartOptions();
@@ -41,7 +42,7 @@ it("선택ID와 십진문자열을 보내고 commit 응답 후에만 변경 이�
     .mockResolvedValue(
       response({ changed: true, message: "저장했습니다.", part: {} }, 201),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const listener = vi.fn();
   window.addEventListener("sicost:sales-parts-committed", listener);
   try {
@@ -56,8 +57,7 @@ it("선택ID와 십진문자열을 보내고 commit 응답 후에만 변경 이�
   }
 });
 it("정산 보호 오류는 root envelope로 보존하고 성공 이벤트를 내지 않는다", async () => {
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue(
       response(
         {

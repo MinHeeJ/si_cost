@@ -1,5 +1,6 @@
 import {
   ApiError,
+  authenticatedFetch,
   type ApiErrorBody,
   type ApiEnvelope,
 } from "../../shared/api";
@@ -42,7 +43,10 @@ export type B7Applied = {
 };
 export type Download = { blob: Blob; filename: string };
 async function response(path: string, options: RequestInit = {}) {
-  const result = await fetch(path, { ...options, redirect: "error" });
+  const result = await authenticatedFetch(path, {
+    ...options,
+    redirect: "error",
+  });
   if (
     !result.ok ||
     result.headers.get("Content-Type")?.includes("application/json")

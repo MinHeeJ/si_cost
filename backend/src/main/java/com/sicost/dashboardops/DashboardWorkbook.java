@@ -24,6 +24,7 @@ final class DashboardWorkbook {
             criteria.forEach((key,value) -> sink.accept(Arrays.asList(key,value.isNumber()?null:text(value),value.isNumber()?value.decimalValue():null)))));
         long count = 0;
         for (int i=0;i<REGIONS.size();i++) {
+            if(!data.has(REGIONS.get(i)))continue;
             JsonNode region = data.required(REGIONS.get(i));
             List<JsonNode> rows = new ArrayList<>();
             if (region.isArray()) region.forEach(rows::add); else rows.add(region);

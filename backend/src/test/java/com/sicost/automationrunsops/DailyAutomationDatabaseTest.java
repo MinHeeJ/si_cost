@@ -39,6 +39,14 @@ class DailyAutomationDatabaseTest {
     DailyAutomationRepository repository(ChangeHistoryWriter history) {
         return new DailyAutomationRepository(mapper,new MonthCloseBoundary(db.source),mock(SettlementSourceLocks.class),history,clock,new DataSourceTransactionManager(db.source));
     }
+    // Requirement 18 §9: these are internal commands, independent of an admin session.
+    <T> T system(java.util.function.Supplier<T> work) {
+        var previous=org.springframework.security.core.context.SecurityContextHolder.getContext();
+        try {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+            return com.sicost.permission.PermissionTaskContext.system(com.sicost.permission.PermissionTaskContext.Command.DAILY_OPERATIONS,work);
+        } finally {org.springframework.security.core.context.SecurityContextHolder.setContext(previous);}
+    }
     @AfterEach void cleanup() {
         if(db!=null) {
             String schema=db.sql.queryForObject("SELECT current_schema()",String.class);
@@ -47,45 +55,66 @@ class DailyAutomationDatabaseTest {
         }
     }
     @Test void twoIndependentInstancesKeepSessionLockAcrossTransactionsAndReleaseIt() {
-        var first=new DailyAutomationSessionLocks(db.source);var second=new DailyAutomationSessionLocks(db.source);
-        var key=new Key("DAILY_OPERATIONS",today);
-        try(var lease=first.tryAcquire(key)) {
-            assertThat(lease).isNotNull();repository.prepare(key);repository.update(key,"RUNNING",1,null);
-            assertThat(second.tryAcquire(key)).isNull();
-            try(var other=second.tryAcquire(new Key("RECEIVABLE_DUNNING",today))) { assertThat(other).isNotNull(); }
-        }
-        try(var resumed=second.tryAcquire(key)) { assertThat(resumed).isNotNull(); }
+        system(()->{
+            var first=new DailyAutomationSessionLocks(db.source);var second=new DailyAutomationSessionLocks(db.source);
+            var key=new Key("DAILY_OPERATIONS",today);
+            try(var lease=first.tryAcquire(key)) {
+                assertThat(lease).isNotNull();repository.prepare(key);repository.update(key,"RUNNING",1,null);
+                assertThat(second.tryAcquire(key)).isNull();
+                try(var other=second.tryAcquire(new Key("RECEIVABLE_DUNNING",today))) { assertThat(other).isNotNull(); }
+            }
+            try(var resumed=second.tryAcquire(key)) { assertThat(resumed).isNotNull(); }
+
+            return null;
+        });
     }
     @Test void realMapperMaterializesOriginalStartAndSameDayCompletedResultWithoutNewAudit() {
-        var key=new Key("DAILY_OPERATIONS",today);var initial=repository.prepare(key);
-        repository.update(key,"FAILED",3,"단계 4 / ASGN-1 / 처리 실패");repository.update(key,"RUNNING",3,null);repository.update(key,"SUCCEEDED",7,null);
-        long count=db.count("tb_sy_chg_hist");var completed=repository.prepare(key);
-        assertThat(completed.startedAt()).isEqualTo(initial.startedAt());assertThat(completed.lastStep()).isEqualTo(7);
-        assertThat(completed.view().endedAt()).isNotNull();assertThat(db.count("tb_sy_chg_hist")).isEqualTo(count);
+        system(()->{
+            var key=new Key("DAILY_OPERATIONS",today);var initial=repository.prepare(key);
+            repository.update(key,"FAILED",3,"단계 4 / ASGN-1 / 처리 실패");repository.update(key,"RUNNING",3,null);repository.update(key,"SUCCEEDED",7,null);
+            long count=db.count("tb_sy_chg_hist");var completed=repository.prepare(key);
+            assertThat(completed.startedAt()).isEqualTo(initial.startedAt());assertThat(completed.lastStep()).isEqualTo(7);
+            assertThat(completed.view().endedAt()).isNotNull();assertThat(db.count("tb_sy_chg_hist")).isEqualTo(count);
+
+            return null;
+        });
     }
     String project(String state,LocalDate end) {
         String id="P-"+UUID.randomUUID().toString().replace("-","").substring(0,14);
         db.sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES (?,?,'MO',?,'2026-01-01',?,1,0,0,'SYSTEM')",id,id,state,end);return id;
     }
     @Test void projectEndAndBusinessHistoryAndSystemAuditAreAtomicAndResumeIsNoOp() {
-        String id=project("ING",today.minusDays(1));
-        var actions=new DailyAutomationActions(mapper,repository,mock(DeveloperQueryService.class),writer(audits),clock);
-        actions.process(3,id,today);long count=db.count("tb_sy_chg_hist");actions.process(3,id,today);
-        assertThat(db.sql.queryForObject("SELECT proj_stat_cd FROM tb_pj_proj WHERE proj_id=?",String.class,id)).isEqualTo("END");
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg WHERE proj_id=?",Long.class,id)).isEqualTo(1);
-        assertThat(db.count("tb_sy_chg_hist")).isEqualTo(count);
+        system(()->{
+            String id=project("ING",today.minusDays(1));
+            var actions=new DailyAutomationActions(mapper,repository,mock(DeveloperQueryService.class),writer(audits),clock);
+            actions.process(3,id,today);long count=db.count("tb_sy_chg_hist");actions.process(3,id,today);
+            assertThat(db.sql.queryForObject("SELECT proj_stat_cd FROM tb_pj_proj WHERE proj_id=?",String.class,id)).isEqualTo("END");
+            assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg WHERE proj_id=?",Long.class,id)).isEqualTo(1);
+            assertThat(db.count("tb_sy_chg_hist")).isEqualTo(count);
+            assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_sy_chg_hist WHERE reg_user_id <> 'SYSTEM'",Long.class)).isZero();
+
+            return null;
+        });
     }
     @Test void mandatoryAuditFailureRollsBackOriginalProjectAndBusinessHistory() {
-        String id=project("ING",today.minusDays(1));var failed=mock(ChangeHistoryMapper.class);when(failed.insert(any())).thenReturn(0);
-        var actions=new DailyAutomationActions(mapper,repository(writer(failed)),mock(DeveloperQueryService.class),writer(failed),clock);
-        assertThatThrownBy(()->actions.process(3,id,today)).isInstanceOf(RuntimeException.class);
-        assertThat(db.sql.queryForObject("SELECT proj_stat_cd FROM tb_pj_proj WHERE proj_id=?",String.class,id)).isEqualTo("ING");
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg WHERE proj_id=?",Long.class,id)).isZero();
+        system(()->{
+            String id=project("ING",today.minusDays(1));var failed=mock(ChangeHistoryMapper.class);when(failed.insert(any())).thenReturn(0);
+            var actions=new DailyAutomationActions(mapper,repository(writer(failed)),mock(DeveloperQueryService.class),writer(failed),clock);
+            assertThatThrownBy(()->actions.process(3,id,today)).isInstanceOf(IllegalStateException.class).hasMessage("자동 처리·전달 필드 감사를 저장하지 못했습니다.");
+            assertThat(db.sql.queryForObject("SELECT proj_stat_cd FROM tb_pj_proj WHERE proj_id=?",String.class,id)).isEqualTo("ING");
+            assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_pj_proj_chg WHERE proj_id=?",Long.class,id)).isZero();
+
+            return null;
+        });
     }
     @Test void endDateTodayAndPreAndLostProjectsNeverEndAutomatically() {
-        String current=project("ING",today),pre=project("PRE",today.minusDays(1)),lost=project("LOSE",today.minusDays(1));
-        var actions=new DailyAutomationActions(mapper,repository,mock(DeveloperQueryService.class),writer(audits),clock);
-        for(String id:java.util.List.of(current,pre,lost))actions.process(3,id,today);
-        assertThat(db.count("tb_pj_proj_chg")).isZero();assertThat(db.count("tb_sy_chg_hist")).isZero();
+        system(()->{
+            String current=project("ING",today),pre=project("PRE",today.minusDays(1)),lost=project("LOSE",today.minusDays(1));
+            var actions=new DailyAutomationActions(mapper,repository,mock(DeveloperQueryService.class),writer(audits),clock);
+            for(String id:java.util.List.of(current,pre,lost))actions.process(3,id,today);
+            assertThat(db.count("tb_pj_proj_chg")).isZero();assertThat(db.count("tb_sy_chg_hist")).isZero();
+
+            return null;
+        });
     }
 }

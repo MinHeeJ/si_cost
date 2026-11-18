@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   assignUserProject,
@@ -13,7 +14,7 @@ function transport() {
     text: async () =>
       JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
   });
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   return fetcher;
 }
 it("encodes selected user identity and adds no unsupported year or query", async () => {

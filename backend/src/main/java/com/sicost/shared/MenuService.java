@@ -19,6 +19,12 @@ public class MenuService {
     }
     private static final Comparator<MenuRow> ORDER = Comparator.comparingInt(MenuRow::sortOrder).thenComparing(MenuRow::menuId);
     private final SharedQueriesMapper mapper;
+    private com.sicost.common.concurrent.RevisionService revisions=new com.sicost.common.concurrent.RevisionService(new com.fasterxml.jackson.databind.ObjectMapper());
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRevisions(com.sicost.common.concurrent.RevisionService revisions) {this.revisions=revisions;}
+    private com.sicost.permission.PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     public MenuService(SharedQueriesMapper mapper) { this.mapper=mapper; }
     @Transactional(readOnly=true)
     public MenusData getMenus() {
@@ -28,6 +34,7 @@ public class MenuService {
         Map<String,String> excluded=new LinkedHashMap<>();
         for (MenuRow row:rows) {
             String reason=invalid(row,byId);
+            if(reason==null && row.screenId()!=null && (permissions==null || !permissions.allows(row.screenId(),"INQ")))reason="조회 권한이 없는 메뉴입니다.";
             if (reason!=null) excluded.put(row.menuId(),reason);
         }
         Map<String,MenuRow> winners=new HashMap<>();
@@ -47,7 +54,12 @@ public class MenuService {
         List<MenuNode> roots=children.getOrDefault(null,Collections.emptyList()).stream()
             .filter(row -> row.screenId()!=null || !children.getOrDefault(row.menuId(),Collections.emptyList()).isEmpty())
             .map(row -> node(row,children)).toList();
-        return new MenusData(roots,excluded.entrySet().stream().map(e -> new MenuDiagnostic(e.getKey(),e.getValue())).toList());
+        // Preserve configuration diagnostics for authorized menu administrators only.
+        // Ordinary navigation must not disclose stopped or forbidden menu identities.
+        List<MenuDiagnostic> diagnostics=permissions!=null && permissions.hasRole("ADMIN") && permissions.allows("UI-25","INQ")
+            ? excluded.entrySet().stream().map(entry->new MenuDiagnostic(entry.getKey(),entry.getValue())).toList()
+            : List.of();
+        return new MenusData(roots,diagnostics,revisions.revision(rows),false,true);
     }
     private String invalid(MenuRow row,Map<String,MenuRow> byId) {
         Set<String> visited=new HashSet<>();

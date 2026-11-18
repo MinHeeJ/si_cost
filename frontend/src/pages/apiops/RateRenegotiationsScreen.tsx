@@ -18,6 +18,10 @@ import { ProfitabilityValue } from "../profitability/ProfitabilityValue";
 import { getProjects } from "../projects/projectsApi";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./rateRenegotiationsApi";
+import {
+  useFieldPermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
 import "./rateRenegotiations.css";
 
 export const renegotiationColumns = [
@@ -54,6 +58,9 @@ const emptyView = (): ColumnView => ({
 export function RateRenegotiationsScreen({
   onPerson,
 }: { onPerson?(id: string): void } = {}) {
+  const canCost = useFieldPermission("UI-32", "monthlyLaborCost");
+  const canDownload = usePermission("UI-32", "DNLD"),
+    canPerson = usePermission("UI-02", "INQ");
   const location = useLocation();
   const preferences = usePreferences();
   const shared = useSharedScreen("UI-32");
@@ -187,14 +194,20 @@ export function RateRenegotiationsScreen({
     setRate(applied.increaseRate);
     submit(next, applied.increaseRate);
   };
-  const openPerson = onPerson ?? setPerson;
+  const openPerson = (id: string) => {
+    if (canPerson) (onPerson ?? setPerson)(id);
+  };
   const employeeLabel = (code: string) =>
     employees.find((e) => e.code === code)?.name ?? code;
   const amount = (value: string | null | undefined) => (
     <ProfitabilityValue value={value} unit={unit} />
   );
   const columns: Column<api.RenegotiationRow>[] = view.order
-    .filter((id) => !view.hidden.includes(id))
+    .filter(
+      (id) =>
+        !view.hidden.includes(id) &&
+        (canCost || !["monthlyLaborCost", "employeeType"].includes(id)),
+    )
     .map((id) => {
       const definition = renegotiationColumns.find((c) => c.id === id)!;
       const label =
@@ -224,6 +237,7 @@ export function RateRenegotiationsScreen({
           if (id === "name")
             return (
               <button
+                disabled={!canPerson}
                 type="button"
                 className="sicost-link"
                 data-testid={`renegotiation-person-${marker}`}
@@ -290,7 +304,7 @@ export function RateRenegotiationsScreen({
             );
           const value = row[id as keyof api.RenegotiationRow] as string | null;
           return (
-            <span title={row.issues.map((i) => i.message).join(" · ")}>
+            <span title={row.issues?.map((i) => i.message).join(" · ")}>
               <ProfitabilityValue
                 value={value}
                 kind={
@@ -322,11 +336,11 @@ export function RateRenegotiationsScreen({
           기준월 {data?.baseMonth ?? "–"} · 계산시각{" "}
           {formatDateTime(data?.calculatedAt)}
         </span>
-        <button
+        {canDownload && <button
           className="sicost-button renegotiation-download"
           data-testid="renegotiation-download"
           type="button"
-          disabled={!data || loading || exporting}
+          disabled={!canDownload || !data || loading || exporting}
           onClick={async () => {
             if (exporting) return;
             setExporting(true);
@@ -334,7 +348,12 @@ export function RateRenegotiationsScreen({
             try {
               await api.downloadRenegotiations(
                 applied,
-                view.order.filter((id) => !view.hidden.includes(id)),
+                view.order.filter(
+                  (id) =>
+                    !view.hidden.includes(id) &&
+                    (canCost ||
+                      !["monthlyLaborCost", "employeeType"].includes(id)),
+                ),
                 unit,
               );
             } catch (e) {
@@ -348,7 +367,7 @@ export function RateRenegotiationsScreen({
           }}
         >
           {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
-        </button>
+        </button>}
       </div>
       <div className="renegotiation-summary">
         <article>
@@ -476,27 +495,32 @@ export function RateRenegotiationsScreen({
             ))}
           </select>
         </label>
-        <label>
-          직원 구분
-          <select
-            data-testid="renegotiation-employee"
-            value={draft.employeeType ?? ""}
-            onChange={(e) =>
-              setDraft({ ...draft, employeeType: e.target.value || undefined })
-            }
-          >
-            <option value="">전체</option>
-            {employees.map((e) => (
-              <option
-                data-testid={`renegotiation-employee-option-${Array.from(e.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                key={e.code}
-                value={e.code}
-              >
-                {e.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {canCost && (
+          <label>
+            직원 구분
+            <select
+              data-testid="renegotiation-employee"
+              value={draft.employeeType ?? ""}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  employeeType: e.target.value || undefined,
+                })
+              }
+            >
+              <option value="">전체</option>
+              {employees.map((e) => (
+                <option
+                  data-testid={`renegotiation-employee-option-${Array.from(e.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={e.code}
+                  value={e.code}
+                >
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           프로젝트
           <select
@@ -530,7 +554,7 @@ export function RateRenegotiationsScreen({
           {data ? "재계산 중… 직전 결과입니다." : "불러오는 중…"}
         </p>
       )}
-      {data?.issues.map((i, index) => (
+      {(data?.issues ?? []).map((i, index) => (
         <div
           data-testid={`renegotiation-banner-${index}`}
           className="sicost-banner sicost-tone-warn"
@@ -540,7 +564,7 @@ export function RateRenegotiationsScreen({
           {i.message}
         </div>
       ))}
-      {!!data?.unevaluatedCount && (
+      {canCost && !!data?.unevaluatedCount && (
         <details data-testid="renegotiation-unevaluated">
           <summary data-testid="renegotiation-unevaluated-summary">
             평가불가 {data.unevaluatedCount}건 · 원가·매출 미확인 근거 펼침
@@ -674,55 +698,58 @@ export function RateRenegotiationsScreen({
         협상 반영은 UI-12 해당 배정의 변경 기록 → 단가 변경을 이용하세요. 이
         화면에서는 단가 적용·협상 저장·상태 변경을 하지 않습니다.
       </p>
-      <details
-        className="renegotiation-guide"
-        data-testid="renegotiation-guide"
-      >
-        <summary data-testid="renegotiation-guide-summary">계산 방법</summary>
-        <p>
-          기준월 {data?.baseMonth ?? "–"} · 목표율은 기준월 유효
-          TGT_MRGN_RT입니다. 월 계산은 월MM m, 연 증가는 계약MM k를 사용합니다.
-        </p>
-        <table>
-          <thead>
-            <tr>
-              <th>항목</th>
-              <th>계산식</th>
-              <th>참고</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(help)
-              .filter(([id]) => id !== "contractMm")
-              .map(([id, text]) => (
-                <tr
-                  data-testid={`renegotiation-guide-row-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                  key={id}
-                >
-                  <td>
-                    {renegotiationColumns.find((c) => c.id === id)?.label}
-                  </td>
-                  <td>{text}</td>
-                  <td>
-                    {id === "targetUnitPrice"
-                      ? "만 원 단위 올림"
-                      : "기준월 원천"}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        <p>
-          목표 연 증가 = DOWN(max(0,V−U) × k × 12). 미래 연장·급여·부가세를
-          추정하지 않습니다.
-        </p>
-        <p>
-          계산 예시: U 6,000,000원 · m/k 1.00 · C 5,400,000원 · T 20% → 현재
-          10.0%, 목표 6,750,000원, 필요 12.5%, 목표 연 9,000,000원, 가정 5% 연
-          3,600,000원.
-        </p>
-      </details>
-      {person && (
+      {canCost && (
+        <details
+          className="renegotiation-guide"
+          data-testid="renegotiation-guide"
+        >
+          <summary data-testid="renegotiation-guide-summary">계산 방법</summary>
+          <p>
+            기준월 {data?.baseMonth ?? "–"} · 목표율은 기준월 유효
+            TGT_MRGN_RT입니다. 월 계산은 월MM m, 연 증가는 계약MM k를
+            사용합니다.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>항목</th>
+                <th>계산식</th>
+                <th>참고</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(help)
+                .filter(([id]) => id !== "contractMm")
+                .map(([id, text]) => (
+                  <tr
+                    data-testid={`renegotiation-guide-row-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                    key={id}
+                  >
+                    <td>
+                      {renegotiationColumns.find((c) => c.id === id)?.label}
+                    </td>
+                    <td>{text}</td>
+                    <td>
+                      {id === "targetUnitPrice"
+                        ? "만 원 단위 올림"
+                        : "기준월 원천"}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+          <p>
+            목표 연 증가 = DOWN(max(0,V−U) × k × 12). 미래 연장·급여·부가세를
+            추정하지 않습니다.
+          </p>
+          <p>
+            계산 예시: U 6,000,000원 · m/k 1.00 · C 5,400,000원 · T 20% → 현재
+            10.0%, 목표 6,750,000원, 필요 12.5%, 목표 연 9,000,000원, 가정 5% 연
+            3,600,000원.
+          </p>
+        </details>
+      )}
+      {person && canPerson && (
         <DeveloperDrawer id={person} onClose={() => setPerson(undefined)} />
       )}
       {columnDraft && (
@@ -741,62 +768,70 @@ export function RateRenegotiationsScreen({
           }}
         >
           <div data-testid="renegotiation-columns-panel">
-            {columnDraft.order.map((id, index) => {
-              const definition = renegotiationColumns.find((c) => c.id === id)!;
-              const move = (delta: number) => {
-                const order = [...columnDraft.order];
-                [order[index], order[index + delta]] = [
-                  order[index + delta],
-                  order[index],
-                ];
-                setColumnDraft({ ...columnDraft, order });
-              };
-              return (
-                <div
-                  className="renegotiation-column"
-                  key={id}
-                  data-testid={`renegotiation-column-${index}`}
-                >
-                  <span>
-                    {definition.label}
-                    {definition.required ? " (필수)" : ""}
-                  </span>
-                  <button
-                    data-testid={`renegotiation-column-up-${index}`}
-                    aria-label={`${definition.label} 위로`}
-                    disabled={index === 0 || preferences.pending}
-                    onClick={() => move(-1)}
+            {columnDraft.order
+              .filter(
+                (id) =>
+                  canCost || !["monthlyLaborCost", "employeeType"].includes(id),
+              )
+              .map((id) => {
+                const index = columnDraft.order.indexOf(id);
+                const definition = renegotiationColumns.find(
+                  (c) => c.id === id,
+                )!;
+                const move = (delta: number) => {
+                  const order = [...columnDraft.order];
+                  [order[index], order[index + delta]] = [
+                    order[index + delta],
+                    order[index],
+                  ];
+                  setColumnDraft({ ...columnDraft, order });
+                };
+                return (
+                  <div
+                    className="renegotiation-column"
+                    key={id}
+                    data-testid={`renegotiation-column-${index}`}
                   >
-                    ▲
-                  </button>
-                  <button
-                    data-testid={`renegotiation-column-down-${index}`}
-                    aria-label={`${definition.label} 아래로`}
-                    disabled={index === 10 || preferences.pending}
-                    onClick={() => move(1)}
-                  >
-                    ▼
-                  </button>
-                  <label>
-                    <input
-                      data-testid={`renegotiation-column-visible-${index}`}
-                      type="checkbox"
-                      disabled={definition.required || preferences.pending}
-                      checked={!columnDraft.hidden.includes(id)}
-                      onChange={() =>
-                        setColumnDraft({
-                          ...columnDraft,
-                          hidden: columnDraft.hidden.includes(id)
-                            ? columnDraft.hidden.filter((c) => c !== id)
-                            : [...columnDraft.hidden, id],
-                        })
-                      }
-                    />
-                    보이기
-                  </label>
-                </div>
-              );
-            })}
+                    <span>
+                      {definition.label}
+                      {definition.required ? " (필수)" : ""}
+                    </span>
+                    <button
+                      data-testid={`renegotiation-column-up-${index}`}
+                      aria-label={`${definition.label} 위로`}
+                      disabled={index === 0 || preferences.pending}
+                      onClick={() => move(-1)}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      data-testid={`renegotiation-column-down-${index}`}
+                      aria-label={`${definition.label} 아래로`}
+                      disabled={index === 10 || preferences.pending}
+                      onClick={() => move(1)}
+                    >
+                      ▼
+                    </button>
+                    <label>
+                      <input
+                        data-testid={`renegotiation-column-visible-${index}`}
+                        type="checkbox"
+                        disabled={definition.required || preferences.pending}
+                        checked={!columnDraft.hidden.includes(id)}
+                        onChange={() =>
+                          setColumnDraft({
+                            ...columnDraft,
+                            hidden: columnDraft.hidden.includes(id)
+                              ? columnDraft.hidden.filter((c) => c !== id)
+                              : [...columnDraft.hidden, id],
+                          })
+                        }
+                      />
+                      보이기
+                    </label>
+                  </div>
+                );
+              })}
           </div>
         </Dialog>
       )}

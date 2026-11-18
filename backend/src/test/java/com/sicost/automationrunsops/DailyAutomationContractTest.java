@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(DailyAutomationController.class)
 @ContextConfiguration(classes=DailyAutomationController.class)
 @Import({DailyAutomationService.class,DailyAutomationRepository.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
@@ -46,7 +47,13 @@ class DailyAutomationContractTest {
     final AtomicReference<Stored> stored=new AtomicReference<>();
     final AtomicReference<Runnable> worker=new AtomicReference<>();
     DailyAutomationSessionLocks.Lease lease;
+    @org.junit.jupiter.api.AfterEach void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @BeforeEach void setup() {
+        var context=org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("admin",null,java.util.List.of()));
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
         Clock fixed=Clock.fixed(Instant.parse("2026-07-14T17:00:00Z"),ZoneId.of("Asia/Seoul"));
         when(clock.instant()).thenReturn(fixed.instant());when(clock.getZone()).thenReturn(fixed.getZone());when(clock.withZone(any())).thenReturn(fixed);
         when(manager.getTransaction(any())).thenAnswer(i->new SimpleTransactionStatus());
@@ -59,7 +66,7 @@ class DailyAutomationContractTest {
         doAnswer(i->{worker.set(i.getArgument(0));return null;}).when(executor).execute(any());
     }
     String url(String job) {return "/api/automation-runs/"+job+"/run-today";}
-    @Test void acceptsTodayWithoutLoginAndReturnsActualRunWithRequiredNulls() throws Exception {
+    @Test void authenticatedManualRunReturnsActualRunWithRequiredNulls() throws Exception {
         mvc.perform(post(url("DAILY_OPERATIONS"))).andExpect(status().isAccepted())
             .andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.data.accepted").value(true))
             .andExpect(jsonPath("$.data.completed").value(false)).andExpect(jsonPath("$.data.run.jobCode").value("DAILY_OPERATIONS"))

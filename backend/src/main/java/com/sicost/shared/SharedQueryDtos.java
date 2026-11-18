@@ -23,7 +23,10 @@ public final class SharedQueryDtos {
     public record MenuNode(String menuId, String parentId, String name, String screenId,
                            int sortOrder, String icon, boolean pcOnly, List<MenuNode> children) {}
     public record MenuDiagnostic(String menuId, String message) {}
-    public record MenusData(List<MenuNode> items, List<MenuDiagnostic> diagnostics) {}
+    public record MenusData(List<MenuNode> items, List<MenuDiagnostic> diagnostics, String revision,
+                            boolean developmentMode, boolean accessEnforcement) {}
+    public record CurrentUserData(String userId,String name,List<String> roleIds,boolean developmentMode,
+                                  boolean accessEnforcement,com.sicost.currentuserops.PermissionSettingsDtos.Settings capabilities) {}
     public record HistoryQuery(String targetType, String groupId, int size, long offset) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record History(long histId, OffsetDateTime occurredAt, String target, String groupId,

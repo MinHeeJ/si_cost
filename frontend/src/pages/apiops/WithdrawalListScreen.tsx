@@ -469,9 +469,9 @@ export function WithdrawalContent({ year }: { year: number }) {
             <option value="">전체</option>
             {jobs.map((j) => (
               <option
+                data-testid={`withdrawal-job-option-${Array.from(j.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                 key={j.code}
                 value={j.code}
-                data-testid={`withdrawal-job-option-${Array.from(j.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
               >
                 {j.name}
               </option>

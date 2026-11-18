@@ -7,9 +7,11 @@ import {
   type ProgressEditorMode,
 } from "./ProjectProgressEditor";
 import * as api from "./projectProgressApi";
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./projectProgress.css";
 
 export type ProjectProgressPanelProps = {
+  permissionScreen?: "UI-01" | "UI-31";
   projectId: string;
   year: number;
   onChanged?(): Promise<void>;
@@ -26,11 +28,14 @@ const tone = (status: string): Tone =>
           ? "info"
           : "neutral";
 export function ProjectProgressPanel({
+  permissionScreen = "UI-01",
   projectId,
   year,
   onChanged,
   onDirtyChange,
 }: ProjectProgressPanelProps) {
+  const canSteps = usePermission("UI-01", "UPD"),
+    canMemo = usePermission(permissionScreen, "UPD");
   const [data, setData] = useState<api.ProjectProgress>();
   const [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -280,7 +285,7 @@ export function ProjectProgressPanel({
               <button
                 data-testid="progress-initialize"
                 type="button"
-                disabled={locked}
+                disabled={locked || !canSteps}
                 onClick={() => setMode({ kind: "initialize" })}
               >
                 기본 단계 초기화
@@ -289,7 +294,7 @@ export function ProjectProgressPanel({
             <button
               data-testid="progress-dates"
               type="button"
-              disabled={locked || !data.steps.length}
+              disabled={locked || !canSteps || !data.steps.length}
               onClick={() => setMode({ kind: "dates" })}
             >
               단계 계획 입력
@@ -333,7 +338,9 @@ export function ProjectProgressPanel({
                         <button
                           data-testid={`progress-complete-${s.stepSn}`}
                           type="button"
-                          disabled={locked || s.startDate > status.baseDate}
+                          disabled={
+                            locked || !canSteps || s.startDate > status.baseDate
+                          }
                           onClick={() => setMode({ kind: "complete", step: s })}
                         >
                           완료
@@ -357,7 +364,7 @@ export function ProjectProgressPanel({
             <button
               data-testid="progress-memo-new"
               type="button"
-              disabled={locked}
+              disabled={locked || !canMemo}
               onClick={() => setMode({ kind: "memo" })}
             >
               이번 주 상태 적기
@@ -513,6 +520,7 @@ export function ProjectProgressPanel({
           )}
           {mode && (
             <ProjectProgressEditor
+              permissionScreen={permissionScreen}
               key={
                 mode.kind === "memo"
                   ? `memo-${mode.memo?.memoSn ?? "new"}`

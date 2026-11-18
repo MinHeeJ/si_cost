@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(BillOperationsController.class)
 @ContextConfiguration(classes=BillOperationsController.class)
 @Import({BillOperationsService.class,BillEstimateService.class,BillOperationsRepository.class,AssignmentMonthlyService.class,

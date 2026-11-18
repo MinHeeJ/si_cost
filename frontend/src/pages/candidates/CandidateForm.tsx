@@ -11,6 +11,10 @@ import { ClientSelect } from "../clientsops/ClientSelect";
 import * as api from "./peopleClient";
 import { useResumeExtraction } from "../../shared/useResumeExtraction";
 import {
+  useFieldPermission,
+  usePermission,
+} from "../../shared/permission/PermissionBoundary";
+import {
   ResumeUploadButton,
   ResumeExtractionFeedback,
 } from "../../shared/ResumeAssist";
@@ -28,6 +32,8 @@ export function CandidateForm({
   onSaved(id: string, message: string, created: boolean): void;
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const canRate = useFieldPermission("UI-33", "desiredRate");
+  const canSave = usePermission("UI-33", candidate ? "UPD" : "REG");
   const [form, setForm] = useState<api.CandidateFields>(() =>
     candidate
       ? {
@@ -41,7 +47,7 @@ export function CandidateForm({
           subJobCode: candidate.subJobCode,
           gradeCode: candidate.gradeCode,
           homeAreaCode: candidate.homeAreaCode,
-          desiredRate: candidate.desiredRate,
+          desiredRate: candidate.desiredRate ?? "",
           availableDate: candidate.availableDate,
           sourceCode: candidate.sourceCode,
           memo: candidate.memo,
@@ -152,9 +158,10 @@ export function CandidateForm({
     if (!form.sourceCode) messages.sourceCode = "출처를 선택해 주세요.";
     const rate = form.desiredRate.replace(/\s|,/g, "").replace(/원$/, "");
     if (
-      !/^\d+$/.test(rate) ||
-      /^0+$/.test(rate) ||
-      rate.replace(/^0+/, "").length > 15
+      canRate &&
+      (!/^\d+$/.test(rate) ||
+        /^0+$/.test(rate) ||
+        rate.replace(/^0+/, "").length > 15)
     )
       messages.desiredRate =
         "희망 단가는 1~999,999,999,999,999원 정수로 입력해 주세요.";
@@ -179,7 +186,7 @@ export function CandidateForm({
     return Object.keys(messages).length === 0;
   }
   async function save() {
-    if (busy.current || resume.isBusy() || !validate()) return;
+    if (!canSave || busy.current || resume.isBusy() || !validate()) return;
     busy.current = true;
     setPending(true);
     setError(undefined);
@@ -187,6 +194,7 @@ export function CandidateForm({
       if (candidate) {
         const result = await api.putCandidate(candidate.id, {
           ...form,
+          desiredRate: canRate ? form.desiredRate : "",
           expectedRevision: candidate.revision,
         });
         changed.current = false;
@@ -199,7 +207,10 @@ export function CandidateForm({
           false,
         );
       } else {
-        const result = await api.createCandidate(form);
+        const result = await api.createCandidate({
+          ...form,
+          desiredRate: canRate ? form.desiredRate : "",
+        });
         changed.current = false;
         onDirtyChange?.(false);
         onSaved(
@@ -248,7 +259,7 @@ export function CandidateForm({
           } else onClose();
         }}
         confirmLabel={candidate ? "저장" : "등록"}
-        confirmDisabled={Boolean(lookupError) || resume.pending}
+        confirmDisabled={!canSave || Boolean(lookupError) || resume.pending}
         footerStart={
           !candidate ? (
             <ResumeUploadButton state={resume} disabled={pending} />
@@ -350,14 +361,16 @@ export function CandidateForm({
             error={fields.gradeCode}
             disabled={pending}
           />
-          <Decimal
-            label="희망 단가 (원/월) *"
-            value={form.desiredRate}
-            data-testid="candidate-rate"
-            onChange={(v) => change("desiredRate", v)}
-            error={fields.desiredRate}
-            disabled={pending}
-          />
+          {canRate && (
+            <Decimal
+              label="희망 단가 (원/월) *"
+              value={form.desiredRate}
+              data-testid="candidate-rate"
+              onChange={(v) => change("desiredRate", v)}
+              error={fields.desiredRate}
+              disabled={pending}
+            />
+          )}
           {text("availableDate", "투입 가능일 *")}
           <div className="candidate-form-wide">
             <AddressSelector

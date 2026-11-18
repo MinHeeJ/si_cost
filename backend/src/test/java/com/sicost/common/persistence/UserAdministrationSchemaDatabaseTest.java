@@ -31,18 +31,27 @@ class UserAdministrationSchemaDatabaseTest {
         sql.update("INSERT INTO tb_sy_user(user_id,user_nm,email_addr,pwd_hash,pwd_err_cnt,user_stat_cd,mfa_err_cnt,reg_user_id) SELECT ?,?,?||'@example.test',pwd_hash,0,'USE',0,'admin' FROM tb_sy_user WHERE user_id='admin'",id,name,id);
         sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES (?,?,'admin')",id,role);
     }
-    @Test void developmentActorPrefersEligibleAdminThenOrderedFallbackWithActualNameAndActiveRoles() {
+    @Test void authenticatedActorNeverFallsBackAndActiveRolesComeFromThatAccount() {
         user("aaaadmin","다음 관리자","ADMIN");user("zzzadmin","마지막 관리자","ADMIN");
-        assertThat(users.findAdministrator()).isEqualTo("admin");
+        var actor=new com.sicost.common.context.CurrentUserProvider(users);
+        assertThat(actor.userId()).isEqualTo("admin");
+        assertThat(actor.currentUser().developmentMode()).isFalse();
         sql.update("UPDATE tb_sy_user SET user_stat_cd='STOP' WHERE user_id='admin'");
-        assertThat(users.findAdministrator()).isEqualTo("aaaadmin");
-        assertThat(users.findName("aaaadmin")).isEqualTo("다음 관리자");
+        // Account/session invalidation belongs to AuthenticationService; this provider must never select another admin.
+        assertThat(actor.userId()).isEqualTo("admin");
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+            org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated("aaaadmin",null,List.of()));
+        assertThat(actor.userId()).isEqualTo("aaaadmin");
+        assertThat(actor.currentUser().name()).isEqualTo("다음 관리자");
         sql.update("INSERT INTO tb_sy_user_role(user_id,role_id,reg_user_id) VALUES ('aaaadmin','PM','admin')");
-        assertThat(users.findActiveRoles("aaaadmin")).containsExactly("ADMIN","PM");
+        assertThat(actor.currentUser().roleIds()).containsExactly("ADMIN","PM");
         sql.update("UPDATE tb_sy_role SET use_yn='N' WHERE role_id='PM'");
-        assertThat(users.findActiveRoles("aaaadmin")).containsExactly("ADMIN");
-        sql.update("UPDATE tb_sy_role SET use_yn='N' WHERE role_id='ADMIN'");
-        assertThat(users.findAdministrator()).isNull();
+        assertThat(actor.currentUser().roleIds()).containsExactly("ADMIN");
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        assertThatThrownBy(actor::currentUser).isInstanceOfSatisfying(com.sicost.common.api.ApiException.class,
+            e->assertThat(e.code()).isEqualTo("AUTH_REQUIRED"));
+        assertThatThrownBy(users::findAdministrator).isInstanceOfSatisfying(com.sicost.common.api.ApiException.class,
+            e->assertThat(e.code()).isEqualTo("AUTH_REQUIRED"));
     }
     @Test void authenticationColumnsRetainRequiredHashLengthsNullableMfaAndNumericCounters() {
         var columns=sql.queryForList("SELECT column_name,data_type,character_maximum_length,numeric_precision,is_nullable FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='tb_sy_user'");

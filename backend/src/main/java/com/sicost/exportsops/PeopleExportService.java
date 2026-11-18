@@ -31,6 +31,9 @@ public class PeopleExportService {
     private final CandidateQueryService candidates;
     private final SharedQueriesMapper codes;
     private final ExcelExportService excel;
+    private com.sicost.permission.PermissionProjectionService projection;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
 
     public PeopleExportService(DeveloperQueryService developers, CandidateQueryService candidates, SharedQueriesMapper codes, ExcelExportService excel) {
         this.developers = developers; this.candidates = candidates; this.codes = codes; this.excel = excel;
@@ -39,6 +42,7 @@ public class PeopleExportService {
     public Download create(JsonNode body, HttpServletRequest request) {
         PeopleExportInput.Export input = PeopleExportInput.parse(body);
         boolean dev = input.view().equals("DEVELOPERS");
+        final List<String> allowedColumns=!dev && projection!=null?projection.candidateColumns(input.columns()):input.columns();
         Map<String, String> query = new HashMap<>(input.filters());
         if (input.sort() != null) query.put("sort", input.sort());
         query.put("direction", input.direction());
@@ -47,7 +51,7 @@ public class PeopleExportService {
         CandidateInput.Query candQuery = dev ? null : CandidateInput.query(query);
         Map<String, String> employeeTypes = labels("EMP_TYPE"), workStatuses = labels("WORK_STAT"), contactStatuses = labels("CNTC_STAT");
         String unit = input.amountUnit();
-        List<Column> columns = input.columns().stream().map(id -> new Column(id, title(id, dev, unit), numeric(id) ? CellType.NUMBER : CellType.TEXT)).toList();
+        List<Column> columns = allowedColumns.stream().map(id -> new Column(id, title(id, dev, unit), numeric(id) ? CellType.NUMBER : CellType.TEXT)).toList();
         String conditions = input.filters().entrySet().stream().sorted(Map.Entry.comparingByKey())
             .map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining("; "))
             + "; sort=" + Objects.toString(input.sort(), "기본") + " " + input.direction();
@@ -60,7 +64,7 @@ public class PeopleExportService {
                 JsonNode items = result.get("items");
                 for (JsonNode item : items) {
                     List<Object> values = new ArrayList<>();
-                    for (String id : input.columns()) values.add(cell(id, item, unit, employeeTypes, workStatuses, contactStatuses));
+                    for (String id : allowedColumns) values.add(cell(id, item, unit, employeeTypes, workStatuses, contactStatuses));
                     sink.accept(values);
                 }
                 if (items.size() < CHUNK || (long) page * CHUNK >= result.get("total").asLong()) break;

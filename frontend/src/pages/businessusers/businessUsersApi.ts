@@ -40,9 +40,16 @@ export type BusinessUserCreate = {
   businessRoleIds?: BusinessRole[];
   roleIds?: string[];
   headOffice?: boolean;
-  projectAssignments?: { projectId: string; expectedRevision: string; replaceConfirmed: boolean }[];
+  projectAssignments?: {
+    projectId: string;
+    expectedRevision: string;
+    replaceConfirmed: boolean;
+  }[];
 };
-export type BusinessUserEdit = Omit<BusinessUserCreate, "userId" | "projectAssignments"> & {
+export type BusinessUserEdit = Omit<
+  BusinessUserCreate,
+  "userId" | "projectAssignments"
+> & {
   expectedRevision: string;
 };
 export type BusinessUserSaveResult = {
@@ -102,6 +109,9 @@ export const notifyBusinessUsersCommitted = () =>
   window.dispatchEvent(new CustomEvent("sicost:business-users-committed"));
 
 export const getManagedUserRoleOptions = async () => {
-  const { getRoles } = await import("../roles/rolesApi");
-  return (await getRoles()).items.map(({ roleId, name }) => ({ roleId, name }));
+  return (
+    await request<{ items: { roleId: string; name: string }[] }>(
+      "/api/business-users/role-options",
+    )
+  ).items;
 };

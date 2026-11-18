@@ -28,7 +28,12 @@ class UserConfigurationBoundaryTest {
     @Test void onlyEditableUserColumnsAndExplicitUnlockCounterAreWritable() {
         assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_sy_user SET user_nm=?,email_addr=?,mod_user_id=?,mod_dttm=? WHERE user_id=?")).doesNotThrowAnyException();
         assertThatCode(() -> PersistenceBoundary.requireAllowed("UPDATE tb_sy_user SET user_stat_cd=?,pwd_err_cnt=0,mod_user_id=?,mod_dttm=? WHERE user_id=?")).doesNotThrowAnyException();
-        for (String field : new String[]{"user_id","reg_user_id","reg_dttm","pwd_hash","pwd_chg_dttm","mfa_use_yn","mfa_code_hash","mfa_expr_dttm","mfa_err_cnt","last_login_dttm","temp_pwd_yn","pwd_err_cnt"})
+        // Req18 §3.1: these two exact bound authentication commands now persist login results.
+        for(String field:new String[]{"pwd_err_cnt","last_login_dttm"}) {
+            assertThatCode(()->PersistenceBoundary.requireAllowed("UPDATE tb_sy_user SET "+field+"=? WHERE user_id=?")).doesNotThrowAnyException();
+            assertThatThrownBy(()->PersistenceBoundary.requireAllowed("UPDATE tb_sy_user SET "+field+"=? WHERE user_id=? OR 1=1")).isInstanceOf(IllegalStateException.class);
+        }
+        for (String field : new String[]{"user_id","reg_user_id","reg_dttm","pwd_hash","pwd_chg_dttm","mfa_use_yn","mfa_code_hash","mfa_expr_dttm","mfa_err_cnt","temp_pwd_yn"})
             assertThatThrownBy(() -> PersistenceBoundary.requireAllowed("UPDATE tb_sy_user SET "+field+"=? WHERE user_id=?")).isInstanceOf(IllegalStateException.class);
     }
     @Test void roleSettingsPreserveNameSystemFlagOrderIdentityAndRegistration() {

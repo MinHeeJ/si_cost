@@ -24,7 +24,7 @@ export function BillingReviewDownloadButton({
     if (
       active.current ||
       disabled ||
-      window.matchMedia?.("(max-width: 767px)").matches
+      window.matchMedia?.("(max-width: 767px)")?.matches
     )
       return;
     active.current = true;

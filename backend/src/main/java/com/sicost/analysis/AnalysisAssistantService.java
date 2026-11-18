@@ -54,6 +54,11 @@ public class AnalysisAssistantService {
     }
     private Final persist(Accepted a,Result result,boolean prediction) {
         return write.execute(tx->{
+            policy.require(a.user(),result.appliedScope());
+            if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive())
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void beforeCommit(boolean readOnly) {policy.require(a.user(),result.appliedScope());}
+                });
             String id=mapper.nextId();boolean provisional=result.tables().stream().anyMatch(t->Set.of("PROVISIONAL","PLANNED").contains(t.sourceState()));
             String description=String.join(" · ",result.usedData().stream().map(Evidence::queryName).distinct().toList());if(description.length()>500)description=description.substring(0,500);
             try {mapper.insert(new Insert(id,a.user(),a.question().question(),json.writeValueAsString(result),description,result.appliedScope().baseMonth().replace("-",""),provisional?"Y":"N",result.status(),a.at().toLocalDateTime(),LocalDateTime.now(clock.withZone(TimeConfiguration.SEOUL))));}
@@ -67,13 +72,46 @@ public class AnalysisAssistantService {
         if(cursor!=null)try {String[] pair=new String(Base64.getUrlDecoder().decode(cursor),StandardCharsets.UTF_8).split("\\|",-1);if(pair.length!=2||!pair[1].matches("[1-9][0-9]{0,11}"))throw new IllegalArgumentException();at=LocalDateTime.parse(pair[0]);id=pair[1];}catch(Exception e){throw invalid("cursor");}
         var rows=mapper.page(users.userId(),at,id,limit+1);boolean more=rows.size()>limit;var selected=rows.stream().limit(limit).toList();
         String next=null;if(more){var last=selected.get(selected.size()-1);next=Base64.getUrlEncoder().withoutPadding().encodeToString((last.questionAt()+"|"+last.qnaId()).getBytes(StandardCharsets.UTF_8));}
-        return new Page(selected.stream().map(r->new Summary(r.qnaId(),r.question(),r.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),r.status(),r.provisional().equals("Y"))).toList(),next,more);
+        String user=users.userId();
+        return new Page(selected.stream().map(r->{var view=storedResult(user,r);boolean visible=!UNAVAILABLE.equals(view.reason());return new Summary(r.qnaId(),visible?safeQuestion(user,r.question(),view):UNAVAILABLE,r.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),view.status(),visible&&r.provisional().equals("Y"));}).toList(),next,more);
     }
     public Detail detail(String id) {
         if(id==null||!id.matches("[1-9][0-9]{0,11}"))throw missing();String user=users.userId();var row=mapper.find(user,id);if(row==null)throw missing();
-        try {var result=json.readValue(row.answer(),Result.class);policy.require(user,result.appliedScope());for(var table:result.tables())for(var r:table.rows())if(r.target()!=null)policy.require(user,new Scope(List.of(r.target()),List.of(),null,null,result.appliedScope().baseDate(),result.appliedScope().baseMonth()));
-            return new Detail(row.qnaId(),row.question(),row.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),row.status(),row.provisional().equals("Y"),result,row.description(),row.baseMonth()==null?null:row.baseMonth().substring(0,4)+"-"+row.baseMonth().substring(4),"질문 당시 결과 · "+result.dataAsOf());
-        }catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new ApiException(500,"ANALYSIS_RECORD_ERROR","저장된 답변을 읽지 못했습니다.");}
+        var result=storedResult(user,row);boolean visible=!UNAVAILABLE.equals(result.reason());
+        return new Detail(row.qnaId(),visible?safeQuestion(user,row.question(),result):UNAVAILABLE,row.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime(),result.status(),visible&&row.provisional().equals("Y"),result,visible?row.description():"",visible&&row.baseMonth()!=null?row.baseMonth().substring(0,4)+"-"+row.baseMonth().substring(4):null,visible?"질문 당시 결과 · "+result.dataAsOf():UNAVAILABLE);
+    }
+    private static final String UNAVAILABLE="과거 답변을 현재 권한으로 표시할 수 없습니다. 다시 질문해 주세요.";
+    private Result storedResult(String user,Stored row) {
+        try {var result=json.readValue(row.answer(),Result.class);if(displayable(user,result))return result;}
+        catch(com.fasterxml.jackson.core.JsonProcessingException ignored) { /* Never echo corrupt stored text. */ }
+        return unavailable(row.questionAt().atZone(TimeConfiguration.SEOUL).toOffsetDateTime());
+    }
+    public Final projectFinal(Final value) {
+        if(value.result()==null || displayable(users.userId(),value.result()))return value;
+        return new Final(value.persisted(),value.qnaId(),"NO_ANS",unavailable(value.result().dataAsOf()),null,UNAVAILABLE);
+    }
+    private boolean displayable(String user,Result value) {
+        if(value==null || value.appliedScope()==null || value.appliedScope().targets()==null || value.appliedScope().targets().isEmpty())return false;
+        try {
+            policy.require(user,value.appliedScope());
+            for(var evidence:value.usedData())policy.require(user,evidence.scope());
+            for(var table:value.tables())for(var row:table.rows())if(row.target()!=null)policy.require(user,new Scope(List.of(row.target()),List.of(),null,null,value.appliedScope().baseDate(),value.appliedScope().baseMonth()));
+            var functions=value.appliedScope().targets().stream().filter(t->t.targetType().equals("FUNCTION")).toList();
+            if(functions.isEmpty())return false;
+            boolean onlyAssignments=functions.stream().allMatch(t->t.targetId().equals("ASSIGNMENTS"));
+            if(onlyAssignments && !policy.allows(user,new Target("FUNCTION","COMPANY","",List.of()))) {
+                if(!value.conclusion().equals("등록 자료의 공통 조회 결과입니다. 기간·잠정 상태와 미확인 항목을 함께 확인하세요.") || !value.assumptions().isEmpty() || value.unknownReasons().stream().anyMatch(reason->!AnalysisDataQueries.PRIVATE_EXCLUSION.equals(reason)))return false;
+                Set<String> allowed=Set.of("id","project","person","job","start","end","year","mm","type");
+                if(value.tables().stream().anyMatch(t->t.columns().stream().anyMatch(c->!allowed.contains(c.key())) || t.rows().stream().anyMatch(r->r.cells().stream().anyMatch(c->!allowed.contains(c.columnKey())))))return false;
+            }
+            return true;
+        } catch(ApiException denied) {if(denied.status()==401)throw denied;return false;}
+        catch(NullPointerException | IllegalArgumentException malformed) {return false;}
+    }
+    private String safeQuestion(String user,String question,Result result) {return policy.allows(user,new Target("FUNCTION","COMPANY","",List.of()))?question:"현재 권한으로 조회한 질문 기록";}
+    private Result unavailable(OffsetDateTime at) {
+        if(at==null)at=clock.instant().atZone(TimeConfiguration.SEOUL).toOffsetDateTime();
+        return new Result("1",UNAVAILABLE,List.of(),List.of(),List.of(UNAVAILABLE),List.of(),List.of("현재 권한으로 다시 질문해 주세요."),new Context("UI-26",null,null,null),new Scope(List.of(),List.of(),null,null,at.toLocalDate(),YearMonth.from(at).toString()),"NO_ANS",UNAVAILABLE,List.of(),new Interpreter("SERVER_RULE",null,"현재 권한으로 재검사"),at);
     }
     private Result failure(Accepted a,String status,String reason,AnalysisQuestionInterpreter.Intent i){return new Result("1",status.equals("ERR")?"오류 · "+reason:"답할 수 없음 · "+reason,List.of(),List.of(),List.of(reason),List.of(),List.of("질문 기록 확인 후 다시 질문해 주세요."),a.question().context(),new Scope(List.of(),List.of(),i.from().toString(),i.to().toString(),a.at().toLocalDate(),i.prediction()?YearMonth.from(a.at()).toString():i.to().toString()),status,reason,List.of(),new Interpreter("SERVER_RULE",null,"서버 규칙으로 해석·외부 모델 미사용"),a.at());}
     private static ApiException invalid(String field){return new ApiException(400,"INVALID_INPUT","질문은 1~1000자, 문맥과 조회 조건은 지정된 형식으로 입력해 주세요.",field,null);}

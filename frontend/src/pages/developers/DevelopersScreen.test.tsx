@@ -1,10 +1,11 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import {
   fireEvent,
   render as testingRender,
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
@@ -104,8 +105,7 @@ beforeEach(() => {
     }),
   });
   window.scrollTo = vi.fn();
-  vi.stubGlobal(
-    "fetch",
+  stubBusinessFetch(
     vi.fn().mockResolvedValue({
       ok: true,
       status: 200,

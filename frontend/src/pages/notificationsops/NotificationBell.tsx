@@ -65,10 +65,12 @@ export function NotificationBell({
   const { pending, message, commit } = useCommitRefresh(
     "읽음 처리는 완료됐지만 알림을 다시 불러오지 못했습니다. 재조회해 주세요.",
   );
-  const refreshCount = useCallback(async () => {
+  const refreshCount = useCallback(async (background = false) => {
     const generation = ++countGeneration.current;
     try {
-      const result = await api.getNotificationUnreadCount();
+      const result = await (background
+        ? api.getNotificationUnreadCount(true)
+        : api.getNotificationUnreadCount());
       if (alive.current && generation === countGeneration.current) {
         setBadges(result);
         setCountError(undefined);
@@ -80,11 +82,13 @@ export function NotificationBell({
       throw error;
     }
   }, []);
-  const load = useCallback(async (next = 1) => {
+  const load = useCallback(async (next = 1, background = false) => {
     const generation = ++listGeneration.current;
     setLoading(true);
     try {
-      const result = await api.getNotifications(next);
+      const result = await (background
+        ? api.getNotifications(next, true)
+        : api.getNotifications(next));
       if (alive.current && generation === listGeneration.current) {
         const items =
           next === 1
@@ -106,17 +110,23 @@ export function NotificationBell({
         setLoading(false);
     }
   }, []);
-  const refresh = useCallback(async () => {
-    await Promise.all([refreshCount(), ...(openRef.current ? [load()] : [])]);
-  }, [load, refreshCount]);
+  const refresh = useCallback(
+    async (background = false) => {
+      await Promise.all([
+        refreshCount(background),
+        ...(openRef.current ? [load(1, background)] : []),
+      ]);
+    },
+    [load, refreshCount],
+  );
   useEffect(() => {
     alive.current = true;
     const quietRefresh = () => {
       if (!document.hidden && !dispatching.current)
-        void refresh().catch(() => {});
+        void refresh(true).catch(() => {});
     };
     const poll = () => {
-      if (!document.hidden) void refreshCount().catch(() => {});
+      if (!document.hidden) void refreshCount(true).catch(() => {});
     };
     quietRefresh();
     const timer = window.setInterval(poll, 30000);
@@ -351,7 +361,17 @@ export function NotificationBell({
             ))}
           </ul>
           <footer>
-            {onOpenAutomation && <button type="button" onClick={() => { close(); onOpenAutomation(); }}>자동처리상태</button>}
+            {onOpenAutomation && (
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  onOpenAutomation();
+                }}
+              >
+                자동처리상태
+              </button>
+            )}
             {page?.hasMore && (
               <button
                 type="button"

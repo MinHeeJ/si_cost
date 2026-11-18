@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(JsonTypesContractTest.InputController.class)
 @Import({JsonTypesContractTest.InputController.class, JsonConfiguration.class, ApiExceptionHandler.class, RequestIdFilter.class})
 class JsonTypesContractTest {

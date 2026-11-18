@@ -45,7 +45,7 @@ class DeveloperStateDatabaseTest {
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,DeveloperAggregateRevision.class,CommitInvalidation.class,DeveloperStateRepository.class,DeveloperStateService.class);
-        context.refresh();service=context.getBean(DeveloperStateService.class);
+        context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(DeveloperStateService.class);
         String part=sql.queryForObject("SELECT part_id FROM tb_bs_part WHERE hq_yn='Y' ORDER BY part_id LIMIT 1",String.class);
         sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,jncmp_dt,work_stat_cd,reg_user_id) VALUES(?,?,'상태 검증','FT','DEV','DRCT',?,DATE '2026-01-01','IDLE','admin')",ID,"K-STATE-901",part);
     }

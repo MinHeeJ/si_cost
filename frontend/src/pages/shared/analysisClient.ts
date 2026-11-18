@@ -1,4 +1,9 @@
-import { request, ApiError, type ApiErrorBody } from "../../shared/api";
+import {
+  authenticatedFetch,
+  request,
+  ApiError,
+  type ApiErrorBody,
+} from "../../shared/api";
 export type AnalysisContext = {
   screenId?: string;
   baseMonth?: string;
@@ -109,7 +114,7 @@ export async function sendQuestion(
   context: AnalysisContext,
   onProgress: (p: AnalysisProgress) => void,
 ): Promise<AnalysisFinal> {
-  const response = await fetch("/api/analysis/questions", {
+  const response = await authenticatedFetch("/api/analysis/questions", {
     method: "POST",
     redirect: "error",
     headers: {
@@ -168,7 +173,7 @@ export async function sendQuestion(
   return final;
 }
 export async function downloadQuestion(id: string) {
-  const r = await fetch(
+  const r = await authenticatedFetch(
     `/api/analysis/questions/${encodeURIComponent(id)}/excel`,
     { redirect: "error" },
   );

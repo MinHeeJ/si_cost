@@ -29,12 +29,18 @@ export function useProfitabilityDetails(
 export function useProfitabilityLedger(
   personId: string,
   query: ProfitabilityQuery,
+  allowed = true,
 ) {
   const [data, setData] = useState<IndividualProfitabilityPersonData>();
   const [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
+    if (!allowed) {
+      setData(undefined);
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setData(undefined);
@@ -50,7 +56,7 @@ export function useProfitabilityLedger(
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [personId, query, revision]);
+  }, [personId, query, revision, allowed]);
   return {
     data,
     error,

@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   getOperatingStandards,
@@ -16,7 +17,7 @@ it("현재월 조회는 인자·페이지없이 전달하고 선택월만 인코
         JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
       ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getOperatingStandards();
   expect(fetcher.mock.calls[0][0]).toBe("/api/operating-standards");
   fetcher.mockResolvedValue(
@@ -38,7 +39,7 @@ it("선택키를 경로에 인코딩하고 동일 PUT으로 CASH별도 요청한
           JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
         ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   await getOperatingStandardHistory("선택/키");
   expect(fetcher.mock.calls[0][0]).toBe(
     "/api/operating-standards/%EC%84%A0%ED%83%9D%2F%ED%82%A4/history",

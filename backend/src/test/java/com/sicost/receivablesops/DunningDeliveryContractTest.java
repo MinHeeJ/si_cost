@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@com.sicost.common.BusinessMvcSlice
 @WebMvcTest(DunningDeliveryController.class)
 @ContextConfiguration(classes=DunningDeliveryController.class)
 @Import({DunningDeliveryService.class,DunningDeliveryRepository.class,DunningDeliveryCommands.class,RevisionService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})

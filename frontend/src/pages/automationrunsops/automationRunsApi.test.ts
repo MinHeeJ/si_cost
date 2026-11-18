@@ -1,3 +1,4 @@
+import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   createAutomationRunToday,
@@ -14,7 +15,7 @@ it("오늘 명령은 두 작업의 경로만 사용하고 본문·날짜·강제
           { status: 202 },
         ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   for (const job of ["DAILY_OPERATIONS", "RECEIVABLE_DUNNING"] as const) {
     await createAutomationRunToday(job);
     expect(fetcher).toHaveBeenLastCalledWith(
@@ -32,7 +33,7 @@ it("목록은 승인한 페이지·크기·정렬만 보내며 닫힘 취소 신
         JSON.stringify({ success: true, meta: {}, data: { items: [] } }),
       ),
     );
-  vi.stubGlobal("fetch", fetcher);
+  stubBusinessFetch(fetcher);
   const controller = new AbortController();
   await getAutomationRuns({ page: 2, size: 20 }, controller.signal);
   const [path, options] = fetcher.mock.lastCall!;
