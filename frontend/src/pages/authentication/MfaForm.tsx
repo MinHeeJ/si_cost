@@ -74,6 +74,7 @@ export function MfaForm({
   }, [state]);
   return (
     <form
+      data-testid="authentication-mfa-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!busy) void act("mfa/verify");
@@ -90,6 +91,7 @@ export function MfaForm({
       <label>
         인증번호
         <input
+          data-testid="authentication-mfa-code-input"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           inputMode="numeric"
@@ -100,17 +102,27 @@ export function MfaForm({
           autoFocus
         />
       </label>
-      <button className="authentication-primary" disabled={busy}>
+      <button
+        data-testid="authentication-mfa-verify-button"
+        className="authentication-primary"
+        disabled={busy}
+      >
         인증 확인
       </button>
       <button
+        data-testid="authentication-mfa-resend-button"
         type="button"
         disabled={busy}
         onClick={() => void act("mfa/resend")}
       >
         다시 보내기
       </button>
-      <button type="button" disabled={busy} onClick={() => void act("restart")}>
+      <button
+        data-testid="authentication-mfa-restart-button"
+        type="button"
+        disabled={busy}
+        onClick={() => void act("restart")}
+      >
         처음으로
       </button>
     </form>

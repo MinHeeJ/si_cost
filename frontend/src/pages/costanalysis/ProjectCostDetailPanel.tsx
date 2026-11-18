@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -88,6 +93,7 @@ export function ProjectCostDetailPanel({
 }: ProjectCostDetailPanelProps) {
   const [search, setSearch] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const requested = search.get("costTab") ?? initialTab;
   const tab = tabs.some(([key]) => key === requested) ? requested : "months";
   const [detail, setDetail] = useState<api.Detail>();
@@ -203,6 +209,8 @@ export function ProjectCostDetailPanel({
       label: "실제 투입자",
       render: (r) => (
         <button
+          type="button"
+          className="cost-person-link"
           data-testid={`cost-person-${r.month}-${r.assignmentId.toLowerCase()}`}
           onClick={() => setPerson(r.personId)}
         >
@@ -250,23 +258,28 @@ export function ProjectCostDetailPanel({
         subtitle={`${projectId} · ${detail?.month ?? month ?? "현재월"} · 금액 단위 ${amountUnit}`}
         onClose={() => (dirty ? setLeaving(true) : onClose())}
         testId="project-cost-detail"
+        actions={
+          detail && (
+            <button
+              type="button"
+              data-testid="cost-project-information"
+              onClick={() =>
+                navigate(
+                  `/UI-01?${new URLSearchParams({ projectId, tab: "basic", month: detail.month })}`,
+                  { state: { returnTo: location.pathname + location.search } },
+                )
+              }
+            >
+              프로젝트 정보
+            </button>
+          )
+        }
       >
         <section
           data-testid="cost-detail-content"
           data-screen-id="SCR-UI-04-B138-CAUSE-NAV"
         >
-          {detail && (
-            <>
-              <CostMetrics detail={detail} unit={amountUnit} />
-              <Link
-                data-testid="cost-project-information"
-                to={`/UI-01?${new URLSearchParams({ projectId, tab: "basic", month: detail.month })}`}
-                state={{ returnTo: location.pathname + location.search }}
-              >
-                프로젝트 정보
-              </Link>
-            </>
-          )}
+          {detail && <CostMetrics detail={detail} unit={amountUnit} />}
           <nav role="tablist" aria-label="원가 상세 영역" className="cost-tabs">
             {tabs.map(([key, label]) => (
               <button
@@ -359,40 +372,53 @@ export function ProjectCostDetailPanel({
                     {
                       id: "related",
                       label: "관련 내역",
-                      render: (r) =>
-                        r.kind === "FREE_SUPPORT" ? (
-                          <button
-                            data-testid="cost-free-assignments"
-                            onClick={() => selectTab("assignments")}
-                          >
-                            투입 인력
-                          </button>
-                        ) : (
-                          <>
-                            <Link
-                              data-testid={`cost-cause-${r.kind.toLowerCase().replaceAll("_", "-")}`}
-                              to={`/${r.targetScreenId}?${new URLSearchParams({ projectId, ...(r.targetScreenId === "UI-01" ? { tab: "plans" } : {}) })}`}
-                              state={{
-                                returnTo: location.pathname + location.search,
-                              }}
-                            >
-                              {r.targetScreenId === "UI-01"
-                                ? "인원 계획"
-                                : "원가 검토"}
-                            </Link>
-                            {r.kind === "EXCESS_MM" && (
-                              <Link
-                                data-testid="cost-demand-link"
-                                to={`/UI-11?${new URLSearchParams({ projectId })}`}
+                      render: (r) => (
+                        <div className="cost-related">
+                          <div className="cost-related-actions">
+                            {r.kind === "FREE_SUPPORT" ? (
+                              <button
+                                type="button"
+                                className="cost-related-button"
+                                data-testid="cost-free-assignments"
+                                onClick={() => selectTab("assignments")}
                               >
-                                인력 수요
-                              </Link>
+                                투입 인력
+                              </button>
+                            ) : (
+                              <>
+                                <Link
+                                  className="cost-related-button"
+                                  data-testid={`cost-cause-${r.kind.toLowerCase().replaceAll("_", "-")}`}
+                                  to={`/${r.targetScreenId}?${new URLSearchParams({ projectId, ...(r.targetScreenId === "UI-01" ? { tab: "plans" } : {}) })}`}
+                                  state={{
+                                    returnTo:
+                                      location.pathname + location.search,
+                                  }}
+                                >
+                                  {r.targetScreenId === "UI-01"
+                                    ? "인원 계획"
+                                    : "원가 검토"}
+                                </Link>
+                                {r.kind === "EXCESS_MM" && (
+                                  <Link
+                                    className="cost-related-button"
+                                    data-testid="cost-demand-link"
+                                    to={`/UI-11?${new URLSearchParams({ projectId })}`}
+                                  >
+                                    인력 수요
+                                  </Link>
+                                )}
+                              </>
                             )}
-                            {r.targetScreenId === "UI-32" && (
-                              <small> 후속 화면 준비 안내에서 확인</small>
+                          </div>
+                          {r.kind !== "FREE_SUPPORT" &&
+                            r.targetScreenId === "UI-32" && (
+                              <small className="cost-related-note">
+                                후속 화면 준비 안내에서 확인
+                              </small>
                             )}
-                          </>
-                        ),
+                        </div>
+                      ),
                     },
                   ]}
                 />

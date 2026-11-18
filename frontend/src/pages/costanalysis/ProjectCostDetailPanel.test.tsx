@@ -16,6 +16,12 @@ import { ProjectCostSimulationPanel } from "./ProjectCostSimulationPanel";
 import { ProjectCostDetailRoute } from "./ProjectCostDetailRoute";
 import { ApiError } from "../../shared/api";
 import * as api from "./projectCostApi";
+import * as people from "../developers/peopleClient";
+vi.mock("../developers/peopleClient", async (original) => ({
+  ...(await original<typeof import("../developers/peopleClient")>()),
+  getDeveloper: vi.fn(),
+  getPeopleCodes: vi.fn().mockResolvedValue({ items: [] }),
+}));
 vi.mock("./projectCostApi", async (original) => ({
   ...(await original<typeof import("./projectCostApi")>()),
   getProjectCostAnalysis: vi.fn(),
@@ -151,6 +157,7 @@ const simulation: api.SimulationResult = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(people.getPeopleCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getProjectCostAnalysis).mockResolvedValue(detail());
   vi.mocked(api.getProjectCostMonths).mockResolvedValue(monthly);
   vi.mocked(api.getProjectCostAssignments).mockResolvedValue({
@@ -165,7 +172,7 @@ beforeEach(() => {
 function Location() {
   const location = useLocation();
   return (
-    <output data-testid="location">
+    <output data-testid="location" data-return-to={location.state?.returnTo}>
       {location.pathname}
       {location.search}
     </output>
@@ -206,10 +213,80 @@ it("renders the cross-year monthly source and preserves a zero reference instead
     expect(within(table).getByText(label)).toBeInTheDocument();
   expect(api.getProjectCostMonths).toHaveBeenCalledWith("contract", "2026-01");
 });
+it("프로젝트 정보 버튼은 닫기 바로 왼쪽에 있고 기존 이동·복귀 문맥을 유지한다", async () => {
+  panel("causes");
+  await screen.findByTestId("cost-causes");
+  const info = await screen.findByRole("button", { name: "프로젝트 정보" });
+  const header = screen
+    .getByTestId("project-cost-detail")
+    .querySelector("header")!;
+  expect(header).toContainElement(info);
+  expect(info.nextElementSibling).toHaveTextContent("닫기");
+  expect(
+    within(screen.getByTestId("cost-detail-content")).queryByText(
+      "프로젝트 정보",
+    ),
+  ).not.toBeInTheDocument();
+  fireEvent.click(info);
+  expect(screen.getByTestId("location")).toHaveTextContent(
+    "/UI-01?projectId=contract&tab=basic&month=2026-01",
+  );
+  expect(screen.getByTestId("location")).toHaveAttribute(
+    "data-return-to",
+    "/UI-04?month=2026-01&projectId=contract&costTab=causes",
+  );
+});
+it("실제 투입자는 테두리 없는 이름 동작으로 같은 개발자 상세를 조회한다", async () => {
+  vi.mocked(api.getProjectCostAssignments).mockResolvedValue({
+    projectId: "contract",
+    month: "2026-01",
+    completeness: complete,
+    items: [
+      {
+        month: "2026-01",
+        assignmentId: "assignment",
+        personId: "actual",
+        personName: "실제 개발자",
+        managementNumber: null,
+        jobCode: "DEV",
+        jobName: "개발",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+        assignmentMm: "1",
+        freeMm: "0",
+        laborAllocated: "100",
+        teamExpense: "7",
+        projectExpense: "3",
+        directExpense: "10",
+        personalPrice: "150",
+        inputType: "PAID",
+        assignmentStatus: "ACTIVE",
+        planned: false,
+        fixed: true,
+        completeness: complete,
+      },
+    ],
+  });
+  vi.mocked(people.getDeveloper).mockRejectedValue(
+    new Error("개발자 조회 확인"),
+  );
+  panel("assignments");
+  const person = await screen.findByRole("button", {
+    name: "실제 개발자 · actual",
+  });
+  expect(person).toHaveClass("cost-person-link");
+  fireEvent.click(person);
+  expect(await screen.findByTestId("developer-drawer")).toBeInTheDocument();
+  await screen.findByText("개발자 조회 확인");
+  expect(people.getDeveloper).toHaveBeenCalledWith("actual");
+});
 it("restores the causes tab, preserves negative remainder, and routes to project plans with context", async () => {
   panel("causes");
   await screen.findByTestId("cost-causes");
-  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute("data-highlight", "true");
+  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute(
+    "data-highlight",
+    "true",
+  );
   expect(screen.getByText(/나머지 −262/)).toBeInTheDocument();
   expect(
     screen.queryByText("위 세 가지로 설명되지 않습니다"),
@@ -232,10 +309,17 @@ it("shows positive unexplained and warning tone from the server only", async () 
   );
 });
 it("경보 없는 원인 막대는 서버의 참고 표시를 따라 회색으로 남는다", async () => {
-  vi.mocked(api.getProjectCostCauses).mockResolvedValue({...causes,highlight:false,message:"경보가 없는 프로젝트라 참고용"});
+  vi.mocked(api.getProjectCostCauses).mockResolvedValue({
+    ...causes,
+    highlight: false,
+    message: "경보가 없는 프로젝트라 참고용",
+  });
   panel("causes");
   await screen.findByTestId("cost-causes");
-  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute("data-highlight","false");
+  expect(screen.getByTestId("cost-cause-bars")).toHaveAttribute(
+    "data-highlight",
+    "false",
+  );
   expect(screen.getByText("경보가 없는 프로젝트라 참고용")).toBeInTheDocument();
 });
 it("free support opens the assignment tab without changing month or project", async () => {
@@ -250,6 +334,35 @@ it("free support opens the assignment tab without changing month or project", as
     "2026-01",
   );
   expect(screen.getByText("조회된 자료가 없습니다.")).toBeInTheDocument();
+});
+it("관련 내역 네 이동은 같은 작은 버튼 스타일이고 안내는 버튼 그룹 밖 아래에 있다", async () => {
+  panel("causes");
+  const table = await screen.findByTestId("cost-causes");
+  for (const name of ["투입 인력", "인원 계획", "원가 검토", "인력 수요"]) {
+    const control = within(table).getByRole(
+      name === "투입 인력" ? "button" : "link",
+      { name },
+    );
+    expect(control).toHaveClass("cost-related-button");
+    expect(control.parentElement).toHaveClass("cost-related-actions");
+  }
+  const note = within(table).getByText("후속 화면 준비 안내에서 확인");
+  expect(note).toHaveClass("cost-related-note");
+  expect(note.previousElementSibling).toHaveClass("cost-related-actions");
+  expect(
+    within(table).getByRole("link", { name: "인원 계획" }),
+  ).toHaveAttribute("href", "/UI-01?projectId=contract&tab=plans");
+  expect(
+    within(table).getByRole("link", { name: "인력 수요" }),
+  ).toHaveAttribute("href", "/UI-11?projectId=contract");
+  fireEvent.click(within(table).getByRole("link", { name: "원가 검토" }));
+  expect(screen.getByTestId("location")).toHaveTextContent(
+    "/UI-32?projectId=contract",
+  );
+  expect(screen.getByTestId("location")).toHaveAttribute(
+    "data-return-to",
+    "/UI-04?month=2026-01&projectId=contract&costTab=causes",
+  );
 });
 it("failed tab fetch displays the request id and explicit retry", async () => {
   vi.mocked(api.getProjectCostMonths).mockRejectedValueOnce(
@@ -307,6 +420,31 @@ it("simulation sends exact decimal strings and only approved fields, then displa
     screen.queryByRole("button", { name: "저장" }),
   ).not.toBeInTheDocument();
 });
+it.each([
+  ["11.35", "-3.2"],
+  [null, null],
+  ["0", "0"],
+])(
+  "simulation target gaps %s/%s append %%p only for known server values",
+  async (before, after) => {
+    vi.mocked(api.createProjectCostSimulation).mockResolvedValue({
+      ...simulation,
+      beforeTargetGap: before,
+      afterTargetGap: after,
+    });
+    render(<ProjectCostSimulationPanel detail={detail()} />);
+    fireEvent.click(screen.getByTestId("cost-simulation-submit"));
+    const result = await screen.findByTestId("cost-simulation-result");
+    for (const [label, value] of [
+      ["변경 전 목표 대비", before],
+      ["변경 후 목표 대비", after],
+    ]) {
+      const cell = within(result).getByText(label!).nextElementSibling;
+      expect(cell).toHaveTextContent(value == null ? "–" : `${value}%p`);
+      if (value?.startsWith("-")) expect(cell).toHaveClass("cost-negative");
+    }
+  },
+);
 it("simulation validates each integer and amount without coercion", async () => {
   render(<ProjectCostSimulationPanel detail={detail()} />);
   fireEvent.change(screen.getByTestId("cost-simulation-n"), {

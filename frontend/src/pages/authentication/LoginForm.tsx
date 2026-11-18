@@ -19,6 +19,7 @@ export function LoginForm({
     [error, setError] = useState("");
   return (
     <form
+      data-testid="authentication-login-form"
       onSubmit={async (event) => {
         event.preventDefault();
         if (busy) return;
@@ -56,6 +57,7 @@ export function LoginForm({
       <label>
         아이디
         <input
+          data-testid="authentication-login-user-id-input"
           name="userId"
           autoComplete="username"
           value={userId}
@@ -68,6 +70,7 @@ export function LoginForm({
       <label>
         비밀번호
         <input
+          data-testid="authentication-login-password-input"
           name="password"
           type="password"
           autoComplete="current-password"
@@ -76,10 +79,20 @@ export function LoginForm({
           required
         />
       </label>
-      <button type="submit" className="authentication-primary" disabled={busy}>
+      <button
+        data-testid="authentication-login-submit-button"
+        type="submit"
+        className="authentication-primary"
+        disabled={busy}
+      >
         {busy ? "확인 중…" : "로그인"}
       </button>
-      <button type="button" onClick={onRecovery} disabled={busy}>
+      <button
+        data-testid="authentication-login-recovery-button"
+        type="button"
+        onClick={onRecovery}
+        disabled={busy}
+      >
         비밀번호 찾기
       </button>
     </form>

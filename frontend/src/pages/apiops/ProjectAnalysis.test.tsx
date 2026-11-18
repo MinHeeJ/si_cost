@@ -173,6 +173,99 @@ beforeEach(() => {
   });
 });
 describe("프로젝트 원가 목록", () => {
+  it("네 지표 설명은 hover·focus로 열리고 정렬 요청과 함께 유지된다", async () => {
+    mount(<ProjectCostAnalysis />);
+    await screen.findByTestId("project-cost-open-owned");
+    const descriptions = [
+      [
+        "cumulativeRevenue",
+        "턴키는 진행기준(원가÷예산), 월단위·파견은 귀속월 매출 누계",
+      ],
+      [
+        "cumulativeCost",
+        "인건비 배분 원가 + 직접 경비(팀비·프로젝트경비·추가 직접 경비)",
+      ],
+      [
+        "forecastMargin",
+        "턴키: (현재 계약금액 − 원가 누계 − 남은 기간 예상 원가) ÷ 현재 계약금액. 월단위·파견: 당월 마진율",
+      ],
+      [
+        "budgetUsage",
+        "원가 누계 ÷ 예산(프로젝트별 입력값, 기본값 계약금액 × (1 − 목표 마진율))",
+      ],
+    ];
+    for (const [id, description] of descriptions) {
+      const info = screen.getByTestId(
+        `project-cost-help-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`,
+      );
+      fireEvent.mouseEnter(info);
+      expect(screen.getByRole("tooltip")).toHaveTextContent(description);
+      fireEvent.mouseLeave(info);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      fireEvent.focus(info);
+      expect(screen.getByRole("tooltip")).toHaveTextContent(description);
+      fireEvent.keyDown(info, { key: "Escape" });
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      if (id !== "forecastMargin") {
+        fireEvent.click(screen.getByTestId(`sort-${id}`));
+        await waitFor(() =>
+          expect(api.getProjectCosts).toHaveBeenCalledWith(
+            expect.objectContaining({ sort: id, direction: "ASC" }),
+            expect.any(AbortSignal),
+          ),
+        );
+      }
+    }
+  });
+  it.each([
+    ["11.35", "11.35%p"],
+    ["-3.2", "−3.2%p"],
+    ["0.00", "0%p"],
+    [null, "–"],
+  ])(
+    "목표 대비 %s의 수치와 음수색을 유지하며 단위만 붙인다",
+    async (gap, text) => {
+      const data = costs();
+      data.items[0].targetGap = gap;
+      vi.mocked(api.getProjectCosts).mockResolvedValue(data);
+      mount(<ProjectCostAnalysis />);
+      const table = await screen.findByTestId("project-cost-table");
+      await waitFor(() =>
+        expect(
+          table.querySelector('[data-column="targetGap"]'),
+        ).toHaveTextContent(text),
+      );
+      expect(
+        within(table).getByRole("columnheader", { name: "목표 대비" }),
+      ).toBeInTheDocument();
+      const value = table.querySelector('[data-column="targetGap"] span');
+      if (gap?.startsWith("-")) expect(value).toHaveClass("analysis-negative");
+      else expect(value).not.toHaveClass("analysis-negative");
+    },
+  );
+  it("단위·엑셀은 요약 위에 두고 열 설정은 요약 아래·필터 위에 배치한다", async () => {
+    const openColumns = vi.fn();
+    mount(
+      <ProjectCostAnalysis
+        renderColumns={() => <button onClick={openColumns}>열 설정</button>}
+        renderExport={() => <button>엑셀</button>}
+      />,
+    );
+    const summary = await screen.findByTestId("analysis-summary-root");
+    const columns = screen.getByRole("button", { name: "열 설정" });
+    const before = (first: Element, second: Element) =>
+      expect(
+        first.compareDocumentPosition(second) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    before(screen.getByTestId("project-cost-unit"), summary);
+    before(screen.getByRole("button", { name: "엑셀" }), summary);
+    before(summary, columns);
+    before(columns, screen.getByTestId("project-cost-filters"));
+    expect(columns.parentElement).toHaveClass("project-analysis-toolbar");
+    fireEvent.click(columns);
+    expect(openColumns).toHaveBeenCalledOnce();
+  });
   it("URL 상세 변경과 월 이동을 같은 화면 인스턴스에 반영한다", async () => {
     mount(
       <>
@@ -222,7 +315,7 @@ describe("프로젝트 원가 목록", () => {
     expect(
       screen.queryByRole("button", { name: "상세 취소" }),
     ).not.toBeInTheDocument();
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
   });
   it("목록에서 선택한 단위를 원가 상세에 그대로 전달한다", async () => {
     mount(
@@ -238,11 +331,11 @@ describe("프로젝트 원가 목록", () => {
       target: { value: "원" },
     });
     expect(screen.getByTestId("detail-unit")).toHaveTextContent("원");
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
   });
   it("renders server filter-wide five cards, unknowns and full unbounded budget percentage", async () => {
     mount(<ProjectCostAnalysis />);
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
     expect(
       screen.getByTestId("analysis-summary-cumulative-revenue"),
     ).toHaveTextContent("–");
@@ -269,7 +362,7 @@ describe("프로젝트 원가 목록", () => {
     });
     vi.mocked(api.getProjectCosts).mockResolvedValue(data);
     mount(<ProjectCostAnalysis />);
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
     const table = within(screen.getByTestId("project-cost-table"));
     expect(table.getByText("2,000.001")).toBeInTheDocument();
     expect(table.getByText("1,000.002")).toBeInTheDocument();
@@ -285,7 +378,7 @@ describe("프로젝트 원가 목록", () => {
   });
   it("applies drafted filters only on search and resets page and server defaults", async () => {
     mount(<ProjectCostAnalysis />);
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
     fireEvent.change(screen.getByTestId("project-cost-type"), {
       target: { value: "TK" },
     });
@@ -324,7 +417,7 @@ describe("프로젝트 원가 목록", () => {
     await screen.findByText(/문의 번호: analysis-test/);
     expect(screen.getByText("month: 월 조건을 확인하세요")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
   });
   it("empty response renders empty state instead of synthetic projects", async () => {
     vi.mocked(api.getProjectCosts).mockResolvedValue({
@@ -357,14 +450,30 @@ describe("프로젝트 원가 목록", () => {
       "/UI-04?month=2026-06",
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "시험 프로젝트" }),
+      (await screen.findByTestId("project-cost-open-owned"))
+        .closest("tr")!
+        .querySelector('[data-column="cumulativeCost"]')!,
     );
     expect(screen.getByTestId("detail")).toHaveTextContent("owned 2026-06");
     fireEvent.click(screen.getByText("상세 취소"));
     expect(screen.queryByTestId("detail")).not.toBeInTheDocument();
+    expect(screen.getByTestId("project-cost-open-owned")).toBeInTheDocument();
+  });
+  it("행 Enter는 상세를 열고 프로젝트명은 일반 글자이며 안내를 표시한다", async () => {
+    mount(
+      <ProjectCostAnalysis
+        renderDetail={(id) => <section data-testid="row-detail">{id}</section>}
+      />,
+    );
+    const name = await screen.findByTestId("project-cost-open-owned");
+    expect(name.tagName).toBe("SPAN");
+    const row = name.closest("tr")!;
+    expect(row).toHaveAttribute("tabindex", "0");
     expect(
-      screen.getByRole("button", { name: "시험 프로젝트" }),
+      screen.getByText("행을 누르면 월별 원가·시뮬레이션"),
     ).toBeInTheDocument();
+    fireEvent.keyDown(row, { key: "Enter" });
+    expect(screen.getByTestId("row-detail")).toHaveTextContent("owned");
   });
   it("internal row leaves financial cells empty without changing research cost", async () => {
     const data = costs();
@@ -377,7 +486,7 @@ describe("프로젝트 원가 목록", () => {
     };
     vi.mocked(api.getProjectCosts).mockResolvedValue(data);
     mount(<ProjectCostAnalysis />);
-    await screen.findByRole("button", { name: "시험 프로젝트" });
+    await screen.findByTestId("project-cost-open-owned");
     expect(
       within(screen.getByTestId("project-cost-table")).getByText("내부"),
     ).toHaveClass("sicost-tone-neutral");
@@ -387,7 +496,10 @@ describe("프로젝트 원가 목록", () => {
 describe("프로젝트 현황판", () => {
   it("renders all signal reasons with distinct severities, all PMs, unknown and off-page stale banner", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");
-    await screen.findByText("진행 프로젝트");
+    await screen.findByTestId("status-board-table-row-owned");
+    expect(screen.getByTestId("project-status-board")).not.toHaveClass(
+      "project-cost-analysis",
+    );
     expect(screen.getByText("일정 늦음 10.0")).toHaveClass("sicost-tone-bad");
     expect(screen.getByText("메모경과 21")).toHaveClass("sicost-tone-warn");
     expect(screen.getByText("담당 하나, 담당 둘")).toBeInTheDocument();
@@ -401,7 +513,7 @@ describe("프로젝트 현황판", () => {
   it("issues tab leaves summary unchanged and passes only board filters to its owner", async () => {
     const renderIssues = vi.fn(() => <p>이슈 목록 연결</p>);
     mount(<ProjectStatusBoard renderIssues={renderIssues} />, "/UI-31");
-    await screen.findByText("진행 프로젝트");
+    await screen.findByTestId("status-board-table-row-owned");
     fireEvent.click(screen.getByTestId("status-issues-tab"));
     expect(screen.getByText("이슈 목록 연결")).toBeInTheDocument();
     expect(
@@ -414,7 +526,7 @@ describe("프로젝트 현황판", () => {
     data.items[0] = { ...data.items[0], sourceStatus: "PRE" };
     vi.mocked(api.getProjectStatusBoard).mockResolvedValue(data);
     mount(<ProjectStatusBoard />, "/UI-31");
-    await screen.findByText("진행 프로젝트");
+    await screen.findByTestId("status-board-table-row-owned");
     expect(screen.getByText(/선투입은 일반 원가 목록/)).toBeInTheDocument();
     expect(screen.queryByTestId("status-cost-owned")).not.toBeInTheDocument();
     expect(screen.getByTestId("status-project-owned")).toHaveAttribute(
@@ -434,15 +546,17 @@ describe("프로젝트 현황판", () => {
       </PermissionContext.Provider>,
       "/UI-31",
     );
-    await screen.findByText("진행 프로젝트");
+    await screen.findByTestId("status-board-table-row-owned");
     expect(screen.getByText("기본 단계 미생성")).toBeInTheDocument();
-    expect(screen.queryByTestId("status-project-owned")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("status-project-owned"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId("status-stage-owned")).not.toBeInTheDocument();
     expect(screen.queryByTestId("status-cost-owned")).not.toBeInTheDocument();
   });
   it("part options use actual HQ id and submitted light filter is server-driven", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");
-    await screen.findByText("진행 프로젝트");
+    await screen.findByTestId("status-board-table-row-owned");
     await screen.findByText("본사 (본사 직접 영업)");
     fireEvent.change(screen.getByTestId("status-part"), {
       target: { value: "actual-hq" },
