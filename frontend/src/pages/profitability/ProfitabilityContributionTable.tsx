@@ -15,14 +15,17 @@ export function ProfitabilityContributionTable({
     ...new Map(cells.map((c) => [c.gradeCode, c.gradeName])).entries(),
   ];
   return (
-    <section className="profitability-contribution" data-testid="profitability-contribution">
+    <section
+      className="profitability-contribution"
+      data-testid="profitability-contribution"
+    >
       <button
         type="button"
         data-testid="profitability-contribution-toggle"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        직무·등급별 공헌이익 {open ? "접기" : "펼침"}
+        {open ? "▾" : "▸"} 직무·등급별 인당 공헌이익
       </button>
       {open && (
         <div
@@ -30,7 +33,7 @@ export function ProfitabilityContributionTable({
           data-testid="profitability-contribution-panel"
         >
           <table className="sicost-table">
-            <caption>현재 검색조건·보기의 개인별 공헌이익 평균 / 인원</caption>
+            <caption>인당 평균 영업이익 / 인원</caption>
             <thead>
               <tr>
                 <th>주직무</th>
@@ -51,8 +54,16 @@ export function ProfitabilityContributionTable({
                       (c) => c.jobCode === job && c.gradeCode === grade,
                     );
                     return (
-                      <td key={JSON.stringify(grade)}>
-                        {formatAmount(cell?.averageProfit, unit)} ({cell?.personCount ?? 0}명)
+                      <td
+                        key={JSON.stringify(grade)}
+                        className={
+                          cell?.averageProfit?.startsWith("-")
+                            ? "profitability-negative"
+                            : undefined
+                        }
+                      >
+                        {formatAmount(cell?.averageProfit, unit)} (
+                        {cell?.personCount ?? 0}명)
                         {cell && cell.unknownCount > 0
                           ? ` (미확인 ${cell.unknownCount}명)`
                           : ""}

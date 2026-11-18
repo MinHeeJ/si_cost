@@ -56,6 +56,16 @@ const sortable = new Set<string>([
   "profit",
   "profitRate",
 ]);
+const headerHelp: Record<string, string> = {
+  utilization:
+    "투입된 달 ÷ 재직한 달. 조회 연도 1월(그 해 입사면 입사한 달)부터 이번 달(퇴사자는 퇴사한 달)까지",
+  personalCost: "월 급여 + 수당 + 4대보험(회사) + 퇴직금 적립 (엑셀 Q열)",
+  teamExpense: "팀비(1인당 월) × 그 사람 MM. 외주 0(식-11)",
+  projectExpense:
+    "프로젝트경비(1인당 월) × 그 사람 MM(식-11). 추가 직접 경비(출장비 등)는 사람에게 나누지 않고 프로젝트 원가에만 들어감",
+  totalCost: "개인별 원가 + 팀비 + 프로젝트경비 (엑셀 T열)",
+  profit: "단가 − 원가합계 (엑셀 U열)",
+};
 export function IndividualProfitabilityScreen({
   analysisEntry,
   onPerson,
@@ -127,9 +137,19 @@ export function IndividualProfitabilityScreen({
     (def) => ({
       id: def.id,
       label:
-        def.id === "pay" && query.view === "CUMULATIVE"
-          ? "급여(누계)"
-          : def.label,
+        def.id === "pay" && query.view === "CUMULATIVE" ? (
+          "급여(누계)"
+        ) : (
+          <>
+            {def.label}
+            {headerHelp[def.id] && (
+              <>
+                {" "}
+                <span title={headerHelp[def.id]}>ⓘ</span>
+              </>
+            )}
+          </>
+        ),
       sortable: sortable.has(def.id),
       align: [
         "name",
