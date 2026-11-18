@@ -19,6 +19,7 @@ export type DialogProps = {
   cancelActionId?: string;
   footerStart?: ReactNode;
   noValidate?: boolean;
+  hideCancel?: boolean;
 };
 const FOCUSABLE =
   'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]';
@@ -40,6 +41,7 @@ export function Dialog({
   cancelActionId,
   footerStart,
   noValidate,
+  hideCancel = false,
 }: DialogProps) {
   const ref = useRef<HTMLFormElement>(null);
   const inFlight = useRef(false);
@@ -138,17 +140,19 @@ export function Dialog({
         </div>
         <footer>
           {footerStart}
-          <button
-            type="button"
-            data-testid={cancelTestId}
-            data-action-id={cancelActionId}
-            disabled={pending}
-            onClick={() => {
-              if (!inFlight.current) onCancel();
-            }}
-          >
-            {cancelLabel}
-          </button>
+          {!hideCancel && (
+            <button
+              type="button"
+              data-testid={cancelTestId}
+              data-action-id={cancelActionId}
+              disabled={pending}
+              onClick={() => {
+                if (!inFlight.current) onCancel();
+              }}
+            >
+              {cancelLabel}
+            </button>
+          )}
           <button
             type="submit"
             data-testid={confirmTestId}

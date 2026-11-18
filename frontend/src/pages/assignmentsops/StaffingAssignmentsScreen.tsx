@@ -142,7 +142,11 @@ export function AssignmentsContent({
   initialMonth,
   initialWarning,
 }: StaffingAssignmentsProps & { year: number; context: PeriodContext }) {
-  const [filters, setFilters] = useState<api.Filters>({ year, ...(initialMonth?.startsWith(`${year}-`) ? { month: initialMonth } : {}), ...(initialWarning ? { warning: initialWarning } : {}) }),
+  const [filters, setFilters] = useState<api.Filters>({
+      year,
+      ...(initialMonth?.startsWith(`${year}-`) ? { month: initialMonth } : {}),
+      ...(initialWarning ? { warning: initialWarning } : {}),
+    }),
     [draft, setDraft] = useState({
       projectId: "",
       jobCode: "",
@@ -497,9 +501,14 @@ export function AssignmentsContent({
         </label>
         <label className="sicost-field">
           선택월
-          <input type="month" data-testid="assignments-month-filter" value={draft.month}
-            min={`${year}-01`} max={`${year}-12`}
-            onChange={(e) => setDraft((v) => ({ ...v, month: e.target.value }))} />
+          <input
+            type="month"
+            data-testid="assignments-month-filter"
+            value={draft.month}
+            min={`${year}-01`}
+            max={`${year}-12`}
+            onChange={(e) => setDraft((v) => ({ ...v, month: e.target.value }))}
+          />
         </label>
         <label className="sicost-field">
           경고
@@ -567,7 +576,11 @@ export function AssignmentsContent({
             >
               연장 가능성 변경 / 배정 취소
             </button>
-            <button type="button" onClick={clearSelection}>
+            <button
+              data-testid="assignments-clear-selection"
+              type="button"
+              onClick={clearSelection}
+            >
               선택 해제
             </button>
           </div>

@@ -96,7 +96,12 @@ export function AssignmentCandidatesPanel({
                         "상태",
                         "행동",
                       ].map((label) => (
-                        <th key={label}>{label}</th>
+                        <th
+                          data-testid={`assignment-candidate-header-${Array.from(label, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                          key={label}
+                        >
+                          {label}
+                        </th>
                       ))}
                     </tr>
                   </thead>

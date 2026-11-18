@@ -35,14 +35,21 @@ const statuses: Record<api.CalendarCell["status"], string> = {
 };
 export function WorkforceOperationsScreen() {
   const location = useLocation();
-  const incoming = location.state as { fromDashboard?: boolean; section?: string } | null;
-  const dashboardSupply = incoming?.fromDashboard && incoming.section === "supply";
+  const incoming = location.state as {
+    fromDashboard?: boolean;
+    section?: string;
+  } | null;
+  const dashboardSupply =
+    incoming?.fromDashboard && incoming.section === "supply";
   const [context, setContext] = useState<PeriodContext>();
   const [year, setYear] = useState<number>();
   const [error, setError] = useState<unknown>();
   const [reload, setReload] = useState(0);
   const [tab, setTab] = useState(dashboardSupply ? "supply" : "calendar");
-  useEffect(() => { if (location.pathname === "/UI-28" && incoming?.fromDashboard) setTab(dashboardSupply ? "supply" : "calendar"); }, [location.key]);
+  useEffect(() => {
+    if (location.pathname === "/UI-28" && incoming?.fromDashboard)
+      setTab(dashboardSupply ? "supply" : "calendar");
+  }, [location.key]);
   useEffect(() => {
     let live = true;
     void getPeriodContext()
@@ -157,7 +164,10 @@ export function WorkforceCalendar({
     remainingOnly: false,
   });
   const [filter, setFilter] = useState(draft);
-  const [ordering, setOrdering] = useState<{ sort?: string; direction?: "ASC" | "DESC" }>({});
+  const [ordering, setOrdering] = useState<{
+    sort?: string;
+    direction?: "ASC" | "DESC";
+  }>({});
   const [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<api.CalendarPage>();
@@ -315,7 +325,10 @@ export function WorkforceCalendar({
             ["employeeType", "직원구분"],
           ] as const
         ).map(([key, label]) => (
-          <label key={key}>
+          <label
+            data-testid={`calendar-filter-label-${Array.from(key, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+            key={key}
+          >
             {label}
             <select
               data-testid={`calendar-filter-${key}`}
@@ -324,7 +337,11 @@ export function WorkforceCalendar({
             >
               <option value="">전체</option>
               {options[key]?.map((o) => (
-                <option key={o.code} value={o.code}>
+                <option
+                  data-testid={`calendar-filter-option-${Array.from(key, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(o.code, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={o.code}
+                  value={o.code}
+                >
                   {o.name}
                 </option>
               ))}
@@ -379,12 +396,43 @@ export function WorkforceCalendar({
             <table className="sicost-table workforce-calendar-table">
               <thead>
                 <tr>
-                  <th aria-sort={ordering.sort === "name" ? ordering.direction === "DESC" ? "descending" : "ascending" : "none"}>
-                    <button type="button" onClick={() => { setPage(1); setOrdering({ sort: "name", direction: ordering.sort === "name" && ordering.direction === "ASC" ? "DESC" : "ASC" }); }}>이름 {ordering.sort === "name" ? ordering.direction === "DESC" ? "↓" : "↑" : "↕"}</button>
+                  <th
+                    aria-sort={
+                      ordering.sort === "name"
+                        ? ordering.direction === "DESC"
+                          ? "descending"
+                          : "ascending"
+                        : "none"
+                    }
+                  >
+                    <button
+                      data-testid="calendar-sort-name"
+                      type="button"
+                      onClick={() => {
+                        setPage(1);
+                        setOrdering({
+                          sort: "name",
+                          direction:
+                            ordering.sort === "name" &&
+                            ordering.direction === "ASC"
+                              ? "DESC"
+                              : "ASC",
+                        });
+                      }}
+                    >
+                      이름{" "}
+                      {ordering.sort === "name"
+                        ? ordering.direction === "DESC"
+                          ? "↓"
+                          : "↑"
+                        : "↕"}
+                    </button>
                   </th>
                   <th>직무</th>
                   {Array.from({ length: 12 }, (_, i) => (
-                    <th key={i}>{i + 1}월</th>
+                    <th data-testid={`calendar-month-header-${i + 1}`} key={i}>
+                      {i + 1}월
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -404,7 +452,10 @@ export function WorkforceCalendar({
                     </th>
                     <td>{lookup("jobCode", person.jobCode)}</td>
                     {person.cells.map((cell) => (
-                      <td key={cell.month}>
+                      <td
+                        data-testid={`calendar-person-month-${Array.from(String(person.developerId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                        key={cell.month}
+                      >
                         <WorkforceCalendarCell
                           cell={cell}
                           personId={person.developerId}
@@ -415,7 +466,16 @@ export function WorkforceCalendar({
                 ))}
                 {!data.items.length && (
                   <tr>
-                    <td colSpan={14}><p>조회된 인력이 없습니다.</p><button type="button" onClick={reset}>조건 초기화</button></td>
+                    <td colSpan={14}>
+                      <p>조회된 인력이 없습니다.</p>
+                      <button
+                        data-testid="calendar-empty-reset"
+                        type="button"
+                        onClick={reset}
+                      >
+                        조건 초기화
+                      </button>
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -425,7 +485,12 @@ export function WorkforceCalendar({
                     비는인원
                   </th>
                   {data.monthTotals.map((m) => (
-                    <td key={m.month}>{m.availablePeople ?? "–"}</td>
+                    <td
+                      data-testid={`calendar-available-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                      key={m.month}
+                    >
+                      {m.availablePeople ?? "–"}
+                    </td>
                   ))}
                 </tr>
                 <tr>
@@ -433,7 +498,12 @@ export function WorkforceCalendar({
                     남는 MM
                   </th>
                   {data.monthTotals.map((m) => (
-                    <td key={m.month}>{decimal(m.remainingMm)}</td>
+                    <td
+                      data-testid={`calendar-remaining-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                      key={m.month}
+                    >
+                      {decimal(m.remainingMm)}
+                    </td>
                   ))}
                 </tr>
               </tfoot>
@@ -468,7 +538,11 @@ export function WorkforceCalendar({
                 }}
               >
                 {[20, 50, 100].map((n) => (
-                  <option key={n} value={n}>
+                  <option
+                    data-testid={`calendar-size-option-${n}`}
+                    key={n}
+                    value={n}
+                  >
                     {n}건씩
                   </option>
                 ))}
@@ -500,6 +574,7 @@ export function WorkforceCalendarCell({
         : statuses[cell.status];
   return (
     <div
+      data-testid={`calendar-cell-container-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
       className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}${cell.leavingSoon ? " workforce-calendar-ending" : ""}${cell.overAssigned ? " workforce-calendar-over" : ""}`}
     >
       <button
@@ -515,13 +590,19 @@ export function WorkforceCalendarCell({
           {cell.month} · {statuses[cell.status]} · 전체합{" "}
           {decimal(cell.actualMm)} MM
           {cell.projects.map((p, i) => (
-            <p key={`${p.projectId}:${i}`}>
+            <p
+              data-testid={`calendar-cell-project-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${i}`}
+              key={`${p.projectId}:${i}`}
+            >
               {p.projectId}: {decimal(p.actualMm)} MM · 종료 {p.endDate} · EXT{" "}
               {p.extensionPossibility ?? "미정"}
             </p>
           ))}
           {cell.tentativeAssignments.map((t) => (
-            <p key={t.id}>
+            <p
+              data-testid={`calendar-cell-tentative-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(String(t.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+              key={t.id}
+            >
               가배정 {t.opportunityId} · {t.startMonth} ~ 자리 종료월 ·{" "}
               {cell.tentativeProbability ?? "–"}%
             </p>
