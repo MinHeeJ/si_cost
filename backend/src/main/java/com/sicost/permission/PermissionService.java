@@ -60,8 +60,8 @@ public class PermissionService {
         Set<String> pcOnlyScreens=new HashSet<>();
         for(var row:ordered)if(row.screenId()!=null && screens.containsKey(row.screenId()) && menuPath(row,indexed).stream().anyMatch(PermissionMapper.Menu::pcOnly))pcOnlyScreens.add(row.screenId());
         boolean administrator=roles.stream().anyMatch(role->"ADMIN".equals(role.roleId()));
-        Set<String> renegotiationFields=new HashSet<>(Set.of("name","projectName","renewalDate","contractMm","unitPrice","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain"));
-        if(sensitive)renegotiationFields.addAll(Set.of("monthlyLaborCost","employeeType"));
+        Set<String> renegotiationFields=new HashSet<>(Set.of("name","employeeType","projectName","renewalDate","contractMm","unitPrice","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain"));
+        if(sensitive)renegotiationFields.add("monthlyLaborCost");
         Set<String> developerFields=new HashSet<>(Set.of("id","managementNo","name","companyId","companyName","employeeType","grade","job","status","useYn","currentProjects","withdrawalDate","monthlyMm","revision","gradeCode","jobCode","subJobCode","positionCode","directClass","partId","hireDate","homeAreaCode","homeAddress","skills","priceHistory","editPrice"));
         Set<String> assignmentFields=new HashSet<>(Set.of("id","projectId","projectName","developerId","developerName","managementNo","jobCode","jobName","startDate","endDate","contractMm","inputType","contractDeveloperId","extensionPossibility","extensionCount","earlyWithdrawal","assignmentStatus","yearMm","revision","warnings","protectedMonths","month","monthlyMm","inputDays","fixed"));
         if(candidateRate(roles)) {developerFields.add("monthlyRate");assignmentFields.addAll(Set.of("billingUnitPrice","appliedUnitPrice","defaultUnitPrice","salesAmount"));}

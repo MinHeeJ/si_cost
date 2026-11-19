@@ -27,14 +27,17 @@ class SettlementFeatureExportTest {
     final JsonMapper json=JsonMapper.builder().findAndAddModules().build();
     SalesPartSettlementService settlements;RateRenegotiationService rates;SettlementTrendService trends;
     AccessLogWriter logs;MockMvc mvc;MasterDataExportService old;
+    ExcelExportService excel;
+    SettlementExportService featureExports;
     @BeforeEach void setup() {
         settlements=mock(SalesPartSettlementService.class);rates=mock(RateRenegotiationService.class);trends=mock(SettlementTrendService.class);logs=mock(AccessLogWriter.class);old=mock(MasterDataExportService.class);
         var users=mock(CurrentUserProvider.class);when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),true));
         var tx=mock(PlatformTransactionManager.class);when(tx.getTransaction(any())).thenAnswer(c->new SimpleTransactionStatus());
         var clock=Clock.fixed(Instant.parse("2026-11-14T00:00:00Z"),ZoneId.of("Asia/Seoul"));
-        var excel=new ExcelExportService(users,logs,clock,tx);
+        excel=new ExcelExportService(users,logs,clock,tx);
         var controller=new MasterDataExportController(old,mock(PeopleExportService.class),mock(AssignmentExportService.class));
-        controller.settlements(new SettlementExportService(excel,settlements,trends,rates,clock));
+        featureExports=new SettlementExportService(excel,settlements,trends,rates,clock);
+        controller.settlements(featureExports);
         mvc=MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new ApiExceptionHandler()).build();
     }
     Result result(int count) {
@@ -83,6 +86,48 @@ class SettlementFeatureExportTest {
         for(String body:List.of(settlementBody("WRONG"),settlementBody("MONTH").replace("\"amountUnit\":\"원\"","\"page\":2"),"{\"view\":\"RATE_RENEGOTIATIONS\",\"filters\":{\"month\":\"2026-11\"},\"columns\":[\"name\",\"projectName\"]}","{\"view\":\"RATE_RENEGOTIATIONS\",\"filters\":{},\"columns\":[\"name\"]}"))
             mvc.perform(post("/api/exports/master-data").contentType("application/json").content(body)).andExpect(status().isBadRequest());
         verifyNoInteractions(settlements,rates,logs,old);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void rateWorkbookKeepsClassificationAndMethodsButOnlyFinanceReceivesMonthlyCost(boolean sensitive) throws Exception {
+        var permissions=mock(com.sicost.permission.PermissionService.class);
+        Set<String> fields=new HashSet<>(SettlementExportService.RATE_COLUMNS);
+        if(!sensitive)fields.remove("monthlyLaborCost");
+        when(permissions.capabilities()).thenReturn(new com.sicost.permission.PermissionService.Capabilities(
+            Map.of("UI-32",Set.of("INQ","DNLD")),
+            new com.sicost.permission.PermissionService.Scope(sensitive,Set.of("OPERATIONS"),Set.of()),
+            sensitive,Map.of("UI-32",fields),Map.of(),Set.of()));
+        when(permissions.candidateRateAllowed()).thenReturn(true);
+        var projection=new com.sicost.permission.PermissionProjectionService(permissions);
+        featureExports.setProjection(projection,json);
+        excel.setProjection(new com.sicost.permission.PermissionExportProjection(
+            projection,permissions,mock(com.sicost.authentication.AuthenticationTaskService.class)));
+        var row=new RateRenegotiationDtos.Row("A","D","이름","0001","FL","P","프로젝트",
+            "2026-11-14",0,true,"1.00","0.52","6000000","3120000","2808000",
+            "10.0","6750000","12.5","3600000","9000000",List.of());
+        var summary=new RateRenegotiationDtos.Summary(1,1,"10.0","3600000","9000000");
+        when(rates.export(any())).thenReturn(new RateRenegotiationDtos.Result("2026-11",
+            OffsetDateTime.parse("2026-11-14T09:00:00+09:00"),"5","20",summary,
+            List.of(row),new RateRenegotiationDtos.Page(1,50,1),0,List.of(),List.of()));
+        String body=json.writeValueAsString(Map.of("view","RATE_RENEGOTIATIONS",
+            "filters",Map.of("renewalWindow","ALL","marginBelow","ALL","employeeType","FL"),
+            "columns",SettlementExportService.RATE_COLUMNS,"amountUnit","원"));
+        var response=mvc.perform(post("/api/exports/master-data").contentType("application/json").content(body))
+            .andExpect(status().isOk()).andReturn().getResponse();
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
+            var sheet=book.getSheet("단가 재협상");
+            List<String> headers=new ArrayList<>();
+            sheet.getRow(0).forEach(cell->headers.add(cell.getStringCellValue()));
+            assertThat(headers).contains("구분","이익률","목표 단가","필요 인상률","가정 연 증가");
+            assertThat(headers.contains("월 노동비")).isEqualTo(sensitive);
+            assertThat(sheet.getRow(1).getCell(headers.indexOf("구분")).getStringCellValue()).isEqualTo("FL");
+            assertThat(sheet.getRow(2).getCell(headers.indexOf("가정 연 증가")).getNumericCellValue()).isEqualTo(3600000);
+            assertThat(book.getSheet("계산 방법").getRow(1).getCell(1).getStringCellValue()).contains("노동비C");
+            var text=new StringBuilder();
+            for(var page:book)for(var r:page)for(var cell:r)text.append(cell.toString()).append('\n');
+            if(!sensitive)assertThat(text.toString()).doesNotContain("2808000","monthlyLaborCost","월 노동비");
+        }
+        verify(rates).export(argThat(q->q.employeeType().equals("FL") && q.renewalWindow().equals("ALL")));
     }
     @Test void auditFailurePreventsFileTransmission() throws Exception {
         when(settlements.exportSettlement(eq("PART-001"),any())).thenReturn(result(0));doThrow(new IllegalStateException("audit failed")).when(logs).append(any(),any());

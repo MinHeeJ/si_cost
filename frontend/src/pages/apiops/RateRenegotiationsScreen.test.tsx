@@ -151,6 +151,13 @@ describe("단가 재협상 대상", () => {
     expect(screen.getByText("D-0")).toHaveClass("sicost-tone-bad");
     expect(screen.getByText("D-31")).toHaveClass("sicost-tone-warn");
     expect(screen.getByText("예정")).toBeVisible();
+    expect(screen.getByTestId("renegotiation-person-owned-0")).toHaveClass(
+      "renegotiation-person-link",
+    );
+    expect(
+      screen.getByTestId("renegotiation-person-owned-0"),
+    ).toHaveTextContent("관리번호");
+    expect(screen.queryByText(/협상 반영은/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /단가 적용|협상 저장|상태 변경/ }),
     ).not.toBeInTheDocument();
@@ -372,20 +379,133 @@ it("formats the target criterion with one decimal instead of exposing stored fou
   expect(screen.queryByText(/20.0000%/)).not.toBeInTheDocument();
 });
 
-it.each([false, true])("renders restricted PART results without private diagnostic arrays (empty=%s)", async empty => {
-  const { PermissionContext, ScreenPermissionContext } = await import("../../shared/permission/PermissionBoundary");
-  const result = response();
-  const { issues, unevaluatedAssignments, ...restricted } = result;
-  restricted.items = empty ? [] : result.items.map(({ issues, monthlyLaborCost, employeeType, managementNo, ...row }) => ({ ...row, availableFields: Object.keys(row) })) as unknown as api.RenegotiationRow[];
-  restricted.pagination.total = restricted.items.length;
-  vi.mocked(api.getRateRenegotiations).mockResolvedValue(restricted as api.RenegotiationsResult);
-  render(<PermissionContext.Provider value={{ screens: { "UI-32": ["INQ"] }, sensitive: false, scope: { all: false, partIds: ["own-part"], projectIds: [] }, fields: { "UI-32": ["marginRate", "targetUnitPrice", "annualGain"] } }}>
-    <ScreenPermissionContext.Provider value="UI-32"><MemoryRouter><PreferencesProvider api={preferences}><RateRenegotiationsScreen /></PreferencesProvider></MemoryRouter></ScreenPermissionContext.Provider>
-  </PermissionContext.Provider>);
+it.each([false, true])(
+  "renders restricted PART results without private diagnostic arrays (empty=%s)",
+  async (empty) => {
+    const { PermissionContext, ScreenPermissionContext } = await import(
+      "../../shared/permission/PermissionBoundary"
+    );
+    const result = response();
+    const { issues, unevaluatedAssignments, ...restricted } = result;
+    restricted.items = empty
+      ? []
+      : (result.items.map(({ issues, monthlyLaborCost, ...row }) => ({
+          ...row,
+          availableFields: Object.keys(row),
+        })) as unknown as api.RenegotiationRow[]);
+    restricted.pagination.total = restricted.items.length;
+    vi.mocked(api.getRateRenegotiations).mockResolvedValue(
+      restricted as api.RenegotiationsResult,
+    );
+    render(
+      <PermissionContext.Provider
+        value={{
+          screens: { "UI-32": ["INQ"] },
+          sensitive: false,
+          scope: { all: false, partIds: ["own-part"], projectIds: [] },
+          fields: { "UI-32": ["marginRate", "targetUnitPrice", "annualGain"] },
+        }}
+      >
+        <ScreenPermissionContext.Provider value="UI-32">
+          <MemoryRouter>
+            <PreferencesProvider api={preferences}>
+              <RateRenegotiationsScreen />
+            </PreferencesProvider>
+          </MemoryRouter>
+        </ScreenPermissionContext.Provider>
+      </PermissionContext.Provider>,
+    );
+    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    expect(
+      screen.queryByRole("columnheader", { name: /월 원가/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "구분" })).toBeVisible();
+    expect(screen.getByTestId("renegotiation-employee")).toBeVisible();
+    fireEvent.click(screen.getByTestId("renegotiation-guide-summary"));
+    expect(screen.getByTestId("renegotiation-guide")).toHaveTextContent(
+      "목표 단가",
+    );
+    expect(screen.getByTestId("renegotiation-guide")).toHaveTextContent(
+      "필요 인상률",
+    );
+    expect(screen.queryByText(/원가·매출 미확인 근거/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("renegotiation-download"),
+    ).not.toBeInTheDocument();
+    if (empty)
+      expect(screen.getByTestId("renegotiation-empty-reset")).toBeVisible();
+    else {
+      expect(
+        screen.getByRole("columnheader", { name: /필요 인상률/ }),
+      ).toBeVisible();
+      expect(
+        screen.getByTestId("renegotiation-person-owned-0"),
+      ).toHaveTextContent("관리번호");
+      expect(
+        within(screen.getByTestId("renegotiation-table")).getAllByText(
+          "정규직",
+        ),
+      ).toHaveLength(2);
+    }
+  },
+);
+
+it("PART export and column settings retain employee type but exclude monthly cost", async () => {
+  const { PermissionContext } = await import(
+    "../../shared/permission/PermissionBoundary"
+  );
+  render(
+    <PermissionContext.Provider
+      value={{
+        screens: { "UI-32": ["INQ", "DNLD"], "UI-02": ["INQ"] },
+        sensitive: false,
+        scope: { all: false, partIds: ["own-part"], projectIds: [] },
+        fields: {
+          "UI-32": [
+            "employeeType",
+            "marginRate",
+            "targetUnitPrice",
+            "annualGain",
+          ],
+        },
+      }}
+    >
+      <MemoryRouter>
+        <PreferencesProvider api={preferences}>
+          <RateRenegotiationsScreen />
+        </PreferencesProvider>
+      </MemoryRouter>
+    </PermissionContext.Provider>,
+  );
   await screen.findByText(/^기준월 2080-07 · 계산시각/);
-  expect(screen.queryByRole("columnheader", { name: /월 원가/ })).not.toBeInTheDocument();
-  expect(screen.queryByText(/원가·매출 미확인 근거/)).not.toBeInTheDocument();
-  expect(screen.queryByTestId("renegotiation-download")).not.toBeInTheDocument();
-  if (empty) expect(screen.getByTestId("renegotiation-empty-reset")).toBeVisible();
-  else expect(screen.getByRole("columnheader", { name: /필요 인상률/ })).toBeVisible();
+  fireEvent.change(screen.getByTestId("renegotiation-employee"), {
+    target: { value: "FT" },
+  });
+  fireEvent.click(screen.getByTestId("renegotiation-search"));
+  await waitFor(() =>
+    expect(api.getRateRenegotiations).toHaveBeenLastCalledWith(
+      { ...api.defaultRenegotiationQuery(), employeeType: "FT" },
+      expect.any(AbortSignal),
+    ),
+  );
+  await waitFor(() =>
+    expect(screen.getByTestId("renegotiation-download")).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByTestId("renegotiation-download"));
+  await waitFor(() =>
+    expect(api.downloadRenegotiations).toHaveBeenCalledWith(
+      { ...api.defaultRenegotiationQuery(), employeeType: "FT" },
+      renegotiationColumns
+        .filter((c) => c.id !== "monthlyLaborCost")
+        .map((c) => c.id),
+      "천원",
+    ),
+  );
+  fireEvent.click(screen.getByTestId("renegotiation-columns"));
+  expect(screen.getByTestId("renegotiation-column-1")).toHaveTextContent(
+    "구분",
+  );
+  expect(
+    screen.queryByTestId("renegotiation-column-6"),
+  ).not.toBeInTheDocument();
 });

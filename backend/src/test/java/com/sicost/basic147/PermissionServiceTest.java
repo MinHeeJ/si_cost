@@ -17,6 +17,16 @@ class PermissionServiceTest {
     PermissionMapper.Menu menu(String id,String parent,String screen,String use,int order,boolean inquiry,boolean registration,boolean update) {return new PermissionMapper.Menu(id,parent,screen,use,order,false,inquiry,registration,update,false,false,false,false);}
     @BeforeEach void principal() {SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated("real-user",null,List.of()));}
     @AfterEach void clear() {SecurityContextHolder.clearContext();}
+    @Test void renegotiationPartFieldsKeepEmployeeTypeAndOnlySensitiveRolesReceiveMonthlyCost() {
+        for(String role:List.of("SALES_LDR","FIN","EXEC","ADMIN")) {
+            boolean sensitive=!role.equals("SALES_LDR");
+            when(mapper.roles("real-user")).thenReturn(List.of(new PermissionMapper.Role(
+                role,sensitive?"ALL":"PART",sensitive?"Y":"N")));
+            var fields=policy.capabilities().fields().get("UI-32");
+            assertThat(fields).contains("employeeType","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain");
+            assertThat(fields.contains("monthlyLaborCost")).isEqualTo(sensitive);
+        }
+    }
     @Test void renegotiationExceptionDoesNotExposeLaborTotalsInPersonalCostDetails() throws Exception {
         when(mapper.roles("real-user")).thenReturn(List.of(new PermissionMapper.Role("SALES_LDR","PART","N")));
         var projection=new PermissionProjectionService(policy);var json=new ObjectMapper();

@@ -19,7 +19,9 @@ class PermissionViewsTest {
     @Test void rateUsesExactRestrictedAllowlistNotNullMoneyOrPrivateEvidence() throws Exception {
         ObjectNode data=(ObjectNode)json.readTree("{\"baseMonth\":\"2026-11\",\"calculatedAt\":\"2026-11-17\",\"summary\":{\"personCount\":1,\"weightedMarginRate\":\"10.0\"},\"items\":[{\"name\":\"synthetic\",\"monthlyLaborCost\":\"5400000\",\"managementNo\":\"private-reference\",\"employeeType\":\"FT\",\"unitPrice\":\"6000000\",\"marginRate\":\"10.0\"}],\"issues\":[{\"message\":\"private-evidence\"}],\"unevaluatedAssignments\":[{\"message\":\"private-evidence\"}]}");
         PermissionViews.rate(data);
-        assertThat(data.toString()).doesNotContain("monthlyLaborCost","5400000","managementNo","employeeType","private-evidence","issues","unevaluatedAssignments");
+        assertThat(data.toString()).doesNotContain("monthlyLaborCost","5400000","private-evidence","issues","unevaluatedAssignments");
+        assertThat(data.path("items").path(0).path("employeeType").asText()).isEqualTo("FT");
+        assertThat(data.path("items").path(0).path("managementNo").asText()).isEqualTo("private-reference");
         assertThat(data.path("items").path(0).path("unitPrice").asText()).isEqualTo("6000000");
         assertThat(data.path("items").path(0).path("marginRate").asText()).isEqualTo("10.0");
         assertFields(data);assertFields(data.path("summary"));assertFields(data.path("items").path(0));

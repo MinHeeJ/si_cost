@@ -53,7 +53,7 @@ public class SettlementExportService {
         JsonNode conditions=body;
         if(rate && projection!=null && !projection.sensitive()) {
             var safe=(com.fasterxml.jackson.databind.node.ObjectNode)body.deepCopy();var selected=safe.putArray("columns");
-            for(var column:body.path("columns"))if(!Set.of("monthlyLaborCost","employeeType").contains(column.asText()))selected.add(column.asText());conditions=safe;
+            for(var column:body.path("columns"))if(!column.asText().equals("monthlyLaborCost"))selected.add(column.asText());conditions=safe;
         }
         var spec=new Specification(kind,null,List.of(new Column("name","이름",CellType.TEXT)),conditions.toString(),unit,screen);
         if(rate) {
@@ -68,7 +68,7 @@ public class SettlementExportService {
         return excel.generateWorkbook(spec,()->settlementWorkbook(part,parsed,mode,unit),request);
     }
     private WorkbookData rateWorkbook(RateRenegotiationDtos.Result data,List<String> ids,String unit) {
-        if(projection!=null && !projection.sensitive())ids=ids.stream().filter(id->!Set.of("monthlyLaborCost","employeeType").contains(id)).toList();
+        if(projection!=null && !projection.sensitive())ids=ids.stream().filter(id->!id.equals("monthlyLaborCost")).toList();
         var columns=ids.stream().map(id->new Column(id,rateTitle(id),Set.of("name","employeeType","projectName","renewalDate").contains(id)?CellType.TEXT:CellType.NUMBER)).toList();
         List<List<Object>> values=new ArrayList<>();
         for(var r:data.items())values.add(ids.stream().map(id->rateValue(r,id,unit)).toList());
@@ -82,7 +82,7 @@ public class SettlementExportService {
             data.issues().forEach(i->info.add(new Information("계산 근거",i.message())));
         }
         String day=LocalDate.now(clock.withZone(com.sicost.common.TimeConfiguration.SEOUL)).format(DateTimeFormatter.BASIC_ISO_DATE);
-        return new WorkbookData(projection==null || projection.sensitive()?List.of(sheet("단가 재협상",columns,values),methods(true)):List.of(sheet("단가 재협상",columns,values)),info,summary.assignmentCount(),day,"단가재협상_"+day+".xlsx");
+        return new WorkbookData(List.of(sheet("단가 재협상",columns,values),methods(true)),info,summary.assignmentCount(),day,"단가재협상_"+day+".xlsx");
     }
     private WorkbookData settlementWorkbook(String part,SalesPartSettlementInput.Query query,String mode,String unit) {
         var data=settlements.exportSettlement(part,query);
