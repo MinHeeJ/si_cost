@@ -117,6 +117,18 @@ class FinancialImportContractTest {
             var sheet=book.getSheetAt(0);assertThat(sheet.getPhysicalNumberOfRows()).isEqualTo(1);assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short)8);
             for(int i=0;i<8;i++)assertThat(sheet.getRow(0).getCell(i).getStringCellValue()).isEqualTo(FinancialImportDefinition.HEADERS.get(i)+(Set.of(0,2,3).contains(i)?"*":""));
             assertThat(sheet.getColumnStyle(3).getDataFormatString()).isEqualTo("0");assertThat(sheet.getColumnStyle(0).getDataFormatString()).isEqualTo("@");
+            assertThat(sheet.getColumnStyle(5).getDataFormatString()).isEqualTo("yyyy-mm-dd");
+            assertThat(sheet.getDataValidations()).hasSize(6).allSatisfy(rule -> {
+                assertThat(rule.getShowErrorBox()).isTrue();
+                assertThat(rule.getErrorStyle()).isEqualTo(org.apache.poi.ss.usermodel.DataValidation.ErrorStyle.STOP);
+                assertThat(rule.getRegions().getCellRangeAddresses()).allSatisfy(range -> {
+                    assertThat(range.getFirstRow()).isEqualTo(1);
+                    assertThat(range.getLastRow()).isEqualTo(5000);
+                });
+            });
+            assertThat(book.isSheetHidden(book.getSheetIndex("재무입력목록"))).isTrue();
+            assertThat(book.getName("B2SgaItems").getRefersToFormula()).contains("재무입력목록");
+            assertThat(book.getSheet("재무입력목록").getRow(0).getCell(1).getStringCellValue()).isEqualTo("임대료");
             assertThat(book.getSheet("다운로드정보").getRow(5).getCell(1).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.NUMERIC);
         }
         verify(logs).append(argThat(e->e.action().equals("DNLD")&&e.screenId().equals("UI-10")),any());verify(manager,times(2)).commit(any());noBusiness();

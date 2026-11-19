@@ -1282,7 +1282,7 @@ describe("공식 진입점 합성", () => {
     await screen.findByTestId("financial-items-panel");
     expect(financial.saveFinancialItems).not.toHaveBeenCalled();
   });
-  it("마감 재무 화면의 등록은 읽기 전용과 비활성 저장을 유지한다", async () => {
+  it("마감 재무 화면은 읽기 전용을 유지하고 변경 작업을 숨긴다", async () => {
     vi.mocked(financial.getFinancialItems).mockResolvedValue(
       financialEditorFixture({
         editable: false,
@@ -1291,10 +1291,14 @@ describe("공식 진입점 합성", () => {
       }),
     );
     open("/UI-10");
-    await screen.findByText("마감된 월입니다.");
-    expect(screen.getByTestId("financial-save")).toBeDisabled();
-    expect(screen.getByTestId("financial-items-add")).toBeDisabled();
-    expect(screen.getByTestId("financial-upload-button")).toBeDisabled();
+    await screen.findByText(
+      /는 마감되었습니다\. 고칠 내용은 다음 달 전월 조정으로 입력하세요\./,
+    );
+    expect(screen.queryByTestId("financial-save")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("financial-items-add")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("financial-upload-button"),
+    ).not.toBeInTheDocument();
     expect(corporateTax.createCorporateTaxDefaults).not.toHaveBeenCalled();
   });
   it("UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다", async () => {
@@ -1369,7 +1373,13 @@ describe("공식 진입점 합성", () => {
     );
     open("/UI-12");
     await screen.findByText("배정 조회 실패");
-    await userEvent.click(within(screen.getByText("배정 조회 실패").closest("[role=alert]") as HTMLElement).getByRole("button", { name: "다시 조회" }));
+    await userEvent.click(
+      within(
+        screen
+          .getByText("배정 조회 실패")
+          .closest("[role=alert]") as HTMLElement,
+      ).getByRole("button", { name: "다시 조회" }),
+    );
     await screen.findByText("조건에 맞는 결과가 없습니다.");
     expect(assignments.getAssignments).toHaveBeenCalledTimes(2);
   });

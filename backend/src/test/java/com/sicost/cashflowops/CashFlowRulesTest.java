@@ -58,7 +58,7 @@ class CashFlowRulesTest {
     @Test void financialDatesAndFallbackDoNotCloneRepeatsOrDuplicateCardDetail() throws Exception {
         var rows=sources(snapshot(List.of(),List.of(),List.of()),current,"""
             {"items":[{"fin_ym":"202610","item_sn":1,"fin_cls_cd":"SGA","io_dt":"2026-11-03","amt":10,"vat_amt":1,"rpt_yn":"Y"},{"fin_ym":"202611","item_sn":2,"fin_cls_cd":"NOPR_IN","io_dt":null,"amt":20,"vat_amt":2}],"cardMonths":[{"pay_ym":"202611","cash_amt":0}],"cardPayments":[{"pay_ym":"202611","card_id":"card","pay_amt":999}]}
-            """);assertThat(rows).hasSize(3);assertThat(rows.stream().filter(r->r.item()==Item.MISC).findFirst().orElseThrow().amount()).isEqualTo("22");assertThat(rows.stream().filter(r->r.sourceType().equals("TB_FI_CARD_MON")).findFirst().orElseThrow().amount()).isEqualTo("0");
+            """);assertThat(rows).hasSize(2);assertThat(rows).noneMatch(r->r.item()==Item.MISC);assertThat(rows.stream().filter(r->r.sourceType().equals("TB_FI_CARD_MON")).findFirst().orElseThrow().amount()).isEqualTo("0");
     }
     @Test void missingCardParentWithDetailIsUnknownButBothAbsentIsValidZero() throws Exception {
         assertThat(sources(snapshot(List.of(),List.of(),List.of()),current,"{\"cardPayments\":[{\"pay_ym\":\"202611\",\"card_id\":\"001\"}]}").get(0).amount()).isNull();assertThat(sources(snapshot(List.of(),List.of(),List.of()),current,"{}")).isEmpty();

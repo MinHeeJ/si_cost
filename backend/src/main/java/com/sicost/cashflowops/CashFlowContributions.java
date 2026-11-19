@@ -24,8 +24,9 @@ public final class CashFlowContributions {
             LocalDate date=date(r,"io_dt");String sourceMonth=apiMonth(text(r,"fin_ym"));
             if(!m.equals(date==null?sourceMonth:YearMonth.from(date).toString()))continue;
             boolean income="NOPR_IN".equals(text(r,"fin_cls_cd"));
+            if(income && date==null)continue;
             add(out,new Evidence("TB_FI_ITEM",text(r,"fin_ym")+":"+text(r,"item_sn"),income?Item.MISC:Item.EXPENSE,date,sourceMonth,m),
-                sum(nullableNumber(r,"amt"),nullableNumber(r,"vat_amt")),nullableNumber(r,"vat_amt"),closed?"ACTUAL":"PLANNED","AMT + VAT_AMT · IO_DT 없으면 FIN_YM", "/UI-10");
+                sum(nullableNumber(r,"amt"),nullableNumber(r,"vat_amt")),nullableNumber(r,"vat_amt"),closed?"ACTUAL":"PLANNED",income?"AMT + VAT_AMT · IO_DT월":"AMT + VAT_AMT · IO_DT 없으면 FIN_YM", "/UI-10");
         }
         for(JsonNode r:financial.path("loans"))add(out,new Evidence("TB_FI_LOAN",text(r,"loan_sn"),Item.LOAN,date(r,"loan_dt"),m,m),
             nullableNumber(r,"amt")==null?null:nullableNumber(r,"amt").multiply("OUT".equals(text(r,"io_cd"))?BigDecimal.ONE.negate():BigDecimal.ONE),BigDecimal.ZERO,closed?"ACTUAL":"PLANNED","IN +AMT / OUT −AMT", "/UI-10");

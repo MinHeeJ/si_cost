@@ -6,19 +6,20 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, StatusBadge, Toast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
-import { DataTable } from "../../shared/DataTable";
+
 import { Dialog } from "../../shared/Dialog";
 import { FinancialUploadActions } from "../b2/FinancialUploadDialog";
 import { FinancialHistoryPanel } from "../apiops/FinancialHistoryPanel";
 import { TaxPaymentDialog } from "../corporatetaxesops/TaxPaymentDialog";
-import { FinancialPaymentStatus } from "../corporatetaxesops/FinancialPaymentStatus";
+import { FinancialTaxPanel, taxExplanation } from "./FinancialTaxPanel";
+import { FinancialCardsPanel } from "./FinancialCardsPanel";
 import type { CorporateTaxPayment } from "../corporatetaxesops/corporateTaxApi";
 import { FinancialRowsPanel } from "./FinancialRowsPanel";
 import { FinancialAmount, type FinancialUnit } from "./FinancialAmount";
-import { WonInput } from "./WonInput";
+
 import { useFinancialEditor } from "./useFinancialEditor";
 import { useFinancialNavigationGuard } from "./useFinancialNavigationGuard";
 import * as api from "./financialApi";
@@ -85,14 +86,86 @@ export function FinancialItemsEditor({
   const [tab, setTab] = useState<"financial" | "cash">("financial");
   const [unit, setUnit] = useState<FinancialUnit>("천원"),
     [history, setHistory] = useState(false);
-  const [showStopped, setShowStopped] = useState(false),
-    [payment, setPayment] = useState<CorporateTaxPayment>();
+  const [payment, setPayment] = useState<CorporateTaxPayment>();
+  const [confirmation, setConfirmation] = useState<{
+    title: string;
+    message?: string;
+    label: string;
+    proceed(): void;
+  }>();
+  const [adjustmentTarget, setAdjustmentTarget] = useState(
+    initialAdjustmentTargetMonth,
+  );
+  const [pendingAdjustment, setPendingAdjustment] = useState<string>();
+  const [scrollToAdjustment, setScrollToAdjustment] = useState(false);
   const [codes, setCodes] = useState<{ code: string; name: string }[]>([]);
   const [yearStatus, setYearStatus] = useState<api.YearStatus>(),
     [statusError, setStatusError] = useState<unknown>(),
     [statusRetry, setStatusRetry] = useState(0);
   const next = useRef(0);
+  const editorElement = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = editorElement.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const position = () => {
+      const bounds = element.getBoundingClientRect();
+      if (!bounds.width) return;
+      element.style.setProperty(
+        "--financial-footer-left",
+        `${Math.max(0, bounds.left)}px`,
+      );
+      element.style.setProperty(
+        "--financial-footer-right",
+        `${Math.max(0, window.innerWidth - bounds.right)}px`,
+      );
+    };
+    const observer = new ResizeObserver(position);
+    observer.observe(element);
+    window.addEventListener("resize", position);
+    position();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", position);
+    };
+  }, [state.loading, editor?.month]);
   const adjustmentOpened = useRef(false);
+  useEffect(() => {
+    if (!pendingAdjustment || !editor?.editable || state.loading) return;
+    setPendingAdjustment(undefined);
+    setTab("financial");
+    if (!editor.adjustmentTargetMonths.includes(pendingAdjustment)) {
+      state.setError(new Error("최근 12개월 마감월만 조정할 수 있습니다"));
+      return;
+    }
+    setAdjustmentTarget(pendingAdjustment);
+    state.setDraft((old) =>
+      old
+        ? {
+            ...old,
+            adjustments: [
+              ...old.adjustments,
+              {
+                key: `new-${++next.current}`,
+                values: {
+                  targetMonth: pendingAdjustment,
+                  itemCode: "ETC",
+                  amount: "",
+                  reason: "",
+                },
+              },
+            ],
+          }
+        : old,
+    );
+    setScrollToAdjustment(true);
+  }, [pendingAdjustment, editor, state.loading]);
+  useEffect(() => {
+    if (!scrollToAdjustment || tab !== "financial") return;
+    document
+      .getElementById("financial-adjustments-section")
+      ?.scrollIntoView?.({ block: "start" });
+    setScrollToAdjustment(false);
+  }, [scrollToAdjustment, tab]);
   useEffect(() => {
     if (
       (!openAdjustments && !openTax) ||
@@ -152,6 +225,23 @@ export function FinancialItemsEditor({
         state.violations[0].tab === "CARD_TRANSFER_LOAN" ? "cash" : "financial",
       );
   }, [state.error]);
+  useEffect(() => {
+    const violation = state.violations[0];
+    if (!violation) return;
+    const key = violation.field.replace(
+      /[A-Z]/g,
+      (letter) => `-${letter.toLowerCase()}`,
+    );
+    const id =
+      violation.collection === "corporateTax"
+        ? "financial-estimated-tax"
+        : `financial-${violation.collection === "cards" ? "card" : violation.collection}-${violation.rowId}-${key}`;
+    const field = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-testid]"),
+    ).find((element) => element.dataset.testid === id);
+    field?.scrollIntoView?.({ block: "center" });
+    field?.focus();
+  }, [state.error, tab]);
   useEffect(() => {
     if (!editor) return;
     window.dispatchEvent(
@@ -271,11 +361,9 @@ export function FinancialItemsEditor({
         : collection === "adjustments"
           ? {
               targetMonth:
-                initialAdjustmentTargetMonth &&
-                editor.adjustmentTargetMonths.includes(
-                  initialAdjustmentTargetMonth,
-                )
-                  ? initialAdjustmentTargetMonth
+                adjustmentTarget &&
+                editor.adjustmentTargetMonths.includes(adjustmentTarget)
+                  ? adjustmentTarget
                   : (editor.adjustmentTargetMonths[0] ?? null),
               itemCode: "ETC",
               amount: "",
@@ -321,26 +409,149 @@ export function FinancialItemsEditor({
       codes={codes}
       violations={state.violations}
       onChange={(key, field, value) => update(collection, key, field, value)}
-      onDelete={(key) => remove(collection, key)}
+      onDelete={(key) =>
+        setConfirmation({
+          title: "이 행을 삭제할까요?",
+          label: "삭제",
+          proceed: () => remove(collection, key),
+        })
+      }
       onAdd={() => add(collection)}
+      tableRows={
+        collection === "items"
+          ? [
+              {
+                key: "tax-calculated",
+                cells: {
+                  finClass: "법인세",
+                  itemName: (
+                    <>
+                      법인세(월할){" "}
+                      <StatusBadge tone="neutral">계산</StatusBadge>
+                      <HelpTooltip label="법인세(월할) 안내">
+                        {taxExplanation(allocation, editor.month)}
+                      </HelpTooltip>
+                    </>
+                  ),
+                  amount: (
+                    <button
+                      type="button"
+                      className="financial-calculated"
+                      data-testid="financial-tax-jump"
+                      onClick={() => {
+                        document
+                          .getElementById("financial-tax-section")
+                          ?.scrollIntoView?.({ block: "start" });
+                        document
+                          .querySelector<HTMLInputElement>(
+                            '[data-testid="financial-estimated-tax"]:not(:disabled)',
+                          )
+                          ?.focus({ preventScroll: true });
+                      }}
+                    >
+                      {currentTax?.verified && currentTax.amount !== null
+                        ? amount(currentTax.amount)
+                        : "–"}
+                    </button>
+                  ),
+                  vatAmount: "–",
+                  ioDate: "납부는 3월·8월 (자금수지)",
+                  repeat: "–",
+                  remark: "연간 예상액에서 자동 계산",
+                },
+              },
+              ...[
+                [
+                  "sga",
+                  "판관비 합계",
+                  "SGA",
+                  contributions.sgaAmount,
+                  contributions.sgaVatAmount,
+                ],
+                [
+                  "income",
+                  "영업외수익 합계",
+                  "NOPR_IN",
+                  contributions.nonOperatingIncome,
+                  contributions.nonOperatingIncomeVat,
+                ],
+                [
+                  "expense",
+                  "영업외비용 합계",
+                  "NOPR_OUT",
+                  contributions.nonOperatingExpense,
+                  contributions.nonOperatingExpenseVat,
+                ],
+              ].map(([key, label, code, total, vat]) => ({
+                key: `total-${key}`,
+                cells: {
+                  finClass: <strong>{label}</strong>,
+                  itemName: `${draft.items.filter((row) => row.values.finClass === code).length}건`,
+                  amount: <strong>{amount(total)}</strong>,
+                  vatAmount: amount(vat),
+                },
+              })),
+              {
+                key: "total-tax",
+                cells: {
+                  finClass: <strong>법인세(월할)</strong>,
+                  itemName: "계산값",
+                  amount: (
+                    <strong>
+                      {currentTax?.verified && currentTax.amount !== null
+                        ? amount(currentTax.amount)
+                        : "–"}
+                    </strong>
+                  ),
+                },
+              },
+            ]
+          : collection === "transfers"
+            ? [
+                {
+                  key: "total-expense",
+                  cells: {
+                    classCode: <strong>계좌이체(제경비) 합계</strong>,
+                    amount: (
+                      <strong>
+                        {amount(contributions.cashTransferExpense)}
+                      </strong>
+                    ),
+                  },
+                },
+                {
+                  key: "total-special",
+                  cells: {
+                    classCode: <strong>특별비(미지급 인건비) 합계</strong>,
+                    amount: (
+                      <strong>{amount(contributions.cashUnpaidLabor)}</strong>
+                    ),
+                  },
+                },
+                {
+                  key: "total-transfers",
+                  cells: {
+                    classCode: <strong>합계</strong>,
+                    itemName: `${draft.transfers.length}건`,
+                    amount: (
+                      <strong>{amount(contributions.transferTotal)}</strong>
+                    ),
+                  },
+                },
+              ]
+            : []
+      }
     />
   );
   const amount = (value: string | null | undefined, plus = false) => (
     <FinancialAmount value={value} unit={unit} plus={plus} />
   );
-  const cardUpdate = (key: string, field: string, value: string) =>
-    state.setDraft((old) =>
-      old
-        ? {
-            ...old,
-            cards: old.cards.map((row) =>
-              row.key === key
-                ? { ...row, values: { ...row.values, [field]: value } }
-                : row,
-            ),
-          }
-        : old,
-    );
+  const contributions = state.calculated?.contributions ?? editor.contributions;
+  const allocation = state.calculated?.allocation ?? editor.allocation;
+  const currentTax = allocation.months.find(
+    (row) => row.month === editor.month,
+  );
+  const previousMonth = `${Number(editor.month.slice(5)) === 1 ? Number(editor.month.slice(0, 4)) - 1 : editor.month.slice(0, 4)}-${String(Number(editor.month.slice(5)) === 1 ? 12 : Number(editor.month.slice(5)) - 1).padStart(2, "0")}`;
   const cashDirty =
     changed("transfers") ||
     changed("loans") ||
@@ -359,7 +570,7 @@ export function FinancialItemsEditor({
   const financialDirty =
     changed("items") ||
     changed("adjustments") ||
-    draft.estimatedTax !== editor.corporateTax?.estimatedTax ||
+    draft.estimatedTax !== (editor.corporateTax?.estimatedTax ?? null) ||
     draft.taxSchedules.some((row) => {
       const old = editor.taxPayments.find(
         (p) => p.year === row.year && p.payType === row.payType,
@@ -367,7 +578,11 @@ export function FinancialItemsEditor({
       return old?.payAmount !== row.payAmount || old?.dueDate !== row.dueDate;
     });
   return (
-    <section className="financial-editor" data-testid="financial-editor">
+    <section
+      ref={editorElement}
+      className="financial-editor"
+      data-testid="financial-editor"
+    >
       <ScreenPeriodBar
         screenId="UI-10"
         controlled={{
@@ -379,22 +594,35 @@ export function FinancialItemsEditor({
       />
       <ScreenTitleActions>
         <div className="financial-actions">
-          <button
-            type="button"
-            data-testid="financial-load-previous"
-            disabled={disabled}
-            onClick={() => void state.preview("LOAD_PREVIOUS")}
-          >
-            지난달 항목 불러오기
-          </button>
-          <FinancialUploadActions
-            month={editor.month}
-            readOnly={disabled}
-            beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
-            onApplied={async () => {
-              await refresh();
-            }}
-          />
+          {editor.editable && (
+            <>
+              <button
+                type="button"
+                data-testid="financial-load-previous"
+                disabled={disabled}
+                onClick={async () => {
+                  const result = await state.preview("LOAD_PREVIOUS");
+                  if (result?.addedDrafts.length)
+                    setConfirmation({
+                      title: `${previousMonth} 항목을 불러올까요?`,
+                      label: "불러오기",
+                      message: `이번 달에 없는 항목 ${result.addedDrafts.length}개(${result.addedDrafts.map((row) => row.itemName).join(", ")})를 가져옵니다. 금액은 그대로, 입출금일은 이번 달 같은 날짜로 바뀝니다. 저장해야 반영됩니다.`,
+                      proceed: () => state.applyPrevious(result),
+                    });
+                }}
+              >
+                지난달 항목 불러오기
+              </button>
+              <FinancialUploadActions
+                month={editor.month}
+                readOnly={disabled}
+                beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
+                onApplied={async () => {
+                  await refresh();
+                }}
+              />
+            </>
+          )}
           <button
             type="button"
             data-testid="financial-history-toggle"
@@ -444,7 +672,10 @@ export function FinancialItemsEditor({
             다음 해 ›
           </button>
           <strong>입력 현황</strong>
-          <HelpTooltip label="안내">달을 누르면 그 달 항목으로 바뀝니다. 헤더의 기준 연월도 함께 바뀝니다. 아래 [저장]은 두 탭을 함께 저장합니다.</HelpTooltip>
+          <HelpTooltip label="안내">
+            달을 누르면 그 달 항목으로 바뀝니다. 헤더의 기준 연월도 함께
+            바뀝니다. 아래 [저장]은 두 탭을 함께 저장합니다.
+          </HelpTooltip>
           <span>저장된 재무 항목만 집계합니다</span>
         </div>
         <div className="financial-month-strip">
@@ -457,7 +688,8 @@ export function FinancialItemsEditor({
               (row) => row.month === value,
             );
             const future = value > editor.today.slice(0, 7);
-            const chip = <button
+            const chip = (
+              <button
                 type="button"
                 key={value}
                 data-testid={`financial-month-${value}`}
@@ -475,8 +707,20 @@ export function FinancialItemsEditor({
                       ? `${status.closeStatus === "CLOSE" ? "마감" : "작업중"} · ${status.itemCount ?? "–"}건`
                       : "조회 중"}
                 </small>
-              </button>;
-            return future || status?.selectable === false ? <HelpTooltip key={value} label={`${Number(value.slice(5))}월`} disabledTarget={chip}>아직 열리지 않은 달입니다. 그 달이 되면 매달 반복 항목이 자동으로 채워집니다.</HelpTooltip> : <span key={value}>{chip}</span>;
+              </button>
+            );
+            return future || status?.selectable === false ? (
+              <HelpTooltip
+                key={value}
+                label={`${Number(value.slice(5))}월`}
+                disabledTarget={chip}
+              >
+                아직 열리지 않은 달입니다. 그 달이 되면 매달 반복 항목이
+                자동으로 채워집니다.
+              </HelpTooltip>
+            ) : (
+              <span key={value}>{chip}</span>
+            );
           })}
         </div>
         {Boolean(statusError) && (
@@ -491,7 +735,11 @@ export function FinancialItemsEditor({
           className="sicost-banner sicost-tone-lock"
           data-testid="financial-read-only"
         >
-          <span>{editor.readOnlyReason}</span>
+          <span>
+            {editor.closeStatus === "CLOSE"
+              ? `${editor.month}는 마감되었습니다. 고칠 내용은 다음 달 전월 조정으로 입력하세요.`
+              : editor.readOnlyReason}
+          </span>
           {editor.closeStatus === "CLOSE" && (
             <button
               type="button"
@@ -499,8 +747,10 @@ export function FinancialItemsEditor({
               disabled={!editor.firstEditableMonth}
               onClick={() => {
                 setTab("financial");
-                if (editor.firstEditableMonth)
+                if (editor.firstEditableMonth) {
+                  setPendingAdjustment(editor.month);
                   selectMonth(editor.firstEditableMonth);
+                }
               }}
             >
               전월 조정 입력
@@ -578,7 +828,25 @@ export function FinancialItemsEditor({
           </button>
         </div>
       )}
-      {state.message && <p role="status">{state.message}</p>}
+      {state.message && !state.error && <Toast message={state.message} />}
+      {state.error != null && (
+        <Toast
+          tone="bad"
+          message={
+            state.error instanceof Error
+              ? state.error.message
+              : "저장에 실패했습니다."
+          }
+        />
+      )}
+      {state.previewError != null && (
+        <ErrorBanner message="서버 미리보기를 불러오지 못했습니다. 입력을 확인한 뒤 다시 시도해 주세요." />
+      )}
+      {state.previewing && (
+        <p role="status" data-testid="financial-preview-pending">
+          서버에서 초안을 계산하고 있습니다.
+        </p>
+      )}
       <div
         hidden={tab !== "financial"}
         data-testid="financial-financial-panel"
@@ -592,250 +860,22 @@ export function FinancialItemsEditor({
         {draft.items.some((row) => row.automatic) && (
           <p className="sicost-banner sicost-tone-info">
             ‘매달 반복’ 항목 {draft.items.filter((row) => row.automatic).length}
-            개를 지난달에서 자동으로 채웠습니다. 금액이 다르면 고친 뒤 저장해
-            주세요.
+            개를 지난달({previousMonth})에서 자동으로 채웠습니다. 금액이 다르면
+            고친 뒤 저장해 주세요.
           </p>
         )}
         {panel("items")}
-        <div className="financial-sums">
-          <span>
-            판관비 입력 합계 {amount(editor.contributions.sgaAmount)} / 부가세{" "}
-            {amount(editor.contributions.sgaVatAmount)}
-          </span>
-          <span>
-            영업외수익 합계 {amount(editor.contributions.nonOperatingIncome)} /
-            부가세 {amount(editor.contributions.nonOperatingIncomeVat)}
-          </span>
-          <span>
-            영업외비용 합계 {amount(editor.contributions.nonOperatingExpense)} /
-            부가세 {amount(editor.contributions.nonOperatingExpenseVat)}
-          </span>
-          <span>
-            법인세(월할) {amount(editor.contributions.corporateTaxAllocation)}{" "}
-            <StatusBadge tone="neutral">계산</StatusBadge>
-          </span>
-          <small>저장값 또는 마지막 서버 계산값 · 표시 단위 {unit}</small>
-          <button
-            type="button"
-            data-testid="financial-calculate"
-            disabled={disabled}
-            onClick={() => void state.preview("CALCULATE")}
-          >
-            현재 초안 계산
-          </button>
-        </div>
-        <section
-          className="financial-section"
-          id="financial-tax-section"
-          data-testid="financial-tax-panel"
-        >
-          <h2>
-            법인세 {editor.month.slice(0, 4)}년 · 1년 예상액을 달마다 나눠
-            순이익표에 반영
-          </h2>
-          <p>예상액 관리이며 세무 신고가 아닙니다.</p>
-          <label>
-            연간 예상 법인세 (원) *{" "}
-            <WonInput
-              data-testid="financial-estimated-tax"
-              value={draft.estimatedTax ?? ""}
-              disabled={
-                disabled ||
-                draft.estimatedTax === null ||
-                editor.allocation.openMonthCount === 0 ||
-                editor.allocation.months.some(
-                  (row) => row.closeStatus === "CLOSE" && !row.verified,
-                )
-              }
-              onValueChange={(value) =>
-                state.setDraft((old) =>
-                  old ? { ...old, estimatedTax: value } : old,
-                )
-              }
-            />
-          </label>
-          <p>
-            마감월 반영액 {amount(editor.allocation.closedTotal)} / 남은액{" "}
-            {amount(editor.allocation.remainingAmount)} / 열린 운영월 수{" "}
-            {editor.allocation.openMonthCount}
-          </p>
-          {editor.allocation.warnings.map((warning) => (
-            <p key={warning} className="sicost-banner sicost-tone-warn">
-              {warning}
-            </p>
-          ))}
-          <DataTable
-            rows={editor.allocation.months}
-            rowKey={(row) => row.month}
-            columns={[
-              { id: "month", label: "월", render: (row) => row.month },
-              {
-                id: "status",
-                label: "상태",
-                render: (row) => (
-                  <StatusBadge
-                    tone={row.closeStatus === "CLOSE" ? "lock" : "info"}
-                  >
-                    {row.closeStatus === "CLOSE" ? "마감" : "작업중"}
-                  </StatusBadge>
-                ),
-              },
-              {
-                id: "amount",
-                label: "월할액",
-                render: (row) => amount(row.amount),
-              },
-              {
-                id: "verified",
-                label: "확인상태",
-                render: (row) =>
-                  `${row.verified ? "확인" : "미확인"}${row.fixed === "Y" ? " · 고정" : ""}${row.migrated === "Y" ? " · 이관" : ""}`,
-              },
-            ]}
-          />
-          <DataTable
-            rows={editor.taxPayments}
-            rowKey={(row) => `${row.year}-${row.payType}`}
-            empty="등록된 납부 일정이 없습니다."
-            columns={[
-              {
-                id: "type",
-                label: "구분",
-                render: (row) =>
-                  `${row.year}년 ${row.payType === "MID" ? "중간예납" : "확정 신고"}`,
-              },
-              {
-                id: "date",
-                label: "납부일",
-                render: (row) =>
-                  row.payYn === "Y" ? (
-                    <>
-                      {row.paidDate}
-                      {row.paidDate !== row.dueDate && (
-                        <small>예정 {row.dueDate}</small>
-                      )}
-                    </>
-                  ) : (
-                    <input
-                      type="date"
-                      data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-date`}
-                      aria-label={`${row.year} ${row.payType} 예정일`}
-                      disabled={disabled}
-                      value={
-                        draft.taxSchedules.find(
-                          (p) =>
-                            p.year === row.year && p.payType === row.payType,
-                        )?.dueDate ?? ""
-                      }
-                      onChange={(event) =>
-                        state.setDraft((old) =>
-                          old
-                            ? {
-                                ...old,
-                                taxSchedules: old.taxSchedules.map((p) =>
-                                  p.year === row.year &&
-                                  p.payType === row.payType
-                                    ? { ...p, dueDate: event.target.value }
-                                    : p,
-                                ),
-                              }
-                            : old,
-                        )
-                      }
-                    />
-                  ),
-              },
-              {
-                id: "amount",
-                label: "금액",
-                render: (row) =>
-                  row.payYn === "Y" ? (
-                    amount(row.displayAmount)
-                  ) : (
-                    <>
-                      <WonInput
-                        data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-amount`}
-                        aria-label={`${row.year} ${row.payType} 예정액`}
-                        disabled={disabled}
-                        value={
-                          draft.taxSchedules.find(
-                            (p) =>
-                              p.year === row.year && p.payType === row.payType,
-                          )?.payAmount ?? ""
-                        }
-                        placeholder={row.automaticAmount ?? "미확인"}
-                        onValueChange={(value) =>
-                          state.setDraft((old) =>
-                            old
-                              ? {
-                                  ...old,
-                                  taxSchedules: old.taxSchedules.map((p) =>
-                                    p.year === row.year &&
-                                    p.payType === row.payType
-                                      ? { ...p, payAmount: value || null }
-                                      : p,
-                                  ),
-                                }
-                              : old,
-                          )
-                        }
-                      />
-                      <small>자동 계산값 {amount(row.automaticAmount)}</small>
-                      {row.manuallyEdited && (
-                        <StatusBadge tone="neutral">직접 고침</StatusBadge>
-                      )}
-                      {row.payType === "CNFM" && (
-                        <button
-                          type="button"
-                          data-testid={`financial-tax-${row.year}-auto`}
-                          disabled={disabled}
-                          onClick={() =>
-                            state.setDraft((old) =>
-                              old
-                                ? {
-                                    ...old,
-                                    taxSchedules: old.taxSchedules.map((p) =>
-                                      p.year === row.year &&
-                                      p.payType === row.payType
-                                        ? { ...p, payAmount: null }
-                                        : p,
-                                    ),
-                                  }
-                                : old,
-                            )
-                          }
-                        >
-                          자동 계산으로
-                        </button>
-                      )}
-                    </>
-                  ),
-              },
-              {
-                id: "status",
-                label: "상태",
-                render: (row) => <FinancialPaymentStatus status={row.status} />,
-              },
-              {
-                id: "confirm",
-                label: "납부 확인",
-                render: (row) =>
-                  row.payYn === "N" ? (
-                    <button
-                      type="button"
-                      data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-confirm`}
-                      disabled={disabled}
-                      onClick={() => void openPayment(row)}
-                    >
-                      납부 확인
-                    </button>
-                  ) : (
-                    "–"
-                  ),
-              },
-            ]}
-          />
-        </section>
+        <FinancialTaxPanel
+          editor={editor}
+          draft={draft}
+          allocation={allocation}
+          automaticAmounts={state.calculated?.automaticTaxAmounts}
+          disabled={disabled}
+          unit={unit}
+          setDraft={state.setDraft}
+          violations={state.violations}
+          onPayment={(row) => void openPayment(row)}
+        />
         {panel("adjustments")}
         <p>
           조정 합계 (적용월 이익){" "}
@@ -851,216 +891,18 @@ export function FinancialItemsEditor({
         <p className="financial-help">
           자금수지에만 반영됩니다. 손익에는 넣지 않습니다.
         </p>
-        <section
-          className="financial-section"
-          data-testid="financial-cards-panel"
-        >
-          <div className="sicost-list-toolbar">
-            <h2>법인카드 대금</h2>
-            <label>
-              <input
-                type="checkbox"
-                data-testid="financial-show-stopped"
-                checked={showStopped}
-                onChange={(event) => setShowStopped(event.target.checked)}
-              />{" "}
-              삭제된 카드 보기
-            </label>
-          </div>
-          <DataTable
-            rows={draft.cards.filter(
-              (row) =>
-                !row.id ||
-                showStopped ||
-                row.values.useYn === "Y" ||
-                (/^[0-9]+$/.test(row.values.amount ?? "") &&
-                  BigInt(row.values.amount!) > 0n),
-            )}
-            rowKey={(row) => row.key}
-            empty="등록된 카드가 없습니다."
-            columns={[
-              {
-                id: "name",
-                label: "카드 이름 *",
-                render: (row) =>
-                  row.id ? (
-                    row.values.cardName
-                  ) : (
-                    <input
-                      data-testid={`financial-card-${row.key}-name`}
-                      aria-label="새 카드 이름"
-                      value={row.values.cardName ?? ""}
-                      maxLength={100}
-                      disabled={disabled}
-                      onChange={(event) =>
-                        cardUpdate(row.key, "cardName", event.target.value)
-                      }
-                    />
-                  ),
-              },
-              {
-                id: "last4",
-                label: "끝 4자리 *",
-                render: (row) =>
-                  row.id ? (
-                    row.values.last4
-                  ) : (
-                    <input
-                      data-testid={`financial-card-${row.key}-last-four`}
-                      aria-label="새 카드 끝 4자리"
-                      value={row.values.last4 ?? ""}
-                      maxLength={4}
-                      disabled={disabled}
-                      onChange={(event) =>
-                        cardUpdate(row.key, "last4", event.target.value)
-                      }
-                    />
-                  ),
-              },
-              {
-                id: "amount",
-                label: "해당 월 결제액",
-                render: (row) => (
-                  <WonInput
-                    data-testid={`financial-card-${row.key}-amount`}
-                    aria-label={`${row.key} 결제액`}
-                    value={row.values.amount ?? ""}
-                    disabled={disabled}
-                    onValueChange={(value) =>
-                      cardUpdate(row.key, "amount", value)
-                    }
-                  />
-                ),
-              },
-              {
-                id: "state",
-                label: "상태",
-                render: (row) => (
-                  <StatusBadge tone={row.values.useYn === "Y" ? "ok" : "lock"}>
-                    {row.values.useYn === "Y" ? "사용" : "삭제"}
-                  </StatusBadge>
-                ),
-              },
-              {
-                id: "action",
-                label: "삭제/되살리기",
-                render: (row) => (
-                  <button
-                    type="button"
-                    data-testid={`financial-card-${row.key}-state`}
-                    disabled={disabled}
-                    onClick={() => {
-                      if (!row.id)
-                        state.setDraft((old) =>
-                          old
-                            ? {
-                                ...old,
-                                cards: old.cards.filter(
-                                  (card) => card.key !== row.key,
-                                ),
-                              }
-                            : old,
-                        );
-                      else
-                        cardUpdate(
-                          row.key,
-                          "useYn",
-                          row.values.useYn === "Y" ? "N" : "Y",
-                        );
-                    }}
-                  >
-                    {row.values.useYn === "Y" ? "삭제" : "되살리기"}
-                  </button>
-                ),
-              },
-            ]}
-          />
-          <button
-            type="button"
-            data-testid="financial-card-add"
-            disabled={disabled}
-            onClick={() =>
-              state.setDraft((old) =>
-                old
-                  ? {
-                      ...old,
-                      cards: [
-                        ...old.cards,
-                        {
-                          key: `new-card-${++next.current}`,
-                          values: {
-                            cardName: "",
-                            last4: "",
-                            useYn: "Y",
-                            amount: "0",
-                          },
-                        },
-                      ],
-                    }
-                  : old,
-              )
-            }
-          >
-            카드 추가
-          </button>
-          <div className="financial-sums">
-            <span>카드별 합계 {amount(editor.cardMonth.cardSumAmount)}</span>
-            <label>
-              자금수지 반영합계 (원){" "}
-              <WonInput
-                data-testid="financial-card-cash-override"
-                disabled={disabled}
-                value={
-                  draft.cashOverride?.mode === "MANUAL"
-                    ? (draft.cashOverride.amount ?? "")
-                    : editor.cardMonth.cashAmount
-                }
-                onValueChange={(value) =>
-                  state.setDraft((old) =>
-                    old
-                      ? {
-                          ...old,
-                          cashOverride: { mode: "MANUAL", amount: value },
-                        }
-                      : old,
-                  )
-                }
-              />
-            </label>
-            <StatusBadge
-              tone={
-                draft.cashOverride?.mode === "MANUAL" ||
-                (!draft.cashOverride && editor.cardMonth.editYn === "Y")
-                  ? "warn"
-                  : "info"
-              }
-            >
-              {draft.cashOverride?.mode === "MANUAL" ||
-              (!draft.cashOverride && editor.cardMonth.editYn === "Y")
-                ? "직접 고침"
-                : "자동"}
-            </StatusBadge>
-            <span>차액 {amount(editor.cardMonth.difference)}</span>
-            <button
-              type="button"
-              data-testid="financial-card-auto"
-              disabled={disabled}
-              onClick={() =>
-                state.setDraft((old) =>
-                  old ? { ...old, cashOverride: { mode: "AUTO" } } : old,
-                )
-              }
-            >
-              자동 합계로
-            </button>
-          </div>
-        </section>
+        <FinancialCardsPanel
+          month={editor.month}
+          draft={draft}
+          cardMonth={state.calculated?.cardMonth ?? editor.cardMonth}
+          unit={unit}
+          disabled={disabled}
+          readOnly={!canUpdate || !editor.editable}
+          setDraft={state.setDraft}
+          violations={state.violations}
+          onError={state.setError}
+        />
         {panel("transfers")}
-        <p>
-          계좌이체(제경비) {amount(editor.contributions.cashTransferExpense)} /
-          특별비(미지급 인건비) {amount(editor.contributions.cashUnpaidLabor)} /
-          전체 {amount(editor.contributions.transferTotal)}
-        </p>
         {panel("loans")}
         <p>
           받음 합계 {amount(editor.contributions.cashLoanIn)} / 갚음 합계{" "}
@@ -1074,14 +916,20 @@ export function FinancialItemsEditor({
           refreshKey={editor.revision}
         />
       )}
-      {canUpdate && (
-        <footer className="financial-footer">
+      {canUpdate && editor.editable && (
+        <footer className="financial-footer" data-testid="financial-footer">
           <small>금액 입력은 원 정수 · 두 탭을 함께 저장합니다.</small>
           <button
             type="button"
             data-testid="financial-cancel"
-            disabled={state.pending || !state.dirty}
-            onClick={state.discard}
+            disabled={state.pending}
+            onClick={() =>
+              setConfirmation({
+                title: "저장 안 한 내용을 모두 되돌릴까요?",
+                label: "되돌리기",
+                proceed: state.discard,
+              })
+            }
           >
             취소
           </button>
@@ -1089,12 +937,29 @@ export function FinancialItemsEditor({
             type="button"
             className="sicost-primary"
             data-testid="financial-save"
-            disabled={disabled || !state.dirty}
+            disabled={disabled}
             onClick={() => void state.save()}
           >
             저장
           </button>
         </footer>
+      )}
+      {confirmation && (
+        <Dialog
+          open
+          title={confirmation.title}
+          confirmLabel={confirmation.label}
+          cancelLabel={confirmation.label === "되돌리기" ? "계속 편집" : "취소"}
+          onCancel={() => setConfirmation(undefined)}
+          onConfirm={() => {
+            confirmation.proceed();
+            setConfirmation(undefined);
+          }}
+        >
+          <div data-testid="financial-confirmation-dialog">
+            {confirmation.message}
+          </div>
+        </Dialog>
       )}
       {guard.request && (
         <Dialog
@@ -1140,6 +1005,7 @@ export function FinancialItemsEditor({
           onClose={() => setPayment(undefined)}
           onSaved={async () => {
             await refresh();
+            state.setMessage("납부 확인을 저장했습니다.");
           }}
         />
       )}

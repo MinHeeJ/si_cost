@@ -30,7 +30,8 @@ public class FinancialImportController {
             "첫 시트 8열, 1~5,000행. 구분·세부 항목·금액은 필수입니다. 제목에 번호를 붙이지 마세요.",
             "구분과 판관비 항목은 사용 중인 코드 이름 또는 저장된 표기 대응만 사용합니다. 세부 항목은 독립된 입력값입니다.",
             "금액과 부가세는 원 정수입니다. 부가세 빈칸은 0, 입출금일 빈칸은 없음, 매달 반복 빈칸은 N입니다.",
-            "검사 후 같은 파일과 업로드 번호로 선택월의 업로드 항목만 교체합니다. 직접 입력·자동 채움·지난달 복사 항목은 보존합니다."),request)) {
+            "검사 후 같은 파일과 업로드 번호로 선택월의 업로드 항목만 교체합니다. 직접 입력·자동 채움·지난달 복사 항목은 보존합니다."),request,
+            workbook -> FinancialImportTemplate.configure(workbook,service.templateCodes()))) {
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition",ContentDisposition.attachment().filename(download.filename(),StandardCharsets.UTF_8).build().toString());
             response.setContentLengthLong(download.size());download.transferTo(response.getOutputStream());

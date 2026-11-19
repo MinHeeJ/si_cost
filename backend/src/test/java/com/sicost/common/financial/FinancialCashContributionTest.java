@@ -23,10 +23,12 @@ class FinancialCashContributionTest {
         assertThat(result.get("verified")).isEqualTo(false);assertThat(result.get("cashIssues")).isEqualTo(List.of());
         assertThat(result.get("corporateTaxAllocation")).isNull();assertThat(result.get("cashVerified")).isEqualTo(true);
     }
-    @Test void nonOperatingIncomeWithoutIoDateUsesFinancialMonthOnceWithVat() {
+    @Test void nonOperatingIncomeWithoutIoDateStaysInProfitOnly() {
         var source=snapshot();source.withArray("items").addObject().put("fin_cls_cd","NOPR_IN").put("fin_ym","202607").put("amt","-100").put("vat_amt","10").putNull("io_dt");
         var result=contributions(source,month,unknownAllocation());
-        assertThat(result.get("cashMiscIncome")).isEqualTo("-90");assertThat(result.get("cashFinancialExpense")).isEqualTo("0");
+        assertThat(result.get("nonOperatingIncome")).isEqualTo("-100");
+        assertThat(result.get("nonOperatingIncomeVat")).isEqualTo("10");
+        assertThat(result.get("cashMiscIncome")).isEqualTo("0");assertThat(result.get("cashFinancialExpense")).isEqualTo("0");
         assertThat(contributions(source,"2026-08",unknownAllocation()).get("cashMiscIncome")).isEqualTo("0");
     }
     @Test void explicitIoDateOverridesSourceMonth() {
