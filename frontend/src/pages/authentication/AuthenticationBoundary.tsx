@@ -562,14 +562,14 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
               : "변경일 정보 없음. 비밀번호 변경을 권장합니다."}
           </p>
           <button
-            data-testid="authentication-password-recommendation-change"
+            data-testid="authentication-password-recommendation-change-button"
             disabled={recommendPending}
             onClick={() => void chooseRecommendation(true)}
           >
             변경
           </button>
           <button
-            data-testid="authentication-password-recommendation-later"
+            data-testid="authentication-password-recommendation-later-button"
             disabled={recommendPending}
             onClick={() => void chooseRecommendation(false)}
           >

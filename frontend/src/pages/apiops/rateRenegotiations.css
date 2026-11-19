@@ -90,6 +90,20 @@
   color: var(--text-sub);
   margin-top: 4px;
 }
+.renegotiation-screen .renegotiation-person-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: auto;
+  color: var(--primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.renegotiation-screen .renegotiation-person-link:not(:disabled):hover,
+.renegotiation-screen .renegotiation-person-link:focus-visible {
+  text-decoration: underline;
+}
 .renegotiation-screen .sicost-table {
   white-space: nowrap;
   font-size: 13px;

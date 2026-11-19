@@ -63,6 +63,18 @@ export function validMonth(value: string): boolean {
 }
 
 export type AmountUnit = "원" | "천원" | "백만원";
+/** Display-only HALF_UP rounding after unit conversion; keep integer-won source values intact. */
+export function formatIntegerAmount(
+  value: string | null | undefined,
+  unit: AmountUnit = "천원",
+): string {
+  if (value == null) return "–";
+  if (!/^-?\d+$/.test(value)) return value;
+  const divisor = unit === "원" ? 1n : unit === "천원" ? 1000n : 1000000n;
+  const absolute = BigInt(value.replace(/^-/, ""));
+  const rounded = (absolute + divisor / 2n) / divisor;
+  return formatDecimal(`${value.startsWith("-") ? "-" : ""}${rounded}`);
+}
 /** Integer-won API strings are shifted, never converted to floating point or rounded. */
 export function formatAmount(
   value: string | null | undefined,
@@ -107,4 +119,12 @@ export function formatDate(value: string | null | undefined): string {
   if (value == null) return "–";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   return formatDateTime(value).slice(0, 10);
+}
+export function formatShortDate(value: string | null | undefined): string {
+  const date = formatDate(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date.slice(5) : date;
+}
+export function formatShortDateTime(value: string | null | undefined): string {
+  const dateTime = formatDateTime(value);
+  return /^\d{4}-\d{2}-\d{2} /.test(dateTime) ? dateTime.slice(5) : dateTime;
 }

@@ -167,7 +167,11 @@ export function BillCopyDialog({
             변경하지 않습니다.
           </p>
           {draft.warnings.map((warning, i) => (
-            <p key={i} className="sicost-banner sicost-tone-warn">
+            <p
+              key={i}
+              className="sicost-banner sicost-tone-warn"
+              data-testid={`bill-copy-warning-${i}`}
+            >
               {warning}
             </p>
           ))}
@@ -180,7 +184,11 @@ export function BillCopyDialog({
               ["taxInvoiceNo", "세금계산서번호", "text"],
             ] as const
           ).map(([key, label, type]) => (
-            <div className="sicost-field" key={key}>
+            <div
+              className="sicost-field"
+              key={key}
+              data-testid={`bill-copy-field-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+            >
               <label htmlFor={`bill-copy-${key}`}>{label}<FieldHelp label={label} /></label>
               <input
                 id={`bill-copy-${key}`}
@@ -240,7 +248,10 @@ export function BillCopyDialog({
         <div data-testid="bill-duplicate-dialog">
           <p>같은 달 청구를 추가하려면 등록을 한 번 더 누르세요.</p>
           {duplicate?.existingBills.map((row) => (
-            <p key={row.id}>
+            <p
+              key={row.id}
+              data-testid={`bill-copy-duplicate-${row.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+            >
               {row.id} · {row.order}차
             </p>
           ))}

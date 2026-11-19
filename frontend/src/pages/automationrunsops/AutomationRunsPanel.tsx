@@ -165,7 +165,7 @@ function AutomationRunsContent({ onClose, onOpenReceivables }: Props) {
             empty="자동 처리 실행 기록이 없습니다."
             emptyAction={
               <button
-                data-testid="automation-runs-reset-filters"
+                data-testid="automation-runs-reset-button"
                 type="button"
                 onClick={() => {
                   setPage(1);

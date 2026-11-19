@@ -5,10 +5,21 @@ import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { SalesPartnerProfitScreen } from "./SalesPartnerProfitScreen";
 import * as api from "./salesPartSettlementsApi";
+import { SettlementActions } from "../salespartsettlementsops/SettlementActions";
+import { SettlementCardInput } from "../salespartsettlementsops/SettlementCardInput";
 vi.mock("./salesPartSettlementsApi");
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({
+    children,
+    headerActions,
+  }: {
+    children: ReactNode;
+    headerActions?: ReactNode;
+  }) => (
+    <section>
+      <header data-testid="screen-header">{headerActions}</header>
+      {children}
+    </section>
   ),
 }));
 vi.mock("../shared/ScreenPeriodBar", () => ({ ScreenPeriodBar: () => null }));
@@ -139,9 +150,107 @@ it("renders server whole-population summary, exact columns, original project nam
   expect(screen.getByRole("columnheader", { name: /비용 계/ })).toBeVisible();
   await userEvent.click(screen.getByRole("button", { name: /실제 인력/ }));
   expect(person).toHaveBeenCalledWith("actual");
-  await userEvent.click(screen.getByText("계산 방법 펼침"));
-  expect(screen.getByText(/파트 비용 = 급여/)).toBeVisible();
+  const remark = screen
+    .getByText("월 급여 없음(시작 달 급여 0)")
+    .closest(".settlement-remark")!;
+  expect(remark.querySelector("details")).toBeNull();
+  expect(remark.getAttribute("title")).toContain(
+    "급여 원천: START_MONTH_MISSING_ZERO",
+  );
+  expect(remark.getAttribute("title")).toContain(
+    "최초 투입 2026-07-02 · 시작일수 30/31 · 기본급 –",
+  );
+  expect(remark.getAttribute("title")).toContain("TK project: PLAN");
+  await userEvent.click(screen.getByText("계산 방법"));
+  const guide = screen.getByRole("table", { name: "계산 방법" });
+  expect(
+    within(guide)
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent),
+  ).toEqual(["항목", "계산식", "참고"]);
+  expect(guide.querySelectorAll("tbody tr")).toHaveLength(10);
+  expect(guide).toHaveTextContent("파트 기준값(10원)");
+  expect(guide).toHaveTextContent("이익 × 이익 배분율(40.0%)");
+  expect(guide).toHaveTextContent("−933,333.2 → −933,333");
+  expect(
+    screen.getByText(/인력은 그 사람의 소속 영업 파트로 모읍니다/),
+  ).toBeVisible();
 });
+it("keeps the same guide below trend and updates it from the selected part-month standard", async () => {
+  vi.mocked(api.getSalesPartSettlement).mockImplementation(async (id) => ({
+    ...response(id),
+    standard: {
+      ...standard(),
+      salesExpenseAmount: id === "two" ? "1234567" : "10",
+      distributionRate: id === "two" ? "35" : "40",
+    },
+  }));
+  mount({
+    showMonthTable: false,
+    renderViews: () => <div data-testid="trend-view" />,
+  });
+  await screen.findByText("61명");
+  await userEvent.click(screen.getByText("계산 방법"));
+  expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
+  expect(screen.getByTestId("settlement-month-panel")).not.toBeVisible();
+  await userEvent.click(screen.getByRole("tab", { name: "two" }));
+  const formula = await screen.findByText("파트 기준값(1,234,567원)");
+  await userEvent.click(screen.getByText("계산 방법"));
+  expect(formula).toBeVisible();
+  expect(screen.getByText("이익 × 이익 배분율(35.0%)")).toBeVisible();
+});
+it.each(["WORK", "CNFM", "CLOSE"])(
+  "keeps actions in header order and only the unit above the month table (%s)",
+  async (status) => {
+    vi.mocked(api.getSalesPartSettlement).mockResolvedValue({
+      ...response(),
+      canConfirm: status === "WORK",
+      canCancel: status === "CNFM",
+    });
+    mount({
+      renderActions: (data, _refresh, query) => (
+        <SettlementActions data={data} query={query} trend={false} unit="원" />
+      ),
+      renderCard: (data, refresh, actionsTarget, partName) => (
+        <SettlementCardInput
+          data={data}
+          refresh={refresh}
+          actionsTarget={actionsTarget}
+          partName={partName}
+          onGuard={() => {}}
+          onView={() => {}}
+          trend={false}
+        />
+      ),
+    });
+    await screen.findByText("61명");
+    const header = screen.getByTestId("screen-header");
+    expect(
+      within(header)
+        .getAllByRole("button")
+        .map((button) => button.textContent?.trim()),
+    ).toEqual([
+      "변경 이력",
+      "엑셀 다운로드",
+      ...(status === "WORK"
+        ? ["정산 확정"]
+        : status === "CNFM"
+          ? ["확정 취소"]
+          : []),
+    ]);
+    const toolbar = screen.getByTestId("settlement-month-toolbar");
+    expect(toolbar).toHaveTextContent(/^단위 원천원백만원$/);
+    expect(within(toolbar).queryByRole("heading")).not.toBeInTheDocument();
+    if (status === "WORK")
+      expect(screen.getByTestId("settlement-confirm-open")).toHaveClass(
+        "sicost-primary",
+      );
+    if (status === "CNFM")
+      expect(screen.getByTestId("settlement-cancel-open")).toHaveClass(
+        "settlement-danger-outline",
+      );
+  },
+);
 it("changes page size without deriving summary from current page and sends only approved sort", async () => {
   mount();
   await screen.findByText("61명");
@@ -276,7 +385,11 @@ it("keeps history-only snapshot visible, readonly reasons and AUTO metadata", as
   });
   mount();
   await screen.findByText("61명");
-  expect(screen.getByText(/정산 대상 영업 파트가 없습니다/)).toBeVisible();
+  expect(
+    screen.getByText(
+      "맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이 아닙니다.",
+    ),
+  ).toBeVisible();
   expect(screen.getByRole("tab", { name: "past (확정 이력)" })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -288,7 +401,26 @@ it("keeps history-only snapshot visible, readonly reasons and AUTO metadata", as
 it("distinguishes no-target from zero-person and null financial results", async () => {
   vi.mocked(api.getSalesPartSettlements).mockResolvedValue(tabs([]));
   mount();
-  await screen.findByText(/정산 대상 영업 파트가 없습니다/);
+  await screen.findByText(
+    "맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이 아닙니다.",
+  );
+  expect(api.getSalesPartSettlement).not.toHaveBeenCalled();
+});
+it("uses the same no-part copy for the restricted leader without financial controls", async () => {
+  vi.mocked(api.getSalesPartSettlements).mockResolvedValue({
+    ...tabs([]),
+    projection: "RESTRICTED",
+  });
+  mount();
+  expect(
+    await screen.findByText(
+      "맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이 아닙니다.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByTestId("settlement-header-actions"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("계산 방법")).not.toBeInTheDocument();
   expect(api.getSalesPartSettlement).not.toHaveBeenCalled();
 });
 it("shows failed request with GET-only retry and clears stale detail", async () => {
@@ -302,7 +434,29 @@ it("shows failed request with GET-only retry and clears stale detail", async () 
   await screen.findByText("61명");
 });
 it("opens close-check month and specified unconfirmed part", async () => {
-  render(<MemoryRouter initialEntries={[{ pathname: "/UI-19", state: { fromMonthClose: true, month: "2026-05", partId: "two" } }]}><SalesPartnerProfitScreen /></MemoryRouter>);
-  await waitFor(() => expect(api.getSalesPartSettlements).toHaveBeenCalledWith("2026-05", expect.any(AbortSignal)));
-  await waitFor(() => expect(api.getSalesPartSettlement).toHaveBeenCalledWith("two", expect.anything(), expect.any(AbortSignal)));
+  render(
+    <MemoryRouter
+      initialEntries={[
+        {
+          pathname: "/UI-19",
+          state: { fromMonthClose: true, month: "2026-05", partId: "two" },
+        },
+      ]}
+    >
+      <SalesPartnerProfitScreen />
+    </MemoryRouter>,
+  );
+  await waitFor(() =>
+    expect(api.getSalesPartSettlements).toHaveBeenCalledWith(
+      "2026-05",
+      expect.any(AbortSignal),
+    ),
+  );
+  await waitFor(() =>
+    expect(api.getSalesPartSettlement).toHaveBeenCalledWith(
+      "two",
+      expect.anything(),
+      expect.any(AbortSignal),
+    ),
+  );
 });

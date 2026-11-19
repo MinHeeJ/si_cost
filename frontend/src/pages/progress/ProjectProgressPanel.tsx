@@ -3,6 +3,7 @@ import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import { formatShortDate } from "../../shared/format";
 import { notifyProjectsCommitted } from "../projects/projectsApi";
 import {
   ProjectProgressEditor,
@@ -414,9 +415,9 @@ export function ProjectProgressPanel({
                 )}
               </dl>
               <small>
-                등록 {m.registeredAt}
+                {formatShortDate(m.registeredAt)} 작성
                 {m.modifiedAt &&
-                  ` · ${m.modifiedAt} ${m.modifiedBy?.userName ?? ""} 고침`}
+                  `, ${formatShortDate(m.modifiedAt)} 고침`}
               </small>
             </article>
           ))}

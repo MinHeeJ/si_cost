@@ -115,7 +115,14 @@ export function SettlementTrendPanel({
                   <th>이름</th>
                   <th>구분<FieldHelp label="구분" kind="B" /></th>
                   {data.months.map((m) => (
-                    <th key={m}>{m.slice(5)}월</th>
+                    <th
+                      key={m}
+                      className={
+                        m === data.month ? "settlement-base-month" : undefined
+                      }
+                    >
+                      {m.slice(5)}월
+                    </th>
                   ))}
                   <th>합계</th>
                   <th>비고</th>
@@ -140,9 +147,16 @@ export function SettlementTrendPanel({
                           key={cell.month}
                           title={`${cell.employeeType ?? ""} · ${cell.source} ${cell.issues.map((issue) => issue.message).join(" / ")}`}
                           className={
-                            cell.value?.startsWith("-")
-                              ? "settlement-negative"
-                              : undefined
+                            [
+                              cell.month === data.month
+                                ? "settlement-base-month"
+                                : "",
+                              cell.value?.startsWith("-")
+                                ? "settlement-negative"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ") || undefined
                           }
                         >
                           {metric.metric === "MM"
@@ -161,7 +175,23 @@ export function SettlementTrendPanel({
                           ? formatMm(metric.total)
                           : formatAmount(metric.total, displayUnit)}
                       </td>
-                      <td>{metric.remark ?? "–"}</td>
+                      {i === 0 && (
+                        <td
+                          rowSpan={person.metrics.length}
+                          className="settlement-remark"
+                          title={
+                            [
+                              ...new Set(
+                                person.metrics
+                                  .map((item) => item.remark)
+                                  .filter(Boolean),
+                              ),
+                            ].join("\n") || undefined
+                          }
+                        >
+                          {person.baseMonthRemark ?? "–"}
+                        </td>
+                      )}
                     </tr>
                   )),
                 )}
@@ -180,9 +210,16 @@ export function SettlementTrendPanel({
                     <td
                       key={total.month}
                       className={
-                        total.partProfitAmount?.startsWith("-")
-                          ? "settlement-negative"
-                          : undefined
+                        [
+                          total.month === data.month
+                            ? "settlement-base-month"
+                            : "",
+                          total.partProfitAmount?.startsWith("-")
+                            ? "settlement-negative"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
                       }
                       title={`인력 이익금 ${total.personProfitShareAmount ?? "미확인"} · 카드 ${total.cardAmount ?? "미확인"}`}
                     >

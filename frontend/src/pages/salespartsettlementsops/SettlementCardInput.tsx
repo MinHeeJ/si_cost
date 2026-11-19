@@ -1,6 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -23,12 +24,16 @@ export function SettlementCardInput({
   onGuard,
   onView,
   trend,
+  actionsTarget,
+  partName,
 }: {
   data: SettlementResult;
   refresh(): void;
   onGuard(guard: (proceed: () => void) => void): void;
   onView(trend: boolean): void;
   trend: boolean;
+  actionsTarget?: HTMLDivElement | null;
+  partName?: string;
 }) {
   const location = useLocation();
   const [current, setCurrent] = useState(data),
@@ -157,6 +162,32 @@ export function SettlementCardInput({
   }, [dirty]);
   const fields = error instanceof ApiError ? error.fieldMessages : {};
   const disabled = pending || refreshFailed || uncertain;
+  const commandActions = (
+    <>
+      {current.canConfirm && (
+        <button
+          type="button"
+          className="sicost-primary"
+          data-testid="settlement-confirm-open"
+          disabled={disabled || Boolean(validation)}
+          onClick={() => setModal("confirm")}
+        >
+          정산 확정
+        </button>
+      )}
+      {current.canCancel && (
+        <button
+          type="button"
+          className="settlement-danger-outline"
+          data-testid="settlement-cancel-open"
+          disabled={disabled}
+          onClick={() => setModal("cancel")}
+        >
+          확정 취소
+        </button>
+      )}
+    </>
+  );
   return (
     <div data-testid="settlement-command-panel">
       <div className="settlement-card">
@@ -200,33 +231,10 @@ export function SettlementCardInput({
         )}
       </div>
       <div className="settlement-toolbar">
-        {current.canConfirm && (
-          <button
-            type="button"
-            className="sicost-primary"
-            data-testid="settlement-confirm-open"
-            disabled={disabled || Boolean(validation)}
-            onClick={() => setModal("confirm")}
-          >
-            정산 확정
-          </button>
-        )}
-        {current.canCancel && (
-          <button
-            type="button"
-            data-testid="settlement-cancel-open"
-            disabled={disabled}
-            onClick={() => setModal("cancel")}
-          >
-            확정 취소
-          </button>
-        )}
-        <SegmentedTabList
-          as="div"
-          role="tablist"
-          aria-label="정산 보기"
-          className="settlement-tabs"
-        >
+        {actionsTarget
+          ? createPortal(commandActions, actionsTarget)
+          : commandActions}
+        <SegmentedTabList as="div" role="tablist" aria-label="정산 보기" className="settlement-tabs">
           <button
             type="button"
             role="tab"
@@ -285,6 +293,7 @@ export function SettlementCardInput({
       {modal === "confirm" && card !== undefined && (
         <SettlementConfirmationDialog
           data={current}
+          partName={partName}
           card={card}
           pending={pending}
           onCancel={() => setModal(undefined)}
@@ -299,6 +308,7 @@ export function SettlementCardInput({
       {modal === "cancel" && (
         <SettlementCancellationDialog
           data={current}
+          partName={partName}
           pending={pending}
           onCancel={() => setModal(undefined)}
           onConfirm={async (reason) => {

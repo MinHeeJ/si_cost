@@ -433,6 +433,8 @@ it("opens one NEXT round, displays source context and does not post again on red
   await screen.findByText("00012");
   fireEvent.click(screen.getByTestId("withdrawal-recommend-a-1"));
   expect(await screen.findByText("맞는 자리 1곳")).toBeInTheDocument();
+  expect(screen.getByTestId("withdrawal-position-1")).toHaveTextContent("수주 확률 70%");
+  expect(screen.getByTestId("withdrawal-position-1")).not.toHaveTextContent("70.0%");
   expect(screen.getByTestId("withdrawal-next-panel")).toHaveTextContent("Java");
   expect(screen.getByTestId("withdrawal-next-panel")).toHaveTextContent(
     "바로 이어서 투입",

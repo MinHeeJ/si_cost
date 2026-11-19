@@ -12,7 +12,7 @@ export function RequiredPasswordForm({
     [busy, setBusy] = useState(false);
   return (
     <form
-      data-testid="required-password-form"
+      data-testid="authentication-required-password-form"
       onSubmit={async (e) => {
         e.preventDefault();
         if (busy) return;
@@ -48,7 +48,7 @@ export function RequiredPasswordForm({
         <input
           type="password"
           autoComplete="new-password"
-          data-testid="required-password-new"
+          data-testid="authentication-required-password-new-input"
           value={newPassword}
           onChange={(e) => setNew(e.target.value)}
           required
@@ -61,13 +61,13 @@ export function RequiredPasswordForm({
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
-          data-testid="required-password-confirm"
+          data-testid="authentication-required-password-confirm-input"
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
       </label>
       <button
-        data-testid="required-password-submit"
+        data-testid="authentication-required-password-submit-button"
         aria-label="변경 후 로그인"
         className="authentication-primary"
         disabled={busy}

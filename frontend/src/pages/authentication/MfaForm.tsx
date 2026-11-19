@@ -74,7 +74,7 @@ export function MfaForm({
   }, [state]);
   return (
     <form
-      data-testid="mfa-form"
+      data-testid="authentication-mfa-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!busy) void act("mfa/verify");
@@ -91,7 +91,7 @@ export function MfaForm({
       <label>
         인증번호
         <input
-          data-testid="mfa-code"
+          data-testid="authentication-mfa-code-input"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           inputMode="numeric"
@@ -103,7 +103,7 @@ export function MfaForm({
         />
       </label>
       <button
-        data-testid="mfa-submit"
+        data-testid="authentication-mfa-verify-button"
         aria-label="인증 확인"
         className="authentication-primary"
         disabled={busy}
@@ -112,7 +112,7 @@ export function MfaForm({
       </button>
       <button
         type="button"
-        data-testid="mfa-resend"
+        data-testid="authentication-mfa-resend-button"
         disabled={busy}
         onClick={() => void act("mfa/resend")}
       >
@@ -120,7 +120,7 @@ export function MfaForm({
       </button>
       <button
         type="button"
-        data-testid="mfa-restart"
+        data-testid="authentication-mfa-restart-button"
         disabled={busy}
         onClick={() => void act("restart")}
       >

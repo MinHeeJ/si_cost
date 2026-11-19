@@ -525,6 +525,16 @@ export function MonthCloseScreen() {
               관리{" "}
               {data.managementAllowed ? "가능 · 과거 운영연도 포함" : "불가"}
             </p>
+            {data.status === "WORK" && (
+              <div
+                className={`month-close-check-banner ${data.warningCount > 0 ? "warn" : "info"}`}
+                role={data.warningCount > 0 ? "alert" : "status"}
+                data-testid="month-close-check-banner"
+              >
+                {data.month} 마감 전 점검 6개 중 {data.warningCount}개를
+                확인해야 합니다.
+              </div>
+            )}
             {data.status === "CLOSE" && (
               <div className="month-close-lock">
                 마감자 {data.closedBy} · 마감일시 {data.closedAt} · 원월

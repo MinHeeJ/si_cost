@@ -39,6 +39,32 @@ class SettlementTrendTest {
             .andExpect(jsonPath("$.data.periodPartProfitAmount").value("25"));
         verify(reads,never()).previewSettlement("part","2026-01");
     }
+    @Test void baseMonthRemarkUsesSelectedMonthRowWithoutChangingMetrics() throws Exception {
+        var march = month("2026-03");
+        var original = SettlementCommandTest.row("past-person", "현재 프로젝트");
+        var row = new Row(
+            original.developerId(), original.name(), original.managementNo(), original.employeeType(),
+            original.projectNames(), original.legacyProjectText(), original.mm(), original.unitPrice(),
+            original.payAmount(), original.salesExpenseAmount(), original.retirementAmount(),
+            original.costAmount(), original.profitAmount(), original.profitShareAmount(),
+            "공통관리비+퇴직금", original.basis(), original.issues()
+        );
+        when(reads.previewSettlement("part", "2026-03")).thenReturn(new Result(
+            "part", "2026-03", "CNFM", march.standard(), "5", "revision",
+            null, null, null, null, true, List.of(), false, false, true,
+            march.summary(), march.totals(), List.of(row), march.pagination(), List.of()
+        ));
+        mvc.perform(get("/api/sales-part-settlements/part/trend"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].baseMonthRemark").value("공통관리비+퇴직금"))
+            .andExpect(jsonPath("$.data.items[0].metrics[0].total").value("2.00"))
+            .andExpect(jsonPath("$.data.periodPartProfitAmount").value("25"));
+    }
+    @Test void historicalOnlyPersonHasNoBaseMonthRemark() throws Exception {
+        mvc.perform(get("/api/sales-part-settlements/part/trend"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].baseMonthRemark").value(org.hamcrest.Matchers.nullValue()));
+    }
     @Test void pageDoesNotChangeWholePeriodOrMonthlyTotals() {
         var first=service.get("part",new SalesPartSettlementInput.Query(null,1,20,"name","ASC"));
         var second=service.get("part",new SalesPartSettlementInput.Query(null,2,20,"name","ASC"));

@@ -598,7 +598,10 @@ function BillsContent({
                 ["미수금", summary.unpaid],
               ] as const
             ).map(([label, card]) => (
-              <article key={label}>
+              <article
+                key={label}
+                data-testid={`bill-summary-card-${({ "청구 총액": "billed", "이번달 청구": "current-month", 미수금: "unpaid" } as const)[label]}`}
+              >
                 <span>{label}</span>
                 <strong>
                   {billMoney(card.amount, unit)} {unit}
@@ -725,7 +728,11 @@ function BillsContent({
           >
             <option value="">전체</option>
             {Object.entries(billStatusNames).map(([value, label]) => (
-              <option key={value} value={value}>
+              <option
+                key={value}
+                value={value}
+                data-testid={`bill-status-option-${value.toLowerCase().replaceAll("_", "-")}`}
+              >
                 {label}
               </option>
             ))}
@@ -906,6 +913,7 @@ function BillsContent({
             emptyAction={
               <button
                 type="button"
+                data-testid="bill-empty-reset"
                 onClick={() => {
                   setProjectSearch("");
                   setSelected([]);
@@ -1005,7 +1013,10 @@ function BillsContent({
         <section data-testid="bill-project-dialog">
           <p>종료·실주 프로젝트도 검색할 수 있습니다.</p>
           {projectOptions.map((p) => (
-            <p key={p.id}>
+            <p
+              key={p.id}
+              data-testid={`bill-project-option-${p.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+            >
               <button
                 type="button"
                 data-testid={`bill-project-pick-${p.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}

@@ -44,12 +44,20 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
     page.getByTestId("month-close-check-pay").getByRole("button"),
   ).toHaveCount(0);
   if (data.status === "CLOSE") {
+    await expect(page.getByTestId("month-close-check-banner")).toHaveCount(0);
     await expect(page.getByTestId("month-close-check-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-close-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-reopen-button")).toHaveCount(
       data.canReopen ? 1 : 0,
     );
   } else {
+    const banner = page.getByTestId("month-close-check-banner");
+    await expect(banner).toHaveText(
+      `${data.month} 마감 전 점검 6개 중 ${data.warningCount}개를 확인해야 합니다.`,
+    );
+    await expect(banner).toHaveClass(
+      new RegExp(data.warningCount > 0 ? "warn" : "info"),
+    );
     await expect(page.getByTestId("month-close-check-button")).toBeEnabled({
       enabled: data.managementAllowed && data.canCheck,
     });

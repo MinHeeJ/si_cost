@@ -312,6 +312,7 @@ export function ExcelUploadDialog<Id extends string | number = number>({
                 <button
                   type="button"
                   className="b7-file-chip-remove"
+                  data-testid="b7-file-remove"
                   onClick={() => {
                     setFile(undefined);
                     setResult(undefined);

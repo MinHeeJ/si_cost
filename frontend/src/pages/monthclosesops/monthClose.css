@@ -80,6 +80,18 @@
   color: var(--lock);
   background: var(--lock-bg);
 }
+.month-close-check-banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+.month-close-check-banner.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.month-close-check-banner.info {
+  color: var(--info);
+  background: var(--info-bg);
+}
 .month-close-impact {
   margin: 12px 0;
   padding: 12px 16px;

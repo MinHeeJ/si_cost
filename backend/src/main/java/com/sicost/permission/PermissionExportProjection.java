@@ -26,7 +26,8 @@ public class PermissionExportProjection {
     public boolean allowed(String screen,String id,String title) {
         if(fields.sensitive())return true;
         if(screen.equals("UI-19"))return Set.of("name","projectNames","mm","unitPrice","profitStatus","month","personCount","surplusPersonCount","deficitPersonCount").contains(id);
-        if(screen.equals("UI-32"))return permissions.capabilities().fields().get("UI-32").contains(id);
+        if(screen.equals("UI-32"))return Set.of("metric","formula").contains(id)
+            || permissions.capabilities().fields().get("UI-32").contains(id);
         if(screen.equals("UI-31") && Set.of("costUsage","costUsageRate","costUsageRatio","costUsagePercent").contains(id))return true;
         if(screen.equals("UI-03") && title.matches("(?s).*(인건비|노무비|팀비|프로젝트경비).*"))return false;
         return !fields.forbidden(screen,id) && !privateText(title) && (!id.equals("remark") || !Set.of("UI-03","UI-04").contains(screen));

@@ -58,7 +58,9 @@ export function BusinessPlanUploadDialog({
               </p>
             )}
             {validation.warnings.map((text, i) => (
-              <p key={i}>{text}</p>
+              <p key={i} data-testid={`business-plan-upload-warning-${i}`}>
+                {text}
+              </p>
             ))}
             <div className="business-plan-scroll">
               <table>

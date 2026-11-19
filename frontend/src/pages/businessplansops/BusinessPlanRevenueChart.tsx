@@ -73,7 +73,7 @@ export function BusinessPlanRevenueChart({
               {[0, 1, 2, 3, 4].map((tick) => {
                 const value = minimum + (span * tick) / 4;
                 return (
-                  <g key={tick}>
+                  <g key={tick} data-testid={`business-plan-chart-tick-${tick}`}>
                     <line
                       x1="60"
                       x2="890"
@@ -125,6 +125,7 @@ export function BusinessPlanRevenueChart({
               {segments.map((path, index) => (
                 <path
                   key={index}
+                  data-testid={`business-plan-target-segment-${index}`}
                   d={path}
                   className="business-plan-target-line"
                 />
@@ -134,6 +135,7 @@ export function BusinessPlanRevenueChart({
                   month.salesTargetAmt != null && (
                     <circle
                       key={month.month}
+                      data-testid={`business-plan-target-point-${month.month}`}
                       cx={x(index)}
                       cy={y(point(month.salesTargetAmt)!)}
                       r="4"

@@ -16,11 +16,13 @@ export function SharedScreenFrame({
   children,
   periodBar,
   initialMonth,
+  headerActions,
 }: {
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
   initialMonth?: string;
+  headerActions?: ReactNode;
 }) {
   const motionRoot = useScreenMotion(screenId);
   const [statusTarget,setStatusTarget]=useState<HTMLDivElement|null>(null);
@@ -92,6 +94,7 @@ export function SharedScreenFrame({
               <small>{screenId}</small>
             </div>
           </div>
+          {headerActions}
         </div>
         {menu.pcOnly && (
           <div className="sicost-pc-notice" role="note">

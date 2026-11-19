@@ -1,7 +1,8 @@
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
@@ -23,6 +24,7 @@ import {
   type AnalysisUnit,
 } from "./ProjectAnalysisParts";
 import "./projectAnalysis.css";
+import "../costanalysis/projectCost.css";
 const fields = [
   ["cumulativeRevenue", "누적 매출", true],
   ["cumulativeProfit", "누적 이익", true],
@@ -42,7 +44,7 @@ const financialColumns = [
   ["forecastMargin", "예상 최종 마진율"],
   ["monthlyMargin", "월간 마진율"],
   ["targetMargin", "목표 마진율"],
-  ["targetGap", "목표 대비 (%p)"],
+  ["targetGap", "목표 대비"],
   ["budgetAmount", "예산"],
   ["budgetUsage", "예산 소진율"],
   ["pricePerMm", "MM당 단가"],
@@ -51,6 +53,75 @@ const financialColumns = [
   ["freeMm", "무상지원 MM"],
   ["freeLaborCost", "무상 원가"],
 ] as const;
+const columnDescriptions: Record<string, string> = {
+  cumulativeRevenue:
+    "턴키는 진행기준(원가÷예산), 월단위·파견은 귀속월 매출 누계",
+  cumulativeCost:
+    "인건비 배분 원가 + 직접 경비(팀비·프로젝트경비·추가 직접 경비)",
+  forecastMargin:
+    "턴키: (현재 계약금액 − 원가 누계 − 남은 기간 예상 원가) ÷ 현재 계약금액. 월단위·파견: 당월 마진율",
+  budgetUsage:
+    "원가 누계 ÷ 예산(프로젝트별 입력값, 기본값 계약금액 × (1 − 목표 마진율))",
+};
+function CostColumnHelp({ id, label }: { id: string; label: string }) {
+  const tooltipId = useId();
+  const [position, setPosition] = useState<{ left: number; top: number }>();
+  const description = columnDescriptions[id];
+  useEffect(() => {
+    if (!position) return;
+    const dismiss = () => setPosition(undefined);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+    };
+  }, [position]);
+  if (!description) return <>{label}</>;
+  const show = (target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    setPosition({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 368)),
+      top: rect.bottom,
+    });
+  };
+  return (
+    <>
+      {label}{" "}
+      <span
+        className="cost-column-help"
+        data-testid={`project-cost-help-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+        tabIndex={0}
+        aria-label={`${label} 설명`}
+        aria-describedby={position ? tooltipId : undefined}
+        onMouseEnter={(event) => show(event.currentTarget)}
+        onMouseLeave={() => setPosition(undefined)}
+        onFocus={(event) => show(event.currentTarget)}
+        onBlur={() => setPosition(undefined)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            setPosition(undefined);
+          }
+        }}
+      >
+        ⓘ
+        {position &&
+          createPortal(
+            <span
+              id={tooltipId}
+              role="tooltip"
+              className="cost-column-tooltip"
+              style={position}
+            >
+              {description}
+            </span>,
+            document.body,
+          )}
+      </span>
+    </>
+  );
+}
 const sorts = new Set([
   "projectName",
   "contractAmount",
@@ -250,14 +321,11 @@ export function ProjectCostAnalysis({
       sortable: true,
       render: (row) => (
         <>
-          <button
-            type="button"
-            className="project-analysis-link"
+          <span
             data-testid={`project-cost-open-${row.projectId.toLowerCase()}`}
-            onClick={() => detail(row.projectId)}
           >
             {row.projectName}
-          </button>
+          </span>
           <small>{row.projectId}</small>
           {!row.completeness.costComplete && (
             <StatusBadge tone="warn">원가 미확인</StatusBadge>
@@ -286,7 +354,7 @@ export function ProjectCostAnalysis({
     ...financialColumns.map(
       ([id, label]): Column<api.CostRow> => ({
         id,
-        label,
+        label: <CostColumnHelp id={id} label={label} />,
         sortable: sorts.has(id),
         align: "right",
         render: (row) => (
@@ -306,6 +374,12 @@ export function ProjectCostAnalysis({
               </>
             ) : id === "planMm" && row[id] == null ? (
               "계획 없음"
+            ) : id === "targetGap" ? (
+              row[id] == null ? (
+                "–"
+              ) : (
+                `${analysisDisplay(row[id])}%p`
+              )
             ) : (
               analysisDisplay(
                 row[id],
@@ -357,7 +431,7 @@ export function ProjectCostAnalysis({
       data-testid="project-cost-analysis"
       data-screen-id="SCR-UI-04"
       data-slice-id="SLICE-001"
-      className="project-analysis"
+      className="project-analysis project-cost-analysis"
     >
       {context && (
         <ScreenPeriodBar
@@ -409,7 +483,6 @@ export function ProjectCostAnalysis({
               ))}
             </select>
           </label>
-          {renderColumns?.()}
           {renderExport?.(query, unit)}
         </div>
       </ScreenTitleActions>
@@ -422,6 +495,14 @@ export function ProjectCostAnalysis({
           />
           <AnalysisCompleteness value={result.data.summary.completeness} />
         </>
+      )}
+      {renderColumns && (
+        <div
+          className="project-analysis-toolbar"
+          data-testid="project-cost-column-toolbar"
+        >
+          {renderColumns()}
+        </div>
       )}
       <FilterBar
         testId="project-cost-filters"
@@ -500,12 +581,17 @@ export function ProjectCostAnalysis({
       </FilterBar>
       <AnalysisFailure error={settings.error} retry={settings.clear} />
       <AnalysisFailure error={result.error} retry={result.retry} />
+      <small data-testid="project-cost-row-hint">
+        행을 누르면 월별 원가·시뮬레이션
+      </small>
       <DataTable
         testId="project-cost-table"
         dense={dense}
         rows={result.error ? [] : (result.data?.items ?? [])}
         columns={visibleColumns}
         rowKey={(row) => row.projectId}
+        onRowAction={(row) => detail(row.projectId)}
+        mobileRowAction
         loading={result.loading}
         total={result.data?.total ?? 0}
         page={result.data?.page ?? 1}

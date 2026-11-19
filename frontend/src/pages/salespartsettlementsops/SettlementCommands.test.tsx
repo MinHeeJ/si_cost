@@ -1,5 +1,6 @@
 import {
   act,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -76,6 +77,7 @@ function mount(data = response()) {
     <MemoryRouter>
       <SettlementCardInput
         data={data}
+        partName="운영사업파트"
         refresh={refresh}
         onGuard={(next) => {
           guard = next;
@@ -155,7 +157,15 @@ it("confirmation previews draft with whole-population counts and no preceding ca
   await userEvent.click(screen.getByRole("button", { name: "정산 확정" }));
   expect(screen.getByText(/전체 61명 · 적자 2명/)).toBeVisible();
   expect(screen.getByText(/최종 파트 이익금 26 원/)).toBeVisible();
-  await userEvent.click(screen.getByRole("button", { name: /^확정$/ }));
+  expect(screen.getByRole("dialog")).toHaveAccessibleName(
+    "운영사업파트 2026-07 정산을 확정할까요?",
+  );
+  expect(
+    screen.getByText(
+      "확정하면 이 달 파트 정산(법인카드 사용액 포함)이 잠깁니다.",
+    ),
+  ).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "확정하기" }));
   await waitFor(() =>
     expect(api.createSalesPartSettlementConfirmation).toHaveBeenCalledWith(
       "part",
@@ -276,7 +286,7 @@ it("locked snapshot has read-only card and hides save/confirm/cancel when CLOSE"
     screen.queryByRole("button", { name: "확정 취소" }),
   ).not.toBeInTheDocument();
 });
-it("released AUTO opens cancellation and validates reason without truncation", async () => {
+it("released AUTO uses the common reason field and rejects empty or over-limit reasons", async () => {
   mount({
     ...response(),
     status: "AUTO",
@@ -285,16 +295,35 @@ it("released AUTO opens cancellation and validates reason without truncation", a
     canCancel: true,
   });
   await userEvent.click(screen.getByRole("button", { name: "확정 취소" }));
-  const reason = screen.getByLabelText("취소 사유");
+  const dialog = screen.getByRole("dialog", {
+    name: "정산 확정을 취소할까요?",
+  });
+  expect(dialog).toHaveTextContent(
+    "취소하면 이 달 파트 정산을 다시 고칠 수 있습니다. 사유는 기록에 남습니다.",
+  );
+  expect(dialog).toHaveTextContent(
+    "운영사업파트 / 2026-07 · 확정 파트 이익금 30 원",
+  );
+  expect(within(dialog).getByRole("button", { name: "닫기" })).toBeVisible();
+  const reason = screen.getByLabelText("취소 사유 *");
+  expect(reason.closest("label")).toHaveClass("sicost-field");
+  expect(reason).toHaveAttribute("maxlength", "500");
   const submit = within(screen.getByRole("dialog")).getByRole("button", {
     name: /^확정 취소$/,
   });
-  expect(submit).toBeDisabled();
-  const user = userEvent.setup();
-  await user.click(reason);
-  await user.paste("가".repeat(501));
-  expect(reason).toHaveValue("가".repeat(501));
-  expect(submit).toBeDisabled();
+  expect(submit).toHaveClass("sicost-danger");
+  await userEvent.click(submit);
+  expect(screen.getByText("취소 사유를 입력해 주세요.")).toHaveClass(
+    "sicost-field-error",
+  );
+  expect(reason).toHaveAttribute("aria-invalid", "true");
+  expect(api.createSalesPartSettlementCancellation).not.toHaveBeenCalled();
+  fireEvent.change(reason, { target: { value: "가".repeat(501) } });
+  await userEvent.click(submit);
+  expect(api.createSalesPartSettlementCancellation).not.toHaveBeenCalled();
+  expect(
+    screen.getByText("취소 사유는 공백을 제외하고 1~500자로 입력해 주세요."),
+  ).toBeVisible();
   await userEvent.clear(reason);
   await userEvent.type(reason, " 정산 재검토 ");
   await userEvent.click(submit);
@@ -327,7 +356,7 @@ it("trend renders five rows, null dashes, all-month totals and errors with GET r
       },
     ],
     total: "1",
-    remark: null,
+    remark: "미확인 월: 2026-01",
   }));
   vi.mocked(api.getSalesPartSettlementTrend)
     .mockRejectedValueOnce(new Error("추이 실패"))
@@ -340,6 +369,7 @@ it("trend renders five rows, null dashes, all-month totals and errors with GET r
           developerId: "past",
           name: "과거 인력",
           managementNo: "number",
+          baseMonthRemark: "공통관리비+퇴직금",
           metrics,
         },
       ],
@@ -370,4 +400,16 @@ it("trend renders five rows, null dashes, all-month totals and errors with GET r
   expect(screen.getAllByTestId(/^settlement-trend-past-/)).toHaveLength(5);
   expect(screen.getByText("카드는 월 1회 차감")).toBeVisible();
   expect(screen.getAllByText("–").length).toBeGreaterThan(0);
+  const panel = screen.getByTestId("settlement-trend-panel");
+  expect(
+    within(panel).getByText("공통관리비+퇴직금").closest("td"),
+  ).toHaveAttribute("rowspan", "5");
+  expect(
+    within(panel).getByText("공통관리비+퇴직금").closest("td"),
+  ).toHaveAttribute("title", "미확인 월: 2026-01");
+  expect(within(panel).queryByText(/미확인 월/)).not.toBeInTheDocument();
+  expect(panel.querySelectorAll(".settlement-base-month")).toHaveLength(7);
+  expect(within(panel).getByRole("columnheader", { name: "02월" })).toHaveClass(
+    "settlement-base-month",
+  );
 });

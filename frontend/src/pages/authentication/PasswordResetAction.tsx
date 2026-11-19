@@ -23,7 +23,7 @@ export function PasswordResetAction({
   return (
     <>
       <button
-        data-testid="password-reset-open"
+        data-testid="authentication-password-reset-button"
         type="button"
         disabled={stopped}
         onClick={() => setOpen(true)}

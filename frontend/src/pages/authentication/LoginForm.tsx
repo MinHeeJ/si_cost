@@ -19,7 +19,7 @@ export function LoginForm({
     [error, setError] = useState("");
   return (
     <form
-      data-testid="login-form"
+      data-testid="authentication-login-form"
       onSubmit={async (event) => {
         event.preventDefault();
         if (busy) return;
@@ -57,7 +57,7 @@ export function LoginForm({
         아이디
         <input
           name="userId"
-          data-testid="login-user-id"
+          data-testid="authentication-login-user-id-input"
           autoComplete="username"
           value={userId}
           maxLength={30}
@@ -70,7 +70,7 @@ export function LoginForm({
         비밀번호
         <input
           name="password"
-          data-testid="login-password"
+          data-testid="authentication-login-password-input"
           type="password"
           autoComplete="current-password"
           value={password}
@@ -80,7 +80,7 @@ export function LoginForm({
       </label>
       <button
         type="submit"
-        data-testid="login-submit"
+        data-testid="authentication-login-submit-button"
         className="authentication-primary"
         disabled={busy}
       >
@@ -90,7 +90,7 @@ export function LoginForm({
         비밀번호를 5번 틀리면 계정이 잠깁니다.{" "}
         <button
           type="button"
-          data-testid="login-recovery"
+          data-testid="authentication-login-recovery-button"
           onClick={onRecovery}
           disabled={busy}
         >

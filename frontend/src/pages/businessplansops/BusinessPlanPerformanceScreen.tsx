@@ -278,7 +278,7 @@ export function BusinessPlanPerformanceScreen({
                   <tr>
                     <th>항목</th>
                     {data.months.map((month, index) => (
-                      <th key={month.month}>
+                      <th key={month.month} data-testid={`business-plan-month-header-${month.month}`}>
                         {index + 1}월<br />
                         <StatusBadge
                           tone={
@@ -329,6 +329,7 @@ export function BusinessPlanPerformanceScreen({
                         return (
                           <td
                             key={month.month}
+                            data-testid={`business-plan-cell-${row.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}-${month.month}`}
                             data-financial-negative={
                               row.amount && value?.startsWith("-")
                             }

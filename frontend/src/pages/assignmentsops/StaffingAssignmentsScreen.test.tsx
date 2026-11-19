@@ -521,3 +521,42 @@ it("마감 선택월을 조회·전체선택에 유지하고 초기화하면 연
   await waitFor(() => expect(api.getAssignments).toHaveBeenLastCalledWith(expect.not.objectContaining({ month: expect.anything() })));
   expect(screen.getByTestId("assignments-month-filter")).toHaveValue("");
 });
+
+it("변경 이력의 입력 시각은 ISO 원문 대신 월일 시분으로 보인다", async () => {
+  vi.mocked(api.getHistory).mockResolvedValue({
+    items: [
+      {
+        sequence: 1,
+        type: "UPRC",
+        applyDate: "2026-11-16",
+        before: "8000000",
+        after: "8500000",
+        reasonCode: "NEGO",
+        memo: null,
+        newUnitPrice: "8500000",
+        newContractMm: null,
+        retroactive: "N",
+        closeCross: "N",
+        corrected: "N",
+        correctionTargetSequence: null,
+        actor: "admin",
+        registeredAt: "2026-11-16T17:05:14.951915",
+      },
+    ],
+    total: 1,
+    page: 1,
+    size: 50,
+  });
+  render(
+    <AssignmentDrawer
+      id={row.id}
+      year={2026}
+      readonly={false}
+      onClose={vi.fn()}
+      onChange={vi.fn()}
+    />,
+  );
+  await userEvent.click(await screen.findByTestId("assignment-history-tab"));
+  expect(await screen.findByText("admin / 11-16 17:05")).toBeInTheDocument();
+  expect(screen.queryByText(/2026-11-16T17:05/)).not.toBeInTheDocument();
+});

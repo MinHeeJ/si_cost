@@ -188,6 +188,38 @@ it("renders exact six cards, current calculation and empty yearly history withou
   ).toBeInTheDocument();
   expect(api.getMonthCloses).toHaveBeenCalledWith("2026-01", 1, 50);
 });
+it.each([0, 3])(
+  "shows the pre-close banner from server warning count %i above the checks",
+  async (warningCount) => {
+    vi.mocked(api.getMonthCloses).mockResolvedValue({
+      ...data(),
+      warningCount,
+    });
+    await mount();
+    const banner = screen.getByTestId("month-close-check-banner");
+    expect(banner).toHaveTextContent(
+      `2026-01 마감 전 점검 6개 중 ${warningCount}개를 확인해야 합니다.`,
+    );
+    expect(banner).toHaveClass(warningCount ? "warn" : "info");
+    expect(
+      banner.compareDocumentPosition(screen.getByText("마감 점검")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  },
+);
+it("preserves the closed-month notice instead of the pre-close banner", async () => {
+  vi.mocked(api.getMonthCloses).mockResolvedValue({
+    ...data(),
+    status: "CLOSE",
+    closedBy: "마감자",
+    closedAt: "2026-02-01",
+  });
+  await mount();
+  expect(
+    screen.queryByTestId("month-close-check-banner"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/원월 금액\/현금은 읽기 전용입니다/)).toBeVisible();
+});
 it("preview cancel never sends a write or acceptance", async () => {
   await mount();
   await userEvent.click(screen.getByRole("button", { name: "마감하기" }));
@@ -355,7 +387,7 @@ it("rollback failure keeps prior values and never publishes success", async () =
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "다시 점검" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("req-failure");
+  expect(await screen.findByText(/req-failure/)).toHaveTextContent("저장 실패");
   expect(screen.getByText("미마감")).toBeInTheDocument();
   expect(api.publishMonthCloseCommit).not.toHaveBeenCalled();
   expect(screen.queryByText("저장했습니다.")).not.toBeInTheDocument();
@@ -440,7 +472,9 @@ it("stale preview requires a GET before any new command and never silently confi
     }),
   );
   await userEvent.click(screen.getByTestId("month-close-close-button"));
-  expect(await screen.findByRole("alert")).toHaveTextContent("stale-preview");
+  expect(await screen.findByText(/stale-preview/)).toHaveTextContent(
+    "원천이 변경되었습니다.",
+  );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getByTestId("month-close-close-button")).toBeDisabled();
   expect(api.saveMonthClose).not.toHaveBeenCalled();

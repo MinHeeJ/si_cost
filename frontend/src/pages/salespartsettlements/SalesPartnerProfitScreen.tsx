@@ -34,7 +34,12 @@ export type SalesPartnerProfitScreenProps = {
     data: api.SettlementResult,
     query: api.SettlementQuery,
   ): ReactNode;
-  renderCard?(data: api.SettlementResult, refresh: () => void): ReactNode;
+  renderCard?(
+    data: api.SettlementResult,
+    refresh: () => void,
+    actionsTarget: HTMLDivElement | null,
+    partName: string,
+  ): ReactNode;
   guardNavigation?(proceed: () => void): void;
   showMonthTable?: boolean;
 };
@@ -92,6 +97,9 @@ export function SalesPartnerProfitScreen({
     entry.current?.partId,
   );
   const [data, setData] = useState<api.SettlementResult>();
+  const [actionsTarget, setActionsTarget] = useState<HTMLDivElement | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const [reload, setReload] = useState(0),
@@ -348,6 +356,13 @@ export function SalesPartnerProfitScreen({
       render: (row) => (
         <div
           className="settlement-remark"
+          title={[
+            `급여 원천: ${row.basis.paySource}`,
+            `최초 투입 ${row.basis.firstInputDate ?? "–"} · 시작일수 ${row.basis.payableDays ?? "–"}/${row.basis.calendarDays ?? "–"} · 기본급 ${formatAmount(row.basis.basePayAmount, displayUnit)}`,
+            ...row.basis.tkSources.map((source) => `TK ${source}`),
+            ...row.basis.warnings.map((warning) => warning.message),
+            ...row.issues.map((issue) => issue.message),
+          ].join("\n")}
           onClick={(event) => event.stopPropagation()}
         >
           <span>{row.remark ?? "–"}</span>
@@ -356,21 +371,6 @@ export function SalesPartnerProfitScreen({
               ⚠ 월 급여 없음(시작 달 급여 0)
             </p>
           )}
-          <details>
-            <summary>계산 근거</summary>
-            <p>급여 원천: {row.basis.paySource}</p>
-            <p>
-              최초 투입 {row.basis.firstInputDate ?? "–"} · 시작일수{" "}
-              {row.basis.payableDays ?? "–"}/{row.basis.calendarDays ?? "–"} ·
-              기본급 {amount(row.basis.basePayAmount)}
-            </p>
-            {row.basis.tkSources.map((source) => (
-              <p key={source}>TK {source}</p>
-            ))}
-            {row.issues.map((issue, i) => (
-              <p key={i}>{issue.message}</p>
-            ))}
-          </details>
         </div>
       ),
     },
@@ -380,6 +380,20 @@ export function SalesPartnerProfitScreen({
     <SharedScreenFrame
       screenId="UI-19"
       periodBar={<ScreenPeriodBar screenId="UI-19" initialMonth={entryMonth} />}
+      headerActions={
+        data && (
+          <div
+            className="settlement-header-actions"
+            data-testid="settlement-header-actions"
+          >
+            {renderActions?.(data, refresh, query)}
+            <div
+              className="settlement-command-actions"
+              ref={setActionsTarget}
+            />
+          </div>
+        )
+      }
     >
       <div
         className="settlement-screen"
@@ -393,7 +407,8 @@ export function SalesPartnerProfitScreen({
         )}
         {tabs && tabs.eligibleCount === 0 && (
           <p className="settlement-empty">
-            정산 대상 영업 파트가 없습니다. 본사는 정산 대상이 아닙니다
+            맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이
+            아닙니다.
           </p>
         )}
         {tabs && (
@@ -505,7 +520,12 @@ export function SalesPartnerProfitScreen({
               ))}
             </div>
             {renderCard ? (
-              renderCard(data, refresh)
+              renderCard(
+                data,
+                refresh,
+                actionsTarget,
+                selectedTab?.partName ?? data.partId,
+              )
             ) : (
               <div className="settlement-card">
                 <span>법인카드 사용액</span>
@@ -516,7 +536,7 @@ export function SalesPartnerProfitScreen({
                 </p>
               </div>
             )}
-            {renderActions?.(data, refresh, query)}
+
             {data.issues
               .filter((issue) => !issue.developerId)
               .map((issue, i) => (
@@ -528,12 +548,11 @@ export function SalesPartnerProfitScreen({
                   {issue.message}
                 </p>
               ))}
-            <div className="settlement-toolbar" hidden={!showMonthTable}>
-              <h2>이번 달</h2>
-              <span>
-                {data.month} · {selectedTab?.partName} ·{" "}
-                {data.summary.personCount}명
-              </span>
+            <div
+              className="settlement-toolbar"
+              data-testid="settlement-month-toolbar"
+              hidden={!showMonthTable}
+            >
               <label>
                 단위{" "}
                 <select
@@ -621,34 +640,108 @@ export function SalesPartnerProfitScreen({
               />
             </div>
             {renderViews?.(data, query)}
-            <details className="settlement-guide">
-              <summary>계산 방법 펼침</summary>
+            <details
+              className="settlement-guide"
+              data-testid="settlement-calculation-guide"
+            >
+              <summary data-testid="settlement-guide-toggle">계산 방법</summary>
+              <div className="sicost-table-viewport">
+                <table
+                  className="settlement-guide-table"
+                  aria-label="계산 방법"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">항목</th>
+                      <th scope="col">계산식</th>
+                      <th scope="col">참고</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-testid="settlement-guide-mm">
+                      <th scope="row">MM</th>
+                      <td>프로젝트별 MM을 모두 더함</td>
+                      <td>
+                        투입을 시작·끝낸 달은 날짜만큼 (예: 15일 시작 → 17/31) ·
+                        내부 프로젝트 제외
+                      </td>
+                    </tr>
+                    <tr data-testid="settlement-guide-price">
+                      <th scope="row">단가</th>
+                      <td>프로젝트별 (월 단가 × MM)을 모두 더함</td>
+                      <td>
+                        턴키는 배분표의 그 사람 그 달 금액, 배분표가 없으면 그
+                        달 원가 × (계약금액 ÷ 예산) · 무상지원 0
+                      </td>
+                    </tr>
+                    <tr data-testid="settlement-guide-pay">
+                      <th scope="row">급여</th>
+                      <td>그 달 실제 지급액</td>
+                      <td>
+                        MM과 관계없이 그 달 받은 급여 전부. 투입을 시작한 달은
+                        날짜만큼: 월 급여 × (그 달 일수 − 시작일 + 1) ÷ 그 달
+                        일수 (엑셀 「원가표」 방식)
+                      </td>
+                    </tr>
+                    <tr data-testid="settlement-guide-expense">
+                      <th scope="row">공통관리비</th>
+                      <td>
+                        파트 기준값(
+                        {formatAmount(data.standard.salesExpenseAmount, "원")}
+                        원)
+                      </td>
+                      <td>
+                        외주(업체 인력)만 제외 — 정규·계약직·프리랜서에 붙음
+                      </td>
+                    </tr>
+                    <tr data-testid="settlement-guide-retirement">
+                      <th scope="row">퇴직금</th>
+                      <td>급여 ÷ 12</td>
+                      <td>정규직에만</td>
+                    </tr>
+                    <tr data-testid="settlement-guide-cost">
+                      <th scope="row">비용</th>
+                      <td>급여 + 공통관리비 + 퇴직금</td>
+                      <td />
+                    </tr>
+                    <tr data-testid="settlement-guide-profit">
+                      <th scope="row">이익</th>
+                      <td>단가 − 비용</td>
+                      <td>적자면 음수</td>
+                    </tr>
+                    <tr data-testid="settlement-guide-share">
+                      <th scope="row">이익금</th>
+                      <td>
+                        이익 × 이익 배분율(
+                        {formatRate(data.standard.distributionRate)})
+                      </td>
+                      <td>
+                        원 단위 버림 (음수는 0 쪽으로 자름: −933,333.2 →
+                        −933,333) · 배분율은 그 달에 적용되는 파트 기준 이력 값
+                      </td>
+                    </tr>
+                    <tr data-testid="settlement-guide-part-profit">
+                      <th scope="row">파트 이익금</th>
+                      <td>
+                        인력별 이익금을 모두 더함(적자 포함) − 법인카드 사용액
+                      </td>
+                      <td />
+                    </tr>
+                    <tr data-testid="settlement-guide-period">
+                      <th scope="row">기간 추이 합계</th>
+                      <td>투입한 달(MM &gt; 0)의 값만 더함</td>
+                      <td>
+                        투입 안 한 달은 – · 맨 아래 「파트 이익금」 줄은 달마다
+                        인력별 이익금 합 − 그 달 법인카드 사용액
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
               <p>
-                MM: 비내부 실제 월 투입 합계. MO/DP 단가: 귀속월 매출 합계.
-                FREE/PRE/LOSE는 단가 0입니다.
-              </p>
-              <p>
-                최초 시작월만 기본급 × 포함일수 ÷ 달력일수(원 미만 절사). 그
-                밖에는 업로드 급여, 외주는 공급액 전액이며 미업로드는 유효
-                기본급 예정입니다.
-              </p>
-              <p>
-                공통관리비: 외주 0, 나머지 월 한 번 전액. 퇴직금: 정규직만 급여
-                ÷ 12(원 미만 절사).
-              </p>
-              <p>
-                파트 비용 = 급여 + 공통관리비 + 퇴직금. 이익 = 단가 − 비용.
-                인력별 이익금 = 이익 × 배분율 ÷ 100(음수도 0쪽 절사). 파트
-                이익금 = 전체 인력 이익금 합 − 카드.
-              </p>
-              <p>
-                TK는 PLAN &gt; CTRT &gt; EST의 실제 인력 행을 사용합니다. 사람
-                행이 없을 때만 노동비 × 계약금액 ÷ 저장 예산이며 예산이 0
-                이하이면 미확인입니다.
-              </p>
-              <p>
-                미확인은 –이며 0과 다릅니다. 확정 사본의 저장되지 않은 당시
-                근거는 현재 자료로 복원하지 않습니다.
+                인력은 그 사람의 소속 영업 파트로 모읍니다. 미확인은 –이며 0과
+                다릅니다. 확정 사본의 저장되지 않은 당시 근거는 현재 자료로
+                복원하지 않습니다.
               </p>
             </details>
           </>
