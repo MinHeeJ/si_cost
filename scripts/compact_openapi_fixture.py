@@ -1,4 +1,4 @@
-"""Losslessly compact the durable OpenAPI fixture for the runtime reader's 1 MiB budget.
+"""Losslessly compact the durable OpenAPI fixture for the runtime reader's 8 MiB budget.
 
 Only equal YAML values share anchors; paths, operations and provenance remain intact.
 Run from the repository root. Never reads reference-only specification directories.
@@ -10,7 +10,8 @@ import sys
 import yaml
 
 FIXTURE = Path("backend/src/test/resources/contracts/openapi.yaml")
-LIMIT = 1024 * 1024
+# Matches RuntimeCheckContractTest and the Quality runtime reader's _OPENAPI_LIMIT.
+LIMIT = 8 * 1024 * 1024
 
 
 def compact(document):

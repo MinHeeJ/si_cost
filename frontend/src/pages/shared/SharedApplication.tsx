@@ -21,6 +21,7 @@ import {
 } from "../notificationsops/notificationsApi";
 import { flattenMenus, SharedScreenContext } from "./SharedScreenContext";
 import { screenRegistry } from "./screenRegistry";
+import { dashboardMessage } from "../dashboardops/dashboardPresentation";
 import {
   deleteSharedPreference,
   getCurrentUser,
@@ -112,7 +113,11 @@ function SharedApplicationContent({
     ),
     [userMenu, setUserMenu] = useState(false);
   const [favoriteNotice, setFavoriteNotice] = useState("");
-  useEffect(() => { if (!favoriteNotice) return; const timer = setTimeout(() => setFavoriteNotice(""), 3500); return () => clearTimeout(timer); }, [favoriteNotice]);
+  useEffect(() => {
+    if (!favoriteNotice) return;
+    const timer = setTimeout(() => setFavoriteNotice(""), 3500);
+    return () => clearTimeout(timer);
+  }, [favoriteNotice]);
   const userButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false),
     recentActivation = useRef(""),
@@ -141,13 +146,18 @@ function SharedApplicationContent({
     recent = ids("RECENT");
   const active = location.pathname.slice(1),
     current = byScreen(active);
+  const displayMessage = (message: string) =>
+    active === "UI-16" ? dashboardMessage(message) : message;
   const visibleOnDevice = (id: string) => !mobile || !byScreen(id)?.pcOnly;
   const registered = management?.items.find((row) => row.screenId === active);
+  const pcOnlyRestricted = Boolean(
+    current && mobile && (registered?.pcOnly ?? current.pcOnly),
+  );
   const restriction =
     registered && !registered.use
       ? "사용 중지된 메뉴입니다."
-      : mobile && (registered?.pcOnly ?? current?.pcOnly)
-        ? "PC에서 이용해 주세요. PC전용 메뉴입니다."
+      : pcOnlyRestricted
+        ? `PC에서 이용해 주세요 — 「${current!.name}」는 큰 표를 다루는 화면이라 휴대폰에서는 열리지 않습니다`
         : "";
   useEffect(() => {
     const refresh = () => setReload((n) => n + 1);
@@ -436,7 +446,9 @@ function SharedApplicationContent({
       favorites.includes(id)
         ? favorites.filter((item) => item !== id)
         : [...favorites, id],
-    ).then(ok => { if (ok && adding) setFavoriteNotice("즐겨찾기에 추가했습니다."); });
+    ).then((ok) => {
+      if (ok && adding) setFavoriteNotice("즐겨찾기에 추가했습니다.");
+    });
   };
   const fold = () => {
     const next = !folded;
@@ -468,7 +480,10 @@ function SharedApplicationContent({
   if (error)
     return (
       <main className="sicost-screen-content">
-        <ErrorBanner message={error} onRetry={() => setReload((n) => n + 1)} />
+        <ErrorBanner
+          message={displayMessage(error)}
+          onRetry={() => setReload((n) => n + 1)}
+        />
       </main>
     );
   if (!menus || !user)
@@ -518,12 +533,13 @@ function SharedApplicationContent({
       }}
     >
       <div className="sicost-app" data-screen-id="SCR-UI">
-        {favoriteNotice && createPortal(
-          <div className="sicost-toast-stack">
-            <Toast key={favoriteNotice} message={favoriteNotice} />
-          </div>,
-          document.body,
-        )}
+        {favoriteNotice &&
+          createPortal(
+            <div className="sicost-toast-stack">
+              <Toast key={favoriteNotice} message={favoriteNotice} />
+            </div>,
+            document.body,
+          )}
         <header className="sicost-header">
           <button
             type="button"
@@ -814,7 +830,10 @@ function SharedApplicationContent({
               {tabs
                 .filter((id) => byScreen(id))
                 .map((id) => (
-                  <div key={id} className={`sicost-work-tab${id === active ? " active" : ""}`}>
+                  <div
+                    key={id}
+                    className={`sicost-work-tab${id === active ? " active" : ""}`}
+                  >
                     <button onClick={() => go(id)}>
                       {isDirty?.(id) && "● "}
                       {byScreen(id)?.name}
@@ -830,26 +849,52 @@ function SharedApplicationContent({
                   </div>
                 ))}
             </nav>
-            {preferenceError && <ErrorBanner message={preferenceError} />}
+            {preferenceError && (
+              <ErrorBanner message={displayMessage(preferenceError)} />
+            )}
             {preferences?.error != null && (
               <ErrorBanner
-                message={
+                message={displayMessage(
                   preferences.error instanceof Error
                     ? preferences.error.message
-                    : "화면 설정을 불러오지 못했습니다."
-                }
+                    : "화면 설정을 불러오지 못했습니다.",
+                )}
                 onRetry={preferences.retry}
               />
             )}
             {menus.diagnostics.map((item) => (
               <p className="sicost-banner sicost-tone-warn" key={item.menuId}>
-                {item.menuId}: {item.message}
+                {active === "UI-16"
+                  ? displayMessage(item.message)
+                  : `${item.menuId}: ${item.message}`}
               </p>
             ))}
             {restriction && (
-              <p role="alert" className="sicost-banner sicost-tone-warn">
-                {restriction}
-              </p>
+              <section
+                data-testid="pc-only-notice"
+                className="sicost-banner sicost-tone-warn"
+                role="note"
+              >
+                <p>{restriction}</p>
+                {pcOnlyRestricted && (
+                  <button
+                    type="button"
+                    data-testid="pc-only-dashboard-button"
+                    onClick={() => {
+                      // Without dashboard access, reuse AuthenticationBoundary's
+                      // first-screen selection instead of inventing menu ordering.
+                      navigate(
+                        byScreen("UI-16") && visibleOnDevice("UI-16")
+                          ? "/UI-16"
+                          : "/UI-22",
+                        { state: null },
+                      );
+                    }}
+                  >
+                    대시보드로
+                  </button>
+                )}
+              </section>
             )}
             {!restriction && screenRegistry[active] && !byScreen(active) && (
               <p role="alert">이 화면을 볼 권한이 없습니다.</p>
@@ -991,7 +1036,9 @@ function SharedApplicationContent({
                 <p>표 열 설정은 해당 표의 열 설정에서 변경합니다.</p>
               </>
             )}
-            {preferenceError && <ErrorBanner message={preferenceError} />}
+            {preferenceError && (
+              <ErrorBanner message={displayMessage(preferenceError)} />
+            )}
           </div>
         </Dialog>
       )}

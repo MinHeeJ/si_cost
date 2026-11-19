@@ -25,6 +25,7 @@ import { ChangeHistoryPanel } from "./ChangeHistoryPanel";
 import { SharedApplication, SharedRoutes } from "./SharedApplication";
 import { screenRegistry } from "./screenRegistry";
 import * as api from "./sharedApi";
+import { ApiError } from "../../shared/api";
 vi.mock("./sharedApi");
 vi.mock("../dashboardops/dashboardApi", async (original) => ({
   ...(await original<typeof import("../dashboardops/dashboardApi")>()),
@@ -116,6 +117,82 @@ beforeEach(() => {
     size: 50,
     total: 0,
   });
+});
+it.each(["UI-16", "UI-01"])(
+  "%s 공통 기간 조회 오류도 대시보드 표시 범위만 정리한다",
+  async (screenId) => {
+    vi.mocked(api.getPeriodContext).mockRejectedValue(
+      new Error("OperatingProfit /api/period-context"),
+    );
+    render(<ScreenPeriodBar screenId={screenId} />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      screenId === "UI-16"
+        ? "기간 정보를 확인하지 못했습니다."
+        : "OperatingProfit /api/period-context",
+    );
+    if (screenId === "UI-16")
+      expect(alert).not.toHaveTextContent(/OperatingProfit|\/api\//);
+  },
+);
+it("UI-16 기간 저장 실패는 진단 번호 없이 업무 오류와 기존 선택을 유지한다", async () => {
+  vi.mocked(api.putSharedPreference).mockRejectedValue(
+    new ApiError(500, {
+      success: false,
+      meta: {},
+      code: "FAILED",
+      message: "기간 저장 실패",
+      requestId: "diagnostic-request-id",
+    }),
+  );
+  render(<ScreenPeriodBar screenId="UI-16" />);
+  const select = await screen.findByLabelText("기간");
+  fireEvent.change(select, { target: { value: "2026-10" } });
+  expect(await screen.findByRole("alert")).toHaveTextContent("기간 저장 실패");
+  expect(screen.getByRole("alert")).not.toHaveTextContent(
+    /문의 번호|diagnostic-request-id/,
+  );
+  expect(select).toHaveValue("2026-11");
+});
+it.each(["UI-16", "UI-01"])(
+  "%s 공통 메뉴 진단은 대시보드에서만 내부 ID를 제거한다",
+  async (screenId) => {
+    vi.mocked(api.getMenus).mockResolvedValue({
+      items: menus,
+      diagnostics: [
+        {
+          menuId: "internal-menu-id",
+          message: "OperatingProfit /api/menus 조회 실패",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter initialEntries={[`/${screenId}`]}>
+        <SharedApplication screens={{ [screenId]: <p>업무 본문</p> }} />
+      </MemoryRouter>,
+    );
+    const text =
+      screenId === "UI-16"
+        ? "자료 상태를 확인해 주세요."
+        : "internal-menu-id: OperatingProfit /api/menus 조회 실패";
+    expect(await screen.findByText(text)).toBeVisible();
+    if (screenId === "UI-16")
+      expect(screen.queryByText(/internal-menu-id/)).not.toBeInTheDocument();
+  },
+);
+it("UI-16 공통 선호 설정 오류에서도 API 식별자를 표시하지 않는다", async () => {
+  vi.mocked(api.getSharedPreferences).mockRejectedValue(
+    new Error("WorkforceForecast /api/me/preferences"),
+  );
+  render(
+    <MemoryRouter initialEntries={["/UI-16"]}>
+      <SharedApplication screens={{ "UI-16": <p>업무 본문</p> }} />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText("자료 상태를 확인해 주세요.")).toBeVisible();
+  expect(
+    screen.queryByText(/WorkforceForecast|\/api\/me/),
+  ).not.toBeInTheDocument();
 });
 describe("controlled 기간 선택", () => {
   it("UI-03만 내년 선택을 막고 이전 유효 YEAR를 revision과 함께 복원한다", async () => {

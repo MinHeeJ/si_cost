@@ -4,6 +4,7 @@ import { OPERATING_STANDARDS_COMMITTED } from "../operatingstandards/operatingSt
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { PeriodSelector } from "./PeriodSelector";
 import { clampPeriod, screenPeriods } from "./periods";
+import { dashboardMessage } from "../dashboardops/dashboardPresentation";
 import {
   getMonthClose,
   getPeriodContext,
@@ -33,6 +34,10 @@ export function ScreenPeriodBar({
   const [preference, setPreference] = useState<SharedPreference | undefined>(),
     [error, setError] = useState(""),
     [status, setStatus] = useState("");
+  const displayError =
+    screenId === "UI-16"
+      ? dashboardMessage(error, "기간 정보를 확인하지 못했습니다.")
+      : error;
   const [pending, setPending] = useState(false),
     [loading, setLoading] = useState(true),
     [reload, setReload] = useState(0);
@@ -298,7 +303,10 @@ export function ScreenPeriodBar({
   if (loading) return <p role="status">기간을 불러오는 중입니다.</p>;
   if (!context || !value)
     return (
-      <ErrorBanner message={error} onRetry={() => setReload((n) => n + 1)} />
+      <ErrorBanner
+        message={displayError}
+        onRetry={() => setReload((n) => n + 1)}
+      />
     );
   const range = ranges(context),
     unavailable =
@@ -361,8 +369,46 @@ export function ScreenPeriodBar({
       >
         {value.type === "YEAR_CUM" ? (
           <>
-            <PeriodSelector type="YEAR" label="누계 연도" value={value.year} min={range.min} max={range.max} disabled={pending || unavailable} onChange={year=>void save(cumulative(year,year===thisYear?context.currentMonth:`${year}-12`,context))} />
-            <label className="sicost-cutoff-month">누계 기준월 <select aria-label="누계 월" disabled={pending || unavailable} value={value.month} onChange={e=>void save({...value,month:e.target.value})}>{Array.from({length:value.year===thisYear?Number(context.currentMonth.slice(5)):12},(_,i)=>`${value.year}-${String(i+1).padStart(2,"0")}`).map(month=><option key={month} value={month}>{Number(month.slice(5))}월</option>)}</select></label>
+            <PeriodSelector
+              type="YEAR"
+              label="누계 연도"
+              value={value.year}
+              min={range.min}
+              max={range.max}
+              disabled={pending || unavailable}
+              onChange={(year) =>
+                void save(
+                  cumulative(
+                    year,
+                    year === thisYear ? context.currentMonth : `${year}-12`,
+                    context,
+                  ),
+                )
+              }
+            />
+            <label className="sicost-cutoff-month">
+              누계 기준월{" "}
+              <select
+                aria-label="누계 월"
+                disabled={pending || unavailable}
+                value={value.month}
+                onChange={(e) => void save({ ...value, month: e.target.value })}
+              >
+                {Array.from(
+                  {
+                    length:
+                      value.year === thisYear
+                        ? Number(context.currentMonth.slice(5))
+                        : 12,
+                  },
+                  (_, i) => `${value.year}-${String(i + 1).padStart(2, "0")}`,
+                ).map((month) => (
+                  <option key={month} value={month}>
+                    {Number(month.slice(5))}월
+                  </option>
+                ))}
+              </select>
+            </label>
             <span>1~{Number(value.month.slice(5))}월 누계</span>
           </>
         ) : (
@@ -396,7 +442,10 @@ export function ScreenPeriodBar({
         )}
       </div>
       {error && (
-        <ErrorBanner message={error} onRetry={() => setReload((n) => n + 1)} />
+        <ErrorBanner
+          message={displayError}
+          onRetry={() => setReload((n) => n + 1)}
+        />
       )}
     </section>
   );

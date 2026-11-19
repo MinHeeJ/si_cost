@@ -133,7 +133,9 @@ it("767px는 저장 PC설정으로 직접주소 안내·768px는 진입", async 
     value: 767,
   });
   open();
-  await screen.findByText("PC에서 이용해 주세요. PC전용 메뉴입니다.");
+  await screen.findByText(
+    "PC에서 이용해 주세요 — 「메뉴 편집」는 큰 표를 다루는 화면이라 휴대폰에서는 열리지 않습니다",
+  );
   expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-25");
   expect(screen.queryByText("메뉴 편집 본문")).not.toBeInTheDocument();
   Object.defineProperty(window, "innerWidth", {

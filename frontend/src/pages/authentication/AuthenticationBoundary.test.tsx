@@ -45,9 +45,10 @@ afterEach(() => {
 });
 function application(
   content = <div data-testid="business">private business</div>,
+  path = "/UI-23",
 ) {
   return render(
-    <MemoryRouter initialEntries={["/UI-23"]}>
+    <MemoryRouter initialEntries={[path]}>
       <AuthenticationBoundary>{content}</AuthenticationBoundary>
     </MemoryRouter>,
   );
@@ -69,7 +70,9 @@ describe("authentication consumer boundaries", () => {
       screens: { "UI-16": ["INQ"] },
     });
     function Consumer() {
-      return <output data-testid="allowed-route">{useLocation().pathname}</output>;
+      return (
+        <output data-testid="allowed-route">{useLocation().pathname}</output>
+      );
     }
     application(<Consumer />);
     expect(
@@ -84,6 +87,9 @@ describe("authentication consumer boundaries", () => {
     await screen.findByText(
       "볼 수 있는 화면이 없습니다. 관리자에게 권한을 요청해 주세요.",
     );
+    // Boundary and logout-only SessionIndicator each perform their initial GET.
+    // Establish that baseline before attributing any later read to the 401 event.
+    await waitFor(() => expect(api.session).toHaveBeenCalledTimes(2));
     const calls = vi.mocked(api.session).mock.calls.length;
     act(() =>
       window.dispatchEvent(
@@ -141,13 +147,11 @@ describe("authentication consumer boundaries", () => {
   it("selects a device-usable first screen instead of a PC-only first grant on mobile", async () => {
     vi.stubGlobal(
       "matchMedia",
-      vi
-        .fn()
-        .mockReturnValue({
-          matches: true,
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-        }),
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
     );
     vi.mocked(api.capabilities).mockResolvedValue({
       ...empty,
@@ -157,13 +161,22 @@ describe("authentication consumer boundaries", () => {
     function Consumer() {
       return <div data-testid="route">{useLocation().pathname}</div>;
     }
-    application(<Consumer />);
+    application(<Consumer />, "/UI-22");
     await waitFor(() =>
       expect(screen.getByTestId("route")).toHaveTextContent("/UI-33"),
     );
   });
   it("rechecks the server instead of clearing other tabs on a stale zero countdown", async () => {
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance"] });
+    vi.useFakeTimers({
+      toFake: [
+        "Date",
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "performance",
+      ],
+    });
     const base = Date.parse(authenticated.serverTime);
     vi.setSystemTime(base);
     vi.mocked(api.session)
@@ -220,9 +233,29 @@ describe("authentication consumer boundaries", () => {
   });
 });
 
-it.each([['UI-01', '/UI-01'], ['UI-33', '/UI-01']])('honors only a permitted legacy hash target (%s)', async (allowed, expected) => {
-  vi.mocked(api.capabilities).mockResolvedValue({ ...empty, screens: { 'UI-01': ['INQ'] } });
-  function Location() { const value = useLocation(); return <p data-testid="hash-location">{value.pathname + value.hash}</p>; }
-  render(<MemoryRouter initialEntries={['/#' + allowed]}><AuthenticationBoundary><Location /></AuthenticationBoundary></MemoryRouter>);
-  await waitFor(() => expect(screen.getByTestId('hash-location')).toHaveTextContent(expected));
-});
+it.each([
+  ["UI-01", "/UI-01"],
+  ["UI-33", "/UI-01"],
+])(
+  "honors only a permitted legacy hash target (%s)",
+  async (allowed, expected) => {
+    vi.mocked(api.capabilities).mockResolvedValue({
+      ...empty,
+      screens: { "UI-01": ["INQ"] },
+    });
+    function Location() {
+      const value = useLocation();
+      return <p data-testid="hash-location">{value.pathname + value.hash}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/#" + allowed]}>
+        <AuthenticationBoundary>
+          <Location />
+        </AuthenticationBoundary>
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("hash-location")).toHaveTextContent(expected),
+    );
+  },
+);

@@ -20,6 +20,11 @@ import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import { flattenMenus, useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./dashboardApi";
 import { DashboardTrendChart } from "./DashboardTrendChart";
+import {
+  closeCheckLabels,
+  contractTypeLabels,
+  dashboardMessage,
+} from "./dashboardPresentation";
 import "./dashboard.css";
 
 const metricLabels: Record<api.DashboardMetric["metricCode"], string> = {
@@ -67,21 +72,26 @@ const count = (value: number | null) => (value == null ? "–" : String(value));
 export function DashboardBasis({
   basis,
   compact = false,
+  periodLabel = "기준월",
+  hidePeriod = false,
 }: {
   basis: api.DashboardBasis;
   compact?: boolean;
+  periodLabel?: string;
+  hidePeriod?: boolean;
 }) {
+  if (hidePeriod && basis.status === "AVAILABLE" && !basis.reasons.length)
+    return null;
   return (
     <div className="dashboard-basis">
-      <span
-        className={compact ? "sicost-sr-only" : undefined}
-        title={`${basis.basisMonth ?? basis.basisDate} · ${basis.sourceService} · ${formatDateTime(basis.observedAt)}`}
-      >
-        {basis.basisMonth ?? basis.basisDate} · {basis.sourceService} ·{" "}
-        <span className="sicost-sr-only">
-          {formatDateTime(basis.observedAt)}
+      {!hidePeriod && (
+        <span
+          className={`dashboard-basis-period${compact ? " sicost-sr-only" : ""}`}
+        >
+          {basis.basisMonth ? periodLabel : "기준일"}{" "}
+          {basis.basisMonth ?? basis.basisDate}
         </span>
-      </span>
+      )}
       {basis.status === "FAILED" && (
         <StatusBadge tone="bad">조회 실패</StatusBadge>
       )}
@@ -92,7 +102,7 @@ export function DashboardBasis({
         <StatusBadge tone="neutral">자료 없음</StatusBadge>
       )}
       {basis.reasons.map((reason, i) => (
-        <span key={i}>{reason}</span>
+        <span key={i}>{dashboardMessage(reason)}</span>
       ))}
     </div>
   );
@@ -118,9 +128,10 @@ export function DashboardScreen({
   const [month, setMonth] = useState<string>();
   const [receivedData, setData] = useState<api.DashboardData>();
   // Retain cards only while refreshing the same selected period.
-  const data = month === undefined || receivedData?.selectedMonth === month
-    ? receivedData
-    : undefined;
+  const data =
+    month === undefined || receivedData?.selectedMonth === month
+      ? receivedData
+      : undefined;
   const [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
@@ -133,7 +144,10 @@ export function DashboardScreen({
     { menus } = useSharedScreen("UI-16");
   const money = (value: string | null) => formatAmount(value, amountUnit);
   const closeProgress = data?.closeProgress;
-  const requestPending = useRef(false), lastReceived = useRef(0);
+  const requestPending = useRef(false),
+    lastReceived = useRef(0);
+  const printing = useRef(false),
+    printFocusUntil = useRef(0);
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -148,13 +162,33 @@ export function DashboardScreen({
     const changed = () => setRevision((n) => n + 1),
       resize = () => setMobile(window.innerWidth < 768);
     window.addEventListener("sicost:screen-period-changed", period);
-    const focus = () => { if (document.visibilityState === "visible" && !requestPending.current && Date.now() - lastReceived.current >= 30_000) changed(); };
+    const focus = () => {
+      if (
+        !printing.current &&
+        Date.now() > printFocusUntil.current &&
+        document.visibilityState === "visible" &&
+        !requestPending.current &&
+        Date.now() - lastReceived.current >= 30_000
+      )
+        changed();
+    };
+    const beforePrint = () => {
+      printing.current = true;
+    };
+    const afterPrint = () => {
+      printing.current = false;
+      printFocusUntil.current = Date.now() + 1000;
+    };
+    window.addEventListener("beforeprint", beforePrint);
+    window.addEventListener("afterprint", afterPrint);
     window.addEventListener("focus", focus);
     window.addEventListener("resize", resize);
     events.forEach((name) => window.addEventListener(name, changed));
     return () => {
       window.removeEventListener("sicost:screen-period-changed", period);
       window.removeEventListener("focus", focus);
+      window.removeEventListener("beforeprint", beforePrint);
+      window.removeEventListener("afterprint", afterPrint);
       window.removeEventListener("resize", resize);
       events.forEach((name) => window.removeEventListener(name, changed));
     };
@@ -167,16 +201,23 @@ export function DashboardScreen({
     void api
       .getDashboard(month, abort.signal)
       .then((value) => {
-        if (!abort.signal.aborted) { setData(value); lastReceived.current = Date.now(); }
+        if (!abort.signal.aborted) {
+          setData(value);
+          lastReceived.current = Date.now();
+        }
       })
       .catch((e) => {
         if (!abort.signal.aborted) {
-          if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setData(undefined);
+          if (e instanceof ApiError && (e.status === 401 || e.status === 403))
+            setData(undefined);
           setError(e);
         }
       })
       .finally(() => {
-        if (!abort.signal.aborted) { requestPending.current = false; setLoading(false); }
+        if (!abort.signal.aborted) {
+          requestPending.current = false;
+          setLoading(false);
+        }
       });
     return () => abort.abort();
   }, [month, revision]);
@@ -224,9 +265,10 @@ export function DashboardScreen({
   const failure = (e: unknown) => (
     <ErrorBanner
       message={
-        e instanceof Error ? e.message : "대시보드를 불러오지 못했습니다."
+        e instanceof Error
+          ? dashboardMessage(e.message, "대시보드를 불러오지 못했습니다.")
+          : "대시보드를 불러오지 못했습니다."
       }
-      requestId={e instanceof ApiError ? e.body.requestId : undefined}
       onRetry={() => setRevision((n) => n + 1)}
       retryTestId="dashboard-retry"
     />
@@ -256,20 +298,32 @@ export function DashboardScreen({
           </div>
         </ScreenTitleActions>
         {loading && !data && <p role="status">대시보드를 불러오는 중입니다.</p>}
-        {data && loading && <p role="status" className="sicost-refresh-status">갱신 중…</p>}
-        {data && error != null && <p role="status" className="sicost-refresh-status">갱신 실패 · <button onClick={() => setRevision(n => n + 1)}>다시 시도</button></p>}
+        {data && loading && (
+          <p role="status" className="sicost-refresh-status">
+            갱신 중…
+          </p>
+        )}
+        {data && error != null && (
+          <p role="status" className="sicost-refresh-status">
+            갱신 실패 ·{" "}
+            <button
+              data-testid="dashboard-refresh-retry"
+              onClick={() => setRevision((n) => n + 1)}
+            >
+              다시 시도
+            </button>
+          </p>
+        )}
         {error != null && !data && failure(error)}
         {downloadError != null && (
           <ErrorBanner
             message={
               downloadError instanceof Error
-                ? downloadError.message
+                ? dashboardMessage(
+                    downloadError.message,
+                    "다운로드하지 못했습니다.",
+                  )
                 : "다운로드하지 못했습니다."
-            }
-            requestId={
-              downloadError instanceof ApiError
-                ? downloadError.body.requestId
-                : undefined
             }
           />
         )}
@@ -277,48 +331,81 @@ export function DashboardScreen({
         {data && (
           <>
             <PeriodStatus className="dashboard-dates">
+              <span>
+                조회월 {data.selectedMonth} · 단위: {amountUnit}
+              </span>
+              <span className="dashboard-print-date">기준일 {data.today}</span>
               <span className="dashboard-date-item">
                 <HelpTooltip
                   label="숫자 기준"
                   testId="dashboard-basis-help"
-                  trigger={<span className="dashboard-date-item-content"><span className="dashboard-date-key">기준일</span><b>{data.today.replace(/-/g, ".")}</b></span>}
+                  trigger={
+                    <span className="dashboard-date-item-content">
+                      <span className="dashboard-date-key">기준일</span>
+                      <b>{data.today.replace(/-/g, ".")}</b>
+                    </span>
+                  }
                 >
-                  현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} / 현재월 {data.currentMonth} 기준입니다.
+                  현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} /
+                  현재월 {data.currentMonth} 기준입니다.
                   <br />
                   조회 시각 {formatDateTime(data.observedAt)}
                   {data.metrics.map((card) => (
                     <p key={card.metricCode}>
-                      {metricLabels[card.metricCode]} · {card.basis.basisMonth ?? card.basis.basisDate} · {card.basis.sourceService}
+                      {metricLabels[card.metricCode]} ·{" "}
+                      {card.metricCode === "RECEIVABLE"
+                        ? card.basis.basisDate
+                        : (card.basis.basisMonth ?? card.basis.basisDate)}
                     </p>
                   ))}
                 </HelpTooltip>
               </span>
               <span className="dashboard-date-item">
                 <span className="dashboard-date-key">마감 완료</span>
-                <b>{data.lastClosedMonth
-                  ? `${data.lastClosedMonth.slice(0, 4) !== data.selectedMonth.slice(0, 4) ? `${data.lastClosedMonth.slice(0, 4)}년 ` : ""}${Number(data.lastClosedMonth.slice(5))}월까지`
-                  : "없음"}</b>
+                <b>
+                  {data.lastClosedMonth
+                    ? `${data.lastClosedMonth.slice(0, 4) !== data.selectedMonth.slice(0, 4) ? `${data.lastClosedMonth.slice(0, 4)}년 ` : ""}${Number(data.lastClosedMonth.slice(5))}월까지`
+                    : "없음"}
+                </b>
               </span>
               <span className="dashboard-date-item dashboard-date-state">
-                {data.provisional ? <>
-                  <StatusBadge tone="warn">잠정</StatusBadge>
-                  <span>아래 <b>{Number(data.selectedMonth.slice(5))}월 매출·이익</b>은 마감 전이라 바뀔 수 있습니다</span>
-                </> : data.selectedMonthCloseStatus === "CLOSE" ? <>
-                  <StatusBadge tone="ok">확정</StatusBadge>
-                  <span>{Number(data.selectedMonth.slice(5))}월 숫자는 마감된 확정치입니다</span>
-                </> : <>
-                  <StatusBadge tone="warn">미확정</StatusBadge>
-                  <span>선택한 달의 마감 상태를 확인해 주세요</span>
-                </>}
+                {data.provisional ? (
+                  <>
+                    <StatusBadge tone="warn">잠정</StatusBadge>
+                    <span>
+                      아래{" "}
+                      <b>{Number(data.selectedMonth.slice(5))}월 매출·이익</b>은
+                      마감 전이라 바뀔 수 있습니다
+                    </span>
+                  </>
+                ) : data.selectedMonthCloseStatus === "CLOSE" ? (
+                  <>
+                    <StatusBadge tone="ok">확정</StatusBadge>
+                    <span>
+                      {Number(data.selectedMonth.slice(5))}월 숫자는 마감된
+                      확정치입니다
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <StatusBadge tone="warn">미확정</StatusBadge>
+                    <span>선택한 달의 마감 상태를 확인해 주세요</span>
+                  </>
+                )}
               </span>
               {data.selectedMonth !== data.currentMonth && (
                 <span className="dashboard-date-item dashboard-date-current-note">
                   <Icon name="info" size={14} />
-                  <span>미수금·확인할 일·경보·인력 수급·파이프라인·자금은 <b>오늘 기준</b>입니다 (청구 누락 의심만 고른 달)</span>
+                  <span>
+                    미수금·확인할 일·경보·인력 수급·파이프라인·자금은{" "}
+                    <b>오늘 기준</b>입니다 (청구 누락 의심만 고른 달)
+                  </span>
                 </span>
               )}
               <span className="sicost-sr-only">
-                선택월 {data.selectedMonth} · 현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
+                선택월 {data.selectedMonth} · 현재
+                미수·할일·경보·수급·기회·자금은 오늘 {data.today} / 현재월{" "}
+                {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
               </span>
             </PeriodStatus>
             <div className="dashboard-metrics">
@@ -381,7 +468,14 @@ export function DashboardScreen({
                       {money(card.overdueAmount)} {amountUnit}
                     </small>
                   )}
-                  <DashboardBasis basis={card.basis} compact />
+                  <DashboardBasis
+                    basis={
+                      card.metricCode === "RECEIVABLE"
+                        ? { ...card.basis, basisMonth: null }
+                        : card.basis
+                    }
+                    compact
+                  />
                 </button>
               ))}
             </div>
@@ -440,16 +534,22 @@ export function DashboardScreen({
                       </span>
                       <span>
                         <strong>
-                          {actionLabels[action.actionCode] ?? action.actionCode}{" "}
+                          {actionLabels[action.actionCode] ?? "확인할 일"}{" "}
                           {action.count}건
                         </strong>
-                        <small>{action.reason}</small>
+                        <small>{dashboardMessage(action.reason)}</small>
                         <small>
-                          {action.months.join(" · ")}
-                          {action.amount !== null &&
-                            ` · ${money(action.amount)} ${amountUnit}`}
-                          {action.personCount !== null &&
-                            ` · ${formatFixedDecimal(action.personCount, 1)}명`}
+                          {[
+                            ...action.months,
+                            action.amount !== null
+                              ? `${money(action.amount)} ${amountUnit}`
+                              : null,
+                            action.personCount !== null
+                              ? `${formatFixedDecimal(action.personCount, 1)}명`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </small>
                         {action.withoutNextAssignmentCount !== null && (
                           <small>
@@ -501,12 +601,13 @@ export function DashboardScreen({
                         data-testid={`dashboard-check-${testKey(check.checkCode)}`}
                       >
                         <StatusBadge tone="warn">
-                          {check.checkCode} {count(check.count)}건
+                          {closeCheckLabels[check.checkCode] ?? "마감 점검"}{" "}
+                          {count(check.count)}건
                         </StatusBadge>{" "}
-                        {check.reason}
+                        {dashboardMessage(check.reason)}
                       </p>
                     ))}
-                    <DashboardBasis basis={closeProgress.basis} />
+                    <DashboardBasis basis={closeProgress.basis} hidePeriod />
                   </Panel>
                 )}
                 {data.projectAlerts && (
@@ -536,10 +637,11 @@ export function DashboardScreen({
                       >
                         <span>
                           <strong>{alert.projectName}</strong>
-                          <small>{alert.reason}</small>
+                          <small>{dashboardMessage(alert.reason)}</small>
                           <small>
-                            {alert.contractTypeCode} 마진율{" "}
-                            {formatRate(alert.marginRate)} · 예산 소진{" "}
+                            {contractTypeLabels[alert.contractTypeCode] ??
+                              "계약 구분 미확인"}{" "}
+                            마진율 {formatRate(alert.marginRate)} · 예산 소진{" "}
                             {formatRate(alert.budgetConsumptionRate)}
                           </small>
                         </span>
@@ -550,7 +652,7 @@ export function DashboardScreen({
                               : "warn"
                           }
                         >
-                          {alertLabels[alert.alertType]}
+                          {alertLabels[alert.alertType] ?? "프로젝트 점검"}
                         </StatusBadge>
                       </button>
                     ))}
@@ -561,7 +663,10 @@ export function DashboardScreen({
             <div className="dashboard-two-grid">
               {data.salesCostTrend && (
                 <Panel title="매출·원가 추이" testId="dashboard-trend">
-                  <DashboardBasis basis={data.salesCostTrendBasis} />
+                  <DashboardBasis
+                    basis={data.salesCostTrendBasis}
+                    periodLabel="조회 기준월"
+                  />
                   <DashboardTrendChart rows={data.salesCostTrend} />
                   <div className="sicost-table-viewport">
                     <table
@@ -597,7 +702,10 @@ export function DashboardScreen({
                 title="앞으로 6개월 인력 수급 예측"
                 testId="dashboard-supply"
               >
-                <DashboardBasis basis={data.supplyBasis} />
+                <DashboardBasis
+                  basis={data.supplyBasis}
+                  periodLabel="예측 기준월"
+                />
                 <p>
                   {data.scope === "ALL"
                     ? "전체 인력"
@@ -676,8 +784,8 @@ export function DashboardScreen({
                   title={`영업 파트별 ${data.selectedMonth.slice(5)}월`}
                   testId="dashboard-parts"
                 >
-                  <DashboardBasis basis={data.salesPartsBasis} />
-                  <p>{data.salesPartExplanation}</p>
+                  <DashboardBasis basis={data.salesPartsBasis} hidePeriod />
+                  <p>{dashboardMessage(data.salesPartExplanation)}</p>
                   {data.salesParts.length === 0 &&
                     ["AVAILABLE", "EMPTY"].includes(
                       data.salesPartsBasis.status,
@@ -714,6 +822,7 @@ export function DashboardScreen({
               <Panel title="영업 파이프라인" testId="dashboard-pipeline">
                 <button
                   type="button"
+                  data-testid="dashboard-pipeline-open"
                   onClick={() =>
                     go(
                       { screenId: "UI-29", linkKey: null },
@@ -723,7 +832,10 @@ export function DashboardScreen({
                 >
                   자세히
                 </button>
-                <DashboardBasis basis={data.pipeline.basis} />
+                <DashboardBasis
+                  basis={data.pipeline.basis}
+                  periodLabel="집계 기준월"
+                />
                 <p>진행 기회 {count(data.pipeline.opportunityCount)}건</p>
                 <strong>
                   확률 반영 예상액 {money(data.pipeline.weightedExpectedAmount)}{" "}
@@ -762,7 +874,7 @@ export function DashboardScreen({
               </Panel>
               {data.cashForecast && (
                 <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">
-                  <DashboardBasis basis={data.cashBasis} />
+                  <DashboardBasis basis={data.cashBasis} hidePeriod />
                   {data.cashForecast.map((row) => (
                     <button
                       className="dashboard-list-row"
@@ -802,7 +914,7 @@ export function DashboardScreen({
                           최소 자금 {money(row.minimumCashAmount)} {amountUnit}
                         </small>
                         {row.unconfirmedReasons.map((reason, i) => (
-                          <small key={i}>{reason}</small>
+                          <small key={i}>{dashboardMessage(reason)}</small>
                         ))}
                       </span>
                     </button>

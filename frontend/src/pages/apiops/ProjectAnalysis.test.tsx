@@ -218,9 +218,10 @@ it.each(["cost", "board"] as const)(
     const load =
       kind === "cost" ? api.getProjectCosts : api.getProjectStatusBoard;
     await waitFor(() => expect(load).toHaveBeenCalled());
-    fireEvent.change(screen.getByRole("combobox", { name: "한 화면 건수" }), {
-      target: { value: "100" },
-    });
+    fireEvent.change(
+      await screen.findByRole("combobox", { name: "한 화면 건수" }),
+      { target: { value: "100" } },
+    );
     await waitFor(() => expect(save).toHaveBeenCalledWith(100));
     fireEvent.click(screen.getByRole("link", { name: "다른 업무로 이동" }));
     await waitFor(() =>

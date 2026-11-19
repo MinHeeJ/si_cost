@@ -5,6 +5,7 @@
 저장소 루트에서 `docker compose -f infra/docker-compose.yml up --build -d`로 실행한다.
 프론트는 http://127.0.0.1:3000, 백엔드 health는 http://127.0.0.1:8080/api/health 이다.
 종료는 `docker compose -f infra/docker-compose.yml down`이다. PostgreSQL 지속 볼륨은 삭제하지 않는다.
+Compose 기본 네트워크는 Docker 자동 주소 풀 소진과 무관하게 생성되도록 `10.203.0.0/24`를 명시한다. 다른 배포·호스트/VPN 경로와 겹치면 실행 전에 `COMPOSE_SUBNET`으로 사용하지 않는 사설 `/24`를 지정한다. 동시 배포마다 서로 다른 서브넷을 사용한다. 공유 호스트의 다른 네트워크를 prune하거나 Docker 데몬 설정을 변경할 필요는 없다.
 DB를 호스트에 공개하지 않으며 앱 포트도 loopback에만 바인딩한다. 모든 업무 API에는 서버 세션 인증·현재 저장 권한 검사를 적용한다. 공개 배포 전 HTTPS·Secure 쿠키·SMTP 및 아래 미검증 통합을 확인해야 한다.
 기본 개발 설정으로 시작할 수 있다. 운영에서는 DB_NAME/DB_USER/DB_PASSWORD를 별도로 정하고 기본 개발 비밀번호를 반드시 교체한다.
 
@@ -42,7 +43,7 @@ java -Dloader.main=com.sicost.authentication.AuthenticationAdminCli \
 
 Java 17 / Spring Boot 3.3.13 / Maven / MyBatis 3.0.4 / Flyway / PostgreSQL 16을 사용한다.
 프론트는 Node 20 / React 18.3.1 / Vite 5.4.21 / TypeScript / React Router, npm을 사용한다.
-영구 OpenAPI 시험 자원은 `backend/src/test/resources/contracts/openapi.yaml`이다. 앱 사용 확인기의 1 MiB 읽기 한도에 맞춰 동일한 YAML 값을 앵커로 공유하며, 연산·스키마·설명·추적 정보를 생략하지 않는다. 갱신 후 `python3 scripts/compact_openapi_fixture.py`로 의미 동일성과 크기를 확인한다(PyYAML 필요).
+영구 OpenAPI 시험 자원은 `backend/src/test/resources/contracts/openapi.yaml`이다. 앱 사용 확인기의 8 MiB 읽기 한도 안에서 동일한 YAML 값을 앵커로 공유할 수 있으며, 연산·스키마·설명·추적 정보를 생략하지 않는다. 갱신 후 `python3 scripts/compact_openapi_fixture.py`로 의미 동일성과 크기를 확인한다(PyYAML 필요).
 백엔드 단독 컨텍스트에서도 계약 시험을 실행하도록 같은 contracts 폴더에 runtime/첫 사용 안내 fixture를 보존한다. 인증 필수 값은 루트와 동일해야 한다. 저장소 전체 Maven 실행에서는 루트 파일을 우선 복사한다.
 부모 POM과 MyBatis POM 및 npm 정확 버전 메타데이터의 실제 HTTP 200을 확인했다.
 요청의 D1~D6/D9/D13 결정을 적용한다. 역사적 상류 문서는 수정하지 않았으며 JPA validate를 실행했다고 주장하지 않는다.
@@ -71,7 +72,7 @@ useCommitRefresh는 저장 성공 후 재조회 실패를 별도로 알린다. f
 ## 검증
 
 루트에서 `python3 /app/infra/hermes/runner/code_agent_detail/node/self_check.py .`를 실행한다.
-계약 자원의 읽기 한도·루트/백엔드 fixture 일치·무인증 연산 대조 회귀 검증은 `python3 -m unittest discover -s scripts -p 'test_*.py'`로 실행한다(PyYAML 필요).
+계약 자원의 읽기 한도·루트/백엔드 fixture 일치·인증 필수 계약 및 Compose 네트워크 대조 회귀 검증은 `python3 -m unittest discover -s scripts -p 'test_*.py'`로 실행한다(PyYAML 및 Docker Compose 필요).
 이 명령이 Maven/Vitest 시험 및 별도 PostgreSQL migration 검증을 소유한다. Dockerfile 안에서는 테스트를 실행하지 않는다.
 DB 통합 테스트는 명시한 SICOST_TEST_DB_URL, SICOST_TEST_DB_USER, SICOST_TEST_DB_PASSWORD가 제공될 때만 실행한다.
 URL에는 반드시 버려도 되는 독립 시험용 DB를 지정한다. 테스트마다 자체 UUID 스키마를 만들며 다른 스키마/DB를 초기화하거나 삭제하지 않는다.

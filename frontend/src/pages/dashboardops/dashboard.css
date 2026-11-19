@@ -25,6 +25,9 @@
   background: var(--surface);
   box-shadow: var(--e1);
 }
+.dashboard-print-date {
+  display: none;
+}
 .dashboard-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -290,6 +293,87 @@
   }
 }
 @media print {
+  /* The application theme loads after common.css. Its viewport grid/scroll
+     containers must not clip the printed dashboard to the header's height. */
+  html:has(.sicost-screen-host:not([hidden]) [data-testid="dashboard-screen"]),
+  body:has(.sicost-screen-host:not([hidden]) [data-testid="dashboard-screen"]),
+  body:has(.sicost-screen-host:not([hidden]) [data-testid="dashboard-screen"])
+    :is(
+      #root,
+      [data-testid="authentication-content"],
+      .sicost-app,
+      .sicost-app-body,
+      .sicost-main,
+      .sicost-screen-host:not([hidden]),
+      .sicost-screen,
+      .sicost-screen-content
+    ) {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  body:has(.sicost-screen-host:not([hidden]) [data-testid="dashboard-screen"])
+    .sicost-titlebar {
+    position: static !important;
+  }
+  body:has(.sicost-screen-host:not([hidden]) [data-testid="dashboard-screen"])
+    .authentication-recommend {
+    display: none !important;
+  }
+  .sicost-screen-host:has([data-testid="dashboard-screen"])::after {
+    display: none !important;
+  }
+  .dashboard-content .sicost-enter-stage {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .dashboard-print-date {
+    display: inline;
+  }
+  body:has([data-testid="dashboard-screen"]) .sicost-help-tooltip {
+    display: none !important;
+  }
+  /* These buttons are data surfaces, not print actions. Keep their existing DOM. */
+  .dashboard-content button.dashboard-metric,
+  .dashboard-content button.dashboard-list-row {
+    display: flex !important;
+    color: #000;
+    background: #fff;
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+  .dashboard-metric {
+    padding: 12px;
+    border: 1px solid #ccc;
+  }
+  .dashboard-metric > strong {
+    font-size: 22px;
+  }
+  .dashboard-metric .dashboard-basis-period {
+    position: static;
+    width: auto;
+    height: auto;
+    clip-path: none;
+    clip: auto;
+    overflow: visible;
+    white-space: normal;
+  }
+  .dashboard-row-target,
+  .dashboard-row-icon {
+    display: none;
+  }
   .dashboard-toolbar {
     display: none;
   }
@@ -298,6 +382,16 @@
   }
   .dashboard-panel {
     break-inside: avoid;
+    box-shadow: none;
+    margin-bottom: 12px;
+  }
+  .dashboard-panel .sicost-table-viewport,
+  .dashboard-panel > table {
+    overflow: visible;
+  }
+  .dashboard-content,
+  .dashboard-stack {
+    display: block;
   }
   .dashboard-main-grid,
   .dashboard-two-grid,

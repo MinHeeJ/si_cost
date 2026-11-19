@@ -6,7 +6,7 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
   const series = [
     { key: "salesAmount", label: "매출", style: "sales" },
     { key: "salesCostAmount", label: "매출원가", style: "cost" },
-    { key: "salesTargetAmount", label: "ALL 매출목표", style: "target" },
+    { key: "salesTargetAmount", label: "회사 전체 매출목표", style: "target" },
   ] as const;
   const values = rows.flatMap((row) =>
     series.flatMap((s) => (row[s.key] == null ? [] : [BigInt(row[s.key]!)])),
@@ -21,7 +21,8 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
   return (
     <div className="dashboard-chart">
       <small>
-        단위: 백만원 · 실적 실선 / ALL 매출목표 점선 · 미확인은 연결하지 않음
+        단위: 백만원 · 실적 실선 / 회사 전체 매출목표 점선 · 미확인은 연결하지
+        않음
       </small>
       <ChartHost
         option={seriesChartOptions({
@@ -38,7 +39,7 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
         <svg
           viewBox="0 0 560 215"
           role="img"
-          aria-label="매출·매출원가 실선과 ALL 매출목표 점선"
+          aria-label="매출·매출원가 실선과 회사 전체 매출목표 점선"
         >
           {[low, high].map((value, index) => (
             <g key={index}>
