@@ -47,8 +47,54 @@
 .roles-editor h3 {
   margin: 0;
 }
+.roles-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 14px 20px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+  box-shadow: 0 -10px 24px -18px rgba(17, 24, 39, 0.35);
+}
 .roles-editor td details {
   white-space: normal;
   overflow-wrap: anywhere;
   max-width: 300px;
+}
+
+.roles-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.roles-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
+}
+
+.roles-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }

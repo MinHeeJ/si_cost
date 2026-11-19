@@ -42,8 +42,9 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px 32px;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 20px 24px;
   margin: 0 0 24px;
 }
@@ -51,6 +52,18 @@
   font-size: 16px;
   font-weight: 700;
   padding: 0 8px;
+}
+.project-form-dialog .sicost-form-page > header {
+  padding: 0 0 16px;
+}
+.project-form-dialog .project-toolbar {
+  position: sticky;
+  bottom: -18px;
+  margin: 0 -24px -18px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  z-index: 2;
 }
 .project-form-grid p,
 .project-help {
@@ -74,9 +87,17 @@
   overflow-wrap: anywhere;
 }
 .project-tabs {
-  border-bottom: 1px solid var(--divider);
-  padding-bottom: 8px;
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .project-tabs [aria-selected="true"] {
   color: var(--primary);
@@ -97,9 +118,10 @@
 }
 .project-card {
   background: var(--surface);
-  border: 1px solid var(--divider);
+  border: 0;
+  box-shadow: var(--e1);
   padding: 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   display: grid;
   gap: 8px;
 }
@@ -125,4 +147,27 @@
 }
 .project-search input {
   min-width: 220px;
+}
+
+.project-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.project-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
 }

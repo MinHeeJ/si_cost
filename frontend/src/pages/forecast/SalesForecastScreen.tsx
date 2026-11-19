@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -8,6 +10,8 @@ import {
   type AmountUnit,
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import { SalesForecastDownloadPanel } from "./SalesForecastDownloadPanel";
 import * as api from "./salesForecastApi";
 import "./salesForecast.css";
@@ -133,7 +137,7 @@ export function SalesForecastPanel() {
               ))}
             </div>
           )}
-          <div className="sales-forecast-summary">
+          <KpiStrip className="sales-forecast-summary">
             <article data-testid="forecast-revenue-card">
               <p>6개월 예상매출</p>
               <strong>
@@ -160,7 +164,7 @@ export function SalesForecastPanel() {
                 {data.summary.hiringJobCount} <small>개</small>
               </strong>
             </article>
-          </div>
+          </KpiStrip>
           <div className="sales-forecast-charts">
             <ForecastBars
               title="월별 예상매출"
@@ -214,7 +218,7 @@ export function SalesForecastPanel() {
               <table className="sicost-table">
                 <thead>
                   <tr>
-                    <th scope="col">구분</th>
+                    <th scope="col">구분<FieldHelp label="구분" kind="B" /></th>
                     {data.revenueMonths.map((m) => (
                       <th scope="col" key={m.month}>
                         {m.month}
@@ -255,7 +259,7 @@ export function SalesForecastPanel() {
                     ] as const
                   ).map(([label, key]) => (
                     <tr key={key} className="sales-forecast-total">
-                      <th scope="row">{label}</th>
+                      <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                       {data.revenueMonths.map((m) => (
                         <td key={m.month} className="sicost-decimal">
                           {money(m[key])}
@@ -275,7 +279,7 @@ export function SalesForecastPanel() {
               <table className="sicost-table">
                 <thead>
                   <tr>
-                    <th>구분</th>
+                    <th>구분<FieldHelp label="구분" kind="B" /></th>
                     {data.workforce.totals.map((m) => (
                       <th key={m.month}>{m.month}</th>
                     ))}
@@ -291,7 +295,7 @@ export function SalesForecastPanel() {
                     ] as const
                   ).map(([label, key]) => (
                     <tr key={key}>
-                      <th scope="row">{label}</th>
+                      <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                       {data.workforce.totals.map((m) => (
                         <td
                           key={m.month}
@@ -331,7 +335,7 @@ export function SalesForecastPanel() {
                 <table className="sicost-table">
                   <thead>
                     <tr>
-                      <th>직무</th>
+                      <th>직무<FieldHelp label="직무" kind="B" /></th>
                       <th>첫부족월</th>
                       <th>최대부족</th>
                       <th>권장시작</th>
@@ -434,54 +438,79 @@ function ForecastBars({
         <span className="sales-forecast-legend-info">■ {labels[1]}</span> ·{" "}
         {unit ?? "명"}
       </p>
-      <svg viewBox="0 0 600 225" role="img" aria-label={title}>
-        {rows.map((r, i) => {
-          const a = (Number(r.first ?? 0) / maximum) * 145,
-            b = (Number(r.second ?? 0) / maximum) * 145,
-            x = 25 + i * 96;
-          return (
-            <g key={r.month}>
-              <title>
-                {r.month} · {labels[0]}{" "}
-                {unit
-                  ? formatIntegerAmount(r.first, unit)
-                  : formatFixedDecimal(r.first, 1)}{" "}
-                · {labels[1]}{" "}
-                {unit
-                  ? formatIntegerAmount(r.second, unit)
-                  : formatFixedDecimal(r.second, 1)}
-              </title>
-              {r.first != null && (
-                <rect
-                  x={x}
-                  y={175 - a}
-                  width={stacked ? 45 : 23}
-                  height={a}
-                  fill="var(--primary)"
-                />
-              )}
-              {r.second != null && (
-                <rect
-                  x={stacked ? x : x + 27}
-                  y={175 - b - (stacked ? a : 0)}
-                  width={stacked ? 45 : 23}
-                  height={b}
-                  fill="var(--info)"
-                />
-              )}
-              <text x={x} y="200">
-                {r.month}
-              </text>
-              {(r.first == null || r.second == null) && (
-                <text x={x} y="25">
-                  미확인
-                </text>
-              )}
-            </g>
-          );
+      <ChartHost
+        option={seriesChartOptions({
+          categories: rows.map((row) => row.month),
+          series: [
+            {
+              name: labels[0],
+              type: "bar",
+              values: rows.map((row) => row.first),
+              stack: stacked ? "forecast" : undefined,
+            },
+            {
+              name: labels[1],
+              type: "bar",
+              values: rows.map((row) => row.second),
+              stack: stacked ? "forecast" : undefined,
+            },
+          ],
+          formatValue: (value) =>
+            unit
+              ? `${formatIntegerAmount(value, unit)} ${unit}`
+              : `${formatFixedDecimal(value, 1)}명`,
+          axisUnit: unit ?? "명",
         })}
-        <line x1="15" x2="590" y1="175" y2="175" stroke="var(--divider)" />
-      </svg>
+      >
+        <svg viewBox="0 0 600 225" role="img" aria-label={title}>
+          {rows.map((r, i) => {
+            const a = (Number(r.first ?? 0) / maximum) * 145,
+              b = (Number(r.second ?? 0) / maximum) * 145,
+              x = 25 + i * 96;
+            return (
+              <g key={r.month}>
+                <title>
+                  {r.month} · {labels[0]}{" "}
+                  {unit
+                    ? formatIntegerAmount(r.first, unit)
+                    : formatFixedDecimal(r.first, 1)}{" "}
+                  · {labels[1]}{" "}
+                  {unit
+                    ? formatIntegerAmount(r.second, unit)
+                    : formatFixedDecimal(r.second, 1)}
+                </title>
+                {r.first != null && (
+                  <rect
+                    x={x}
+                    y={175 - a}
+                    width={stacked ? 45 : 23}
+                    height={a}
+                    fill="var(--primary)"
+                  />
+                )}
+                {r.second != null && (
+                  <rect
+                    x={stacked ? x : x + 27}
+                    y={175 - b - (stacked ? a : 0)}
+                    width={stacked ? 45 : 23}
+                    height={b}
+                    fill="var(--info)"
+                  />
+                )}
+                <text x={x} y="200">
+                  {r.month}
+                </text>
+                {(r.first == null || r.second == null) && (
+                  <text x={x} y="25">
+                    미확인
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          <line x1="15" x2="590" y1="175" y2="175" stroke="var(--divider)" />
+        </svg>
+      </ChartHost>
     </section>
   );
 }

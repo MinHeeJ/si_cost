@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -227,7 +228,7 @@ function ReceivablesContent({
           <p className="billing-review-caption">
             기준일 {data.asOfDate} · 이월 포함 전체 연체 · 단위 {amountUnit}
           </p>
-          <div className="billing-review-cards">
+          <KpiStrip className="billing-review-cards">
             {data.cards.map((card) => (
               <article
                 key={card.step}
@@ -242,7 +243,7 @@ function ReceivablesContent({
                 </StatusBadge>
               </article>
             ))}
-          </div>
+          </KpiStrip>
           <p className="sicost-banner sicost-tone-info">
             다시알림은 실제 수신자와 잔액을 확인한 뒤 요청합니다. 현재
             수신대상과 과거 실제 수신자는 다릅니다. 기준일 이전의 모든 연체를

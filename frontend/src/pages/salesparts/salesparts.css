@@ -61,9 +61,10 @@
 .sales-part-cards article {
   display: grid;
   gap: 8px;
-  border: 1px solid var(--divider);
+  border: 0;
+  box-shadow: var(--e1);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 16px;
 }
 @media (max-width: 767px) {

@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
@@ -125,7 +126,8 @@ export function AssignmentDrawer({
         retry={() => void load().catch(() => {})}
       />
       {message && <p role="status">{message}</p>}
-      <nav
+      <SegmentedTabList
+        as="nav"
         className="assignment-tabs"
         role="tablist"
         aria-label="투입 배정 상세 영역"
@@ -148,7 +150,7 @@ export function AssignmentDrawer({
         >
           변경 이력 ({history?.total ?? "–"})
         </button>
-      </nav>
+      </SegmentedTabList>
       {row && (
         <>
           <dl className="assignment-details">

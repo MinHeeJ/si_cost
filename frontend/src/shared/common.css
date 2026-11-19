@@ -5,9 +5,9 @@
   --text: #111827;
   --text-sub: #4b5563;
   --text-dis: #9ca3af;
-  --border: #d1d5db;
-  --divider: #e5e7eb;
-  --bg: #f9fafb;
+  --border: #d5dae1;
+  --divider: #e7eaee;
+  --bg: #f7f8fa;
   --surface: #fff;
   --head-bg: #f3f4f6;
   --ok: #15803d;
@@ -21,12 +21,16 @@
   --lock: #4b5563;
   --lock-bg: #f3f4f6;
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
-  font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic",
-    "Apple SD Gothic Neo", system-ui, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05),
+    0 6px 16px rgba(17, 24, 39, 0.07);
+  --e1: 0 0 0 1px rgba(17, 24, 39, 0.06), 0 1px 2px rgba(17, 24, 39, 0.04);
+  --ring: rgba(29, 78, 216, 0.2);
+  font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR",
+    "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
   font-size: 14px;
-  line-height: 20px;
+  line-height: 21px;
 }
 * {
   box-sizing: border-box;

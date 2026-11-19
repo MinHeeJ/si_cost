@@ -18,14 +18,20 @@
 .bill-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .bill-summary article {
   display: grid;
   gap: 8px;
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .bill-summary strong {
@@ -42,8 +48,9 @@
 .bill-filters {
   padding: 16px;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
 }
 .bill-filters input,
 .bill-filters select,
@@ -105,7 +112,7 @@
 }
 .bill-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .bill-form > p,
@@ -133,7 +140,17 @@
   overflow-wrap: anywhere;
 }
 .bill-tabs {
-  border-bottom: 1px solid var(--divider);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .bill-tabs button[aria-selected="true"] {
   color: var(--primary);
@@ -161,8 +178,9 @@
     gap: 12px;
   }
   .bill-mobile article {
-    border: 1px solid var(--divider);
-    border-radius: 8px;
+    border: 0;
+    box-shadow: var(--e1);
+    border-radius: 10px;
     padding: 16px;
     background: var(--surface);
   }
@@ -209,4 +227,37 @@
   font-size: 11px;
   line-height: 1.35;
   white-space: normal;
+}
+
+.bill-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
+}
+
+.bill-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.bill-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
 }

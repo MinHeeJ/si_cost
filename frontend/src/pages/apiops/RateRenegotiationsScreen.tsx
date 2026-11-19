@@ -1,3 +1,7 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -223,12 +227,8 @@ export function RateRenegotiationsScreen({
         )
           ? "left"
           : "right",
-        label: (
-          <span title={help[id]}>
-            {label}
-            {help[id] && " ⓘ"}
-          </span>
-        ),
+        label,
+        help: help[id] ? <HelpTooltip label={label} iconOnly>{help[id]}</HelpTooltip> : undefined,
         render: (row) => {
           const marker = row.assignmentId
             .toLowerCase()
@@ -295,15 +295,13 @@ export function RateRenegotiationsScreen({
             );
           if (id === "contractMm")
             return (
-              <span
-                title={`계약MM k=${row.contractMm} / 기준월 월MM m=${row.monthlyMm}`}
-              >
-                <ProfitabilityValue value={row.contractMm} kind="mm" />
-              </span>
+              <HelpTooltip label="계약 MM" trigger={<ProfitabilityValue value={row.contractMm} kind="mm" />}>
+                계약 MM {row.contractMm} / 기준월 월 MM {row.monthlyMm}
+              </HelpTooltip>
             );
           const value = row[id as keyof api.RenegotiationRow] as string | null;
           return (
-            <span title={row.issues?.map((i) => i.message).join(" · ")}>
+            <span>
               <ProfitabilityValue
                 value={value}
                 kind={
@@ -313,6 +311,7 @@ export function RateRenegotiationsScreen({
                 }
                 unit={unit}
               />
+              {Boolean(row.issues?.length) && <HelpTooltip label={`${label} 확인사항`} iconOnly>{row.issues?.map(i => i.message).join(" · ")}</HelpTooltip>}
             </span>
           );
         },
@@ -336,40 +335,45 @@ export function RateRenegotiationsScreen({
           {formatDateTime(data?.calculatedAt)}
         </span>
         {canDownload && (
-          <button
-            className="sicost-button renegotiation-download"
-            data-testid="renegotiation-download"
-            type="button"
-            disabled={!canDownload || !data || loading || exporting}
-            onClick={async () => {
-              if (exporting) return;
-              setExporting(true);
-              setExportError("");
-              try {
-                await api.downloadRenegotiations(
-                  applied,
-                  view.order.filter(
-                    (id) =>
-                      !view.hidden.includes(id) &&
-                      (canCost || id !== "monthlyLaborCost"),
-                  ),
-                  unit,
-                );
-              } catch (e) {
-                if (alive.current)
-                  setExportError(
-                    e instanceof Error ? e.message : "다운로드에 실패했습니다.",
+          <ScreenTitleActions>
+            <button
+              className="sicost-button renegotiation-download"
+              data-testid="renegotiation-download"
+              type="button"
+              disabled={!canDownload || !data || loading || exporting}
+              onClick={async () => {
+                if (exporting) return;
+                setExporting(true);
+                setExportError("");
+                try {
+                  await api.downloadRenegotiations(
+                    applied,
+                    view.order.filter(
+                      (id) =>
+                        !view.hidden.includes(id) &&
+                        (canCost ||
+                          id !== "monthlyLaborCost"),
+                    ),
+                    unit,
                   );
-              } finally {
-                if (alive.current) setExporting(false);
-              }
-            }}
-          >
-            {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
-          </button>
+                } catch (e) {
+                  if (alive.current)
+                    setExportError(
+                      e instanceof Error
+                        ? e.message
+                        : "다운로드에 실패했습니다.",
+                    );
+                } finally {
+                  if (alive.current) setExporting(false);
+                }
+              }}
+            >
+              {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
+            </button>
+          </ScreenTitleActions>
         )}
       </div>
-      <div className="renegotiation-summary">
+      <KpiStrip className="renegotiation-summary">
         <article>
           <h2>대상 인원</h2>
           <strong>{data?.summary.personCount ?? "–"}명</strong>
@@ -399,7 +403,7 @@ export function RateRenegotiationsScreen({
             목표 이익률 {formatRate(data?.targetMarginRate)} · {unit}
           </small>
         </article>
-      </div>
+      </KpiStrip>
       <form
         data-testid="renegotiation-assumption-form"
         className="renegotiation-assumption"
@@ -476,7 +480,7 @@ export function RateRenegotiationsScreen({
         </label>
         <label>
           이익률
-          <select
+          <FieldHelp label="이익률" /><select
             data-testid="renegotiation-margin"
             value={draft.marginBelow}
             onChange={(e) =>

@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { useFieldErrorFocus } from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
@@ -266,7 +267,7 @@ export function AssignmentCreateForm({
     type = "text",
   ) => (
     <label className="sicost-field">
-      {label}
+      {label}<FieldHelp label={label} />
       <input
         data-testid={`assignment-create-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         type={type}

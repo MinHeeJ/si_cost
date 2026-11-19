@@ -1,3 +1,7 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { Pagination } from "../../shared/Pagination";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { Icon } from "../../shared/Icon";
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -63,11 +67,8 @@ export function AssignmentCandidatesPanel({
       className="assignment-form"
       aria-busy={loading}
     >
-      <h2>배정 후보{data ? ` (${data.total})` : ""}</h2>
-      <p className="sicost-banner sicost-tone-info">
-        수주한 기회의 배정 후보입니다. 연도 필터와 별개로 전체 후보를
-        표시합니다.
-      </p>
+      <h2>배정 후보 {data && <span className="sicost-badge sicost-tone-neutral">{data.total}</span>} <HelpTooltip label="배정 후보 안내" iconOnly>수주한 기회의 배정 후보입니다. 연도 필터와 별개로 전체 후보를 표시합니다.</HelpTooltip></h2>
+
       <AssignmentError
         error={error}
         retry={() => {
@@ -82,7 +83,7 @@ export function AssignmentCandidatesPanel({
         data && (
           <>
             {data.items.length === 0 ? (
-              <p>배정 후보가 없습니다.</p>
+              <div className="sicost-empty"><Icon name="folder" size={26} /><p>배정 후보가 없습니다.</p></div>
             ) : (
               <div className="sicost-table-viewport">
                 <table className="sicost-table">
@@ -100,7 +101,7 @@ export function AssignmentCandidatesPanel({
                           data-testid={`assignment-candidate-header-${Array.from(label, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                           key={label}
                         >
-                          {label}
+                          {label}<FieldHelp label={label} kind="B" />
                         </th>
                       ))}
                     </tr>
@@ -152,25 +153,7 @@ export function AssignmentCandidatesPanel({
                 </table>
               </div>
             )}
-            <nav aria-label="배정 후보 페이지">
-              <button
-                type="button"
-                data-testid="candidate-previous"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                이전
-              </button>
-              <span>{page}</span>
-              <button
-                type="button"
-                data-testid="candidate-next"
-                disabled={page * data.size >= data.total || loading}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                다음
-              </button>
-            </nav>
+            <Pagination label="배정 후보 페이지" page={page} size={data.size} total={data.total} onPageChange={setPage} hideSingle testId="candidate" />
           </>
         )
       )}

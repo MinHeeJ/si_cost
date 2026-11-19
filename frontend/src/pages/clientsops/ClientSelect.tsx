@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useId, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import * as api from "./clientActionsApi";
@@ -128,7 +129,7 @@ export function ClientSelect({
             </div>
           ) : (
             <label>
-              {label}
+              {label}<FieldHelp label={label} />
               <select
                 data-testid={`${purpose.toLowerCase()}-client-select`}
                 value={value}

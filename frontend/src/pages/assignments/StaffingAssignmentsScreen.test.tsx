@@ -39,14 +39,14 @@ it("retains loading and real empty list without inventing assignments", async ()
   expect(
     screen.getByText("배정 기간을 불러오는 중입니다."),
   ).toBeInTheDocument();
-  await screen.findByText("조회된 투입 배정이 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   expect(screen.queryByText("AI 추천")).not.toBeInTheDocument();
   expect(screen.queryByText("개인경비")).not.toBeInTheDocument();
   expect(screen.queryByText("청구서 생성")).not.toBeInTheDocument();
 });
 it("download passes selected year and applied filters in won without a unit selector", async () => {
   render(<StaffingAssignmentsScreen />);
-  await screen.findByText("조회된 투입 배정이 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   fireEvent.change(screen.getByTestId("assignments-search"), {
     target: { value: "  Ab_%  " },
   });
@@ -87,7 +87,7 @@ it("download failure retains list and retry never saves the business record", as
     new Error("다운로드 실패"),
   );
   render(<StaffingAssignmentsScreen />);
-  await screen.findByText("조회된 투입 배정이 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   await userEvent.click(screen.getByTestId("assignment-download"));
   await screen.findByText("다운로드 실패");
   expect(api.createAssignment).not.toHaveBeenCalled();

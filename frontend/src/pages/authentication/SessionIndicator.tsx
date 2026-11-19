@@ -112,8 +112,8 @@ export function SessionIndicator({
   }, [remaining]);
   return (
     <div
-      data-testid="authentication-session-indicator"
       className="authentication-session"
+      data-testid="authentication-session-indicator"
     >
       {error && <ErrorBanner message={error} />}
       {!logoutOnly && (

@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -248,7 +249,8 @@ function ClientDrawerContent({
           />
         ) : (
           <>
-            <nav
+            <SegmentedTabList
+              as="nav"
               className="clients-tabs"
               aria-label="거래처 상세 탭"
               role="tablist"
@@ -275,7 +277,7 @@ function ClientDrawerContent({
                   {label}
                 </button>
               ))}
-            </nav>
+            </SegmentedTabList>
             <section role="tabpanel" data-testid={`client-panel-${tab}`}>
               {tab === "basic" && (
                 <>

@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
@@ -172,7 +173,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
           </label>
           <label className="sicost-field">
             직무
-            <input
+            <FieldHelp label="직무" /><input
               data-testid="history-job"
               value={draft.job}
               aria-invalid={Boolean(fields.job)}

@@ -117,7 +117,7 @@
       }
     </style>
   </head>
-  <body data-testid="si-cost-ui-redesign-page">
+  <body data-testid="si-cost-reference-screen">
     <title>SI 원가관리 화면 시안 v1.8 · 리디자인 v23</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -5922,7 +5922,7 @@
       <div class="body">
         <aside class="nav" id="nav" aria-label="메뉴"></aside>
         <div class="navscrim" data-act="navclose"></div>
-        <main id="main" data-testid="si-cost-ui-redesign-main">
+        <main id="main" data-testid="si-cost-reference-main">
           <div
             class="tabbar"
             id="tabbar"
@@ -14479,16 +14479,14 @@ ${[38, 52, 46, 64, 58, 76, 72, 92, 88, 108, 104, 124].map((h, i) => `<rect x="${
         const cs = top(byC);
         const cTop = cs.slice(0, 5);
         if (cs.length > 5) {
-          const r = cs
-            .slice(5)
-            .reduce(
-              (a, x) => ({
-                l: `그 밖 ${cs.length - 5}곳`,
-                rev: a.rev + x.rev,
-                cost: a.cost + x.cost,
-              }),
-              { rev: 0, cost: 0 },
-            );
+          const r = cs.slice(5).reduce(
+            (a, x) => ({
+              l: `그 밖 ${cs.length - 5}곳`,
+              rev: a.rev + x.rev,
+              cost: a.cost + x.cost,
+            }),
+            { rev: 0, cost: 0 },
+          );
           cTop.push(r);
         }
         const rowsDef = [

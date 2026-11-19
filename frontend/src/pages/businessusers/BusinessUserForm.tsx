@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import {
   UserProjectDialog,
@@ -207,7 +208,7 @@ export function BusinessUserForm({
           </fieldset>
           <label className="sicost-field">
             담당파트
-            <select
+            <FieldHelp label="담당파트" /><select
               data-testid="business-user-head-office"
               value={headOffice ? "HQ" : ""}
               disabled={pending}

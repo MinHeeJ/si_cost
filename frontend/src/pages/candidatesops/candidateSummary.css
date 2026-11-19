@@ -3,14 +3,20 @@
 }
 .candidate-summary-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 0;
   margin: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .candidate-summary-metric {
   padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   min-width: 0;
 }
@@ -31,6 +37,35 @@
   font-size: 13px;
   font-weight: 400;
 }
+.candidate-summary-metric > dt::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  margin-right: 6px;
+  background: var(--primary);
+  vertical-align: middle;
+}
+.candidate-summary-secondary {
+  margin-top: 6px;
+}
+.candidate-summary-secondary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.candidate-summary-metric .candidate-summary-secondary :is(dt, dd) {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--text-sub);
+}
+.candidate-summary-secondary dd small {
+  font-size: inherit;
+  margin-left: 2px;
+}
 .candidate-summary-overdue {
   color: var(--bad);
 }
@@ -48,7 +83,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
-  .candidate-summary-metric:last-child {
-    grid-column: 1 / -1;
-  }
+}
+
+.candidate-summary-metrics > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

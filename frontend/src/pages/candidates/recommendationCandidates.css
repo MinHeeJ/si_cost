@@ -80,3 +80,24 @@
     grid-template-columns: 55px minmax(40px, 1fr) auto;
   }
 }
+
+/* UI-30 uses the design's 300px candidate grid; notices keep a full row. */
+.recommendation-candidates[data-screen-id="SCR-UI-30"] {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+.recommendation-candidates[data-screen-id="SCR-UI-30"] > :not(article) {
+  grid-column: 1 / -1;
+}
+.recommendation-candidates[data-screen-id="SCR-UI-30"] > article {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.recommendation-candidates[data-screen-id="SCR-UI-30"] > article header {
+  align-items: flex-start;
+}
+.recommendation-candidates[data-screen-id="SCR-UI-30"] > article footer {
+  margin-top: auto;
+  justify-content: flex-end;
+}

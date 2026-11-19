@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -91,8 +93,10 @@ export function PermissionsScreen({
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
   }, [dirty, onDirtyChange]);
+  const requestPending = useRef(false), lastReceived = useRef(0);
   async function load(id?: string) {
     const seq = ++sequence.current;
+    requestPending.current = true;
     setLoading(true);
     setError(undefined);
     try {
@@ -110,6 +114,7 @@ export function PermissionsScreen({
       setMenus(tree.items);
       setSaved(detail);
       setDraft(detail);
+      lastReceived.current = Date.now();
       setPage(1);
     } catch (e) {
       if (seq === sequence.current) {
@@ -117,7 +122,7 @@ export function PermissionsScreen({
         throw e;
       }
     } finally {
-      if (seq === sequence.current) setLoading(false);
+      if (seq === sequence.current) { requestPending.current = false; setLoading(false); }
     }
   }
   useEffect(() => {
@@ -128,7 +133,7 @@ export function PermissionsScreen({
   }, []);
   useEffect(() => {
     const focus = () => {
-      if (!dirtyRef.current) void load(saved?.roleId).catch(() => {});
+      if (!dirtyRef.current && document.visibilityState === "visible" && !requestPending.current && Date.now()-lastReceived.current >= 30_000) void load(saved?.roleId).catch(() => {});
     };
     window.addEventListener("focus", focus);
     return () => window.removeEventListener("focus", focus);
@@ -342,7 +347,12 @@ export function PermissionsScreen({
         </p>
       ))}
       <div className="roles-toolbar">
-        <div role="tablist" aria-label="역할" className="roles-tabs">
+        <SegmentedTabList
+          as="div"
+          role="tablist"
+          aria-label="역할"
+          className="roles-tabs"
+        >
           {roles.map((role) => (
             <button
               role="tab"
@@ -361,7 +371,7 @@ export function PermissionsScreen({
               {role.name}
             </button>
           ))}
-        </div>
+        </SegmentedTabList>
         <button
           data-testid="role-refresh"
           disabled={pending || loading}
@@ -370,13 +380,13 @@ export function PermissionsScreen({
           최신값 다시 조회
         </button>
       </div>
-      {loading && <p role="status">역할 설정을 불러오고 있습니다.</p>}
+      {loading && <p role="status" className={draft ? "sicost-refresh-status" : undefined}>{draft ? "갱신 중…" : "역할 설정을 불러오고 있습니다."}</p>}
       {!loading && !roles.length && !error && (
         <p className="sicost-empty" role="status">
           사용 중인 역할이 없습니다. 역할을 추가해 주세요.
         </p>
       )}
-      {draft && !loading && (
+      {draft && (
         <div
           role="tabpanel"
           data-testid="role-editor-panel"
@@ -399,9 +409,9 @@ export function PermissionsScreen({
             )}
             <label className="sicost-field">
               데이터범위
-              <ScopeSelect
+              <FieldHelp label="데이터범위" /><ScopeSelect
                 testId="role-scope"
-                disabled={!canUpdate || pending}
+                disabled={!canUpdate || pending || loading}
                 value={draft.dataScope}
                 onChange={(value) => setDraft({ ...draft, dataScope: value })}
               />
@@ -409,7 +419,7 @@ export function PermissionsScreen({
             <label>
               <input
                 data-testid="role-sensitive"
-                disabled={!canUpdate || pending}
+                disabled={!canUpdate || pending || loading}
                 type="checkbox"
                 checked={draft.sensitiveView}
                 onChange={(e) =>
@@ -429,7 +439,7 @@ export function PermissionsScreen({
                 <tr>
                   <th>서브메뉴</th>
                   {actions.map(([key, label]) => (
-                    <th key={key}>{label}</th>
+                    <th key={key}>{label}<FieldHelp label={label} kind="B" /></th>
                   ))}
                 </tr>
               </thead>
@@ -465,7 +475,7 @@ export function PermissionsScreen({
                                 aria-label={`${row.name} ${label}`}
                                 data-testid={`role-${row.menuId}-${key}`}
                                 checked={row[key]}
-                                disabled={!canUpdate || pending}
+                                disabled={!canUpdate || pending || loading}
                                 onChange={(e) =>
                                   setDraft({
                                     ...draft,
@@ -495,7 +505,7 @@ export function PermissionsScreen({
             확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
             마감해제는 별도 관리자 자격을 검사합니다.
           </p>
-          <div className="roles-toolbar">
+          <div className="roles-toolbar roles-savebar">
             <div>
               <button
                 data-testid="role-page-previous"
@@ -539,7 +549,7 @@ export function PermissionsScreen({
               {canUpdate && (
                 <button
                   data-testid="role-cancel"
-                  disabled={pending || !dirty}
+                  disabled={pending || loading || !dirty}
                   onClick={() => setDraft(saved)}
                 >
                   취소
@@ -549,7 +559,7 @@ export function PermissionsScreen({
                 <button
                   data-testid="role-save"
                   className="sicost-primary"
-                  disabled={pending || !dirty}
+                  disabled={pending || loading || !dirty}
                   onClick={() => void save()}
                 >
                   저장
@@ -710,7 +720,7 @@ export function PermissionsScreen({
             <>
               <label className="sicost-field">
                 데이터범위
-                <ScopeSelect
+                <FieldHelp label="데이터범위" /><ScopeSelect
                   testId="role-create-scope"
                   value={newScope}
                   onChange={setNewScope}

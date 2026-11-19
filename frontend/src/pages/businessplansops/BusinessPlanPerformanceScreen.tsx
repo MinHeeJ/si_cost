@@ -1,3 +1,7 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { FinancialOverview } from "../../shared/FinancialOverview";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -169,50 +173,52 @@ export function BusinessPlanPerformanceScreen({
         data-testid="business-plan-performance"
         data-screen-id="SCR-UI-18"
       >
-        <div className="business-plan-toolbar">
-          <label>
-            단위{" "}
-            <select
-              data-testid="business-plan-unit"
-              value={unit}
-              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+        <ScreenTitleActions>
+          <div className="business-plan-toolbar">
+            <label>
+              단위{" "}
+              <select
+                data-testid="business-plan-unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value as AmountUnit)}
+              >
+                <option>원</option>
+                <option>천원</option>
+                <option>백만원</option>
+              </select>
+            </label>
+            <button
+              data-testid="business-plan-template"
+              type="button"
+              disabled={!period || downloading || mobile}
+              onClick={() => void template()}
             >
-              <option>원</option>
-              <option>천원</option>
-              <option>백만원</option>
-            </select>
-          </label>
-          <button
-            data-testid="business-plan-template"
-            type="button"
-            disabled={!period || downloading || mobile}
-            onClick={() => void template()}
-          >
-            양식 내려받기
-          </button>
-          <button
-            data-testid="business-plan-upload"
-            className="sicost-primary"
-            type="button"
-            disabled={
-              !data ||
-              mobile ||
-              data.context.year !== Number(data.context.nowMonth.slice(0, 4))
-            }
-            onClick={() => {
-              setUploadYear(Number(data!.context.nowMonth.slice(0, 4)));
-              setUpload(true);
-            }}
-          >
-            목표 업로드
-          </button>
-          {data && (
-            <span>
-              양식: {data.context.year}년 · 업로드:{" "}
-              {data.context.nowMonth.slice(0, 4)}년 목표
-            </span>
-          )}
-        </div>
+              양식 내려받기
+            </button>
+            <button
+              data-testid="business-plan-upload"
+              className="sicost-primary"
+              type="button"
+              disabled={
+                !data ||
+                mobile ||
+                data.context.year !== Number(data.context.nowMonth.slice(0, 4))
+              }
+              onClick={() => {
+                setUploadYear(Number(data!.context.nowMonth.slice(0, 4)));
+                setUpload(true);
+              }}
+            >
+              목표 업로드
+            </button>
+            {data && (
+              <span>
+                양식: {data.context.year}년 · 업로드:{" "}
+                {data.context.nowMonth.slice(0, 4)}년 목표
+              </span>
+            )}
+          </div>
+        </ScreenTitleActions>
         {mobile && (
           <p role="note">목표 업로드와 양식 내려받기는 PC에서 이용해 주세요.</p>
         )}
@@ -234,27 +240,8 @@ export function BusinessPlanPerformanceScreen({
         )}
         {data && (
           <>
-            <p className="business-plan-context">
-              {data.context.year}년 1~{data.context.month.slice(5)}월 · 회사
-              전체 · 읽기 전용 · 조회 {formatDateTime(data.context.snapshotAt)}
-            </p>
-            {data.context.year !==
-              Number(data.context.nowMonth.slice(0, 4)) && (
-              <p className="business-plan-warning">
-                지난 해 실적·목표는 읽기 전용입니다.
-              </p>
-            )}
-            {data.notices.map((notice, index) => (
-              <p
-                className="business-plan-warning"
-                role="note"
-                key={index}
-                data-testid={`business-plan-notice-${index}`}
-              >
-                {notice}
-              </p>
-            ))}
-            <div className="business-plan-summary">
+            <FinancialOverview comparison="사업계획 목표·실적" context={data.context} months={data.months.map(m=>m.actual)} provisional={data.months.some(m=>m.actual.provisional)} notices={data.notices} />
+            <KpiStrip className="business-plan-summary">
               {data.summary.map((summary) => (
                 <article
                   key={summary.metric}
@@ -280,7 +267,7 @@ export function BusinessPlanPerformanceScreen({
                   )}
                 </article>
               ))}
-            </div>
+            </KpiStrip>
             <BusinessPlanRevenueChart months={data.months} unit={unit} />
             <div className="business-plan-scroll">
               <table
@@ -291,10 +278,7 @@ export function BusinessPlanPerformanceScreen({
                   <tr>
                     <th>항목</th>
                     {data.months.map((month, index) => (
-                      <th
-                        key={month.month}
-                        data-testid={`business-plan-month-header-${month.month}`}
-                      >
+                      <th key={month.month} data-testid={`business-plan-month-header-${month.month}`}>
                         {index + 1}월<br />
                         <StatusBadge
                           tone={
@@ -329,7 +313,7 @@ export function BusinessPlanPerformanceScreen({
                       data-testid={`business-plan-row-${row.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
                     >
                       <th scope="row">
-                        {row.label}{" "}
+                        {row.label}<FieldHelp label={row.label} kind="B" />{" "}
                         {row.amount && (
                           <span
                             tabIndex={0}

@@ -71,14 +71,22 @@ public class WorkforceCalendarService {
         for(var r:rows){Person p=people.get(r.developerId());Cell c=cell(p,current,context);if(c.status().equals("AVAILABLE"))available++;spare=spare.add(spare(p,c));third=third.add(spare(p,cell(p,current.plusMonths(3),context)));if(c.assignmentCount()>=2)concurrent++;if(c.overAssigned())over++;
             if(r.lastWithdrawalDate()!=null&&!r.lastWithdrawalDate().isBefore(day)&&!r.lastWithdrawalDate().isAfter(current.plusMonths(2).atEndOfMonth())){leaving++;if(context.sources().assignments().stream().anyMatch(a->a.source().developerId().equals(p.id())&&a.source().endDate().equals(r.lastWithdrawalDate())&&"H".equals(a.source().extensionPossibility())))high++;}
         }
-        return new CalendarPage(all?List.copyOf(rows):StaffingQueryInput.page(rows,paging),rows.size(),paging.page(),paging.size(),year,new Summary(available,spare.setScale(2).toPlainString(),leaving,high,concurrent,over,third.setScale(2).toPlainString()),List.copyOf(totals));
+        // Fetch display labels only for the already filtered, visible page. Calculations above stay unchanged.
+        List<CalendarPerson> visible=all?List.copyOf(rows):StaffingQueryInput.page(rows,paging);
+        Map<String,String> labels=new HashMap<>();
+        if(!visible.isEmpty()) {
+            var display=mapper.personDisplays(visible.stream().map(CalendarPerson::developerId).toList());
+            if(display!=null)display.forEach(p->labels.put(p.id(),p.managementNo()));
+        }
+        visible=visible.stream().map(p->new CalendarPerson(p.developerId(),p.name(),p.jobCode(),p.gradeCode(),p.employeeType(),p.lastWithdrawalDate(),p.cells(),labels.get(p.developerId()))).toList();
+        return new CalendarPage(visible,rows.size(),paging.page(),paging.size(),year,new Summary(available,spare.setScale(2).toPlainString(),leaving,high,concurrent,over,third.setScale(2).toPlainString()),List.copyOf(totals));
     }
     private BigDecimal spare(Person person,Cell cell){return !"Y".equals(person.useYn())||Set.of("BEFORE_JOIN","RETIRED","LEAVE").contains(cell.status())?BigDecimal.ZERO:BigDecimal.ONE.subtract(new BigDecimal(cell.actualMm())).max(BigDecimal.ZERO);}
     private Cell cell(Person person,YearMonth month,Context ctx){
         List<ProjectMm> projects=new ArrayList<>();BigDecimal mm=BigDecimal.ZERO;
         for(var a:ctx.sources().assignments())if(a.source().developerId().equals(person.id()))for(var m:a.months())if(m.month().equals(month.toString())&&new BigDecimal(m.monthlyMm()).signum()>0){
             boolean pre=ctx.sources().projects().stream().anyMatch(p->p.id().equals(a.source().projectId())&&p.status().equals("PRE"));
-            projects.add(new ProjectMm(a.source().projectId(),m.monthlyMm(),a.source().endDate(),a.source().extensionPossibility(),pre));mm=mm.add(new BigDecimal(m.monthlyMm()));
+            projects.add(new ProjectMm(a.source().projectId(),m.monthlyMm(),a.source().endDate(),a.source().extensionPossibility(),pre,ctx.sources().projects().stream().filter(p->p.id().equals(a.source().projectId())).map(SalesForecastSources.Project::name).findFirst().orElse(null)));mm=mm.add(new BigDecimal(m.monthlyMm()));
         }
         var tents=ctx.tentatives().stream().filter(t->person.id().equals(t.developerId())&&month.compareTo(SalesWorkforceProjectionService.parse(t.startMonth()))>=0&&month.compareTo(SalesWorkforceProjectionService.parse(t.endMonth()))<=0).toList();
         YearMonth current=YearMonth.from(ctx.day());boolean past=month.isBefore(current);

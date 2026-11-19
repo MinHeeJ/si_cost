@@ -1,3 +1,6 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -104,7 +107,7 @@ export function SettlementRestrictedView({
       data-screen-id="SCR-UI-19"
     >
       <h1>영업 파트 정산</h1>
-      <div role="tablist" aria-label="영업 파트">
+      <SegmentedTabList as="div" role="tablist" aria-label="영업 파트">
         {tabs?.parts.map((part) => (
           <button
             key={part.partId}
@@ -116,7 +119,7 @@ export function SettlementRestrictedView({
             {part.partName}
           </button>
         ))}
-      </div>
+      </SegmentedTabList>
       {message != null && (
         <ErrorBanner
           message={
@@ -144,7 +147,10 @@ export function SettlementRestrictedView({
                 ? "마감자동"
                 : "확정"}
           </p>
-          <div className="settlement-summary" data-testid="settlement-summary">
+          <KpiStrip
+            className="settlement-summary"
+            data-testid="settlement-summary"
+          >
             <article>
               <h2>파트장</h2>
               <strong>{data.standard.leaderName ?? "–"}</strong>
@@ -165,7 +171,7 @@ export function SettlementRestrictedView({
               <h2>적자 인원</h2>
               <strong>{data.summary.deficitPersonCount}명</strong>
             </article>
-          </div>
+          </KpiStrip>
           <p>
             수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
           </p>
@@ -207,7 +213,7 @@ export function SettlementRestrictedView({
                   <thead>
                     <tr>
                       <th>월</th>
-                      <th>상태</th>
+                      <th>상태<FieldHelp label="상태" kind="B" /></th>
                       <th>인원</th>
                       <th>흑자 인원</th>
                       <th>적자 인원</th>

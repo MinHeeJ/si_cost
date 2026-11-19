@@ -45,14 +45,17 @@ export function AnalysisConversation({
   }, []);
   const text = a.question.trim(),
     valid = [...text].length >= 1 && [...text].length <= 1000;
+  const testPrefix = compact ? "analysis-side" : "analysis-main";
   return (
     <div
       className={`analysis-workspace${compact ? " compact" : ""}`}
       data-screen-id={compact ? "SCR-UI-26-P1" : "SCR-UI-26"}
+      data-testid={`${testPrefix}-conversation`}
     >
       <button
         type="button"
         className="analysis-history-toggle"
+        data-testid={`${testPrefix}-history-toggle`}
         onClick={() => setShowHistory((v) => !v)}
         aria-expanded={showHistory}
       >
@@ -63,7 +66,11 @@ export function AnalysisConversation({
         <aside className="analysis-history" aria-label="질문 기록">
           <header>
             <h2>질문 기록</h2>
-            <button type="button" onClick={() => void a.refresh()}>
+            <button
+              type="button"
+              data-testid={`${testPrefix}-history-refresh`}
+              onClick={() => void a.refresh()}
+            >
               새로고침
             </button>
           </header>
@@ -74,10 +81,14 @@ export function AnalysisConversation({
             />
           )}
           {!a.history.length && !a.historyError && <p>아직 질문이 없습니다.</p>}
-          {a.history.map((h) => (
-            <article key={h.qnaId}>
+          {a.history.map((h, index) => (
+            <article
+              key={h.qnaId}
+              data-testid={`${testPrefix}-history-row-${index}`}
+            >
               <button
                 className="analysis-history-title"
+                data-testid={`${testPrefix}-history-ask-${index}`}
                 type="button"
                 disabled={a.pending}
                 onClick={() => void a.askAgain(h.qnaId)}
@@ -89,13 +100,21 @@ export function AnalysisConversation({
                 {formatDateTime(h.questionAt)} · {states[h.status]}{" "}
                 {h.provisional && "· 잠정"}
               </small>
-              <button type="button" onClick={() => void a.view(h.qnaId)}>
+              <button
+                type="button"
+                data-testid={`${testPrefix}-history-view-${index}`}
+                onClick={() => void a.view(h.qnaId)}
+              >
                 답변 보기
               </button>
             </article>
           ))}
           {a.cursor && (
-            <button type="button" onClick={() => void a.refresh(true)}>
+            <button
+              type="button"
+              data-testid={`${testPrefix}-history-more`}
+              onClick={() => void a.refresh(true)}
+            >
               더 보기 (50건)
             </button>
           )}
@@ -158,6 +177,7 @@ export function AnalysisConversation({
                 금액 단위{" "}
                 <select
                   aria-label="답변 금액 단위"
+                  data-testid={`${testPrefix}-amount-unit`}
                   value={unit}
                   onChange={(e) => setUnit(e.target.value as AmountUnit)}
                 >
@@ -224,6 +244,7 @@ export function AnalysisConversation({
                 <button
                   type="button"
                   key={i}
+                  data-testid={`${testPrefix}-source-${i}`}
                   onClick={() => {
                     const destination = analysisDestination(link);
                     navigate(destination.to, { state: destination.state });
@@ -236,6 +257,7 @@ export function AnalysisConversation({
               {a.result.status === "OK" && a.qnaId && (
                 <button
                   type="button"
+                  data-testid={`${testPrefix}-download`}
                   onClick={() =>
                     void downloadQuestion(a.qnaId!).catch((e) =>
                       a.setError(
@@ -268,11 +290,12 @@ export function AnalysisConversation({
               "다음 분기 대기 인력",
               "이번 달 적자 인력",
               "이번 달 매출·영업이익",
-            ].map((q) => (
+            ].map((q, index) => (
               <button
                 type="button"
                 disabled={a.pending}
                 key={q}
+                data-testid={`${testPrefix}-suggestion-${index}`}
                 onClick={() => void a.send(q)}
               >
                 {q}
@@ -283,6 +306,7 @@ export function AnalysisConversation({
           <div className="analysis-input">
             <textarea
               id={id}
+              data-testid={`${testPrefix}-question`}
               value={a.question}
               placeholder="조회할 대상·기간·지표를 입력하세요"
               aria-invalid={!valid && Boolean(a.question)}
@@ -303,6 +327,7 @@ export function AnalysisConversation({
             <button
               type="button"
               className="sicost-primary"
+              data-testid={`${testPrefix}-send`}
               disabled={!valid || a.pending}
               onClick={() => void a.send()}
             >
@@ -311,7 +336,9 @@ export function AnalysisConversation({
           </div>
           <small
             id={`${id}-error`}
-            className={!valid ? "sicost-field-error" : ""}
+            className={
+              !valid && Boolean(a.question) ? "sicost-field-error" : ""
+            }
           >
             {!valid
               ? "질문은 앞뒤 공백을 제외하고 1~1000자로 입력해 주세요."
@@ -365,7 +392,9 @@ function AnalysisResultTable({
         >
           {display(cell(r, c.key)?.value, c.key)}
           {cell(r, c.key)?.reason && <small> · {cell(r, c.key)?.reason}</small>}
-          {c.key === table.columns[0].key && r.reason && <small> · {r.reason}</small>}
+          {c.key === table.columns[0].key && r.reason && (
+            <small> · {r.reason}</small>
+          )}
         </span>
       ),
     }));
@@ -413,18 +442,24 @@ function AnalysisResultTable({
         footer={{
           label: "전체 합계",
           render: (c) =>
-            c.id === table.columns[0].key
-              ? "전체 합계"
-              : table.totals.some((v) => v.columnKey === c.id)
-                ? (
-                    <span>
-                      {display(table.totals.find((v) => v.columnKey === c.id)?.value, c.id)}
-                      {table.totals.find((v) => v.columnKey === c.id)?.reason && (
-                        <small> · {table.totals.find((v) => v.columnKey === c.id)?.reason}</small>
-                      )}
-                    </span>
-                  )
-                : "",
+            c.id === table.columns[0].key ? (
+              "전체 합계"
+            ) : table.totals.some((v) => v.columnKey === c.id) ? (
+              <span>
+                {display(
+                  table.totals.find((v) => v.columnKey === c.id)?.value,
+                  c.id,
+                )}
+                {table.totals.find((v) => v.columnKey === c.id)?.reason && (
+                  <small>
+                    {" "}
+                    · {table.totals.find((v) => v.columnKey === c.id)?.reason}
+                  </small>
+                )}
+              </span>
+            ) : (
+              ""
+            ),
         }}
       />
     </section>

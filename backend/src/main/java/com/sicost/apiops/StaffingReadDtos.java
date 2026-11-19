@@ -14,9 +14,14 @@ public final class StaffingReadDtos {
     public record TentativeSource(String id,String opportunityId,int needSn,String developerId,String startMonth,String status,String sourceScreenId,LocalDateTime processedAt,String endMonth,BigDecimal probability){
         public Tentative view(){return new Tentative(id,opportunityId,needSn,developerId,com.sicost.common.persistence.DatabaseMonthCodec.toApi(startMonth),status,sourceScreenId,processedAt);}
     }
-    public record ProjectMm(String projectId,String actualMm,LocalDate endDate,String extensionPossibility,boolean preContract){}
+    public record PersonDisplay(String id,String managementNo){}
+    public record ProjectMm(String projectId,String actualMm,LocalDate endDate,String extensionPossibility,boolean preContract,String projectName){
+        public ProjectMm(String projectId,String actualMm,LocalDate endDate,String extensionPossibility,boolean preContract){this(projectId,actualMm,endDate,extensionPossibility,preContract,null);}
+    }
     public record Cell(String month,String status,String actualMm,int assignmentCount,boolean overAssigned,boolean leavingSoon,List<ProjectMm> projects,List<Tentative> tentativeAssignments,String tentativeProbability){}
-    public record CalendarPerson(String developerId,String name,String jobCode,String gradeCode,String employeeType,LocalDate lastWithdrawalDate,List<Cell> cells){}
+    public record CalendarPerson(String developerId,String name,String jobCode,String gradeCode,String employeeType,LocalDate lastWithdrawalDate,List<Cell> cells,String managementNo){
+        public CalendarPerson(String developerId,String name,String jobCode,String gradeCode,String employeeType,LocalDate lastWithdrawalDate,List<Cell> cells){this(developerId,name,jobCode,gradeCode,employeeType,lastWithdrawalDate,cells,null);}
+    }
     public record MonthTotal(String month,Integer availablePeople,String remainingMm){}
     public record Summary(int availablePeople,String remainingMm,int leavingSoonPeople,int highExtensionPeople,int concurrentPeople,int overAssignedPeople,String thirdMonthRemainingMm){}
     public record CalendarPage(List<CalendarPerson> items,int total,int page,int size,int year,Summary summary,List<MonthTotal> monthTotals){}

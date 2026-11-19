@@ -1,3 +1,6 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { Icon } from "../../shared/Icon";
 import {
   useCallback,
   useEffect,
@@ -7,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -179,7 +183,9 @@ export function AssignmentsContent({
     [creating, setCreating] = useState(false),
     [dirty, setDirty] = useState(false),
     [leaving, setLeaving] = useState(false),
-    [dense, setDense] = useState(false);
+    [dense, setDense] = useState(false),
+    [columnsOpen, setColumnsOpen] = useState(false),
+    [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   useEffect(() => {
     if (entryAssignmentId) setDetail(entryAssignmentId);
     return () => {
@@ -333,20 +339,13 @@ export function AssignmentsContent({
     {
       id: "warnings",
       label: "경고",
-      render: (r) => (
-        <span
-          className={r.warnings.length ? "sicost-badge sicost-tone-warn" : ""}
-          title={r.warnings.map((w) => w.message).join("\n")}
-        >
-          {r.warnings.length ? "주의" : "–"}
-        </span>
-      ),
+      render: (r) => r.warnings.length ? <HelpTooltip label="배정 경고" trigger={<Icon name="warning" size={16} />}>{r.warnings.map(w=>w.message).join(" · ")}</HelpTooltip> : "–",
     },
-    { id: "projectName", label: "프로젝트", render: (r) => r.projectName },
+    { id: "projectName", label: "프로젝트", render: (r) => <button className="sicost-text-link" onClick={()=>setDetail(r.id)}>{r.projectName}</button> },
     {
       id: "developerName",
-      label: "이름 (관리번호)",
-      render: (r) => `${r.developerName} (${r.managementNo})`,
+      label: "이름",
+      render: (r) => <span className="sicost-person-cell">{r.developerName}<small>{r.managementNo}</small></span>,
     },
     { id: "jobName", label: "직무", render: (r) => r.jobName },
     { id: "startDate", label: "투입일", render: (r) => r.startDate },
@@ -364,20 +363,20 @@ export function AssignmentsContent({
     },
     {
       id: "contractMm",
-      label: "계약 월MM",
+      label: "월 MM",
       render: (r) => r.contractMm,
       align: "right",
     },
-    { id: "yearMm", label: "연간 MM", render: (r) => r.yearMm, align: "right" },
+    { id: "yearMm", label: `${year}년 MM`, render: (r) => r.yearMm, align: "right" },
     {
       id: "extensionPossibility",
       label: "연장 가능성",
-      render: (r) => kindName(r.extensionPossibility),
+      render: (r) => r.extensionPossibility ? <span className={`sicost-badge ${["HIGH","H"].includes(r.extensionPossibility) ? "sicost-tone-ok" : ["LOW","L"].includes(r.extensionPossibility) ? "sicost-tone-bad" : "sicost-tone-neutral"}`}>{kindName(r.extensionPossibility)}</span> : "–",
     },
     {
       id: "inputType",
-      label: "투입구분",
-      render: (r) => kindName(r.inputType),
+      label: "투입 구분",
+      render: (r) => <span className="sicost-kind-chip">{kindName(r.inputType)}</span>,
     },
   ];
   columns.forEach((column) => {
@@ -398,35 +397,27 @@ export function AssignmentsContent({
   }
   return (
     <div data-testid="assignments-content" className="assignments-content">
-      <AssignmentCandidatesPanel
-        year={year}
-        today={context.currentDate}
-        readOnly={readonly}
-        onDirtyChange={onDirtyChange}
-        onChanged={refreshed}
-        onConfirmed={async (id) => {
-          setDetail(id);
-        }}
-      />
-      <div className="assignment-head">
-        <div className="assignment-head-actions">
-          <B5Actions
-            year={year}
-            readOnly={readonly}
-            onApplied={refreshed}
-            onDirtyChange={dirtyChanged}
-          />
-          <button
-            type="button"
-            data-testid="assignment-new"
-            disabled={readonly || loading || Boolean(error)}
-            onClick={() => setCreating(true)}
-            className="sicost-primary"
-          >
-            신규 배정
-          </button>
+      <ScreenTitleActions>
+        <div className="assignment-head">
+          <div className="assignment-head-actions">
+            <B5Actions
+              year={year}
+              readOnly={readonly}
+              onApplied={refreshed}
+              onDirtyChange={dirtyChanged}
+            />
+            <button
+              type="button"
+              data-testid="assignment-new"
+              disabled={readonly || loading || Boolean(error)}
+              onClick={() => setCreating(true)}
+              className="sicost-primary"
+            >
+              + 배정
+            </button>
+          </div>
         </div>
-      </div>
+      </ScreenTitleActions>
       {readonly && (
         <p className="sicost-banner sicost-tone-lock">
           지난 해·읽기 전용: 조회와 다운로드만 가능합니다.
@@ -479,7 +470,7 @@ export function AssignmentsContent({
         </label>
         <label className="sicost-field">
           직무
-          <select
+          <FieldHelp label="직무" /><select
             data-testid="assignments-job-filter"
             value={draft.jobCode}
             onChange={(e) =>
@@ -498,7 +489,7 @@ export function AssignmentsContent({
             ))}
           </select>
         </label>
-        <label className="sicost-field">
+        <details className="assignment-extra-conditions" open={Boolean(draft.month)}><summary>추가 조건</summary><label className="sicost-field assignment-extra-month">
           선택월
           <input
             type="month"
@@ -509,7 +500,7 @@ export function AssignmentsContent({
             onChange={(e) => setDraft((v) => ({ ...v, month: e.target.value }))}
           />
         </label>
-        <label className="sicost-field">
+        </details><label className="sicost-field">
           경고
           <select
             data-testid="assignments-warning-filter"
@@ -524,8 +515,9 @@ export function AssignmentsContent({
           </select>
         </label>
         <label className="sicost-field">
-          이름/관리번호
+          이름
           <input
+            placeholder="이름 또는 관리번호"
             data-testid="assignments-search"
             value={draft.q}
             onChange={(e) => setDraft((v) => ({ ...v, q: e.target.value }))}
@@ -540,7 +532,7 @@ export function AssignmentsContent({
               setDraft((v) => ({ ...v, includeCancelled: e.target.checked }))
             }
           />
-          취소포함
+          취소된 배정 포함
         </label>
       </FilterBar>
       <AssignmentError
@@ -584,28 +576,11 @@ export function AssignmentsContent({
             </button>
           </div>
         ) : (
-          <strong>총 {data?.total ?? 0}건</strong>
+          <strong>{loading ? "조회 중…" : <>총 {data?.total ?? 0}건</>}</strong>
         )}
         <div className="assignment-toolbar assignment-bar-actions">
-          <button
-            type="button"
-            data-testid="assignments-refresh"
-            onClick={() => void load().catch(() => {})}
-          >
-            다시 조회
-          </button>
-
-          <label className="assignment-control">
-            밀도
-            <select
-              data-testid="assignments-density"
-              value={dense ? "좁게" : "넓게"}
-              onChange={(e) => setDense(e.target.value === "좁게")}
-            >
-              <option>넓게</option>
-              <option>좁게</option>
-            </select>
-          </label>
+          <button type="button" data-testid="assignments-columns" onClick={()=>setColumnsOpen(true)}>열 설정</button>
+          <button type="button" className="assignment-density-toggle" data-testid="assignments-density" aria-pressed={dense} onClick={()=>setDense(!dense)}>좁게 보기</button>
           {renderActions?.({
             year,
             filters,
@@ -618,10 +593,10 @@ export function AssignmentsContent({
       </div>
       <DataTable
         rows={data?.items ?? []}
-        columns={columns}
+        columns={columns.filter(column=>!hiddenColumns.includes(column.id))}
         rowKey={(r) => r.id}
         loading={loading}
-        empty="조회된 투입 배정이 없습니다."
+        empty="조건에 맞는 결과가 없습니다."
         emptyAction={
           <button
             type="button"
@@ -655,6 +630,11 @@ export function AssignmentsContent({
         onRowAction={(r) => setDetail(r.id)}
         dense={dense}
       />
+      <Dialog open={columnsOpen} title="현재 표 열 설정" onCancel={()=>setColumnsOpen(false)} onConfirm={()=>setColumnsOpen(false)} confirmLabel="완료">
+        <p>현재 작업 탭의 표시 열을 선택합니다.</p>
+        {columns.map(column=><label className="assignment-column-option" key={column.id}><input type="checkbox" checked={!hiddenColumns.includes(column.id)} disabled={["projectName","developerName"].includes(column.id)} onChange={event=>setHiddenColumns(current=>event.target.checked?current.filter(id=>id!==column.id):[...current,column.id])} />{column.label}</label>)}
+        <button type="button" onClick={()=>setHiddenColumns([])}>기본 열로 복원</button>
+      </Dialog>
       {detail && (
         <AssignmentDrawer
           key={`${detail}-${detailVersion}`}
@@ -724,6 +704,16 @@ export function AssignmentsContent({
       >
         <p>확인 전까지 작성 내용과 현재 기간을 유지합니다.</p>
       </Dialog>
+      <AssignmentCandidatesPanel
+        year={year}
+        today={context.currentDate}
+        readOnly={readonly}
+        onDirtyChange={onDirtyChange}
+        onChanged={refreshed}
+        onConfirmed={async (id) => {
+          setDetail(id);
+        }}
+      />
     </div>
   );
 }

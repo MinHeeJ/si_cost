@@ -64,14 +64,20 @@
 .profitability-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .profitability-summary article {
   min-width: 0;
   background: var(--surface);
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   overflow-wrap: anywhere;
 }
 .profitability-summary h2 {
@@ -214,8 +220,9 @@
 .profitability-contribution {
   padding: 16px;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
 }
 .profitability-contribution > button {
   border: 0;
@@ -260,4 +267,14 @@
 .profitability-view button.sicost-primary:not(:disabled):hover {
   color: #fff;
   background: var(--primary-hover);
+}
+
+.profitability-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

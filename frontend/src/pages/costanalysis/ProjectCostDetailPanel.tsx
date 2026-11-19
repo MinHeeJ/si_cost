@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import {
   Link,
@@ -20,8 +21,8 @@ import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 const tabs = [
   ["months", "월별 원가"],
   ["assignments", "투입 인력"],
-  ["causes", "원가 초과 원인"],
   ["simulation", "시뮬레이션"],
+  ["causes", "원가 초과 원인"],
 ] as const;
 const causeNames = {
   EXCESS_MM: "투입이 계획보다 많음",
@@ -280,7 +281,12 @@ export function ProjectCostDetailPanel({
           data-screen-id="SCR-UI-04-B138-CAUSE-NAV"
         >
           {detail && <CostMetrics detail={detail} unit={amountUnit} />}
-          <nav role="tablist" aria-label="원가 상세 영역" className="cost-tabs">
+          <SegmentedTabList
+            as="nav"
+            role="tablist"
+            aria-label="원가 상세 영역"
+            className="cost-tabs"
+          >
             {tabs.map(([key, label]) => (
               <button
                 type="button"
@@ -294,7 +300,7 @@ export function ProjectCostDetailPanel({
                 {label}
               </button>
             ))}
-          </nav>
+          </SegmentedTabList>
           {loading && <p role="status">원가 상세를 불러오는 중입니다.</p>}
           {error != null && (
             <ErrorBanner

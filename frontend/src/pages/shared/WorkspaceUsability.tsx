@@ -162,10 +162,11 @@ export function WorkspaceUsability({
             }}
           />
         </label>
-        <div role="listbox" aria-label="검색된 메뉴">
+        <div key={query} role="listbox" aria-label="검색된 메뉴" className="sicost-command-results">
           {matches.map((m, i) => (
             <button
               type="button"
+              style={{ animationDelay: `${Math.min(i, 5) * 20}ms` }}
               role="option"
               aria-selected={i === index}
               key={m.screenId}
@@ -174,7 +175,8 @@ export function WorkspaceUsability({
                 onClose();
               }}
             >
-              {m.screenId} · {m.name}
+              <strong>{m.name}</strong>
+              <small>{menus.find(group => group.menuId === m.parentId)?.name} · {m.screenId}</small>
             </button>
           ))}
         </div>

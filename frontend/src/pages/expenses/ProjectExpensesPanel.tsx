@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -447,7 +448,7 @@ function ExpensesContent({
             )}
           </div>
           <div className="sicost-field">
-            <label htmlFor="expense-memo">메모</label>
+            <label htmlFor="expense-memo">메모<FieldHelp label="메모" /></label>
             <textarea
               id="expense-memo"
               data-testid="expense-memo"

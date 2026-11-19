@@ -1,5 +1,8 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
@@ -50,6 +53,15 @@ export function ProjectStatusBoard({
   const canProjects = usePermission("UI-01", "INQ");
   const canCosts = usePermission("UI-04", "INQ");
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const activePath = useRef(location.pathname);
+  activePath.current = location.pathname;
+  useEffect(() => {
+    activePath.current = location.pathname;
+    return () => {
+      activePath.current = "";
+    };
+  }, [location.pathname]);
   const [query, setQuery] = useState<api.AnalysisQuery>(
     Object.assign(
       pageSize === undefined ? {} : { size: analysisPageSize(pageSize) },
@@ -73,7 +85,13 @@ export function ProjectStatusBoard({
   useEffect(() => {
     if (previousSize.current !== pageSize) {
       previousSize.current = pageSize;
-      apply({ ...query, size: analysisPageSize(pageSize ?? 50), page: 1 });
+      const next = {
+        ...query,
+        size: analysisPageSize(pageSize ?? 50),
+        page: 1,
+      };
+      setQuery(next);
+      setDraft(next);
     }
   }, [pageSize]);
   const [draft, setDraft] = useState(query),
@@ -95,6 +113,7 @@ export function ProjectStatusBoard({
   function apply(next: api.AnalysisQuery) {
     setQuery(next);
     setDraft(next);
+    if (activePath.current !== "/UI-31") return;
     const url = new URLSearchParams(api.analysisQuery(next));
     for (const key of [
       "issueStatus",
@@ -111,6 +130,7 @@ export function ProjectStatusBoard({
   }
   function selectTab(next: string) {
     setTab(next);
+    if (activePath.current !== "/UI-31") return;
     const url = new URLSearchParams(params);
     url.set("view", next);
     setParams(url, { replace: true, preventScrollReset: true });
@@ -145,20 +165,20 @@ export function ProjectStatusBoard({
               <li
                 data-testid={`status-reason-${Array.from(row.projectId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${index}`}
                 key={`${reason.kind}-${index}`}
-                title={
-                  reason.kind === "기한지난HIGH"
-                    ? "기한 지난 높음 이슈가 있습니다."
-                    : `${reason.formula} · 기준 ${reason.threshold}`
-                }
               >
-                <StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>
-                  {reason.kind === "기한지난HIGH"
-                    ? "기한 지난 높음 이슈"
-                    : reason.kind === "기한지난이슈"
-                      ? "기한 지난 이슈"
-                      : reason.kind}{" "}
-                  {reason.value}
-                </StatusBadge>
+                {(() => {
+                  const name =
+                    reason.kind === "기한지난HIGH"
+                      ? "기한 지난 높음 이슈"
+                      : reason.kind === "기한지난이슈"
+                        ? "기한 지난 이슈"
+                        : reason.kind;
+                  return (
+                    <HelpTooltip label={`${name} ${reason.value}`} trigger={<StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>{name} {reason.value}</StatusBadge>}>
+                      {reason.kind === "기한지난HIGH" ? "기한 지난 높음 이슈가 있습니다." : `${reason.formula} · 기준 ${reason.threshold}`}
+                    </HelpTooltip>
+                  );
+                })()}
               </li>
             ))}
           </ul>
@@ -347,7 +367,8 @@ export function ProjectStatusBoard({
           )}
         </>
       )}
-      <div
+      <SegmentedTabList
+        as="div"
         role="tablist"
         aria-label="프로젝트 현황 보기"
         className="project-analysis-tabs"
@@ -370,7 +391,7 @@ export function ProjectStatusBoard({
         >
           이슈 모아 보기 ({result.data?.summary.openIssueCount ?? "–"})
         </button>
-      </div>
+      </SegmentedTabList>
       <FilterBar
         testId="status-filters"
         resetTestId="status-reset"
@@ -419,7 +440,7 @@ export function ProjectStatusBoard({
         </label>
         <label className="sicost-field">
           영업 파트
-          <select
+          <FieldHelp label="영업 파트" /><select
             data-testid="status-part"
             value={String(draft.partId ?? "")}
             onChange={(e) => change("partId", e.target.value)}

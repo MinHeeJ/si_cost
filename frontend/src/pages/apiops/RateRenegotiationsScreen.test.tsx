@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import {
   fireEvent,
   render,
@@ -145,9 +146,11 @@ describe("단가 재협상 대상", () => {
     const table = screen.getByTestId("renegotiation-table");
     expect(within(table).getAllByRole("columnheader")).toHaveLength(11);
     expect(within(table).getAllByText("1.00")).toHaveLength(2);
-    expect(
-      screen.getAllByTitle("계약MM k=1.00 / 기준월 월MM m=0.52"),
-    ).toHaveLength(2);
+    const mmHelp=screen.getAllByRole("button", {name:"계약 MM 도움말"});
+    expect(mmHelp).toHaveLength(2);
+    await userEvent.click(mmHelp[0]);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("계약 MM 1.00 / 기준월 월 MM 0.52");
+    await userEvent.keyboard("{Escape}");
     expect(screen.getByText("D-0")).toHaveClass("sicost-tone-bad");
     expect(screen.getByText("D-31")).toHaveClass("sicost-tone-warn");
     expect(screen.getByText("예정")).toBeVisible();

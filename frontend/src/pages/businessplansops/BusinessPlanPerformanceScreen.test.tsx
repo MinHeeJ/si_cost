@@ -287,7 +287,7 @@ it("ignores a stale response after period changes", async () => {
   period("2026", "2026-06");
   await screen.findByRole("table");
   await act(async () => resolve(result()));
-  expect(screen.getByText(/2026년 1~06월/)).toBeInTheDocument();
+  expect(screen.getByText(/2026년 · 2026-06까지 실적/)).toBeInTheDocument();
 });
 it("disables PC-only actions on narrow screens without hiding actuals", async () => {
   Object.defineProperty(window, "innerWidth", { value: 600 });

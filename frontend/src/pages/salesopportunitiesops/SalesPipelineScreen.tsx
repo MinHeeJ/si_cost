@@ -1,3 +1,6 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { useOverlayLayer } from "../../shared/useOverlayLayer";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
@@ -219,16 +222,40 @@ export function SalesPipelinePanel({
           />
         </OpportunityModal>
       )}
-      <div className="sales-command-toolbar">
-        <button
-          className="sicost-primary"
-          data-testid="pipeline-create-button"
-          onClick={() => setEditing("new")}
-        >
-          기회 등록
-        </button>
-      </div>
-      <div
+      <ScreenTitleActions>
+        <div className="sales-command-toolbar">
+          <button
+            className="sicost-primary"
+            data-testid="pipeline-create-button"
+            onClick={() => setEditing("new")}
+          >
+            기회 등록
+          </button>
+        </div>
+      </ScreenTitleActions>
+      {data && tab !== "FORECAST" && (
+        <dl className="sales-command-summary">
+          <div>
+            <dt>진행 기회</dt>
+            <dd>{data.summary.opportunityCount}건</dd>
+            <p>14일 초과 미갱신 {data.summary.staleCount}건</p>
+          </div>
+          <div>
+            <dt>예상 금액 합계</dt>
+            <dd>{formatSummaryAmount(data.summary.amount)}</dd>
+          </div>
+          <div>
+            <dt>확률 반영 금액</dt>
+            <dd>{formatSummaryAmount(data.summary.weightedAmount)}</dd>
+          </div>
+          <div>
+            <dt>확률 반영 필요 인력</dt>
+            <dd>{formatFixedDecimal(data.summary.weightedPeople, 1)}명</dd>
+          </div>
+        </dl>
+      )}
+      <SegmentedTabList
+        as="div"
         className="sales-command-tabs"
         role="tablist"
         aria-label="영업 파이프라인 보기"
@@ -250,7 +277,7 @@ export function SalesPipelinePanel({
             {label}
           </button>
         ))}
-      </div>
+      </SegmentedTabList>
       {tab === "FORECAST" ? (
         <SalesForecastPanel />
       ) : (
@@ -310,27 +337,6 @@ export function SalesPipelinePanel({
           {error != null && <SalesCommandError error={error} />}
           {data && (
             <>
-              <dl className="sales-command-summary">
-                <div>
-                  <dt>진행 기회</dt>
-                  <dd>{data.summary.opportunityCount}건</dd>
-                  <p>14일 초과 미갱신 {data.summary.staleCount}건</p>
-                </div>
-                <div>
-                  <dt>예상 금액 합계</dt>
-                  <dd>{formatSummaryAmount(data.summary.amount)}</dd>
-                </div>
-                <div>
-                  <dt>확률 반영 금액</dt>
-                  <dd>{formatSummaryAmount(data.summary.weightedAmount)}</dd>
-                </div>
-                <div>
-                  <dt>확률 반영 필요 인력</dt>
-                  <dd>
-                    {formatFixedDecimal(data.summary.weightedPeople, 1)}명
-                  </dd>
-                </div>
-              </dl>
               {tab === "ING" ? (
                 <div className="sales-command-kanban">
                   {(Object.keys(stageNames) as api.Stage[]).map((stage) => (
@@ -627,7 +633,8 @@ export function SalesPipelinePanel({
                 opportunity={detail}
                 refresh={refresh}
               />
-              <div
+              <SegmentedTabList
+                as="div"
                 className="sales-command-tabs"
                 role="tablist"
                 aria-label="기회 상세 탭"
@@ -643,7 +650,7 @@ export function SalesPipelinePanel({
                     {t}
                   </button>
                 ))}
-              </div>
+              </SegmentedTabList>
               <div role="tabpanel" data-testid="opportunity-detail-panel">
                 {detailTab === "기본 정보" && (
                   <>
@@ -730,9 +737,10 @@ function isStale(opportunity: api.Opportunity, today?: string) {
 
 function OpportunityModal({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const topmost = useOverlayLayer(ref, true, 55);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.focus();
+    if (topmost()) ref.current?.focus();
     return () => previous?.focus();
   }, []);
   return createPortal(
@@ -743,8 +751,9 @@ function OpportunityModal({ children }: { children: React.ReactNode }) {
         aria-modal="true"
         aria-label="영업 기회 입력"
         tabIndex={-1}
-        className="sicost-dialog sales-opportunity-dialog"
+        className="sicost-dialog sicost-dialog-page sales-opportunity-dialog"
         onKeyDown={(event) => {
+          if (!topmost()) return;
           if (!ref.current?.contains(event.target as Node)) return;
           if (event.key === "Escape") {
             event.preventDefault();

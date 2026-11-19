@@ -1,3 +1,4 @@
+import { FieldHelp } from "./FieldHelp";
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiError } from "./api";
 import { ErrorBanner, StatusBadge } from "./Feedback";
@@ -126,7 +127,7 @@ export function AddressSelector({
     );
     return (
       <div className="sicost-field">
-        <label htmlFor={`${id}-${level}`}>{label}</label>
+        <label htmlFor={`${id}-${level}`}>{label}<FieldHelp label={label} /></label>
         <select
           id={`${id}-${level}`}
           ref={level === "SIDO" ? first : undefined}

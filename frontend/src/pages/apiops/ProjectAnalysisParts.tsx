@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -27,7 +28,7 @@ export function AnalysisSummary({
   unit?: AnalysisUnit;
 }) {
   return (
-    <div
+    <KpiStrip
       className="project-analysis-summary"
       data-testid="analysis-summary-root"
     >
@@ -48,7 +49,7 @@ export function AnalysisSummary({
           </strong>
         </section>
       ))}
-    </div>
+    </KpiStrip>
   );
 }
 export function AnalysisCompleteness({ value }: { value: Completeness }) {

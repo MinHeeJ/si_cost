@@ -20,8 +20,9 @@
   padding: 16px;
   margin: 0;
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
 }
 .corporate-tax-summary dt {
   color: var(--text-sub);

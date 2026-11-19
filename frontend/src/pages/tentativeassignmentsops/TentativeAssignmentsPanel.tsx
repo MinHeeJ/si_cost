@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -91,7 +92,7 @@ export function TentativeAssignmentsPanel({
                         "처리시각",
                         "행동",
                       ].map((label) => (
-                        <th key={label}>{label}</th>
+                        <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                       ))}
                     </tr>
                   </thead>

@@ -52472,6 +52472,10 @@ components:
       type: object
       additionalProperties: false
       properties:
+        projectName:
+          anyOf:
+          - type: string
+          - type: 'null'
         projectId:
           type: string
           maxLength: 20
@@ -52550,6 +52554,11 @@ components:
       type: object
       additionalProperties: false
       properties:
+        managementNo:
+          anyOf:
+          - type: string
+            maxLength: 20
+          - type: 'null'
         developerId:
           type: string
           maxLength: 20

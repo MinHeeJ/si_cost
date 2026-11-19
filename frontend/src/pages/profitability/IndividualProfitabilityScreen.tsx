@@ -1,3 +1,4 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useSensitivePermission, usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Column } from "../../shared/DataTable";
@@ -136,20 +137,8 @@ export function IndividualProfitabilityScreen({
   const columns: Column<ProfitabilityPerson>[] = profitabilityColumns.map(
     (def) => ({
       id: def.id,
-      label:
-        def.id === "pay" && query.view === "CUMULATIVE" ? (
-          "급여(누계)"
-        ) : (
-          <>
-            {def.label}
-            {headerHelp[def.id] && (
-              <>
-                {" "}
-                <span title={headerHelp[def.id]}>ⓘ</span>
-              </>
-            )}
-          </>
-        ),
+      label: def.id === "pay" && query.view === "CUMULATIVE" ? "급여(누계)" : def.label,
+      help: headerHelp[def.id] ? <HelpTooltip label={def.label} iconOnly>{headerHelp[def.id]}</HelpTooltip> : undefined,
       sortable: sortable.has(def.id),
       align: [
         "name",
@@ -164,11 +153,7 @@ export function IndividualProfitabilityScreen({
         if (def.id === "name") return name(person);
         if (def.id === "utilization")
           return (
-            <span
-              title={`${person.utilizedMonths} 투입달 ÷ ${person.employmentMonths} 직접 재직달. ${person.monthBasis.map((m) => `${m.month} ${m.explanation}`).join("; ")}`}
-            >
-              <ProfitabilityValue value={person.utilization} kind="rate" />
-            </span>
+            <HelpTooltip label="가동률 계산" trigger={<span className="sicost-derived-value"><ProfitabilityValue value={person.utilization} kind="rate" /></span>}>{person.utilizedMonths}달 ÷ {person.employmentMonths}달{person.monthBasis.map(m=><p key={m.month}>{m.month} · {m.explanation}</p>)}</HelpTooltip>
           );
         if (def.id === "hireDate")
           return <ProfitabilityValue value={person.hireDate} kind="date" />;
@@ -181,9 +166,7 @@ export function IndividualProfitabilityScreen({
           return person[def.id as "companyName" | "position"] ?? "–";
         if (def.id === "revenue" && person.turnkeyOnlyExcluded)
           return (
-            <span title="TK전용: 턴키 단가만 제외했습니다. 비용과 이익은 유지되며 평균 단가 분모에서만 제외합니다.">
-              –
-            </span>
+            <HelpTooltip label="턴키 단가 제외" trigger="–">TK전용: 턴키 단가만 제외했습니다. 비용과 이익은 유지되며 평균 단가 분모에서만 제외합니다.</HelpTooltip>
           );
         return value(person.metrics, def.id);
       },

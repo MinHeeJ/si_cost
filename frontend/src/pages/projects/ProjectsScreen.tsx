@@ -7,6 +7,7 @@ import {
 } from "react";
 import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -462,31 +463,33 @@ export function ProjectsScreen({
         </>
       ) : (
         <>
-          <header className="project-toolbar">
-            <div />
-            <div className="project-actions">
-              {!mobile && (
-                <B9UploadActions
-                  year={year}
-                  readOnly={readOnly}
-                  onApplied={() => load()}
-                  onDirtyChange={childDirty}
-                />
-              )}
-              <button
-                type="button"
-                data-testid="project-create"
-                className="sicost-primary"
-                disabled={readOnly}
-                onClick={() => {
-                  setSelected(undefined);
-                  setForm({});
-                }}
-              >
-                등록
-              </button>
-            </div>
-          </header>
+          <ScreenTitleActions>
+            <header className="project-toolbar">
+              <div />
+              <div className="project-actions">
+                {!mobile && (
+                  <B9UploadActions
+                    year={year}
+                    readOnly={readOnly}
+                    onApplied={() => load()}
+                    onDirtyChange={childDirty}
+                  />
+                )}
+                <button
+                  type="button"
+                  data-testid="project-create"
+                  className="sicost-primary"
+                  disabled={readOnly}
+                  onClick={() => {
+                    setSelected(undefined);
+                    setForm({});
+                  }}
+                >
+                  등록
+                </button>
+              </div>
+            </header>
+          </ScreenTitleActions>
           {data && data.unassignedCount > 0 && (
             <div
               className="sicost-banner sicost-tone-warn project-unassigned"

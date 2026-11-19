@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -165,7 +166,7 @@ export function ReminderDialog({
                   <tr>
                     {["이름", "아이디", "자격", "이메일", "이메일누락"].map(
                       (label) => (
-                        <th key={label}>{label}</th>
+                        <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                       ),
                     )}
                   </tr>

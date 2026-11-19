@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
@@ -260,13 +261,15 @@ export function WorkforceRecommendationsScreen({
     >
       <header className="recommendation-heading">
         <h2>AI 인력 추천</h2>
-        <button
-          type="button"
-          data-testid="recommendation-history-open"
-          onClick={() => setHistory(true)}
-        >
-          추천 기록
-        </button>
+        <ScreenTitleActions>
+          <button
+            type="button"
+            data-testid="recommendation-history-open"
+            onClick={() => setHistory(true)}
+          >
+            추천 기록
+          </button>
+        </ScreenTitleActions>
       </header>
       <RecommendationBrowseError
         error={targetError}

@@ -21,3 +21,6 @@ playwright-report/
 
 __pycache__/
 *.pyc
+
+# Playwright verifier artifacts
+.aiops-code-context/

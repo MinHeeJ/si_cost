@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { PeopleChangeHistoryTable } from "../apiops/PeopleChangeHistoryTable";
@@ -160,22 +161,19 @@ export function DeveloperDrawer({
       )}
       {data && (
         <>
-          <nav className="developer-tabs" role="tablist">
-            {["기본 정보", "투입 이력", "근무 상태 이력", "변경 이력"].map(
-              (name, i) => (
-                <button
-                  key={name}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === name}
-                  data-testid={`developer-tab-${i}`}
-                  onClick={() => navigate(() => setTab(name))}
-                >
-                  {name}
-                </button>
-              ),
+          <SegmentedTabs
+            label="개발자 상세 탭"
+            testId="developer-detail-tabs"
+            value={tab}
+            onChange={(name) => navigate(() => setTab(name))}
+            tabs={["기본 정보", "투입 이력", "근무 상태 이력", "변경 이력"].map(
+              (name, i) => ({
+                key: name,
+                label: name,
+                testId: `developer-tab-${i}`,
+              }),
             )}
-          </nav>
+          />
           <div role="tabpanel" data-testid="developer-detail-panel">
             {tab === "기본 정보" && (
               <>

@@ -32,6 +32,7 @@ export type CalendarCell = {
   leavingSoon: boolean;
   projects: {
     projectId: string;
+    projectName?: string | null;
     actualMm: string;
     endDate: string;
     extensionPossibility: string | null;
@@ -47,6 +48,7 @@ export type CalendarCell = {
 };
 export type CalendarPerson = {
   developerId: string;
+  managementNo?: string | null;
   name: string;
   jobCode: string;
   gradeCode: string | null;

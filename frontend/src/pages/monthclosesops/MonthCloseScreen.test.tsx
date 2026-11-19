@@ -298,7 +298,9 @@ it("does not truncate a 501-character reason into a valid request", async () => 
       onCancel={vi.fn()}
     />,
   );
-  await userEvent.type(screen.getByRole("textbox"), "가".repeat(501));
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("textbox"));
+  await user.paste("가".repeat(501));
   expect(screen.getByRole("button", { name: "확인 후 해제" })).toBeDisabled();
   expect(screen.getByRole("textbox")).toHaveValue("가".repeat(501));
 });

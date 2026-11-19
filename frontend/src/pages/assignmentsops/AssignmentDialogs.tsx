@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState, useRef } from "react";
 import { useFieldErrorFocus } from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
@@ -161,7 +162,7 @@ export function ReasonFields({
       </label>
       <label className="sicost-field">
         메모
-        <textarea
+        <FieldHelp label="메모" /><textarea
           data-testid="assignment-memo"
           disabled={disabled}
           value={memo}
@@ -282,6 +283,7 @@ export function AssignmentChangeDialog({
     <label className="sicost-field">
       {label}
       <span aria-hidden="true"> *</span>
+      <FieldHelp label={label} />
       <input
         data-testid={`assignment-change-${name}`}
         aria-label={label}

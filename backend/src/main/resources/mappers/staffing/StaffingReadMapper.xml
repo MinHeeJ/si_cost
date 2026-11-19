@@ -18,6 +18,10 @@
       use_yn AS "useYn",drct_cls_cd AS "directClass",jncmp_dt AS "joinDate",retire_dt AS "retireDate"
     FROM tb_hr_dev WHERE emp_type_cd IN ('FT','CT','FL','OS') ORDER BY dev_id
   </select>
+  <select id="personDisplays" resultType="com.sicost.apiops.StaffingReadDtos$PersonDisplay">
+    SELECT dev_id AS "id",mng_no AS "managementNo" FROM tb_hr_dev
+    WHERE dev_id IN <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+  </select>
   <select id="tentatives" resultType="com.sicost.apiops.StaffingReadDtos$TentativeSource">
     SELECT t.tent_id::text AS "id",t.opp_id AS "opportunityId",t.need_sn::int AS "needSn",t.dev_id AS "developerId",
       t.bgn_ym AS "startMonth",t.tent_stat_cd AS "status",t.src_scrn_id AS "sourceScreenId",t.proc_dttm AS "processedAt",

@@ -1,5 +1,7 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -47,7 +49,7 @@ const extraLabels = (group: string): string[] =>
 const cleanCode = (value: string) => value.trim().toUpperCase();
 function CodeGroupLockMark() {
   return (
-    <svg
+    <HelpTooltip label="시스템 코드" trigger={<svg
       width="14"
       height="14"
       viewBox="0 0 16 16"
@@ -56,7 +58,7 @@ function CodeGroupLockMark() {
       aria-label="시스템 잠금"
     >
       <path d="M5 7V4a3 3 0 0 1 6 0v3M4 7h8v7H4z" />
-    </svg>
+    </svg>}>시스템 코드: 이름만 바꿀 수 있습니다.</HelpTooltip>
   );
 }
 
@@ -596,7 +598,11 @@ export function CommonCodesScreen({
             <Icon name="plus" size={16} /> 그룹 추가
           </button>
         </header>
-        <nav className="codegroups-tabs" aria-label="공통코드 하위 탭">
+        <SegmentedTabList
+          as="nav"
+          className="codegroups-tabs"
+          aria-label="공통코드 하위 탭"
+        >
           {tabs.map((item) => (
             <button
               data-testid={`common-codes-tab-${item.id}`}
@@ -610,7 +616,7 @@ export function CommonCodesScreen({
               {item.label}
             </button>
           ))}
-        </nav>
+        </SegmentedTabList>
         {error != null && (
           <ErrorBanner
             message={
@@ -645,7 +651,7 @@ export function CommonCodesScreen({
                   </div>
                 )}
                 {groups.map((item) => (
-                  <button
+                  <div className="codegroups-group-entry" key={item.groupId}><button
                     data-testid={`common-codes-group-${item.groupId.toLowerCase().replace(/_/g, "-")}`}
                     key={item.groupId}
                     aria-current={
@@ -659,8 +665,7 @@ export function CommonCodesScreen({
                   >
                     <span>{item.name}</span>
                     <small>{item.codeCount}</small>
-                    {item.sysCodeYn === "Y" && <CodeGroupLockMark />}
-                  </button>
+                  </button>{item.sysCodeYn === "Y" && <CodeGroupLockMark />}</div>
                 ))}
                 {!groups.length && !loading && !error && (
                   <p className="sicost-empty">등록된 그룹이 없습니다.</p>

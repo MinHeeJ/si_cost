@@ -1,3 +1,4 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -34,7 +35,11 @@ export function CashFlowScreen({
 } = {}) {
   const navigate = useNavigate(),
     location = useLocation();
-  const incoming = location.state as { cashFlowSource?: CashSelection; fromDashboard?: boolean; month?: string } | null;
+  const incoming = location.state as {
+    cashFlowSource?: CashSelection;
+    fromDashboard?: boolean;
+    month?: string;
+  } | null;
   const [year, setYear] = useState<number>(),
     [localUnit, setLocalUnit] = useState<AmountUnit>("천원"),
     [data, setData] = useState<api.CashFlowResult>();
@@ -53,6 +58,7 @@ export function CashFlowScreen({
     unit = amountUnit ?? localUnit;
   const restoredUnit = useRef<api.CashUnit>();
   const [retainResult, setRetainResult] = useState(false);
+  const requestPending=useRef(false),lastReceived=useRef(0);
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -73,12 +79,13 @@ export function CashFlowScreen({
     const changed = () => setRefresh((n) => n + 1),
       resize = () => setMobile(window.innerWidth < 768);
     window.addEventListener("sicost:screen-period-changed", period);
-    window.addEventListener("focus", changed);
+    const focus=()=>{if(document.visibilityState === "visible" && !requestPending.current && Date.now()-lastReceived.current>=30_000)changed()};
+    window.addEventListener("focus", focus);
     window.addEventListener("resize", resize);
     events.forEach((name) => window.addEventListener(name, changed));
     return () => {
       window.removeEventListener("sicost:screen-period-changed", period);
-      window.removeEventListener("focus", changed);
+      window.removeEventListener("focus", focus);
       window.removeEventListener("resize", resize);
       events.forEach((name) => window.removeEventListener(name, changed));
     };
@@ -86,21 +93,25 @@ export function CashFlowScreen({
   useEffect(() => {
     if (restoredUnit.current === unitCode(unit)) {
       restoredUnit.current = undefined;
+      requestPending.current = false;
       setLoading(false);
       return;
     }
     const abort = new AbortController();
+    requestPending.current=true;
     setLoading(true);
     setError(undefined);
     setRetainResult(false);
     void api
       .getCashFlow(year, unitCode(unit), abort.signal)
       .then((value) => {
-        if (!abort.signal.aborted) setData(value);
+        if (!abort.signal.aborted) {setData(value);lastReceived.current=Date.now();}
       })
       .catch((e) => {
         if (abort.signal.aborted) return;
         setError(e);
+        if(e instanceof ApiError && (e.status===401 || e.status===403)) {setData(undefined);setRetainResult(false);return;}
+        if(data)setRetainResult(true);
         if (
           data &&
           (year === undefined || data.year === year) &&
@@ -119,7 +130,7 @@ export function CashFlowScreen({
         }
       })
       .finally(() => {
-        if (!abort.signal.aborted) setLoading(false);
+        if (!abort.signal.aborted) {requestPending.current=false;setLoading(false);}
       });
     return () => abort.abort();
   }, [year, unit, refresh]);
@@ -223,41 +234,53 @@ export function CashFlowScreen({
     : [];
   return (
     <SharedScreenFrame screenId="UI-21">
-      {incoming?.fromDashboard && incoming.month && /^\d{4}-(0[1-9]|1[0-2])$/.test(incoming.month) && <p className="sicost-banner sicost-tone-info">대시보드 요청월 {incoming.month}{data && incoming.month.slice(0,4) !== String(data.year) ? " · 조회 가능 연도 밖입니다. 현재 허용 연도를 표시합니다." : " · 해당 월의 자금 행을 확인해 주세요."}</p>}
+      {incoming?.fromDashboard &&
+        incoming.month &&
+        /^\d{4}-(0[1-9]|1[0-2])$/.test(incoming.month) && (
+          <p className="sicost-banner sicost-tone-info">
+            대시보드 요청월 {incoming.month}
+            {data && incoming.month.slice(0, 4) !== String(data.year)
+              ? " · 조회 가능 연도 밖입니다. 현재 허용 연도를 표시합니다."
+              : " · 해당 월의 자금 행을 확인해 주세요."}
+          </p>
+        )}
       <div
         className="operating-profit cash-flow"
         data-testid="cash-flow-screen"
       >
-        <div className="operating-toolbar">
-          {!mobile && (
-            <button
-              data-testid="cash-export"
-              disabled={pending || loading || !displayed || error != null}
-              onClick={() => void download()}
-            >
-              {pending ? "파일 생성 중…" : "엑셀 다운로드"}
-            </button>
-          )}
-          <label>
-            단위{" "}
-            <select
-              data-testid="cash-unit"
-              aria-label="단위"
-              value={unit}
-              disabled={pending || loading}
-              onChange={(e) => {
-                const next = e.target.value as AmountUnit;
-                if (onAmountUnitChange) onAmountUnitChange(next);
-                else setLocalUnit(next);
-              }}
-            >
-              {["원", "천원", "백만원"].map((value) => (
-                <option key={value}>{value}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {loading && <p role="status">자금수지표를 불러오는 중입니다.</p>}
+        <ScreenTitleActions>
+          <div className="operating-toolbar">
+            {!mobile && (
+              <button
+                data-testid="cash-export"
+                disabled={pending || loading || !displayed || error != null}
+                onClick={() => void download()}
+              >
+                {pending ? "파일 생성 중…" : "엑셀 다운로드"}
+              </button>
+            )}
+            <label>
+              단위{" "}
+              <select
+                data-testid="cash-unit"
+                aria-label="단위"
+                value={unit}
+                disabled={pending || loading}
+                onChange={(e) => {
+                  const next = e.target.value as AmountUnit;
+                  if (onAmountUnitChange) onAmountUnitChange(next);
+                  else setLocalUnit(next);
+                }}
+              >
+                {["원", "천원", "백만원"].map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </ScreenTitleActions>
+        {loading && !data && <p role="status">자금수지표를 불러오는 중입니다.</p>}
+        {data && loading && <p role="status" className="sicost-refresh-status">갱신 중…</p>}
         {error != null && (
           <ErrorBanner
             message={

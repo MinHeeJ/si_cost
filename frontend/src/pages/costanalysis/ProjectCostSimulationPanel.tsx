@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -101,7 +102,7 @@ export function ProjectCostSimulationPanel({
             ] as [keyof typeof fields, string][]
           ).map(([key, label]) => (
             <label className="sicost-field" key={key}>
-              {label}
+              {label}<FieldHelp label={label} />
               <input
                 data-testid={`cost-simulation-${key}`}
                 aria-invalid={!!violations[key]}

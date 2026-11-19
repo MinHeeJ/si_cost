@@ -1,0 +1,206 @@
+/* PR31 refinement: presentation only; tokens, numeric formatting and business policy stay upstream. */
+.sicost-help-anchor { display:inline-flex; align-items:center; vertical-align:middle; }
+.sicost-help-icon { width:20px; height:20px; min-height:20px; padding:0; justify-content:center; border:0; background:transparent; border-radius:50%; }
+.sicost-help-value { height:auto; min-height:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:inherit; border-radius:0; }
+.sicost-help-tooltip { max-width:min(380px,calc(100vw - 32px)); line-height:1.6; overflow:visible; animation:sicost-tip-in 140ms var(--ease) both; overflow-wrap:anywhere; }
+.sicost-help-tooltip::before { content:""; position:absolute; left:var(--help-arrow,12px); top:-5px; width:10px; height:10px; background:#0F172A; transform:rotate(45deg); }
+.sicost-help-tooltip[data-side="top"]::before { top:auto; bottom:-5px; }
+.sicost-input-unit { display:flex; position:relative; align-items:center; max-width:180px; }
+.sicost-input-unit input { width:160px; max-width:100%; padding-right:30px; text-align:right; }
+.sicost-input-unit > span { position:absolute; right:10px; color:var(--text-sub); font-size:12px; pointer-events:none; }
+.sicost-field > label { display:flex; align-items:center; gap:3px; }
+.sicost-form-page input[type="date"],.project-form-grid input[type="date"] { width:160px; max-width:100%; }
+.sicost-auto-budget { font-size:12.5px; color:var(--text-sub); }
+.sicost-refresh-status { font-size:12px; color:var(--text-sub); min-height:20px; margin:0; }
+.sicost-screen { container-type:inline-size; }
+@container (max-width:1000px) { .sicost-form-grid,.project-form-grid,.developer-form-grid { grid-template-columns:1fr; } }
+.sicost-work-tab { animation:sicost-tab-in 300ms var(--ease) both; }
+.sicost-sidebar { transition:width 280ms var(--ease),padding 280ms var(--ease),background-color 280ms var(--ease),transform 280ms var(--ease); }
+.sicost-menu-label,.sicost-quick { animation:sicost-fade 300ms 100ms var(--ease) both; }
+@media (min-width:768px) {
+ .sicost-app:has(.sicost-sidebar.folded) .sicost-header { padding-left:0; gap:8px; border-bottom:0; background:linear-gradient(90deg,#0F1E4A 84px,var(--surface) 84px); position:relative; }
+ .sicost-app:has(.sicost-sidebar.folded) .sicost-header::after { content:""; position:absolute; bottom:0; left:84px; right:0; height:1px; background:var(--divider); }
+ .sicost-app:has(.sicost-sidebar.folded) .sicost-header > .sicost-icon-button { width:84px; height:64px; flex:0 0 84px; margin:0; padding:0; border:0; border-radius:0; color:#C9D3EA; background:transparent; box-shadow:none; }
+ .sicost-app:has(.sicost-sidebar.folded) .sicost-header > .sicost-icon-button:hover { color:white; background:rgba(255,255,255,.08); }
+ .sicost-sidebar.folded { width:84px; min-width:84px; padding:12px 6px; background:#0F1E4A; border-right:0; box-shadow:inset -1px 0 rgba(255,255,255,.04); }
+ .sicost-sidebar.folded .sicost-menu-label { display:block; font-size:11px; text-align:center; line-height:1.4; white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
+ .sicost-sidebar.folded .sicost-nav-parent > a { display:flex; flex-direction:column; gap:5px; align-items:center; justify-content:center; min-height:64px; padding:8px 3px; width:100%; position:relative; }
+ .sicost-sidebar.folded .sicost-nav-group.current > .sicost-nav-parent > a { color:#7DD3FC; background:rgba(125,211,252,.12); }
+ .sicost-sidebar.folded .sicost-nav-group.current > .sicost-nav-parent > a::before { content:""; position:absolute; left:-6px; top:8px; bottom:8px; width:3px; background:#7DD3FC; }
+ .sicost-sidebar.folded .sicost-nav-group:is(:hover,:focus-within) > .sicost-nav-children:not([hidden]) { left:72px; width:232px; animation:sicost-fly-in 180ms var(--ease) both; }
+ .sicost-screen-tabs { position:sticky; top:0; z-index:32; }
+ .sicost-titlebar { position:sticky; top:46px; z-index:24; background:var(--bg); box-shadow:0 3px 8px rgb(15 23 42 / calc(.1 * var(--title-shadow,0))); border-bottom:1px solid rgb(213 218 225 / var(--title-shadow,0)); }
+ .sicost-titlebar::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--primary); transform:scaleX(var(--read-progress,0)); transform-origin:left; }
+}
+@supports (animation-timeline:scroll()) { @media(min-width:768px) { .sicost-titlebar::after { animation:sicost-read linear both; animation-timeline:scroll(nearest block); } } }
+.sicost-screen-host:not([hidden]) .sicost-enter-stage { animation:sicost-rise 420ms var(--ease) var(--entry-delay,0ms) both; }
+.sicost-screen-host:not([hidden]) .sicost-titlebar h1 { animation:sicost-rise 400ms var(--ease) both; }
+.sicost-kpi-label::before,.dashboard-metric-label::before { animation:sicost-dot 400ms 300ms var(--ease) both; }
+.dashboard-progress > :first-child { transform-origin:left; animation:sicost-progress 900ms 150ms var(--ease) both; }
+.sicost-star[aria-pressed="true"] { position:relative; }
+.sicost-star[aria-pressed="true"] svg { animation:sicost-star-pop 500ms cubic-bezier(.34,1.56,.64,1); }
+.sicost-star[aria-pressed="true"]::after { content:""; position:absolute; inset:1px; border:2px solid #EAB308; border-radius:50%; pointer-events:none; animation:sicost-star-burst 600ms var(--ease) both; }
+.sicost-toast { display:flex; align-items:center; gap:9px; z-index:1100; animation:sicost-toast-in 220ms var(--ease) both; }
+.sicost-toast svg.sicost-toast-check { animation:none; }
+.sicost-toast-check path { stroke-dasharray:24; stroke-dashoffset:24; animation:sicost-check-draw 600ms 120ms var(--ease) both; }
+.notification-trigger.sicost-bell-click > svg { transform-origin:50% 0; animation:sicost-bell-ring 700ms var(--ease); }
+.notification-count { animation:sicost-dot 400ms var(--ease); }
+.sicost-user-menu:not([hidden]),.notification-popover { transform-origin:calc(100% - 20px) 0; animation:sicost-popover-in 220ms cubic-bezier(.34,1.3,.64,1) both; }
+.sicost-command-results { display:flex; flex-direction:column; gap:3px; }
+.sicost-command-results > button { display:flex; flex-direction:column; align-items:flex-start; text-align:left; height:auto; padding:11px 12px; border:0; border-radius:6px; animation:sicost-rise 240ms var(--ease) both; }
+.sicost-command-results > button small { color:var(--text-sub); font-size:12px; margin-top:3px; }
+.sicost-command-results > button:is(:hover,[aria-selected="true"]) { background:#EFF6FF; }
+.sicost-dialog:has(.sicost-command-results) input { height:46px; font-size:15px; }
+input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier(.34,1.56,.64,1); }
+.analysis-progress .active { background:linear-gradient(90deg,#1D4ED8,#0EA5E9,#1D4ED8); background-size:200% 100%; background-clip:text; -webkit-text-fill-color:transparent; animation:sicost-shimmer 1.3s linear infinite; }
+.sicost-skeleton-row td { height:44px; padding:12px; }
+.sicost-skeleton-row td > i { display:block; height:12px; border-radius:4px; background:linear-gradient(90deg,#EEF0F3,#F7F8FA,#EEF0F3); background-size:200% 100%; animation:sicost-shimmer 1.3s linear infinite; }
+.sicost-grid[aria-busy="true"] .sicost-pagination { visibility:hidden; }
+@keyframes sicost-tab-in { from {transform:scale(.94);opacity:.4} to {transform:none;opacity:1} }
+@keyframes sicost-tip-in { from {transform:translateY(-3px);opacity:0} to {transform:none;opacity:1} }
+@keyframes sicost-star-pop {0%{transform:scale(.6)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes sicost-star-burst {from{transform:scale(.5);opacity:1}to{transform:scale(1.7);opacity:0}}
+@keyframes sicost-toast-in {from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sicost-dot {from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes sicost-bell-ring {0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(3deg)}}
+@keyframes sicost-popover-in {from{transform:scale(.95) translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sicost-checkbox-in {from{transform:scale(.7)}to{transform:scale(1)}}
+@keyframes sicost-check-draw {to{stroke-dashoffset:0}}
+@keyframes sicost-fly-in {from{transform:translateX(-6px);opacity:0}to{transform:none;opacity:1}}
+@keyframes sicost-progress {from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes sicost-read {from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes sicost-shimmer {to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important} .sicost-toast-check path {stroke-dashoffset:0} .analysis-progress .active {background:none;-webkit-text-fill-color:currentColor} }
+.sicost-person-cell { display:flex;flex-direction:column;line-height:1.4; }
+.sicost-person-cell small {color:var(--text-sub);font-size:11px}
+.sicost-text-link {height:auto;padding:0;border:0;background:transparent;color:var(--primary);text-align:left;box-shadow:none}
+.sicost-kind-chip {display:inline-flex;padding:2px 7px;border:1px solid var(--divider);border-radius:4px;font-size:12px;white-space:nowrap}
+.sicost-pagination button {min-width:34px;height:34px; padding:0 8px}
+.sicost-pagination button[aria-current="page"] {background:var(--primary);color:white;border-color:var(--primary)}
+.sicost-pagination select {border:1px solid var(--divider);border-radius:6px;background:var(--surface);height:34px}
+.sicost-calendar-caption {font-size:12.5px;color:var(--text-sub);margin:0}
+.sicost-footnote {font-size:12px;color:var(--text-sub);margin:4px 0}
+.workforce-calendar-toolbar {justify-content:space-between;gap:8px}
+.workforce-calendar-legend {display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.workforce-calendar-legend > span {font-size:11px;border-radius:4px;padding:3px 6px;background:#EFF6FF;border:1px solid #D5DAE1}
+.workforce-calendar-legend .calendar-legend-3 {background:#FEF3C7}.workforce-calendar-legend .calendar-legend-4{background:white;border:1px dashed #EF4444}.workforce-calendar-legend .calendar-legend-5{border:1px dashed #3D6CF2}
+.workforce-calendar-content {min-width:0}
+.workforce-calendar .sicost-table-viewport {max-height:640px;overflow:auto;isolation:isolate;border-radius:10px;border:1px solid #E7EAEE}
+.workforce-calendar-table {border-collapse:separate;border-spacing:0;table-layout:fixed}
+.workforce-calendar-table :is(th,td) {box-sizing:border-box;height:44px!important;min-height:44px;padding:0 3px!important;border:0!important;border-bottom:1px solid #EEF0F3!important;box-shadow:none;vertical-align:middle}
+.workforce-calendar-table thead th {position:sticky;top:0;z-index:3;background:white!important;height:44px!important;border-bottom:2px solid #D5DAE1!important}
+.workforce-calendar-table th:first-child {width:160px;min-width:160px;max-width:160px;left:0;background:white!important;z-index:2;border-right:1px solid #EEF0F3!important;padding:0 10px!important}
+.workforce-calendar-table th:nth-child(2),.workforce-calendar-table tbody td:nth-child(2) {position:sticky;left:160px;width:100px;min-width:100px;background:white!important;z-index:2;border-right:1px solid #EEF0F3!important}
+.workforce-calendar-table thead th:is(:first-child,:nth-child(2)) {z-index:4}
+.workforce-calendar-table th:first-child button {height:40px;padding:0;border:0;box-shadow:none;background:transparent;font-size:13.5px;text-align:left}
+.workforce-calendar-table th.calendar-current-month {color:#1D4ED8;border-bottom:2px solid #1D4ED8!important}
+.workforce-calendar-cell {height:30px;margin:3px 0;border-radius:4px;overflow:hidden}
+.workforce-calendar-cell .sicost-help-anchor,.workforce-calendar-cell .sicost-help-value {height:100%;width:100%;display:block}
+.calendar-cell-visual {display:flex;height:100%;justify-content:center;align-items:center;font-size:11px}
+.workforce-calendar-assigned {background:linear-gradient(90deg,#DBEAFE var(--assigned-fill,100%),transparent var(--assigned-fill,100%))}
+.workforce-calendar-concurrent {background:repeating-linear-gradient(135deg,#DBEAFE 0 6px,#BFDBFE 6px 12px)}
+.workforce-calendar-ending {background:#FEF3C7}
+.workforce-calendar-available {border:1px dashed #EF4444;background:transparent}
+.workforce-calendar-before_join {background:transparent}
+.sicost-period-row {display:flex;align-items:stretch;gap:10px;container-type:inline-size;min-width:0}
+.sicost-period-row:empty {display:none}
+.sicost-period-status-slot:empty {display:none}
+.sicost-period-row .sicost-period-bar {flex:none;margin:0}
+.sicost-period-status-slot {flex:1;min-width:0}
+.sicost-period-status {min-height:44px;height:100%;display:flex;align-items:center;gap:16px;padding:8px 16px;border:1px solid var(--divider);border-radius:8px;background:var(--surface);font-size:12.5px;color:var(--text);flex-wrap:wrap;box-sizing:border-box}
+.sicost-period-status > span + span {border-left:1px solid var(--divider);padding-left:16px}
+.financial-caption {display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-sub);font-size:12.5px;margin:10px 0}
+.financial-caption label {display:flex;align-items:center;gap:6px;white-space:nowrap}
+.financial-caption select {height:30px;background:var(--surface);border:1px solid var(--divider);border-radius:6px}
+.financial-notice-summary {font-size:12.5px;color:var(--text);padding:10px 12px;border:1px solid var(--divider);border-radius:6px;margin:8px 0}
+.financial-notice-summary summary {cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.financial-notice-summary summary b {color:#B45309}.financial-notice-summary ul {margin-bottom:0;line-height:1.8}
+@container(max-width:1060px){.sicost-period-row {flex-wrap:wrap}.sicost-period-status-slot {flex-basis:100%}}
+.sicost-screen-content > .sicost-period-row {grid-column:1 / -1;width:100%;box-sizing:border-box}
+.sicost-period-row > .sicost-period-bar {min-width:260px}
+@media(min-width:1001px){.sicost-screen .sicost-title-actions-positioned {z-index:26}}
+.dashboard-panel progress::-webkit-progress-value {transform-origin:left;animation:sicost-progress 900ms 150ms var(--ease) both}
+.dashboard-panel progress::-moz-progress-bar {transform-origin:left;animation:sicost-progress 900ms 150ms var(--ease) both}
+.sicost-derived-value {border-bottom:1px dotted currentColor;cursor:help}
+.dashboard-metric > span:first-child::before {animation:sicost-dot 400ms 300ms var(--ease) both}
+@media(prefers-reduced-motion:reduce){.dashboard-panel progress::-webkit-progress-value,.dashboard-panel progress::-moz-progress-bar{animation:none!important}}
+
+.sicost-disabled-help{display:inline-flex;position:relative;border-radius:6px;cursor:help}.sicost-disabled-help>button:disabled{pointer-events:none}.sicost-disabled-help:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.financial-month-strip>.sicost-help-anchor,.financial-month-strip>span{display:contents}
+.dashboard-panel progress{transform-origin:left;animation:sicost-progress 900ms 150ms var(--ease) both}
+.dashboard-panel progress::-webkit-progress-value,.dashboard-panel progress::-moz-progress-bar{animation:none}
+@media(prefers-reduced-motion:reduce){.dashboard-panel progress{animation:none!important}}
+.codegroups-group-entry{display:flex;align-items:center;gap:4px}.codegroups-group-entry>button{flex:1;min-width:0}
+.assignment-extra-conditions{font-size:12.5px;align-self:center}.assignment-extra-conditions summary{cursor:pointer;color:var(--text-sub)}.assignment-extra-conditions[open]{flex-basis:100%}.assignment-extra-conditions .sicost-field{max-width:180px;margin:8px 0}.assignment-column-option{display:flex;align-items:center;gap:8px;margin:9px 0}
+.codegroups-list .sicost-help-value{width:22px;height:28px;padding:0;justify-content:center}
+/* A fixed application viewport gives the main panel its intended scroll container. */
+.sicost-app{height:100dvh;min-height:0}.sicost-main{min-height:0}
+.calendar-person-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;line-height:18px}.workforce-calendar-table tbody th small{display:block;font-size:10.5px;line-height:14px;color:var(--text-sub);font-weight:400}.calendar-cell-visual small{font-size:10px}
+.sicost-motion-reset h1,.sicost-motion-reset progress,.sicost-motion-reset .sicost-kpi-label::before,.sicost-motion-reset .dashboard-metric>span:first-child::before{animation:none!important}
+
+/* Dashboard: one status surface beside the month picker, as in the design. */
+.sicost-screen-content:has(> .dashboard-content) { container: dashboard-period / inline-size; }
+.sicost-period-row:has(.dashboard-dates) { gap: 12px; }
+.sicost-period-status.dashboard-dates {
+  min-height: 44px;
+  padding: 4px 6px;
+  gap: 0;
+  border: 0;
+  border-radius: var(--r-xl, 12px);
+  box-shadow: var(--e1);
+  font-size: 12.5px;
+  color: var(--text-sub);
+}
+.sicost-period-status.dashboard-dates > .dashboard-date-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding: 4px 14px;
+  border: 0;
+  line-height: 18px;
+}
+.dashboard-date-item + .dashboard-date-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--divider);
+}
+.dashboard-date-item-content { display: inline-flex; align-items: center; gap: 8px; }
+.dashboard-date-key { font-size: 11.5px; font-weight: 600; }
+.dashboard-date-item b { color: var(--text); font-weight: 700; }
+.dashboard-date-state { color: var(--text); }
+.dashboard-date-state:has(.sicost-tone-warn) b { color: var(--warn, #b45309); }
+.dashboard-date-current-note svg { flex: none; color: var(--info); }
+@container dashboard-period (max-width: 1060px) {
+  .sicost-period-row:has(.dashboard-dates) { flex-wrap: wrap; }
+  .sicost-period-row:has(.dashboard-dates) .sicost-period-status-slot { flex-basis: 100%; }
+}
+@media (max-width: 767px) {
+  .sicost-period-status.dashboard-dates { padding: 6px 4px; }
+  .sicost-period-status.dashboard-dates > .dashboard-date-item { padding: 4px 10px; }
+  .dashboard-date-item + .dashboard-date-item::before { display: none; }
+}
+
+/* Floating feedback lives outside the application grid and its scroll areas. */
+.sicost-toast-stack {
+  position: fixed;
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.sicost-toast-stack .sicost-toast {
+  min-width: min(240px, calc(100vw - 32px));
+  background: #1f2937;
+  color: #fff;
+  border: 0;
+  font-weight: 500;
+}
+.sicost-toast-stack .sicost-toast-check { flex: none; color: #4ade80; }

@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -185,7 +186,8 @@ export function B6DistributionPanel({
                 지난 연도 또는 실주 프로젝트는 조회만 할 수 있습니다.
               </p>
             )}
-            <div
+            <SegmentedTabList
+              as="div"
               className="b6-toolbar"
               role="tablist"
               aria-label="배분표 조회 단계"
@@ -208,7 +210,7 @@ export function B6DistributionPanel({
                   {value} {label}
                 </button>
               ))}
-            </div>
+            </SegmentedTabList>
             <p>
               계산에 쓰는 단계{" "}
               <StatusBadge tone="info">

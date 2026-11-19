@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -665,7 +666,7 @@ function SalesPartDetailDialog({
               </button>
             </div>
           )}
-          <div role="tablist" aria-label="파트 상세">
+          <SegmentedTabList as="div" role="tablist" aria-label="파트 상세">
             <>
               {["현재 기준", "기준 이력", "변경 이력"].map((label) => (
                 <button
@@ -680,7 +681,7 @@ function SalesPartDetailDialog({
                 </button>
               ))}
             </>
-          </div>
+          </SegmentedTabList>
           <div role="tabpanel" data-testid="sales-part-detail-panel">
             {tab === "변경 이력" ? (
               <ChangeHistoryTable

@@ -36,7 +36,7 @@ export function RequiredPasswordForm({
         }
       }}
     >
-      <h1>첫 비밀번호 변경</h1>
+      <h1 aria-label="첫 비밀번호 변경">비밀번호 변경</h1>
       <p>안전한 사용을 위해 임시 비밀번호를 변경해 주세요.</p>
       <p>
         8자 이상, 영문·숫자·특수문자를 포함해 UTF-8 72바이트 이하로 입력하세요.
@@ -46,9 +46,9 @@ export function RequiredPasswordForm({
       <label>
         새 비밀번호
         <input
-          data-testid="authentication-required-password-new-input"
           type="password"
           autoComplete="new-password"
+          data-testid="authentication-required-password-new-input"
           value={newPassword}
           onChange={(e) => setNew(e.target.value)}
           required
@@ -58,20 +58,21 @@ export function RequiredPasswordForm({
       <label>
         새 비밀번호 확인
         <input
-          data-testid="authentication-required-password-confirm-input"
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
+          data-testid="authentication-required-password-confirm-input"
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
       </label>
       <button
         data-testid="authentication-required-password-submit-button"
+        aria-label="변경 후 로그인"
         className="authentication-primary"
         disabled={busy}
       >
-        변경 후 로그인
+        변경하고 시작
       </button>
     </form>
   );

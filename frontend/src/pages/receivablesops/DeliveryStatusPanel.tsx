@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
@@ -142,7 +143,7 @@ export function DeliveryStatusPanel({
                             "성공시각",
                             "오류코드/사유",
                           ].map((label) => (
-                            <th key={label}>{label}</th>
+                            <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                           ))}
                         </tr>
                       </thead>

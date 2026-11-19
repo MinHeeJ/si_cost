@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
@@ -248,7 +249,7 @@ export function UserProjectDialog({
             </label>
             <label className="sicost-field">
               상태
-              <select
+              <FieldHelp label="상태" /><select
                 data-testid="user-project-status"
                 value={status}
                 disabled={pending}

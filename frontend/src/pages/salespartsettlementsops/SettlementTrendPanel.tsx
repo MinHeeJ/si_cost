@@ -1,7 +1,10 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
 import { formatAmount, formatMm, type AmountUnit } from "../../shared/format";
 import { ErrorBanner } from "../../shared/Feedback";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import {
   getSalesPartSettlementTrend,
   type TrendResult,
@@ -84,6 +87,25 @@ export function SettlementTrendPanel({
               </select>
             </label>
           </div>
+          <ChartHost
+            option={seriesChartOptions({
+              categories: data.monthlyTotals.map((row) => row.month),
+              series: [
+                {
+                  name: "파트 이익금",
+                  values: data.monthlyTotals.map((row) => row.partProfitAmount),
+                  type: "bar",
+                },
+              ],
+              formatValue: (value) =>
+                `${formatAmount(value, displayUnit)} ${displayUnit}`,
+              axisUnit: "백만원",
+            })}
+          >
+            <p className="settlement-guide">
+              차트를 표시할 수 없는 환경에서는 아래 월별 정산표를 이용해 주세요.
+            </p>
+          </ChartHost>
           <div className="sicost-table-viewport">
             <table
               className={`sicost-table settlement-trend-table${shared.dense ? " sicost-dense" : ""}`}
@@ -91,7 +113,7 @@ export function SettlementTrendPanel({
               <thead>
                 <tr>
                   <th>이름</th>
-                  <th>구분</th>
+                  <th>구분<FieldHelp label="구분" kind="B" /></th>
                   {data.months.map((m) => (
                     <th
                       key={m}
