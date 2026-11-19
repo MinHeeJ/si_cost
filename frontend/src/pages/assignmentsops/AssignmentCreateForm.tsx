@@ -1,6 +1,6 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
-import { useFieldErrorFocus } from "../../shared/FieldErrors";
+import { errorOutsideFields, useFieldErrorFocus } from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -17,6 +17,17 @@ import {
   ReasonFields,
 } from "./AssignmentDialogs";
 import * as api from "./assignmentActionsApi";
+/** 이 창에서 칸 아래에 문구를 보여 주는 칸(SFR-017-01). 여기 없는 칸의 오류는 위쪽 띠에 남긴다. */
+const createFieldsWithMessage = new Set([
+  "projectId",
+  "developerId",
+  "jobCode",
+  "inputType",
+  "startDate",
+  "endDate",
+  "contractMm",
+  "billingUnitPrice",
+]);
 
 export function AssignmentCreateForm({
   year,
@@ -309,7 +320,11 @@ export function AssignmentCreateForm({
             후 직접 수정하지 않습니다.
           </p>
           <div className="assignment-create-wide">
-            <AssignmentError error={error} />
+            <AssignmentError
+              error={errorOutsideFields(error, (key) =>
+                createFieldsWithMessage.has(key),
+              )}
+            />
           </div>
           {message && (
             <p role="status" className="assignment-create-wide">
@@ -455,6 +470,7 @@ export function AssignmentCreateForm({
                 </option>
               ))}
             </select>
+            {fields.jobCode && <span role="alert">{fields.jobCode}</span>}
           </label>
           <label className="sicost-field">
             투입구분 *
@@ -470,6 +486,7 @@ export function AssignmentCreateForm({
               <option value="SUB">대체</option>
               <option value="FREE">무상</option>
             </select>
+            {fields.inputType && <span role="alert">{fields.inputType}</span>}
           </label>
           {field("투입일 *", "startDate", "date")}
           {field("철수일 *", "endDate", "date")}

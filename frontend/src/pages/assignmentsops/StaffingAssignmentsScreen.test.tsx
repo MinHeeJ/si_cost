@@ -456,6 +456,86 @@ it("신규폼 SUB 계약상 인력은 실제 변경시 지우며 숨긴 단가�
     expect.not.objectContaining({ billingUnitPrice: expect.anything() }),
   );
 });
+it.each([
+  ["projectId", "프로젝트를 입력해 주세요.", 1],
+  ["jobCode", "직무를 입력해 주세요.", 1],
+  ["year", "입력 항목의 형식과 길이를 확인해 주세요.", 1],
+])(
+  "신규폼 서버 거절 %s: 칸 아래에 보이면 위쪽 띠에 다시 안 나오고, 칸 문구가 없으면 띠에만 나온다",
+  async (field, message, count) => {
+    vi.mocked(api.preview).mockRejectedValue(
+      new ApiError(400, {
+        success: false,
+        meta: {},
+        code: "VALIDATION_ERROR",
+        message,
+        field,
+        requestId: `create-${field}`,
+      }),
+    );
+    render(
+      <AssignmentCreateForm
+        year={2026}
+        today={context.currentDate}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    await screen.findByRole("option", { name: "실제 프로젝트 · MO · ING" });
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "신규 배정" })).getByRole(
+        "button",
+        { name: "저장" },
+      ),
+    );
+    expect(await screen.findAllByText(message)).toHaveLength(count);
+    if (field === "year")
+      expect(screen.getByText(/create-year/)).toBeInTheDocument();
+    else
+      expect(screen.queryByText(new RegExp(`create-${field}`))).not.toBeInTheDocument();
+  },
+);
+it("신규폼 빈 저장의 여러 칸 거절은 칸마다 한 번씩만 보이고 위쪽 띠·문의 번호가 없다", async () => {
+  vi.mocked(api.preview).mockRejectedValue(
+    new ApiError(400, {
+      success: false,
+      meta: {},
+      code: "INVALID_INPUT",
+      message: "프로젝트를 입력해 주세요.",
+      field: "projectId",
+      requestId: "create-many",
+      details: {
+        violations: [
+          { field: "projectId", message: "프로젝트를 입력해 주세요." },
+          { field: "developerId", message: "개발자를 골라 주세요" },
+          { field: "jobCode", message: "직무를 입력해 주세요." },
+        ],
+      },
+    } as ConstructorParameters<typeof ApiError>[1]),
+  );
+  render(
+    <AssignmentCreateForm
+      year={2026}
+      today={context.currentDate}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+    />,
+  );
+  await screen.findByRole("option", { name: "실제 프로젝트 · MO · ING" });
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: "신규 배정" })).getByRole(
+      "button",
+      { name: "저장" },
+    ),
+  );
+  for (const text of [
+    "프로젝트를 입력해 주세요.",
+    "개발자를 골라 주세요",
+    "직무를 입력해 주세요.",
+  ])
+    expect(await screen.findAllByText(text)).toHaveLength(1);
+  expect(screen.queryByText(/create-many/)).not.toBeInTheDocument();
+});
 it("저장후 재조회 실패는 POST 재실행 없이 조회만 허용한다", async () => {
   const refreshed = vi.fn().mockRejectedValue(new Error("조회 실패"));
   render(

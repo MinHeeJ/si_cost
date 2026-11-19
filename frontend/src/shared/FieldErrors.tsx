@@ -1,4 +1,18 @@
 import { useEffect, type RefObject } from "react";
+import { ApiError } from "./api";
+
+/**
+ * 칸 아래에 이미 보이는 서버 검사 오류는 위쪽 오류 띠에 다시 보이지 않는다(SFR-017-01 「틀린 칸 아래 빨간 이유」).
+ * 칸에 붙지 않거나 화면에 없는 칸의 오류는 그대로 띠에 남긴다.
+ */
+export function errorOutsideFields(
+  error: unknown,
+  shown: (field: string) => boolean,
+): unknown {
+  if (!(error instanceof ApiError)) return error;
+  const keys = Object.keys(error.fieldMessages);
+  return keys.length > 0 && keys.every(shown) ? undefined : error;
+}
 
 export function focusFirstError(
   root: ParentNode | null,

@@ -303,3 +303,50 @@ it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다",
     "sicost-primary",
   );
 });
+it("빈 필수 칸은 칸 이름이 든 원문 형식 문구를 보이고 「필수 입력입니다.」를 쓰지 않는다", async () => {
+  mount();
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  for (const text of [
+    "기회명을 입력해 주세요.",
+    "고객사를 골라 주세요.",
+    "영업 파트를 골라 주세요.",
+    "예상 금액을 입력해 주세요.",
+  ])
+    expect(screen.getByText(text)).toBeInTheDocument();
+  expect(screen.queryByText("필수 입력입니다.")).not.toBeInTheDocument();
+  expect(api.createSalesOpportunity).not.toHaveBeenCalled();
+});
+it("칸 아래에 보이는 서버 거절 문구는 위쪽 오류 띠에 다시 나오지 않는다", async () => {
+  vi.mocked(api.putSalesOpportunity).mockRejectedValue(
+    new ApiError(400, {
+      success: false,
+      meta: {},
+      code: "VALIDATION_ERROR",
+      message: "고객사를 입력해 주세요.",
+      field: "customerId",
+      requestId: "field-request",
+    }),
+  );
+  mount(detail());
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(await screen.findAllByText("고객사를 입력해 주세요.")).toHaveLength(1);
+});
+it("칸에 붙지 않는 서버 거절은 위쪽 오류 띠에 그대로 나온다", async () => {
+  vi.mocked(api.putSalesOpportunity).mockRejectedValue(
+    new ApiError(409, {
+      success: false,
+      meta: {},
+      code: "STALE_WRITE",
+      message: "다른 사용자가 먼저 고쳤습니다.",
+      requestId: "stale-request",
+    }),
+  );
+  mount(detail());
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(
+    await screen.findByText("다른 사용자가 먼저 고쳤습니다."),
+  ).toBeInTheDocument();
+});

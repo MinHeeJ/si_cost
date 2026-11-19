@@ -29,6 +29,51 @@ class InputValidatorTest {
         }
         assertThatThrownBy(() -> InputValidator.text("  ", 50, "name")).isInstanceOf(ApiException.class);
     }
+    /** 빈 칸 문구: 받침에 맞는 조사, 칸 이름을 모르면 main 공통 문구(2026-11-19 205 완료 점검 ①). */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(delimiter='|', value={
+        "projectId|프로젝트를 입력해 주세요.",
+        "customerId|고객사를 입력해 주세요.",
+        "partId|영업 파트를 입력해 주세요.",
+        "name|이름을 입력해 주세요.",
+        "jobCode|직무를 입력해 주세요.",
+        "reason|사유를 입력해 주세요.",
+        "memo|메모를 입력해 주세요.",
+        "startMonth|시작월을 입력해 주세요.",
+        "monthlyMm|월 MM을 입력해 주세요.",
+        "needs[0].count|인원을 입력해 주세요.",
+        "developerId|개발자를 골라 주세요",
+        "거래처명|거래처명을 입력해 주세요.",
+        "operationId|입력 항목의 형식과 길이를 확인해 주세요.",
+        "key|입력 항목의 형식과 길이를 확인해 주세요.",
+        "value|입력 항목의 형식과 길이를 확인해 주세요."})
+    void blankTextMessageUsesParticleOrMainFallback(String field, String expected) {
+        assertThatThrownBy(() -> InputValidator.text("  ", 50, field))
+            .isInstanceOfSatisfying(ApiException.class, e -> {
+                assertThat(e.getMessage()).isEqualTo(expected).doesNotContain("을(를)");
+                assertThat(e.field()).isEqualTo(field);
+            });
+    }
+    @Test void particleFollowsFinalSoundIncludingLatinAndDigits() {
+        assertThat(InputValidator.objectParticle("프로젝트")).isEqualTo("를");
+        assertThat(InputValidator.objectParticle("시작월")).isEqualTo("을");
+        assertThat(InputValidator.objectParticle("월 MM")).isEqualTo("을");
+        assertThat(InputValidator.objectParticle("ID")).isEqualTo("를");
+        assertThat(InputValidator.objectParticle("항목1")).isEqualTo("을");
+        assertThat(InputValidator.objectParticle("항목2")).isEqualTo("를");
+    }
+    @Test void invalidMessageKeepsMainFallbackForUnknownFields() {
+        assertThat(InputValidator.invalid("operationId").getMessage()).isEqualTo("입력 항목의 형식과 길이를 확인해 주세요.");
+        assertThat(InputValidator.invalid(null).getMessage()).isEqualTo("입력 항목의 형식과 길이를 확인해 주세요.");
+        assertThat(InputValidator.invalid("memo").getMessage()).isEqualTo("메모 칸의 형식과 길이를 확인해 주세요.");
+        assertThatThrownBy(() -> InputValidator.text("가".repeat(51), 50, "projectId"))
+            .hasMessage("프로젝트 칸의 형식과 길이를 확인해 주세요.");
+    }
+    @Test void labelStillNamesUnknownFieldsForRowMessages() {
+        assertThat(InputValidator.label("needs[0].count")).isEqualTo("인원");
+        assertThat(InputValidator.label("operationId")).isEqualTo("입력 항목");
+        assertThat(InputValidator.label(null)).isEqualTo("입력");
+    }
     @ParameterizedTest @ValueSource(strings={"-1", "1e2", "NaN", "Infinity", "100000000000", "1.12345", "1원원", "+1", ".1"})
     void invalidDecimalsReturn400(String input) {
         assertThatThrownBy(() -> DecimalValidator.standard(input)).isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.status()).isEqualTo(400));

@@ -10,6 +10,8 @@ import java.util.Map;
 public final class InputValidator {
     private InputValidator() {}
     public static final String DATE_MESSAGE = "날짜 형식이 맞지 않습니다. YYYY-MM-DD로 적어 주세요.";
+    /** main과 같은 공통 문구. 칸 이름을 모르는 칸에 쓴다. */
+    public static final String GENERIC_MESSAGE = "입력 항목의 형식과 길이를 확인해 주세요.";
     public static final String MANAGEMENT_NUMBER_MESSAGE = "등록되지 않은 관리번호입니다. 개발자 풀에 먼저 등록해 주세요.";
 
     /** Collect independent checks without changing the rules or running any writes. */
@@ -30,8 +32,7 @@ public final class InputValidator {
         }
     }
     public static String text(String value, int max, String field) {
-        if (value == null || value.isBlank()) throw new ApiException(400, "VALIDATION_ERROR",
-            "developerId".equals(field) ? message(field) : label(field) + "을(를) 입력해 주세요.", field, null);
+        if (value == null || value.isBlank()) throw new ApiException(400, "VALIDATION_ERROR", requiredMessage(field), field, null);
         String trimmed = value.strip();
         if (trimmed.isEmpty() || trimmed.codePointCount(0, trimmed.length()) > max) throw invalid(field);
         return trimmed;
@@ -41,6 +42,18 @@ public final class InputValidator {
         return "’" + source + "’" + (sourceFinal == 0 ? "를" : "을")
             + " ’" + target + "’" + (targetFinal == 0 || targetFinal == 8 ? "로" : "으로")
             + " 바꿔 읽었습니다";
+    }
+    /** 빈 칸 문구. 칸 이름을 아는 경우만 「○○를/을 입력해 주세요.」, 모르면 main의 공통 문구(B 화면 문구를 어색하게 바꾸지 않음). */
+    static String requiredMessage(String field) {
+        if ("developerId".equals(field)) return message(field);
+        String name = knownLabel(field);
+        return name == null ? GENERIC_MESSAGE : name + objectParticle(name) + " 입력해 주세요.";
+    }
+    /** 받침이 있으면 「을」, 없으면 「를」. 영문·숫자로 끝나면 읽는 소리 기준(예: 월 MM → 엠 → 을). */
+    static String objectParticle(String word) {
+        char last = word.charAt(word.length() - 1);
+        if (last >= '가' && last <= '힣') return finalConsonant(word) == 0 ? "를" : "을";
+        return "LMNRlmnr013678".indexOf(last) >= 0 ? "을" : "를";
     }
     private static int finalConsonant(String value) {
         char last = value.charAt(value.length() - 1);
@@ -81,7 +94,12 @@ public final class InputValidator {
         return new ApiException(400, "VALIDATION_ERROR", message(field), field, null);
     }
     public static String label(String field) {
-        if(field==null)return "입력";
+        String name = knownLabel(field);
+        return name != null ? name : field == null ? "입력" : "입력 항목";
+    }
+    /** 화면 칸 이름을 아는 경우만 이름, 모르면 null. */
+    private static String knownLabel(String field) {
+        if(field==null)return null;
         String key=field.substring(field.lastIndexOf('.')+1);
         return switch(key) {
             case "name" -> "이름"; case "developerId" -> "개발자"; case "projectId" -> "프로젝트";
@@ -93,11 +111,11 @@ public final class InputValidator {
             case "applyDate" -> "적용일"; case "applyMonth" -> "적용월"; case "newEndDate" -> "새 종료일";
             case "withdrawalDate" -> "철수일"; case "probability" -> "수주 확률"; case "amount" -> "금액";
             case "reasonCode", "reason" -> "사유"; case "memo" -> "메모"; case "needs" -> "필요 인력";
-            default -> field != null && field.matches(".*[가-힣].*") ? field : "입력 항목";
+            default -> field.matches(".*[가-힣].*") ? field : null;
         };
     }
     public static String message(String field) {
-        if(field==null)return "입력 항목의 형식과 길이를 확인해 주세요.";
+        if(field==null)return GENERIC_MESSAGE;
         return switch(field) {
             case "developerId" -> "개발자를 골라 주세요";
             case "billingUnitPrice", "newUnitPrice" -> "청구 단가를 입력해 주세요.";
@@ -105,7 +123,7 @@ public final class InputValidator {
             case "probability" -> "0~100 사이 숫자로 입력해 주세요.";
             case "reasonCode" -> "사유를 골라 주세요.";
             case "startDate", "endDate", "applyDate", "newEndDate", "withdrawalDate", "plannedStartDate", "plannedEndDate", "hireDate", "retireDate", "availableDate" -> DATE_MESSAGE;
-            default -> label(field)+" 칸의 형식과 길이를 확인해 주세요.";
+            default -> knownLabel(field) == null ? GENERIC_MESSAGE : knownLabel(field)+" 칸의 형식과 길이를 확인해 주세요.";
         };
     }
 }
