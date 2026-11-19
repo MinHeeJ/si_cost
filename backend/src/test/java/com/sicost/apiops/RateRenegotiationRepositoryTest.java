@@ -64,4 +64,29 @@ class RateRenegotiationRepositoryTest {
         assertThat(result.candidates().get(0).month().salesAmount()).isNull();
         assertThat(result.sources().assignments()).isEmpty();
     }
+    @Test void actualAssignmentStatementScopesProjectsWithoutFilteringTheDevelopersHomePart() throws Exception {
+        var configuration=new org.apache.ibatis.session.Configuration();
+        configuration.setArgNameBasedConstructorAutoMapping(true);
+        configuration.setMapUnderscoreToCamelCase(true);
+        String resource="mappers/apiops/RateRenegotiationMapper.xml";
+        try(var input=getClass().getClassLoader().getResourceAsStream(resource)) {
+            new org.apache.ibatis.builder.xml.XMLMapperBuilder(
+                input,configuration,resource,configuration.getSqlFragments()).parse();
+        }
+        var statement=configuration.getMappedStatement(RateRenegotiationMapper.class.getName()+".assignments");
+        String original=statement.getBoundSql(LocalDate.of(2080,7,15)).getSql();
+        var scope=new com.sicost.permission.PermissionScopeSql.Scope(
+            false,Set.of("OPERATIONS"),Set.of(),"208007","208007","leader");
+        String scoped=com.sicost.permission.PermissionScopeSql.rewrite(original,scope);
+        assertThat(scoped).contains("permission_part.proj_id=permission_row.proj_id", "'OPERATIONS'");
+        assertThat(scoped).contains("JOIN tb_hr_dev d ON d.dev_id = a.dev_id");
+        assertThat(scoped).doesNotContain("permission_row.part_id","permission_person");
+        var all=new com.sicost.permission.PermissionScopeSql.Scope(
+            true,Set.of(),Set.of(),"208007","208007","finance");
+        assertThat(com.sicost.permission.PermissionScopeSql.rewrite(original,all)).isEqualTo(original);
+        assertThat(statement.getResultMaps().get(0).getType()).isEqualTo(Source.class);
+        for(var field:Source.class.getRecordComponents()) {
+            assertThat(original).contains("AS \""+field.getName()+"\"");
+        }
+    }
 }

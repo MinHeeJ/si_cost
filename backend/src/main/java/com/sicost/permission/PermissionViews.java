@@ -18,7 +18,7 @@ public final class PermissionViews {
     }
     public static void rate(ObjectNode value) {
         if(value.path("summary") instanceof ObjectNode summary)fields(summary,"personCount","assignmentCount","weightedMarginRate","annualGain","targetAnnualGain");
-        for(var node:value.path("items"))if(node instanceof ObjectNode row)fields(row,"assignmentId","developerId","name","projectId","projectName","renewalDate","daysUntilRenewal","planned","contractMm","monthlyMm","unitPrice","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain","targetAnnualGain");
+        for(var node:value.path("items"))if(node instanceof ObjectNode row)fields(row,"assignmentId","developerId","name","managementNo","employeeType","projectId","projectName","renewalDate","daysUntilRenewal","planned","contractMm","monthlyMm","unitPrice","marginRate","targetUnitPrice","requiredIncreaseRate","annualGain","targetAnnualGain");
         fields(value,"baseMonth","calculatedAt","appliedIncreaseRate","targetMarginRate","summary","items","pagination","unevaluatedCount");
     }
     private static void standard(ObjectNode node) {fields(node,"leaderName");}

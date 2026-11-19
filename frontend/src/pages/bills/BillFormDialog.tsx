@@ -389,7 +389,11 @@ export function BillFormDialog({
                 >
                   <option value="">선택해 주세요</option>
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option
+                      key={p.id}
+                      value={p.id}
+                      data-testid={`bill-form-project-option-${p.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+                    >
                       {p.name} · {p.customerName ?? "–"}
                     </option>
                   ))}
@@ -425,7 +429,11 @@ export function BillFormDialog({
               "taxInvoiceNo",
             ] as const
           ).map((key) => (
-            <div className="sicost-field" key={key}>
+            <div
+              className="sicost-field"
+              key={key}
+              data-testid={`bill-form-field-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+            >
               <label htmlFor={`bill-${key}`}>{labels[key]}</label>
               <input
                 id={`bill-${key}`}
@@ -460,7 +468,10 @@ export function BillFormDialog({
             <div data-testid="bill-estimate-sources">
               {estimate.sources.length ? (
                 estimate.sources.map((s) => (
-                  <p key={s.assignmentId}>
+                  <p
+                    key={s.assignmentId}
+                    data-testid={`bill-form-estimate-source-${s.assignmentId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+                  >
                     {s.developerName} ({s.managementNo}) · 단가{" "}
                     {s.appliedUnitPrice} × MM {s.mm} · {s.supplyAmount}원{" "}
                     {s.protected ? "보호월 자료" : ""}
@@ -486,7 +497,10 @@ export function BillFormDialog({
       >
         <section data-testid="bill-duplicate-dialog">
           {duplicate?.existingBills.map((b) => (
-            <p key={b.id}>
+            <p
+              key={b.id}
+              data-testid={`bill-form-duplicate-${b.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+            >
               {b.id} · {b.order}차
             </p>
           ))}
