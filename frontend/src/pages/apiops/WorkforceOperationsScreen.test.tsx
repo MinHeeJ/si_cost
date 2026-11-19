@@ -325,3 +325,21 @@ it("대시보드 인력부족 진입은 기존 수요·공급 탭을 연다", as
   expect(await screen.findByTestId("supply-tab")).toHaveAttribute("aria-selected","true");
   expect(screen.getByTestId("supply-panel")).toBeVisible();
 });
+
+it("refreshes unchanged search conditions once per click and keeps applied filters", async () => {
+  mount();
+  await screen.findByTestId("calendar-person-D-1");
+  expect(api.getWorkforceOperations).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByTestId("calendar-search"));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(2));
+  await userEvent.selectOptions(screen.getByLabelText("직무"), "DEV");
+  expect(api.getWorkforceOperations).toHaveBeenCalledTimes(2);
+  await userEvent.click(screen.getByTestId("calendar-search"));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(3));
+  await userEvent.click(screen.getByTestId("calendar-search"));
+  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(4));
+  expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+    expect.objectContaining({ jobCode: "DEV", page: 1 }),
+    expect.any(AbortSignal),
+  );
+});

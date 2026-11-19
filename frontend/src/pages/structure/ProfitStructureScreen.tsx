@@ -54,6 +54,20 @@ const tabs: [api.Aggregation, string][] = [
   ["QUARTER", "분기"],
   ["YTD", "연 누계"],
 ];
+function monthRange(months: string[]) {
+  if (!months.length) return "조회 기간";
+  const first = months[0], last = months[months.length - 1];
+  const label = (month: string) => `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
+  if (first === last) return label(first);
+  return first.slice(0, 4) === last.slice(0, 4)
+    ? `${first.slice(0, 4)}년 ${Number(first.slice(5))}~${Number(last.slice(5))}월`
+    : `${label(first)}~${label(last)}`;
+}
+const comparisonLabels: Record<api.Aggregation, string> = {
+  MONTH: "전년 동월과 비교",
+  QUARTER: "전년 동분기의 같은 월 범위와 비교",
+  YTD: "전년 동기 누계와 비교",
+};
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 function Change({
@@ -354,7 +368,15 @@ export function ProfitStructureScreen({
             data-testid="structure-panel"
             aria-label={tabs.find(([v]) => v === aggregation)?.[1]}
           >
-            <FinancialOverview context={data.context} months={data.months} provisional={last?.provisional ?? data.months.some(m=>m.provisional)} notices={data.notices} />
+            <FinancialOverview
+              context={data.context}
+              months={data.months}
+              provisional={last?.provisional ?? data.months.some(m=>m.provisional)}
+              notices={data.notices}
+              caption={last
+                ? `${monthRange(last.months)} · ${tabs.find(([mode]) => mode === data.context.aggregation)?.[1]} 실적 · ${comparisonLabels[data.context.aggregation]} · 부가세 제외`
+                : `${data.context.year}년 · 조회 기간의 손익 자료가 없습니다 · 부가세 제외`}
+            />
             {!data.months.some(
               (m) => m.sourceKind !== "MISSING" && m.sourceKind !== "FUTURE",
             ) && (

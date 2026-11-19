@@ -325,7 +325,7 @@ export function WorkforceCalendar({
         resetTestId="calendar-reset"
         searchTestId="calendar-search"
         onSubmit={() => {
-          setFilter(draft);
+          setFilter({ ...draft });
           setPage(1);
         }}
         onReset={reset}

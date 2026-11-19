@@ -550,3 +550,34 @@ it("does not invent a closed month and includes the year for a previous year's c
   ready();
   expect(await screen.findByText("2025년 12월까지")).toBeInTheDocument();
 });
+
+it.each(["success", "failure"])("hides previous-month cards during a different-month request and after %s", async (outcome) => {
+  ready();
+  await screen.findByTestId("dashboard-metric-sales");
+  let resolve!: (value: api.DashboardData) => void;
+  let reject!: (reason: Error) => void;
+  vi.mocked(api.getDashboard).mockImplementationOnce(() => new Promise((ok, fail) => {
+    resolve = ok;
+    reject = fail;
+  }));
+  act(() => window.dispatchEvent(new CustomEvent("sicost:screen-period-changed", {
+    detail: { screenId: "UI-16", value: { type: "YEAR_MONTH", value: "2026-06" } },
+  })));
+  await waitFor(() => expect(api.getDashboard).toHaveBeenLastCalledWith("2026-06", expect.any(AbortSignal)));
+  expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument();
+  expect(screen.getByTestId("dashboard-export")).toBeDisabled();
+  expect(screen.queryByText(/선택월 2026-07/)).not.toBeInTheDocument();
+  if (outcome === "success") {
+    await act(async () => resolve({ ...data, selectedMonth: "2026-06" }));
+    expect(screen.getByTestId("dashboard-metric-sales")).toBeInTheDocument();
+    expect(screen.getByText(/선택월 2026-06/)).toBeInTheDocument();
+  } else {
+    await act(async () => reject(new Error("다른 월 조회 실패")));
+    expect(screen.getByText("다른 월 조회 실패")).toBeVisible();
+    expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-export")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("dashboard-retry"));
+    await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(3));
+    expect(api.getDashboard).toHaveBeenLastCalledWith("2026-06", expect.any(AbortSignal));
+  }
+});

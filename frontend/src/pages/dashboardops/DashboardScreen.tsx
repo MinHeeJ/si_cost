@@ -116,7 +116,11 @@ export function DashboardScreen({
   amountUnit = "천원",
 }: { amountUnit?: AmountUnit } = {}) {
   const [month, setMonth] = useState<string>();
-  const [data, setData] = useState<api.DashboardData>();
+  const [receivedData, setData] = useState<api.DashboardData>();
+  // Retain cards only while refreshing the same selected period.
+  const data = month === undefined || receivedData?.selectedMonth === month
+    ? receivedData
+    : undefined;
   const [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
