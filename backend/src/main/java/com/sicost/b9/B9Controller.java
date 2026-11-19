@@ -22,7 +22,11 @@ public class B9Controller {
     public void getB9Template(HttpServletRequest request,HttpServletResponse response) throws IOException {
         allow(request.getParameterMap().keySet(),Set.of());
         var columns=new ArrayList<ExcelExportService.Column>();
-        for(int i=0;i<B9ImportDefinition.HEADERS.size();i++)columns.add(new ExcelExportService.Column("b9Field"+i,B9ImportDefinition.HEADERS.get(i),ExcelExportService.CellType.TEXT));
+        for(int i=0;i<B9ImportDefinition.HEADERS.size();i++) {
+            String title=B9ImportDefinition.HEADERS.get(i);
+            if(Set.of("프로젝트명","고객사","계약유형","시작일","종료일","영업 파트").contains(title))title+="*";
+            columns.add(new ExcelExportService.Column("b9Field"+i,title,ExcelExportService.CellType.TEXT));
+        }
         var specification=new ExcelExportService.Specification("프로젝트_등록양식",null,columns,"B9 신규 등록","원","UI-01");
         try(var download=exports.generateTemplate(specification,B9ImportDefinition.GUIDE,request)) {
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

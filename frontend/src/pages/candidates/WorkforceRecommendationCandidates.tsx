@@ -1,4 +1,9 @@
-import { formatIntegerAmount, formatDecimal, type AmountUnit } from "../../shared/format";
+import {
+  formatIntegerAmount,
+  formatDecimal,
+  formatRate,
+  type AmountUnit,
+} from "../../shared/format";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -11,6 +16,11 @@ import {
   type Create,
 } from "../assignmentsops/assignmentActionsApi";
 import * as api from "./recommendationActionsApi";
+import { useCodeNames } from "../../shared/codeNames";
+import {
+  recommendationBasis,
+  recommendationReason,
+} from "./recommendationPresentation";
 import "./recommendationCandidates.css";
 
 export type RecommendationCandidatesProps = {
@@ -43,16 +53,42 @@ const itemLabels: Record<string, string> = {
   GAP: "공백",
   PROB: "수주 확률",
 };
-function costBasis(row: api.RecommendationCandidate, unit: AmountUnit, fallback: string) {
+function costBasis(
+  row: api.RecommendationCandidate,
+  unit: AmountUnit,
+  fallback: string,
+) {
   const detail = row.scoreDetail;
-  if (!detail || typeof detail !== "object" || !("c" in detail) || !("u" in detail)) return fallback;
-  const c = detail.c, u = detail.u;
-  if (!(c === null || typeof c === "string") || !(u === null || typeof u === "string")) return fallback;
-  return <>{"m" in detail && typeof detail.m === "string" ? `원가월 ${detail.m} · ` : ""}인건비 {formatIntegerAmount(c, unit)} {unit} · 단가 {formatIntegerAmount(u, unit)} {unit}{"f" in detail && detail.f === 1 ? " · 예정" : ""}{c === null || u === null ? " · 원천 미확인" : ""}</>;
+  if (
+    !detail ||
+    typeof detail !== "object" ||
+    !("c" in detail) ||
+    !("u" in detail)
+  )
+    return fallback;
+  const c = detail.c,
+    u = detail.u;
+  if (
+    !(c === null || typeof c === "string") ||
+    !(u === null || typeof u === "string")
+  )
+    return fallback;
+  return (
+    <>
+      {"m" in detail && typeof detail.m === "string"
+        ? `${detail.m.slice(0, 4)}년 ${Number(detail.m.slice(-2))}월 원가 기준 · `
+        : ""}
+      인건비 {formatIntegerAmount(c, unit)} {unit} · 단가{" "}
+      {formatIntegerAmount(u, unit)} {unit}
+      {"f" in detail && detail.f === 1 ? " · 예정" : ""}
+      {c === null || u === null ? " · 원천 미확인" : ""}
+    </>
+  );
 }
 export function WorkforceRecommendationCandidates(
   props: RecommendationCandidatesProps,
 ) {
+  const name = useCodeNames("JOB", "GRADE", "EMP_TYPE", "SALES_STEP");
   const {
     rcmdId,
     type,
@@ -269,7 +305,15 @@ export function WorkforceRecommendationCandidates(
         <div className="recommendation-empty">
           <h2>맞는 인력이 없습니다.</h2>
           <p>조건을 확인한 뒤 다시 추천해 주세요.</p>
-          {props.onReset && <button type="button" onClick={props.onReset}>조건 초기화</button>}
+          {props.onReset && (
+            <button
+              data-testid="recommendation-empty-reset"
+              type="button"
+              onClick={props.onReset}
+            >
+              조건 초기화
+            </button>
+          )}
         </div>
       ) : (
         candidates
@@ -307,9 +351,9 @@ export function WorkforceRecommendationCandidates(
                   </strong>
                 </header>
                 <p>
-                  {row.developer.jobCode} /{" "}
-                  {row.developer.gradeCode ?? "미확인"} /{" "}
-                  {row.developer.employeeTypeCode}
+                  {name("JOB", row.developer.jobCode)} ·{" "}
+                  {name("GRADE", row.developer.gradeCode)} ·{" "}
+                  {name("EMP_TYPE", row.developer.employeeTypeCode)}
                 </p>
                 {type === "NEXT" && next ? (
                   <>
@@ -326,17 +370,20 @@ export function WorkforceRecommendationCandidates(
                     </button>
                     <p>
                       {next.customerName ?? "고객 미확인"} ·{" "}
-                      {next.salesStepCode} · 수주 확률 {formatDecimal(next.probability)}%
+                      {name("SALES_STEP", next.salesStepCode)} · 수주 확률{" "}
+                      {formatRate(next.probability)}
                     </p>
                     <p>
                       원 시작월 {next.originalStartMonth} · 실제 예정월{" "}
-                      {next.actualStartMonth} · 필요 등급 {next.gradeCode} ·
-                      남은 자리 {next.remainingCount}명 · 공백 {next.gapMonths}
+                      {next.actualStartMonth} · 필요 등급{" "}
+                      {name("GRADE", next.gradeCode)} · 남은 자리{" "}
+                      {next.remainingCount}명 · 공백 {next.gapMonths}
                       개월 · 대기 {next.waitDays}일
                     </p>
                     <div className="recommendation-chips">
                       {next.reasonChips.map((chip, i) => (
                         <span
+                          data-testid={`recommendation-reason-chip-${row.rank}-${i}`}
                           className="sicost-badge sicost-tone-info"
                           key={`${i}-${chip}`}
                         >
@@ -358,12 +405,13 @@ export function WorkforceRecommendationCandidates(
                     >
                       {target.name}
                     </button>{" "}
-                    / {row.jobCode} / {row.startMonth} /{" "}
-                    {row.requestedGradeCode}
+                    · {name("JOB", row.jobCode)} · {row.startMonth} ·{" "}
+                    {name("GRADE", row.requestedGradeCode)}
                   </p>
                 )}
                 {row.otherTentativeAssignments.map((t) => (
                   <p
+                    data-testid={`recommendation-other-assignment-${row.rank}-${t.tentativeAssignmentId.toLowerCase().replace(/_/g, "-")}`}
                     className="sicost-banner sicost-tone-warn"
                     key={t.tentativeAssignmentId}
                   >
@@ -384,8 +432,13 @@ export function WorkforceRecommendationCandidates(
                 <div className="recommendation-scores">
                   {row.scoreItems.map((item) => (
                     <div
+                      data-testid={`recommendation-score-${row.rank}-${item.itemCode.toLowerCase().replace(/_/g, "-")}`}
                       className="recommendation-score"
-                      title={item.basis}
+                      title={
+                        item.itemCode === "COST"
+                          ? undefined
+                          : recommendationBasis(item)
+                      }
                       key={item.itemCode}
                     >
                       <span>{itemLabels[item.itemCode] ?? item.itemCode}</span>
@@ -397,11 +450,15 @@ export function WorkforceRecommendationCandidates(
                       <span>
                         {item.score}/{item.weight}
                       </span>
-                      <small>{item.itemCode === "COST" ? costBasis(row, props.amountUnit ?? "천원", item.basis) : item.basis}</small>
+                      <small>
+                        {item.itemCode === "COST"
+                          ? costBasis(row, "원", item.basis)
+                          : recommendationBasis(item)}
+                      </small>
                     </div>
                   ))}
                 </div>
-                <p>{row.reason}</p>
+                <p>{recommendationReason(row.reason)}</p>
                 <footer>
                   {selected ? (
                     <span
@@ -465,9 +522,10 @@ export function WorkforceRecommendationCandidates(
       {excluding && (
         <Dialog
           open
-          title={`후보 제외: ${excluding.developer.name}`}
+          title={`${excluding.developer.name}님을 후보에서 제외할까요?`}
+          danger
           pending={pending}
-          confirmLabel="확정"
+          confirmLabel="제외"
           confirmDisabled={codesLoading || !reasons.length || !actionsEnabled}
           onCancel={() => setExcluding(undefined)}
           onConfirm={async () => {
@@ -489,7 +547,7 @@ export function WorkforceRecommendationCandidates(
             data-testid="recommendation-exclusion-modal"
           >
             <p>
-              {target.name} / {excluding.jobCode}
+              {target.name} · {name("JOB", excluding.jobCode)}
             </p>
             <label>
               제외 사유*
@@ -504,7 +562,11 @@ export function WorkforceRecommendationCandidates(
               >
                 <option value="">사유를 선택해 주세요</option>
                 {reasons.map((r) => (
-                  <option value={r.code} key={r.code}>
+                  <option
+                    data-testid={`recommendation-exclusion-reason-option-${r.code.toLowerCase().replace(/_/g, "-")}`}
+                    value={r.code}
+                    key={r.code}
+                  >
                     {r.name}
                   </option>
                 ))}
@@ -547,10 +609,14 @@ export function WorkforceRecommendationCandidates(
           >
             <p>
               현재 선택 자리 {confirming.needSn} /{" "}
-              {props.selectedNeedLabel ?? confirming.row.jobCode}
+              {props.selectedNeedLabel ?? name("JOB", confirming.row.jobCode)}
             </p>
             {confirming.warnings.map((w) => (
-              <p className="sicost-banner sicost-tone-warn" key={w.code}>
+              <p
+                data-testid={`recommendation-warning-${w.code.toLowerCase().replace(/_/g, "-")}`}
+                className="sicost-banner sicost-tone-warn"
+                key={w.code}
+              >
                 {w.message}
               </p>
             ))}

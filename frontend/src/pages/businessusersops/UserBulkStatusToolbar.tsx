@@ -119,6 +119,7 @@ export function UserBulkStatusToolbar({
           <span>선택 {selected.length}건</span>
           {onSelectAll && (
             <button
+              data-testid="user-bulk-select-all"
               type="button"
               disabled={pending}
               onClick={() => void onSelectAll().catch(setError)}
@@ -148,7 +149,12 @@ export function UserBulkStatusToolbar({
               일괄 다시 사용
             </button>
             {onClear && (
-              <button type="button" disabled={pending} onClick={onClear}>
+              <button
+                data-testid="user-bulk-clear-selection"
+                type="button"
+                disabled={pending}
+                onClick={onClear}
+              >
                 선택 해제
               </button>
             )}

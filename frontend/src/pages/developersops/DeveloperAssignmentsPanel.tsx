@@ -41,9 +41,12 @@ const columns: Column<api.DeveloperAssignment>[] = [
               : "lock"
         }
       >
-        {({ ACT: "투입", CNCL: "취소", END: "종료" } as Record<string, string>)[
-          row.assignmentStatus
-        ] ?? row.assignmentStatus}
+        {(
+          { ACT: "투입 중", CNCL: "취소", END: "종료" } as Record<
+            string,
+            string
+          >
+        )[row.assignmentStatus] ?? "–"}
       </StatusBadge>
     ),
   },

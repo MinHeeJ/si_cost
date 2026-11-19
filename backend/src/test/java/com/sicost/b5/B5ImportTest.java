@@ -47,6 +47,17 @@ class B5ImportTest {
     @Test void wholeFileMonthlyTotalWarnsEveryRelatedRowNotOnlyLaterRow() throws Exception {var file=B5Workbook.file(b->{B5Workbook.row(b,1,"P-test","0001","개발","2026-06-01","2026-06-30","0.60","100","신규");B5Workbook.row(b,2,"P-other","0001","개발","2026-06-01","2026-06-30","0.60","100","신규");});var result=definition.check(definition.parse(file),new Request(2026,null,null,List.of()));assertThat(result.summary().warningRows()).isEqualTo(2);assertThat(result.issues()).allMatch(i->i.reason().contains("1.20"));}
     @ParameterizedTest @ValueSource(strings={"0","1.01","0.123","-1","1e0"}) void invalidMmErr(String mm) throws Exception {assertThat(check("P-test","0001","개발","2026-06-01","2026-06-30",mm,"100","신규").summary().errorRows()).isEqualTo(1);}
     @Test void invalidRealDateErr() throws Exception {assertThat(check("P-test","0001","개발","2026-02-30","2026-06-30","","100","신규").summary().errorRows()).isEqualTo(1);}
+    @Test void uploadMessagesIdentifyDatesNumbersAndConvertedValues() throws Exception {
+        assertThat(check("P-test","0001","개발","2026/13/01","2026-06-30","","100","신규").issues())
+            .anySatisfy(i->{assertThat(i.columnName()).isEqualTo("투입일");assertThat(i.reason()).isEqualTo("날짜 형식이 맞지 않습니다. YYYY-MM-DD로 적어 주세요.");});
+        assertThat(check("P-test","unknown","개발","2026-06-01","2026-06-30","","100","신규").issues())
+            .anySatisfy(i->{assertThat(i.columnName()).isEqualTo("관리번호");assertThat(i.reason()).isEqualTo("등록되지 않은 관리번호입니다. 개발자 풀에 먼저 등록해 주세요.");});
+        when(mapper.codes()).thenReturn(List.of(new Code("JOB","DEV","백엔드 개발",true,"[예시] 백엔드(Java)"),new Code("INPUT_TYPE","NEW","신규",true,null)));
+        assertThat(check("P-test","0001","[예시] 백엔드(Java)","2026-06-01","2026-06-30","","100","신규").issues())
+            .anySatisfy(i->{assertThat(i.severity()).isEqualTo("WARN");assertThat(i.reason()).isEqualTo("’[예시] 백엔드(Java)’를 ’백엔드 개발’로 바꿔 읽었습니다");});
+        assertThat(check("P-test","0001","백엔드개발자","2026-06-01","2026-06-30","","100","신규").issues())
+            .anySatisfy(i->assertThat(i.reason()).isEqualTo("’백엔드개발자’는 등록되지 않은 직무입니다."));
+    }
     @Test void explicitDotDatesAcceptedAndNoTruncation() throws Exception {assertThat(check("P-test","0001","개발","2026.06.01","2026.06.30","","100","신규").summary().errorRows()).isZero();assertThat(check("X".repeat(21),"0001","개발","2026-06-01","2026-06-30","","100","신규").summary().errorRows()).isEqualTo(1);}
     @Test void mappedActiveCodeWarnAndAmbiguousNameErr() throws Exception {when(mapper.codes()).thenReturn(List.of(new Code("JOB","DEV","개발",true,"개발자"),new Code("INPUT_TYPE","NEW","신규",true,null)));assertThat(check("P-test","0001","개발자","2026-06-01","2026-06-30","","100","신규").summary().warningRows()).isEqualTo(1);when(mapper.codes()).thenReturn(List.of(new Code("JOB","D1","개발",true,null),new Code("JOB","D2","개발",true,null)));assertThat(check("P-test","0001","개발","2026-06-01","2026-06-30","","100","신규").summary().errorRows()).isEqualTo(1);}
     @Test void missingSubDefaultUsesExplicitPriceNeverActualDeveloperPrice() throws Exception {when(actions.preview(any())).thenThrow(new ApiException(400,"INVALID_INPUT","단가를 입력해 주세요.","billingUnitPrice",null));assertThat(check("P-test","0001","개발","2026-06-01","2026-06-30","","","대체투입","0002").summary().errorRows()).isEqualTo(1);verify(sources,never()).price(any());}

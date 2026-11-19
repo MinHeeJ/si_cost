@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useFieldErrorFocus } from "../../shared/FieldErrors";
+import { sanitizeNumber } from "../../shared/NumericInput";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./assignmentActionsApi";
+import { useCodeNames } from "../../shared/codeNames";
 
 export const changeLabels = {
   EXT: "연장",
@@ -107,12 +110,14 @@ export function ReasonFields({
   onChange,
   disabled,
   error,
+  required = false,
 }: {
   reason: string;
   memo: string;
   onChange(field: "reason" | "memo", value: string): void;
   disabled?: boolean;
   error?: Record<string, string>;
+  required?: boolean;
 }) {
   const [codes, setCodes] = useState<SharedCodeLookup[]>([]),
     [failure, setFailure] = useState<unknown>();
@@ -133,7 +138,7 @@ export function ReasonFields({
     <>
       <AssignmentError error={failure} />
       <label className="sicost-field">
-        사유
+        사유{required && <span aria-hidden="true"> *</span>}
         <select
           data-testid="assignment-reason"
           disabled={disabled}
@@ -183,6 +188,7 @@ export function AssignmentChangeDialog({
   onChanged(): Promise<void>;
   onDirtyChange?(dirty: boolean): void;
 }) {
+  const name = useCodeNames("ASGN_CHG_TYPE");
   const [type, setType] = useState<keyof typeof changeLabels>("EXT"),
     [date, setDate] = useState(today),
     [month, setMonth] = useState(today.slice(0, 7)),
@@ -195,6 +201,16 @@ export function AssignmentChangeDialog({
     [stale, setStale] = useState(false),
     [leaving, setLeaving] = useState(false);
   const { pending, message, commit } = useCommitRefresh();
+  const formRoot = useRef<HTMLDivElement>(null);
+  useFieldErrorFocus(formRoot, fields);
+  const extensionStart = new Date(`${assignment.endDate}T00:00:00Z`);
+  extensionStart.setUTCDate(extensionStart.getUTCDate() + 1);
+  const retroactive =
+    type === "UPRC" || type === "RATE"
+      ? month < today.slice(0, 7)
+      : type === "EXT"
+        ? extensionStart.toISOString().slice(0, 10) < today
+        : date < today;
   useEffect(() => {
     onDirtyChange?.(true);
     return () => onDirtyChange?.(false);
@@ -212,7 +228,12 @@ export function AssignmentChangeDialog({
       case "EARLY":
         return { ...common, type, withdrawalDate: date };
       case "UPRC":
-        return { ...common, type, applyMonth: month, newUnitPrice: value };
+        return {
+          ...common,
+          type,
+          applyMonth: month,
+          newUnitPrice: value.replace(/,/g, ""),
+        };
       case "RATE":
         return { ...common, type, applyMonth: month, newContractMm: value };
       case "EXTP":
@@ -260,12 +281,23 @@ export function AssignmentChangeDialog({
   ) => (
     <label className="sicost-field">
       {label}
+      <span aria-hidden="true"> *</span>
       <input
         data-testid={`assignment-change-${name}`}
+        aria-label={label}
         type={kind}
         value={current}
         disabled={pending || Boolean(preview)}
-        onChange={(e) => set(e.target.value)}
+        onChange={(e) =>
+          set(
+            kind === "text"
+              ? sanitizeNumber(
+                  e.target.value,
+                  name === "newUnitPrice" ? "amount" : "decimal",
+                )
+              : e.target.value,
+          )
+        }
         aria-invalid={Boolean(fields[name])}
       />
       {fields[name] && <span role="alert">{fields[name]}</span>}
@@ -282,10 +314,10 @@ export function AssignmentChangeDialog({
         confirmLabel={preview ? "확인 후 저장" : "저장"}
         confirmDisabled={stale}
       >
-        <div data-testid="assignment-change-dialog">
+        <div data-testid="assignment-change-dialog" ref={formRoot}>
           <p>
-            {assignment.id} · YEAR {year} · {assignment.startDate} ~{" "}
-            {assignment.endDate}
+            {assignment.projectName} · {assignment.developerName} · {year}년 ·{" "}
+            {assignment.startDate} ~ {assignment.endDate}
           </p>
           <AssignmentError error={error} />
           {message && <p role="status">{message}</p>}
@@ -296,9 +328,10 @@ export function AssignmentChangeDialog({
             </p>
           )}
           <label className="sicost-field">
-            변경 종류
+            변경 종류<span aria-hidden="true"> *</span>
             <select
               data-testid="assignment-change-type"
+              aria-label="변경 종류"
               disabled={pending || Boolean(preview)}
               value={type}
               onChange={(e) => {
@@ -312,7 +345,7 @@ export function AssignmentChangeDialog({
                   key={key}
                   value={key}
                 >
-                  {label}
+                  {name("ASGN_CHG_TYPE", key)}
                 </option>
               ))}
             </select>
@@ -348,8 +381,10 @@ export function AssignmentChangeDialog({
           {(type === "EXTP" || type === "KIND") && (
             <label className="sicost-field">
               {type === "EXTP" ? "연장가능성" : "투입구분"}
+              <span aria-hidden="true"> *</span>
               <select
                 data-testid="assignment-change-value"
+                aria-label={type === "EXTP" ? "연장가능성" : "투입구분"}
                 value={value}
                 disabled={pending || Boolean(preview)}
                 onChange={(e) => setValue(e.target.value)}
@@ -376,6 +411,13 @@ export function AssignmentChangeDialog({
               reason={reason}
               memo={memo}
               disabled={pending || Boolean(preview)}
+              required={
+                type === "EARLY" ||
+                retroactive ||
+                Boolean(assignment.protectedMonths.length) ||
+                Boolean(preview?.protectedMonths.length) ||
+                Boolean(fields.reasonCode)
+              }
               error={fields}
               onChange={(k, v) => (k === "reason" ? setReason(v) : setMemo(v))}
             />

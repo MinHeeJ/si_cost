@@ -74,7 +74,8 @@ class DeveloperImportContractTest {
         assertThat(r.getResponse().getHeader("Content-Disposition")).contains("20260615_090000.xlsx");
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(r.getResponse().getContentAsByteArray()))) {
             var s=book.getSheetAt(0);assertThat(s.getRow(0).getLastCellNum()).isEqualTo((short)17);assertThat(s.getPhysicalNumberOfRows()).isEqualTo(1);
-            List<String> titles=new ArrayList<>();for(var c:s.getRow(0))titles.add(c.getStringCellValue());assertThat(titles).containsExactlyElementsOf(B8ImportDefinition.HEADERS);
+            List<String> titles=new ArrayList<>();for(var c:s.getRow(0))titles.add(c.getStringCellValue());
+            assertThat(titles).containsExactly("관리번호","이름*","직원구분*","소속*","등급","주 직무*","보조 직무","직위","직접/간접*","영업 파트*","입사일","월 단가","월 급여·지급액","보유 스킬","거주지 시·도","거주지 시·군·구","거주지 동");
             for(int i:new int[]{0,3,10,14,15,16})assertThat(s.getColumnStyle(i).getDataFormatString()).isEqualTo("@");
             StringBuilder guide=new StringBuilder();for(var row:book.getSheet("입력안내"))guide.append(row.getCell(0).getStringCellValue());
             assertThat(guide.toString()).contains("MEMBER","조건부 필수","코드명","사업자번호","HQ","미예약","경고","managementNo","monthlyPay");

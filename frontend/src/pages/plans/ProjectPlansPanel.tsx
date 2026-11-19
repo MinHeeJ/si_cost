@@ -269,7 +269,7 @@ function ProjectPlansEditor({
         <span
           data-testid={`project-plans-row-${row.jobCode.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
         >
-          {row.jobName} <small>{row.jobCode}</small>{" "}
+          {row.jobName}{" "}
           {row.useYn === "N" && <StatusBadge tone="lock">중지</StatusBadge>}
         </span>
       ),
@@ -289,6 +289,7 @@ function ProjectPlansEditor({
             data-testid={`project-plan-mm-${row.jobCode.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
             value={values[row.jobCode] ?? ""}
             inputMode="decimal"
+            numericKind="decimal"
             error={fields[row.jobCode]}
             disabled={pending || stale || refreshFailed || retrying}
             onChange={(value) => {

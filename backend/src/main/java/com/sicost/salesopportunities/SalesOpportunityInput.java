@@ -10,7 +10,7 @@ import static com.sicost.salesopportunities.SalesOpportunityDtos.*;
 
 public final class SalesOpportunityInput {
     private SalesOpportunityInput() {}
-    public static ApiException invalid(String field){return new ApiException(400,"VALIDATION_ERROR","입력 형식과 범위를 확인해 주세요.",field,null);}
+    public static ApiException invalid(String field){return new ApiException(400,"VALIDATION_ERROR","amount".equals(field)?"예상 금액은 0보다 커야 합니다.":com.sicost.common.validation.InputValidator.message(field),field,null);}
     public static Query query(Map<String,String> q){
         Set<String> allowed=Set.of("status","includeStopped","result","page","size","sort","direction");
         q.keySet().forEach(k->{if(!allowed.contains(k))throw new ApiException(400,"UNKNOWN_FIELD","허용되지 않은 조회 조건입니다.",k,null);});
@@ -28,6 +28,14 @@ public final class SalesOpportunityInput {
     private static void period(String s,int months,String field){if(month(s,field).plusMonths(months-1).getYear()>9999)throw invalid(field);}
     public static Save save(JsonNode b,boolean update){
         var fields=new HashSet<>(Set.of("name","customerId","partId","stage","probability","manualProbability","amount","startMonth","contractType","months","nextTask","nextDue","workplace","memo","needs","tentativeSelections"));if(update)fields.add("expectedRevision");SalesCommandInput.fields(b,fields);
+        com.sicost.common.validation.InputValidator.all(
+            () -> text(b,"name",100,true),
+            () -> text(b,"customerId",20,true),
+            () -> text(b,"partId",20,true),
+            () -> decimal(b,"probability","(?:100(?:\\.0{1,2})?|(?:[0-9]|[1-9][0-9])(?:\\.[0-9]{1,2})?)",true),
+            () -> decimal(b,"amount","[1-9][0-9]{0,14}",true),
+            () -> month(text(b,"startMonth",7,true),"startMonth")
+        );
         String name=text(b,"name",100,true),customer=text(b,"customerId",20,true),part=text(b,"partId",20,true),stage=text(b,"stage",10,true);
         if(!Set.of("FIND","PROP","NEGO","PRE").contains(stage))throw invalid("stage");
         if(!b.has("manualProbability")||!b.get("manualProbability").isBoolean())throw invalid("manualProbability");
@@ -38,12 +46,14 @@ public final class SalesOpportunityInput {
         if(due!=null){try{if(!due.matches("(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}"))throw invalid("nextDue");date=LocalDate.parse(due);}catch(DateTimeException e){throw invalid("nextDue");}if(task==null)throw invalid("nextDue");}
         JsonNode array=b.get("needs");if(array==null||!array.isArray()||array.isEmpty()||array.size()>999)throw invalid("needs");
         var needs=new ArrayList<com.sicost.salesopportunitiesops.SalesCommandDtos.DraftNeed>();var serials=new HashSet<Integer>();int row=0;
+        var errors=new ArrayList<Map<String,Object>>();
         for(JsonNode n:array){row++;try{
             SalesCommandInput.fields(n,Set.of("needSn","jobCode","gradeCode","count","startMonth","months","monthlyMm","expectedRate"));
             Integer sn=integer(n,"needSn",n.has("needSn"));if(sn!=null&&(!update||!serials.add(sn)))throw invalid("needSn");
             String startNeed=text(n,"startMonth",7,true);int duration=integer(n,"months",true);period(startNeed,duration,"startMonth");
             needs.add(new com.sicost.salesopportunitiesops.SalesCommandDtos.DraftNeed(sn,text(n,"jobCode",10,true),text(n,"gradeCode",10,false),integer(n,"count",true),startNeed,duration,decimal(n,"monthlyMm","(?:0\\.(?:0[1-9]|[1-9][0-9]?)|1(?:\\.0{1,2})?)",true),decimal(n,"expectedRate","[1-9][0-9]{0,14}",false)));
-        }catch(ApiException e){throw new ApiException(400,"VALIDATION_ERROR",row+"번째 줄의 입력 칸을 확인해 주세요.","needs["+(row-1)+"]."+e.field(),Map.of("rowNumber",row));}}
+        }catch(ApiException e){errors.add(Map.of("field","needs["+(row-1)+"]."+e.field(),"message",row+"번째 줄의 "+com.sicost.common.validation.InputValidator.label(e.field())+" 칸을 확인해 주세요","rowNumber",row));}}
+        if(!errors.isEmpty())throw new ApiException(400,"VALIDATION_ERROR",(String)errors.get(0).get("message"),(String)errors.get(0).get("field"),Map.of("rowNumber",errors.get(0).get("rowNumber"),"violations",errors));
         List<Selection> selections=null;
         if(b.has("tentativeSelections")){JsonNode a=b.get("tentativeSelections");if(!a.isArray()||a.size()>999)throw invalid("tentativeSelections");var values=new ArrayList<Selection>();for(JsonNode s:a){SalesCommandInput.fields(s,Set.of("needSn","needIndex","developerId","startMonth","sourceScreenId"));if(s.has("needSn")==s.has("needIndex"))throw invalid("needIndex");Integer sn=integer(s,"needSn",s.has("needSn")),index=integer(s,"needIndex",s.has("needIndex"));String sm=text(s,"startMonth",7,true);month(sm,"startMonth");String screen=text(s,"sourceScreenId",10,true);if(!Set.of("UI-29","UI-05","UI-30").contains(screen))throw invalid("sourceScreenId");values.add(new Selection(sn,index,text(s,"developerId",20,true),sm,screen));}selections=List.copyOf(values);}
         return new Save(name,customer,part,stage,probability,b.get("manualProbability").booleanValue(),amount,start,type,months,task,date,text(b,"workplace",200,false),text(b,"memo",500,false),List.copyOf(needs),selections,update?text(b,"expectedRevision",2000,true):null);

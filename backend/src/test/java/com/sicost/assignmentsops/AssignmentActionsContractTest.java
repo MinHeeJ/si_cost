@@ -87,6 +87,31 @@ class AssignmentActionsContractTest {
     ObjectNode bulk(String type) {ObjectNode n=json.createObjectNode().put("year",2026).put("type",type);n.putArray("items").addObject().put("id","A-101").put("expectedRevision",revision("A-101"));return n;}
     void postBody(String path,ObjectNode n,int status) throws Exception {mvc.perform(post(path).contentType("application/json").content(n.toString())).andExpect(r->assertThat(r.getResponse().getStatus()).as(r.getResponse().getContentAsString()).isEqualTo(status));}
     void noWrites() {verify(mapper,never()).update(any());verify(mapper,never()).insert(any());verify(mapper,never()).event(any());verify(months,never()).saveMonth(any());verifyNoInteractions(audit,invalidation);}
+    void expectField(ObjectNode body,String path,String field,String message) throws Exception {
+        mvc.perform(post(path).contentType("application/json").content(body.toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field))
+            .andExpect(jsonPath("$.message").value(message));
+        noWrites();
+    }
+    @Test void assignmentValidationExplainsEachFieldWithoutWrites() throws Exception {
+        String path="/api/assignments/preview";
+        expectField(create().put("developerId",""),path,"developerId","개발자를 골라 주세요");
+        expectField(create().put("endDate","2029-01-01"),path,"endDate",
+            "철수일이 프로젝트 계약 종료일("+project.endDate()+")보다 늦습니다. 「프로젝트·투입 › 프로젝트」에서 계약 기간을 먼저 연장해 주세요.");
+        expectField(create().put("billingUnitPrice","0"),path,"billingUnitPrice","청구 단가를 입력해 주세요.");
+        expectField(create().put("contractMm","1.5"),path,"contractMm","0 초과 1.00 이하 숫자로 입력해 주세요.");
+        expectField(change("EARLY").put("withdrawalDate","2026-08-01"),"/api/assignments/A-101/changes","reasonCode","사유를 골라 주세요.");
+        when(mapper.developer(anyString())).thenAnswer(c->new Developer(c.getArgument(0),"인력","M-101","FT","DRCT","PART-1","Y",day.minusYears(1),day.plusDays(5)));
+        expectField(create(),path,"endDate","철수일이 인력님의 퇴사일("+day.plusDays(5)+")보다 늦습니다.");
+    }
+    @Test void independentAssignmentErrorsAreReturnedTogether() throws Exception {
+        mvc.perform(post("/api/assignments/preview").contentType("application/json")
+            .content(create().put("developerId","").put("contractMm","1.5").toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.details.violations.length()").value(2))
+            .andExpect(jsonPath("$.details.violations[0].field").value("developerId"))
+            .andExpect(jsonPath("$.details.violations[1].field").value("contractMm"));
+        noWrites();
+    }
     @Test void monthsReturnsStoredValuesInDecimalStringsWithoutRegenerating() throws Exception {
         when(months.months("A-101")).thenReturn(List.of(new StoredMonth("202607",31,new BigDecimal("1.00"),new BigDecimal("100"),new BigDecimal("100"),"Y")));
         mvc.perform(get("/api/assignments/A-101/months").param("year","2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].monthlyMm").value("1.00")).andExpect(jsonPath("$.data.items[0].fixed").value("Y")).andExpect(jsonPath("$.data.total").value(1));noWrites();

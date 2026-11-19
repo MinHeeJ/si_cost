@@ -110,9 +110,9 @@ public class B9ImportDefinition {
         if(named.isEmpty()) {
             var mapped=codes.stream().filter(c->c.groupId().equals(group)&&value.equals(c.source())).toList();
             var ids=mapped.stream().map(Code::code).distinct().toList();
-            if(ids.size()==1&&mapped.stream().allMatch(Code::active)) {issue(row,title,"WARN","이전 표기의 코드명 대응을 적용했습니다.",issues);return ids.get(0);}
+            if(ids.size()==1&&mapped.stream().allMatch(Code::active)) {issue(row,title,"WARN",com.sicost.common.validation.InputValidator.codeConversionMessage(value,mapped.get(0).name()),issues);return ids.get(0);}
         }
-        issue(row,title,"ERR","활성 코드명 또는 유일한 활성 대응값을 입력해 주세요. 코드ID는 사용할 수 없습니다.",issues);return null;
+        issue(row,title,"ERR","’"+value+"’는 등록되지 않은 "+title+"입니다.",issues);return null;
     }
     private String customer(SourceRow row,List<Candidate> customers,List<Problem> issues) {
         String value=text(row,"고객사",50,true,issues);if(value==null)return null;
@@ -147,7 +147,7 @@ public class B9ImportDefinition {
     }
     private LocalDate date(SourceRow row,String title,List<Problem> issues) {
         String value=text(row,title,10,true,issues);if(value==null)return null;
-        try{return ProjectInputPolicy.date(value,title);}catch(ApiException e){issue(row,title,"ERR","실제 날짜를 YYYY-MM-DD로 입력해 주세요.",issues);return null;}
+        try{return ProjectInputPolicy.date(value,title);}catch(ApiException e){issue(row,title,"ERR",com.sicost.common.validation.InputValidator.DATE_MESSAGE,issues);return null;}
     }
     private String text(SourceRow row,String title,int max,boolean required,List<Problem> issues) {
         var cell=row.cells().get(title);String value=cell.text().replaceAll("^[\\s\\p{Z}]+|[\\s\\p{Z}]+$","");

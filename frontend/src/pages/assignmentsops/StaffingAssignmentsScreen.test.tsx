@@ -155,10 +155,7 @@ const ready = async () => {
 it("11열·십진 원금 비파괴 단위와 API 값을 표시한다", async () => {
   draw();
   await ready();
-  expect(screen.getByText("999,999,999,999.999")).toBeInTheDocument();
-  fireEvent.change(screen.getByTestId("assignments-unit"), {
-    target: { value: "원" },
-  });
+  expect(screen.queryByTestId("assignments-unit")).not.toBeInTheDocument();
   expect(screen.getByText("999,999,999,999,999")).toBeInTheDocument();
   expect(screen.getAllByRole("columnheader")).toHaveLength(12);
   expect(api.changeAssignment).not.toHaveBeenCalled();
@@ -367,7 +364,7 @@ it("고정월은 조회전용이고 취소 배정은 변경 버튼이 없다", a
       onChange={vi.fn()}
     />,
   );
-  await screen.findByText("Y");
+  await screen.findByText("예");
   expect(
     screen.queryByTestId("assignment-change-open"),
   ).not.toBeInTheDocument();
@@ -448,7 +445,12 @@ it("신규폼 SUB 계약상 인력은 실제 변경시 지우며 숨긴 단가�
   expect(
     screen.queryByTestId("assignment-create-billing-unit-price"),
   ).not.toBeInTheDocument();
-  await userEvent.click(within(screen.getByRole("dialog",{name:"신규 배정"})).getByRole("button",{name:"저장"}));
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: "신규 배정" })).getByRole(
+      "button",
+      { name: "저장" },
+    ),
+  );
   await waitFor(() => expect(api.preview).toHaveBeenCalled());
   expect(api.preview).toHaveBeenCalledWith(
     expect.not.objectContaining({ billingUnitPrice: expect.anything() }),
@@ -477,48 +479,138 @@ it("저장후 재조회 실패는 POST 재실행 없이 조회만 허용한다",
 });
 
 it("UI-32 entry opens the selected assignment history while regular entry keeps the list", async () => {
-  render(<AssignmentsContent year={2026} context={context} entryAssignmentId={row.id} entryHistory />);
+  render(
+    <AssignmentsContent
+      year={2026}
+      context={context}
+      entryAssignmentId={row.id}
+      entryHistory
+    />,
+  );
   await screen.findByTestId("assignment-detail-drawer");
-  await waitFor(() => expect(api.getAssignment).toHaveBeenCalledWith(row.id, 2026));
-  expect(screen.getByTestId("assignment-history-tab")).toHaveAttribute("aria-selected", "true");
+  await waitFor(() =>
+    expect(api.getAssignment).toHaveBeenCalledWith(row.id, 2026),
+  );
+  expect(screen.getByTestId("assignment-history-tab")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 });
 
-it.each(["ADD", "FREE"])("추천 배정의 투입구분 %s 변경도 같은 사람·프로젝트의 추천 참조를 유지한다", async (kind) => {
-  render(<AssignmentCreateForm year={2026} today={context.currentDate} onClose={vi.fn()} onSaved={vi.fn()}
-    initialValues={{ year: 2026, projectId: row.projectId, developerId: row.developerId, jobCode: row.jobCode,
-      startDate: row.startDate, endDate: row.endDate, contractMm: "1.00", billingUnitPrice: "10000000", inputType: "NEW",
-      recommendationRef: { rcmdId: "123", rank: 2 } }} />);
-  await screen.findByRole("option", { name: "실제 프로젝트 · MO · ING" });
-  fireEvent.change(screen.getByTestId("assignment-kind"), { target: { value: kind } });
-  await userEvent.click(within(screen.getByRole("dialog", { name: "신규 배정" })).getByRole("button", { name: "저장" }));
-  await waitFor(() => expect(api.preview).toHaveBeenCalled());
-  expect(api.preview).toHaveBeenCalledWith(expect.objectContaining({ inputType: kind, recommendationRef: { rcmdId: "123", rank: 2 } }));
-});
+it.each(["ADD", "FREE"])(
+  "추천 배정의 투입구분 %s 변경도 같은 사람·프로젝트의 추천 참조를 유지한다",
+  async (kind) => {
+    render(
+      <AssignmentCreateForm
+        year={2026}
+        today={context.currentDate}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        initialValues={{
+          year: 2026,
+          projectId: row.projectId,
+          developerId: row.developerId,
+          jobCode: row.jobCode,
+          startDate: row.startDate,
+          endDate: row.endDate,
+          contractMm: "1.00",
+          billingUnitPrice: "10000000",
+          inputType: "NEW",
+          recommendationRef: { rcmdId: "123", rank: 2 },
+        }}
+      />,
+    );
+    await screen.findByRole("option", { name: "실제 프로젝트 · MO · ING" });
+    fireEvent.change(screen.getByTestId("assignment-kind"), {
+      target: { value: kind },
+    });
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "신규 배정" })).getByRole(
+        "button",
+        { name: "저장" },
+      ),
+    );
+    await waitFor(() => expect(api.preview).toHaveBeenCalled());
+    expect(api.preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inputType: kind,
+        recommendationRef: { rcmdId: "123", rank: 2 },
+      }),
+    );
+  },
+);
 
 it("EXTP는 사유·적용일·미리보기 없이 메타정보 변경만 한 번 저장한다", async () => {
-  render(<AssignmentChangeDialog assignment={row} year={2026} today={context.currentDate} onClose={vi.fn()} onChanged={vi.fn()} />);
-  fireEvent.change(screen.getByLabelText("변경 종류"), { target: { value: "EXTP" } });
+  render(
+    <AssignmentChangeDialog
+      assignment={row}
+      year={2026}
+      today={context.currentDate}
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("변경 종류"), {
+    target: { value: "EXTP" },
+  });
   expect(screen.queryByLabelText(/변경 사유/)).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   await waitFor(() => expect(api.changeAssignment).toHaveBeenCalledTimes(1));
   expect(api.preview).not.toHaveBeenCalled();
-  expect(api.changeAssignment).toHaveBeenCalledWith(row.id, { year: 2026, expectedRevision: row.revision, type: "EXTP", extensionPossibility: null });
+  expect(api.changeAssignment).toHaveBeenCalledWith(row.id, {
+    year: 2026,
+    expectedRevision: row.revision,
+    type: "EXTP",
+    extensionPossibility: null,
+  });
 });
 it("uses close-check year and MM warning without changing saved period", async () => {
-  render(<StaffingAssignmentsScreen initialMonth="2026-05" initialWarning="MM_OVER" />);
-  await waitFor(() => expect(api.getAssignments).toHaveBeenCalledWith(expect.objectContaining({ year: 2026, month: "2026-05", warning: "MM_OVER" })));
+  render(
+    <StaffingAssignmentsScreen
+      initialMonth="2026-05"
+      initialWarning="MM_OVER"
+    />,
+  );
+  await waitFor(() =>
+    expect(api.getAssignments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        year: 2026,
+        month: "2026-05",
+        warning: "MM_OVER",
+      }),
+    ),
+  );
   expect(shared.putSharedPreference).not.toHaveBeenCalled();
 });
 
 it("마감 선택월을 조회·전체선택에 유지하고 초기화하면 연간 전체로 돌아간다", async () => {
-  render(<StaffingAssignmentsScreen initialMonth="2026-05" initialWarning="MM_OVER" />);
+  render(
+    <StaffingAssignmentsScreen
+      initialMonth="2026-05"
+      initialWarning="MM_OVER"
+    />,
+  );
   await screen.findByText(row.projectName);
   expect(screen.getByTestId("assignments-month-filter")).toHaveValue("2026-05");
-  fireEvent.change(screen.getByTestId("assignments-search"), { target: { value: "담당" } });
+  fireEvent.change(screen.getByTestId("assignments-search"), {
+    target: { value: "담당" },
+  });
   await userEvent.click(screen.getByTestId("assignments-query"));
-  await waitFor(() => expect(api.getAssignments).toHaveBeenLastCalledWith(expect.objectContaining({ month: "2026-05", warning: "MM_OVER", q: "담당" })));
+  await waitFor(() =>
+    expect(api.getAssignments).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        month: "2026-05",
+        warning: "MM_OVER",
+        q: "담당",
+      }),
+    ),
+  );
   await userEvent.click(screen.getByTestId("assignments-reset"));
-  await waitFor(() => expect(api.getAssignments).toHaveBeenLastCalledWith(expect.not.objectContaining({ month: expect.anything() })));
+  await waitFor(() =>
+    expect(api.getAssignments).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ month: expect.anything() }),
+    ),
+  );
   expect(screen.getByTestId("assignments-month-filter")).toHaveValue("");
 });
 

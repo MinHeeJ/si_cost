@@ -44,7 +44,7 @@ public class B5ImportDefinition {
         for(SourceRow row:file.rows()) {
             try {
                 String projectId=text(row,"프로젝트ID",20,true),number=text(row,"관리번호",20,true),job=code(row,"직무","JOB",codes,issues);
-                String developerId=developers.get(number);if(developerId==null)throw invalid("관리번호");
+                String developerId=developers.get(number);if(developerId==null)throw new ApiException(400,"INVALID_INPUT",com.sicost.common.validation.InputValidator.MANAGEMENT_NUMBER_MESSAGE,"관리번호",null);
                 String type=code(row,"투입 구분","INPUT_TYPE",codes,issues);if(!Set.of("NEW","ADD","SUB","FREE").contains(type))throw invalid("투입 구분");
                 LocalDate start=date(row,"투입일"),end=date(row,"철수일");BigDecimal mm=AssignmentInputPolicy.contractMm(text(row,"월 MM",4,false),true);
                 String contract=null;
@@ -133,9 +133,9 @@ public class B5ImportDefinition {
         if(direct.size()==1)return ProjectInputPolicy.text(direct.iterator().next(),10,field);
         if(direct.isEmpty()) {
             List<Code> mapped=codes.stream().filter(c->c.groupId().equals(group)&&value.equals(c.source())).toList();Set<String> ids=new HashSet<>();mapped.forEach(c->ids.add(c.code()));
-            if(ids.size()==1&&mapped.stream().allMatch(Code::active)){add(issues,row.number(),field,"WARN",value,"활성 코드명 대응을 적용했습니다.");return ProjectInputPolicy.text(ids.iterator().next(),10,field);}
+            if(ids.size()==1&&mapped.stream().allMatch(Code::active)){add(issues,row.number(),field,"WARN",value,com.sicost.common.validation.InputValidator.codeConversionMessage(value,mapped.get(0).name()));return ProjectInputPolicy.text(ids.iterator().next(),10,field);}
         }
-        throw invalid(field);
+        throw new ApiException(400,"INVALID_INPUT","’"+value+"’는 등록되지 않은 "+field+"입니다.",field,null);
     }
     private String text(SourceRow row,String field,int max,boolean required) {
         CellValue c=row.cells().get(field);if(c.error()!=null)throw new ApiException(400,"INVALID_INPUT",c.error(),field,null);

@@ -93,6 +93,10 @@ it("discards a new resume-assisted draft on cancel, including an upload still pe
       expect(screen.getByTestId("candidate-name")).toHaveValue("추출 이름");
     }
     fireEvent.click(screen.getByRole("button", { name: "취소" }));
+    if (!pending) {
+      expect(onSaved).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "나가기" }));
+    }
     expect(onSaved).toHaveBeenCalledWith("", "", false);
     expect(onClose).not.toHaveBeenCalled();
     unmount();

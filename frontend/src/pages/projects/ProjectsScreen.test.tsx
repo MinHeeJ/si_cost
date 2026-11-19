@@ -180,7 +180,9 @@ beforeEach(() => {
             { code: "END", name: "종료" },
             { code: "LOSE", name: "실주" },
           ]
-        : []) as shared.SharedCodeLookup[],
+        : group === "DSTRB_STEP"
+          ? [{ code: "PLAN", name: "실제 투입계획" }]
+          : []) as shared.SharedCodeLookup[],
   }));
   vi.mocked(clients.getClientOptions).mockResolvedValue({
     items: [{ id: "C-42", name: "검증 고객", type: "CUST" }],
@@ -274,9 +276,11 @@ it("list renders all ten columns and server banner total with distinct badge ton
   expect(
     screen.getAllByText("진행").find((node) => node.tagName === "SPAN"),
   ).toHaveClass("sicost-tone-info");
-  expect(
-    screen.getByTestId(`project-distribution-${project.id.toLowerCase()}`),
-  ).toHaveTextContent("PLAN 합계 경고 불일치 3");
+  await waitFor(() =>
+    expect(
+      screen.getByTestId(`project-distribution-${project.id.toLowerCase()}`),
+    ).toHaveTextContent("실제 투입계획 합계 경고 불일치 3"),
+  );
 });
 it("unassigned CTA only changes part filter and resets page preserving year search status and type", async () => {
   render(<ProjectsScreen {...props} />);

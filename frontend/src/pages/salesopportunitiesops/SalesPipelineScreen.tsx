@@ -4,7 +4,13 @@ import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
-import { formatAmount, formatFixedDecimal, formatShortDateTime } from "../../shared/format";
+import {
+  formatAmount,
+  formatFixedDecimal,
+  formatShortDateTime,
+  formatSummaryAmount,
+  formatRate,
+} from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
 import { SALES_COMMITTED } from "../assignmentcandidatesops/assignmentCandidatesApi";
 import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
@@ -12,16 +18,31 @@ import { SalesQuotePanel, SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { SalesOpportunityForm } from "../salesopportunities/SalesOpportunityForm";
 import { getPeriodContext } from "../shared/sharedApi";
+import { useCodeNames } from "../../shared/codeNames";
+import { BusinessName } from "../../shared/BusinessName";
 import "./salesCommands.css";
 
-export function SalesPipelineScreen() {
+export function SalesPipelineScreen({
+  onDirtyChange,
+}: { onDirtyChange?(dirty: boolean): void } = {}) {
   return (
     <SharedScreenFrame screenId="UI-29">
-      <SalesPipelinePanel />
+      <SalesPipelinePanel onDirtyChange={onDirtyChange} />
     </SharedScreenFrame>
   );
 }
-export function SalesPipelinePanel() {
+export function SalesPipelinePanel({
+  onDirtyChange,
+}: { onDirtyChange?(dirty: boolean): void } = {}) {
+  const name = useCodeNames(
+    "JOB",
+    "GRADE",
+    "APRV_STAT",
+    "OPP_STAT",
+    "LOSE_RSN",
+    "CTRT_TYPE",
+    "APRV_ACT",
+  );
   const location = useLocation();
   const [editing, setEditing] = useState<"new" | api.Opportunity>(),
     [highlight, setHighlight] = useState<string>(),
@@ -45,19 +66,27 @@ export function SalesPipelinePanel() {
   const [tab, setTab] = useState<"ING" | "CLOSED" | "FORECAST">("ING"),
     [result, setResult] = useState<"WIN" | "LOSE" | "STOP">("WIN"),
     [includeStopped, setIncludeStopped] = useState(false);
-  const [ordering, setOrdering] = useState<{ sort: "amount" | "resultDate"; direction: "ASC" | "DESC" }>();
+  const [ordering, setOrdering] = useState<{
+    sort: "amount" | "resultDate";
+    direction: "ASC" | "DESC";
+  }>();
   const [page, setPage] = useState(1),
     [data, setData] = useState<api.OpportunityPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const [selectedId, setSelectedId] = useState<string | undefined>(
     (location.state as { opportunityId?: string } | null)?.opportunityId ??
-      new URLSearchParams(location.search).get("opportunityId") ?? undefined,
+      new URLSearchParams(location.search).get("opportunityId") ??
+      undefined,
   );
   useEffect(() => {
-    const id = (location.state as { opportunityId?: string } | null)?.opportunityId
-      ?? new URLSearchParams(location.search).get("opportunityId");
-    if (id) { setSelectedId(id); setDetailTab("기본 정보"); }
+    const id =
+      (location.state as { opportunityId?: string } | null)?.opportunityId ??
+      new URLSearchParams(location.search).get("opportunityId");
+    if (id) {
+      setSelectedId(id);
+      setDetailTab("기본 정보");
+    }
   }, [location.key, location.search]);
   const [detail, setDetail] = useState<api.Opportunity>(),
     [detailError, setDetailError] = useState<unknown>(),
@@ -186,6 +215,7 @@ export function SalesPipelinePanel() {
             detail={editing === "new" ? undefined : editing}
             onClose={() => setEditing(undefined)}
             onSaved={saved}
+            onDirtyChange={onDirtyChange}
           />
         </OpportunityModal>
       )}
@@ -225,10 +255,17 @@ export function SalesPipelinePanel() {
         <SalesForecastPanel />
       ) : (
         <>
-          <FilterBar onSubmit={() => setGeneration((v) => v + 1)} onReset={() => {
-            setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1);
-          }}>
-            <button type="button"
+          <FilterBar
+            onSubmit={() => setGeneration((v) => v + 1)}
+            onReset={() => {
+              setResult("WIN");
+              setIncludeStopped(false);
+              setPage(1);
+              setGeneration((v) => v + 1);
+            }}
+          >
+            <button
+              type="button"
               data-testid="pipeline-retry-button"
               disabled={loading}
               onClick={() => setGeneration((v) => v + 1)}
@@ -281,11 +318,11 @@ export function SalesPipelinePanel() {
                 </div>
                 <div>
                   <dt>예상 금액 합계</dt>
-                  <dd>{formatAmount(data.summary.amount, "천원")} 천원</dd>
+                  <dd>{formatSummaryAmount(data.summary.amount)}</dd>
                 </div>
                 <div>
                   <dt>확률 반영 금액</dt>
-                  <dd>{formatAmount(data.summary.weightedAmount, "천원")} 천원</dd>
+                  <dd>{formatSummaryAmount(data.summary.weightedAmount)}</dd>
                 </div>
                 <div>
                   <dt>확률 반영 필요 인력</dt>
@@ -312,12 +349,23 @@ export function SalesPipelinePanel() {
                         .filter((s) => s.stage === stage)
                         .map((s) => (
                           <p key={s.stage}>
-                            {s.count}건 · {formatAmount(s.amount, "천원")} 천원
+                            {s.count}건 · {formatAmount(s.amount, "원")} 원
                           </p>
                         ))}
                       {!loading &&
                         data.items.every((o) => o.stage !== stage) && (
-                          <div className="sales-command-empty"><p>기회 없음</p><button type="button" onClick={() => { setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
+                          <div className="sales-command-empty">
+                            <p>기회 없음</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPage(1);
+                                setGeneration((v) => v + 1);
+                              }}
+                            >
+                              조건 초기화
+                            </button>
+                          </div>
                         )}
                       {data.items
                         .filter((o) => o.stage === stage)
@@ -341,21 +389,26 @@ export function SalesPipelinePanel() {
                               {o.name}
                             </button>
                             <p>
-                              {o.customerId} · {o.startMonth}
+                              <BusinessName kind="client" id={o.customerId} /> ·{" "}
+                              {o.startMonth}
                             </p>
-                            <strong>
-                              {formatAmount(o.amount, "천원")} 천원
-                            </strong>
+                            <strong>{formatAmount(o.amount, "원")} 원</strong>
                             <p>
-                              확률 {o.probability}% ·{" "}
+                              확률 {formatRate(o.probability)} ·{" "}
                               {o.manualProbability ? "수동" : "기본"}
                             </p>
-                            <p>{o.needs.map((n) => n.jobCode).join(" · ")}</p>
-                            <span
-                              className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()}`}
-                            >
-                              {o.approvalStatus}
-                            </span>
+                            <p>
+                              {o.needs
+                                .map((n) => name("JOB", n.jobCode))
+                                .join(" · ")}
+                            </p>
+                            {o.approvalStatus !== "NONE" && (
+                              <span
+                                className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()}`}
+                              >
+                                {name("APRV_STAT", o.approvalStatus)}
+                              </span>
+                            )}
                             <p
                               className={
                                 today && o.nextDue && o.nextDue < today
@@ -410,12 +463,49 @@ export function SalesPipelinePanel() {
                         <th>기회명</th>
                         <th>고객</th>
                         <th>결과</th>
-                        {([['amount', '예상액 (천원)'], ['resultDate', '결과일']] as const).map(([key, title]) => {
-                          const selected = ordering?.sort === key || !ordering && key === "resultDate";
+                        {(
+                          [
+                            ["amount", "예상액 (원)"],
+                            ["resultDate", "결과일"],
+                          ] as const
+                        ).map(([key, title]) => {
+                          const selected =
+                            ordering?.sort === key ||
+                            (!ordering && key === "resultDate");
                           const direction = ordering?.direction ?? "DESC";
-                          return <th key={key} aria-sort={selected ? direction === "ASC" ? "ascending" : "descending" : "none"}>
-                            <button type="button" onClick={() => { setPage(1); setOrdering({ sort: key, direction: selected && direction === "ASC" ? "DESC" : "ASC" }); }}>{title} {selected ? direction === "ASC" ? "↑" : "↓" : "↕"}</button>
-                          </th>;
+                          return (
+                            <th
+                              key={key}
+                              aria-sort={
+                                selected
+                                  ? direction === "ASC"
+                                    ? "ascending"
+                                    : "descending"
+                                  : "none"
+                              }
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPage(1);
+                                  setOrdering({
+                                    sort: key,
+                                    direction:
+                                      selected && direction === "ASC"
+                                        ? "DESC"
+                                        : "ASC",
+                                  });
+                                }}
+                              >
+                                {title}{" "}
+                                {selected
+                                  ? direction === "ASC"
+                                    ? "↑"
+                                    : "↓"
+                                  : "↕"}
+                              </button>
+                            </th>
+                          );
                         })}
                         <th>프로젝트 / 실주 사유</th>
                       </tr>
@@ -434,9 +524,11 @@ export function SalesPipelinePanel() {
                               {o.name}
                             </button>
                           </td>
-                          <td>{o.customerId}</td>
-                          <td>{o.status}</td>
-                          <td>{formatAmount(o.amount, "천원")}</td>
+                          <td>
+                            <BusinessName kind="client" id={o.customerId} />
+                          </td>
+                          <td>{name("OPP_STAT", o.status)}</td>
+                          <td>{formatAmount(o.amount, "원")}</td>
                           <td>{o.resultDate ?? "–"}</td>
                           <td>
                             {o.projectId ? (
@@ -445,10 +537,11 @@ export function SalesPipelinePanel() {
                                 to="/UI-01"
                                 state={{ projectId: o.projectId }}
                               >
-                                {o.projectId}
+                                <BusinessName kind="project" id={o.projectId} />{" "}
+                                ({o.projectId})
                               </Link>
                             ) : (
-                              `${o.lossReasonCode ?? "–"} ${o.lossMemo ?? ""}`
+                              `${name("LOSE_RSN", o.lossReasonCode)} ${o.lossMemo ?? ""}`
                             )}
                           </td>
                         </tr>
@@ -456,7 +549,20 @@ export function SalesPipelinePanel() {
                     </tbody>
                   </table>
                   {data.items.length === 0 && (
-                    <div className="sales-command-empty"><p>종료 기회 없음</p><button type="button" onClick={() => { setResult("WIN"); setIncludeStopped(false); setPage(1); setGeneration((v) => v + 1); }}>조건 초기화</button></div>
+                    <div className="sales-command-empty">
+                      <p>종료 기회 없음</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResult("WIN");
+                          setIncludeStopped(false);
+                          setPage(1);
+                          setGeneration((v) => v + 1);
+                        }}
+                      >
+                        조건 초기화
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -542,8 +648,9 @@ export function SalesPipelinePanel() {
                 {detailTab === "기본 정보" && (
                   <>
                     <p>
-                      고객 {detail.customerId} · 영업파트 {detail.partId} ·{" "}
-                      {detail.contractType ?? "–"}
+                      고객 <BusinessName kind="client" id={detail.customerId} />{" "}
+                      · 영업파트 <BusinessName kind="part" id={detail.partId} />{" "}
+                      · {name("CTRT_TYPE", detail.contractType)}
                     </p>
                     <p>
                       {detail.startMonth} · {detail.months ?? "–"}개월 ·{" "}
@@ -568,8 +675,11 @@ export function SalesPipelinePanel() {
                       key={n.needSn ?? i}
                     >
                       <p>
-                        {n.jobCode} / {n.gradeCode ?? "등급 미지정"} · {n.count}
-                        명 · {n.startMonth}부터 {n.months}개월 · 월{" "}
+                        {name("JOB", n.jobCode)} /{" "}
+                        {n.gradeCode
+                          ? name("GRADE", n.gradeCode)
+                          : "등급 미지정"}{" "}
+                        · {n.count}명 · {n.startMonth}부터 {n.months}개월 · 월{" "}
                         {n.monthlyMm} MM
                       </p>
                       <p>예상단가 {n.expectedRate ?? "직무 기본단가"}</p>
@@ -591,7 +701,8 @@ export function SalesPipelinePanel() {
                         data-testid={`approval-history-${h.histSn}`}
                         key={h.histSn}
                       >
-                        {formatShortDateTime(h.registeredAt)} · {h.action} · {h.profitRate}% ·{" "}
+                        {formatShortDateTime(h.registeredAt)} ·{" "}
+                        {name("APRV_ACT", h.action)} · {h.profitRate}% ·{" "}
                         {h.reason} · {h.registeredBy}
                       </article>
                     ))}
@@ -626,27 +737,51 @@ function OpportunityModal({ children }: { children: React.ReactNode }) {
   }, []);
   return createPortal(
     <div className="sicost-scrim sales-opportunity-scrim">
-      <div ref={ref} role="dialog" aria-modal="true" aria-label="영업 기회 입력"
-        tabIndex={-1} className="sicost-dialog sales-opportunity-dialog"
+      <div
+        ref={ref}
+        role="dialog"
+        aria-modal="true"
+        aria-label="영업 기회 입력"
+        tabIndex={-1}
+        className="sicost-dialog sales-opportunity-dialog"
         onKeyDown={(event) => {
           if (!ref.current?.contains(event.target as Node)) return;
           if (event.key === "Escape") {
             event.preventDefault();
-            ref.current?.querySelector<HTMLButtonElement>('[data-testid="opportunity-form-back"]')?.click();
+            ref.current
+              ?.querySelector<HTMLButtonElement>(
+                '[data-testid="opportunity-form-back"]',
+              )
+              ?.click();
           }
           if (event.key === "Tab") {
-            const nodes = [...(ref.current?.querySelectorAll<HTMLElement>(
-              'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]',
-            ) ?? [])].filter((node) => node.getClientRects().length > 0);
-            const first = nodes[0], last = nodes[nodes.length - 1];
-            if (!first) { event.preventDefault(); ref.current?.focus(); }
-            else if (event.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
-              event.preventDefault(); last?.focus();
+            const nodes = [
+              ...(ref.current?.querySelectorAll<HTMLElement>(
+                "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]",
+              ) ?? []),
+            ].filter((node) => node.getClientRects().length > 0);
+            const first = nodes[0],
+              last = nodes[nodes.length - 1];
+            if (!first) {
+              event.preventDefault();
+              ref.current?.focus();
+            } else if (
+              event.shiftKey &&
+              (document.activeElement === first ||
+                document.activeElement === ref.current)
+            ) {
+              event.preventDefault();
+              last?.focus();
             } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault(); first.focus();
+              event.preventDefault();
+              first.focus();
             }
           }
-        }}>{children}</div>
-    </div>, document.body,
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   );
 }

@@ -8,7 +8,7 @@ import static com.sicost.salesopportunitiesops.SalesCommandDtos.*;
 
 public final class SalesCommandInput {
     private SalesCommandInput() {}
-    public static ApiException invalid(String field) { return new ApiException(400,"VALIDATION_ERROR","입력 형식과 범위를 확인해 주세요.",field,null); }
+    public static ApiException invalid(String field) { return new ApiException(400,"VALIDATION_ERROR",com.sicost.common.validation.InputValidator.message(field),field,null); }
     public static String id(String id) { if(id==null||!id.matches("O-[0-9]{4,18}"))throw invalid("id");return id; }
     public static void fields(JsonNode body,Set<String> allowed) {
         if(body==null||!body.isObject())throw invalid("body");

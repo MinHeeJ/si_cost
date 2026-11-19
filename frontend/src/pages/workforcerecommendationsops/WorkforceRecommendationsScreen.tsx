@@ -7,6 +7,7 @@ import {
   RecommendationSavedValues,
 } from "./RecommendationSavedValues";
 import * as api from "./recommendationBrowseApi";
+import { useCodeNames } from "../../shared/codeNames";
 import "./recommendationBrowse.css";
 
 const targetKey = (t: api.RecommendationTarget) =>
@@ -39,6 +40,7 @@ export function WorkforceRecommendationsScreen({
   ): ReactNode;
 } = {}) {
   const [targets, setTargets] = useState<api.RecommendationTargets>();
+  const name = useCodeNames("GRADE", "JOB");
   const [jobs, setJobs] = useState<SharedCodeLookup[]>([]);
   const [selected, setSelected] = useState<api.RecommendationTarget>();
   const [draft, setDraft] = useState<api.RecommendationCondition>();
@@ -350,7 +352,7 @@ export function WorkforceRecommendationsScreen({
                     <option key={n.needSn} value={n.needSn}>
                       {n.needSn}.{" "}
                       {jobs.find((j) => j.code === n.jobCode)?.name ??
-                        n.jobCode}{" "}
+                        name("JOB", n.jobCode)}{" "}
                       {n.needCount}명 · {n.startMonth}
                     </option>
                   ))}
@@ -390,10 +392,11 @@ export function WorkforceRecommendationsScreen({
                   update({ ...draft, requestedGradeCode: e.target.value })
                 }
               >
-                <option value="JR">초급 (JR)</option>
-                <option value="MD">중급 (MD)</option>
-                <option value="SR">고급 (SR)</option>
-                <option value="EX">특급 (EX)</option>
+                {["JR", "MD", "SR", "EX"].map((code) => (
+                  <option key={code} value={code}>
+                    {name("GRADE", code)}
+                  </option>
+                ))}
               </select>
             </label>
             <button
@@ -429,7 +432,12 @@ export function WorkforceRecommendationsScreen({
               target: selected,
               serverDate: targets.serverDate,
               onReset: () => {
-                if (targets && selected) void recommend(initialCondition(selected), selected, targets.baseMonth);
+                if (targets && selected)
+                  void recommend(
+                    initialCondition(selected),
+                    selected,
+                    targets.baseMonth,
+                  );
               },
               onRefresh: async () => {
                 if (!result.rcmdId) return;
@@ -447,16 +455,32 @@ export function WorkforceRecommendationsScreen({
         </fieldset>
       )}
       {result?.exclusions && (
-        <section className="recommendation-card" data-testid="recommendation-exclusions">
+        <section
+          className="recommendation-card"
+          data-testid="recommendation-exclusions"
+        >
           <h2>후보 제외 진단</h2>
-          <p>전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외 {result.exclusions.excludedUniqueCount}명</p>
-          <p>한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은 다를 수 있습니다.</p>
-          <div>{result.exclusions.byReason.map((r) => (
-            <span className="sicost-badge sicost-tone-neutral" key={r.reason}>{r.reason} {r.count}명</span>
-          ))}</div>
-          <details><summary>개인 진단</summary>
+          <p>
+            전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외{" "}
+            {result.exclusions.excludedUniqueCount}명
+          </p>
+          <p>
+            한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은
+            다를 수 있습니다.
+          </p>
+          <div>
+            {result.exclusions.byReason.map((r) => (
+              <span className="sicost-badge sicost-tone-neutral" key={r.reason}>
+                {r.reason} {r.count}명
+              </span>
+            ))}
+          </div>
+          <details>
+            <summary>개인 진단</summary>
             {result.exclusions.diagnostics.map((d) => (
-              <p key={d.developerId}>{d.developerId}: {d.reasons.join(" · ")}</p>
+              <p key={d.developerId}>
+                {d.developerId}: {d.reasons.join(" · ")}
+              </p>
             ))}
           </details>
         </section>

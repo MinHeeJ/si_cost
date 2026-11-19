@@ -6,6 +6,9 @@ import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { formatAmount, formatDecimal } from "../../shared/format";
 import { SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
+import { BusinessName } from "../../shared/BusinessName";
+import { NumericInput } from "../../shared/NumericInput";
+import { useCodeNames } from "../../shared/codeNames";
 
 export const stageNames: Record<api.Stage, string> = {
   FIND: "발굴",
@@ -17,8 +20,8 @@ type Action = "OK" | "REJ" | "lose" | "stop" | "resume" | "win";
 const titles: Record<Action, string> = {
   OK: "견적 승인",
   REJ: "견적 반려",
-  lose: "실주 처리",
-  stop: "삭제 / 사용 중지",
+  lose: "이 기회를 실주 처리할까요?",
+  stop: "이 기회를 삭제할까요?",
   resume: "다시 사용",
   win: "수주 처리",
 };
@@ -43,11 +46,22 @@ function positiveWon(value: string): string | undefined {
 function quotePlans(quote: api.Quote) {
   const jobs = new Map<string, bigint>();
   for (const row of quote.rows) {
-    if (!row.jobCode || row.quantityMm == null || !/^\d+(?:\.\d{1,2})?$/.test(row.quantityMm)) return;
+    if (
+      !row.jobCode ||
+      row.quantityMm == null ||
+      !/^\d+(?:\.\d{1,2})?$/.test(row.quantityMm)
+    )
+      return;
     const [whole, fraction = ""] = row.quantityMm.split(".");
-    jobs.set(row.jobCode, (jobs.get(row.jobCode) ?? 0n) + BigInt(whole + fraction.padEnd(2, "0")));
+    jobs.set(
+      row.jobCode,
+      (jobs.get(row.jobCode) ?? 0n) + BigInt(whole + fraction.padEnd(2, "0")),
+    );
   }
-  return [...jobs].map(([job, value]) => ({ job, mm: `${value / 100n}.${String(value % 100n).padStart(2, "0")}` }));
+  return [...jobs].map(([job, value]) => ({
+    job,
+    mm: `${value / 100n}.${String(value % 100n).padStart(2, "0")}`,
+  }));
 }
 export function SalesOpportunityActions({
   opportunity: o,
@@ -56,6 +70,7 @@ export function SalesOpportunityActions({
   opportunity: api.Opportunity;
   refresh(): Promise<unknown>;
 }) {
+  const name = useCodeNames("JOB");
   const [action, setAction] = useState<Action>(),
     [error, setError] = useState<unknown>(),
     [fields, setFields] = useState<Record<string, string>>({});
@@ -95,8 +110,10 @@ export function SalesOpportunityActions({
   }, [action]);
   const plans = quotePlans(o.quote);
   const contractAmount = positiveWon(win.contractAmount);
-  const difference = contractAmount && o.quote.revenue != null && /^\d+$/.test(o.quote.revenue)
-    ? (BigInt(contractAmount) - BigInt(o.quote.revenue)).toString() : null;
+  const difference =
+    contractAmount && o.quote.revenue != null && /^\d+$/.test(o.quote.revenue)
+      ? (BigInt(contractAmount) - BigInt(o.quote.revenue)).toString()
+      : null;
   const editable = o.status === "ING";
   const quoteKnown =
     o.quote.storedProfitRate != null &&
@@ -150,7 +167,10 @@ export function SalesOpportunityActions({
         return api.createSalesOpportunityLoss(o, reasonCode, memo || null);
       if (action === "stop") return api.saveSalesOpportunityStop(o);
       if (action === "resume") return api.saveSalesOpportunityResume(o);
-      const result = await api.createSalesOpportunityWin(o, { ...win, contractAmount: contractAmount! });
+      const result = await api.createSalesOpportunityWin(o, {
+        ...win,
+        contractAmount: contractAmount!,
+      });
       setProjectId(result.projectId);
       return result;
     });
@@ -212,7 +232,7 @@ export function SalesOpportunityActions({
             </label>
             <label>
               수주 확률{" "}
-              <input
+              <NumericInput
                 data-testid="opportunity-probability-input"
                 value={probability}
                 onChange={(e) => setProbability(e.target.value)}
@@ -262,7 +282,7 @@ export function SalesOpportunityActions({
           </div>
           {!canAdvance && (
             <p className="sales-command-warning">
-              견적 원가 미확인 또는 승인 WAIT/REJ: 협상·계약 직전 신규 진입과
+              견적 원가 미확인 또는 승인 대기/반려: 협상·계약 직전 신규 진입과
               수주를 할 수 없습니다. 현재 단계는 유지됩니다.
             </p>
           )}
@@ -328,7 +348,16 @@ export function SalesOpportunityActions({
           onCancel={() => setAction(undefined)}
           onConfirm={submit}
           pending={pending}
-          confirmLabel={action === "win" ? "수주 확정" : "확인"}
+          confirmLabel={
+            action === "win"
+              ? "수주 확정"
+              : action === "stop"
+                ? "삭제"
+                : action === "lose"
+                  ? "실주 처리"
+                  : "확인"
+          }
+          danger={action === "stop" || action === "lose"}
           confirmDisabled={
             action === "lose" && (!!reasonError || lossReasons.length === 0)
           }
@@ -395,14 +424,14 @@ export function SalesOpportunityActions({
                   {fields.memo && <span role="alert">{fields.memo}</span>}
                 </label>
                 <p>
-                  ACT 가배정을 모두 해제하고 실주 결과와 서버 날짜를 저장합니다.
+                  가배정을 모두 해제하고 실주 결과와 서버 날짜를 저장합니다.
                 </p>
               </>
             )}
             {action === "stop" && (
               <p>
-                물리 삭제하지 않습니다. 사용 중지하고 ACT 가배정을 해제합니다.
-                다시 사용해도 옛 가배정은 복원하지 않습니다.
+                물리 삭제하지 않습니다. 사용 중지하고 가배정을 해제합니다. 다시
+                사용해도 옛 가배정은 복원하지 않습니다.
               </p>
             )}
             {action === "resume" && (
@@ -414,7 +443,8 @@ export function SalesOpportunityActions({
             {action === "win" && (
               <>
                 <p>
-                  고객 {o.customerId} · 영업파트 {o.partId} · 근무지{" "}
+                  고객 <BusinessName kind="client" id={o.customerId} /> ·
+                  영업파트 <BusinessName kind="part" id={o.partId} /> · 근무지{" "}
                   {o.workplace ?? "–"} (읽기 전용)
                 </p>
                 <p>
@@ -504,7 +534,8 @@ export function SalesOpportunityActions({
                     key={n.needSn ?? i}
                     data-testid={`win-need-${n.needSn ?? i}`}
                   >
-                    {n.jobCode}: {n.count}명 × {n.monthlyMm} MM × {n.months}개월
+                    {name("JOB", n.jobCode)}: {n.count}명 × {n.monthlyMm} MM ×{" "}
+                    {n.months}개월
                   </p>
                 ))}
                 <p>
@@ -517,10 +548,19 @@ export function SalesOpportunityActions({
                 </p>
                 <div data-testid="win-plan-totals">
                   <h4>직무별 계획 합계</h4>
-                  {plans?.map((p) => <p key={p.job}>{p.job}: {formatDecimal(p.mm)} MM</p>) ?? "–"}
+                  {plans?.map((p) => (
+                    <p key={p.job}>
+                      {name("JOB", p.job)}: {formatDecimal(p.mm)} MM
+                    </p>
+                  )) ?? "–"}
                 </div>
-                <p data-testid="win-amount-difference">최종 계약금액 − 견적매출: {formatAmount(difference, "원")} 원</p>
-                <p>서버 견적의 수량을 합산합니다. 계약기간으로 계획을 임의 안분하지 않습니다.</p>
+                <p data-testid="win-amount-difference">
+                  최종 계약금액 − 견적매출: {formatAmount(difference, "원")} 원
+                </p>
+                <p>
+                  서버 견적의 수량을 합산합니다. 계약기간으로 계획을 임의
+                  안분하지 않습니다.
+                </p>
               </>
             )}
           </div>

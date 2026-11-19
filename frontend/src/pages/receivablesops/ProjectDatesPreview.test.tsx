@@ -160,7 +160,7 @@ it("keeps the draft, field error and request id on preview failure", async () =>
       meta: {},
       code: "VALIDATION_ERROR",
       message: "단계 날짜를 확인해 주세요.",
-      field: "steps",
+      field: "steps[0].endDate",
       requestId: "dates-test",
     }),
   );
@@ -175,6 +175,11 @@ it("keeps the draft, field error and request id on preview failure", async () =>
     "aria-invalid",
     "true",
   );
+  expect(screen.getByLabelText("개발 계획 종료일")).toHaveAttribute(
+    "aria-invalid",
+    "false",
+  );
+  expect(screen.getByLabelText("착수 계획 종료일")).toHaveFocus();
   expect(api.saveProjectStepDates).not.toHaveBeenCalled();
 });
 it("cancellation keeps dirty confirmation and does not save", async () => {

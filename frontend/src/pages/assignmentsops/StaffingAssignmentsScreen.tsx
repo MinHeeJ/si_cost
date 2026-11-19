@@ -179,7 +179,6 @@ export function AssignmentsContent({
     [creating, setCreating] = useState(false),
     [dirty, setDirty] = useState(false),
     [leaving, setLeaving] = useState(false),
-    [unit, setUnit] = useState("천원"),
     [dense, setDense] = useState(false);
   useEffect(() => {
     if (entryAssignmentId) setDetail(entryAssignmentId);
@@ -324,7 +323,7 @@ export function AssignmentsContent({
   }
   function amount(value: string | null) {
     if (value === null) return "–";
-    const digits = unit === "원" ? 0 : unit === "천원" ? 3 : 6;
+    const digits = 0;
     const padded = value.padStart(digits + 1, "0");
     return formatDecimal(
       digits ? `${padded.slice(0, -digits)}.${padded.slice(-digits)}` : padded,
@@ -354,7 +353,7 @@ export function AssignmentsContent({
     { id: "endDate", label: "철수일", render: (r) => r.endDate },
     {
       id: "billingUnitPrice",
-      label: `단가 (${unit})`,
+      label: "단가",
       render: (r) =>
         unitPriceNote(
           r.inputType,
@@ -479,7 +478,7 @@ export function AssignmentsContent({
           </select>
         </label>
         <label className="sicost-field">
-          JOB
+          직무
           <select
             data-testid="assignments-job-filter"
             value={draft.jobCode}
@@ -595,18 +594,7 @@ export function AssignmentsContent({
           >
             다시 조회
           </button>
-          <label className="assignment-control">
-            단위
-            <select
-              data-testid="assignments-unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-            >
-              <option>원</option>
-              <option>천원</option>
-              <option>백만원</option>
-            </select>
-          </label>
+
           <label className="assignment-control">
             밀도
             <select
@@ -622,7 +610,7 @@ export function AssignmentsContent({
             year,
             filters,
             sort,
-            amountUnit: unit,
+            amountUnit: "원",
             readonly,
             refresh: refreshed,
           })}

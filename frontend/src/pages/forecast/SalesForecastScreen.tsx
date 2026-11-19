@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import {
   formatIntegerAmount,
+  formatSummaryAmount,
   formatFixedDecimal,
   type AmountUnit,
 } from "../../shared/format";
@@ -51,12 +52,24 @@ export function SalesForecastPanel() {
   }, [revision]);
   useEffect(() => {
     const refresh = () => setRevision((v) => v + 1);
-    const events = ["sicost:sales-committed", "sicost:assignments-committed", "sicost:developers-committed", "sicost:projects-committed", "sicost:project-plans-committed", "sicost:operating-standards-committed", "sicost:codegroups-committed", "sicost:bills-committed", "sicost:payroll-committed"];
+    const events = [
+      "sicost:sales-committed",
+      "sicost:assignments-committed",
+      "sicost:developers-committed",
+      "sicost:projects-committed",
+      "sicost:project-plans-committed",
+      "sicost:operating-standards-committed",
+      "sicost:codegroups-committed",
+      "sicost:bills-committed",
+      "sicost:payroll-committed",
+    ];
     events.forEach((name) => window.addEventListener(name, refresh));
-    return () => events.forEach((name) => window.removeEventListener(name, refresh));
+    return () =>
+      events.forEach((name) => window.removeEventListener(name, refresh));
   }, []);
   const unit = unitNames[amountUnit];
-  const money = (value: string | null | undefined) => formatIntegerAmount(value, unit);
+  const money = (value: string | null | undefined) =>
+    formatIntegerAmount(value, unit);
   const people = (value: string | null | undefined) =>
     formatFixedDecimal(value, 1);
   const identities = data
@@ -77,21 +90,7 @@ export function SalesForecastPanel() {
         <h2>
           매출·인력 예측 <span className="sales-forecast-badge">예측</span>
         </h2>
-        <div className="sicost-field">
-          <label htmlFor="sales-forecast-unit">금액 단위</label>
-          <select
-            id="sales-forecast-unit"
-            data-testid="forecast-unit-select"
-            value={amountUnit}
-            onChange={(e) =>
-              setAmountUnit(e.target.value as api.ForecastAmountUnit)
-            }
-          >
-            <option value="WON">원</option>
-            <option value="THOUSAND">천원</option>
-            <option value="MILLION">백만원</option>
-          </select>
-        </div>
+
         <SalesForecastDownloadPanel amountUnit={amountUnit} />
         <button
           data-testid="forecast-refresh-button"
@@ -138,17 +137,15 @@ export function SalesForecastPanel() {
             <article data-testid="forecast-revenue-card">
               <p>6개월 예상매출</p>
               <strong>
-                {money(data.summary.sixMonthRevenue)} <small>{unit}</small>
+                {formatSummaryAmount(data.summary.sixMonthRevenue)}
               </strong>
             </article>
             <article data-testid="forecast-opportunity-card">
               <p>그중 기회 매출</p>
               <strong>
-                {money(data.summary.opportunityRevenue)} <small>{unit}</small>
+                {formatSummaryAmount(data.summary.opportunityRevenue)}
               </strong>
-              <p>
-                모두 따면 {money(data.summary.allWonRevenue)} {unit}
-              </p>
+              <p>모두 따면 {formatSummaryAmount(data.summary.allWonRevenue)}</p>
             </article>
             <article data-testid="forecast-people-card">
               <p>6개월 평균 필요 / 공급</p>
@@ -174,7 +171,7 @@ export function SalesForecastPanel() {
               }))}
               labels={["프로젝트 매출", "확률반영 기회 매출"]}
               stacked
-              unit={unit}
+              unit="원"
             />
             <ForecastBars
               title="수요·공급"
@@ -190,10 +187,27 @@ export function SalesForecastPanel() {
             <h2>
               월별 매출 <small>단위: {unit}</small>
             </h2>
+            <label className="sicost-field" htmlFor="sales-forecast-unit">
+              금액 단위
+              <select
+                id="sales-forecast-unit"
+                data-testid="forecast-unit-select"
+                value={amountUnit}
+                onChange={(e) =>
+                  setAmountUnit(e.target.value as api.ForecastAmountUnit)
+                }
+              >
+                <option value="WON">원</option>
+                <option value="THOUSAND">천원</option>
+                <option value="MILLION">백만원</option>
+              </select>
+            </label>
             {identities.length === 0 && (
               <div className="sales-forecast-empty">
                 <p>예측 대상 프로젝트·기회가 없습니다.</p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>
+                  조건 초기화
+                </button>
               </div>
             )}
             <div className="sicost-table-viewport">
@@ -303,10 +317,14 @@ export function SalesForecastPanel() {
             <h2>채용·외부인력 검토</h2>
             {data.workforce.hiring.length === 0 ? (
               <div className="sales-forecast-empty">
-                <p>{data.workforce.issues.length
-                  ? "미확인 기준과 원천을 확인해 주세요."
-                  : "채용 검토가 필요한 직무가 없습니다."}</p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>조건 초기화</button>
+                <p>
+                  {data.workforce.issues.length
+                    ? "미확인 기준과 원천을 확인해 주세요."
+                    : "채용 검토가 필요한 직무가 없습니다."}
+                </p>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>
+                  조건 초기화
+                </button>
               </div>
             ) : (
               <div className="sicost-table-viewport">

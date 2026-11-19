@@ -36,6 +36,14 @@ public final class AssignmentActionsInput {
     }
     public static Create create(JsonNode n) {
         object(n,Set.of("year","projectId","developerId","jobCode","startDate","endDate","contractMm","billingUnitPrice","inputType","contractDeveloperId","recommendationRef"));
+        InputValidator.all(
+            () -> text(string(n,"projectId",true),20,"projectId"),
+            () -> text(string(n,"developerId",true),20,"developerId"),
+            () -> text(string(n,"jobCode",true),10,"jobCode"),
+            () -> date(string(n,"startDate",true),"startDate"),
+            () -> date(string(n,"endDate",true),"endDate"),
+            () -> AssignmentInputPolicy.contractMm(string(n,"contractMm",false),true)
+        );
         String kind=n.has("inputType")?choice(string(n,"inputType",true),Set.of("NEW","ADD","SUB","FREE"),"inputType"):"NEW";
         String contract=optionalText(string(n,"contractDeveloperId",false),20,"contractDeveloperId");
         if("SUB".equals(kind)&&contract==null||!"SUB".equals(kind)&&contract!=null)throw invalid("contractDeveloperId");

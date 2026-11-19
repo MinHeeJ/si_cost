@@ -16,12 +16,21 @@ export function BalanceTrendChart({
   const span = high - low || 1n;
   const y = (value: string) =>
     250 - Number(((BigInt(value) - low) * 22000n) / span) / 100;
-  const ticks = [0, 1, 2, 3, 4].map(i => String(low + (span * BigInt(i)) / 4n));
+  const ticks = [0, 1, 2, 3, 4].map((i) =>
+    String(low + (span * BigInt(i)) / 4n),
+  );
   // Reserve room for the full decimal labels, including negative balances.
-  const left = Math.max(80, ...ticks.map(value => formatAmount(value, "백만원").length * 9 + 20));
-  const x = (i: number) => left + i * (900 - left) / 11;
+  const left = Math.max(
+    80,
+    ...ticks.map((value) => formatAmount(value, "백만원").length * 9 + 20),
+  );
+  const x = (i: number) => left + (i * (900 - left)) / 11;
   return (
-    <section className="cash-chart" aria-label="월말 잔액 흐름">
+    <section
+      data-testid="balance-trend-chart"
+      className="cash-chart"
+      aria-label="월말 잔액 흐름"
+    >
       <div className="operating-toolbar">
         <h2>월말 잔액 흐름</h2>
         <small>단위: 백만 원 · 부가세 포함</small>

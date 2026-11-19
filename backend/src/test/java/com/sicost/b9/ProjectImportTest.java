@@ -83,6 +83,7 @@ class ProjectImportTest {
     }
     @Test void actualDateAndRangeValidationPastEndNormalizationDoNotCompareSelectedYear() throws Exception {
         var bad=check(ProjectWorkbook.file(b->{ProjectWorkbook.validRow(b,1);var r=b.getSheetAt(0).getRow(1);r.getCell(4).setCellValue("2026-02-30");}));assertThat(bad.summary().errorRows()).isEqualTo(1);
+        assertThat(bad.issues()).anyMatch(i->i.columnName().equals("시작일")&&i.reason().equals("날짜 형식이 맞지 않습니다. YYYY-MM-DD로 적어 주세요."));
         var reversed=check(ProjectWorkbook.file(b->{ProjectWorkbook.validRow(b,1);b.getSheetAt(0).getRow(1).getCell(5).setCellValue("2025-12-31");}));assertThat(reversed.summary().errorRows()).isEqualTo(1);
         var past=check(ProjectWorkbook.file(b->{ProjectWorkbook.validRow(b,1);var r=b.getSheetAt(0).getRow(1);r.getCell(4).setCellValue("2024-01-01");r.getCell(5).setCellValue("2025-01-01");}));assertThat(past.summary().errorRows()).isZero();assertThat(past.projects().get(0).project().status()).isEqualTo("END");
     }

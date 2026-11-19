@@ -1,4 +1,5 @@
 import { useId, type InputHTMLAttributes } from "react";
+import { NumericInput, type NumericKind } from "./NumericInput";
 
 export type TextProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -8,6 +9,7 @@ export type TextProps = Omit<
   value: string;
   onChange(value: string): void;
   error?: string;
+  numericKind?: NumericKind;
 };
 export function Text({
   label,
@@ -15,18 +17,25 @@ export function Text({
   onChange,
   error,
   id,
+  numericKind,
   ...props
 }: TextProps) {
   const generated = useId();
   const inputId = id ?? generated;
+  const Input = numericKind ? NumericInput : "input";
   return (
     <div className="sicost-field">
       <label htmlFor={inputId}>
         {label}
         {props.required && <span aria-hidden="true"> *</span>}
       </label>
-      <input
+      <Input
         {...props}
+        {...(numericKind ? { kind: numericKind } : {})}
+        data-testid={
+          props["data-testid" as keyof typeof props] ??
+          `text-${inputId.replace(/[^a-z0-9-]/gi, "").toLowerCase()}`
+        }
         id={inputId}
         value={value}
         onChange={(event) => onChange(event.target.value)}

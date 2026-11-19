@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useFieldErrorFocus } from "../../shared/FieldErrors";
+import { sanitizeNumber } from "../../shared/NumericInput";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -68,6 +70,8 @@ export function AssignmentCreateForm({
     submitAssignment ? "저장됐지만 다시 불러오지 못했습니다" : undefined,
   );
   const generation = useRef(0);
+  const formRoot = useRef<HTMLDivElement>(null);
+  useFieldErrorFocus(formRoot, fields);
   const project = projects.find((p) => p.id === form.projectId);
   const paid =
     project &&
@@ -177,7 +181,9 @@ export function AssignmentCreateForm({
     return {
       ...body,
       year,
-      ...(canRate && paid && billingUnitPrice ? { billingUnitPrice } : {}),
+      ...(canRate && paid && billingUnitPrice
+        ? { billingUnitPrice: billingUnitPrice.replace(/,/g, "") }
+        : {}),
       contractDeveloperId:
         form.inputType === "SUB" ? form.contractDeveloperId : null,
     };
@@ -265,7 +271,17 @@ export function AssignmentCreateForm({
         data-testid={`assignment-create-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         type={type}
         value={form[key] ?? ""}
-        onChange={(e) => update(key, e.target.value)}
+        onChange={(e) =>
+          update(
+            key,
+            type === "date"
+              ? e.target.value
+              : sanitizeNumber(
+                  e.target.value,
+                  key === "billingUnitPrice" ? "amount" : "decimal",
+                ),
+          )
+        }
         aria-invalid={Boolean(fields[key])}
       />
       {fields[key] && <span role="alert">{fields[key]}</span>}
@@ -284,6 +300,7 @@ export function AssignmentCreateForm({
       >
         <div
           data-testid="assignment-create-form"
+          ref={formRoot}
           className="assignment-create-grid"
         >
           <p className="assignment-create-wide">
@@ -334,6 +351,7 @@ export function AssignmentCreateForm({
             프로젝트 *
             <select
               data-testid="assignment-project"
+              aria-invalid={Boolean(fields.projectId)}
               disabled={Boolean(submitAssignment)}
               value={form.projectId}
               onChange={(e) => {
@@ -396,6 +414,7 @@ export function AssignmentCreateForm({
             실제 투입자 *
             <select
               data-testid="assignment-developer"
+              aria-invalid={Boolean(fields.developerId)}
               disabled={Boolean(submitAssignment)}
               value={form.developerId}
               onChange={(e) => update("developerId", e.target.value)}
@@ -419,6 +438,7 @@ export function AssignmentCreateForm({
             직무 *
             <select
               data-testid="assignment-job"
+              aria-invalid={Boolean(fields.jobCode)}
               disabled={Boolean(submitAssignment)}
               value={form.jobCode}
               onChange={(e) => update("jobCode", e.target.value)}
@@ -439,6 +459,7 @@ export function AssignmentCreateForm({
             투입구분 *
             <select
               data-testid="assignment-kind"
+              aria-invalid={Boolean(fields.inputType)}
               disabled={Boolean(submitAssignment)}
               value={form.inputType}
               onChange={(e) => update("inputType", e.target.value)}

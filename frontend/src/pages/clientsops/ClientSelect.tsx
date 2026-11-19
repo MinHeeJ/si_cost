@@ -11,6 +11,7 @@ export function ClientSelect({
   selectedLabel,
   disabled = false,
   onRegister,
+  required = false,
 }: {
   purpose: api.ClientPurpose;
   value: string;
@@ -18,6 +19,7 @@ export function ClientSelect({
   selectedLabel?: string;
   disabled?: boolean;
   onRegister?(): void;
+  required?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [q, setQ] = useState(""),
@@ -66,7 +68,9 @@ export function ClientSelect({
         data-testid={`${purpose.toLowerCase()}-client-open`}
         onClick={() => setOpen((previous) => !previous)}
       >
-        {label}: {(selected?.name ?? selectedLabel ?? value) || "선택해 주세요"}
+        {label}
+        {required && <span aria-hidden="true"> *</span>}:{" "}
+        {(selected?.name ?? selectedLabel ?? value) || "선택해 주세요"}
       </button>
       {open && !disabled && (
         <div

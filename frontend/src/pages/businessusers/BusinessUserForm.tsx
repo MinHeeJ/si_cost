@@ -208,6 +208,7 @@ export function BusinessUserForm({
           <label className="sicost-field">
             담당파트
             <select
+              data-testid="business-user-head-office"
               value={headOffice ? "HQ" : ""}
               disabled={pending}
               onChange={(e) => setHeadOffice(e.target.value === "HQ")}
@@ -224,9 +225,13 @@ export function BusinessUserForm({
             <fieldset disabled={pending}>
               <legend>담당프로젝트</legend>
               {projects.map((item) => (
-                <p key={item.project.id}>
+                <p
+                  data-testid={`business-user-project-${item.project.id.toLowerCase().replace(/_/g, "-")}`}
+                  key={item.project.id}
+                >
                   {item.project.name} ({item.project.id}){" "}
                   <button
+                    data-testid={`business-user-project-remove-${item.project.id.toLowerCase().replace(/_/g, "-")}`}
                     type="button"
                     onClick={() =>
                       setProjects((v) =>
@@ -238,7 +243,11 @@ export function BusinessUserForm({
                   </button>
                 </p>
               ))}
-              <button type="button" onClick={() => setChoosingProject(true)}>
+              <button
+                data-testid="business-user-project-add"
+                type="button"
+                onClick={() => setChoosingProject(true)}
+              >
                 담당 프로젝트 추가
               </button>
             </fieldset>

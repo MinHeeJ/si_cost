@@ -433,8 +433,12 @@ it("opens one NEXT round, displays source context and does not post again on red
   await screen.findByText("00012");
   fireEvent.click(screen.getByTestId("withdrawal-recommend-a-1"));
   expect(await screen.findByText("맞는 자리 1곳")).toBeInTheDocument();
-  expect(screen.getByTestId("withdrawal-position-1")).toHaveTextContent("수주 확률 70%");
-  expect(screen.getByTestId("withdrawal-position-1")).not.toHaveTextContent("70.0%");
+  expect(screen.getByTestId("withdrawal-position-1")).toHaveTextContent(
+    "수주 확률 70.0%",
+  );
+  expect(screen.getByTestId("withdrawal-position-1")).not.toHaveTextContent(
+    "수주 확률 70%",
+  );
   expect(screen.getByTestId("withdrawal-next-panel")).toHaveTextContent("Java");
   expect(screen.getByTestId("withdrawal-next-panel")).toHaveTextContent(
     "바로 이어서 투입",
@@ -536,57 +540,160 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
   vi.mocked(api.getWithdrawals).mockResolvedValue(data([]));
   mount();
   await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
-  fireEvent.change(screen.getByTestId("withdrawal-period"), { target: { value: "PAST" } });
-  fireEvent.change(screen.getByTestId("withdrawal-extension-filter"), { target: { value: "UNSET" } });
+  fireEvent.change(screen.getByTestId("withdrawal-period"), {
+    target: { value: "PAST" },
+  });
+  fireEvent.change(screen.getByTestId("withdrawal-extension-filter"), {
+    target: { value: "UNSET" },
+  });
   fireEvent.click(screen.getByTestId("withdrawal-search"));
-  await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ period: "PAST", extension: "UNSET" })));
-  const reset = within(screen.getByTestId("withdrawal-table")).getByRole("button", { name: "조건 초기화" });
+  await waitFor(() =>
+    expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ period: "PAST", extension: "UNSET" }),
+    ),
+  );
+  const reset = within(screen.getByTestId("withdrawal-table")).getByRole(
+    "button",
+    { name: "조건 초기화" },
+  );
   fireEvent.click(reset);
-  await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ period: "ALL", extension: "ALL", page: 1 })));
+  await waitFor(() =>
+    expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ period: "ALL", extension: "ALL", page: 1 }),
+    ),
+  );
   expect(screen.getByTestId("withdrawal-period")).toHaveValue("ALL");
   expect(screen.getByTestId("withdrawal-extension-filter")).toHaveValue("ALL");
 });
 
-
 it("persists density and keeps the saved density if preference saving fails", async () => {
-  const saveDense = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("밀도 저장 실패"));
-  render(<MemoryRouter><SharedScreenContext.Provider value={{ menus: [], favorites: [], star: vi.fn(), pending: false, dense: false, saveDense }}><WithdrawalContent year={2026} /></SharedScreenContext.Provider></MemoryRouter>);
+  const saveDense = vi
+    .fn()
+    .mockResolvedValueOnce(undefined)
+    .mockRejectedValueOnce(new Error("밀도 저장 실패"));
+  render(
+    <MemoryRouter>
+      <SharedScreenContext.Provider
+        value={{
+          menus: [],
+          favorites: [],
+          star: vi.fn(),
+          pending: false,
+          dense: false,
+          saveDense,
+        }}
+      >
+        <WithdrawalContent year={2026} />
+      </SharedScreenContext.Provider>
+    </MemoryRouter>,
+  );
   await screen.findByText("00012");
   fireEvent.click(screen.getByTestId("withdrawal-density"));
-  await waitFor(() => expect(screen.getByTestId("withdrawal-density")).toHaveAttribute("aria-pressed", "true"));
+  await waitFor(() =>
+    expect(screen.getByTestId("withdrawal-density")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    ),
+  );
   expect(saveDense).toHaveBeenLastCalledWith(true);
   fireEvent.click(screen.getByTestId("withdrawal-density"));
   expect(await screen.findByRole("alert")).toHaveTextContent("밀도 저장 실패");
-  expect(screen.getByTestId("withdrawal-density")).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByTestId("withdrawal-density")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(saveDense).toHaveBeenLastCalledWith(false);
 });
 
 it("a page preference failure keeps the last page size and shows an error instead of an unhandled rejection", async () => {
-  const savePageSize = vi.fn().mockRejectedValue(new Error("페이지 설정 저장 실패"));
-  render(<MemoryRouter><SharedScreenContext.Provider value={{ menus: [], favorites: [], star: vi.fn(), pending: false, pageSize: 50, savePageSize }}><WithdrawalContent year={2026} /></SharedScreenContext.Provider></MemoryRouter>);
+  const savePageSize = vi
+    .fn()
+    .mockRejectedValue(new Error("페이지 설정 저장 실패"));
+  render(
+    <MemoryRouter>
+      <SharedScreenContext.Provider
+        value={{
+          menus: [],
+          favorites: [],
+          star: vi.fn(),
+          pending: false,
+          pageSize: 50,
+          savePageSize,
+        }}
+      >
+        <WithdrawalContent year={2026} />
+      </SharedScreenContext.Provider>
+    </MemoryRouter>,
+  );
   await screen.findByText("00012");
-  fireEvent.change(screen.getByLabelText("한 화면 건수"), { target: { value: "20" } });
-  expect(await screen.findByRole("alert")).toHaveTextContent("페이지 설정 저장 실패");
+  fireEvent.change(screen.getByLabelText("한 화면 건수"), {
+    target: { value: "20" },
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "페이지 설정 저장 실패",
+  );
   expect(savePageSize).toHaveBeenCalledWith(20);
   expect(screen.getByLabelText("한 화면 건수")).toHaveValue("50");
   expect(api.getWithdrawals).toHaveBeenCalledTimes(1);
 });
 
 it("sends every header ASC/DESC to the server, resets page and exports the same sort", async () => {
-  vi.mocked(api.getWithdrawals).mockResolvedValue({ ...data(), totalCount: 120 });
-  render(<MemoryRouter><WithdrawalContent year={2026} /></MemoryRouter>);
+  vi.mocked(api.getWithdrawals).mockResolvedValue({
+    ...data(),
+    totalCount: 120,
+  });
+  render(
+    <MemoryRouter>
+      <WithdrawalContent year={2026} />
+    </MemoryRouter>,
+  );
   const table = await screen.findByTestId("withdrawal-table");
-  for (const [id, label] of [["name", "이름"], ["project", "프로젝트"], ["job", "직무"], ["date", "철수일"], ["days", "남은 일수"], ["history", "연장·조기 철수"], ["extension", "연장 가능성"], ["next", "다음 배정"]]) {
-    fireEvent.click(within(table).getByRole("button", { name: new RegExp(`^${label}`) }));
-    await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ sort: id, direction: "ASC", page: 1 })));
-    fireEvent.click(within(table).getByRole("button", { name: new RegExp(`^${label}`) }));
-    await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ sort: id, direction: "DESC", page: 1 })));
+  for (const [id, label] of [
+    ["name", "이름"],
+    ["project", "프로젝트"],
+    ["job", "직무"],
+    ["date", "철수일"],
+    ["days", "남은 일수"],
+    ["history", "연장·조기 철수"],
+    ["extension", "연장 가능성"],
+    ["next", "다음 배정"],
+  ]) {
+    fireEvent.click(
+      within(table).getByRole("button", { name: new RegExp(`^${label}`) }),
+    );
+    await waitFor(() =>
+      expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: id, direction: "ASC", page: 1 }),
+      ),
+    );
+    fireEvent.click(
+      within(table).getByRole("button", { name: new RegExp(`^${label}`) }),
+    );
+    await waitFor(() =>
+      expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: id, direction: "DESC", page: 1 }),
+      ),
+    );
   }
   fireEvent.click(screen.getByTestId("withdrawal-table-next-page"));
-  await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
+  await waitFor(() =>
+    expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+    ),
+  );
   fireEvent.click(within(table).getByRole("button", { name: /^이름/ }));
-  await waitFor(() => expect(api.getWithdrawals).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "name", direction: "ASC", page: 1 })));
-  await waitFor(() => expect(screen.getByTestId("withdrawal-download")).toBeEnabled());
+  await waitFor(() =>
+    expect(api.getWithdrawals).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: "name", direction: "ASC", page: 1 }),
+    ),
+  );
+  await waitFor(() =>
+    expect(screen.getByTestId("withdrawal-download")).toBeEnabled(),
+  );
   fireEvent.click(screen.getByTestId("withdrawal-download"));
-  await waitFor(() => expect(api.downloadWithdrawals).toHaveBeenCalledWith(expect.objectContaining({ sort: "name", direction: "ASC", page: 1 })));
+  await waitFor(() =>
+    expect(api.downloadWithdrawals).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "name", direction: "ASC", page: 1 }),
+    ),
+  );
 });

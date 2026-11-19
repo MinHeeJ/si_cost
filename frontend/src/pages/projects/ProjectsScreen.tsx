@@ -13,6 +13,7 @@ import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { getSharedCodes } from "../shared/sharedApi";
+import { CodeName } from "../../shared/codeNames";
 import {
   getSalesPartOptions,
   type PartOption,
@@ -362,7 +363,14 @@ export function ProjectsScreen({
                   else setNotice("이 기능은 PC에서 사용해 주세요.");
                 }}
               >
-                {row.distribution?.selectedStep ?? "올리기"}{" "}
+                {row.distribution ? (
+                  <CodeName
+                    group="DSTRB_STEP"
+                    value={row.distribution.selectedStep}
+                  />
+                ) : (
+                  "올리기"
+                )}{" "}
                 {row.distribution &&
                   row.distribution.contractDifference !== "0" && (
                     <StatusBadge tone="warn">합계 경고</StatusBadge>

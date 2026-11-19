@@ -164,7 +164,16 @@ async function openMemo() {
   return screen.getByRole("dialog", { name: "이번 주 상태 적기" });
 }
 it("주간 메모 작성일을 유지하고 수정일을 짧게 따로 표시한다", async () => {
-  draw({ ...original, memos: [{ ...memo, modifiedAt: "2026-06-02T17:37:16.791679+09:00", modifiedBy: actor }] });
+  draw({
+    ...original,
+    memos: [
+      {
+        ...memo,
+        modifiedAt: "2026-06-02T17:37:16.791679+09:00",
+        modifiedBy: actor,
+      },
+    ],
+  });
   const card = await screen.findByTestId("progress-memo-3");
   expect(card).toHaveTextContent("06-01 작성, 06-02 고침");
   expect(card).not.toHaveTextContent("T09:00");
@@ -347,7 +356,7 @@ it("미리보기 실패는 입력 유지·필드 오류 및 문의번호를 표�
       meta: {},
       code: "INVALID_INPUT",
       message: "종료일 확인",
-      field: "steps",
+      field: "steps[0].endDate",
       requestId: "dates-request",
     }),
   );
@@ -359,8 +368,9 @@ it("미리보기 실패는 입력 유지·필드 오류 및 문의번호를 표�
     target: { value: "2026-01-12" },
   });
   await userEvent.click(screen.getByRole("button", { name: "미리보기" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("dates-request");
+  expect(await screen.findByText(/문의 번호: dates-request/)).toBeVisible();
   expect(screen.getByLabelText("착수 계획 종료일")).toHaveValue("2026-01-12");
+  expect(screen.getByLabelText("착수 계획 종료일")).toHaveFocus();
   expect(api.saveProjectStepDates).not.toHaveBeenCalled();
 });
 it("신규 실적은 빈칸이며 명시0은 정수로 서버소유값 없이 저장한다", async () => {
@@ -391,7 +401,21 @@ it("빈 메모는 저장하지 않고 입력 오류를 보여준다", async () =
   ).toBeInTheDocument();
   expect(api.createProjectWeekMemo).not.toHaveBeenCalled();
 });
-it.each(["1.5", "-1", "101"])("실적 %s는 보정 없이 거부한다", async (value) => {
+it("실적 입력의 숫자가 아닌 글자를 즉시 제거하고 정제된 숫자를 저장한다", async () => {
+  draw();
+  const dialog = await openMemo();
+  const input = within(dialog).getByLabelText("실적 진척률");
+  fireEvent.change(input, { target: { value: "-1x" } });
+  expect(input).toHaveValue("1");
+  await userEvent.click(within(dialog).getByRole("button", { name: "저장" }));
+  await waitFor(() =>
+    expect(api.createProjectWeekMemo).toHaveBeenCalledWith(
+      "PROGRESS-1",
+      expect.objectContaining({ actualProgress: 1 }),
+    ),
+  );
+});
+it.each(["1.5", "101"])("실적 %s는 보정 없이 거부한다", async (value) => {
   draw();
   const dialog = await openMemo();
   fireEvent.change(within(dialog).getByLabelText("실적 진척률"), {

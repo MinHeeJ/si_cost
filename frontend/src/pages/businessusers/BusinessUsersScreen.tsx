@@ -275,7 +275,11 @@ export function BusinessUsersScreen({
             >
               <option value="">전체</option>
               {roleOptions.map((option) => (
-                <option key={option.roleId} value={option.roleId}>
+                <option
+                  data-testid={`business-users-role-option-${option.roleId.toLowerCase().replace(/_/g, "-")}`}
+                  key={option.roleId}
+                  value={option.roleId}
+                >
                   {option.name}
                 </option>
               ))}
@@ -296,6 +300,7 @@ export function BusinessUsersScreen({
           </label>
           <label className="sicost-field">
             <input
+              data-testid="business-users-include-stopped"
               type="checkbox"
               checked={draft.includeStopped}
               onChange={(e) =>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApiError } from "../../shared/api";
 import { formatAmount, formatFixedDecimal } from "../../shared/format";
 import * as api from "./salesCommandsApi";
+import { useCodeNames } from "../../shared/codeNames";
 
 export const judgementNames: Record<api.Quote["judgement"], string> = {
   LOSS: "손해",
@@ -18,6 +19,7 @@ export function SalesQuotePanel({
   needs: api.Need[];
   initial?: api.Quote;
 }) {
+  const name = useCodeNames("JOB", "GRADE");
   const [quote, setQuote] = useState(initial),
     [pending, setPending] = useState(false),
     [error, setError] = useState<unknown>();
@@ -112,7 +114,7 @@ export function SalesQuotePanel({
                     data-testid={`quote-row-${r.needSn ?? i}`}
                   >
                     <td>
-                      {r.jobCode ?? "–"} / {r.gradeCode ?? "–"}
+                      {name("JOB", r.jobCode)} / {name("GRADE", r.gradeCode)}
                       {!r.complete && " · 미완료"}
                     </td>
                     <td>{formatFixedDecimal(r.quantityMm, 2)}</td>

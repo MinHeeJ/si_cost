@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
-import { formatFixedDecimal } from "../../shared/format";
+import { formatFixedDecimal, formatRate } from "../../shared/format";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
 import { WorkforceForecastPanel } from "../workforceforecastsops/WorkforceDemandForecastScreen";
 import {
@@ -14,6 +14,8 @@ import {
   type PeriodValue,
 } from "../shared/sharedApi";
 import * as api from "./workforceCalendarApi";
+import { CodeName } from "../../shared/codeNames";
+import { BusinessName } from "../../shared/BusinessName";
 import "./workforceCalendar.css";
 
 const events = [
@@ -570,7 +572,7 @@ export function WorkforceCalendarCell({
     cell.status === "ASSIGNED"
       ? `${pre ? "⚠ 미계약 " : cell.leavingSoon ? "철수예정 " : "투입중 "}${decimal(cell.actualMm)} MM${cell.assignmentCount >= 2 ? ` · ${cell.assignmentCount}건` : ""}${cell.overAssigned ? " · 1.0 초과" : ""}`
       : cell.status === "TENTATIVE"
-        ? `${cell.tentativeProbability ?? "–"}%`
+        ? formatRate(cell.tentativeProbability)
         : statuses[cell.status];
   return (
     <div
@@ -594,8 +596,13 @@ export function WorkforceCalendarCell({
               data-testid={`calendar-cell-project-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${i}`}
               key={`${p.projectId}:${i}`}
             >
-              {p.projectId}: {decimal(p.actualMm)} MM · 종료 {p.endDate} · EXT{" "}
-              {p.extensionPossibility ?? "미정"}
+              <BusinessName kind="project" id={p.projectId} />:{" "}
+              {decimal(p.actualMm)} MM · 종료 {p.endDate} · 연장 가능성{" "}
+              {p.extensionPossibility ? (
+                <CodeName group="EXT_PSBL" value={p.extensionPossibility} />
+              ) : (
+                "미정"
+              )}
             </p>
           ))}
           {cell.tentativeAssignments.map((t) => (
@@ -603,8 +610,9 @@ export function WorkforceCalendarCell({
               data-testid={`calendar-cell-tentative-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(String(t.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
               key={t.id}
             >
-              가배정 {t.opportunityId} · {t.startMonth} ~ 자리 종료월 ·{" "}
-              {cell.tentativeProbability ?? "–"}%
+              가배정 <BusinessName kind="opportunity" id={t.opportunityId} /> ·{" "}
+              {t.startMonth} ~ 자리 종료월 ·{" "}
+              {formatRate(cell.tentativeProbability)}
             </p>
           ))}
         </div>

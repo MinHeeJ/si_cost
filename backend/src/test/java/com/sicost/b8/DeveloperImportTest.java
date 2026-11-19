@@ -69,6 +69,8 @@ class DeveloperImportTest {
         var codes=new ArrayList<>(DeveloperWorkbook.codes());codes.add(new Code("EMP_TYPE","FT","정규직",true,"옛직원"));codes.add(new Code("EMP_TYPE","STOP","중지",false,"옛중지"));when(mapper.codes()).thenReturn(codes);
         var f=DeveloperWorkbook.file(b->{for(int i=1;i<=3;i++)DeveloperWorkbook.validRow(b,i);b.getSheetAt(0).getRow(1).getCell(2).setCellValue("옛직원");b.getSheetAt(0).getRow(2).getCell(2).setCellValue("옛중지");b.getSheetAt(0).getRow(3).getCell(2).setCellValue("FT");});
         var c=check(f);assertThat(c.summary().warningRows()).isEqualTo(1);assertThat(c.summary().errorRows()).isEqualTo(2);
+        assertThat(c.issues()).anyMatch(i->i.severity().equals("WARN")&&i.reason().equals("’옛직원’을 ’정규직’으로 바꿔 읽었습니다"));
+        assertThat(c.issues()).anyMatch(i->i.reason().equals("’옛중지’는 등록되지 않은 직원구분입니다."));
     }
     @ParameterizedTest @ValueSource(strings={"-1","1.2","1e3","1000000000000000","abc"})
     void invalidAmountIsAnErrorAndNotRounded(String amount) throws Exception {
@@ -77,6 +79,7 @@ class DeveloperImportTest {
     @Test void datesNormalizeRealExcelDateAndDottedDateButRejectImpossibleDate() throws Exception {
         var f=DeveloperWorkbook.file(b->{for(int i=1;i<=3;i++)DeveloperWorkbook.validRow(b,i);b.getSheetAt(0).getRow(1).getCell(10).setCellValue("2024.02.29");var cell=b.getSheetAt(0).getRow(2).getCell(10);cell.setCellValue(LocalDate.of(2024,2,29));var style=b.createCellStyle();style.setDataFormat(b.createDataFormat().getFormat("yyyy/mm/dd"));cell.setCellStyle(style);b.getSheetAt(0).getRow(3).getCell(10).setCellValue("2023-02-29");});
         var c=check(f);assertThat(c.developers().get(0).hireDate()).isEqualTo(LocalDate.of(2024,2,29));assertThat(c.developers().get(1).hireDate()).isEqualTo(LocalDate.of(2024,2,29));assertThat(c.summary().errorRows()).isEqualTo(1);
+        assertThat(c.issues()).anyMatch(i->i.columnName().equals("입사일")&&i.reason().equals("날짜 형식이 맞지 않습니다. YYYY-MM-DD로 적어 주세요."));
     }
     @Test void cachedFormulaNeverEvaluatesMissingCacheIsErrorAndIdentifier16DigitsIsError() throws Exception {
         var f=DeveloperWorkbook.file(b->{DeveloperWorkbook.validRow(b,1);var r=b.getSheetAt(0).getRow(1);r.getCell(0).setCellValue(1234567890123456d);r.getCell(1).setCellFormula("\"name\"");r.getCell(1).setCellValue("저장 이름");r.createCell(14).setCellFormula("WEBSERVICE(\"https://invalid.test\")");if(r.getCell(14).getCTCell().isSetV())r.getCell(14).getCTCell().unsetV();});

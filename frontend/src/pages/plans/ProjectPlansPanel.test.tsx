@@ -167,7 +167,7 @@ it("빈값 저장은 0으로 전송하며 합계를 0으로 계산한다", async
     }),
   );
 });
-it.each(["-1", "+1", "1e3", "1.001", "10000", "문자"])(
+it.each(["1.001", "10000"])(
   "잘못된 MM %s은 입력 유지와 필드 오류를 표시하고 저장하지 않는다",
   async (value) => {
     draw();
@@ -178,6 +178,17 @@ it.each(["-1", "+1", "1e3", "1.001", "10000", "문자"])(
     expect(api.saveProjectPlans).not.toHaveBeenCalled();
   },
 );
+it.each([
+  ["-1", "1"],
+  ["+1", "1"],
+  ["1e3", "13"],
+  ["문자", ""],
+])("MM %s에서 숫자 아닌 글자를 즉시 지운다", async (value, expected) => {
+  draw();
+  const field = await input("개발", value);
+  expect(field).toHaveValue(expected);
+  expect(api.saveProjectPlans).not.toHaveBeenCalled();
+});
 it("각 9999.99는 합계가 상한을 넘어도 축소하지 않고 실시간 합계는 정확하다", async () => {
   draw();
   await input("개발", "9999.99");

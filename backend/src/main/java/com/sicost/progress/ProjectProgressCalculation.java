@@ -67,7 +67,7 @@ public final class ProjectProgressCalculation {
             StepRow old=rows.get(i);EndDate in=input.get(i);
             if(in.stepSn()!=old.stepSn() || in.endDate()==null || in.endDate().isBefore(start) || in.endDate().isAfter(p.endDate())
                 || (i==rows.size()-1 && !in.endDate().equals(p.endDate()))
-                || (old.completedDate()!=null && (!start.equals(old.startDate()) || !in.endDate().equals(old.endDate()))))throw invalid("steps");
+                || (old.completedDate()!=null && (!start.equals(old.startDate()) || !in.endDate().equals(old.endDate()))))throw new com.sicost.common.api.ApiException(400,"INVALID_INPUT","종료일이 시작일보다 앞이거나 프로젝트 계약 기간을 벗어납니다. 단계 날짜를 확인해 주세요.","steps["+i+"].endDate",null);
             result.add(withDates(old,start,in.endDate(),old.completedDate()));start=in.endDate().plusDays(1);
         }
         return List.copyOf(result);

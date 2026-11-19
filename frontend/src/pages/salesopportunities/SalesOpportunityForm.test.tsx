@@ -136,22 +136,22 @@ beforeEach(() => {
 it("new form uses DB month and middle grade while independent needs start with six and monthly MM one", async () => {
   mount();
   await ready();
-  expect(screen.getByTestId("opportunity-months")).toHaveValue(6);
+  expect(screen.getByTestId("opportunity-months")).toHaveValue("6");
   expect(screen.getByTestId("opportunity-start-month")).toHaveValue("2026-07");
   expect(screen.getByLabelText("1번째 줄 등급")).toHaveValue("MD");
   expect(screen.getByLabelText("1번째 줄 월MM")).toHaveValue("1.00");
   fireEvent.change(screen.getByTestId("opportunity-months"), {
     target: { value: "12" },
   });
-  expect(screen.getByLabelText("1번째 줄 개월")).toHaveValue(6);
+  expect(screen.getByLabelText("1번째 줄 개월")).toHaveValue("6");
   await userEvent.click(screen.getByRole("button", { name: "행 추가" }));
-  expect(screen.getByLabelText("2번째 줄 개월")).toHaveValue(12);
+  expect(screen.getByLabelText("2번째 줄 개월")).toHaveValue("12");
 });
 it("edit preserves existing needSn nullable grade/months/rate and sends separate PUT with full revision", async () => {
   mount(detail());
   await ready();
   expect(screen.getByTestId("opportunity-name")).toHaveValue("기회 원본");
-  expect(screen.getByTestId("opportunity-months")).toHaveValue(null);
+  expect(screen.getByTestId("opportunity-months")).toHaveValue("");
   expect(screen.getByTestId("opportunity-next-due")).toHaveClass(
     "sales-opportunity-overdue",
   );
@@ -199,6 +199,27 @@ it("field validation keeps deadline without task and focuses field", async () =>
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   expect(screen.getByRole("alert")).toHaveTextContent("할 일을 입력");
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
+});
+it("actual form sanitizes money, probability and monthly MM immediately", async () => {
+  mount(detail());
+  await ready();
+  fireEvent.change(screen.getByTestId("opportunity-amount"), {
+    target: { value: "12a,3b4" },
+  });
+  fireEvent.change(screen.getByTestId("opportunity-probability"), {
+    target: { value: "5x0" },
+  });
+  fireEvent.change(screen.getByLabelText("1번째 줄 월MM"), {
+    target: { value: "0.a5" },
+  });
+  expect(screen.getByTestId("opportunity-amount")).toHaveValue("12,34");
+  expect(screen.getByTestId("opportunity-probability")).toHaveValue("50");
+  expect(screen.getByLabelText("1번째 줄 월MM")).toHaveValue("0.5");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(api.putSalesOpportunity).toHaveBeenCalledWith(
+    "O-0101",
+    expect.objectContaining({ amount: "1234", probability: "50" }),
+  );
 });
 it("server row errors preserve input and do not retry mutation", async () => {
   vi.mocked(api.putSalesOpportunity).mockRejectedValue(
@@ -276,6 +297,9 @@ it("developer picker loads real direct active list and empty state; selection is
 });
 
 it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
-  mount(); await ready();
-  expect(screen.getByTestId("opportunity-form-save")).toHaveClass("sicost-primary");
+  mount();
+  await ready();
+  expect(screen.getByTestId("opportunity-form-save")).toHaveClass(
+    "sicost-primary",
+  );
 });

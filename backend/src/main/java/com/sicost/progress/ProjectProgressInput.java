@@ -37,12 +37,18 @@ public final class ProjectProgressInput {
         JsonNode rows=body.get("steps");
         if (rows==null || !rows.isArray() || rows.isEmpty() || rows.size()>99) throw invalid("steps");
         List<EndDate> values=new ArrayList<>();
+        List<Map<String,String>> errors=new ArrayList<>();
+        int index=0;
         for (JsonNode row:rows) {
             check(row,Set.of("stepSn","endDate"));
             int sn=number(row.get("stepSn"),"steps");
             if (sn<1 || sn>99) throw invalid("steps");
-            values.add(new EndDate(sn,ProjectInputPolicy.date(text(row,"endDate"),"steps")));
+            String field="steps["+index+"].endDate";
+            try {values.add(new EndDate(sn,ProjectInputPolicy.date(text(row,"endDate"),field)));}
+            catch(com.sicost.common.api.ApiException e) {errors.add(Map.of("field",field,"message",com.sicost.common.validation.InputValidator.DATE_MESSAGE));}
+            index++;
         }
+        if(!errors.isEmpty())throw new com.sicost.common.api.ApiException(400,"INVALID_INPUT",errors.get(0).get("message"),errors.get(0).get("field"),Map.of("violations",errors));
         return new Dates(year(body),preview?null:revision(body),List.copyOf(values));
     }
     public static MemoInput memo(JsonNode body) {

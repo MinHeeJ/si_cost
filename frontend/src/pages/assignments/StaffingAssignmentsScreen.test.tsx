@@ -44,22 +44,20 @@ it("retains loading and real empty list without inventing assignments", async ()
   expect(screen.queryByText("개인경비")).not.toBeInTheDocument();
   expect(screen.queryByText("청구서 생성")).not.toBeInTheDocument();
 });
-it("download passes selected year and applied filters with exact decimal display unit", async () => {
+it("download passes selected year and applied filters in won without a unit selector", async () => {
   render(<StaffingAssignmentsScreen />);
   await screen.findByText("조회된 투입 배정이 없습니다.");
   fireEvent.change(screen.getByTestId("assignments-search"), {
     target: { value: "  Ab_%  " },
   });
   await userEvent.click(screen.getByTestId("assignments-query"));
-  fireEvent.change(screen.getByTestId("assignments-unit"), {
-    target: { value: "백만원" },
-  });
+  expect(screen.queryByTestId("assignments-unit")).not.toBeInTheDocument();
   await userEvent.click(screen.getByTestId("assignment-download"));
   await waitFor(() =>
     expect(downloads.downloadAssignments).toHaveBeenCalledWith(
       expect.objectContaining({ year: 2026, q: "Ab_%" }),
       { id: "projectName", direction: "ASC" },
-      "백만원",
+      "원",
     ),
   );
   expect(saveDownload).toHaveBeenCalledOnce();

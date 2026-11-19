@@ -3,6 +3,8 @@ import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import * as api from "./recommendationBrowseApi";
+import { useCodeNames } from "../../shared/codeNames";
+import { BusinessName } from "../../shared/BusinessName";
 import {
   RecommendationBrowseError,
   RecommendationSavedValues,
@@ -10,6 +12,7 @@ import {
 import "./recommendationBrowse.css";
 
 export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
+  const name = useCodeNames("RCMD_TYPE", "JOB", "GRADE");
   const [draft, setDraft] = useState({
     targetType: "" as "" | api.TargetType,
     targetId: "",
@@ -124,7 +127,12 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
           disabled={loading}
           onSubmit={apply}
           onReset={() => {
-            setDraft({ targetType: "", targetId: "", job: "", recommendationType: "" });
+            setDraft({
+              targetType: "",
+              targetId: "",
+              job: "",
+              recommendationType: "",
+            });
             setFields({});
             setSelected(undefined);
             setDetail(undefined);
@@ -190,8 +198,8 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
               }
             >
               <option value="">전체</option>
-              <option value="AI">AI</option>
-              <option value="NEXT">NEXT</option>
+              <option value="AI">{name("RCMD_TYPE", "AI")}</option>
+              <option value="NEXT">{name("RCMD_TYPE", "NEXT")}</option>
             </select>
           </label>
         </FilterBar>
@@ -203,28 +211,74 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
         {!loading && !error && data && (
           <>
             {data.items.length === 0 ? (
-              <div className="recommendation-empty">추천 기록이 없습니다.
-                <button type="button" onClick={() => {
-                  setDraft({ targetType: "", targetId: "", job: "", recommendationType: "" });
-                  setFields({});
-                  setSelected(undefined);
-                  setDetail(undefined);
-                  setQuery({ page: 1, size: query.size });
-                }}>조건 초기화</button>
+              <div className="recommendation-empty">
+                추천 기록이 없습니다.
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft({
+                      targetType: "",
+                      targetId: "",
+                      job: "",
+                      recommendationType: "",
+                    });
+                    setFields({});
+                    setSelected(undefined);
+                    setDetail(undefined);
+                    setQuery({ page: 1, size: query.size });
+                  }}
+                >
+                  조건 초기화
+                </button>
               </div>
             ) : (
               <div className="sicost-table-viewport">
                 <table className="sicost-table">
                   <thead>
                     <tr>
-                      {([
-                        ["rcmdId", "회차"], ["recommendationType", "유형"], ["targetId", "대상"],
-                        ["jobCode", "직무"], ["startMonth", "시작월"], ["requestedGradeCode", "요청등급"],
-                        ["executedAt", "실행시각"], ["executedBy", "사용자"], ["candidateCount", "후보 수"],
-                      ] as const).map(([id, label]) => (
-                        <th key={id} aria-sort={query.sort === id ? query.direction === "DESC" ? "descending" : "ascending" : "none"}>
-                          <button type="button" onClick={() => setQuery((old) => ({ ...old, sort: id, direction: old.sort === id && old.direction !== "DESC" ? "DESC" : "ASC", page: 1 }))}>
-                            {label}{query.sort === id ? query.direction === "DESC" ? " ▼" : " ▲" : ""}
+                      {(
+                        [
+                          ["rcmdId", "회차"],
+                          ["recommendationType", "유형"],
+                          ["targetId", "대상"],
+                          ["jobCode", "직무"],
+                          ["startMonth", "시작월"],
+                          ["requestedGradeCode", "요청등급"],
+                          ["executedAt", "실행시각"],
+                          ["executedBy", "사용자"],
+                          ["candidateCount", "후보 수"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <th
+                          key={id}
+                          aria-sort={
+                            query.sort === id
+                              ? query.direction === "DESC"
+                                ? "descending"
+                                : "ascending"
+                              : "none"
+                          }
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQuery((old) => ({
+                                ...old,
+                                sort: id,
+                                direction:
+                                  old.sort === id && old.direction !== "DESC"
+                                    ? "DESC"
+                                    : "ASC",
+                                page: 1,
+                              }))
+                            }
+                          >
+                            {label}
+                            {query.sort === id
+                              ? query.direction === "DESC"
+                                ? " ▼"
+                                : " ▲"
+                              : ""}
                           </button>
                         </th>
                       ))}
@@ -246,11 +300,20 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
                             {row.rcmdId}
                           </button>
                         </td>
-                        <td>{row.recommendationType}</td>
-                        <td>{row.targetId}</td>
-                        <td>{row.jobCode}</td>
+                        <td>{name("RCMD_TYPE", row.recommendationType)}</td>
+                        <td>
+                          <BusinessName
+                            kind={
+                              row.targetId.startsWith("P-")
+                                ? "project"
+                                : "opportunity"
+                            }
+                            id={row.targetId}
+                          />
+                        </td>
+                        <td>{name("JOB", row.jobCode)}</td>
                         <td>{row.startMonth}</td>
-                        <td>{row.requestedGradeCode}</td>
+                        <td>{name("GRADE", row.requestedGradeCode)}</td>
                         <td>{row.executedAt}</td>
                         <td>{row.executedBy}</td>
                         <td className="sicost-decimal">{row.candidateCount}</td>

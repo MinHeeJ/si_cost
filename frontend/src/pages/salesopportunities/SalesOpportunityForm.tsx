@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useFieldErrorFocus } from "../../shared/FieldErrors";
+import { NumericInput, sanitizeNumber } from "../../shared/NumericInput";
 import { useNavigate } from "react-router-dom";
 import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
@@ -84,6 +86,7 @@ export function SalesOpportunityForm({
     [peopleLoading, setPeopleLoading] = useState(false),
     [peopleError, setPeopleError] = useState<unknown>();
   const [committed, setCommitted] = useState<api.Result>();
+  useFieldErrorFocus(node, fields);
   const destination = useRef<string>(),
     { pending, message, commit } = useCommitRefresh(
       "저장됐지만 다시 불러오지 못했습니다",
@@ -293,7 +296,10 @@ export function SalesOpportunityForm({
       node.current?.querySelector<HTMLElement>(`[name="${key}"]`)?.focus();
       return;
     }
-    const needs = rows.map(({ rowKey: _key, selected: _selected, ...n }) => n);
+    const needs = rows.map(({ rowKey: _key, selected: _selected, ...n }) => ({
+      ...n,
+      expectedRate: n.expectedRate?.replace(/,/g, "") ?? null,
+    }));
     const tentativeSelections = rows.flatMap((r, i) =>
       r.selected.map((developerId) => ({
         ...(r.needSn ? { needSn: r.needSn } : { needIndex: i + 1 }),
@@ -306,7 +312,12 @@ export function SalesOpportunityForm({
     try {
       await commit(
         async () => {
-          const payload = { ...form, needs, tentativeSelections };
+          const payload = {
+            ...form,
+            amount: form.amount.replace(/,/g, ""),
+            needs,
+            tentativeSelections,
+          };
           result = detail
             ? await api.putSalesOpportunity(detail.id, {
                 ...payload,
@@ -473,7 +484,7 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 수주 확률 *
-                <input
+                <NumericInput
                   data-testid="opportunity-probability"
                   name="probability"
                   value={form.probability}
@@ -500,7 +511,8 @@ export function SalesOpportunityForm({
               </div>
               <label>
                 예상 금액 (원) *
-                <input
+                <NumericInput
+                  kind="amount"
                   data-testid="opportunity-amount"
                   name="amount"
                   inputMode="numeric"
@@ -543,10 +555,10 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 예상 기간 (개월)
-                <input
+                <NumericInput
+                  kind="integer"
                   data-testid="opportunity-months"
                   name="months"
-                  type="number"
                   value={form.months ?? ""}
                   onChange={(e) =>
                     set(
@@ -728,7 +740,8 @@ export function SalesOpportunityForm({
                             data-testid={`need-${key.toLowerCase()}-${r.rowKey}`}
                             name={`needs[${index}].${key}`}
                             aria-label={`${index + 1}번째 줄 ${label}`}
-                            type={type}
+                            type={type === "month" ? "month" : "text"}
+                            inputMode={type === "month" ? undefined : "decimal"}
                             value={r[key] ?? ""}
                             onChange={(e) =>
                               changeRow(index, {
@@ -736,10 +749,20 @@ export function SalesOpportunityForm({
                                   key === "count" || key === "months"
                                     ? e.target.value === ""
                                       ? undefined
-                                      : Number(e.target.value)
+                                      : Number(
+                                          sanitizeNumber(
+                                            e.target.value,
+                                            "integer",
+                                          ),
+                                        )
                                     : key === "expectedRate"
-                                      ? e.target.value || null
-                                      : e.target.value,
+                                      ? sanitizeNumber(
+                                          e.target.value,
+                                          "amount",
+                                        ) || null
+                                      : key === "monthlyMm"
+                                        ? sanitizeNumber(e.target.value)
+                                        : e.target.value,
                               })
                             }
                           />
