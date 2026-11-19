@@ -26,7 +26,6 @@ export type ProjectDistributionPanelProps = {
     expectedRevision: string;
     onApplied(): void;
   }): void;
-  onAmountUnitChange?(unit: api.AmountUnit): void;
 };
 const steps: { code: api.DistributionStep; label: string }[] = [
   { code: "EST", label: "EST 견적" },
@@ -47,15 +46,14 @@ export function ProjectDistributionPanel({
   projectId,
   customerName,
   initialStep = "EST",
-  amountUnit = "천원",
+  amountUnit = "원",
   readOnly = false,
   refreshKey = 0,
   onBack,
   onUpload,
-  onAmountUnitChange,
 }: ProjectDistributionPanelProps) {
-  const [step, setStep] = useState(initialStep),
-    [unit, setUnit] = useState(amountUnit);
+  const [step, setStep] = useState(initialStep);
+  const unit = amountUnit;
   const [data, setData] = useState<api.ProjectDistributionData>(),
     [comparison, setComparison] = useState<api.ProjectDistributionComparison>();
   const [uploads, setUploads] = useState<api.ProjectUploadRecord[]>([]);
@@ -66,9 +64,6 @@ export function ProjectDistributionPanel({
     [pending, setPending] = useState(false),
     [resultId, setResultId] = useState<number>();
   const busy = useRef(false);
-  useEffect(() => {
-    setUnit(amountUnit);
-  }, [amountUnit]);
   useEffect(() => {
     setStep(initialStep);
   }, [projectId, initialStep]);
@@ -243,23 +238,6 @@ export function ProjectDistributionPanel({
               </StatusBadge>{" "}
               · 저장된 표 전체 기준 PLAN &gt; CTRT &gt; EST
             </p>
-            <label>
-              단위{" "}
-              <select
-                aria-label="배분표 금액 단위"
-                data-testid="distribution-unit"
-                value={unit}
-                onChange={(event) => {
-                  const next = event.target.value as api.AmountUnit;
-                  setUnit(next);
-                  onAmountUnitChange?.(next);
-                }}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
           </div>
           {comparison && (
             <div

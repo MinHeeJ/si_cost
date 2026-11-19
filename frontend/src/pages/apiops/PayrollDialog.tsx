@@ -68,7 +68,8 @@ export function PayrollDialog({
     size: 50 as 20 | 50 | 100,
   });
   const [draft, setDraft] = useState("");
-  const [unit, setUnit] = useState<Unit>("천원");
+  // A 화면은 원 단위 콤마(SFR-006-01 「그 외 화면은 원」, 사용자 결정 2026-11-19).
+  const unit: Unit = "원";
   const [data, setData] = useState<api.PayrollPage>();
   const [history, setHistory] = useState<api.PayrollUploadsPage>();
   const [historyPage, setHistoryPage] = useState({
@@ -286,18 +287,6 @@ export function PayrollDialog({
                   setActionError(undefined);
                 }}
               />
-            </label>
-            <label className="sicost-field">
-              단위
-              <select
-                data-testid="payroll-unit"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as Unit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
             </label>
             {!mobile && (
               <button

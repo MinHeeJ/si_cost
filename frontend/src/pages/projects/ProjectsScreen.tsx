@@ -60,7 +60,6 @@ export type ProjectsScreenProps = {
   onColumnsChange?(): void;
   onDensityChange?(): void;
   onPageSizeChange?(size: 20 | 50 | 100): Promise<void> | void;
-  onAmountUnitChange?(unit: "원" | "천원" | "백만원"): Promise<void> | void;
 };
 export function ProjectsScreen({
   year,
@@ -69,14 +68,13 @@ export function ProjectsScreen({
   active = true,
   dense = false,
   pageSize = 50,
-  amountUnit = "천원",
+  amountUnit = "원",
   columnView,
   registration,
   onDirtyChange,
   onColumnsChange,
   onDensityChange,
   onPageSizeChange,
-  onAmountUnitChange,
 }: ProjectsScreenProps) {
   const [mobile, setMobile] = useState(
     () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
@@ -450,7 +448,6 @@ export function ProjectsScreen({
                 else
                   setActionError(new Error("배분표 업로드 연결이 필요합니다."));
               }}
-              onAmountUnitChange={(unit) => void onAmountUnitChange?.(unit)}
             />
           )}
           {upload &&
@@ -606,22 +603,6 @@ export function ProjectsScreen({
                   {dense ? "넓게 보기" : "좁게 보기"}
                 </button>
               )}
-              <label>
-                단위{" "}
-                <select
-                  data-testid="project-amount-unit"
-                  value={amountUnit}
-                  onChange={(e) =>
-                    void onAmountUnitChange?.(
-                      e.target.value as "원" | "천원" | "백만원",
-                    )
-                  }
-                >
-                  <option>원</option>
-                  <option>천원</option>
-                  <option>백만원</option>
-                </select>
-              </label>
               {!mobile && (
                 <button
                   type="button"
