@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
@@ -517,7 +518,12 @@ function SharedApplicationContent({
       }}
     >
       <div className="sicost-app" data-screen-id="SCR-UI">
-        {favoriteNotice && <Toast key={favoriteNotice} message={favoriteNotice} />}
+        {favoriteNotice && createPortal(
+          <div className="sicost-toast-stack">
+            <Toast key={favoriteNotice} message={favoriteNotice} />
+          </div>,
+          document.body,
+        )}
         <header className="sicost-header">
           <button
             type="button"

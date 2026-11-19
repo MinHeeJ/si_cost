@@ -509,3 +509,44 @@ it("clears cached business cards when a refresh loses authorization", async () =
   await waitFor(() => expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument());
   expect(screen.getByText("권한이 변경됐습니다.")).toBeVisible();
 });
+
+it("shows the design's provisional month notice once and keeps detailed number sources accessible", async () => {
+  data.selectedMonth = data.currentMonth = "2026-07";
+  data.lastClosedMonth = "2026-06";
+  data.provisional = true;
+  ready();
+  await screen.findByText("7월 매출·이익");
+  const bar = screen.getByRole("group", { name: "조회 기간 상태" });
+  expect(bar).toHaveTextContent("마감 완료6월까지");
+  expect(within(bar).getAllByText("잠정")).toHaveLength(1);
+  expect(within(bar).queryByText("작업중")).not.toBeInTheDocument();
+  expect(bar).toHaveTextContent("마감 전이라 바뀔 수 있습니다");
+  expect(within(bar).queryByText("오늘 기준")).not.toBeInTheDocument();
+  await userEvent.click(within(bar).getByTestId("dashboard-basis-help"));
+  expect(screen.getByRole("tooltip")).toHaveTextContent("회사 손익");
+  expect(screen.getByRole("tooltip")).toHaveTextContent("조회 시각");
+});
+
+it("distinguishes a closed historical month from panels based on today", async () => {
+  data.selectedMonth = "2026-06";
+  data.selectedMonthCloseStatus = "CLOSE";
+  data.provisional = false;
+  data.lastClosedMonth = "2026-06";
+  ready();
+  await screen.findByText("6월 숫자는 마감된 확정치입니다");
+  const bar = screen.getByRole("group", { name: "조회 기간 상태" });
+  expect(within(bar).getByText("확정")).toBeInTheDocument();
+  expect(within(bar).queryByText("잠정")).not.toBeInTheDocument();
+  expect(bar).toHaveTextContent("오늘 기준");
+  expect(bar).toHaveTextContent("청구 누락 의심만 고른 달");
+});
+
+it("does not invent a closed month and includes the year for a previous year's close", async () => {
+  data.lastClosedMonth = null;
+  const view = ready();
+  await screen.findByText("없음");
+  view.unmount();
+  data.lastClosedMonth = "2025-12";
+  ready();
+  expect(await screen.findByText("2025년 12월까지")).toBeInTheDocument();
+});

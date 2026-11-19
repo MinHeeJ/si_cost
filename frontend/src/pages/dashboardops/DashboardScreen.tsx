@@ -272,41 +272,50 @@ export function DashboardScreen({
         {notice && <p role="status">{notice}</p>}
         {data && (
           <>
-            <PeriodStatus>
-            <div className="dashboard-dates">
-              <span>
-                기준일 <b>{data.today}</b>
+            <PeriodStatus className="dashboard-dates">
+              <span className="dashboard-date-item">
+                <HelpTooltip
+                  label="숫자 기준"
+                  testId="dashboard-basis-help"
+                  trigger={<span className="dashboard-date-item-content"><span className="dashboard-date-key">기준일</span><b>{data.today.replace(/-/g, ".")}</b></span>}
+                >
+                  현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} / 현재월 {data.currentMonth} 기준입니다.
+                  <br />
+                  조회 시각 {formatDateTime(data.observedAt)}
+                  {data.metrics.map((card) => (
+                    <p key={card.metricCode}>
+                      {metricLabels[card.metricCode]} · {card.basis.basisMonth ?? card.basis.basisDate} · {card.basis.sourceService}
+                    </p>
+                  ))}
+                </HelpTooltip>
               </span>
-              <span>선택월 {data.selectedMonth}</span>
-              <StatusBadge
-                tone={
-                  data.selectedMonthCloseStatus === "CLOSE" ? "lock" : "info"
-                }
-              >
-                {data.selectedMonthCloseStatus === "CLOSE" ? "마감" : "작업중"}
-              </StatusBadge>{" "}
-              <span>
-                마감 완료 <b>{data.lastClosedMonth ?? "–"}</b>
+              <span className="dashboard-date-item">
+                <span className="dashboard-date-key">마감 완료</span>
+                <b>{data.lastClosedMonth
+                  ? `${data.lastClosedMonth.slice(0, 4) !== data.selectedMonth.slice(0, 4) ? `${data.lastClosedMonth.slice(0, 4)}년 ` : ""}${Number(data.lastClosedMonth.slice(5))}월까지`
+                  : "없음"}</b>
               </span>
-              {data.provisional && <StatusBadge tone="warn">잠정</StatusBadge>}
-              <span className="dashboard-date-note sicost-sr-only">
-                현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M{" "}
-                {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
+              <span className="dashboard-date-item dashboard-date-state">
+                {data.provisional ? <>
+                  <StatusBadge tone="warn">잠정</StatusBadge>
+                  <span>아래 <b>{Number(data.selectedMonth.slice(5))}월 매출·이익</b>은 마감 전이라 바뀔 수 있습니다</span>
+                </> : data.selectedMonthCloseStatus === "CLOSE" ? <>
+                  <StatusBadge tone="ok">확정</StatusBadge>
+                  <span>{Number(data.selectedMonth.slice(5))}월 숫자는 마감된 확정치입니다</span>
+                </> : <>
+                  <StatusBadge tone="warn">미확정</StatusBadge>
+                  <span>선택한 달의 마감 상태를 확인해 주세요</span>
+                </>}
               </span>
-              <HelpTooltip label="숫자 기준" testId="dashboard-basis-help">
-                현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} / 현재월{" "}
-                {data.currentMonth} 기준입니다.
-                <br />
-                조회 시각 {formatDateTime(data.observedAt)}
-                {data.metrics.map((card) => (
-                  <p key={card.metricCode}>
-                    {metricLabels[card.metricCode]} ·{" "}
-                    {card.basis.basisMonth ?? card.basis.basisDate} ·{" "}
-                    {card.basis.sourceService}
-                  </p>
-                ))}
-              </HelpTooltip>
-            </div>
+              {data.selectedMonth !== data.currentMonth && (
+                <span className="dashboard-date-item dashboard-date-current-note">
+                  <Icon name="info" size={14} />
+                  <span>미수금·확인할 일·경보·인력 수급·파이프라인·자금은 <b>오늘 기준</b>입니다 (청구 누락 의심만 고른 달)</span>
+                </span>
+              )}
+              <span className="sicost-sr-only">
+                선택월 {data.selectedMonth} · 현재 미수·할일·경보·수급·기회·자금은 오늘 D / 현재월 M {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
+              </span>
             </PeriodStatus>
             <div className="dashboard-metrics">
               {data.metrics.map((card) => (
