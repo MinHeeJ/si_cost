@@ -13,7 +13,7 @@
         COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd IN ('SGA','NOPR_OUT') AND
           ((io_dt BETWEEN #{start} AND #{end}) OR (io_dt IS NULL AND fin_ym=#{databaseMonth}))),0) AS cash_expense,
         COALESCE(sum(amt+vat_amt) FILTER(WHERE fin_cls_cd='NOPR_IN' AND
-          ((io_dt BETWEEN #{start} AND #{end}) OR (io_dt IS NULL AND fin_ym=#{databaseMonth}))),0) AS cash_income
+          io_dt BETWEEN #{start} AND #{end}),0) AS cash_income
       FROM tb_fi_item WHERE fin_ym=#{databaseMonth} OR io_dt BETWEEN #{start} AND #{end}
     ), transfers AS (
       SELECT COALESCE(sum(amt) FILTER(WHERE xfer_cls_cd='EXP'),0) AS expense,

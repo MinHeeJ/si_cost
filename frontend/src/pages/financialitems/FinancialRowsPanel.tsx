@@ -1,4 +1,5 @@
 import { DataTable, type Column } from "../../shared/DataTable";
+import type { ReactNode } from "react";
 import { StatusBadge } from "../../shared/Feedback";
 import { WonInput } from "./WonInput";
 import type { Collection, DraftRow } from "./financialApi";
@@ -82,6 +83,7 @@ export type FinancialRowsPanelProps = {
   month: string;
   targets: string[];
   codes?: { code: string; name: string }[];
+  tableRows?: { key: string; cells: Record<string, ReactNode> }[];
   violations?: {
     collection: string;
     rowId: string;
@@ -101,6 +103,7 @@ export function FinancialRowsPanel({
   month,
   targets,
   codes = [],
+  tableRows = [],
   violations = [],
   onChange,
   onDelete,
@@ -128,7 +131,17 @@ export function FinancialRowsPanel({
         "aria-label": `${title} ${row.key} ${field.label}`,
         "data-testid": testId,
         disabled,
-        value: row.values[field.key] ?? "",
+        value:
+          field.key === "vatAmount"
+            ? row.values[field.key] || "0"
+            : (row.values[field.key] ?? ""),
+        "aria-invalid":
+          violations.some(
+            (v) =>
+              v.collection === collection &&
+              (v.rowId === row.id || v.rowId === row.key) &&
+              v.field === field.key,
+          ) || undefined,
       };
       const set = (value: string | null) => onChange(row.key, field.key, value);
       const errors = [
@@ -162,7 +175,9 @@ export function FinancialRowsPanel({
             }
             signed={field.kind === "signed"}
             positive={field.kind === "positive"}
-            onValueChange={set}
+            onValueChange={(value) =>
+              set(field.key === "vatAmount" ? value || "0" : value)
+            }
           />
         );
       else if (field.options || field.key === "targetMonth") {
@@ -225,21 +240,22 @@ export function FinancialRowsPanel({
       );
     },
   }));
-  columns.push({
-    id: "delete",
-    label: "삭제",
-    render: (row) => (
-      <button
-        type="button"
-        data-testid={`financial-${collection}-${row.key}-delete`}
-        disabled={readOnly || pending}
-        aria-label={`${title} ${row.key} 삭제`}
-        onClick={() => onDelete(row.key)}
-      >
-        ×
-      </button>
-    ),
-  });
+  if (!readOnly)
+    columns.push({
+      id: "delete",
+      label: "삭제",
+      render: (row) => (
+        <button
+          type="button"
+          data-testid={`financial-${collection}-${row.key}-delete`}
+          disabled={readOnly || pending}
+          aria-label={`${title} ${row.key} 삭제`}
+          onClick={() => onDelete(row.key)}
+        >
+          ×
+        </button>
+      ),
+    });
   return (
     <section
       className="financial-section"
@@ -250,25 +266,28 @@ export function FinancialRowsPanel({
         <h2>{title}</h2>
         <span>
           {month} · {rows.length}건
+          {collection === "items" ? " + 법인세(월할) 계산 1줄" : ""}
         </span>
-        <button
-          type="button"
-          data-testid={`financial-${collection}-add`}
-          disabled={
-            readOnly ||
-            pending ||
-            (collection === "adjustments" && !targets.length)
-          }
-          onClick={onAdd}
-        >
-          {collection === "items"
-            ? "행 추가"
-            : collection === "adjustments"
-              ? "조정 추가"
-              : collection === "transfers"
-                ? "이체 추가"
-                : "대여금 추가"}
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            data-testid={`financial-${collection}-add`}
+            disabled={
+              readOnly ||
+              pending ||
+              (collection === "adjustments" && !targets.length)
+            }
+            onClick={onAdd}
+          >
+            {collection === "items"
+              ? "행 추가"
+              : collection === "adjustments"
+                ? "조정 추가"
+                : collection === "transfers"
+                  ? "이체 추가"
+                  : "대여금 추가"}
+          </button>
+        )}
       </div>
       {collection === "adjustments" && !targets.length && (
         <p>
@@ -277,13 +296,17 @@ export function FinancialRowsPanel({
         </p>
       )}
       <DataTable
+        testId={`financial-${collection}-table`}
         dense
-        rows={rows}
+        rows={[
+          ...rows,
+          ...tableRows.map((row) => ({ key: row.key, values: {} })),
+        ]}
         columns={[
           {
             id: "draft",
             label: "",
-            render: (row) =>
+            render: (row: DraftRow) =>
               !row.id ||
               JSON.stringify(
                 originals.find((old) => old.id === row.id)?.values,
@@ -294,7 +317,15 @@ export function FinancialRowsPanel({
               ) : null,
           },
           ...columns,
-        ]}
+        ].map((column) => ({
+          ...column,
+          render: (row: DraftRow) => {
+            const calculated = tableRows.find((entry) => entry.key === row.key);
+            return calculated
+              ? calculated.cells[column.id]
+              : column.render(row);
+          },
+        }))}
         rowKey={(row) => row.key}
         empty="등록된 항목이 없습니다."
       />

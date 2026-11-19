@@ -94,6 +94,9 @@ public class ExcelExportService {
         return generateTemplate(new Specification("거래처_등록양식", null, columns, "B7", "원"), instructions, request);
     }
     public Download generateTemplate(Specification specification, List<String> instructions, HttpServletRequest request) {
+        return generateTemplate(specification, instructions, request, workbook -> {});
+    }
+    public Download generateTemplate(Specification specification, List<String> instructions, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {
         List<Column> columns = specification.columns();
         return generate(specification, sink -> {}, request, workbook -> {
             var text = workbook.createCellStyle(); text.setDataFormat(workbook.createDataFormat().getFormat("@"));
@@ -102,6 +105,7 @@ public class ExcelExportService {
                 "재무_등록양식".equals(specification.kind()) && columns.get(i).type() == CellType.NUMBER ? number : text);
             var guide = workbook.createSheet("입력안내");
             int line=0;for(String instruction:instructions)if(projection==null || !projection.privateText(instruction))guide.createRow(line++).createCell(0).setCellValue(instruction);
+            customize.accept(workbook);
         });
     }
     private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {

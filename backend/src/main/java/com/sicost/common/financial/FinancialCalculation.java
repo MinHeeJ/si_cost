@@ -50,7 +50,7 @@ public final class FinancialCalculation {
             }
             String date=text(row,"io_dt"),cashMonth=date==null?apiMonth(text(row,"fin_ym")):date.substring(0,7);
             if(month.equals(cashMonth)&&!cls.equals("NOPR_IN"))add(totals,"cashFinancialExpense",amount.add(vat));
-            if(month.equals(cashMonth)&&cls.equals("NOPR_IN"))add(totals,"cashMiscIncome",amount.add(vat));
+            if(date!=null&&month.equals(cashMonth)&&cls.equals("NOPR_IN"))add(totals,"cashMiscIncome",amount.add(vat));
         }
         for(JsonNode r:snapshot.path("adjustments"))add(totals,"adjustmentProfit",number(r,"adj_amt"));
         boolean cardKnown=true;

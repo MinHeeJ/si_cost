@@ -95,6 +95,22 @@ class FinancialDatabaseTest {
     @Test void parentCardMonthExistsBeforeCardPaymentAndExplicitManualSameSumStaysY(){ObjectNode body=body(),cards=body.putObject("cards");cards.putArray("add").addObject().put("clientKey","card").put("cardName","카드").put("last4","0001").put("amount","10");cards.putObject("cashOverride").put("mode","MANUAL").put("amount","10");save(body);assertThat(sql.queryForObject("SELECT edit_yn FROM tb_fi_card_mon WHERE pay_ym='208007'",String.class)).isEqualTo("Y");assertThat(sql.queryForObject("SELECT pay_amt FROM tb_fi_card_pay WHERE pay_ym='208007'",String.class)).isEqualTo("10");ObjectNode restore=body();restore.putObject("cards").putObject("cashOverride").put("mode","AUTO");save(restore);assertThat(sql.queryForObject("SELECT edit_yn FROM tb_fi_card_mon",String.class)).isEqualTo("N");}
     @Test void explicitTaxNumberEqualToAutomaticIsNotNullAndOnlyNullRestores(){seedTax();ObjectNode body=body();body.putArray("taxSchedules").addObject().put("year","2080").put("payType","CNFM").put("dueDate","2081-03-31").put("payAmount","10");save(body);assertThat(sql.queryForObject("SELECT pay_amt FROM tb_fi_tax_pay WHERE pay_type_cd='CNFM'",String.class)).isEqualTo("10");ObjectNode restore=body();restore.putArray("taxSchedules").addObject().put("year","2080").put("payType","CNFM").put("dueDate","2081-03-31").putNull("payAmount");save(restore);assertThat(sql.queryForObject("SELECT pay_amt FROM tb_fi_tax_pay WHERE pay_type_cd='CNFM'",String.class)).isNull();}
     @Test void nullClosedTaxSnapshotBlocksAnnualChange(){seedTax();sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208006','CLOSE','admin')");var audits=history();assertThatThrownBy(()->save(body().put("estimatedTax","21"))).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("PERIOD_READ_ONLY"));assertThat(history()).isEqualTo(audits);assertThat(sql.queryForObject("SELECT est_tax_amt FROM tb_fi_corp_tax WHERE tax_yr='2080'",String.class)).isEqualTo("20");}
+    @Test void savedRecurringSubsetSurvivesReloadAndNextMonthWithoutChangingItsSource(){
+        sql.update("INSERT INTO tb_fi_item(fin_ym,item_sn,fin_cls_cd,item_nm,amt,vat_amt,rpt_yn,reg_user_id) VALUES ('208005',1,'SGA','임대료',10,0,'Y','admin'),('208005',2,'SGA','통신비',20,0,'Y','admin'),('208005',3,'SGA','일회성',30,0,'N','admin')");
+        var source=items();
+        JsonNode june=json.valueToTree(service.getFinancialItems("2080-06"));
+        assertThat(june.path("automaticDrafts")).hasSize(2);
+        ObjectNode request=json.createObjectNode().put("month","2080-06").put("expectedRevision",june.path("revision").asText());
+        ObjectNode rent=item().put("itemName","임대료").put("repeat","Y");
+        rent.putObject("copySource").put("month","2080-05").put("itemSn","1").put("mode","REPEAT");
+        request.putObject("items").putArray("add").add(rent);save(request);
+        JsonNode reloaded=json.valueToTree(service.getFinancialItems("2080-06"));
+        assertThat(reloaded.path("items")).hasSize(1);assertThat(reloaded.path("automaticDrafts")).isEmpty();
+        JsonNode july=json.valueToTree(service.getFinancialItems("2080-07"));
+        assertThat(july.path("automaticDrafts")).hasSize(1);
+        assertThat(july.path("automaticDrafts").get(0).path("itemName").asText()).isEqualTo("임대료");
+        assertThat(sql.queryForList("SELECT * FROM tb_fi_item WHERE fin_ym='208005' ORDER BY fin_ym,item_sn")).isEqualTo(source);
+    }
     @Test void readDraftIsNotPersistedAndFebruaryClampsLeapDay(){sql.update("INSERT INTO tb_fi_item(fin_ym,item_sn,fin_cls_cd,item_nm,amt,vat_amt,io_dt,rpt_yn,reg_user_id) VALUES ('208001',1,'SGA','반복',1,0,'2080-01-31','Y','admin')");var before=items();JsonNode result=json.valueToTree(service.getFinancialItems("2080-02"));assertThat(result.path("automaticDrafts").get(0).path("ioDate").asText()).isEqualTo("2080-02-29");assertThat(items()).isEqualTo(before);assertThat(history()).isEmpty();}
     @Test void explicitDeleteAuditsBeforeValueAndBoundedMonth(){ObjectNode body=body();body.putObject("items").putArray("add").add(item());save(body);ObjectNode deletion=body();deletion.putObject("items").putArray("deleteIds").add("1");save(deletion);assertThat(items()).isEmpty();assertThat(history()).anySatisfy(h->{assertThat(h.get("chg_type_cd")).isEqualTo("DEL");assertThat(h.get("chg_item_nm")).isEqualTo("AMT");assertThat(h.get("bfr_val")).isEqualTo("10");assertThat(h.get("aft_val")).isNull();});}
 

@@ -45,6 +45,18 @@ class FinancialImportDefinitionTest {
         var parsed=mutated(book->{var cell=book.getSheetAt(0).getRow(1).getCell(3);cell.setCellFormula("1+1");cell.setCellValue(5);});
         var checked=definition.check(parsed,codes,0,0);assertThat(checked.rows().get(0).value().amount()).isEqualByComparingTo("5");
     }
+    @Test void numericExcelDateIsAcceptedAsCalendarDate() throws Exception {
+        var parsed = mutated(book -> {
+            var cell = book.getSheetAt(0).getRow(1).createCell(5);
+            cell.setCellValue(java.time.LocalDateTime.of(2026, 12, 5, 0, 0));
+            var style = book.createCellStyle();
+            style.setDataFormat(book.createDataFormat().getFormat("yyyy-mm-dd"));
+            cell.setCellStyle(style);
+        });
+        var checked = definition.check(parsed, codes, 0, 0);
+        assertThat(checked.summary().errorRows()).isZero();
+        assertThat(checked.rows().get(0).value().ioDate()).isEqualTo(java.time.LocalDate.of(2026, 12, 5));
+    }
     @Test void tooManyRowsIs413()throws Exception { var rows=new ArrayList<List<String>>();for(int i=0;i<5001;i++)rows.add(List.of("판관비","","입력","1"));var file=FinancialWorkbook.file(rows);assertThatThrownBy(()->definition.parse(file)).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.status()).isEqualTo(413)); }
     com.sicost.b7.B7Dtos.Parsed mutated(java.util.function.Consumer<XSSFWorkbook> change)throws Exception {
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(FinancialWorkbook.valid().getBytes()));var out=new ByteArrayOutputStream()) { change.accept(book);book.write(out);return definition.parse(new MockMultipartFile("file","financial.xlsx","application/octet-stream",out.toByteArray())); }

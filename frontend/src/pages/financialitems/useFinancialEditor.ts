@@ -52,28 +52,95 @@ function fromEditor(
     })),
   };
 }
+export class FinancialFieldError extends Error {
+  constructor(
+    public collection: string,
+    public rowId: string,
+    public field: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+function requiredMoney(
+  collection: string,
+  rowId: string,
+  field: string,
+  value: string | null | undefined,
+) {
+  if (!value?.trim())
+    throw new FinancialFieldError(
+      collection,
+      rowId,
+      field,
+      "금액을 입력해 주세요.",
+    );
+  try {
+    return normalizeFinancialWon(value);
+  } catch (error) {
+    throw new FinancialFieldError(
+      collection,
+      rowId,
+      field,
+      (error as Error).message,
+    );
+  }
+}
 function normalized(row: api.DraftRow, collection: api.Collection): api.Values {
   const values = { ...row.values };
-  values.amount = normalizeFinancialWon(
-    values.amount ?? "",
-    collection === "adjustments",
-    collection === "loans" || collection === "transfers",
-  );
-  if (collection === "items")
-    values.vatAmount = normalizeFinancialWon(values.vatAmount || "0");
+  const required =
+    collection === "items"
+      ? [
+          ["itemName", "세부 항목을"],
+          ["amount", "금액을"],
+        ]
+      : collection === "adjustments"
+        ? [
+            ["targetMonth", "대상 달을"],
+            ["amount", "금액을"],
+            ["reason", "사유를"],
+          ]
+        : collection === "transfers"
+          ? [
+              ["date", "날짜를"],
+              ["itemName", "내용을"],
+              ["amount", "금액을"],
+            ]
+          : [
+              ["date", "날짜를"],
+              ["amount", "금액을"],
+            ];
+  for (const [field, label] of required)
+    if (!values[field]?.trim())
+      throw new FinancialFieldError(
+        collection,
+        row.key,
+        field,
+        `${label} 입력해 주세요.`,
+      );
+  for (const field of [
+    "amount",
+    ...(collection === "items" ? ["vatAmount"] : []),
+  ]) {
+    try {
+      values[field] = normalizeFinancialWon(
+        field === "vatAmount" ? values[field] || "0" : (values[field] ?? ""),
+        field === "amount" && collection === "adjustments",
+        field === "amount" &&
+          (collection === "loans" || collection === "transfers"),
+      );
+    } catch (error) {
+      throw new FinancialFieldError(
+        collection,
+        row.key,
+        field,
+        (error as Error).message,
+      );
+    }
+  }
   for (const field of api.financialFields[collection])
     if (field !== "amount" && field !== "vatAmount")
       values[field] = values[field]?.trim() || null;
-  const required =
-    collection === "items"
-      ? ["finClass", "itemName"]
-      : collection === "adjustments"
-        ? ["targetMonth", "itemCode", "reason"]
-        : collection === "transfers"
-          ? ["date", "classCode", "itemName"]
-          : ["date", "direction"];
-  if (required.some((field) => !values[field]))
-    throw new Error("필수 입력 항목을 확인해 주세요.");
   return values;
 }
 export function financialPayload(
@@ -134,7 +201,7 @@ export function financialPayload(
         clientKey: row.key,
         cardName: row.values.cardName.trim(),
         last4: row.values.last4,
-        amount: normalizeFinancialWon(row.values.amount || "0"),
+        amount: requiredMoney("cards", row.key, "amount", row.values.amount),
       });
     } else {
       if (original.values.useYn !== row.values.useYn)
@@ -142,7 +209,7 @@ export function financialPayload(
       if (original.values.amount !== row.values.amount)
         cards.payments.push({
           cardId: row.id,
-          amount: normalizeFinancialWon(row.values.amount || "0"),
+          amount: requiredMoney("cards", row.key, "amount", row.values.amount),
         });
     }
   }
@@ -152,7 +219,12 @@ export function financialPayload(
         ? { mode: "AUTO" }
         : {
             mode: "MANUAL",
-            amount: normalizeFinancialWon(draft.cashOverride.amount ?? ""),
+            amount: requiredMoney(
+              "cards",
+              "cash",
+              "override",
+              draft.cashOverride.amount,
+            ),
           };
   if (
     cards.add.length ||
@@ -162,7 +234,12 @@ export function financialPayload(
   )
     body.cards = cards;
   if (draft.estimatedTax !== base.estimatedTax && draft.estimatedTax !== null)
-    body.estimatedTax = normalizeFinancialWon(draft.estimatedTax);
+    body.estimatedTax = requiredMoney(
+      "corporateTax",
+      "annual",
+      "amount",
+      draft.estimatedTax,
+    );
   const schedules = draft.taxSchedules
     .filter(
       (row) =>
@@ -173,13 +250,27 @@ export function financialPayload(
           ),
         ),
     )
-    .map((row) => ({
-      ...row,
-      payAmount:
-        row.payAmount == null || row.payAmount === ""
-          ? null
-          : normalizeFinancialWon(row.payAmount),
-    }));
+    .map((row) => {
+      if (!row.dueDate)
+        throw new FinancialFieldError(
+          "tax",
+          `${row.year}-${row.payType.toLowerCase()}`,
+          "date",
+          "날짜를 입력해 주세요.",
+        );
+      return {
+        ...row,
+        payAmount:
+          row.payAmount == null || row.payAmount === ""
+            ? null
+            : requiredMoney(
+                "tax",
+                `${row.year}-${row.payType.toLowerCase()}`,
+                "amount",
+                row.payAmount,
+              ),
+      };
+    });
   if (schedules.length) body.taxSchedules = schedules;
   return body;
 }
@@ -195,12 +286,19 @@ export function useFinancialEditor(
     [pending, setPending] = useState(false),
     [retry, setRetry] = useState(0);
   const [refreshFailed, setRefreshFailed] = useState(false);
+  const [calculated, setCalculated] = useState<api.Preview>();
+  const [previewError, setPreviewError] = useState<unknown>();
+  const [previewing, setPreviewing] = useState(false);
+  const calculationSequence = useRef(0);
   const sequence = useRef(0),
     busy = useRef(false),
     mounted = useRef(true);
   const adopt = useCallback((result: api.FinancialEditor, automatic = true) => {
     setEditor(result);
     setDraft(fromEditor(result, automatic));
+    setCalculated(undefined);
+    setPreviewError(undefined);
+    calculationSequence.current++;
   }, []);
   useEffect(() => {
     mounted.current = true;
@@ -244,6 +342,54 @@ export function useFinancialEditor(
       JSON.stringify(draft) !== JSON.stringify(fromEditor(editor, false)),
   );
   useEffect(() => {
+    const generation = ++calculationSequence.current;
+    const controller = new AbortController();
+    setPreviewError(undefined);
+    if (!editor || !draft || !editor.editable || pending) return;
+    if (!dirty) {
+      setCalculated(undefined);
+      setPreviewing(false);
+      return;
+    }
+    let body: Record<string, unknown>;
+    try {
+      body = financialPayload(editor, draft);
+    } catch {
+      setPreviewing(false);
+      return;
+    }
+    setPreviewing(true);
+    const timer = window.setTimeout(() => {
+      void api
+        .createFinancialPreview(body, "CALCULATE", controller.signal)
+        .then((result) => {
+          if (
+            !controller.signal.aborted &&
+            generation === calculationSequence.current
+          )
+            setCalculated(result);
+        })
+        .catch((failure) => {
+          if (
+            !controller.signal.aborted &&
+            generation === calculationSequence.current
+          )
+            setPreviewError(failure);
+        })
+        .finally(() => {
+          if (
+            !controller.signal.aborted &&
+            generation === calculationSequence.current
+          )
+            setPreviewing(false);
+        });
+    }, 350);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [editor, draft, dirty, pending]);
+  useEffect(() => {
     onDirtyChange?.(dirty);
     window.dispatchEvent(
       new CustomEvent("sicost:financial-dirty", { detail: { dirty } }),
@@ -273,20 +419,44 @@ export function useFinancialEditor(
   const discard = () => {
     if (editor) setDraft(fromEditor(editor, false));
     setError(undefined);
-    setMessage("");
+    setMessage("변경을 취소했습니다.");
+    setCalculated(undefined);
+    setPreviewError(undefined);
   };
   const save = async () => {
     if (!editor || !draft || !editor.editable || busy.current) return false;
+    if (!dirty) {
+      setError(undefined);
+      setMessage("바뀐 내용이 없습니다.");
+      return true;
+    }
     busy.current = true;
     setPending(true);
     setError(undefined);
     try {
-      const result = await api.saveFinancialItems(
-        financialPayload(editor, draft),
-      );
+      const body = financialPayload(editor, draft);
+      const reflected = [
+        [
+          "법인세",
+          body.estimatedTax !== undefined || body.taxSchedules !== undefined,
+        ],
+        ["전월 조정", body.adjustments !== undefined],
+        ["법인카드", body.cards !== undefined],
+        ["계좌이체", body.transfers !== undefined],
+        ["대여금", body.loans !== undefined],
+      ]
+        .filter(([, included]) => included)
+        .map(([label]) => label);
+      const result = await api.saveFinancialItems(body);
       if (mounted.current) {
         adopt(result.editor, false);
-        setMessage(result.message);
+        setMessage(
+          !result.changed
+            ? "바뀐 내용이 없습니다."
+            : reflected.length
+              ? `저장했습니다. ${reflected.join("·")}도 함께 반영했습니다.`
+              : "저장했습니다.",
+        );
       }
       window.dispatchEvent(
         new CustomEvent("sicost:financial-committed", {
@@ -318,34 +488,8 @@ export function useFinancialEditor(
         financialPayload(editor, draft),
         action,
       );
-      setEditor((old) =>
-        old
-          ? {
-              ...old,
-              allocation: result.allocation,
-              contributions: result.contributions,
-            }
-          : old,
-      );
-      setMessage(result.message);
-      if (result.addedDrafts.length)
-        setDraft((old) =>
-          old
-            ? {
-                ...old,
-                items: [
-                  ...old.items,
-                  ...result.addedDrafts.map((row, index) =>
-                    api.copiedRow(
-                      row,
-                      `copy-${sequence.current++}-${index}`,
-                      "PREVIOUS",
-                    ),
-                  ),
-                ],
-              }
-            : old,
-        );
+      if (!result.addedDrafts.length) setMessage("불러올 항목이 없습니다.");
+      return result;
     } catch (failure) {
       setError(failure);
     } finally {
@@ -353,24 +497,56 @@ export function useFinancialEditor(
       setPending(false);
     }
   };
+  const applyPrevious = (result: api.Preview) => {
+    setDraft((old) =>
+      old
+        ? {
+            ...old,
+            items: [
+              ...old.items,
+              ...result.addedDrafts.map((row, index) =>
+                api.copiedRow(
+                  row,
+                  `copy-${sequence.current++}-${index}`,
+                  "PREVIOUS",
+                ),
+              ),
+            ],
+          }
+        : old,
+    );
+    setMessage(`${result.addedDrafts.length}개 항목을 불러왔습니다.`);
+  };
   const violations =
-    error instanceof ApiError
-      ? ((
-          error.body.details as
-            | {
-                financial?: {
-                  violations?: {
-                    tab: string;
-                    collection: string;
-                    rowId: string;
-                    field: string;
-                    message: string;
-                  }[];
-                };
-              }
-            | undefined
-        )?.financial?.violations ?? [])
-      : [];
+    error instanceof FinancialFieldError
+      ? [
+          {
+            collection: error.collection,
+            rowId: error.rowId,
+            field: error.field,
+            message: error.message,
+            tab: ["cards", "transfers", "loans"].includes(error.collection)
+              ? "CARD_TRANSFER_LOAN"
+              : "FINANCIAL_TAX_ADJUSTMENT",
+          },
+        ]
+      : error instanceof ApiError
+        ? ((
+            error.body.details as
+              | {
+                  financial?: {
+                    violations?: {
+                      tab: string;
+                      collection: string;
+                      rowId: string;
+                      field: string;
+                      message: string;
+                    }[];
+                  };
+                }
+              | undefined
+          )?.financial?.violations ?? [])
+        : [];
   return {
     editor,
     draft,
@@ -378,6 +554,10 @@ export function useFinancialEditor(
     error,
     setError,
     message,
+    setMessage,
+    calculated,
+    previewError,
+    previewing,
     loading,
     pending,
     dirty,
@@ -386,6 +566,7 @@ export function useFinancialEditor(
     discard,
     refresh,
     preview,
+    applyPrevious,
     retry: () => setRetry((n) => n + 1),
     violations,
   };

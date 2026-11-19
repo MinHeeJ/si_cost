@@ -340,13 +340,40 @@ export function AssignmentsContent({
     {
       id: "warnings",
       label: "경고",
-      render: (r) => r.warnings.length ? <HelpTooltip label="배정 경고" trigger={<Icon name="warning" size={16} />}>{r.warnings.map(w=>w.message).join(" · ")}</HelpTooltip> : "–",
+      render: (r) =>
+        r.warnings.length ? (
+          <HelpTooltip
+            label="배정 경고"
+            trigger={<Icon name="warning" size={16} />}
+          >
+            {r.warnings.map((w) => w.message).join(" · ")}
+          </HelpTooltip>
+        ) : (
+          "–"
+        ),
     },
-    { id: "projectName", label: "프로젝트", render: (r) => <button className="sicost-text-link" onClick={()=>setDetail(r.id)}>{r.projectName}</button> },
+    {
+      id: "projectName",
+      label: "프로젝트",
+      render: (r) => (
+        <button
+          data-testid={`assignments-project-open-${Array.from(String(r.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+          className="sicost-text-link"
+          onClick={() => setDetail(r.id)}
+        >
+          {r.projectName}
+        </button>
+      ),
+    },
     {
       id: "developerName",
       label: "이름",
-      render: (r) => <span className="sicost-person-cell">{r.developerName}<small>{r.managementNo}</small></span>,
+      render: (r) => (
+        <span className="sicost-person-cell">
+          {r.developerName}
+          <small>{r.managementNo}</small>
+        </span>
+      ),
     },
     { id: "jobName", label: "직무", render: (r) => r.jobName },
     { id: "startDate", label: "투입일", render: (r) => r.startDate },
@@ -368,16 +395,32 @@ export function AssignmentsContent({
       render: (r) => r.contractMm,
       align: "right",
     },
-    { id: "yearMm", label: `${year}년 MM`, render: (r) => r.yearMm, align: "right" },
+    {
+      id: "yearMm",
+      label: `${year}년 MM`,
+      render: (r) => r.yearMm,
+      align: "right",
+    },
     {
       id: "extensionPossibility",
       label: "연장 가능성",
-      render: (r) => r.extensionPossibility ? <span className={`sicost-badge ${["HIGH","H"].includes(r.extensionPossibility) ? "sicost-tone-ok" : ["LOW","L"].includes(r.extensionPossibility) ? "sicost-tone-bad" : "sicost-tone-neutral"}`}>{kindName(r.extensionPossibility)}</span> : "–",
+      render: (r) =>
+        r.extensionPossibility ? (
+          <span
+            className={`sicost-badge ${["HIGH", "H"].includes(r.extensionPossibility) ? "sicost-tone-ok" : ["LOW", "L"].includes(r.extensionPossibility) ? "sicost-tone-bad" : "sicost-tone-neutral"}`}
+          >
+            {kindName(r.extensionPossibility)}
+          </span>
+        ) : (
+          "–"
+        ),
     },
     {
       id: "inputType",
       label: "투입 구분",
-      render: (r) => <span className="sicost-kind-chip">{kindName(r.inputType)}</span>,
+      render: (r) => (
+        <span className="sicost-kind-chip">{kindName(r.inputType)}</span>
+      ),
     },
   ];
   columns.forEach((column) => {
@@ -471,7 +514,8 @@ export function AssignmentsContent({
         </label>
         <label className="sicost-field">
           직무
-          <FieldHelp label="직무" /><select
+          <FieldHelp label="직무" />
+          <select
             data-testid="assignments-job-filter"
             value={draft.jobCode}
             onChange={(e) =>
@@ -490,18 +534,28 @@ export function AssignmentsContent({
             ))}
           </select>
         </label>
-        <details className="assignment-extra-conditions" open={Boolean(draft.month)}><summary>추가 조건</summary><label className="sicost-field assignment-extra-month">
-          선택월
-          <input
-            type="month"
-            data-testid="assignments-month-filter"
-            value={draft.month}
-            min={`${year}-01`}
-            max={`${year}-12`}
-            onChange={(e) => setDraft((v) => ({ ...v, month: e.target.value }))}
-          />
-        </label>
-        </details><label className="sicost-field">
+        <details
+          className="assignment-extra-conditions"
+          open={Boolean(draft.month)}
+        >
+          <summary data-testid="assignments-extra-conditions-toggle">
+            추가 조건
+          </summary>
+          <label className="sicost-field assignment-extra-month">
+            선택월
+            <input
+              type="month"
+              data-testid="assignments-month-filter"
+              value={draft.month}
+              min={`${year}-01`}
+              max={`${year}-12`}
+              onChange={(e) =>
+                setDraft((v) => ({ ...v, month: e.target.value }))
+              }
+            />
+          </label>
+        </details>
+        <label className="sicost-field">
           경고
           <select
             data-testid="assignments-warning-filter"
@@ -592,8 +646,22 @@ export function AssignmentsContent({
               <option>백만원</option>
             </select>
           </label>
-          <button type="button" data-testid="assignments-columns" onClick={()=>setColumnsOpen(true)}>열 설정</button>
-          <button type="button" className="assignment-density-toggle" data-testid="assignments-density" aria-pressed={dense} onClick={()=>setDense(!dense)}>좁게 보기</button>
+          <button
+            type="button"
+            data-testid="assignments-columns"
+            onClick={() => setColumnsOpen(true)}
+          >
+            열 설정
+          </button>
+          <button
+            type="button"
+            className="assignment-density-toggle"
+            data-testid="assignments-density"
+            aria-pressed={dense}
+            onClick={() => setDense(!dense)}
+          >
+            좁게 보기
+          </button>
           {renderActions?.({
             year,
             filters,
@@ -606,7 +674,7 @@ export function AssignmentsContent({
       </div>
       <DataTable
         rows={data?.items ?? []}
-        columns={columns.filter(column=>!hiddenColumns.includes(column.id))}
+        columns={columns.filter((column) => !hiddenColumns.includes(column.id))}
         rowKey={(r) => r.id}
         loading={loading}
         empty="조건에 맞는 결과가 없습니다."
@@ -643,10 +711,43 @@ export function AssignmentsContent({
         onRowAction={(r) => setDetail(r.id)}
         dense={dense}
       />
-      <Dialog open={columnsOpen} title="현재 표 열 설정" onCancel={()=>setColumnsOpen(false)} onConfirm={()=>setColumnsOpen(false)} confirmLabel="완료">
+      <Dialog
+        open={columnsOpen}
+        title="현재 표 열 설정"
+        onCancel={() => setColumnsOpen(false)}
+        onConfirm={() => setColumnsOpen(false)}
+        confirmLabel="완료"
+      >
         <p>현재 작업 탭의 표시 열을 선택합니다.</p>
-        {columns.map(column=><label className="assignment-column-option" key={column.id}><input type="checkbox" checked={!hiddenColumns.includes(column.id)} disabled={["projectName","developerName"].includes(column.id)} onChange={event=>setHiddenColumns(current=>event.target.checked?current.filter(id=>id!==column.id):[...current,column.id])} />{column.label}</label>)}
-        <button type="button" onClick={()=>setHiddenColumns([])}>기본 열로 복원</button>
+        {columns.map((column) => (
+          <label
+            data-testid={`assignments-column-option-${column.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+            className="assignment-column-option"
+            key={column.id}
+          >
+            <input
+              data-testid={`assignments-column-toggle-${column.id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+              type="checkbox"
+              checked={!hiddenColumns.includes(column.id)}
+              disabled={["projectName", "developerName"].includes(column.id)}
+              onChange={(event) =>
+                setHiddenColumns((current) =>
+                  event.target.checked
+                    ? current.filter((id) => id !== column.id)
+                    : [...current, column.id],
+                )
+              }
+            />
+            {column.label}
+          </label>
+        ))}
+        <button
+          data-testid="assignments-columns-reset"
+          type="button"
+          onClick={() => setHiddenColumns([])}
+        >
+          기본 열로 복원
+        </button>
       </Dialog>
       {detail && (
         <AssignmentDrawer

@@ -14,5 +14,7 @@ public final class FinancialPreviewDtos {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Draft(String sourceMonth,String sourceItemSn,String finClass,String sgaItemCode,String itemName,String amount,
         String vatAmount,String ioDate,String repeat,String remark,String autoFill,List<Map<String,String>> errors) {}
-    public record Preview(String month,String revision,List<Draft> addedDrafts,int copiedCount,String message,Allocation allocation,Map<String,Object> contributions) {}
+    public record Preview(String month,String revision,List<Draft> addedDrafts,int copiedCount,String message,
+        Allocation allocation,Map<String,Object> contributions,Map<String,Object> cardMonth,
+        Map<String,String> automaticTaxAmounts) {}
 }

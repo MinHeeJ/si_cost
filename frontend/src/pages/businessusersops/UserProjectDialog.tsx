@@ -54,15 +54,19 @@ export function UserProjectDialog({
     let active = true;
     setLoading(true);
     setError(undefined);
-    Promise.all([getPeriodContext(), creating ? Promise.resolve({items: []}) : getBusinessUserOptions("PM")])
+    Promise.all([
+      getPeriodContext(),
+      creating ? Promise.resolve({ items: [] }) : getBusinessUserOptions("PM"),
+    ])
       .then(([period, options]) => {
         if (!active) return;
         const currentYear = Number(period.currentDate.slice(0, 4));
         setContext(period);
         setYear(currentYear);
         setEligible(
-          creating || user.status === "USE" &&
-            options.items.some((item) => item.userId === user.userId),
+          creating ||
+            (user.status === "USE" &&
+              options.items.some((item) => item.userId === user.userId)),
         );
         setFilters({ year: currentYear, status: "ING", page: 1 });
       })
@@ -118,7 +122,16 @@ export function UserProjectDialog({
     setFilters({ year, status: "ING", page: 1 });
   }
   async function submit() {
-    if (!selected || !eligible || pending || loading || error || !context || selected.project.endDate < context.currentDate) return;
+    if (
+      !selected ||
+      !eligible ||
+      pending ||
+      loading ||
+      error ||
+      !context ||
+      selected.project.endDate < context.currentDate
+    )
+      return;
     if (selected.pm.items.some((pm) => pm.userId !== user.userId)) {
       setReplacing(true);
       return;
@@ -137,7 +150,11 @@ export function UserProjectDialog({
         </StatusBadge>
       ),
     },
-    { id: "endDate", label: "계약 종료일", render: ({project}) => project.endDate },
+    {
+      id: "endDate",
+      label: "계약 종료일",
+      render: ({ project }) => project.endDate,
+    },
     {
       id: "pm",
       label: "기존 PM 전체",
@@ -152,7 +169,12 @@ export function UserProjectDialog({
         <button
           type="button"
           data-testid={`user-project-select-${choice.project.id}`}
-          disabled={pending || !eligible || !context || choice.project.endDate < context.currentDate}
+          disabled={
+            pending ||
+            !eligible ||
+            !context ||
+            choice.project.endDate < context.currentDate
+          }
           aria-pressed={selected?.project.id === choice.project.id}
           onClick={() => setSelected(choice)}
         >
@@ -188,8 +210,11 @@ export function UserProjectDialog({
               가능합니다.
             </p>
           )}
-          <FilterBar embedded
-            onSubmit={() => year !== undefined && setFilters({year,status,q,page:1})}
+          <FilterBar
+            embedded
+            onSubmit={() =>
+              year !== undefined && setFilters({ year, status, q, page: 1 })
+            }
             onReset={resetSearch}
             disabled={pending || loading || year === undefined}
             searchTestId="user-project-query"
@@ -224,7 +249,8 @@ export function UserProjectDialog({
             </label>
             <label className="sicost-field">
               상태
-              <FieldHelp label="상태" /><select
+              <FieldHelp label="상태" />
+              <select
                 data-testid="user-project-status"
                 value={status}
                 disabled={pending}
@@ -267,7 +293,15 @@ export function UserProjectDialog({
               rowKey={({ project }) => project.id}
               loading={loading}
               empty="선택할 수 있는 프로젝트가 없습니다."
-              emptyAction={<button type="button" onClick={resetSearch}>조건 초기화</button>}
+              emptyAction={
+                <button
+                  data-testid="user-project-empty-reset"
+                  type="button"
+                  onClick={resetSearch}
+                >
+                  조건 초기화
+                </button>
+              }
               page={filters?.page ?? 1}
               size={20}
               total={data?.total ?? 0}
