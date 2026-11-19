@@ -87,7 +87,10 @@ function Location() {
 }
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
+  vi.mocked(dashboard.getDashboard).mockImplementation(async (month) => ({
+    ...dashboardFixture(),
+    selectedMonth: month ?? context.currentMonth,
+  }));
   vi.mocked(api.getSharedCodes).mockResolvedValue({ items: [] });
   vi.mocked(api.getMenus).mockResolvedValue({ items: menus, diagnostics: [] });
   vi.mocked(api.getCurrentUser).mockResolvedValue({

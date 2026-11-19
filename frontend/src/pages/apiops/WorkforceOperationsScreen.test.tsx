@@ -294,7 +294,7 @@ it.each([
     `workforce-calendar-${status.toLowerCase()}`,
   );
 });
-it("distinguishes precontract, concurrent and over-one cues", () => {
+it("distinguishes precontract, concurrent and over-one cues", async () => {
   const c = {
     ...cell(),
     assignmentCount: 2,
@@ -304,6 +304,9 @@ it("distinguishes precontract, concurrent and over-one cues", () => {
   render(<WorkforceCalendarCell cell={c} />);
   expect(screen.getByRole("button")).toHaveAccessibleName(/미계약/);
   expect(document.querySelector(".workforce-calendar-cell")).toHaveClass("workforce-calendar-concurrent", "workforce-calendar-over");
+  const button = screen.getByRole("button", { name: /1\.0 초과/ });
+  await userEvent.click(button);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("1.0 초과");
 });
 
 it("name header toggles server sorting, resets the page and exports the same ordering", async () => {
