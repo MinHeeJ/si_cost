@@ -322,7 +322,6 @@ export function ProjectForm({
     options: { code: string; name: string }[],
   ) => (
     <CodeSelect
-      required
       label={label}
       required={[
         "customerId",
