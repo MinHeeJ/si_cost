@@ -489,7 +489,7 @@ function WorkforceBars({ data }: { data: api.WorkforceForecast }) {
             },
           ],
           formatValue: (value) => `${people(value)}명`,
-          axisUnit: "MM",
+          axisUnit: "명",
         })}
       >
         <svg

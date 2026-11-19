@@ -223,6 +223,7 @@ export function StructureWaterfall({
               subtotal: step.kind === "SUBTOTAL",
             })),
             (value) => `${formatAmount(value, unit)} ${unit}`,
+            (value) => formatAmount(value, "백만원"),
           )}
         >
           <svg viewBox="0 0 900 290" role="img" aria-label="수익 구조 폭포">

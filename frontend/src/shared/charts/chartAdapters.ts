@@ -61,13 +61,15 @@ export function seriesChartOptions({
       ),
     ),
     scaleLabel = power > unitPower ? ` ×10^${power - unitPower}` : "";
+  // Keep the year when a forecast crosses a year boundary.
+  const spansYears = new Set(categories.filter(label => /^\d{4}-\d{2}$/.test(label)).map(label => label.slice(0, 4))).size > 1;
   return {
     ...chartTheme,
     legend: { ...chartTheme.legend, show: series.length > 1, data: series.map(s => ({ name:s.name, icon:s.dashed ? "emptyRect" : "roundRect" })) },
     xAxis: {
       type: "category",
       data: categories,
-      axisLabel: { formatter:(label:string) => /^\d{4}-\d{2}$/.test(label) ? `${Number(label.slice(5))}월` : label },
+      axisLabel: { formatter:(label:string) => !spansYears && /^\d{4}-\d{2}$/.test(label) ? `${Number(label.slice(5))}월` : label },
       boundaryGap: series.some((s) => s.type === "bar"),
       axisLine: { lineStyle: { color: "#D5DAE1" } },
       axisTick: { show: false },
@@ -155,6 +157,7 @@ export function waterfallChartOptions(
     subtotal: boolean;
   }[],
   formatValue: (value: string | null) => string,
+  formatLabel: (value: string | null) => string = formatValue,
 ): EChartsCoreOption {
   const power = Math.max(
     6,
@@ -165,16 +168,20 @@ export function waterfallChartOptions(
   const kind = (step:typeof steps[number]) => step.subtotal ? "합계 단계" : step.value?.startsWith("-") ? "빼는 항목" : "더하는 항목";
   const render = (group:string):CustomSeriesRenderItem => (params, api) => {
     const step=steps[params.dataIndex];
-    if (step.from==null || step.to==null || kind(step)!==group) return;
+    if (kind(step)!==group) return;
+    if (step.from==null || step.to==null) {
+      const anchor=api.coord([params.dataIndex,0]);
+      return {type:"text",style:{x:anchor[0],y:120,text:"미확인",align:"center",fill:"#6B7280",fontSize:12}};
+    }
     const from=api.coord([params.dataIndex,decimalCoordinate(step.from,power)!]),to=api.coord([params.dataIndex,decimalCoordinate(step.to,power)!]);
     const size=api.size?.([1,0]) as number[]|undefined,width=Math.min(44,(size?.[0]??48)*.5),top=Math.min(from[1],to[1]);
     const negative=step.value?.startsWith("-");
     const fill=step.subtotal ? negative ? "#C81E1E" : {type:"linear",x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:"#3D6CF2"},{offset:1,color:"#1D4ED8"}]} : negative ? "#EF4444" : "#0EA5E9";
-    const formatted=formatValue(step.value).replace(/^-/,"−");
+    const formatted=formatLabel(step.value).replace(/^-/,"−");
     const text=step.subtotal || negative || step.value==null ? formatted : `+${formatted}`;
     const children:any[]=[{type:"rect",shape:{x:from[0]-width/2,y:top,width,height:Math.max(1,Math.abs(to[1]-from[1])),r:4},style:{fill}},
       {type:"text",style:{x:from[0],y:top-10,text,align:"center",verticalAlign:"bottom",fill:step.subtotal?"#0F172A":"#6B7280",fontSize:step.subtotal?12.5:11.5,fontWeight:step.subtotal?700:400}}];
-    if(params.dataIndex<steps.length-1) {const next=api.coord([params.dataIndex+1,decimalCoordinate(step.to,power)!]);children.push({type:"line",shape:{x1:from[0]+width/2,y1:to[1],x2:next[0]-width/2,y2:to[1]},style:{stroke:"#CBD2DC",lineDash:[2,3],lineWidth:1}});}
+    if(params.dataIndex<steps.length-1 && steps[params.dataIndex+1].from!=null && steps[params.dataIndex+1].to!=null) {const next=api.coord([params.dataIndex+1,decimalCoordinate(step.to,power)!]);children.push({type:"line",shape:{x1:from[0]+width/2,y1:to[1],x2:next[0]-width/2,y2:to[1]},style:{stroke:"#CBD2DC",lineDash:[2,3],lineWidth:1}});}
     return {type:"group",children};
   };
   return {
@@ -204,7 +211,8 @@ export function waterfallChartOptions(
     series: ["합계 단계","더하는 항목","빼는 항목"].map(name=>({
       name,type:"custom",renderItem:render(name),encode:{x:0,y:[1,2]},
       itemStyle:{color:name==="합계 단계"?"#1D4ED8":name==="더하는 항목"?"#0EA5E9":"#EF4444"},
-      data:steps.map((step,index)=>[index,decimalCoordinate(step.from,power),decimalCoordinate(step.to,power)])
+      // Missing steps use an axis anchor only to draw their "미확인" text; render never draws a zero bar.
+      data:steps.map((step,index)=>[index,decimalCoordinate(step.from,power)??0,decimalCoordinate(step.to,power)??0])
     })),
   };
 }

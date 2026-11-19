@@ -458,7 +458,7 @@ function ForecastBars({
             unit
               ? `${formatIntegerAmount(value, unit)} ${unit}`
               : `${formatFixedDecimal(value, 1)}명`,
-          axisUnit: unit ? "백만원" : "MM",
+          axisUnit: unit ?? "명",
         })}
       >
         <svg viewBox="0 0 600 225" role="img" aria-label={title}>
