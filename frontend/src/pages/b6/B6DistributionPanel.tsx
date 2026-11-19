@@ -240,6 +240,11 @@ export function B6DistributionPanel({
             >
               <DataTable
                 rows={data.rows}
+                stickyColumns={[
+                  { id: "type", width: 100 },
+                  { id: "number", width: 110 },
+                  { id: "name", width: 180 },
+                ]}
                 rowKey={(row) => row.rowSn}
                 empty="등록된 배분표가 없습니다. 양식을 받아 엑셀로 업로드해 주세요."
                 columns={[

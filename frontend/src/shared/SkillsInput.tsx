@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { request } from "./api";
+import { HelpTooltip } from "./HelpTooltip";
 
 export function SkillsInput({
   value,
@@ -32,7 +33,14 @@ export function SkillsInput({
   }, []);
   return (
     <div className="sicost-field">
-      <label htmlFor={id}>보유 스킬</label>
+      <div className="sicost-field-label">
+        <label htmlFor={id}>보유 스킬</label>
+        <HelpTooltip label="보유 스킬">
+          공통코드 「스킬」(UI-27)에 있는 이름을 쉼표(,)로 구분해 여러 개
+          적습니다. AI 인력 추천의 스킬 점수에 씁니다. 입력순으로 저장하며
+          미등록 스킬도 입력할 수 있습니다(최대 999개·각 50자).
+        </HelpTooltip>
+      </div>
       <input
         id={id}
         data-testid="people-skills-input"
@@ -58,10 +66,7 @@ export function SkillsInput({
           <option key={s.code} value={s.name} />
         ))}
       </datalist>
-      <small>
-        입력순으로 저장합니다. 미등록 스킬도 입력할 수 있습니다. (최대 999개·각
-        50자)
-      </small>
+
       {error && (
         <span role="alert" className="sicost-field-error">
           {error}

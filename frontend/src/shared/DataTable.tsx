@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ErrorBanner } from "./Feedback";
 import { Icon } from "./Icon";
+import { HelpTooltip } from "./HelpTooltip";
 import {
   PermissionContext,
   ScreenPermissionContext,
@@ -20,6 +21,7 @@ export type Column<T> = {
   align?: "left" | "right" | "center";
   /** true면 열 이름을 눌러 정렬한다(onSortChange 필요). */
   sortable?: boolean;
+  help?: string;
 };
 export type DataTableProps<T> = {
   rows: readonly T[];
@@ -312,6 +314,18 @@ export function DataTable<T>({
                     </button>
                   ) : (
                     column.label
+                  )}
+                  {column.help && (
+                    <HelpTooltip
+                      label={
+                        typeof column.label === "string"
+                          ? column.label
+                          : column.id
+                      }
+                      testId={`${testId}-help-${marker(column.id)}`}
+                    >
+                      {column.help}
+                    </HelpTooltip>
                   )}
                 </th>
               ))}

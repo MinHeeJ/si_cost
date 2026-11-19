@@ -413,7 +413,7 @@ export function SalesPartnerProfitScreen({
           <div
             role="tablist"
             aria-label="영업 파트"
-            className="settlement-tabs"
+            className="settlement-tabs sicost-segmented-tabs"
           >
             {tabs.parts.map((part) => (
               <button
@@ -452,7 +452,7 @@ export function SalesPartnerProfitScreen({
         {data && (
           <>
             <div
-              className="settlement-summary"
+              className="settlement-summary sicost-kpi-strip"
               data-testid="settlement-summary"
             >
               <article>

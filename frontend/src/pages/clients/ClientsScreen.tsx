@@ -345,7 +345,11 @@ export function ClientsScreen({
       data-testid="clients-screen"
     >
       <div hidden={creating}>
-        <nav className="clients-tabs" aria-label="기준정보 탭" role="tablist">
+        <nav
+          className="clients-tabs sicost-segmented-tabs"
+          aria-label="기준정보 탭"
+          role="tablist"
+        >
           <button
             type="button"
             role="tab"

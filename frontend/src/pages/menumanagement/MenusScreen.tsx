@@ -7,6 +7,7 @@ import * as api from "./menuManagementApi";
 import { MenuRegistrationDialog } from "../menumanagementops/MenuRegistrationDialog";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./menus.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 const modeMessage = "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.";
 export function MenusScreen({
@@ -235,7 +236,13 @@ export function MenusScreen({
           <table className="sicost-table">
             <thead>
               <tr>
-                <th>손잡이</th>
+                <th>
+                  손잡이{" "}
+                  <HelpTooltip label="끌기 손잡이">
+                    끌어서 묶음 순서 바꾸기. 위·아래 버튼과 그룹 선택으로도
+                    이동할 수 있습니다.
+                  </HelpTooltip>
+                </th>
                 <th>메뉴이름</th>
                 <th>화면번호</th>
                 <th>형제 내 순서</th>

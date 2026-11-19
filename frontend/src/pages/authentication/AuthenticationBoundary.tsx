@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ErrorBanner } from "../../shared/Feedback";
+import { Brand, BrandIllustration } from "../../shared/Brand";
 import { PermissionContext } from "../../shared/permission/PermissionBoundary";
 import { LoginForm } from "./LoginForm";
 import { MfaForm } from "./MfaForm";
@@ -180,9 +181,10 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
   if (state.nextStep !== "AUTHENTICATED")
     return (
       <main data-testid="authentication-page" className="authentication-page">
+        <BrandIllustration />
         <section className="authentication-card">
           <div className="authentication-brand">
-            SI COST<span>프로젝트 원가관리</span>
+            <Brand size={36} />
           </div>
           {error && <ErrorBanner message={error} />}
           {recovery ? (

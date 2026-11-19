@@ -1,7 +1,43 @@
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import type { PlanMonth } from "./businessPlanPerformanceApi";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesOptions } from "../../shared/charts/chartAdapters";
 
 export function BusinessPlanRevenueChart({
+  months,
+  unit,
+}: {
+  months: PlanMonth[];
+  unit: AmountUnit;
+}) {
+  const option = seriesOptions(
+    months.map((m) => m.month),
+    [
+      {
+        name: "실적",
+        kind: "bar",
+        values: months.map((m) => m.salesActualAmt),
+      },
+      {
+        name: "목표",
+        values: months.map((m) => m.salesTargetAmt),
+        color: "#f59e0b",
+      },
+    ],
+    unit,
+  );
+  return (
+    <ChartHost
+      className="business-plan-chart"
+      heading={<h2>월별 매출 실적과 목표</h2>}
+      label="1~12월 매출 실적 막대와 목표 기준선, 백만원"
+      testId="business-plan-chart"
+      option={option}
+      fallback={<BusinessPlanRevenueFallback months={months} unit={unit} />}
+    />
+  );
+}
+function BusinessPlanRevenueFallback({
   months,
   unit,
 }: {
@@ -34,7 +70,10 @@ export function BusinessPlanRevenueChart({
   });
   if (segment) segments.push(segment);
   return (
-    <section className="business-plan-chart" data-testid="business-plan-chart">
+    <section
+      className="business-plan-chart"
+      data-testid="business-plan-chart-fallback"
+    >
       <h2>월별 매출 실적과 목표</h2>
       <p>
         <span className="business-plan-actual-key">■ 실적</span>{" "}
@@ -54,7 +93,10 @@ export function BusinessPlanRevenueChart({
             {[0, 1, 2, 3, 4].map((tick) => {
               const value = minimum + (span * tick) / 4;
               return (
-                <g key={tick}>
+                <g
+                  key={tick}
+                  data-testid={`business-plan-chart-grid-tick-${tick}`}
+                >
                   <line
                     x1="60"
                     x2="890"
@@ -106,6 +148,7 @@ export function BusinessPlanRevenueChart({
             {segments.map((path, index) => (
               <path
                 key={index}
+                data-testid={`business-plan-chart-target-segment-${index}`}
                 d={path}
                 className="business-plan-target-line"
               />

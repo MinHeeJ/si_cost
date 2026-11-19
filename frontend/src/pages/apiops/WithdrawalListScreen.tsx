@@ -17,6 +17,7 @@ import { useSharedScreen } from "../shared/SharedScreenContext";
 import { WithdrawalError, WithdrawalNextPanel } from "./WithdrawalNextPanel";
 import * as api from "./withdrawalsApi";
 import "./withdrawals.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 export function WithdrawalListScreen() {
   const [year, setYear] = useState<number>();
@@ -402,10 +403,11 @@ export function WithdrawalContent({ year }: { year: number }) {
           </button>
         </div>
       )}
-      <p className="withdrawal-help">
-        연장가능성 변경은 인력 운영 보드/수요 예측에 반영됩니다. 연도 경계의
-        다른 연도 자료는 연도를 바꿔 조회하세요.
-      </p>
+      <HelpTooltip label="철수 리스트" chip>
+        조회 연도에 철수하는(했던) 인력입니다. [기간] 조건으로 '3개월 안'만 볼
+        수 있습니다. 연장 가능성을 바꾸면 인력 운영 보드와 수요 예측에 바로
+        반영됩니다. 연도 경계의 다른 연도 자료는 연도를 바꿔 조회하세요.
+      </HelpTooltip>
       {data && year < Number(data.serverDate.slice(0, 4)) && (
         <p className="sicost-banner sicost-tone-lock">
           지난 연도는 조회만 할 수 있습니다.

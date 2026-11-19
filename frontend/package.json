@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": {"node": "20.x", "npm": "10.x"},
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
@@ -12,6 +15,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "echarts": "5.5.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.30.1"

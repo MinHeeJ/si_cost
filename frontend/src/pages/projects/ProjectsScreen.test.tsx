@@ -221,7 +221,7 @@ async function fillNew() {
   fireEvent.change(screen.getByLabelText(/계약 종료일/), {
     target: { value: "2027-12-31" },
   });
-  fireEvent.change(screen.getByLabelText(/계약금액/), {
+  fireEvent.change(screen.getByLabelText(/계약금액/, { selector: "input" }), {
     target: { value: "0" },
   });
 }
@@ -548,9 +548,12 @@ it("unavailable automatic preview permits explicit manual zero and blanks retain
     screen.getByLabelText("예산 입력 방식"),
     "MANUAL",
   );
-  fireEvent.change(screen.getByLabelText(/예산\(목표 원가\)/), {
-    target: { value: "0" },
-  });
+  fireEvent.change(
+    screen.getByLabelText(/예산\(목표 원가\)/, { selector: "input" }),
+    {
+      target: { value: "0" },
+    },
+  );
   await userEvent.click(screen.getByTestId("project-form-save"));
   await waitFor(() =>
     expect(api.createProject).toHaveBeenCalledWith(

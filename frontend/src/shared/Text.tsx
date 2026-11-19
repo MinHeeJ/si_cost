@@ -1,4 +1,5 @@
 import { useId, type InputHTMLAttributes } from "react";
+import { HelpTooltip } from "./HelpTooltip";
 
 export type TextProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -8,12 +9,14 @@ export type TextProps = Omit<
   value: string;
   onChange(value: string): void;
   error?: string;
+  help?: string;
 };
 export function Text({
   label,
   value,
   onChange,
   error,
+  help,
   id,
   ...props
 }: TextProps) {
@@ -21,10 +24,13 @@ export function Text({
   const inputId = id ?? generated;
   return (
     <div className="sicost-field">
-      <label htmlFor={inputId}>
-        {label}
-        {props.required && <span aria-hidden="true"> *</span>}
-      </label>
+      <div className="sicost-field-label">
+        <label htmlFor={inputId}>
+          {label}
+          {props.required && <span aria-hidden="true"> *</span>}
+        </label>
+        {help && <HelpTooltip label={label}>{help}</HelpTooltip>}
+      </div>
       <input
         {...props}
         id={inputId}

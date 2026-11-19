@@ -42,7 +42,11 @@ const sourceEvents = [
   "sicost:distribution-committed",
 ];
 // SCR-UI-09
-export function NetProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function NetProfitScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -226,7 +230,7 @@ export function NetProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
                 <FinancialEmptyReset screenId="UI-09" />
               </div>
             )}
-            <div className="operating-summary net-summary">
+            <div className="operating-summary net-summary sicost-kpi-strip">
               {data.summary.map((card) => (
                 <article
                   className="operating-card"
@@ -242,7 +246,9 @@ export function NetProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
                       ? "누계 순이익"
                       : "기준월 순이익"}
                   </h2>
-                  <strong data-financial-negative={card.amount?.startsWith("-")}>
+                  <strong
+                    data-financial-negative={card.amount?.startsWith("-")}
+                  >
                     {formatAmount(card.amount, unit)} <small>{unit}</small>
                   </strong>
                   <p>순이익률 {formatRate(card.rate)}</p>
@@ -339,7 +345,9 @@ export function NetProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
               <button
                 type="button"
                 data-testid="net-tax-link"
-                onClick={() => navigate("/UI-10", { state: { section: "tax" } })}
+                onClick={() =>
+                  navigate("/UI-10", { state: { section: "tax" } })
+                }
               >
                 법인세 월할 확인
               </button>

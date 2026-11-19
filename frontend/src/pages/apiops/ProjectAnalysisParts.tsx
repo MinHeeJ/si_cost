@@ -28,7 +28,7 @@ export function AnalysisSummary({
 }) {
   return (
     <div
-      className="project-analysis-summary"
+      className="project-analysis-summary sicost-kpi-strip"
       data-testid="analysis-summary-root"
     >
       {fields.map(([key, label, money]) => (

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { formHelp } from "../../shared/helpContent";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import {
@@ -406,9 +408,15 @@ export function SalesOpportunityForm({
                 />
                 {field("name")}
               </label>
-              <label>
-                고객사 *
+              <div className="sicost-field">
+                <div className="sicost-field-label">
+                  <label htmlFor="opportunity-customer-input">고객사 *</label>
+                  <HelpTooltip label="고객사">
+                    {formHelp.opportunities.customerId}
+                  </HelpTooltip>
+                </div>
                 <select
+                  id="opportunity-customer-input"
                   data-testid="opportunity-customer"
                   name="customerId"
                   value={form.customerId}
@@ -428,7 +436,7 @@ export function SalesOpportunityForm({
                   ))}
                 </select>
                 {field("customerId")}
-              </label>
+              </div>
               <label>
                 영업 파트 *
                 <select
@@ -471,9 +479,17 @@ export function SalesOpportunityForm({
                 </select>
                 {field("stage")}
               </label>
-              <label>
-                수주 확률 *
+              <div className="sicost-field">
+                <div className="sicost-field-label">
+                  <label htmlFor="opportunity-probability-input">
+                    수주 확률 *
+                  </label>
+                  <HelpTooltip label="수주 확률">
+                    {formHelp.opportunities.probability}
+                  </HelpTooltip>
+                </div>
                 <input
+                  id="opportunity-probability-input"
                   data-testid="opportunity-probability"
                   name="probability"
                   value={form.probability}
@@ -483,7 +499,7 @@ export function SalesOpportunityForm({
                   }}
                 />
                 {field("probability")}
-              </label>
+              </div>
               <div>
                 <p>{form.manualProbability ? "수동 확률" : "기본 확률"}</p>
                 <button
@@ -498,9 +514,17 @@ export function SalesOpportunityForm({
                   기본 확률 사용
                 </button>
               </div>
-              <label>
-                예상 금액 (원) *
+              <div className="sicost-field">
+                <div className="sicost-field-label">
+                  <label htmlFor="opportunity-amount-input">
+                    예상 금액 (원) *
+                  </label>
+                  <HelpTooltip label="예상 금액">
+                    {formHelp.opportunities.amount}
+                  </HelpTooltip>
+                </div>
                 <input
+                  id="opportunity-amount-input"
                   data-testid="opportunity-amount"
                   name="amount"
                   inputMode="numeric"
@@ -508,7 +532,7 @@ export function SalesOpportunityForm({
                   onChange={(e) => set("amount", e.target.value)}
                 />
                 {field("amount")}
-              </label>
+              </div>
               <label>
                 계약유형
                 <select
@@ -560,16 +584,22 @@ export function SalesOpportunityForm({
                   빈칸은 NULL로 저장하고 계산에는 6개월을 사용합니다.
                 </small>
               </label>
-              <label>
-                근무지
+              <div className="sicost-field">
+                <div className="sicost-field-label">
+                  <label htmlFor="opportunity-workplace-input">근무지</label>
+                  <HelpTooltip label="근무지">
+                    {formHelp.opportunities.workplace}
+                  </HelpTooltip>
+                </div>
                 <input
+                  id="opportunity-workplace-input"
                   data-testid="opportunity-workplace"
                   name="workplace"
                   value={form.workplace ?? ""}
                   onChange={(e) => set("workplace", e.target.value || null)}
                 />
                 {field("workplace")}
-              </label>
+              </div>
               <label>
                 할 일
                 <input
@@ -580,9 +610,15 @@ export function SalesOpportunityForm({
                 />
                 {field("nextTask")}
               </label>
-              <label>
-                기한
+              <div className="sicost-field">
+                <div className="sicost-field-label">
+                  <label htmlFor="opportunity-next-due-input">기한</label>
+                  <HelpTooltip label="기한">
+                    {formHelp.opportunities.nextDue}
+                  </HelpTooltip>
+                </div>
                 <input
+                  id="opportunity-next-due-input"
                   data-testid="opportunity-next-due"
                   name="nextDue"
                   type="date"
@@ -595,7 +631,7 @@ export function SalesOpportunityForm({
                   onChange={(e) => set("nextDue", e.target.value || null)}
                 />
                 {field("nextDue")}
-              </label>
+              </div>
               <label>
                 비고
                 <textarea

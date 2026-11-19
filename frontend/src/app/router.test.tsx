@@ -422,6 +422,9 @@ const issueColumns = [
   "modifiedBy",
   "modifiedAt",
 ];
+// Retained screens stay mounted; query shell tabs without scanning their controls.
+const workTabs = () =>
+  within(screen.getByRole("navigation", { name: "열린 화면" }));
 const open = (path = "/UI-27") =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -981,8 +984,13 @@ describe("공식 진입점 합성", () => {
     "%s 열 설정은 전체순서와 다른 뷰를 보존한다",
     async (path, view, label, hidden, order) => {
       open(path);
+      const panel = await screen.findByTestId(
+        view === "projectCost"
+          ? "project-cost-analysis"
+          : "project-status-board",
+      );
       await userEvent.click(
-        await screen.findByRole("button", { name: "열 설정" }),
+        await within(panel).findByRole("button", { name: "열 설정" }),
       );
       const dialog = screen.getByRole("dialog", { name: "현재 표 열 설정" });
       expect(within(dialog).getByLabelText("프로젝트 숨김")).toBeDisabled();
@@ -1021,8 +1029,11 @@ describe("공식 진입점 합성", () => {
     "%s 열 설정 취소는 저장하지 않는다",
     async (path) => {
       open(path);
+      const panel = await screen.findByTestId(
+        path === "/UI-04" ? "project-cost-analysis" : "project-status-board",
+      );
       await userEvent.click(
-        await screen.findByRole("button", { name: "열 설정" }),
+        await within(panel).findByRole("button", { name: "열 설정" }),
       );
       await userEvent.click(
         screen.getByLabelText(path === "/UI-04" ? "유형 숨김" : "PM 숨김"),
@@ -1094,9 +1105,11 @@ describe("공식 진입점 합성", () => {
     open("/UI-01?projectId=P-0042&tab=progress");
     await screen.findByText("진행 조회 실패");
     expect(screen.getByTestId("project-detail")).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
     expect(screen.getByTestId("project-detail")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-01$/ }),
+    );
     expect(screen.getByTestId("project-detail")).toBeVisible();
   });
   it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
@@ -1164,7 +1177,7 @@ describe("공식 진입점 합성", () => {
     const confirm = vi.spyOn(window, "confirm");
     open("/UI-10");
     await userEvent.click(await screen.findByTestId("financial-items-add"));
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "계속 편집",
@@ -1180,7 +1193,7 @@ describe("공식 진입점 합성", () => {
     open("/UI-10");
     await userEvent.click(await screen.findByTestId("financial-items-add"));
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-10 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-10 탭 닫기" }),
     );
     await screen.findByRole("dialog");
     await userEvent.click(screen.getByTestId("financial-navigation-discard"));
@@ -1214,7 +1227,7 @@ describe("공식 진입점 합성", () => {
     fireEvent.change(screen.getByTestId("financial-loans-new-2-amount"), {
       target: { value: "1" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "저장 후 이동",
@@ -1248,7 +1261,7 @@ describe("공식 진입점 합성", () => {
       target: { value: "1" },
     });
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-10 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-10 탭 닫기" }),
     );
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(
@@ -1317,7 +1330,7 @@ describe("공식 진입점 합성", () => {
       target: { value: "1234" },
     });
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-13 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-13 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledOnce();
     expect(screen.getByTestId("bill-supply-amount")).toHaveValue("1234");
@@ -1345,13 +1358,15 @@ describe("공식 진입점 합성", () => {
     fireEvent.change(await screen.findByTestId("assignment-project-search"), {
       target: { value: "보존할 검색" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-12$/ }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-12$/ }),
+    );
     expect(screen.getByTestId("assignment-project-search")).toHaveValue(
       "보존할 검색",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-12 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-12 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledOnce();
     expect(screen.getByTestId("assignment-project-search")).toHaveValue(
@@ -1375,11 +1390,13 @@ describe("공식 진입점 합성", () => {
     await userEvent.click(await screen.findByTestId("project-create"));
     const name = await screen.findByTestId("project-name");
     fireEvent.change(name, { target: { value: "보존 프로젝트" } });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-01$/ }),
+    );
     expect(name).toHaveValue("보존 프로젝트");
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-01 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-01 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledOnce();
     expect(name).toHaveValue("보존 프로젝트");
@@ -1770,11 +1787,13 @@ describe("공식 진입점 합성", () => {
     fireEvent.change(await screen.findByLabelText("A 이름"), {
       target: { value: "보존 입력" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-27$/ }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-27$/ }),
+    );
     expect(screen.getByLabelText("A 이름")).toHaveValue("보존 입력");
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-27 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-27 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalled();
     expect(screen.getByLabelText("A 이름")).toHaveValue("보존 입력");
@@ -1794,7 +1813,7 @@ describe("공식 진입점 합성", () => {
     expect(screen.getByRole("button", { name: "코드 추가" })).toBeEnabled();
     fireEvent.change(input, { target: { value: "폐기" } });
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-27 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-27 탭 닫기" }),
     );
     await screen.findByRole("heading", { name: "DB UI-16" });
     expect(confirm).toHaveBeenCalledTimes(1);
@@ -1802,7 +1821,7 @@ describe("공식 진입점 합성", () => {
     expect(await screen.findByLabelText("A 이름")).toHaveValue("기존 이름");
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-27 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-27 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledTimes(1);
   });
@@ -1966,11 +1985,13 @@ describe("공식 진입점 합성", () => {
     fireEvent.change(screen.getByTestId("business-user-name"), {
       target: { value: "보존 사용자" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-23$/ }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-23$/ }),
+    );
     expect(screen.getByTestId("business-user-name")).toHaveValue("보존 사용자");
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-23 탭 닫기" }),
+      workTabs().getByRole("button", { name: "DB UI-23 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalled();
     expect(screen.getByTestId("business-user-name")).toHaveValue("보존 사용자");
@@ -2074,9 +2095,11 @@ describe("공식 진입점 합성", () => {
     expect(
       await screen.findByTestId("client-account-number"),
     ).toHaveTextContent("001-2345678");
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(workTabs().getByRole("button", { name: "DB UI-16" }));
     expect(screen.queryByTestId("client-drawer")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-15$/ }));
+    await userEvent.click(
+      workTabs().getByRole("button", { name: /DB UI-15$/ }),
+    );
     expect(
       await screen.findByTestId("client-account-show"),
     ).toBeInTheDocument();
@@ -2107,17 +2130,19 @@ describe("공식 진입점 합성", () => {
       // 등록 폼은 공통 모달이라 뒤의 목록 필터에도 같은 이름표가 있다: 모달 안으로 범위를 좁힌다.
       const name = within(screen.getByRole("dialog")).getByLabelText(/^이름/);
       fireEvent.change(name, { target: { value: "보존 인력" } });
-      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      await userEvent.click(
+        workTabs().getByRole("button", { name: "DB UI-16" }),
+      );
       if (id === "UI-33")
         expect(
           screen.queryByRole("dialog", { name: "외부 인력 후보 등록" }),
         ).not.toBeInTheDocument();
       await userEvent.click(
-        screen.getByRole("button", { name: new RegExp(`DB ${id}$`) }),
+        workTabs().getByRole("button", { name: new RegExp(`DB ${id}$`) }),
       );
       expect(name).toHaveValue("보존 인력");
       await userEvent.click(
-        screen.getByRole("button", { name: `DB ${id} 탭 닫기` }),
+        workTabs().getByRole("button", { name: `DB ${id} 탭 닫기` }),
       );
       expect(confirm).toHaveBeenCalledOnce();
       expect(name).toHaveValue("보존 인력");

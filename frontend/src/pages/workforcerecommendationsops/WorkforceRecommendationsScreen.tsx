@@ -8,6 +8,7 @@ import {
 } from "./RecommendationSavedValues";
 import * as api from "./recommendationBrowseApi";
 import "./recommendationBrowse.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 const targetKey = (t: api.RecommendationTarget) =>
   `${t.targetType}:${t.targetId}`;
@@ -403,6 +404,10 @@ export function WorkforceRecommendationsScreen({
             >
               {pending ? "추천 중…" : "추천 받기"}
             </button>
+            <HelpTooltip label="추천 받기">
+              휴직·퇴사 예정자, 그 기간 MM이 이미 1.0인 사람은 뺍니다.
+              나이·성별·학력은 쓰지 않습니다.
+            </HelpTooltip>
           </fieldset>
           <p className="sicost-banner sicost-tone-info">
             추천은 참고용입니다. 배정은 담당자가 정합니다.
@@ -429,7 +434,12 @@ export function WorkforceRecommendationsScreen({
               target: selected,
               serverDate: targets.serverDate,
               onReset: () => {
-                if (targets && selected) void recommend(initialCondition(selected), selected, targets.baseMonth);
+                if (targets && selected)
+                  void recommend(
+                    initialCondition(selected),
+                    selected,
+                    targets.baseMonth,
+                  );
               },
               onRefresh: async () => {
                 if (!result.rcmdId) return;
@@ -447,16 +457,32 @@ export function WorkforceRecommendationsScreen({
         </fieldset>
       )}
       {result?.exclusions && (
-        <section className="recommendation-card" data-testid="recommendation-exclusions">
+        <section
+          className="recommendation-card"
+          data-testid="recommendation-exclusions"
+        >
           <h2>후보 제외 진단</h2>
-          <p>전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외 {result.exclusions.excludedUniqueCount}명</p>
-          <p>한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은 다를 수 있습니다.</p>
-          <div>{result.exclusions.byReason.map((r) => (
-            <span className="sicost-badge sicost-tone-neutral" key={r.reason}>{r.reason} {r.count}명</span>
-          ))}</div>
-          <details><summary>개인 진단</summary>
+          <p>
+            전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외{" "}
+            {result.exclusions.excludedUniqueCount}명
+          </p>
+          <p>
+            한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은
+            다를 수 있습니다.
+          </p>
+          <div>
+            {result.exclusions.byReason.map((r) => (
+              <span className="sicost-badge sicost-tone-neutral" key={r.reason}>
+                {r.reason} {r.count}명
+              </span>
+            ))}
+          </div>
+          <details>
+            <summary>개인 진단</summary>
             {result.exclusions.diagnostics.map((d) => (
-              <p key={d.developerId}>{d.developerId}: {d.reasons.join(" · ")}</p>
+              <p key={d.developerId}>
+                {d.developerId}: {d.reasons.join(" · ")}
+              </p>
             ))}
           </details>
         </section>

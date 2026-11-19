@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../../shared/api";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesOptions } from "../../shared/charts/chartAdapters";
 import { formatFixedDecimal } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { PeriodSelector } from "../shared/PeriodSelector";
@@ -308,7 +310,7 @@ export function WorkforceForecastPanel({
               ))}
             </div>
           )}
-          <div className="workforce-forecast-summary">
+          <div className="workforce-forecast-summary sicost-kpi-strip">
             <article data-testid="workforce-supply-card">
               <p>마지막월 가용</p>
               <strong>{people(data.lastMonthSupply)}명</strong>
@@ -330,7 +332,9 @@ export function WorkforceForecastPanel({
           {data.totals.length === 0 ? (
             <div className="workforce-forecast-empty">
               <p>선택 기간에 예측 자료가 없습니다.</p>
-              <button type="button" onClick={() => setReload((n) => n + 1)}>조건 초기화</button>
+              <button type="button" onClick={() => setReload((n) => n + 1)}>
+                조건 초기화
+              </button>
             </div>
           ) : (
             <>
@@ -442,6 +446,38 @@ function difference(value: string | null, status: string) {
   return `${zero ? "맞음" : `${people(value.replace(/^-/, ""))}명 ${value.startsWith("-") ? "부족" : "남음"}`}${status === "UNKNOWN" ? " · 판정 미확인" : ""}`;
 }
 function WorkforceBars({ data }: { data: api.WorkforceForecast }) {
+  const option = seriesOptions(
+    data.totals.map((m) => m.month),
+    [
+      { name: "가용", kind: "bar", values: data.totals.map((m) => m.supply) },
+      { name: "필요", kind: "bar", values: data.totals.map((m) => m.demand) },
+    ],
+    "원",
+    1,
+  );
+  option.tooltip = {
+    formatter: (input: unknown) => {
+      const i = (
+        (Array.isArray(input) ? input[0] : input) as { dataIndex: number }
+      ).dataIndex;
+      const m = data.totals[i];
+      return m
+        ? `${m.month}\n가용 ${people(m.supply)}명\n필요 ${people(m.demand)}명\n그중 미충원 ${people(m.unfilledDemand)}명`
+        : "";
+    },
+  };
+  return (
+    <ChartHost
+      className="workforce-forecast-card"
+      heading={<h2>월별 가용 vs 필요</h2>}
+      label="월별 가용 vs 필요"
+      testId="workforce-forecast-echart"
+      option={option}
+      fallback={<WorkforceBarsFallback data={data} />}
+    />
+  );
+}
+function WorkforceBarsFallback({ data }: { data: api.WorkforceForecast }) {
   const maximum = Math.max(
     1,
     ...data.totals.flatMap((m) => [

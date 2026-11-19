@@ -596,7 +596,10 @@ export function CommonCodesScreen({
             <Icon name="plus" size={16} /> 그룹 추가
           </button>
         </header>
-        <nav className="codegroups-tabs" aria-label="공통코드 하위 탭">
+        <nav
+          className="codegroups-tabs sicost-segmented-tabs"
+          aria-label="공통코드 하위 탭"
+        >
           {tabs.map((item) => (
             <button
               data-testid={`common-codes-tab-${item.id}`}

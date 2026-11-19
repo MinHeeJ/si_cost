@@ -52,7 +52,6 @@ export function LoginForm({
       }}
     >
       <h1>로그인</h1>
-      <p>등록된 계정으로 로그인해 주세요.</p>
       {error && <ErrorBanner message={error} />}
       <label>
         아이디
@@ -87,14 +86,17 @@ export function LoginForm({
       >
         {busy ? "확인 중…" : "로그인"}
       </button>
-      <button
-        data-testid="authentication-login-recovery-button"
-        type="button"
-        onClick={onRecovery}
-        disabled={busy}
-      >
-        비밀번호 찾기
-      </button>
+      <div className="authentication-login-guidance">
+        비밀번호를 5번 틀리면 계정이 잠깁니다.{" "}
+        <button
+          data-testid="authentication-login-recovery-button"
+          type="button"
+          onClick={onRecovery}
+          disabled={busy}
+        >
+          비밀번호 찾기
+        </button>
+      </div>
     </form>
   );
 }

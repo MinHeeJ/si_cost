@@ -1,7 +1,7 @@
 .menu-management {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 20px;
+  padding: 0;
   min-width: 0;
 }
 .menu-management-heading,
@@ -23,6 +23,15 @@
 }
 .menu-management-actions > :first-child {
   margin-right: auto;
+}
+.menu-management > footer.menu-management-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  border-radius: 0 0 10px 10px;
 }
 .menu-management-root td {
   background: var(--head-bg);
@@ -54,8 +63,9 @@
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
   background: var(--surface);
 }
 .menu-management-history details {

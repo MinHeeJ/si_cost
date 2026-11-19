@@ -66,7 +66,9 @@ it("KEEP은 빈 번호와 불변 사업자번호를 표시하고 계좌3필드�
   );
   await screen.findByRole("option", { name: "협력사" });
   expect(screen.getByLabelText("계좌번호")).toHaveValue("");
-  expect(screen.getByLabelText(/사업자번호/)).toHaveAttribute("readonly");
+  expect(
+    screen.getByLabelText(/사업자번호/, { selector: "input" }),
+  ).toHaveAttribute("readonly");
   await userEvent.clear(screen.getByLabelText(/상호/));
   await userEvent.type(screen.getByLabelText(/상호/), "수정상호");
   await userEvent.click(screen.getByTestId("client-form-save"));
@@ -130,7 +132,10 @@ it("신규등록에는 계좌 확인도 accountAction도 없고 미적용 입력
   render(<ClientForm onClose={vi.fn()} onSaved={vi.fn()} />);
   await selectType("CUST");
   await userEvent.type(screen.getByLabelText(/상호/), "신규");
-  await userEvent.type(screen.getByLabelText(/사업자번호/), "1234567890");
+  await userEvent.type(
+    screen.getByLabelText(/사업자번호/, { selector: "input" }),
+    "1234567890",
+  );
   await userEvent.type(screen.getByLabelText(/세금계산서 이메일/), "a@b.test");
   await userEvent.click(screen.getByTestId("client-form-save"));
   await waitFor(() => expect(api.createClient).toHaveBeenCalledOnce());

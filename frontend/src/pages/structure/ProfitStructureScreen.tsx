@@ -147,7 +147,11 @@ function RevenueComposition({
   );
 }
 // SCR-UI-07 — same materialized buckets drive cards, charts, compositions and numeric tables.
-export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function ProfitStructureScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -381,7 +385,7 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                 <FinancialEmptyReset screenId="UI-07" />
               </p>
             )}
-            <div className="profit-structure-summary">
+            <div className="profit-structure-summary sicost-kpi-strip">
               {data.summary.map((card) => (
                 <article
                   className="profit-structure-card"
@@ -400,7 +404,9 @@ export function ProfitStructureScreen({ amountUnit, onAmountUnitChange, dense }:
                       {formatAmount(card.amount, unit)} {unit}
                     </button>
                   ) : (
-                    <strong data-financial-negative={card.amount?.startsWith("-")}>
+                    <strong
+                      data-financial-negative={card.amount?.startsWith("-")}
+                    >
                       {card.metric === "idleCostAmt"
                         ? formatRate(card.rate)
                         : `${formatAmount(card.amount, unit)} ${unit}`}

@@ -341,7 +341,7 @@ export function ProjectStatusBoard({
       <div
         role="tablist"
         aria-label="프로젝트 현황 보기"
-        className="project-analysis-tabs"
+        className="project-analysis-tabs sicost-segmented-tabs"
       >
         <button
           type="button"

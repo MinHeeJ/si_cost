@@ -227,7 +227,7 @@ function ReceivablesContent({
           <p className="billing-review-caption">
             기준일 {data.asOfDate} · 이월 포함 전체 연체 · 단위 {amountUnit}
           </p>
-          <div className="billing-review-cards">
+          <div className="billing-review-cards sicost-kpi-strip">
             {data.cards.map((card) => (
               <article
                 key={card.step}

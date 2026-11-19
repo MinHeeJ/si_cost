@@ -10,6 +10,7 @@ import {
   useFeaturePermission,
 } from "../../shared/permission/PermissionBoundary";
 import "./roles.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 const actions = [
   ["inquire", "조회"],
@@ -342,7 +343,11 @@ export function PermissionsScreen({
         </p>
       ))}
       <div className="roles-toolbar">
-        <div role="tablist" aria-label="역할" className="roles-tabs">
+        <div
+          role="tablist"
+          aria-label="역할"
+          className="roles-tabs sicost-segmented-tabs"
+        >
           {roles.map((role) => (
             <button
               role="tab"
@@ -490,12 +495,17 @@ export function PermissionsScreen({
               <p className="sicost-empty">등록된 서브메뉴가 없습니다.</p>
             )}
           </div>
+          <HelpTooltip label="데이터 범위" chip>
+            어디까지 볼지 정합니다. 전체 = 회사 전부, 담당 파트 = 이번 달
+            파트장인 파트와 사용자에서 고른 본사, 담당 프로젝트 = 사용자에서
+            사람마다 정한 프로젝트만. 여러 역할은 넓은 쪽 권한을 따릅니다.
+          </HelpTooltip>
           <p className="roles-hint">
             각 동작은 독립적으로 저장되며 업무 접근에는 조회 권한도 필요합니다.
             확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
             마감해제는 별도 관리자 자격을 검사합니다.
           </p>
-          <div className="roles-toolbar">
+          <div className="roles-toolbar roles-savebar">
             <div>
               <button
                 data-testid="role-page-previous"

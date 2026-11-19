@@ -4,6 +4,7 @@ import { useTablePreferences } from "../me/ColumnPreferencesDialog";
 import { usePreferences } from "../me/usePreferences";
 import { ErrorBanner } from "../../shared/Feedback";
 import { profitabilityColumns } from "./profitabilityColumns";
+import { columnHelp } from "../../shared/helpContent";
 
 export type ProfitabilityTableProps<T> = Omit<
   DataTableProps<T>,
@@ -22,7 +23,16 @@ export function ProfitabilityTable<T>(props: ProfitabilityTableProps<T>) {
   );
   const columns = table.columns.flatMap((definition) => {
     const column = props.columns.find((item) => item.id === definition.id);
-    return column ? [column] : [];
+    return column
+      ? [
+          {
+            ...column,
+            help: columnHelp.profitability[
+              column.id === "profit" ? "operatingProfit" : column.id
+            ],
+          },
+        ]
+      : [];
   });
   const size =
     table.pageSize === 20 || table.pageSize === 100 ? table.pageSize : 50;

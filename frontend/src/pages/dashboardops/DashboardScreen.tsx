@@ -13,6 +13,8 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { flattenMenus, useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./dashboardApi";
 import { DashboardTrendChart } from "./DashboardTrendChart";
+import { DashboardSupplyChart } from "./DashboardSupplyChart";
+import { SectionCard } from "../../shared/Surface";
 import "./dashboard.css";
 
 const metricLabels: Record<api.DashboardMetric["metricCode"], string> = {
@@ -89,10 +91,9 @@ function Panel({
   testId: string;
 }) {
   return (
-    <section className="dashboard-panel" data-testid={testId}>
-      <h2>{title}</h2>
+    <SectionCard className="dashboard-panel" testId={testId} title={title}>
       {children}
-    </section>
+    </SectionCard>
   );
 }
 export function DashboardScreen({
@@ -536,6 +537,7 @@ export function DashboardScreen({
                     : "허용된 담당 범위의 인력"}{" "}
                   · 미충원 포함 · 단위: 명
                 </p>
+                <DashboardSupplyChart rows={data.supplyForecast} />
                 <div className="sicost-table-viewport">
                   <table
                     className="sicost-table"

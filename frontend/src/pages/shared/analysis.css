@@ -1,13 +1,17 @@
 .analysis-workspace {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  gap: 24px;
-  padding: 24px;
+  gap: 20px;
+  padding: 0;
   align-items: start;
   min-width: 0;
 }
 .analysis-history {
   font-size: 13px;
+  padding: 20px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
   min-width: 0;
   position: sticky;
   top: 16px;
@@ -64,8 +68,8 @@
 }
 .analysis-user-message {
   margin-left: auto;
-  padding: 10px 14px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 12px 12px 2px 12px;
   background: var(--primary-bg);
   max-width: 90%;
   white-space: pre-wrap;
@@ -73,8 +77,9 @@
 }
 .analysis-answer {
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
   background: var(--surface);
   display: flex;
   flex-direction: column;

@@ -1,5 +1,11 @@
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import type { StructureBucket, WaterfallStep } from "./profitStructureApi";
+import type { EChartsOption } from "echarts";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import {
+  chartCoordinate,
+  seriesOptions,
+} from "../../shared/charts/chartAdapters";
 const colors = ["var(--primary)", "var(--warn)", "var(--ok)", "var(--info)"];
 export function bucketLabel(bucket: StructureBucket, quarterly: boolean) {
   return quarterly
@@ -7,7 +13,44 @@ export function bucketLabel(bucket: StructureBucket, quarterly: boolean) {
     : bucket.key;
 }
 // Number is limited to SVG coordinates. Every tooltip uses the original decimal string.
-export function StructureTrend({
+export function StructureTrend(
+  props: Parameters<typeof StructureTrendFallback>[0],
+) {
+  const { buckets, metrics, labels, quarterly, stacked, unit, title } = props;
+  const option = seriesOptions(
+    buckets.map((b) => bucketLabel(b, quarterly)),
+    metrics.map((m, i) => ({
+      name: labels[i],
+      kind: quarterly || stacked ? "bar" : "line",
+      dashed: m === "referenceRevenue",
+      stack: stacked ? "costs" : undefined,
+      values: buckets.map((b) =>
+        m === "referenceRevenue"
+          ? b.referenceRevenue.visible
+            ? b.referenceRevenue.amount
+            : null
+          : (b.amounts[m] ?? null),
+      ),
+    })),
+    unit,
+  );
+  return (
+    <ChartHost
+      className="profit-structure-card"
+      heading={
+        <>
+          <h2>{title}</h2>
+          <p className="profit-structure-muted">축: 백만원 · 툴팁: {unit}</p>
+        </>
+      }
+      label={title}
+      option={option}
+      testId={`structure-echart-${metrics.join("-").toLowerCase()}`}
+      fallback={<StructureTrendFallback {...props} />}
+    />
+  );
+}
+function StructureTrendFallback({
   title,
   buckets,
   metrics,
@@ -154,7 +197,86 @@ export function StructureTrend({
     </section>
   );
 }
-export function StructureWaterfall({
+export function StructureWaterfall(props: {
+  steps: WaterfallStep[];
+  unit: AmountUnit;
+}) {
+  const { steps, unit } = props;
+  // Running positions are graphic coordinates only; never feed them back to the ledger.
+  let cursor: bigint | null = 0n;
+  const points = steps.map((step, index) => {
+    const from = step.kind === "SUBTOTAL" ? 0n : step.connected ? cursor : null;
+    const amount = step.amount === null ? null : BigInt(step.amount);
+    const to =
+      step.kind === "SUBTOTAL"
+        ? amount
+        : from === null || amount === null
+          ? null
+          : from + amount;
+    cursor = to;
+    return [
+      index,
+      from === null ? null : chartCoordinate(String(from)),
+      to === null ? null : chartCoordinate(String(to)),
+    ];
+  });
+  const option: EChartsOption = {
+    xAxis: {
+      data: steps.map((s) => s.label),
+      axisLabel: { interval: 0, fontSize: 11 },
+    },
+    tooltip: {
+      formatter: (input: unknown) => {
+        const p = (Array.isArray(input) ? input[0] : input) as {
+          dataIndex: number;
+        };
+        const s = steps[p.dataIndex];
+        return s ? `${s.label}\n${formatAmount(s.amount, unit)} ${unit}` : "";
+      },
+    },
+    series: [
+      {
+        type: "custom",
+        data: points,
+        renderItem: (params, api) => {
+          const point = points[params.dataIndex];
+          if (point[1] === null || point[2] === null) return;
+          const from = api.coord!([point[0], point[1]]),
+            to = api.coord!([point[0], point[2]]),
+            step = steps[params.dataIndex];
+          return {
+            type: "rect",
+            shape: {
+              x: from[0] - 20,
+              y: Math.min(from[1], to[1]),
+              width: 40,
+              height: Math.max(1, Math.abs(from[1] - to[1])),
+            },
+            style: {
+              fill:
+                step.kind === "SUBTOTAL"
+                  ? "#1d4ed8"
+                  : step.amount?.startsWith("-")
+                    ? "#b91c1c"
+                    : "#15803d",
+            },
+          };
+        },
+      },
+    ],
+  };
+  return (
+    <ChartHost
+      className="profit-structure-card profit-structure-wide"
+      heading={<h2>수익 구조 폭포</h2>}
+      label="수익 구조 폭포"
+      testId="structure-waterfall-echart"
+      option={option}
+      fallback={<StructureWaterfallFallback {...props} />}
+    />
+  );
+}
+function StructureWaterfallFallback({
   steps,
   unit,
 }: {

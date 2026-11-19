@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { HelpTooltip } from "./HelpTooltip";
 
 export type CodeOption = { code: string; name: string; disabled?: boolean };
 export type CodeSelectProps = {
@@ -8,6 +9,7 @@ export type CodeSelectProps = {
   onChange(value: string): void;
   required?: boolean;
   error?: string;
+  help?: string;
   disabled?: boolean;
   onSelectionConfirmed?(): void;
 };
@@ -17,13 +19,17 @@ export function CodeSelect({
   options,
   onChange,
   error,
+  help,
   onSelectionConfirmed,
   ...props
 }: CodeSelectProps) {
   const id = useId();
   return (
     <div className="sicost-field">
-      <label htmlFor={id}>{label}</label>
+      <div className="sicost-field-label">
+        <label htmlFor={id}>{label}</label>
+        {help && <HelpTooltip label={label}>{help}</HelpTooltip>}
+      </div>
       <select
         {...props}
         id={id}

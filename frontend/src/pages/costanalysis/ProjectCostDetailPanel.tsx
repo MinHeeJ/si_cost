@@ -20,8 +20,8 @@ import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 const tabs = [
   ["months", "월별 원가"],
   ["assignments", "투입 인력"],
-  ["causes", "원가 초과 원인"],
   ["simulation", "시뮬레이션"],
+  ["causes", "원가 초과 원인"],
 ] as const;
 const causeNames = {
   EXCESS_MM: "투입이 계획보다 많음",

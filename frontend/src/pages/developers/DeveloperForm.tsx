@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
+import { formHelp } from "../../shared/helpContent";
 import { Decimal } from "../../shared/Decimal";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { SkillsInput } from "../../shared/SkillsInput";
@@ -216,6 +217,7 @@ export function DeveloperForm({
     return (
       <Text
         label={label}
+        help={formHelp.developers[key]}
         key={key}
         data-testid={`developer-${key.toLowerCase()}-input`}
         value={form[key]}
@@ -252,6 +254,7 @@ export function DeveloperForm({
       <CodeSelect
         key={key}
         label={label}
+        help={formHelp.developers[key]}
         value={form[key]}
         onSelectionConfirmed={() => resume.touch(key)}
         options={all}
@@ -268,6 +271,7 @@ export function DeveloperForm({
         open={open}
         permission={{ screen: "UI-02", action: developer ? "UPD" : "REG" }}
         wide
+        fullPage
         noValidate
         title={developer ? "개발자 수정" : "개발자 등록"}
         pending={pending}
@@ -356,6 +360,7 @@ export function DeveloperForm({
               {canRate && (
                 <Decimal
                   label="월 단가 (원/월)"
+                  help={formHelp.developers.monthlyRate}
                   data-testid="developer-rate-input"
                   value={form.monthlyRate}
                   onChange={(v) => change("monthlyRate", v)}
@@ -365,6 +370,7 @@ export function DeveloperForm({
               {canPay && (
                 <Decimal
                   label="월 급여·지급액 (원/월)"
+                  help={formHelp.developers.monthlyPay}
                   data-testid="developer-pay-input"
                   value={form.monthlyPay}
                   onChange={(v) => change("monthlyPay", v)}

@@ -5,6 +5,8 @@ import {
 } from "../businessusersops/UserProjectDialog";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
+import { formHelp } from "../../shared/helpContent";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
 import * as api from "./businessUsersApi";
 
@@ -150,6 +152,7 @@ export function BusinessUserForm({
         <div className="businessusers-form" data-testid="business-user-form">
           <Text
             label="아이디"
+            help={formHelp.users.userId}
             data-testid="business-user-id"
             value={userId}
             onChange={setUserId}
@@ -167,6 +170,7 @@ export function BusinessUserForm({
           />
           <Text
             label="이메일"
+            help={formHelp.users.email}
             data-testid="business-user-email"
             value={email}
             onChange={setEmail}
@@ -174,7 +178,10 @@ export function BusinessUserForm({
             error={fields.email}
           />
           <fieldset disabled={pending || loading}>
-            <legend>역할</legend>
+            <legend>
+              역할{" "}
+              <HelpTooltip label="역할">{formHelp.users.roles}</HelpTooltip>
+            </legend>
             {loading ? (
               <p role="status">역할을 불러오는 중입니다.</p>
             ) : (
@@ -222,7 +229,12 @@ export function BusinessUserForm({
           </p>
           {!user && roles.includes("PM") && (
             <fieldset disabled={pending}>
-              <legend>담당프로젝트</legend>
+              <legend>
+                담당프로젝트{" "}
+                <HelpTooltip label="담당 프로젝트">
+                  {formHelp.users.projects}
+                </HelpTooltip>
+              </legend>
               {projects.map((item) => (
                 <p key={item.project.id}>
                   {item.project.name} ({item.project.id}){" "}

@@ -245,11 +245,11 @@ export function ProjectDetailPanel({
             >
               {[
                 ["basic", "기본 정보"],
+                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
+                ...(registration?.issues ? [["issues", "이슈"]] : []),
                 ["plans", "인원 계획"],
                 ["assignments", "투입 인력"],
                 ["history", "계약 변경 이력"],
-                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
-                ...(registration?.issues ? [["issues", "이슈"]] : []),
               ].map(([key, label]) => (
                 <button
                   type="button"

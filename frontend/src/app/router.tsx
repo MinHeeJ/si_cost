@@ -94,6 +94,8 @@ import type {
 } from "../pages/me/preferencesApi";
 
 type View = keyof ColumnPreferences;
+import "../shared/workspacePresentation.css";
+
 const tableColumns: Record<View, PreferenceColumn[]> = {
   codes: [
     { id: "code", label: "코드", required: true },

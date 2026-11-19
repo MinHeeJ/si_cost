@@ -1,6 +1,30 @@
 import { formatAmount } from "../../shared/format";
 import type { DashboardTrend } from "./dashboardApi";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesOptions } from "../../shared/charts/chartAdapters";
 export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
+  const option = seriesOptions(
+    rows.map((r) => r.month),
+    [
+      { name: "매출", values: rows.map((r) => r.salesAmount) },
+      { name: "매출원가", values: rows.map((r) => r.salesCostAmount) },
+      {
+        name: "ALL 매출목표",
+        values: rows.map((r) => r.salesTargetAmount),
+        dashed: true,
+      },
+    ],
+  );
+  return (
+    <ChartHost
+      label="매출·매출원가 실선과 ALL 매출목표 점선"
+      testId="dashboard-trend-chart"
+      option={option}
+      fallback={<DashboardTrendFallback rows={rows} />}
+    />
+  );
+}
+function DashboardTrendFallback({ rows }: { rows: DashboardTrend[] }) {
   const series = [
     { key: "salesAmount", label: "매출", style: "sales" },
     { key: "salesCostAmount", label: "매출원가", style: "cost" },

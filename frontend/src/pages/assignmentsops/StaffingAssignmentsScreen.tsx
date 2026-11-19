@@ -27,6 +27,7 @@ import { AssignmentCreateForm } from "./AssignmentCreateForm";
 import { AssignmentDrawer, kindName, unitPriceNote } from "./AssignmentDrawer";
 import * as api from "./assignmentActionsApi";
 import "./assignments.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { B5Actions } from "../b5/B5UploadDialog";
 import { AssignmentCandidatesPanel } from "../assignmentcandidatesops/AssignmentCandidatesPanel";
 
@@ -337,9 +338,13 @@ export function AssignmentsContent({
       render: (r) => (
         <span
           className={r.warnings.length ? "sicost-badge sicost-tone-warn" : ""}
-          title={r.warnings.map((w) => w.message).join("\n")}
         >
           {r.warnings.length ? "주의" : "–"}
+          {r.warnings.length > 0 && (
+            <HelpTooltip label="배정 경고">
+              {r.warnings.map((w) => w.message).join(" / ")}
+            </HelpTooltip>
+          )}
         </span>
       ),
     },

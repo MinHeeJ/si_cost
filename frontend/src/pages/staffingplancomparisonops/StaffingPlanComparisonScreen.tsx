@@ -15,6 +15,7 @@ import {
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./staffingComparisonApi";
 import "./staffingComparison.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 export function StaffingPlanComparisonScreen() {
   const [context, setContext] = useState<PeriodContext>();
@@ -225,10 +226,12 @@ export function StaffingComparisonContent({
   }
   return (
     <div data-testid="staffing-comparison-content">
-      <p className="staffing-comparison-note">
-        {year}년 1~12월 계획과 실제·예정입니다. 프로젝트 상세는 전체 계약기간
-        계획과 비교합니다.
-      </p>
+      <HelpTooltip label="인원 계획 대비 투입" chip>
+        계획 MM은 프로젝트 상세 [인원 계획] 탭에서 직무별로 입력한 값입니다.{" "}
+        {year}년 몫 = 계획 MM × ({year}년에 걸친 프로젝트 개월 수 ÷ 전체 개월
+        수). 줄을 누르면 그 프로젝트의 인원 계획이 열립니다. 프로젝트 상세는
+        전체 계약기간 계획과 비교합니다.
+      </HelpTooltip>
       <FilterBar
         testId="comparison-filters"
         resetTestId="comparison-reset"
@@ -309,7 +312,11 @@ export function StaffingComparisonContent({
           rowKey={(r) => `${r.projectId}-${r.jobCode}`}
           loading={loading}
           empty="조회된 자료가 없습니다."
-          emptyAction={<button type="button" onClick={reset}>조건 초기화</button>}
+          emptyAction={
+            <button type="button" onClick={reset}>
+              조건 초기화
+            </button>
+          }
           dense={dense}
           page={page}
           size={size}

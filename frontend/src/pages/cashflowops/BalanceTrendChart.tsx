@@ -1,6 +1,56 @@
 import { formatAmount } from "../../shared/format";
 import type { CashPoint } from "./cashFlowApi";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesOptions } from "../../shared/charts/chartAdapters";
 export function BalanceTrendChart({
+  points,
+  minimum,
+}: {
+  points: CashPoint[];
+  minimum: string;
+}) {
+  const option = seriesOptions(
+    points.map((p) => p.month),
+    [
+      {
+        name: "월말 잔액(실적)",
+        values: points.map((p) => (p.status === "PLANNED" ? null : p.balance)),
+      },
+      {
+        name: "월말 잔액(예정)",
+        dashed: true,
+        color: "#1d4ed8",
+        values: points.map((p, i) =>
+          p.status === "PLANNED" || points[i + 1]?.status === "PLANNED"
+            ? p.balance
+            : null,
+        ),
+      },
+      {
+        name: "최소 운영자금",
+        dashed: true,
+        color: "#b91c1c",
+        values: points.map(() => minimum),
+      },
+    ],
+  );
+  return (
+    <ChartHost
+      className="cash-chart"
+      heading={
+        <>
+          <h2>월말 잔액 흐름</h2>
+          <small>단위: 백만 원 · 부가세 포함</small>
+        </>
+      }
+      label="실적 실선, 예정 점선, 미확인 잔액은 선을 연결하지 않습니다."
+      testId="cash-balance-echart"
+      option={option}
+      fallback={<BalanceTrendFallback points={points} minimum={minimum} />}
+    />
+  );
+}
+function BalanceTrendFallback({
   points,
   minimum,
 }: {
@@ -16,10 +66,15 @@ export function BalanceTrendChart({
   const span = high - low || 1n;
   const y = (value: string) =>
     250 - Number(((BigInt(value) - low) * 22000n) / span) / 100;
-  const ticks = [0, 1, 2, 3, 4].map(i => String(low + (span * BigInt(i)) / 4n));
+  const ticks = [0, 1, 2, 3, 4].map((i) =>
+    String(low + (span * BigInt(i)) / 4n),
+  );
   // Reserve room for the full decimal labels, including negative balances.
-  const left = Math.max(80, ...ticks.map(value => formatAmount(value, "백만원").length * 9 + 20));
-  const x = (i: number) => left + i * (900 - left) / 11;
+  const left = Math.max(
+    80,
+    ...ticks.map((value) => formatAmount(value, "백만원").length * 9 + 20),
+  );
+  const x = (i: number) => left + (i * (900 - left)) / 11;
   return (
     <section className="cash-chart" aria-label="월말 잔액 흐름">
       <div className="operating-toolbar">

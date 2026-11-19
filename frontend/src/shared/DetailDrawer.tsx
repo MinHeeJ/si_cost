@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useOverlay } from "./useOverlay";
 
 export type DetailDrawerProps = {
   /** 접근성 이름. 비우면 제목을 쓴다. */
@@ -38,6 +39,8 @@ export function DetailDrawer({
 }: DetailDrawerProps) {
   const titleId = useId();
   const closeButton = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  const handleKeyDown = useOverlay(panel, !hidden);
   useEffect(() => {
     if (hidden) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -58,6 +61,8 @@ export function DetailDrawer({
         onClick={close}
       />
       <aside
+        ref={panel}
+        tabIndex={-1}
         className="sicost-drawer"
         style={hidden ? { display: "none" } : undefined}
         role="dialog"
@@ -66,6 +71,7 @@ export function DetailDrawer({
         aria-labelledby={label ? undefined : titleId}
         data-testid={testId}
         onKeyDown={(event) => {
+          if (!handleKeyDown(event)) return;
           if (event.key === "Escape") {
             event.stopPropagation();
             close();

@@ -1,0 +1,93 @@
+@keyframes sicost-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-help-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sicost-brand-up {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sicost-screen-host:not([hidden]) > .sicost-screen .sicost-screen-content > * {
+  animation: sicost-page-in 420ms var(--ease) both;
+}
+.sicost-screen-content > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.sicost-screen-content > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.sicost-screen-content > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.sicost-screen-content > :nth-child(5) {
+  animation-delay: 160ms;
+}
+.sicost-drawer {
+  animation: sicost-drawer-in 260ms var(--ease) both;
+}
+.sicost-dialog {
+  animation: sicost-dialog-in 220ms var(--ease) both;
+}
+.sicost-sidebar {
+  transition:
+    width 280ms var(--ease),
+    transform 280ms var(--ease);
+}
+.sicost-star {
+  transition:
+    transform 340ms var(--ease),
+    color 140ms;
+}
+.sicost-star.selected {
+  transform: rotate(-12deg) scale(1.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

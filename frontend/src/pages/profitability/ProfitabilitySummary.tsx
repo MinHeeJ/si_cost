@@ -15,7 +15,7 @@ export function ProfitabilitySummary({
 }) {
   return (
     <section
-      className="profitability-summary"
+      className="profitability-summary sicost-kpi-strip"
       data-testid="profitability-summary"
       aria-label="개인 원가 수익 요약"
     >

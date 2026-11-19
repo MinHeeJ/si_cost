@@ -15,6 +15,7 @@ import {
 } from "../shared/sharedApi";
 import * as api from "./workforceCalendarApi";
 import "./workforceCalendar.css";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 
 const events = [
   "sicost:sales-committed",
@@ -277,7 +278,7 @@ export function WorkforceCalendar({
           : "조회 전용"}
       </p>
       {data && (
-        <div className="workforce-calendar-summary">
+        <div className="workforce-calendar-summary sicost-kpi-strip">
           <button
             data-testid="calendar-available-card"
             onClick={() => {
@@ -564,7 +565,6 @@ export function WorkforceCalendarCell({
   cell: api.CalendarCell;
   personId?: string;
 }) {
-  const [open, setOpen] = useState(false);
   const pre = cell.projects.some((p) => p.preContract);
   const label =
     cell.status === "ASSIGNED"
@@ -577,15 +577,12 @@ export function WorkforceCalendarCell({
       data-testid={`calendar-cell-container-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
       className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}${cell.leavingSoon ? " workforce-calendar-ending" : ""}${cell.overAssigned ? " workforce-calendar-over" : ""}`}
     >
-      <button
-        data-testid={`calendar-cell-${personId.toLowerCase()}-${cell.month}`}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        onBlur={() => setOpen(false)}
+      <HelpTooltip
+        label={`${cell.month} 인력 운영`}
+        ariaLabel={label}
+        trigger={label}
+        testId={`calendar-cell-${personId.toLowerCase()}-${cell.month}`}
       >
-        {label}
-      </button>
-      {open && (
         <div role="note" className="workforce-calendar-help">
           {cell.month} · {statuses[cell.status]} · 전체합{" "}
           {decimal(cell.actualMm)} MM
@@ -608,7 +605,7 @@ export function WorkforceCalendarCell({
             </p>
           ))}
         </div>
-      )}
+      </HelpTooltip>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useOverlay } from "./useOverlay";
 import { usePermission } from "./permission/PermissionBoundary";
 
 export type DialogProps = {
@@ -14,6 +15,7 @@ export type DialogProps = {
   confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
+  fullPage?: boolean;
   testId?: string;
   confirmTestId?: string;
   cancelTestId?: string;
@@ -38,6 +40,7 @@ export function Dialog({
   confirmDisabled = false,
   cancelLabel = "취소",
   wide,
+  fullPage,
   testId,
   confirmTestId,
   cancelTestId,
@@ -54,6 +57,7 @@ export function Dialog({
   );
   const readOnly = permission !== undefined && !granted;
   const ref = useRef<HTMLFormElement>(null);
+  const handleKeyDown = useOverlay(ref, open);
   const inFlight = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const titleId = useId();
@@ -99,8 +103,10 @@ export function Dialog({
     <div
       className="sicost-scrim"
       onKeyDown={(event) => {
+        if (!handleKeyDown(event)) return;
         if (event.key === "Escape" && !pending && !inFlight.current) {
           event.preventDefault();
+          event.stopPropagation();
           onCancel();
         }
         if (event.key === "Tab") {
@@ -126,7 +132,7 @@ export function Dialog({
         noValidate={noValidate}
         ref={ref}
         data-testid={testId}
-        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}`}
+        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}${fullPage ? " sicost-dialog-page" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

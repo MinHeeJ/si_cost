@@ -503,7 +503,10 @@ export function FinancialItemsEditor({
           )}
         </div>
       )}
-      <nav className="financial-tabs" aria-label="재무 항목 탭">
+      <nav
+        className="financial-tabs sicost-segmented-tabs"
+        aria-label="재무 항목 탭"
+      >
         <button
           type="button"
           data-testid="financial-tab-financial"

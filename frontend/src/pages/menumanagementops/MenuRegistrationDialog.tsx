@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ErrorBanner } from "../../shared/Feedback";
 import { implementedBusinessScreenIds } from "../shared/screenCapabilities";
 import * as api from "../menumanagement/menuManagementApi";
@@ -144,9 +145,13 @@ export function MenuRegistrationDialog({
           <option value={2}>서브</option>
         </select>
       </label>
-      <label className="sicost-field">
-        이름
+      <div className="sicost-field">
+        <div className="sicost-field-label">
+          <label htmlFor="menu-registration-name-input">이름</label>
+          <HelpTooltip label="메뉴 이름">50자 이내</HelpTooltip>
+        </div>
         <input
+          id="menu-registration-name-input"
           aria-label="이름"
           data-testid="menu-registration-name"
           disabled={pending}
@@ -159,7 +164,7 @@ export function MenuRegistrationDialog({
             {fields.name}
           </span>
         )}
-      </label>
+      </div>
       {level === 2 && (
         <>
           <label className="sicost-field">
@@ -186,9 +191,16 @@ export function MenuRegistrationDialog({
               </span>
             )}
           </label>
-          <label className="sicost-field">
-            화면번호
+          <div className="sicost-field">
+            <div className="sicost-field-label">
+              <label htmlFor="menu-registration-screen-input">화면번호</label>
+              <HelpTooltip label="화면 번호">
+                개발이 끝난 화면만 고를 수 있습니다. 새 화면이 개발되면 여기에
+                나옵니다.
+              </HelpTooltip>
+            </div>
             <select
+              id="menu-registration-screen-input"
               data-testid="menu-registration-screen"
               disabled={pending || loading}
               aria-invalid={Boolean(fields.screenId)}
@@ -207,7 +219,7 @@ export function MenuRegistrationDialog({
                 {fields.screenId}
               </span>
             )}
-          </label>
+          </div>
           <label>
             <input
               data-testid="menu-registration-pc"

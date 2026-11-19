@@ -85,7 +85,7 @@ export function CandidateSummaryPanel({
         <p role="status">후보 요약을 불러오는 중입니다.</p>
       ) : data ? (
         <>
-          <dl className="candidate-summary-metrics">
+          <dl className="candidate-summary-metrics sicost-kpi-strip">
             {metrics.map(({ key, label, explanation }) => (
               <div
                 className="candidate-summary-metric"

@@ -44,6 +44,14 @@
 .roles-editor [role="tabpanel"] {
   min-width: 0;
 }
+.roles-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+  padding: 14px 24px;
+}
 .roles-editor h3 {
   margin: 0;
 }

@@ -160,7 +160,10 @@ it("신규등록은 별도경로가 아닌 전체폼이며 필터 밖 등록도 
   const form = within(screen.getByTestId("client-form"));
   await userEvent.selectOptions(form.getByLabelText("구분"), "CUST");
   await userEvent.type(form.getByLabelText(/상호/), "새거래처");
-  await userEvent.type(form.getByLabelText(/사업자번호/), "1234567890");
+  await userEvent.type(
+    form.getByLabelText(/사업자번호/, { selector: "input" }),
+    "1234567890",
+  );
   await userEvent.type(form.getByLabelText(/세금계산서 이메일/), "a@b.test");
   await userEvent.click(screen.getByTestId("client-form-save"));
   expect(await screen.findByTestId("client-created-view")).toBeInTheDocument();

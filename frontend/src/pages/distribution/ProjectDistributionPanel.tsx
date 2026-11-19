@@ -10,6 +10,7 @@ import {
 import { DistributionUploadResultDialog } from "./DistributionUploadResultDialog";
 import * as api from "./distributionApi";
 import "./distribution.css";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
 
 export type ProjectDistributionPanelProps = {
   projectId: string;
@@ -214,25 +215,18 @@ export function ProjectDistributionPanel({
               조회 전용입니다. 배분표는 열람·다운로드할 수 있습니다.
             </p>
           )}
-          <nav
-            className="distribution-tabs"
-            aria-label="배분표 조회 단계"
-            role="tablist"
-          >
-            {steps.map((item) => (
-              <button
-                type="button"
-                role="tab"
-                data-testid={`distribution-tab-${item.code.toLowerCase()}`}
-                key={item.code}
-                aria-selected={step === item.code}
-                aria-controls="distribution-stage-panel"
-                onClick={() => setStep(item.code)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <SegmentedTabs
+            label="배분표 조회 단계"
+            testId="distribution-stage-tabs"
+            value={step}
+            onChange={(value) => setStep(value as api.DistributionStep)}
+            tabs={steps.map((item) => ({
+              key: item.code,
+              label: item.label,
+              panelId: "distribution-stage-panel",
+              testId: `distribution-tab-${item.code.toLowerCase()}`,
+            }))}
+          />
           <div className="distribution-toolbar">
             <p>
               계산에 쓰는 단계{" "}
@@ -280,6 +274,7 @@ export function ProjectDistributionPanel({
           <div
             id="distribution-stage-panel"
             role="tabpanel"
+            aria-labelledby={`distribution-stage-panel-tab-${step}`}
             data-testid="distribution-stage-panel"
             aria-label={`${step} 배분표`}
           >

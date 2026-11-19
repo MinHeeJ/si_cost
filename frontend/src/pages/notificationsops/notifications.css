@@ -21,6 +21,9 @@
   max-width: calc(100vw - 32px);
   padding: 0;
   color: var(--text);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 .notification-popover header,
 .notification-popover footer {

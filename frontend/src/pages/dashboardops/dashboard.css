@@ -1,6 +1,6 @@
 .dashboard-content {
   display: grid;
-  gap: 24px;
+  gap: 20px;
   min-width: 0;
 }
 .dashboard-toolbar {
@@ -20,7 +20,11 @@
 .dashboard-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
+  gap: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+  overflow: hidden;
 }
 .dashboard-metric {
   display: flex;
@@ -31,8 +35,11 @@
   min-width: 0;
   padding: 18px 20px;
   text-align: left;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
   background: var(--surface);
 }
 .dashboard-metric > span {
@@ -40,8 +47,8 @@
   color: var(--text-sub);
 }
 .dashboard-metric > strong {
-  font-size: 25px;
-  line-height: 32px;
+  font-size: 28px;
+  line-height: 34px;
   overflow-wrap: anywhere;
 }
 .dashboard-metric small {
@@ -52,8 +59,9 @@
 .dashboard-panel {
   min-width: 0;
   padding: 20px 24px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
   background: var(--surface);
 }
 .dashboard-panel > h2 {

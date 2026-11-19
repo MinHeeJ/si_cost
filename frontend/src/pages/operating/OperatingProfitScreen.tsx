@@ -77,7 +77,11 @@ function Change({
   );
 }
 // SCR-UI-08
-export function OperatingProfitScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function OperatingProfitScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -279,7 +283,7 @@ export function OperatingProfitScreen({ amountUnit, onAmountUnitChange, dense }:
                 <FinancialEmptyReset screenId="UI-08" />
               </div>
             )}
-            <div className="operating-summary">
+            <div className="operating-summary sicost-kpi-strip">
               {data.summary.map((card) => (
                 <article
                   className="operating-card"
@@ -287,7 +291,9 @@ export function OperatingProfitScreen({ amountUnit, onAmountUnitChange, dense }:
                   data-testid={`operating-card-${kebab(card.metric)}`}
                 >
                   <h2>{labels[card.metric] ?? card.metric}</h2>
-                  <strong data-financial-negative={card.amount?.startsWith("-")}>
+                  <strong
+                    data-financial-negative={card.amount?.startsWith("-")}
+                  >
                     {formatAmount(card.amount, unit)} <small>{unit}</small>
                   </strong>
                   {card.metric === "oprtPrftAmt" && (

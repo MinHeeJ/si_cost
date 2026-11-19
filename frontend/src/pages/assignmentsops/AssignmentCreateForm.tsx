@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import {
@@ -259,9 +260,22 @@ export function AssignmentCreateForm({
     key: "startDate" | "endDate" | "contractMm" | "billingUnitPrice",
     type = "text",
   ) => (
-    <label className="sicost-field">
-      {label}
+    <div
+      className="sicost-field"
+      data-testid={`assignment-create-field-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+    >
+      <div className="sicost-field-label">
+        <label htmlFor={`assignment-create-${key}`}>{label}</label>
+        {key === "contractMm" && (
+          <HelpTooltip label="월 MM">
+            기본 1.00(풀 출근). 주 3일이면 0.6, 주 1~2회면 0.25처럼 줄여서
+            금액을 맞춥니다. 특정 달만 다르면 저장한 뒤 [변경 기록] → 월 MM
+            변경으로 그 달부터 바꿉니다.
+          </HelpTooltip>
+        )}
+      </div>
       <input
+        id={`assignment-create-${key}`}
         data-testid={`assignment-create-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         type={type}
         value={form[key] ?? ""}
@@ -269,7 +283,7 @@ export function AssignmentCreateForm({
         aria-invalid={Boolean(fields[key])}
       />
       {fields[key] && <span role="alert">{fields[key]}</span>}
-    </label>
+    </div>
   );
   return (
     <>
@@ -415,9 +429,15 @@ export function AssignmentCreateForm({
               <span role="alert">{fields.developerId}</span>
             )}
           </label>
-          <label className="sicost-field">
-            직무 *
+          <div className="sicost-field">
+            <div className="sicost-field-label">
+              <label htmlFor="assignment-create-job">직무 *</label>
+              <HelpTooltip label="직무">
+                개발자를 고르면 주 직무로 채웁니다.
+              </HelpTooltip>
+            </div>
             <select
+              id="assignment-create-job"
               data-testid="assignment-job"
               disabled={Boolean(submitAssignment)}
               value={form.jobCode}
@@ -434,7 +454,7 @@ export function AssignmentCreateForm({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
           <label className="sicost-field">
             투입구분 *
             <select

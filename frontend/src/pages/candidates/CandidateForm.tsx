@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { formHelp } from "../../shared/helpContent";
 import { Text } from "../../shared/Text";
 import { Decimal } from "../../shared/Decimal";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -298,6 +300,9 @@ export function CandidateForm({
             disabled={pending}
           />
           <div className="sicost-field">
+            <HelpTooltip label="소속 업체">
+              {formHelp.candidates.companyId}
+            </HelpTooltip>
             <ClientSelect
               purpose="VENDOR"
               value={form.companyId ?? ""}
@@ -381,9 +386,13 @@ export function CandidateForm({
               error={fields.homeAreaCode}
             />
           </div>
-          <label className="sicost-field candidate-form-wide">
-            자체 메모
+          <div className="sicost-field candidate-form-wide">
+            <div className="sicost-field-label">
+              <label htmlFor="candidate-memo-input">자체 메모</label>
+              <HelpTooltip label="메모">{formHelp.candidates.memo}</HelpTooltip>
+            </div>
             <textarea
+              id="candidate-memo-input"
               data-testid="candidate-memo"
               value={form.memo ?? ""}
               disabled={pending}
@@ -391,7 +400,7 @@ export function CandidateForm({
               onChange={(e) => change("memo", e.target.value)}
             />
             {fields.memo && <span role="alert">{fields.memo}</span>}
-          </label>
+          </div>
           {error != null && (
             <div className="candidate-form-wide">
               <ErrorBanner

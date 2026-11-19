@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { Text } from "../../shared/Text";
+import { formHelp } from "../../shared/helpContent";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -299,6 +300,7 @@ export function ProjectForm({
       key={key}
       data-testid={`project-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
       label={label}
+      help={formHelp.projects[key]}
       value={form[key]}
       onChange={(v) => change(key, v)}
       error={fields[key]}
@@ -313,6 +315,7 @@ export function ProjectForm({
   ) => (
     <CodeSelect
       label={label}
+      help={formHelp.projects[key]}
       value={form[key]}
       options={options}
       onChange={(v) => change(key, v)}

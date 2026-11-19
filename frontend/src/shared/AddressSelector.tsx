@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiError } from "./api";
 import { ErrorBanner, StatusBadge } from "./Feedback";
+import { HelpTooltip } from "./HelpTooltip";
 import {
   getAreaChildren,
   getAreaPath,
@@ -126,7 +127,16 @@ export function AddressSelector({
     );
     return (
       <div className="sicost-field">
-        <label htmlFor={`${id}-${level}`}>{label}</label>
+        <div className="sicost-field-label">
+          <label htmlFor={`${id}-${level}`}>{label}</label>
+          <HelpTooltip label={label}>
+            {level === "SIDO"
+              ? "추천의 근무지 점수는 시·도가 근무지와 같은지로 봅니다."
+              : level === "SGG"
+                ? "시·도를 먼저 고르면 그 시·도의 시·군·구가 나옵니다. 선택."
+                : "시·군·구를 먼저 고르면 그 시·군·구의 읍·면·동이 나옵니다. 선택."}
+          </HelpTooltip>
+        </div>
         <select
           id={`${id}-${level}`}
           ref={level === "SIDO" ? first : undefined}

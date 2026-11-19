@@ -5,6 +5,7 @@ import { ScreenPermissionContext } from "../../shared/permission/PermissionBound
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
+import { Brand } from "../../shared/Brand";
 import { HeaderActions } from "./HeaderActions";
 import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
@@ -527,14 +528,24 @@ function SharedApplicationContent({
           <Link
             to="/UI-16"
             className="sicost-brand-link"
+            aria-label="프로젝트·원가 관리"
             onClick={(event) => {
               event.preventDefault();
               go("UI-16");
             }}
           >
-            <span className="sicost-logo">SI</span>
-            <strong className="sicost-brand">프로젝트·원가 관리</strong>
+            <Brand />
           </Link>
+          <button
+            type="button"
+            className="sicost-menu-seek"
+            data-testid="workspace-menu-search"
+            onClick={() => setUtility("search")}
+          >
+            <Icon name="search" size={18} />
+            <span>화면 이름이나 화면 ID로 찾기</span>
+            <kbd>Ctrl K</kbd>
+          </button>
           <span className="sicost-header-spacer" />
           <HeaderActions
             onBadges={setNotificationBadges}

@@ -43,6 +43,7 @@ export function SharedScreenFrame({
   if (!menu) return <div role="alert">사용 가능한 메뉴가 없습니다.</div>;
   return (
     <section
+      data-testid={`screen-${screenId.toLowerCase()}`}
       data-screen-id={`SCR-${screenId}`}
       className={`sicost-screen${screenId === "UI-27" ? " sicost-workspace-screen" : ""}`}
     >

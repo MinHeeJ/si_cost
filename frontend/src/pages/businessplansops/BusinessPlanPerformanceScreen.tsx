@@ -68,7 +68,11 @@ const rows: {
 ];
 
 // SCR-UI-18 — the existing router and shared frame retain menu, favorites, tabs and YEAR_CUM.
-export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, dense }: {
+export function BusinessPlanPerformanceScreen({
+  amountUnit,
+  onAmountUnitChange,
+  dense,
+}: {
   amountUnit?: AmountUnit;
   dense?: boolean;
   onAmountUnitChange?(unit: AmountUnit): void;
@@ -190,7 +194,11 @@ export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, 
             data-testid="business-plan-upload"
             className="sicost-primary"
             type="button"
-            disabled={!data || mobile || data.context.year !== Number(data.context.nowMonth.slice(0, 4))}
+            disabled={
+              !data ||
+              mobile ||
+              data.context.year !== Number(data.context.nowMonth.slice(0, 4))
+            }
             onClick={() => {
               setUploadYear(Number(data!.context.nowMonth.slice(0, 4)));
               setUpload(true);
@@ -246,7 +254,7 @@ export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, 
                 {notice}
               </p>
             ))}
-            <div className="business-plan-summary">
+            <div className="business-plan-summary sicost-kpi-strip">
               {data.summary.map((summary) => (
                 <article
                   key={summary.metric}
@@ -283,7 +291,10 @@ export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, 
                   <tr>
                     <th>항목</th>
                     {data.months.map((month, index) => (
-                      <th key={month.month}>
+                      <th
+                        key={month.month}
+                        data-testid={`business-plan-month-header-${month.month}`}
+                      >
                         {index + 1}월<br />
                         <StatusBadge
                           tone={
@@ -334,7 +345,10 @@ export function BusinessPlanPerformanceScreen({ amountUnit, onAmountUnitChange, 
                         return (
                           <td
                             key={month.month}
-                            data-financial-negative={row.amount && value?.startsWith("-")}
+                            data-testid={`business-plan-cell-${row.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}-${month.month}`}
+                            data-financial-negative={
+                              row.amount && value?.startsWith("-")
+                            }
                             className={
                               row.adverse && month[row.adverse] === true
                                 ? "business-plan-adverse"

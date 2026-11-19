@@ -217,7 +217,11 @@ export function BillDetailDrawer({
             </button>
           </div>
           <p>정상 입금 {detail.receipts.normalCount}건</p>
-          <ReceivableDeliveryActions billId={bill.id} onChanged={refresh} onPanelChange={setDeliveryOpen} />
+          <ReceivableDeliveryActions
+            billId={bill.id}
+            onChanged={refresh}
+            onPanelChange={setDeliveryOpen}
+          />
           {protectedBill && (
             <p className="sicost-banner sicost-tone-lock">
               청구월·TK 매출월이 마감·이관·지난해이면 청구 수정은 할 수
@@ -257,7 +261,10 @@ export function BillDetailDrawer({
                   ],
                   ["세금계산서번호", bill.taxInvoiceNo ?? "–"],
                 ].map(([label, value]) => (
-                  <div key={label}>
+                  <div
+                    key={label}
+                    data-testid={`bill-detail-field-${({ 프로젝트: "project", 고객사: "customer", 청구월: "billing-month", 차수: "order", 청구일: "billing-date", "입금 예정일": "due-date", 공급가: "supply-amount", 부가세율: "vat-rate", 부가세: "vat-amount", 합계: "total-amount", 입금합: "receipt-amount", 잔액: "unpaid-amount", 세금계산서번호: "tax-invoice-no" } as Record<string, string>)[label]}`}
+                  >
                     <dt>{label}</dt>
                     <dd>{value}</dd>
                   </div>

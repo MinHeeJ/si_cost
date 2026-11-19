@@ -82,7 +82,7 @@ export function BillSummaryCards({
       ) : (
         !error &&
         data && (
-          <div className="bill-summary-grid">
+          <div className="bill-summary-grid sicost-kpi-strip">
             {(
               [
                 ["청구 총액", data.billed],
@@ -174,7 +174,11 @@ export function BillEstimatePanel({
               : `${formatDecimal(data.supplyAmount)} 원`}
           </p>
           {data.warnings.map((warning, i) => (
-            <p className="sicost-banner sicost-tone-warn" key={i}>
+            <p
+              className="sicost-banner sicost-tone-warn"
+              key={i}
+              data-testid={`bill-estimate-warning-${i}`}
+            >
               {warning}
             </p>
           ))}

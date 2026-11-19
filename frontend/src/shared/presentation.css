@@ -1,0 +1,248 @@
+@import "./motion.css";
+.sicost-section-card {
+  min-width: 0;
+  padding: 22px 24px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sicost-section-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.sicost-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--surface-shadow);
+  overflow: hidden;
+}
+.sicost-kpi-item {
+  padding: 18px 22px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+}
+.sicost-kpi-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.sicost-kpi-label::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.sicost-kpi-value {
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.sicost-kpi-value small {
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 5px;
+  white-space: nowrap;
+}
+.sicost-kpi-comparison {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.sicost-detail-description {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+}
+.sicost-detail-description > * {
+  padding: 12px;
+  margin: 0;
+  border-bottom: 1px solid var(--divider);
+  overflow-wrap: anywhere;
+}
+.sicost-detail-description dt {
+  color: var(--text-sub);
+  background: var(--head-bg);
+}
+.sicost-segmented-tabs {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 6px;
+  background: #eceff3;
+}
+.sicost-segmented-tabs > button {
+  border: 0;
+  background: transparent;
+  color: var(--text-sub);
+  white-space: nowrap;
+  height: 34px;
+  transition:
+    background-color 340ms var(--ease),
+    box-shadow 340ms var(--ease);
+}
+.sicost-segmented-tabs > button[aria-selected="true"] {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 1px 3px #1118271a;
+  font-weight: 700;
+}
+.sicost-form-section {
+  padding: 20px 24px;
+  margin: 0 0 20px;
+  min-width: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--surface-shadow);
+}
+.sicost-form-section > legend {
+  float: left;
+  width: 100%;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 0 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--divider);
+}
+.sicost-form-section-grid {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+.sicost-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--surface);
+  box-shadow: 0 -1px 0 var(--divider);
+  padding: 14px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sicost-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.sicost-help-chip {
+  width: auto;
+  height: 38px;
+  padding: 0 12px;
+  margin: 0;
+  border-radius: 6px;
+  background: #eceff3;
+  font-size: 13px;
+}
+.sicost-help-value {
+  width: auto;
+  height: auto;
+  font: inherit;
+  text-align: inherit;
+  border-bottom: 1px dotted var(--text-sub);
+  border-radius: 0;
+}
+.sicost-help-popup {
+  position: fixed;
+  z-index: 2000;
+  width: max-content;
+  max-width: min(380px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e5e9f0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+  animation: sicost-help-in 140ms var(--ease);
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+.sicost-help-popup::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 14px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: #0f172a;
+}
+.sicost-help-popup[data-above="true"]::before {
+  top: auto;
+  bottom: -5px;
+}
+.sicost-help-popup b,
+.sicost-help-popup strong {
+  color: white;
+}
+.sicost-help-popup a {
+  color: #93c5fd;
+}
+.sicost-field-label {
+  display: inline-flex;
+  align-items: center;
+}
+@container page (max-width: 1000px) {
+  .sicost-form-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .sicost-section-card,
+  .sicost-form-section {
+    padding: 16px;
+  }
+  .sicost-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sicost-kpi-item {
+    padding: 16px;
+  }
+  .sicost-kpi-value {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .sicost-form-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sicost-form-actions {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+}
