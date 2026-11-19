@@ -1,3 +1,5 @@
+import { Pagination } from "./Pagination";
+import { FieldHelp } from "./FieldHelp";
 import {
   Fragment,
   useContext,
@@ -16,6 +18,7 @@ import {
 export type Column<T> = {
   id: string;
   label: ReactNode;
+  help?: ReactNode;
   render(row: T): ReactNode;
   align?: "left" | "right" | "center";
   /** true면 열 이름을 눌러 정렬한다(onSortChange 필요). */
@@ -313,27 +316,14 @@ export function DataTable<T>({
                   ) : (
                     column.label
                   )}
+                  {column.help ?? (typeof column.label === "string" && <FieldHelp label={column.label} kind="B" />)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={span}>
-                  <div
-                    role="status"
-                    className="sicost-empty sicost-loading-state"
-                  >
-                    불러오는 중입니다.
-                    <div className="sicost-loading-lines" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                  </div>
-                </td>
-              </tr>
+              <>{Array.from({length:5},(_,index)=><tr key={index} className="sicost-skeleton-row" aria-hidden="true">{Array.from({length:span},(_,column)=><td key={column}><i /></td>)}</tr>)}<tr className="sicost-sr-only"><td colSpan={span}><span role="status">불러오는 중입니다.</span></td></tr></>
             ) : !rows.length ? (
               <tr>
                 <td colSpan={span}>
@@ -505,66 +495,7 @@ export function DataTable<T>({
         </table>
       </div>
       {page !== undefined && (
-        <nav aria-label="페이지" className="sicost-pagination">
-          <span>
-            {total ? (page - 1) * size + 1 : 0}-{Math.min(page * size, total)} /{" "}
-            {total}건
-          </span>
-          <div>
-            <button
-              type="button"
-              aria-label="처음 페이지"
-              data-testid={`${testId}-first-page`}
-              disabled={loading || page <= 1}
-              onClick={() => onPageChange?.(1)}
-            >
-              «
-            </button>
-            <button
-              type="button"
-              aria-label="이전 페이지"
-              data-testid={`${testId}-previous-page`}
-              disabled={loading || page <= 1}
-              onClick={() => onPageChange?.(page - 1)}
-            >
-              ‹
-            </button>
-            <span aria-current="page">{page}</span>
-            <button
-              type="button"
-              aria-label="다음 페이지"
-              data-testid={`${testId}-next-page`}
-              disabled={loading || page >= pages}
-              onClick={() => onPageChange?.(page + 1)}
-            >
-              ›
-            </button>
-            <button
-              type="button"
-              aria-label="마지막 페이지"
-              data-testid={`${testId}-last-page`}
-              disabled={loading || page >= pages}
-              onClick={() => onPageChange?.(pages)}
-            >
-              »
-            </button>
-          </div>
-          <select
-            aria-label="한 화면 건수"
-            data-testid={`${testId}-page-size`}
-            value={size}
-            disabled={loading}
-            onChange={(event) =>
-              onSizeChange?.(Number(event.target.value) as 20 | 50 | 100)
-            }
-          >
-            {[20, 50, 100].map((value) => (
-              <option key={value} value={value}>
-                {value}건씩
-              </option>
-            ))}
-          </select>
-        </nav>
+        <Pagination page={page} size={size} total={total} loading={loading} onPageChange={onPageChange} onSizeChange={onSizeChange} testId={testId} />
       )}
     </div>
   );

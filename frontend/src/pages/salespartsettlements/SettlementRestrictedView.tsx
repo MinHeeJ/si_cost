@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
@@ -209,7 +210,7 @@ export function SettlementRestrictedView({
                   <thead>
                     <tr>
                       <th>월</th>
-                      <th>상태</th>
+                      <th>상태<FieldHelp label="상태" kind="B" /></th>
                       <th>인원</th>
                       <th>흑자 인원</th>
                       <th>적자 인원</th>

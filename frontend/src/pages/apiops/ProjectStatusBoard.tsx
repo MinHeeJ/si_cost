@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -163,11 +165,8 @@ export function ProjectStatusBoard({
               <li
                 data-testid={`status-reason-${Array.from(row.projectId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${index}`}
                 key={`${reason.kind}-${index}`}
-                title={`${reason.formula} · 기준 ${reason.threshold}`}
               >
-                <StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>
-                  {reason.kind} {reason.value}
-                </StatusBadge>
+                <HelpTooltip label={`${reason.kind} ${reason.value}`} trigger={<StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>{reason.kind} {reason.value}</StatusBadge>}>{reason.formula} · 기준 {reason.threshold}</HelpTooltip>
               </li>
             ))}
           </ul>
@@ -429,7 +428,7 @@ export function ProjectStatusBoard({
         </label>
         <label className="sicost-field">
           영업 파트
-          <select
+          <FieldHelp label="영업 파트" /><select
             data-testid="status-part"
             value={String(draft.partId ?? "")}
             onChange={(e) => change("partId", e.target.value)}

@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -465,7 +466,7 @@ export function WithdrawalContent({ year }: { year: number }) {
         </label>
         <label className="sicost-field">
           직무
-          <select
+          <FieldHelp label="직무" /><select
             data-testid="withdrawal-job"
             value={draft.job}
             onChange={(e) => setDraft((v) => ({ ...v, job: e.target.value }))}

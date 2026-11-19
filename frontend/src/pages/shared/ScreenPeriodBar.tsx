@@ -361,52 +361,8 @@ export function ScreenPeriodBar({
       >
         {value.type === "YEAR_CUM" ? (
           <>
-            <label>
-              누계 연도{" "}
-              <select
-                aria-label="누계 연도"
-                value={value.year}
-                disabled={pending || unavailable}
-                onChange={(event) =>
-                  void save(
-                    cumulative(
-                      event.target.value,
-                      ["UI-07", "UI-08", "UI-09", "UI-18"].includes(screenId)
-                        ? event.target.value === thisYear
-                          ? context.currentMonth
-                          : `${event.target.value}-12`
-                        : value.month,
-                      context,
-                    ),
-                  )
-                }
-              >
-                {Array.from(
-                  {
-                    length: Math.max(
-                      0,
-                      Number(range.max) - Number(range.min) + 1,
-                    ),
-                  },
-                  (_, index) => String(Number(range.min) + index),
-                ).map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-            <PeriodSelector
-              type="YEAR_MONTH"
-              label="누계 월"
-              value={value.month}
-              min={`${value.year}-01`}
-              max={
-                value.year === thisYear
-                  ? context.currentMonth
-                  : `${value.year}-12`
-              }
-              disabled={pending || unavailable}
-              onChange={(month) => void save({ ...value, month })}
-            />
+            <PeriodSelector type="YEAR" label="누계 연도" value={value.year} min={range.min} max={range.max} disabled={pending || unavailable} onChange={year=>void save(cumulative(year,year===thisYear?context.currentMonth:`${year}-12`,context))} />
+            <label className="sicost-cutoff-month">누계 기준월 <select aria-label="누계 월" disabled={pending || unavailable} value={value.month} onChange={e=>void save({...value,month:e.target.value})}>{Array.from({length:value.year===thisYear?Number(context.currentMonth.slice(5)):12},(_,i)=>`${value.year}-${String(i+1).padStart(2,"0")}`).map(month=><option key={month} value={month}>{Number(month.slice(5))}월</option>)}</select></label>
             <span>1~{Number(value.month.slice(5))}월 누계</span>
           </>
         ) : (

@@ -1,3 +1,4 @@
+import { FinancialOverview } from "../../shared/FinancialOverview";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
@@ -353,40 +354,7 @@ export function ProfitStructureScreen({
             data-testid="structure-panel"
             aria-label={tabs.find(([v]) => v === aggregation)?.[1]}
           >
-            <div
-              className="financial-basis-strip"
-              aria-label="조회 기준과 자료 상태"
-            >
-              <p className="profit-structure-muted">
-                {data.context.month} 기준 · 회사 전체 · 읽기 전용 · 조회{" "}
-                {formatDateTime(data.context.snapshotAt)}
-              </p>
-              {data.context.year <
-                Number(data.context.nowMonth.slice(0, 4)) && (
-                <StatusBadge tone="lock">지난 해·읽기 전용</StatusBadge>
-              )}
-              {last && (
-                <p>
-                  {bucketLabel(last, quarterly)}{" "}
-                  <StatusBadge tone={last.provisional ? "warn" : "lock"}>
-                    {last.provisional ? "잠정 · 작업중" : "확정/이관"}
-                  </StatusBadge>
-                  {last.completeness.estimated.length > 0 && (
-                    <StatusBadge tone="info">예정 포함</StatusBadge>
-                  )}
-                </p>
-              )}
-              {data.notices.map((notice, index) => (
-                <p
-                  className="profit-structure-banner"
-                  role="note"
-                  key={index}
-                  data-testid={`structure-notice-${index}`}
-                >
-                  {notice}
-                </p>
-              ))}
-            </div>
+            <FinancialOverview context={data.context} months={data.months} provisional={last?.provisional ?? data.months.some(m=>m.provisional)} notices={data.notices} />
             {!data.months.some(
               (m) => m.sourceKind !== "MISSING" && m.sourceKind !== "FUTURE",
             ) && (

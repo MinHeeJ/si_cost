@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -400,7 +401,7 @@ export function ExcelUploadDialog<Id extends string | number = number>({
                 <thead>
                   <tr>
                     <th>원래 행</th>
-                    <th>관리번호</th>
+                    <th>관리번호<FieldHelp label="관리번호" kind="B" /></th>
                     {applied && <th>개발자 ID</th>}
                   </tr>
                 </thead>

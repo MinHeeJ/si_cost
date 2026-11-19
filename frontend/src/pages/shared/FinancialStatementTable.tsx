@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { StatusBadge } from "../../shared/Feedback";
 import { formatAmount, formatRate, type AmountUnit } from "../../shared/format";
 
@@ -164,6 +166,7 @@ export function FinancialStatementTable({
   months,
   rows,
   month,
+  currentMonth = month,
   unit,
   showPreviousYear,
   provisional,
@@ -173,6 +176,7 @@ export function FinancialStatementTable({
   months: StatementMonth[];
   rows: StatementRow[];
   month: string;
+  currentMonth?: string;
   unit: AmountUnit;
   showPreviousYear: boolean;
   provisional: boolean;
@@ -188,11 +192,13 @@ export function FinancialStatementTable({
             {months.map((item) => (
               <th
                 scope="col"
+                aria-label={`${Number(item.month.slice(5))}월 ${status(item.sourceKind) ?? ""}`}
                 key={item.month}
-                className={item.month === month ? "operating-current" : ""}
+                className={item.month === currentMonth ? "operating-current" : ""}
               >
                 {Number(item.month.slice(5))}월{" "}
-                {status(item.sourceKind) && (
+                {item.completeness.issues.length>0 && <HelpTooltip label={`${Number(item.month.slice(5))}월 확인 사항`} trigger={<span aria-hidden="true">⚠</span>}>{item.completeness.issues.map((issue,i)=><p key={i}>{issue.reason}</p>)}</HelpTooltip>}
+                {item.month === currentMonth && status(item.sourceKind) && (
                   <StatusBadge
                     tone={
                       item.sourceKind === "CALCULATED"
@@ -227,7 +233,7 @@ export function FinancialStatementTable({
             >
               <th scope="row">
                 {row.depth > 0 && "└"}
-                {row.label}
+                {row.label}<FieldHelp label={row.label} kind="B" />
               </th>
               {row.monthlyValues.map((value, index) => (
                 <td

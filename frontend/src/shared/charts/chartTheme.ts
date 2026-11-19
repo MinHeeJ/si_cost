@@ -26,7 +26,7 @@ export const chartTheme = {
   tooltip: {
     trigger: "axis",
     backgroundColor: "#fff",
-    borderColor: "#D5DAE1",
+    borderColor: "#E7EAEE",
     textStyle: { color: "#111827" },
     extraCssText: "border-radius:8px;box-shadow:0 6px 20px rgba(17,24,39,.12);",
   },

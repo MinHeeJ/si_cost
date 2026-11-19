@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -236,8 +238,8 @@ export function MenusScreen({
             <thead>
               <tr>
                 <th>손잡이</th>
-                <th>메뉴이름</th>
-                <th>화면번호</th>
+                <th>메뉴이름<FieldHelp label="메뉴이름" kind="B" /></th>
+                <th>화면번호<FieldHelp label="화면번호" kind="B" /></th>
                 <th>형제 내 순서</th>
                 <th>사용</th>
                 <th>PC전용</th>
@@ -467,9 +469,7 @@ export function MenusScreen({
                       </td>
                       <td>
                         {protectedRow && (
-                          <span className="sicost-badge sicost-tone-lock">
-                            잠금
-                          </span>
+                          <HelpTooltip label="시스템 묶음 잠금" trigger={<span className="sicost-badge sicost-tone-lock">잠금</span>}>시스템 묶음: 끌 수 없고, 안의 메뉴를 밖으로 옮길 수 없습니다.</HelpTooltip>
                         )}
                         {row.level === 2 && !row.use && (
                           <span className="sicost-badge sicost-tone-warn">

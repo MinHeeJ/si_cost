@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import {
   useCallback,
   useEffect,
@@ -417,7 +418,7 @@ export function ClientsScreen({
           >
             <label className="sicost-field">
               구분
-              <select
+              <FieldHelp label="구분" /><select
                 data-testid="clients-filter-type"
                 value={draft.type}
                 onChange={(event) =>

@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
 import { formatAmount, formatMm, type AmountUnit } from "../../shared/format";
@@ -112,7 +113,7 @@ export function SettlementTrendPanel({
               <thead>
                 <tr>
                   <th>이름</th>
-                  <th>구분</th>
+                  <th>구분<FieldHelp label="구분" kind="B" /></th>
                   {data.months.map((m) => (
                     <th key={m}>{m.slice(5)}월</th>
                   ))}

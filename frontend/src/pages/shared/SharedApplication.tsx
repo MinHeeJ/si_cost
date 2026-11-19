@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, Toast } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
 import { Brand } from "../../shared/Brand";
 import { HeaderActions } from "./HeaderActions";
@@ -110,6 +110,8 @@ function SharedApplicationContent({
       null,
     ),
     [userMenu, setUserMenu] = useState(false);
+  const [favoriteNotice, setFavoriteNotice] = useState("");
+  useEffect(() => { if (!favoriteNotice) return; const timer = setTimeout(() => setFavoriteNotice(""), 3500); return () => clearTimeout(timer); }, [favoriteNotice]);
   const userButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false),
     recentActivation = useRef(""),
@@ -427,12 +429,13 @@ function SharedApplicationContent({
       setPreferenceError("즐겨찾기는 최대 10개까지 등록할 수 있습니다.");
       return;
     }
+    const adding = !favorites.includes(id);
     void savePreference(
       "FAV",
       favorites.includes(id)
         ? favorites.filter((item) => item !== id)
         : [...favorites, id],
-    );
+    ).then(ok => { if (ok && adding) setFavoriteNotice("즐겨찾기에 추가했습니다."); });
   };
   const fold = () => {
     const next = !folded;
@@ -514,6 +517,7 @@ function SharedApplicationContent({
       }}
     >
       <div className="sicost-app" data-screen-id="SCR-UI">
+        {favoriteNotice && <Toast key={favoriteNotice} message={favoriteNotice} />}
         <header className="sicost-header">
           <button
             type="button"
@@ -728,7 +732,6 @@ function SharedApplicationContent({
                       >
                         <span
                           className="sicost-menu-icon"
-                          title={parent.icon ?? undefined}
                           data-icon={parent.icon ?? undefined}
                         >
                           <Icon name={parent.icon} size={20} />
@@ -805,7 +808,7 @@ function SharedApplicationContent({
               {tabs
                 .filter((id) => byScreen(id))
                 .map((id) => (
-                  <div key={id} className={id === active ? "active" : ""}>
+                  <div key={id} className={`sicost-work-tab${id === active ? " active" : ""}`}>
                     <button onClick={() => go(id)}>
                       {isDirty?.(id) && "● "}
                       {byScreen(id)?.name}

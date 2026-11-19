@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
@@ -161,7 +162,7 @@ export function SettlementCardInput({
       <div className="settlement-card">
         {current.canSaveCard ? (
           <label>
-            법인카드 사용액{" "}
+            법인카드 사용액<FieldHelp label="법인카드 사용액" />{" "}
             <input
               data-testid="settlement-card-input"
               value={draft}

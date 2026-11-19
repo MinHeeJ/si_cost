@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
@@ -33,16 +35,16 @@ const financialColumns = [
   ["contractAmount", "현재 계약금액"],
   ["planMm", "계획 MM"],
   ["actualMm", "실제 MM"],
-  ["cumulativeRevenue", "누적 매출 ⓘ"],
-  ["cumulativeCost", "누적 원가 ⓘ"],
+  ["cumulativeRevenue", "누적 매출"],
+  ["cumulativeCost", "누적 원가"],
   ["cumulativeProfit", "이익"],
   ["cumulativeMargin", "누적 마진율"],
-  ["forecastMargin", "예상 최종 마진율 ⓘ"],
+  ["forecastMargin", "예상 최종 마진율"],
   ["monthlyMargin", "월간 마진율"],
   ["targetMargin", "목표 마진율"],
   ["targetGap", "목표 대비 (%p)"],
   ["budgetAmount", "예산"],
-  ["budgetUsage", "예산 소진율 ⓘ"],
+  ["budgetUsage", "예산 소진율"],
   ["pricePerMm", "MM당 단가"],
   ["costPerMm", "MM당 원가"],
   ["profitPerMm", "MM당 이익"],
@@ -329,14 +331,11 @@ export function ProjectCostAnalysis({
             : row.alerts.map((alert) => (
                 <span
                   data-testid={`project-cost-alert-${Array.from(`${row.projectId}-${alert.kind}`, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                  title={`${alert.comparison} · ${alert.actualNumerator} / ${alert.actualDenominator} · 기준 ${alert.threshold}`}
                   key={alert.kind}
                 >
-                  <StatusBadge
-                    tone={alert.kind === "BUDGET_OVER" ? "bad" : "warn"}
-                  >
-                    {alert.message}
-                  </StatusBadge>
+                  <HelpTooltip label={alert.message} trigger={<StatusBadge tone={alert.kind === "BUDGET_OVER" ? "bad" : "warn"}>{alert.message}</StatusBadge>}>
+                    {alert.comparison} · {alert.actualNumerator} / {alert.actualDenominator} · 기준 {alert.threshold}
+                  </HelpTooltip>
                 </span>
               ))}
           {row.primaryCause && <small>{row.primaryCause}</small>}
@@ -477,7 +476,7 @@ export function ProjectCostAnalysis({
         </label>
         <label className="sicost-field">
           상태
-          <select
+          <FieldHelp label="상태" /><select
             data-testid="project-cost-status"
             value={String(draft.status ?? "")}
             onChange={(e) => change("status", e.target.value)}

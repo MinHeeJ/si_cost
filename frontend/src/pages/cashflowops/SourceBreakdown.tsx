@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
@@ -112,7 +113,7 @@ export function SourceBreakdown({
                       "계산근거 / 미확인",
                       "원천",
                     ].map((label) => (
-                      <th key={label}>{label}</th>
+                      <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                     ))}
                   </tr>
                 </thead>

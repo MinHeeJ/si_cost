@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { formatDecimal } from "../../shared/format";
 import { StatusBadge } from "../../shared/Feedback";
 import type { AmountUnit, ProjectDistributionData } from "./distributionApi";
@@ -41,9 +42,9 @@ export function MonthlyMatrixTable({
         <thead>
           <tr>
             <th scope="col">사람/항목</th>
-            <th scope="col">관리번호</th>
+            <th scope="col">관리번호<FieldHelp label="관리번호" kind="B" /></th>
             <th scope="col">이름/항목명</th>
-            <th scope="col">직무</th>
+            <th scope="col">직무<FieldHelp label="직무" kind="B" /></th>
             {data.months.map((month) => (
               <th
                 data-testid={`distribution-month-header-${month}`}

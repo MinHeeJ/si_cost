@@ -1,3 +1,4 @@
+import { FieldHelp } from "./FieldHelp";
 import type { HTMLAttributes, ReactNode } from "react";
 
 export function SectionCard({
@@ -63,7 +64,7 @@ export function KpiItem({
   return (
     <div className="sicost-kpi-item">
       <div className="sicost-kpi-label">
-        {label}
+        {label}{typeof label === "string" && <FieldHelp label={label} kind="B" />}
         {status}
       </div>
       <strong className="sicost-kpi-value">

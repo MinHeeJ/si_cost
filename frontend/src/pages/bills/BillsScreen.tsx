@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
@@ -709,7 +710,7 @@ function BillsContent({
             });
           }}
         >
-          <label htmlFor="bill-status-filter">상태</label>
+          <label htmlFor="bill-status-filter">상태<FieldHelp label="상태" /></label>
           <select
             id="bill-status-filter"
             data-testid="bill-status-filter"

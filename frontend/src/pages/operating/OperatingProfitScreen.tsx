@@ -1,3 +1,4 @@
+import { FinancialOverview } from "../../shared/FinancialOverview";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
@@ -215,18 +216,7 @@ export function OperatingProfitScreen({
             >
               전년 손익 업로드
             </button>
-            <label>
-              단위{" "}
-              <select
-                data-testid="operating-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
+
             <button
               type="button"
               data-testid="operating-export"
@@ -252,40 +242,18 @@ export function OperatingProfitScreen({
         )}
         {data && (
           <>
-            <div
-              className="financial-basis-strip"
-              aria-label="조회 기준과 자료 상태"
-            >
-              <p className="operating-muted">
-                {data.context.month} 기준 · 부가세 제외 · 회사 전체 · 읽기 전용
-                · 조회 {formatDateTime(data.context.snapshotAt)}
-              </p>
-              {data.context.year <
-                Number(data.context.nowMonth.slice(0, 4)) && (
-                <StatusBadge tone="lock">지난 해·읽기 전용</StatusBadge>
-              )}
-              {data.cumulativeProvisional && (
-                <div className="operating-banner" role="note">
-                  <StatusBadge tone="warn">잠정</StatusBadge> 미마감 월이
-                  포함되어 있습니다. 원천 변경 시 다시 계산합니다.
-                </div>
-              )}
-              {data.completeness.estimated.length > 0 && (
-                <div className="operating-banner info">
-                  <StatusBadge tone="info">예정 포함</StatusBadge>{" "}
-                  {data.completeness.estimated.join(" · ")}
-                </div>
-              )}
-              {data.notices.map((notice, index) => (
-                <p
-                  className="operating-muted"
-                  key={index}
-                  data-testid={`operating-notice-${index}`}
-                >
-                  {notice}
-                </p>
-              ))}
-            </div>
+            <FinancialOverview context={data.context} months={data.months} provisional={data.cumulativeProvisional} notices={data.notices} unitControl={<label>
+              단위{" "}
+              <select
+                data-testid="operating-unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value as AmountUnit)}
+              >
+                <option>원</option>
+                <option>천원</option>
+                <option>백만원</option>
+              </select>
+            </label>} />
             {data.completeness.availableMonthCount === 0 && (
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
@@ -315,6 +283,7 @@ export function OperatingProfitScreen({
               ))}
             </KpiStrip>
             <FinancialStatementTable
+              currentMonth={data.context.nowMonth}
               months={data.months}
               rows={data.rows}
               month={data.context.month}

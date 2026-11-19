@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -180,7 +181,7 @@ export function BillCopyDialog({
             ] as const
           ).map(([key, label, type]) => (
             <div className="sicost-field" key={key}>
-              <label htmlFor={`bill-copy-${key}`}>{label}</label>
+              <label htmlFor={`bill-copy-${key}`}>{label}<FieldHelp label={label} /></label>
               <input
                 id={`bill-copy-${key}`}
                 data-testid={`bill-copy-${key.replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`)}`}

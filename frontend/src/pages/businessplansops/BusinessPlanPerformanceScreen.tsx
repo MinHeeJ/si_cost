@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { FinancialOverview } from "../../shared/FinancialOverview";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -238,32 +240,7 @@ export function BusinessPlanPerformanceScreen({
         )}
         {data && (
           <>
-            <div
-              className="financial-basis-strip"
-              aria-label="조회 기준과 자료 상태"
-            >
-              <p className="business-plan-context">
-                {data.context.year}년 1~{data.context.month.slice(5)}월 · 회사
-                전체 · 읽기 전용 · 조회{" "}
-                {formatDateTime(data.context.snapshotAt)}
-              </p>
-              {data.context.year !==
-                Number(data.context.nowMonth.slice(0, 4)) && (
-                <p className="business-plan-warning">
-                  지난 해 실적·목표는 읽기 전용입니다.
-                </p>
-              )}
-              {data.notices.map((notice, index) => (
-                <p
-                  className="business-plan-warning"
-                  role="note"
-                  key={index}
-                  data-testid={`business-plan-notice-${index}`}
-                >
-                  {notice}
-                </p>
-              ))}
-            </div>
+            <FinancialOverview comparison="사업계획 목표·실적" context={data.context} months={data.months.map(m=>m.actual)} provisional={data.months.some(m=>m.actual.provisional)} notices={data.notices} />
             <KpiStrip className="business-plan-summary">
               {data.summary.map((summary) => (
                 <article
@@ -336,7 +313,7 @@ export function BusinessPlanPerformanceScreen({
                       data-testid={`business-plan-row-${row.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
                     >
                       <th scope="row">
-                        {row.label}{" "}
+                        {row.label}<FieldHelp label={row.label} kind="B" />{" "}
                         {row.amount && (
                           <span
                             tabIndex={0}

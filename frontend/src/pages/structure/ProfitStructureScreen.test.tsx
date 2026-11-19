@@ -247,7 +247,7 @@ it("shows adverse comparison and provisional/estimated states with shared tones"
       /전월/,
     ),
   ).toHaveClass("adverse");
-  expect(screen.getByText("잠정 · 작업중")).toBeInTheDocument();
+  expect(screen.getAllByText("잠정").length).toBeGreaterThan(0);
   expect(screen.getByText("예정 포함")).toBeInTheDocument();
 });
 it("switches aggregation and preserves it on period change", async () => {

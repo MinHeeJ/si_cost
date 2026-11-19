@@ -77,7 +77,7 @@ describe("v22 presentation contracts", () => {
         서버에서 받은 기준을 표시합니다.
       </HelpTooltip>,
     );
-    const trigger = screen.getByRole("button", { name: "계산 기준" });
+    const trigger = screen.getByRole("button", { name: "계산 기준 도움말" });
     await userEvent.tab();
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "서버에서 받은 기준",
@@ -124,15 +124,15 @@ describe("v22 presentation contracts", () => {
     const user = userEvent.setup();
     await user.tab();
     expect(
-      screen.getByRole("dialog", { name: "원천 안내" }),
+      screen.getByRole("dialog", { name: "원천 안내 도움말" }),
     ).toBeInTheDocument();
     await user.tab();
     expect(screen.getByRole("link", { name: "손익 원천" })).toHaveFocus();
     await user.keyboard("{Escape}");
     expect(
-      screen.queryByRole("dialog", { name: "원천 안내" }),
+      screen.queryByRole("dialog", { name: "원천 안내 도움말" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "원천 안내" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "원천 안내 도움말" })).toHaveFocus();
   });
   it("retains the accessible original chart when SVG chart initialization is unavailable", () => {
     render(
@@ -215,4 +215,31 @@ describe("v22 presentation contracts", () => {
     ).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
   });
+});
+
+it("pins only one help portal and explains disabled controls without enabling their action", async () => {
+  let writes = 0;
+  render(<><HelpTooltip label="첫 항목">첫 도움말</HelpTooltip><HelpTooltip label="잠긴 달" disabledTarget={<button disabled onClick={() => writes++}>12월</button>}>아직 열리지 않은 달입니다.</HelpTooltip><button>바깥</button></>);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", {name:"첫 항목 도움말"}));
+  fireEvent.pointerLeave(screen.getByRole("button", {name:"첫 항목 도움말"}).parentElement!);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("첫 도움말");
+  await user.click(screen.getByRole("button", {name:"잠긴 달 도움말"}));
+  expect(screen.getAllByRole("tooltip")).toHaveLength(1);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("아직 열리지 않은 달");
+  expect(screen.getByRole("tooltip").parentElement).toBe(document.body);
+  expect(screen.getByRole("button", {name:"12월"})).toBeDisabled();
+  expect(writes).toBe(0);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", {name:"잠긴 달 도움말"})).toHaveFocus();
+  await user.click(screen.getByRole("button", {name:"첫 항목 도움말"}));
+  await user.click(screen.getByRole("button", {name:"바깥"}));
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+});
+it("shows exact stacked totals and preserves unknown values rather than replacing them with zero", () => {
+  const option = seriesChartOptions({categories:["2026-01","2026-02"],series:[{name:"원가",stack:"cost",type:"bar",values:["9007199254740993.001",null]},{name:"조정",stack:"cost",type:"bar",values:["-0.002","0"]}],formatValue:value=>value??"미확인"});
+  const tooltip=option.tooltip as {formatter(p:unknown):HTMLElement};
+  expect(tooltip.formatter([{dataIndex:0}])).toHaveTextContent("합계 9007199254740992.999");
+  expect(tooltip.formatter([{dataIndex:1}])).toHaveTextContent("합계 미확인");
 });

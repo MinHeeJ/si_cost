@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
@@ -226,12 +228,8 @@ export function RateRenegotiationsScreen({
         )
           ? "left"
           : "right",
-        label: (
-          <span title={help[id]}>
-            {label}
-            {help[id] && " ⓘ"}
-          </span>
-        ),
+        label,
+        help: help[id] ? <HelpTooltip label={label} iconOnly>{help[id]}</HelpTooltip> : undefined,
         render: (row) => {
           const marker = row.assignmentId
             .toLowerCase()
@@ -298,15 +296,13 @@ export function RateRenegotiationsScreen({
             );
           if (id === "contractMm")
             return (
-              <span
-                title={`계약MM k=${row.contractMm} / 기준월 월MM m=${row.monthlyMm}`}
-              >
-                <ProfitabilityValue value={row.contractMm} kind="mm" />
-              </span>
+              <HelpTooltip label="계약 MM" trigger={<ProfitabilityValue value={row.contractMm} kind="mm" />}>
+                계약 MM {row.contractMm} / 기준월 월 MM {row.monthlyMm}
+              </HelpTooltip>
             );
           const value = row[id as keyof api.RenegotiationRow] as string | null;
           return (
-            <span title={row.issues?.map((i) => i.message).join(" · ")}>
+            <span>
               <ProfitabilityValue
                 value={value}
                 kind={
@@ -316,6 +312,7 @@ export function RateRenegotiationsScreen({
                 }
                 unit={unit}
               />
+              {Boolean(row.issues?.length) && <HelpTooltip label={`${label} 확인사항`} iconOnly>{row.issues?.map(i => i.message).join(" · ")}</HelpTooltip>}
             </span>
           );
         },
@@ -484,7 +481,7 @@ export function RateRenegotiationsScreen({
         </label>
         <label>
           이익률
-          <select
+          <FieldHelp label="이익률" /><select
             data-testid="renegotiation-margin"
             value={draft.marginBelow}
             onChange={(e) =>

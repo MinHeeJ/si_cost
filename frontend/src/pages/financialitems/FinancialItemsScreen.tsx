@@ -1,3 +1,4 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -443,6 +444,7 @@ export function FinancialItemsEditor({
             다음 해 ›
           </button>
           <strong>입력 현황</strong>
+          <HelpTooltip label="안내">달을 누르면 그 달 항목으로 바뀝니다. 헤더의 기준 연월도 함께 바뀝니다. 아래 [저장]은 두 탭을 함께 저장합니다.</HelpTooltip>
           <span>저장된 재무 항목만 집계합니다</span>
         </div>
         <div className="financial-month-strip">
@@ -455,8 +457,7 @@ export function FinancialItemsEditor({
               (row) => row.month === value,
             );
             const future = value > editor.today.slice(0, 7);
-            return (
-              <button
+            const chip = <button
                 type="button"
                 key={value}
                 data-testid={`financial-month-${value}`}
@@ -474,8 +475,8 @@ export function FinancialItemsEditor({
                       ? `${status.closeStatus === "CLOSE" ? "마감" : "작업중"} · ${status.itemCount ?? "–"}건`
                       : "조회 중"}
                 </small>
-              </button>
-            );
+              </button>;
+            return future || status?.selectable === false ? <HelpTooltip key={value} label={`${Number(value.slice(5))}월`} disabledTarget={chip}>아직 열리지 않은 달입니다. 그 달이 되면 매달 반복 항목이 자동으로 채워집니다.</HelpTooltip> : <span key={value}>{chip}</span>;
           })}
         </div>
         {Boolean(statusError) && (

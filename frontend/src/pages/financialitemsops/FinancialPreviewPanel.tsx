@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -228,7 +229,7 @@ export function FinancialPreviewPanel({
               <thead>
                 <tr>
                   <th>월</th>
-                  <th>상태</th>
+                  <th>상태<FieldHelp label="상태" kind="B" /></th>
                   <th>월할액 ({unit})</th>
                   <th>확인상태</th>
                 </tr>

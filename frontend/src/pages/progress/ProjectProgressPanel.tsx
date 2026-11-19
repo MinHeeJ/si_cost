@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -307,7 +308,7 @@ export function ProjectProgressPanel({
                 <tr>
                   {["단계", "비중", "예정 기간", "완료일", "상태", "작업"].map(
                     (label) => (
-                      <th key={label}>{label}</th>
+                      <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                     ),
                   )}
                 </tr>

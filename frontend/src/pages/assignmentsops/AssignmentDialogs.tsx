@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -156,7 +157,7 @@ export function ReasonFields({
       </label>
       <label className="sicost-field">
         메모
-        <textarea
+        <FieldHelp label="메모" /><textarea
           data-testid="assignment-memo"
           disabled={disabled}
           value={memo}
@@ -259,7 +260,7 @@ export function AssignmentChangeDialog({
     set: (v: string) => void,
   ) => (
     <label className="sicost-field">
-      {label}
+      {label}<FieldHelp label={label} />
       <input
         data-testid={`assignment-change-${name}`}
         type={kind}

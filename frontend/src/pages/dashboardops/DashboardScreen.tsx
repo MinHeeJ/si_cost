@@ -1,3 +1,4 @@
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -128,6 +129,7 @@ export function DashboardScreen({
     { menus } = useSharedScreen("UI-16");
   const money = (value: string | null) => formatAmount(value, amountUnit);
   const closeProgress = data?.closeProgress;
+  const requestPending = useRef(false), lastReceived = useRef(0);
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -142,30 +144,35 @@ export function DashboardScreen({
     const changed = () => setRevision((n) => n + 1),
       resize = () => setMobile(window.innerWidth < 768);
     window.addEventListener("sicost:screen-period-changed", period);
-    window.addEventListener("focus", changed);
+    const focus = () => { if (document.visibilityState === "visible" && !requestPending.current && Date.now() - lastReceived.current >= 30_000) changed(); };
+    window.addEventListener("focus", focus);
     window.addEventListener("resize", resize);
     events.forEach((name) => window.addEventListener(name, changed));
     return () => {
       window.removeEventListener("sicost:screen-period-changed", period);
-      window.removeEventListener("focus", changed);
+      window.removeEventListener("focus", focus);
       window.removeEventListener("resize", resize);
       events.forEach((name) => window.removeEventListener(name, changed));
     };
   }, []);
   useEffect(() => {
     const abort = new AbortController();
+    requestPending.current = true;
     setLoading(true);
     setError(undefined);
     void api
       .getDashboard(month, abort.signal)
       .then((value) => {
-        if (!abort.signal.aborted) setData(value);
+        if (!abort.signal.aborted) { setData(value); lastReceived.current = Date.now(); }
       })
       .catch((e) => {
-        if (!abort.signal.aborted) setError(e);
+        if (!abort.signal.aborted) {
+          if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setData(undefined);
+          setError(e);
+        }
       })
       .finally(() => {
-        if (!abort.signal.aborted) setLoading(false);
+        if (!abort.signal.aborted) { requestPending.current = false; setLoading(false); }
       });
     return () => abort.abort();
   }, [month, revision]);
@@ -244,8 +251,10 @@ export function DashboardScreen({
             )}
           </div>
         </ScreenTitleActions>
-        {loading && <p role="status">대시보드를 불러오는 중입니다.</p>}
-        {error != null && failure(error)}
+        {loading && !data && <p role="status">대시보드를 불러오는 중입니다.</p>}
+        {data && loading && <p role="status" className="sicost-refresh-status">갱신 중…</p>}
+        {data && error != null && <p role="status" className="sicost-refresh-status">갱신 실패 · <button onClick={() => setRevision(n => n + 1)}>다시 시도</button></p>}
+        {error != null && !data && failure(error)}
         {downloadError != null && (
           <ErrorBanner
             message={
@@ -261,13 +270,14 @@ export function DashboardScreen({
           />
         )}
         {notice && <p role="status">{notice}</p>}
-        {data && !loading && !error && (
+        {data && (
           <>
+            <PeriodStatus>
             <div className="dashboard-dates">
               <span>
                 기준일 <b>{data.today}</b>
               </span>
-              <span>선택월 Q {data.selectedMonth}</span>
+              <span>선택월 {data.selectedMonth}</span>
               <StatusBadge
                 tone={
                   data.selectedMonthCloseStatus === "CLOSE" ? "lock" : "info"
@@ -297,6 +307,7 @@ export function DashboardScreen({
                 ))}
               </HelpTooltip>
             </div>
+            </PeriodStatus>
             <div className="dashboard-metrics">
               {data.metrics.map((card) => (
                 <button

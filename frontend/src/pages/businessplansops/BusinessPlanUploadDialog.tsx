@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useState } from "react";
 import {
   ExcelUploadDialog,
@@ -64,7 +65,7 @@ export function BusinessPlanUploadDialog({
                 <thead>
                   <tr>
                     <th>월</th>
-                    <th>상태</th>
+                    <th>상태<FieldHelp label="상태" kind="B" /></th>
                     <th>매출 목표 변경 전 → 후 (원)</th>
                     <th>영업이익 목표 변경 전 → 후 (원)</th>
                   </tr>

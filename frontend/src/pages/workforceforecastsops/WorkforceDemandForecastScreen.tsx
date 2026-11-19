@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
@@ -351,7 +352,7 @@ export function WorkforceForecastPanel({
                   <table className="sicost-table">
                     <thead>
                       <tr>
-                        <th>구분</th>
+                        <th>구분<FieldHelp label="구분" kind="B" /></th>
                         {data.totals.map((m) => (
                           <th key={m.month}>{m.month}</th>
                         ))}
@@ -366,7 +367,7 @@ export function WorkforceForecastPanel({
                         ] as const
                       ).map(([label, key]) => (
                         <tr data-testid={`workforce-row-${key}`} key={key}>
-                          <th scope="row">{label}</th>
+                          <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                           {data.totals.map((m) => (
                             <td
                               key={m.month}

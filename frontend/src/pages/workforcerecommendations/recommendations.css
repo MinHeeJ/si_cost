@@ -36,7 +36,7 @@
 .recommendation-cards {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 .recommendation-card header p {
   color: var(--text-sub);
@@ -118,4 +118,23 @@
   .recommendation-heading {
     flex-wrap: wrap;
   }
+}
+
+/* Keep all candidate details and actions inside the responsive cards. */
+.recommendation-cards > .recommendation-card {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.recommendation-cards > .recommendation-card header {
+  align-items: flex-start;
+}
+.recommendation-cards > .recommendation-card header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.recommendation-cards > .recommendation-card footer {
+  margin-top: auto;
+  flex-wrap: wrap;
 }

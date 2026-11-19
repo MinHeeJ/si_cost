@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -216,7 +217,7 @@ export function SalesForecastPanel() {
               <table className="sicost-table">
                 <thead>
                   <tr>
-                    <th scope="col">구분</th>
+                    <th scope="col">구분<FieldHelp label="구분" kind="B" /></th>
                     {data.revenueMonths.map((m) => (
                       <th scope="col" key={m.month}>
                         {m.month}
@@ -257,7 +258,7 @@ export function SalesForecastPanel() {
                     ] as const
                   ).map(([label, key]) => (
                     <tr key={key} className="sales-forecast-total">
-                      <th scope="row">{label}</th>
+                      <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                       {data.revenueMonths.map((m) => (
                         <td key={m.month} className="sicost-decimal">
                           {money(m[key])}
@@ -277,7 +278,7 @@ export function SalesForecastPanel() {
               <table className="sicost-table">
                 <thead>
                   <tr>
-                    <th>구분</th>
+                    <th>구분<FieldHelp label="구분" kind="B" /></th>
                     {data.workforce.totals.map((m) => (
                       <th key={m.month}>{m.month}</th>
                     ))}
@@ -293,7 +294,7 @@ export function SalesForecastPanel() {
                     ] as const
                   ).map(([label, key]) => (
                     <tr key={key}>
-                      <th scope="row">{label}</th>
+                      <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                       {data.workforce.totals.map((m) => (
                         <td
                           key={m.month}
@@ -333,7 +334,7 @@ export function SalesForecastPanel() {
                 <table className="sicost-table">
                   <thead>
                     <tr>
-                      <th>직무</th>
+                      <th>직무<FieldHelp label="직무" kind="B" /></th>
                       <th>첫부족월</th>
                       <th>최대부족</th>
                       <th>권장시작</th>

@@ -170,7 +170,7 @@ it("keeps source Q separate from current D/M and downloads the displayed Q", asy
   data.selectedMonthCloseStatus = "CLOSE";
   data.closeProgress.snapshot = true;
   ready();
-  await screen.findByText(/선택월 Q 2026-06/);
+  await screen.findByText(/선택월 2026-06/);
   expect(screen.getByText(/현재 미수·할일/)).toHaveTextContent("2026-07");
   expect(screen.getByTestId("dashboard-close")).toHaveTextContent(
     "당시 마감 사본",
@@ -468,4 +468,44 @@ it("등록되지 않은 대상과 0건 할일은 업무 화면으로 이동하�
   expect(
     screen.queryByTestId("dashboard-action-overdue-receivable"),
   ).not.toBeInTheDocument();
+});
+it("retains cards through throttled focus refresh, rejects duplicate/hidden requests and offers retry after failure", async () => {
+  let clock = 100_000;
+  const now = vi.spyOn(Date, "now").mockImplementation(() => clock);
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    ready();
+    const card = await screen.findByTestId("dashboard-metric-sales");
+    await waitFor(() => expect(screen.queryByText("대시보드를 불러오는 중입니다.")).not.toBeInTheDocument());
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(api.getDashboard).toHaveBeenCalledTimes(1);
+    clock += 31_000;
+    visibility.mockReturnValue("hidden");
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(api.getDashboard).toHaveBeenCalledTimes(1);
+    visibility.mockReturnValue("visible");
+    let fail!: (reason: Error) => void;
+    vi.mocked(api.getDashboard).mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+    act(() => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
+    expect(screen.getByText("갱신 중…")).toBeVisible();
+    act(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("focus")); });
+    expect(api.getDashboard).toHaveBeenCalledTimes(2);
+    await act(async () => fail(new Error("temporary network failure")));
+    expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
+    expect(screen.getByText(/갱신 실패/)).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(screen.queryByText(/갱신 실패/)).not.toBeInTheDocument());
+    expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
+  } finally { now.mockRestore(); visibility.mockRestore(); }
+});
+it("clears cached business cards when a refresh loses authorization", async () => {
+  ready();
+  await screen.findByTestId("dashboard-metric-sales");
+  vi.mocked(api.getDashboard).mockRejectedValueOnce(new (await import("../../shared/api")).ApiError(403, {success:false,meta:{},code:"FORBIDDEN",message:"권한이 변경됐습니다.",requestId:"revoked"}));
+  act(() => window.dispatchEvent(new CustomEvent("sicost:bills-committed")));
+  await waitFor(() => expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument());
+  expect(screen.getByText("권한이 변경됐습니다.")).toBeVisible();
 });

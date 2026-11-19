@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useState } from "react";
 import { ApiError } from "../../shared/api";
 import { formatAmount } from "../../shared/format";
@@ -132,7 +133,7 @@ export function HistoricalProfitLossImportDialog({
                     <th>매출</th>
                     <th>매출원가</th>
                     <th>판관비 합계</th>
-                    <th>영업이익</th>
+                    <th>영업이익<FieldHelp label="영업이익" kind="B" /></th>
                     <th>매출총이익</th>
                     <th>당기순이익</th>
                     <th>변경</th>

@@ -1,3 +1,8 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { helpContent } from "../../shared/helpContent";
+import { useState } from "react";
+import { PeriodStatusTarget } from "../../shared/PeriodStatus";
+import { useScreenMotion } from "../../shared/useScreenMotion";
 import type { ReactNode } from "react";
 import { ScreenTitleActionTarget } from "../../shared/ScreenTitleActions";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -17,6 +22,8 @@ export function SharedScreenFrame({
   periodBar?: ReactNode;
   initialMonth?: string;
 }) {
+  const motionRoot = useScreenMotion(screenId);
+  const [statusTarget,setStatusTarget]=useState<HTMLDivElement|null>(null);
   const location = useLocation();
   const canUpdate = usePermission(screenId, "UPD");
   const incoming = location.state as {
@@ -41,8 +48,9 @@ export function SharedScreenFrame({
   const parent = menus.find((node) => node.menuId === menu?.parentId);
   if (!menu) return <div role="alert">사용 가능한 메뉴가 없습니다.</div>;
   return (
-    <ScreenTitleActionTarget.Provider value>
+    <ScreenTitleActionTarget.Provider value><PeriodStatusTarget.Provider value={statusTarget}>
       <section
+        ref={motionRoot}
         data-screen-id={`SCR-${screenId}`}
         className={`sicost-screen${screenId === "UI-27" ? " sicost-workspace-screen" : ""}`}
       >
@@ -103,7 +111,7 @@ export function SharedScreenFrame({
         <div
           className={`sicost-screen-content${menu.pcOnly ? " sicost-pc-body" : ""}`}
         >
-          {periodBar === undefined ? (
+          <div className="sicost-period-row">{periodBar === undefined ? (
             <ScreenPeriodBar
               screenId={screenId}
               initialMonth={
@@ -113,6 +121,8 @@ export function SharedScreenFrame({
           ) : (
             periodBar
           )}
+          <div className="sicost-period-status-slot" ref={setStatusTarget} /></div>
+          {["UI-05","UI-11"].includes(screenId) && <HelpTooltip label="안내">{helpContent.filter(e=>e.screen===screenId && e.kind==="C").map((e,i)=><p key={i}>{e.text}</p>)}</HelpTooltip>}
           {analysisEntry?.scope && (
             <p className="sicost-banner sicost-tone-info" role="note">
               분석에서 연 원천 화면 · {analysisEntry.scope.fromMonth} ~{" "}
@@ -154,7 +164,7 @@ export function SharedScreenFrame({
           {children}
         </div>
       </section>
-    </ScreenTitleActionTarget.Provider>
+    </PeriodStatusTarget.Provider></ScreenTitleActionTarget.Provider>
   );
 }
 export function FollowUpScreen({ screenId }: { screenId: string }) {

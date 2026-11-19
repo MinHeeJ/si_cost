@@ -38,10 +38,7 @@ export function BusinessPlanRevenueChart({
   return (
     <section className="business-plan-chart" data-testid="business-plan-chart">
       <h2>월별 매출 실적과 목표</h2>
-      <p>
-        <span className="business-plan-actual-key">■ 실적</span>{" "}
-        <span className="business-plan-target-key">━ 목표</span> · 백만원 축
-      </p>
+      <small className="sicost-chart-unit">단위 {unit}</small>
       {amounts.length === 0 ? (
         <div className="business-plan-empty">
           표시할 매출 목표·실적 자료가 없습니다.
@@ -61,6 +58,7 @@ export function BusinessPlanRevenueChart({
                   name: "목표",
                   values: months.map((month) => month.salesTargetAmt),
                   dashed: true,
+                  dashPattern: [5, 4],
                 },
               ],
               formatValue: (value) => `${formatAmount(value, unit)} ${unit}`,

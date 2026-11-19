@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import {
   useCallback,
   useEffect,
@@ -536,7 +537,7 @@ export function DeveloperPoolScreen({
                 }))
               }
             />
-            사용 중지 포함
+            사용 중지 포함 <FieldHelp label="사용 중지 포함" />
           </label>
         </FilterBar>
         {notice && (

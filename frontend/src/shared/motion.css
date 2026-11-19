@@ -6,41 +6,6 @@
   --motion-drawer: 260ms;
   --motion-dialog: 220ms;
 }
-.sicost-screen-host:not([hidden]) .sicost-screen-content > * {
-  animation: sicost-rise var(--motion-page) var(--ease) both;
-}
-.sicost-screen-host:not([hidden])
-  .sicost-screen-content
-  > :is(:has(.sicost-title-actions-positioned), :has(.codegroups-title)) {
-  animation: none;
-}
-.sicost-screen-host:not([hidden])
-  :is(
-    .sicost-filterbar,
-    .sicost-table-viewport,
-    .sicost-kpi-strip,
-    .sicost-title-action-group
-  ) {
-  animation: sicost-rise var(--motion-page) var(--ease) both;
-}
-.sicost-screen-host:not([hidden]) .sicost-title-actions-positioned {
-  animation-name: sicost-fade;
-}
-.sicost-screen-content > :nth-child(2) {
-  animation-delay: 40ms;
-}
-.sicost-screen-content > :nth-child(3) {
-  animation-delay: 80ms;
-}
-.sicost-screen-content > :nth-child(4) {
-  animation-delay: 120ms;
-}
-.sicost-screen-content > :nth-child(5) {
-  animation-delay: 160ms;
-}
-.sicost-screen-content > :nth-child(n + 6) {
-  animation-delay: 200ms;
-}
 .sicost-sidebar {
   transition:
     width var(--motion-menu) var(--ease),
@@ -92,7 +57,7 @@
 }
 .notification-trigger:has(.notification-count) > svg {
   transform-origin: 50% 18%;
-  animation: sicost-bell 650ms var(--ease);
+  animation: sicost-bell 700ms var(--ease);
 }
 .analysis-side-panel {
   animation: sicost-drawer-in var(--motion-drawer) var(--ease);
@@ -105,7 +70,7 @@
   margin-right: 6px;
   border-radius: 50%;
   background: currentColor;
-  animation: sicost-step 900ms ease-in-out infinite;
+  animation: sicost-step 1300ms ease-in-out infinite;
 }
 .sicost-kpi-strip strong,
 .dashboard-metric > strong {
@@ -135,7 +100,7 @@
 @keyframes sicost-rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
