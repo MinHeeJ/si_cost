@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -237,16 +239,18 @@ export function BusinessUsersScreen({
         <div className="businessusers-toolbar">
           <h2>사용자</h2>
           {canRegister && (
-            <button
-              className="sicost-primary"
-              data-testid="business-user-register"
-              onClick={() => {
-                setNotice("");
-                setForm({});
-              }}
-            >
-              등록
-            </button>
+            <ScreenTitleActions>
+              <button
+                className="sicost-primary"
+                data-testid="business-user-register"
+                onClick={() => {
+                  setNotice("");
+                  setForm({});
+                }}
+              >
+                등록
+              </button>
+            </ScreenTitleActions>
           )}
         </div>
         {roleError != null && (
@@ -268,7 +272,7 @@ export function BusinessUsersScreen({
         >
           <label className="sicost-field">
             역할
-            <select
+            <FieldHelp label="역할" /><select
               data-testid="business-users-role-filter"
               value={draft.role}
               onChange={(e) => setDraft({ ...draft, role: e.target.value })}
@@ -283,7 +287,7 @@ export function BusinessUsersScreen({
           </label>
           <label className="sicost-field">
             상태
-            <select
+            <FieldHelp label="상태" /><select
               data-testid="business-users-status-filter"
               value={draft.status}
               onChange={(e) => setDraft({ ...draft, status: e.target.value })}
@@ -302,7 +306,7 @@ export function BusinessUsersScreen({
                 setDraft({ ...draft, includeStopped: e.target.checked })
               }
             />
-            사용 중지 포함
+            사용 중지 포함 <FieldHelp label="사용 중지 포함" />
           </label>
           <label className="sicost-field businessusers-search">
             이름

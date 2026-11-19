@@ -80,7 +80,7 @@ export function MfaForm({
         if (!busy) void act("mfa/verify");
       }}
     >
-      <h1>이메일 인증</h1>
+      <h1 aria-label="이메일 인증">인증번호 확인</h1>
       <p>{current.maskedEmail} 등록 이메일로 보낸 인증번호를 입력해 주세요.</p>
 
       {error && <ErrorBanner message={error} />}
@@ -104,22 +104,23 @@ export function MfaForm({
       </label>
       <button
         data-testid="authentication-mfa-verify-button"
+        aria-label="인증 확인"
         className="authentication-primary"
         disabled={busy}
       >
-        인증 확인
+        확인
       </button>
       <button
-        data-testid="authentication-mfa-resend-button"
         type="button"
+        data-testid="authentication-mfa-resend-button"
         disabled={busy}
         onClick={() => void act("mfa/resend")}
       >
         다시 보내기
       </button>
       <button
-        data-testid="authentication-mfa-restart-button"
         type="button"
+        data-testid="authentication-mfa-restart-button"
         disabled={busy}
         onClick={() => void act("restart")}
       >

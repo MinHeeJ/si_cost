@@ -4,6 +4,9 @@ import { ApplicationRouter } from "./router";
 import { request } from "../shared/api";
 import { ErrorBanner, StatusBadge } from "../shared/Feedback";
 import "../shared/common.css";
+import "../shared/presentation.css";
+import "../shared/motion.css";
+import "../shared/refinements.css";
 
 export function ApplicationStatus() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");

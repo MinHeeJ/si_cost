@@ -90,10 +90,11 @@ class StaffingReadContractTest {
     }
     @Test void calendarActualWinsTentativeAndHistoricalEmptyTotalsStayNull()throws Exception{
         when(mapper.people()).thenReturn(List.of(new Person("D-1","개발자","DEV",null,"FT","Y","DRCT",day.minusYears(1),null)));
+        when(mapper.personDisplays(List.of("D-1"))).thenReturn(List.of(new PersonDisplay("D-1","K-0042")));
         when(forecasts.projects()).thenReturn(List.of(new SalesForecastSources.Project("P-1","프로젝트","MO","ING",day,day.plusMonths(3),BigDecimal.ONE,BigDecimal.ZERO,null)));
         when(forecasts.assignmentIds()).thenReturn(List.of("A-1"));when(months.source("A-1")).thenReturn(source("A-1",day,day.plusMonths(1).minusDays(1),"0.50"));
         when(mapper.tentatives()).thenReturn(List.of(new TentativeSource("1","O-1",1,"D-1","202607","ACT","UI-29",null,"202608",new BigDecimal("50"))));
-        mvc.perform(get("/api/workforce-operations?year=2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].cells[0].status").value("PAST_EMPTY")).andExpect(jsonPath("$.data.monthTotals[0].remainingMm").doesNotExist()).andExpect(jsonPath("$.data.items[0].cells[6].status").value("ASSIGNED")).andExpect(jsonPath("$.data.items[0].cells[6].tentativeAssignments[0].id").value("1")).andExpect(jsonPath("$.data.summary.remainingMm").value("0.50"));
+        mvc.perform(get("/api/workforce-operations?year=2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].cells[0].status").value("PAST_EMPTY")).andExpect(jsonPath("$.data.monthTotals[0].remainingMm").doesNotExist()).andExpect(jsonPath("$.data.items[0].cells[6].status").value("ASSIGNED")).andExpect(jsonPath("$.data.items[0].cells[6].tentativeAssignments[0].id").value("1")).andExpect(jsonPath("$.data.summary.remainingMm").value("0.50")).andExpect(jsonPath("$.data.items[0].managementNo").value("K-0042")).andExpect(jsonPath("$.data.items[0].cells[6].projects[0].projectName").value("프로젝트"));
     }
     @Test void calendarLeavePriorityAndFilteredSummary()throws Exception{
         when(mapper.people()).thenReturn(List.of(new Person("D-1","개발자","DEV",null,"FT","Y","DRCT",day,null)));

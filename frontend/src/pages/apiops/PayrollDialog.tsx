@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -328,7 +329,12 @@ export function PayrollDialog({
               서버 기준 연월을 확인하거나 유효한 연월을 선택해 주세요.
             </p>
           )}
-          <div className="payroll-tabs" role="tablist" aria-label="급여 내역">
+          <SegmentedTabList
+            as="div"
+            className="payroll-tabs"
+            role="tablist"
+            aria-label="급여 내역"
+          >
             <button
               type="button"
               role="tab"
@@ -357,7 +363,7 @@ export function PayrollDialog({
                 파일 검사·반영
               </button>
             )}
-          </div>
+          </SegmentedTabList>
           {mobile && (
             <p className="sicost-banner sicost-tone-info">
               급여 업로드·다운로드는 PC에서 이용해 주세요.

@@ -86,28 +86,44 @@ export function CandidateSummaryPanel({
       ) : data ? (
         <>
           <dl className="candidate-summary-metrics">
-            {metrics.map(({ key, label, explanation }) => (
-              <div
-                className="candidate-summary-metric"
-                key={key}
-                title={explanation}
-                data-testid={`candidate-summary-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
-              >
-                <dt>{label}</dt>
-                <dd
-                  className={
-                    key === "overdueContact" && data[key] > 0
-                      ? "candidate-summary-overdue"
-                      : key === "interviewScheduled" && data[key] > 0
-                        ? "candidate-summary-interview"
-                        : undefined
-                  }
+            {metrics
+              .filter((metric) => metric.key !== "inProgress")
+              .map(({ key, label, explanation }) => (
+                <div
+                  className="candidate-summary-metric"
+                  key={key}
+                  title={explanation}
+                  data-testid={`candidate-summary-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
                 >
-                  {data[key].toLocaleString("ko-KR")}
-                  <small>명</small>
-                </dd>
-              </div>
-            ))}
+                  <dt>{label}</dt>
+                  <dd
+                    className={
+                      key === "overdueContact" && data[key] > 0
+                        ? "candidate-summary-overdue"
+                        : key === "interviewScheduled" && data[key] > 0
+                          ? "candidate-summary-interview"
+                          : undefined
+                    }
+                  >
+                    {data[key].toLocaleString("ko-KR")}
+                    <small>명</small>
+                  </dd>
+                  {key === "total" && (
+                    <dl className="candidate-summary-secondary">
+                      <div
+                        title="보류·계약 완료 제외"
+                        data-testid="candidate-summary-in-progress"
+                      >
+                        <dt>진행 중</dt>
+                        <dd>
+                          {data.inProgress.toLocaleString("ko-KR")}
+                          <small>명</small>
+                        </dd>
+                      </div>
+                    </dl>
+                  )}
+                </div>
+              ))}
           </dl>
           {data.total === 0 && (
             <p className="candidate-summary-empty">등록된 후보가 없습니다.</p>

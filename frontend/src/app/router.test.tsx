@@ -458,7 +458,10 @@ beforeEach(() => {
     accessEnforcement: false,
     settingsRevision: "settings-r",
   });
-  vi.mocked(dashboard.getDashboard).mockResolvedValue(dashboardFixture());
+  vi.mocked(dashboard.getDashboard).mockImplementation(async (month) => ({
+    ...dashboardFixture(),
+    selectedMonth: month ?? context.currentMonth,
+  }));
   vi.mocked(cashFlow.getCashFlow).mockRejectedValue(
     new Error("자금수지 원천 조회 실패"),
   );
@@ -860,6 +863,7 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  // 앱 셸의 다단계 상호작용은 통합 실행 부하에서 5초를 넘을 수 있어 이 시나리오만 여유를 둔다.
   it("UI-30은 현재 자리와 원래 revision으로 행동하고 조회 실패 뒤 GET만 재시도한다", async () => {
     open("/UI-30");
     await screen.findByTestId("recommendation-candidates");
@@ -903,7 +907,7 @@ describe("공식 진입점 합성", () => {
     expect(screen.getByTestId("recommendation-card-1")).toHaveTextContent(
       "2026-11",
     );
-  });
+  }, 10000);
   it("UI-30의 기록은 기존 drawer에서 GET만 사용하고 닫아도 추천을 재실행하지 않는다", async () => {
     open("/UI-30");
     await screen.findByTestId("recommendation-candidates");
@@ -1340,7 +1344,7 @@ describe("공식 진입점 합성", () => {
   it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     open("/UI-12");
-    await screen.findByText("조회된 투입 배정이 없습니다.");
+    await screen.findByText("조건에 맞는 결과가 없습니다.");
     await userEvent.click(screen.getByTestId("assignment-new"));
     fireEvent.change(await screen.findByTestId("assignment-project-search"), {
       target: { value: "보존할 검색" },
@@ -1365,8 +1369,8 @@ describe("공식 진입점 합성", () => {
     );
     open("/UI-12");
     await screen.findByText("배정 조회 실패");
-    await userEvent.click(screen.getByTestId("assignments-refresh"));
-    await screen.findByText("조회된 투입 배정이 없습니다.");
+    await userEvent.click(within(screen.getByText("배정 조회 실패").closest("[role=alert]") as HTMLElement).getByRole("button", { name: "다시 조회" }));
+    await screen.findByText("조건에 맞는 결과가 없습니다.");
     expect(assignments.getAssignments).toHaveBeenCalledTimes(2);
   });
   it("프로젝트 편집을 보존하고 셸 탭 닫기 취소에 dirty를 전달한다", async () => {
@@ -1375,11 +1379,12 @@ describe("공식 진입점 합성", () => {
     await userEvent.click(await screen.findByTestId("project-create"));
     const name = await screen.findByTestId("project-name");
     fireEvent.change(name, { target: { value: "보존 프로젝트" } });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+    const tabs = within(screen.getByRole("navigation", { name: "열린 화면" }));
+    await userEvent.click(tabs.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(tabs.getByRole("button", { name: /DB UI-01$/ }));
     expect(name).toHaveValue("보존 프로젝트");
     await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-01 탭 닫기" }),
+      tabs.getByRole("button", { name: "DB UI-01 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledOnce();
     expect(name).toHaveValue("보존 프로젝트");
@@ -1548,7 +1553,7 @@ describe("공식 진입점 합성", () => {
         expect(
           await screen.findByTestId("staffing-assignments-screen"),
         ).toBeVisible();
-        await screen.findByText("조회된 투입 배정이 없습니다.");
+        await screen.findByText("조건에 맞는 결과가 없습니다.");
         expect(assignments.getAssignments).toHaveBeenCalledWith(
           expect.objectContaining({ year: 2026 }),
         );
@@ -1780,6 +1785,7 @@ describe("공식 진입점 합성", () => {
     expect(screen.getByLabelText("A 이름")).toHaveValue("보존 입력");
     confirm.mockRestore();
   });
+  // 폐기·대시보드 이동·재진입까지 검증하므로 이 시나리오에만 통합 실행 시간 여유를 둔다.
   it("임시 ADMIN은 메뉴와 코드 CTA를 사용하고 폐기 후 재진입은 깨끗한 화면이다", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     open();
@@ -1805,7 +1811,7 @@ describe("공식 진입점 합성", () => {
       screen.getByRole("button", { name: "DB UI-27 탭 닫기" }),
     );
     expect(confirm).toHaveBeenCalledTimes(1);
-  });
+  }, 10000);
   it("설정 모달과 편집 표는 같은 저장 결과를 즉시 사용한다", async () => {
     open();
     await screen.findByLabelText("A 이름");
@@ -1946,7 +1952,7 @@ describe("공식 진입점 합성", () => {
     await userEvent.click(
       screen.getByRole("checkbox", { name: `${clientFixture.id} 선택` }),
     );
-    await userEvent.click(screen.getByTestId("client-status-n"));
+    await userEvent.click(await screen.findByTestId("client-status-n"));
     await userEvent.click(
       within(
         screen.getByRole("dialog", { name: "거래처 사용 중지" }),
@@ -2107,17 +2113,20 @@ describe("공식 진입점 합성", () => {
       // 등록 폼은 공통 모달이라 뒤의 목록 필터에도 같은 이름표가 있다: 모달 안으로 범위를 좁힌다.
       const name = within(screen.getByRole("dialog")).getByLabelText(/^이름/);
       fireEvent.change(name, { target: { value: "보존 인력" } });
-      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      const tabs = within(
+        screen.getByRole("navigation", { name: "열린 화면" }),
+      );
+      await userEvent.click(tabs.getByRole("button", { name: "DB UI-16" }));
       if (id === "UI-33")
         expect(
           screen.queryByRole("dialog", { name: "외부 인력 후보 등록" }),
         ).not.toBeInTheDocument();
       await userEvent.click(
-        screen.getByRole("button", { name: new RegExp(`DB ${id}$`) }),
+        tabs.getByRole("button", { name: new RegExp(`DB ${id}$`) }),
       );
       expect(name).toHaveValue("보존 인력");
       await userEvent.click(
-        screen.getByRole("button", { name: `DB ${id} 탭 닫기` }),
+        tabs.getByRole("button", { name: `DB ${id} 탭 닫기` }),
       );
       expect(confirm).toHaveBeenCalledOnce();
       expect(name).toHaveValue("보존 인력");

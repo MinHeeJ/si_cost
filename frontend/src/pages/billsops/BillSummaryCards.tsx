@@ -1,3 +1,4 @@
+import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -82,7 +83,7 @@ export function BillSummaryCards({
       ) : (
         !error &&
         data && (
-          <div className="bill-summary-grid">
+          <KpiStrip className="bill-summary-grid">
             {(
               [
                 ["청구 총액", data.billed],
@@ -111,7 +112,7 @@ export function BillSummaryCards({
               <strong>{data.lateCount}건</strong>
               <small>{data.lateScope}</small>
             </article>
-          </div>
+          </KpiStrip>
         )
       )}
     </section>

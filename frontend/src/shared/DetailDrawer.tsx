@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useOverlayLayer } from "./useOverlayLayer";
 
 export type DetailDrawerProps = {
   /** 접근성 이름. 비우면 제목을 쓴다. */
@@ -38,10 +39,12 @@ export function DetailDrawer({
 }: DetailDrawerProps) {
   const titleId = useId();
   const closeButton = useRef<HTMLButtonElement>(null);
+  const drawer = useRef<HTMLElement>(null);
+  const topmost = useOverlayLayer(drawer, !hidden, 50);
   useEffect(() => {
     if (hidden) return;
     const previous = document.activeElement as HTMLElement | null;
-    closeButton.current?.focus();
+    if (topmost()) closeButton.current?.focus();
     return () => {
       previous?.focus?.();
     };
@@ -58,6 +61,8 @@ export function DetailDrawer({
         onClick={close}
       />
       <aside
+        ref={drawer}
+        tabIndex={-1}
         className="sicost-drawer"
         style={hidden ? { display: "none" } : undefined}
         role="dialog"
@@ -66,9 +71,30 @@ export function DetailDrawer({
         aria-labelledby={label ? undefined : titleId}
         data-testid={testId}
         onKeyDown={(event) => {
+          if (!topmost()) return;
           if (event.key === "Escape") {
+            event.preventDefault();
             event.stopPropagation();
             close();
+          }
+          if (event.key === "Tab") {
+            const controls = [
+              ...(drawer.current?.querySelectorAll<HTMLElement>(
+                'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]',
+              ) ?? []),
+            ].filter((node) => !node.closest("[hidden]"));
+            const first = controls[0],
+              last = controls.at(-1);
+            if (!first) {
+              event.preventDefault();
+              drawer.current?.focus();
+            } else if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
           }
         }}
       >

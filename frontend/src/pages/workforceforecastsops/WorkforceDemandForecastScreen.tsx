@@ -1,8 +1,13 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { KpiStrip } from "../../shared/Surface";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../../shared/api";
 import { formatFixedDecimal } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { ChartHost } from "../../shared/charts/ChartHost";
+import { seriesChartOptions } from "../../shared/charts/chartAdapters";
 import { PeriodSelector } from "../shared/PeriodSelector";
 import {
   getPeriodContext,
@@ -249,35 +254,39 @@ export function WorkforceForecastPanel({
           {data?.totals.at(-1)?.month ?? `${query.from.slice(0, 4)}-12`} · 전체
           직무
         </p>
-        <label>
-          금액 단위
-          <select
-            data-testid="workforce-unit"
-            aria-label="금액 단위"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value as api.WorkforceAmountUnit)}
-          >
-            <option value="WON">원</option>
-            <option value="THOUSAND">천원</option>
-            <option value="MILLION">백만원</option>
-          </select>
-        </label>
-        {!mobile && (
+        <ScreenTitleActions>
+          <label>
+            금액 단위
+            <select
+              data-testid="workforce-unit"
+              aria-label="금액 단위"
+              value={unit}
+              onChange={(e) =>
+                setUnit(e.target.value as api.WorkforceAmountUnit)
+              }
+            >
+              <option value="WON">원</option>
+              <option value="THOUSAND">천원</option>
+              <option value="MILLION">백만원</option>
+            </select>
+          </label>
+          {!mobile && (
+            <button
+              data-testid="workforce-download"
+              disabled={disabled || loading || downloading || !data}
+              onClick={() => void download()}
+            >
+              {downloading ? "파일 생성 중…" : "엑셀 다운로드"}
+            </button>
+          )}
           <button
-            data-testid="workforce-download"
-            disabled={disabled || loading || downloading || !data}
-            onClick={() => void download()}
+            data-testid="workforce-refresh"
+            disabled={loading || disabled}
+            onClick={() => setReload((n) => n + 1)}
           >
-            {downloading ? "파일 생성 중…" : "엑셀 다운로드"}
+            재조회
           </button>
-        )}
-        <button
-          data-testid="workforce-refresh"
-          disabled={loading || disabled}
-          onClick={() => setReload((n) => n + 1)}
-        >
-          재조회
-        </button>
+        </ScreenTitleActions>
       </div>
       {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
       {loading && <p role="status">예측을 불러오는 중입니다.</p>}
@@ -308,7 +317,7 @@ export function WorkforceForecastPanel({
               ))}
             </div>
           )}
-          <div className="workforce-forecast-summary">
+          <KpiStrip className="workforce-forecast-summary">
             <article data-testid="workforce-supply-card">
               <p>마지막월 가용</p>
               <strong>{people(data.lastMonthSupply)}명</strong>
@@ -326,11 +335,13 @@ export function WorkforceForecastPanel({
               </strong>
               <p>최대부족 {people(data.maximumShortage)}명</p>
             </article>
-          </div>
+          </KpiStrip>
           {data.totals.length === 0 ? (
             <div className="workforce-forecast-empty">
               <p>선택 기간에 예측 자료가 없습니다.</p>
-              <button type="button" onClick={() => setReload((n) => n + 1)}>조건 초기화</button>
+              <button type="button" onClick={() => setReload((n) => n + 1)}>
+                조건 초기화
+              </button>
             </div>
           ) : (
             <>
@@ -341,7 +352,7 @@ export function WorkforceForecastPanel({
                   <table className="sicost-table">
                     <thead>
                       <tr>
-                        <th>구분</th>
+                        <th>구분<FieldHelp label="구분" kind="B" /></th>
                         {data.totals.map((m) => (
                           <th key={m.month}>{m.month}</th>
                         ))}
@@ -356,7 +367,7 @@ export function WorkforceForecastPanel({
                         ] as const
                       ).map(([label, key]) => (
                         <tr data-testid={`workforce-row-${key}`} key={key}>
-                          <th scope="row">{label}</th>
+                          <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
                           {data.totals.map((m) => (
                             <td
                               key={m.month}
@@ -452,55 +463,81 @@ function WorkforceBars({ data }: { data: api.WorkforceForecast }) {
   return (
     <section className="workforce-forecast-card">
       <h2>월별 가용 vs 필요</h2>
-      <p className="workforce-forecast-muted">
+      <p className="workforce-forecast-muted workforce-chart-legend">
         <span className="workforce-forecast-available">■ 가용</span>{" "}
         <span className="workforce-forecast-needed">■ 필요</span>
       </p>
-      <svg
-        role="img"
-        aria-label="월별 가용 vs 필요"
-        viewBox={`0 0 ${Math.max(600, data.months * 80)} 240`}
-      >
-        {data.totals.map((m, i) => {
-          const a = (Number(m.supply ?? 0) / maximum) * 160,
-            b = (Number(m.demand ?? 0) / maximum) * 160,
-            x = 25 + i * Math.max(80, 550 / data.months);
-          return (
-            <g key={m.month}>
-              <title>
-                {m.month} · 가용 {people(m.supply)} · 필요 {people(m.demand)} ·
-                그중 미충원 {people(m.unfilledDemand)}
-              </title>
-              {m.supply != null && (
-                <rect
-                  x={x}
-                  y={190 - a}
-                  width="20"
-                  height={a}
-                  fill="var(--primary)"
-                />
-              )}
-              {m.demand != null && (
-                <rect
-                  x={x + 24}
-                  y={190 - b}
-                  width="20"
-                  height={b}
-                  fill="var(--warn)"
-                />
-              )}
-              <text x={x} y="215">
-                {m.month}
-              </text>
-              {(m.supply == null || m.demand == null) && (
-                <text x={x} y="25">
-                  미확인
-                </text>
-              )}
-            </g>
-          );
+      <ChartHost
+        option={seriesChartOptions({
+          categories: data.totals.map((month) => month.month),
+          series: [
+            {
+              name: "가용",
+              type: "bar",
+              values: data.totals.map((month) => month.supply),
+            },
+            {
+              name: "필요",
+              type: "bar",
+              values: data.totals.map((month) => month.demand),
+            },
+            {
+              name: "그중 미충원",
+              type: "line",
+              values: data.totals.map((month) => month.unfilledDemand),
+              dashed: true,
+            },
+          ],
+          formatValue: (value) => `${people(value)}명`,
+          axisUnit: "명",
         })}
-      </svg>
+      >
+        <svg
+          role="img"
+          aria-label="월별 가용 vs 필요"
+          viewBox={`0 0 ${Math.max(600, data.months * 80)} 240`}
+        >
+          {data.totals.map((m, i) => {
+            const a = (Number(m.supply ?? 0) / maximum) * 160,
+              b = (Number(m.demand ?? 0) / maximum) * 160,
+              x = 25 + i * Math.max(80, 550 / data.months);
+            return (
+              <g key={m.month}>
+                <title>
+                  {m.month} · 가용 {people(m.supply)} · 필요 {people(m.demand)}{" "}
+                  · 그중 미충원 {people(m.unfilledDemand)}
+                </title>
+                {m.supply != null && (
+                  <rect
+                    x={x}
+                    y={190 - a}
+                    width="20"
+                    height={a}
+                    fill="var(--primary)"
+                  />
+                )}
+                {m.demand != null && (
+                  <rect
+                    x={x + 24}
+                    y={190 - b}
+                    width="20"
+                    height={b}
+                    fill="var(--warn)"
+                  />
+                )}
+                <text x={x} y="215">
+                  {m.month}
+                </text>
+                {(m.supply == null || m.demand == null) && (
+                  <text x={x} y="25">
+                    미확인
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </ChartHost>
     </section>
   );
 }

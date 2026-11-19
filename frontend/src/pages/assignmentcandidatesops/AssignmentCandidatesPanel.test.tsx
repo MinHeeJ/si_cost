@@ -136,7 +136,7 @@ it("renders API-backed CNVT region and the reference columns without hiding amou
   expect(screen.getByText("CNVT")).toHaveClass("sicost-tone-info");
   for (const name of ["프로젝트", "사람", "직무", "예정기간", "상태", "행동"])
     expect(screen.getByRole("columnheader", { name })).toBeVisible();
-  expect(screen.getByRole("heading", { name: "배정 후보 (1)" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "배정 후보 1" })).toBeVisible();
 });
 it("opens the existing form with API defaults, fixed identity, NEW and developer effective price", async () => {
   await open();

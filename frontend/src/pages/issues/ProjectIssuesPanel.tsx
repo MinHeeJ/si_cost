@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -207,7 +208,7 @@ export function ProjectIssuesPanel({
       >
         <label className="sicost-field">
           상태
-          <select
+          <FieldHelp label="상태" /><select
             data-testid="issues-status-filter"
             value={draft.status}
             onChange={(e) =>

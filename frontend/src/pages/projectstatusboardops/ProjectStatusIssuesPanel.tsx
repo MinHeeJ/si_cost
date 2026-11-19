@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Link,
@@ -254,7 +255,7 @@ export function ProjectStatusIssuesPanel({
       >
         <label className="sicost-field">
           상태
-          <select
+          <FieldHelp label="상태" /><select
             data-testid="status-issue-state"
             value={draft.status}
             onChange={(e) =>

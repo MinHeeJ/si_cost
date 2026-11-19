@@ -16,8 +16,9 @@
   align-items: end;
   gap: 12px;
   padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   flex-wrap: wrap;
 }
@@ -67,8 +68,9 @@
 .b7-client-card {
   background: var(--surface);
   padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   margin-bottom: 12px;
 }
 @media (max-width: 767px) {
@@ -168,8 +170,9 @@
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .b7-file-chip-name {

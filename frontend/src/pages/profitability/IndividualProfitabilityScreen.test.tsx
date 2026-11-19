@@ -545,14 +545,11 @@ describe("개인 기간 조회 본문", () => {
     mount();
     await screen.findByText("급여 미업로드·예정");
     expect(screen.getAllByText("1.0 초과")).toHaveLength(1);
-    expect(screen.getByText("1.0 초과").parentElement).toHaveAttribute(
-      "title",
-      "202601: 1.01MM",
-    );
-    expect(screen.getByText("미확인").parentElement).toHaveAttribute(
-      "title",
-      expect.stringContaining("TB_HR_MON_PAY"),
-    );
+    await userEvent.click(screen.getByRole("button", {name:"1.0 초과 도움말"}));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("202601: 1.01MM");
+    await userEvent.click(screen.getByRole("button", {name:"미확인 도움말"}));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("TB_HR_MON_PAY");
+
   });
   it("공헌이익은 기본접힘이고 펼치면 미분류·인원을 표시한다", async () => {
     mount();

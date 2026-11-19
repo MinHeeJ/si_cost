@@ -172,7 +172,7 @@ it("로딩·빈목록·재조회 실패를 구분한다", async () => {
   });
   draw();
   expect(screen.getByText("불러오는 중입니다.")).toBeInTheDocument();
-  await screen.findByText("조회된 투입 배정이 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
 });
 it("조회 실패는 재조회만 제공한다", async () => {
   vi.mocked(api.getAssignments).mockRejectedValueOnce(
@@ -186,7 +186,7 @@ it("조회 실패는 재조회만 제공한다", async () => {
   );
   draw();
   await screen.findByText(/assignment-read/);
-  await userEvent.click(screen.getByTestId("assignments-refresh"));
+  await userEvent.click(within(screen.getByText(/assignment-read/).closest("[role=alert]") as HTMLElement).getByRole("button", { name: "다시 조회" }));
   await ready();
   expect(api.createAssignment).not.toHaveBeenCalled();
 });

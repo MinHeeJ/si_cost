@@ -22,14 +22,20 @@
 .billing-review-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .billing-review-check-cards {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .billing-review-cards article {
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 20px 24px;
   background: var(--surface);
   display: flex;
@@ -110,4 +116,14 @@
     font-size: 12px;
     color: var(--text-sub);
   }
+}
+
+.billing-review-cards > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

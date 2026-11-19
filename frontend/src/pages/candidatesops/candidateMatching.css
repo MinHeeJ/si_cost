@@ -1,8 +1,9 @@
 .candidate-matching-panel {
   min-width: 0;
   padding: 20px 24px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .candidate-matching-panel > header {

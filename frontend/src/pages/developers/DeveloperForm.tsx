@@ -5,6 +5,8 @@ import { CodeSelect } from "../../shared/CodeSelect";
 import { SkillsInput } from "../../shared/SkillsInput";
 import { AddressSelector } from "../../shared/AddressSelector";
 import { Dialog } from "../../shared/Dialog";
+import { FormPage } from "../../shared/FormPage";
+import { FormSection } from "../../shared/FormSection";
 import { ErrorBanner } from "../../shared/Feedback";
 import { useFieldPermission } from "../../shared/permission/PermissionBoundary";
 import { ApiError } from "../../shared/api";
@@ -268,6 +270,8 @@ export function DeveloperForm({
         open={open}
         permission={{ screen: "UI-02", action: developer ? "UPD" : "REG" }}
         wide
+        fullPage
+        fullPageBreadcrumb="기준정보 › 개발자 풀"
         noValidate
         title={developer ? "개발자 수정" : "개발자 등록"}
         pending={pending}
@@ -283,104 +287,118 @@ export function DeveloperForm({
           ) : undefined
         }
       >
-        <p className="sicost-banner sicost-tone-info">{developerBanner}</p>
-        {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
-        {lookupError != null && (
-          <ErrorBanner
-            message="선택 항목을 불러오지 못했습니다."
-            onRetry={() => void load()}
-          />
-        )}
-        {error != null && (
-          <ErrorBanner
-            message={
-              error instanceof Error ? error.message : "저장하지 못했습니다."
-            }
-            requestId={
-              error instanceof ApiError ? error.body.requestId : undefined
-            }
-          />
-        )}
-        <div ref={container} data-testid="developer-edit-form">
-          {!developer && <ResumeExtractionFeedback state={resume} />}
-          <fieldset disabled={pending} className="developer-form-fields">
-            <legend>기본 정보</legend>
-            {text("name", "이름", 50, true)}
-            {text("managementNo", "관리번호", 20)}
-            {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
-            {select(
-              "companyId",
-              "소속",
-              [
-                { code: "__own__", name: "자사" },
-                ...companies.map((c) => ({ code: c.id, name: c.name })),
-              ],
-              true,
-            )}
-            {select("gradeCode", "등급", codes.GRADE ?? [])}
-            {select("jobCode", "주 직무", codes.JOB ?? [], true)}
-            {select("subJobCode", "보조 직무", codes.JOB ?? [])}
-            <SkillsInput
-              value={form.skills}
-              onChange={(v) => change("skills", v)}
-              disabled={pending}
-              error={fields.skills}
+        <FormPage
+          title={developer ? "개발자 수정" : "개발자 등록"}
+          actions={null}
+          showHeader={false}
+        >
+          <p className="sicost-banner sicost-tone-info">{developerBanner}</p>
+          {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
+          {lookupError != null && (
+            <ErrorBanner
+              message="선택 항목을 불러오지 못했습니다."
+              onRetry={() => void load()}
             />
-            <AddressSelector
-              value={form.homeAreaCode}
-              onChange={(v) => change("homeAreaCode", v)}
-              maxLevel="EMD"
-              disabled={pending}
-              error={fields.homeAreaCode}
-            />
-            {select(
-              "partId",
-              "영업 파트",
-              parts.map((p) => ({
-                code: p.id,
-                name:
-                  p.name +
-                  (p.firstEffectiveMonth
-                    ? ` · 시작 ${p.firstEffectiveMonth}`
-                    : ""),
-              })),
-              true,
-            )}
-            {text("hireDate", "입사일", 10)}
-            {select("positionCode", "직위", codes.JBPS ?? [])}
-            {select("directClass", "직접/간접", codes.DRCT_CLS ?? [], true)}
-          </fieldset>
-          {(canRate || canPay) && (
-            <fieldset disabled={pending} className="developer-form-fields">
-              <legend>금액</legend>
-              {canRate && (
-                <Decimal
-                  label="월 단가 (원/월)"
-                  data-testid="developer-rate-input"
-                  value={form.monthlyRate}
-                  onChange={(v) => change("monthlyRate", v)}
-                  error={fields.monthlyRate}
-                />
-              )}
-              {canPay && (
-                <Decimal
-                  label="월 급여·지급액 (원/월)"
-                  data-testid="developer-pay-input"
-                  value={form.monthlyPay}
-                  onChange={(v) => change("monthlyPay", v)}
-                  error={fields.monthlyPay}
-                />
-              )}
-              {developer?.editPrice && (
-                <p>
-                  편집 가격 시작월: {developer.editPrice.effectiveMonth} (현재
-                  또는 가장 가까운 예정값)
-                </p>
-              )}
-              <p>{canPay ? priceHelp : "단가 변경은 저장월부터 적용됩니다."}</p>
-            </fieldset>
           )}
-        </div>
+          {error != null && (
+            <ErrorBanner
+              message={
+                error instanceof Error ? error.message : "저장하지 못했습니다."
+              }
+              requestId={
+                error instanceof ApiError ? error.body.requestId : undefined
+              }
+            />
+          )}
+          <div ref={container} data-testid="developer-edit-form">
+            {!developer && <ResumeExtractionFeedback state={resume} />}
+            <FormSection
+              title="기본 정보"
+              disabled={pending}
+              className="developer-form-fields"
+            >
+              {text("name", "이름", 50, true)}
+              {text("managementNo", "관리번호", 20)}
+              {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
+              {select(
+                "companyId",
+                "소속",
+                [
+                  { code: "__own__", name: "자사" },
+                  ...companies.map((c) => ({ code: c.id, name: c.name })),
+                ],
+                true,
+              )}
+              {select("gradeCode", "등급", codes.GRADE ?? [])}
+              {select("jobCode", "주 직무", codes.JOB ?? [], true)}
+              {select("subJobCode", "보조 직무", codes.JOB ?? [])}
+              <SkillsInput
+                value={form.skills}
+                onChange={(v) => change("skills", v)}
+                disabled={pending}
+                error={fields.skills}
+              />
+              <AddressSelector
+                value={form.homeAreaCode}
+                onChange={(v) => change("homeAreaCode", v)}
+                maxLevel="EMD"
+                disabled={pending}
+                error={fields.homeAreaCode}
+              />
+              {select(
+                "partId",
+                "영업 파트",
+                parts.map((p) => ({
+                  code: p.id,
+                  name:
+                    p.name +
+                    (p.firstEffectiveMonth
+                      ? ` · 시작 ${p.firstEffectiveMonth}`
+                      : ""),
+                })),
+                true,
+              )}
+              {text("hireDate", "입사일", 10)}
+              {select("positionCode", "직위", codes.JBPS ?? [])}
+              {select("directClass", "직접/간접", codes.DRCT_CLS ?? [], true)}
+            </FormSection>
+            {(canRate || canPay) && (
+              <FormSection
+                title="금액"
+                disabled={pending}
+                className="developer-form-fields"
+              >
+                {canRate && (
+                  <Decimal
+                    label="월 단가 (원/월)"
+                    data-testid="developer-rate-input"
+                    value={form.monthlyRate}
+                    onChange={(v) => change("monthlyRate", v)}
+                    error={fields.monthlyRate}
+                  />
+                )}
+                {canPay && (
+                  <Decimal
+                    label="월 급여·지급액 (원/월)"
+                    data-testid="developer-pay-input"
+                    value={form.monthlyPay}
+                    onChange={(v) => change("monthlyPay", v)}
+                    error={fields.monthlyPay}
+                  />
+                )}
+                {developer?.editPrice && (
+                  <p>
+                    편집 가격 시작월: {developer.editPrice.effectiveMonth} (현재
+                    또는 가장 가까운 예정값)
+                  </p>
+                )}
+                <p>
+                  {canPay ? priceHelp : "단가 변경은 저장월부터 적용됩니다."}
+                </p>
+              </FormSection>
+            )}
+          </div>
+        </FormPage>
       </Dialog>
       <Dialog
         open={open && leaving}

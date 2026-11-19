@@ -1,3 +1,5 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -378,7 +380,7 @@ export function WorkforceRecommendationsScreen() {
             </label>
             <label className="sicost-field">
               직무
-              <select
+              <FieldHelp label="직무" /><select
                 data-testid="recommendation-job"
                 disabled={running || pending}
                 value={draft?.jobCode ?? ""}
@@ -398,7 +400,7 @@ export function WorkforceRecommendationsScreen() {
             {target?.targetType === "OPPORTUNITY" && (
               <label className="sicost-field">
                 가배정 자리
-                <select
+                <FieldHelp label="가배정 자리" /><select
                   data-testid="recommendation-need"
                   disabled={running || pending}
                   value={draft?.needSn ?? ""}
@@ -467,7 +469,7 @@ export function WorkforceRecommendationsScreen() {
           }}
         >
           추천 받기
-        </button>
+        </button><HelpTooltip label="추천 대상" iconOnly>휴직·퇴사 예정자, 그 기간 MM이 이미 1.0인 사람은 뺍니다. 나이·성별·학력은 쓰지 않습니다.</HelpTooltip>
       </section>
       <AssignmentError error={error} />
       <AssignmentError error={actionError} />
@@ -712,7 +714,7 @@ function RecommendationHistory({ onClose }: { onClose(): void }) {
           </label>
           <label className="sicost-field">
             직무
-            <input
+            <FieldHelp label="직무" /><input
               data-testid="recommendation-history-job"
               value={job}
               onChange={(e) => setJob(e.target.value)}

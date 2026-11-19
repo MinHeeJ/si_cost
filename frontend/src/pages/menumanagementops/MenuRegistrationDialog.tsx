@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -188,7 +189,7 @@ export function MenuRegistrationDialog({
           </label>
           <label className="sicost-field">
             화면번호
-            <select
+            <FieldHelp label="화면번호" /><select
               data-testid="menu-registration-screen"
               disabled={pending || loading}
               aria-invalid={Boolean(fields.screenId)}

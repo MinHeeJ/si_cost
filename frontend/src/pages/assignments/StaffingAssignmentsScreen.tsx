@@ -78,7 +78,7 @@ function AssignmentDownloads({ context }: { context: AssignmentListActions }) {
         disabled={pending}
         onClick={() => void download()}
       >
-        {pending ? "파일 생성 중…" : "다운로드"}
+        {pending ? "파일 생성 중…" : "엑셀 다운로드"}
       </button>
       {success && <span role="status">파일을 내려받았습니다.</span>}
       <AssignmentError error={error} retry={() => void download()} />

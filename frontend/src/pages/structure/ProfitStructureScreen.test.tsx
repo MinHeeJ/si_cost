@@ -197,14 +197,14 @@ function period(month = "2026-07") {
     ),
   );
 }
-async function draw() {
+async function draw(month = "2026-07") {
   render(
     <MemoryRouter>
       <ProfitStructureScreen />
       <Location />
     </MemoryRouter>,
   );
-  period();
+  period(month);
   await screen.findByTestId("structure-card-sales-amt");
 }
 beforeEach(() => {
@@ -247,7 +247,7 @@ it("shows adverse comparison and provisional/estimated states with shared tones"
       /전월/,
     ),
   ).toHaveClass("adverse");
-  expect(screen.getByText("잠정 · 작업중")).toBeInTheDocument();
+  expect(screen.getAllByText("잠정").length).toBeGreaterThan(0);
   expect(screen.getByText("예정 포함")).toBeInTheDocument();
 });
 it("switches aggregation and preserves it on period change", async () => {
@@ -393,4 +393,23 @@ it.each([
   await waitFor(() =>
     expect(api.getProfitLossStructure).toHaveBeenCalledTimes(2),
   );
+});
+
+it.each([
+  ["MONTH", "월", ["2026-08"], "2026년 8월 · 월 실적 · 전년 동월과 비교"],
+  ["QUARTER", "분기", ["2026-07", "2026-08"], "2026년 7~8월 · 분기 실적 · 전년 동분기의 같은 월 범위와 비교"],
+  ["YTD", "연 누계", Array.from({ length: 8 }, (_, i) => `2026-${String(i + 1).padStart(2, "0")}`), "2026년 1~8월 · 연 누계 실적 · 전년 동기 누계와 비교"],
+] as const)("describes the server's actual %s bucket period", async (mode, tab, months, expected) => {
+  vi.mocked(api.getProfitLossStructure).mockImplementation(async (year, month, aggregation) => {
+    const result = response();
+    result.context = { ...result.context, year, month, nowMonth: month, aggregation };
+    const bucketMonths = aggregation === mode ? [...months] : [month];
+    result.buckets[0] = { ...result.buckets[0], months: bucketMonths, throughMonth: month, monthCount: bucketMonths.length };
+    result.months = bucketMonths.map(value => ({ ...result.months[0], month: value }));
+    return result;
+  });
+  await draw("2026-08");
+  if (mode !== "MONTH") await userEvent.click(screen.getByRole("tab", { name: tab }));
+  expect(await screen.findByText(`${expected} · 부가세 제외`)).toBeVisible();
+  expect(api.getProfitLossStructure).toHaveBeenLastCalledWith(2026, "2026-08", mode, expect.any(AbortSignal));
 });

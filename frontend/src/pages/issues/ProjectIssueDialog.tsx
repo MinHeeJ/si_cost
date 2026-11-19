@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -193,7 +194,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
     Boolean(props.readOnly);
   const field = (key: keyof typeof form, label: string) => (
     <div className="sicost-field">
-      <label htmlFor={`issue-${key}`}>{label}</label>
+      <label htmlFor={`issue-${key}`}>{label}<FieldHelp label={label} /></label>
       <input
         id={`issue-${key}`}
         data-testid={`issue-${key}`}
@@ -210,7 +211,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
     const values = codes?.[key] ?? [];
     return (
       <div className="sicost-field">
-        <label htmlFor={`issue-${key}`}>{label}</label>
+        <label htmlFor={`issue-${key}`}>{label}<FieldHelp label={label} /></label>
         <select
           id={`issue-${key}`}
           data-testid={`issue-${key}`}

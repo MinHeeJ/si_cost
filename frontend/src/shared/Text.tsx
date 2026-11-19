@@ -1,3 +1,4 @@
+import { FieldHelp } from "./FieldHelp";
 import { useId, type InputHTMLAttributes } from "react";
 
 export type TextProps = Omit<
@@ -8,6 +9,8 @@ export type TextProps = Omit<
   value: string;
   onChange(value: string): void;
   error?: string;
+  unit?: string;
+  helpScreenId?: string;
 };
 export function Text({
   label,
@@ -15,6 +18,8 @@ export function Text({
   onChange,
   error,
   id,
+  unit,
+  helpScreenId,
   ...props
 }: TextProps) {
   const generated = useId();
@@ -24,15 +29,18 @@ export function Text({
       <label htmlFor={inputId}>
         {label}
         {props.required && <span aria-hidden="true"> *</span>}
+        <FieldHelp label={label} screenId={helpScreenId} />
       </label>
-      <input
+      <div className={unit ? "sicost-input-unit" : undefined}><input
         {...props}
         id={inputId}
+        aria-label={props["aria-label"] ?? label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${inputId}-error` : undefined}
       />
+      {unit && <span aria-hidden="true">{unit}</span>}</div>
       {error && (
         <span
           id={`${inputId}-error`}

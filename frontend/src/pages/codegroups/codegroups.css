@@ -31,9 +31,16 @@
 }
 .codegroups-tabs {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--divider);
-  margin-top: 8px;
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .codegroups-tabs button {
   border: 0;
@@ -59,8 +66,9 @@
 }
 .codegroups-list {
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 8px;
   max-height: 520px;
   overflow-y: auto;
@@ -174,8 +182,9 @@
 }
 .codegroups-embedded .codegroups-title {
   position: absolute;
-  top: 20px;
+  top: 38px;
   right: 24px;
+  z-index: 22;
 }
 .codegroups-embedded .codegroups-tabs {
   margin-top: 0;
@@ -228,4 +237,27 @@
     text-align: center;
     color: var(--text-sub);
   }
+}
+
+.codegroups-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.codegroups-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
 }

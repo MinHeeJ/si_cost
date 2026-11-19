@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { request } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -255,7 +256,7 @@ export function ClientsTableScreen({
       >
         <label className="sicost-field">
           구분
-          <select
+          <FieldHelp label="구분" /><select
             data-testid="clients-type-filter"
             value={draft.type}
             onChange={(event) =>

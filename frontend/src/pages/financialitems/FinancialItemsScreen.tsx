@@ -1,6 +1,9 @@
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getSharedCodes } from "../shared/sharedApi";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -374,32 +377,34 @@ export function FinancialItemsEditor({
           disabled: state.pending,
         }}
       />
-      <div className="financial-actions">
-        <button
-          type="button"
-          data-testid="financial-load-previous"
-          disabled={disabled}
-          onClick={() => void state.preview("LOAD_PREVIOUS")}
-        >
-          지난달 항목 불러오기
-        </button>
-        <FinancialUploadActions
-          month={editor.month}
-          readOnly={disabled}
-          beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
-          onApplied={async () => {
-            await refresh();
-          }}
-        />
-        <button
-          type="button"
-          data-testid="financial-history-toggle"
-          aria-expanded={history}
-          onClick={() => setHistory((value) => !value)}
-        >
-          변경 이력 {history ? "접기" : "펼침"}
-        </button>
-      </div>
+      <ScreenTitleActions>
+        <div className="financial-actions">
+          <button
+            type="button"
+            data-testid="financial-load-previous"
+            disabled={disabled}
+            onClick={() => void state.preview("LOAD_PREVIOUS")}
+          >
+            지난달 항목 불러오기
+          </button>
+          <FinancialUploadActions
+            month={editor.month}
+            readOnly={disabled}
+            beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
+            onApplied={async () => {
+              await refresh();
+            }}
+          />
+          <button
+            type="button"
+            data-testid="financial-history-toggle"
+            aria-expanded={history}
+            onClick={() => setHistory((value) => !value)}
+          >
+            변경 이력 {history ? "접기" : "펼침"}
+          </button>
+        </div>
+      </ScreenTitleActions>
       <section
         className="financial-months"
         data-testid="financial-month-status"
@@ -439,6 +444,7 @@ export function FinancialItemsEditor({
             다음 해 ›
           </button>
           <strong>입력 현황</strong>
+          <HelpTooltip label="안내">달을 누르면 그 달 항목으로 바뀝니다. 헤더의 기준 연월도 함께 바뀝니다. 아래 [저장]은 두 탭을 함께 저장합니다.</HelpTooltip>
           <span>저장된 재무 항목만 집계합니다</span>
         </div>
         <div className="financial-month-strip">
@@ -451,8 +457,7 @@ export function FinancialItemsEditor({
               (row) => row.month === value,
             );
             const future = value > editor.today.slice(0, 7);
-            return (
-              <button
+            const chip = <button
                 type="button"
                 key={value}
                 data-testid={`financial-month-${value}`}
@@ -470,8 +475,8 @@ export function FinancialItemsEditor({
                       ? `${status.closeStatus === "CLOSE" ? "마감" : "작업중"} · ${status.itemCount ?? "–"}건`
                       : "조회 중"}
                 </small>
-              </button>
-            );
+              </button>;
+            return future || status?.selectable === false ? <HelpTooltip key={value} label={`${Number(value.slice(5))}월`} disabledTarget={chip}>아직 열리지 않은 달입니다. 그 달이 되면 매달 반복 항목이 자동으로 채워집니다.</HelpTooltip> : <span key={value}>{chip}</span>;
           })}
         </div>
         {Boolean(statusError) && (
@@ -503,7 +508,11 @@ export function FinancialItemsEditor({
           )}
         </div>
       )}
-      <nav className="financial-tabs" aria-label="재무 항목 탭">
+      <SegmentedTabList
+        as="nav"
+        className="financial-tabs"
+        aria-label="재무 항목 탭"
+      >
         <button
           type="button"
           data-testid="financial-tab-financial"
@@ -534,7 +543,7 @@ export function FinancialItemsEditor({
             <option>백만원</option>
           </select>
         </label>
-      </nav>
+      </SegmentedTabList>
       {state.error != null && (
         <ErrorBanner
           message={

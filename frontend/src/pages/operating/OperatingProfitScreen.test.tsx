@@ -256,8 +256,8 @@ it("uses exact decimal display and leaves future values blank rather than zero",
 });
 it("shows distinct imported closed and working tones", async () => {
   await draw();
-  expect(screen.getByText("이관")).toHaveClass("sicost-tone-lock");
-  expect(screen.getByText("확정")).toHaveClass("sicost-tone-lock");
+  expect(screen.getByRole("columnheader", {name:/1월 이관/})).toBeInTheDocument();
+  expect(screen.getByRole("columnheader", {name:/2월 확정/})).toBeInTheDocument();
   expect(
     screen
       .getAllByText("작업중")

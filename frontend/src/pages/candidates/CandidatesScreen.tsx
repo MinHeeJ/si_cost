@@ -1,3 +1,5 @@
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -439,22 +441,24 @@ export function CandidatesScreen({
       data-screen-id="SCR-UI-33"
       data-feature-id="SLICE-BASIC132-CANDIDATES"
     >
-      <header className="candidate-toolbar">
-        <button
-          className="sicost-primary"
-          data-testid="candidate-create"
-          disabled={!canRegister || Boolean(committed)}
-          onClick={() =>
-            setForm((f) =>
-              f && !f.candidate
-                ? { ...f, open: true }
-                : { open: true, key: ++nextForm.current },
-            )
-          }
-        >
-          후보 등록
-        </button>
-      </header>
+      <ScreenTitleActions>
+        <header className="candidate-toolbar">
+          <button
+            className="sicost-primary"
+            data-testid="candidate-create"
+            disabled={!canRegister || Boolean(committed)}
+            onClick={() =>
+              setForm((f) =>
+                f && !f.candidate
+                  ? { ...f, open: true }
+                  : { open: true, key: ++nextForm.current },
+              )
+            }
+          >
+            후보 등록
+          </button>
+        </header>
+      </ScreenTitleActions>
       <CandidateSummaryPanel refreshKey={version} active={active} />
       <CandidateShortagesPanel
         refreshKey={version}
@@ -757,7 +761,11 @@ export function CandidatesScreen({
           ) : (
             detail && (
               <>
-                <nav className="candidate-tabs" aria-label="후보 상세 탭">
+                <SegmentedTabList
+                  as="nav"
+                  className="candidate-tabs"
+                  aria-label="후보 상세 탭"
+                >
                   {["기본 정보", "연락 기록", "변경 이력"].map((t) => (
                     <button
                       key={t}
@@ -768,7 +776,7 @@ export function CandidatesScreen({
                       {t}
                     </button>
                   ))}
-                </nav>
+                </SegmentedTabList>
                 <section
                   hidden={tab !== "기본 정보"}
                   role="tabpanel"

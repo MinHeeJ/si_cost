@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { Dialog } from "../../shared/Dialog";
+import { Icon } from "../../shared/Icon";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import * as api from "./clientsApi";
@@ -210,8 +211,9 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
       data-testid="client-form"
       data-screen-id="SCR-UI-15"
     >
-      <header className="clients-toolbar">
-        <h2>{client ? "기본 정보 수정" : "거래처 등록"}</h2>
+      <header
+        className={`clients-toolbar${client ? "" : " sicost-form-heading"}`}
+      >
         <button
           type="button"
           data-testid="client-form-back"
@@ -220,6 +222,17 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
         >
           {client ? "취소" : "목록"}
         </button>
+        {client ? (
+          <h2>기본 정보 수정</h2>
+        ) : (
+          <div>
+            <p className="sicost-breadcrumb">기준정보 › 거래처·영업 파트</p>
+            <div className="sicost-title-row">
+              <h1>거래처 등록</h1>
+              <small>UI-15</small>
+            </div>
+          </div>
+        )}
       </header>
       {!canSave && (
         <p role="note">
@@ -254,6 +267,13 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           else void save();
         }}
       >
+        {!client && (
+          <p className="sicost-banner sicost-tone-info clients-form-guidance">
+            <Icon name="info" size={18} />
+            구분을 선택하면 고객사는 세금계산서 이메일, 협력사는 지급 계좌를
+            입력할 수 있습니다.
+          </p>
+        )}
         <fieldset
           disabled={!canSave || pending}
           className="clients-form-fields"
@@ -280,7 +300,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           {text("contactName", "담당자", 20)}
           {text("phone", "연락처", 20)}
         </fieldset>
-        {!form.type && (
+        {!form.type && client && (
           <p className="sicost-banner sicost-tone-info">
             구분을 선택하면 세금계산서 이메일 또는 지급 계좌를 입력할 수
             있습니다.

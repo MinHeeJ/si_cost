@@ -17,14 +17,20 @@
 .project-progress-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .project-progress-metrics > div {
   display: grid;
   gap: 8px;
   padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .project-progress-metrics span {
@@ -47,8 +53,9 @@
 }
 .project-progress-memo {
   padding: 20px 24px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .project-progress-memo dl {
@@ -97,4 +104,14 @@
   .project-progress-memo dl {
     grid-template-columns: 1fr;
   }
+}
+
+.project-progress-metrics > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

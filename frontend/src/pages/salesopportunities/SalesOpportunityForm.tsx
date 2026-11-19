@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FormPage } from "../../shared/FormPage";
@@ -341,6 +342,8 @@ export function SalesOpportunityForm({
     >
       <FormPage
         title={detail ? "영업 기회 수정" : "영업 기회 등록"}
+        breadcrumb="인력 계획 › 영업 파이프라인"
+        screenId="UI-29"
         actions={
           <button
             type="button"
@@ -562,7 +565,7 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 근무지
-                <input
+                <FieldHelp label="근무지" /><input
                   data-testid="opportunity-workplace"
                   name="workplace"
                   value={form.workplace ?? ""}
@@ -582,7 +585,7 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 기한
-                <input
+                <FieldHelp label="기한" /><input
                   data-testid="opportunity-next-due"
                   name="nextDue"
                   type="date"

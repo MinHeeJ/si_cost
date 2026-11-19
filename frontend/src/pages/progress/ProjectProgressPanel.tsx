@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -202,7 +204,7 @@ export function ProjectProgressPanel({
               ))}
             </aside>
           )}
-          <div className="project-progress-metrics">
+          <KpiStrip className="project-progress-metrics">
             <div>
               <span>계획</span>
               <strong>{status.planProgress}%</strong>
@@ -246,7 +248,7 @@ export function ProjectProgressPanel({
                 </strong>
               </div>
             )}
-          </div>
+          </KpiStrip>
           <p>
             현재 단계{" "}
             {status.allStepsCompleted
@@ -307,7 +309,7 @@ export function ProjectProgressPanel({
                 <tr>
                   {["단계", "비중", "예정 기간", "완료일", "상태", "작업"].map(
                     (label) => (
-                      <th key={label}>{label}</th>
+                      <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                     ),
                   )}
                 </tr>

@@ -63,8 +63,8 @@ export function PasswordRecoveryForm({ onClose }: { onClose(): void }) {
         임시 비밀번호 요청
       </button>
       <button
-        data-testid="authentication-password-recovery-back-button"
         type="button"
+        data-testid="authentication-password-recovery-back-button"
         onClick={onClose}
         disabled={busy}
       >

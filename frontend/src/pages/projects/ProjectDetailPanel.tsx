@@ -1,3 +1,4 @@
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import {
   useCallback,
   useEffect,
@@ -238,18 +239,19 @@ export function ProjectDetailPanel({
                 실주 또는 지난 연도는 조회만 할 수 있습니다.
               </p>
             )}
-            <nav
+            <SegmentedTabList
+              as="nav"
               role="tablist"
               aria-label="프로젝트 상세 영역"
               className="project-tabs"
             >
               {[
                 ["basic", "기본 정보"],
+                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
+                ...(registration?.issues ? [["issues", "이슈"]] : []),
                 ["plans", "인원 계획"],
                 ["assignments", "투입 인력"],
                 ["history", "계약 변경 이력"],
-                ...(registration?.progress ? [["progress", "진행 현황"]] : []),
-                ...(registration?.issues ? [["issues", "이슈"]] : []),
               ].map(([key, label]) => (
                 <button
                   type="button"
@@ -265,7 +267,7 @@ export function ProjectDetailPanel({
                     : label}
                 </button>
               ))}
-            </nav>
+            </SegmentedTabList>
             <div role="tabpanel" data-testid={`project-panel-${tab}`}>
               {tab === "progress" &&
                 context &&

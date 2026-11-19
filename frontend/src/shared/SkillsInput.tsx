@@ -1,3 +1,4 @@
+import { FieldHelp } from "./FieldHelp";
 import { useEffect, useId, useState } from "react";
 import { request } from "./api";
 
@@ -32,7 +33,7 @@ export function SkillsInput({
   }, []);
   return (
     <div className="sicost-field">
-      <label htmlFor={id}>보유 스킬</label>
+      <label htmlFor={id}>보유 스킬<FieldHelp label="보유 스킬" /></label>
       <input
         id={id}
         data-testid="people-skills-input"

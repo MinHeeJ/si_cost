@@ -19,6 +19,10 @@
 }
 .withdrawal-help {
   margin: 0;
+  background: var(--surface);
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: var(--e1);
 }
 .withdrawal-sub {
   display: block;
@@ -59,8 +63,9 @@
 }
 .withdrawal-position {
   padding: 12px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .withdrawal-position h3 {

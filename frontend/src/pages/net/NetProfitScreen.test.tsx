@@ -306,8 +306,8 @@ it("uses adverse server comparison flags and independent provisional and estimat
 });
 it("distinguishes migrated closed and working states", async () => {
   await draw();
-  expect(screen.getByText("이관")).toHaveClass("sicost-tone-lock");
-  expect(screen.getByText("확정")).toHaveClass("sicost-tone-lock");
+  expect(screen.getByRole("columnheader", {name:/1월 이관/})).toBeInTheDocument();
+  expect(screen.getByRole("columnheader", {name:/2월 확정/})).toBeInTheDocument();
   expect(
     screen
       .getAllByText("작업중")

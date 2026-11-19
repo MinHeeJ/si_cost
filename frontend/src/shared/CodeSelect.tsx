@@ -1,3 +1,4 @@
+import { FieldHelp } from "./FieldHelp";
 import { useId } from "react";
 
 export type CodeOption = { code: string; name: string; disabled?: boolean };
@@ -23,17 +24,18 @@ export function CodeSelect({
   const id = useId();
   return (
     <div className="sicost-field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{props.required && <span aria-hidden="true"> *</span>}<FieldHelp label={label} /></label>
       <select
         {...props}
         id={id}
+        aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onSelectionConfirmed}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
       >
-        <option value="">선택해 주세요</option>
+        <option value="">선택</option>
         {options.map((option) => (
           <option
             key={option.code}

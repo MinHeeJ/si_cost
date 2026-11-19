@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -211,7 +212,7 @@ export function SalesOpportunityActions({
               </select>
             </label>
             <label>
-              수주 확률{" "}
+              수주 확률<FieldHelp label="수주 확률" />{" "}
               <input
                 data-testid="opportunity-probability-input"
                 value={probability}
@@ -385,7 +386,7 @@ export function SalesOpportunityActions({
                 </label>
                 <label>
                   메모
-                  <textarea
+                  <FieldHelp label="메모" /><textarea
                     aria-label="메모"
                     data-testid="loss-memo-input"
                     value={memo}
@@ -423,7 +424,7 @@ export function SalesOpportunityActions({
                 </p>
                 <label>
                   계약금액
-                  <input
+                  <FieldHelp label="계약금액" /><input
                     data-testid="win-amount-input"
                     value={win.contractAmount}
                     onChange={(e) =>

@@ -1,15 +1,21 @@
 .bill-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
   margin-block: 16px 24px;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .bill-summary-card {
   display: grid;
   gap: 8px;
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -66,4 +72,14 @@
   .bill-selection-panel {
     display: none;
   }
+}
+
+.bill-summary-grid > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

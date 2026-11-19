@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
+import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
+import { FieldHelp } from "../../shared/FieldHelp";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { Dialog } from "../../shared/Dialog";
@@ -62,6 +64,7 @@ export function ProjectForm({
   const initial = useRef(form),
     node = useRef<HTMLFormElement>(null),
     busy = useRef(false);
+  const topmost = useOverlayLayer(node, modal && visible, 24);
   const [codes, setCodes] = useState<
     Record<string, { code: string; name: string }[]>
   >({});
@@ -187,9 +190,10 @@ export function ProjectForm({
   useEffect(() => {
     if (!modal || !visible || leaving) return;
     const previous = document.activeElement as HTMLElement | null;
-    node.current?.querySelector<HTMLInputElement>("input")?.focus();
+    if (topmost())
+      node.current?.querySelector<HTMLInputElement>("input")?.focus();
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && topmost()) {
         event.preventDefault();
         close();
       }
@@ -299,9 +303,11 @@ export function ProjectForm({
       key={key}
       data-testid={`project-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
       label={label}
+      unit={key.endsWith("Amount") ? "원" : undefined}
       value={form[key]}
       onChange={(v) => change(key, v)}
       error={fields[key]}
+      placeholder={key === "teamExpenseAmount" ? preview?.teamExpenseAmount ?? undefined : key === "projectExpenseAmount" ? preview?.projectExpenseAmount ?? undefined : undefined}
       disabled={pending || Boolean(committed)}
       {...options}
     />
@@ -312,6 +318,7 @@ export function ProjectForm({
     options: { code: string; name: string }[],
   ) => (
     <CodeSelect
+      required
       label={label}
       value={form[key]}
       options={options}
@@ -323,6 +330,8 @@ export function ProjectForm({
   const content = (
     <FormPage
       title={p ? "프로젝트 수정" : "프로젝트 등록"}
+      breadcrumb="프로젝트·투입 › 프로젝트"
+      screenId="UI-01"
       actions={
         <button
           type="button"
@@ -330,7 +339,7 @@ export function ProjectForm({
           disabled={pending}
           onClick={close}
         >
-          목록
+          ‹ 목록
         </button>
       }
     >
@@ -413,7 +422,7 @@ export function ProjectForm({
             })}
             {input("endDate", "계약 종료일", { required: true, type: "date" })}
             {!p ? (
-              select("initialStatus", "초기 상태", codes.PROJ_STAT ?? [])
+              select("initialStatus", "상태", codes.PROJ_STAT ?? [])
             ) : (
               <div>
                 상태 {detail?.effectiveStatus}
@@ -472,11 +481,12 @@ export function ProjectForm({
                 {form.budgetMode === "MANUAL" ? (
                   input("budgetAmount", "예산(목표 원가)", { required: true })
                 ) : (
-                  <p>
-                    자동 예산{" "}
+                  <p className="sicost-auto-budget">
+                    예산(목표 원가) <FieldHelp label="예산(목표 원가)" /> <br />{" "}
                     {p && form.contractAmount === initial.current.contractAmount
                       ? (p.budgetAmount ?? "–")
                       : (preview?.budgetAmount ?? "계산 불가")}
+                    <span aria-hidden="true"> 원</span>
                   </p>
                 )}
                 {fields.budgetAmount && form.budgetMode !== "MANUAL" && (
@@ -575,7 +585,7 @@ export function ProjectForm({
           style={visible ? undefined : { display: "none" }}
         >
           <div
-            className="sicost-dialog sicost-dialog-wide"
+            className="sicost-dialog sicost-dialog-page project-form-dialog"
             role="dialog"
             aria-modal="true"
             aria-label={p ? "프로젝트 수정" : "프로젝트 등록"}

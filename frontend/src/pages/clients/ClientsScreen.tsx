@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import {
   useCallback,
   useEffect,
@@ -6,6 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+import { SegmentedTabs } from "../../shared/SegmentedTabs";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ClientForm } from "./ClientForm";
@@ -345,64 +348,66 @@ export function ClientsScreen({
       data-testid="clients-screen"
     >
       <div hidden={creating}>
-        <nav className="clients-tabs" aria-label="기준정보 탭" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={workspaceTab === "clients"}
-            data-testid="clients-workspace-tab"
-            onClick={() => changeTab("clients")}
-          >
-            거래처
-          </button>
-          {renderParts && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={workspaceTab === "parts"}
-              data-testid="parts-workspace-tab"
-              onClick={() => changeTab("parts")}
-            >
-              영업 파트
-            </button>
-          )}
-        </nav>
+        <SegmentedTabs
+          label="기준정보 탭"
+          testId="clients-workspace-tabs"
+          value={workspaceTab}
+          onChange={(key) => changeTab(key as "clients" | "parts")}
+          tabs={[
+            {
+              key: "clients",
+              label: "거래처",
+              testId: "clients-workspace-tab",
+            },
+            ...(renderParts
+              ? [
+                  {
+                    key: "parts",
+                    label: "영업 파트",
+                    testId: "parts-workspace-tab",
+                  },
+                ]
+              : []),
+          ]}
+        />
         <div
           hidden={workspaceTab !== "clients"}
           role="tabpanel"
           data-testid="clients-workspace-panel"
         >
-          <div className="clients-toolbar">
-            <h2>거래처</h2>
-            <div className="clients-actions">
-              {!mobile && onTemplate && (
+          <ScreenTitleActions active={workspaceTab === "clients" && !creating}>
+            <div className="clients-toolbar">
+              <h2 className="sicost-sr-only">거래처</h2>
+              <div className="clients-actions">
+                {!mobile && onTemplate && (
+                  <button
+                    type="button"
+                    data-testid="clients-template"
+                    onClick={onTemplate}
+                  >
+                    양식 내려받기
+                  </button>
+                )}
+                {!mobile && onUpload && (
+                  <button
+                    type="button"
+                    data-testid="clients-upload"
+                    onClick={onUpload}
+                  >
+                    엑셀 업로드
+                  </button>
+                )}
                 <button
                   type="button"
-                  data-testid="clients-template"
-                  onClick={onTemplate}
+                  className="sicost-primary"
+                  data-testid="clients-register"
+                  onClick={() => setCreating(true)}
                 >
-                  양식 내려받기
+                  등록
                 </button>
-              )}
-              {!mobile && onUpload && (
-                <button
-                  type="button"
-                  data-testid="clients-upload"
-                  onClick={onUpload}
-                >
-                  엑셀 업로드
-                </button>
-              )}
-              <button
-                type="button"
-                className="sicost-primary"
-                data-testid="clients-register"
-                onClick={() => setCreating(true)}
-              >
-                등록
-              </button>
+              </div>
             </div>
-          </div>
+          </ScreenTitleActions>
           <FilterBar
             testId="clients-filter-form"
             className="clients-filter"
@@ -413,7 +418,7 @@ export function ClientsScreen({
           >
             <label className="sicost-field">
               구분
-              <select
+              <FieldHelp label="구분" /><select
                 data-testid="clients-filter-type"
                 value={draft.type}
                 onChange={(event) =>

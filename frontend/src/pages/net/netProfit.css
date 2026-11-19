@@ -3,8 +3,9 @@
 }
 .net-contributions {
   padding: 20px 24px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
   min-width: 0;
 }
@@ -40,4 +41,10 @@
   .net-contribution-track {
     grid-column: 1 / -1;
   }
+}
+
+.net-summary .operating-card {
+  padding: 18px 22px 17px;
+  border-radius: 0;
+  border: 0;
 }

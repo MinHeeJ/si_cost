@@ -18,14 +18,20 @@
 .renegotiation-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .renegotiation-summary article,
 .renegotiation-assumption,
 .renegotiation-guide {
   background: var(--surface);
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   padding: 20px 24px;
   min-width: 0;
 }
@@ -167,4 +173,14 @@
     padding: 12px;
     overflow-x: auto;
   }
+}
+
+.renegotiation-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
 }

@@ -1,3 +1,7 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
+import { KpiStrip } from "../../shared/Surface";
 import { FilterBar } from "../../shared/FilterBar";
 import { BillingReviewDownloadButton } from "../apiops/BillingReviewDownloadButton";
 import {
@@ -539,29 +543,31 @@ function BillsContent({
   };
   return (
     <>
-      <header className="bill-heading">
-        <span>오늘 {period.currentDate}</span>
-        <label htmlFor="bill-unit">단위</label>
-        <select
-          id="bill-unit"
-          data-testid="bill-unit"
-          value={unit}
-          onChange={(e) => setUnit(e.target.value as AmountUnit)}
-        >
-          <option>원</option>
-          <option>천원</option>
-          <option>백만원</option>
-        </select>
-        <button
-          type="button"
-          className="sicost-primary"
-          data-testid="bill-create"
-          disabled={readonly || pending}
-          onClick={() => setForm({})}
-        >
-          청구 등록
-        </button>
-      </header>
+      <ScreenTitleActions>
+        <header className="bill-heading">
+          <span>오늘 {period.currentDate}</span>
+          <label htmlFor="bill-unit">단위</label>
+          <select
+            id="bill-unit"
+            data-testid="bill-unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as AmountUnit)}
+          >
+            <option>원</option>
+            <option>천원</option>
+            <option>백만원</option>
+          </select>
+          <button
+            type="button"
+            className="sicost-primary"
+            data-testid="bill-create"
+            disabled={readonly || pending}
+            onClick={() => setForm({})}
+          >
+            청구 등록
+          </button>
+        </header>
+      </ScreenTitleActions>
       {readonly && (
         <p className="sicost-banner sicost-tone-lock">
           지난 연도는 조회만 할 수 있습니다.
@@ -576,7 +582,8 @@ function BillsContent({
           void loadSummary().catch(() => {});
         }}
       />
-      <section
+      <KpiStrip
+        as="section"
         data-testid="bills-summary"
         className="bill-summary"
         aria-busy={summaryLoading}
@@ -611,7 +618,7 @@ function BillsContent({
             </article>
           </>
         )}
-      </section>
+      </KpiStrip>
       <p className="bill-hint">
         카드는 선택연도·이월 설정 기준이며 목록 필터와 독립입니다.
       </p>
@@ -620,7 +627,12 @@ function BillsContent({
           renderTabs(actionContext)
         ) : (
           <>
-            <nav role="tablist" aria-label="청구 업무 탭" className="bill-tabs">
+            <SegmentedTabList
+              as="nav"
+              role="tablist"
+              aria-label="청구 업무 탭"
+              className="bill-tabs"
+            >
               <button
                 type="button"
                 role="tab"
@@ -648,7 +660,7 @@ function BillsContent({
               >
                 미수 알림 ({receivableCount ?? "–"})
               </button>
-            </nav>
+            </SegmentedTabList>
             <div hidden={tab !== "checks"}>
               <BillingChecksPanel
                 initialMonth={initialMonth}
@@ -701,7 +713,7 @@ function BillsContent({
             });
           }}
         >
-          <label htmlFor="bill-status-filter">상태</label>
+          <label htmlFor="bill-status-filter">상태<FieldHelp label="상태" /></label>
           <select
             id="bill-status-filter"
             data-testid="bill-status-filter"

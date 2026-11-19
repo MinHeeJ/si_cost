@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -265,7 +266,7 @@ export function ProjectProgressEditor({
                         "완료일",
                         "상태",
                       ].map((label) => (
-                        <th key={label}>{label}</th>
+                        <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
                       ))}
                     </tr>
                   </thead>
@@ -351,7 +352,7 @@ export function ProjectProgressEditor({
                 ] as const
               ).map(([key, label]) => (
                 <label className="sicost-field" key={key}>
-                  {label}
+                  {label}<FieldHelp label={label} />
                   <textarea
                     data-testid={`progress-memo-${key.replace(/[A-Z]/g, (v) => `-${v.toLowerCase()}`)}`}
                     aria-label={label}

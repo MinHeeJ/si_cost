@@ -240,6 +240,8 @@ export function NotificationBell({
         aria-controls={open ? "notification-popover" : undefined}
         data-testid="notification-open-button"
         onClick={() => {
+          trigger.current?.classList.remove("sicost-bell-click");
+          if (trigger.current) { void trigger.current.offsetWidth; trigger.current.classList.add("sicost-bell-click"); }
           if (open) close();
           else {
             openRef.current = true;

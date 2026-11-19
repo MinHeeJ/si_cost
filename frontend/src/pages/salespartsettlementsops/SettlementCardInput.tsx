@@ -1,3 +1,5 @@
+import { FieldHelp } from "../../shared/FieldHelp";
+import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
@@ -191,7 +193,7 @@ export function SettlementCardInput({
       <div className="settlement-card">
         {current.canSaveCard ? (
           <label>
-            법인카드 사용액{" "}
+            법인카드 사용액<FieldHelp label="법인카드 사용액" />{" "}
             <input
               data-testid="settlement-card-input"
               value={draft}
@@ -232,7 +234,7 @@ export function SettlementCardInput({
         {actionsTarget
           ? createPortal(commandActions, actionsTarget)
           : commandActions}
-        <div role="tablist" aria-label="정산 보기" className="settlement-tabs">
+        <SegmentedTabList as="div" role="tablist" aria-label="정산 보기" className="settlement-tabs">
           <button
             type="button"
             role="tab"
@@ -259,7 +261,7 @@ export function SettlementCardInput({
           >
             기간 추이 (1월~기준월)
           </button>
-        </div>
+        </SegmentedTabList>
       </div>
       {message && <p role="status">{message}</p>}
       {error != null && (

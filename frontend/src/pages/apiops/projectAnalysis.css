@@ -7,13 +7,19 @@
 .project-analysis-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
+
+  gap: 0;
+  background: var(--surface);
+  border-radius: 10px;
+  box-shadow: var(--e1);
+  overflow: hidden;
 }
 .project-analysis-summary section {
   min-width: 0;
   padding: 20px;
-  border: 1px solid var(--divider);
-  border-radius: 8px;
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
   background: var(--surface);
 }
 .project-analysis-summary span {
@@ -92,8 +98,16 @@
 }
 .project-analysis-tabs {
   display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--divider);
+  align-items: center;
+  gap: 2px;
+  border-bottom: 0;
+  background: #eceff3;
+  border-radius: 6px;
+  padding: 4px;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 .project-analysis-tabs button {
   min-height: 40px;
@@ -135,13 +149,83 @@
     grid-template-columns: 1fr;
   }
 }
-.analysis-mobile-list { display: grid; gap: 12px; min-width: 0; }
-.analysis-mobile-card { border: 1px solid var(--divider); border-radius: 8px; background: var(--surface); padding: 16px; }
-.analysis-mobile-card dl { display: grid; gap: 10px; margin: 0; }
-.analysis-mobile-card dl > div { display: flex; justify-content: space-between; gap: 16px; }
-.analysis-mobile-card dt { color: var(--text-sub); flex-shrink: 0; }
-.analysis-mobile-card dd { margin: 0; min-width: 0; text-align: right; overflow-wrap: anywhere; }
-.analysis-mobile-empty { padding: 24px; display: grid; gap: 16px; text-align: center; }
-@media (max-width: 767px) { .project-status-download { display: none; } }
+.analysis-mobile-list {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.analysis-mobile-card {
+  border: 0;
+  box-shadow: var(--e1);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 16px;
+}
+.analysis-mobile-card dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.analysis-mobile-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.analysis-mobile-card dt {
+  color: var(--text-sub);
+  flex-shrink: 0;
+}
+.analysis-mobile-card dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.analysis-mobile-empty {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .project-status-download {
+    display: none;
+  }
+}
 
-.analysis-negative { color: var(--bad); }
+.analysis-negative {
+  color: var(--bad);
+}
+
+.project-analysis-summary > * {
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--divider),
+    0 -1px 0 var(--divider);
+  background: transparent;
+  padding: 18px 22px 17px;
+}
+
+.project-analysis-tabs button {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.project-analysis-tabs
+  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
+  background: var(--surface);
+  color: var(--text);
+  border: 0;
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.1),
+    0 0 0 1px rgba(17, 24, 39, 0.04);
+}
