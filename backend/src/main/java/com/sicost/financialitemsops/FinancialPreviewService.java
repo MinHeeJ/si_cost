@@ -54,7 +54,27 @@ public class FinancialPreviewService {
         BigDecimal annual=null;for(JsonNode t:draft.path("taxes"))if(selected.toString().substring(0,4).equals(text(t,"tax_yr")))annual=number(t,"est_tax_amt");
         var allocation=allocate(month.substring(0,4),annual,repository.taxMonths(month));
         if(request.has("estimatedTax")&&(!allocation.verified()||allocation.openMonthCount()==0))throw conflict("PERIOD_READ_ONLY",month,"마감월 법인세 자료를 확인해 주세요.");
-        return new Preview(month,revision,List.copyOf(added),added.size(),request.path("action").asText().equals("LOAD_PREVIOUS")?(added.isEmpty()?"불러올 항목이 없습니다":"지난달 항목을 불러왔습니다. 금액을 확인한 뒤 저장해 주세요."):"계산했습니다.",allocation,FinancialCalculation.contributions(draft,month,allocation));
+        return new Preview(month,revision,List.copyOf(added),added.size(),request.path("action").asText().equals("LOAD_PREVIOUS")?(added.isEmpty()?"불러올 항목이 없습니다":"지난달 항목을 불러왔습니다. 금액을 확인한 뒤 저장해 주세요."):"계산했습니다.",
+            allocation,FinancialCalculation.contributions(draft,month,allocation),cardMonth(draft),automaticTaxAmounts(draft));
+    }
+    private Map<String,Object> cardMonth(ObjectNode draft) {
+        ObjectNode stored=draft.withArray("cardMonths").isEmpty()?null:(ObjectNode)draft.withArray("cardMonths").get(0);
+        BigDecimal sum=stored==null?BigDecimal.ZERO:number(stored,"card_sum_amt");
+        BigDecimal cash=stored==null?BigDecimal.ZERO:number(stored,"cash_amt");
+        return Map.of("cardSumAmount",money(sum),"cashAmount",money(cash),
+            "editYn",stored==null?"N":Objects.toString(text(stored,"edit_yn"),"N"),
+            "difference",money(cash.subtract(sum)),"exists",stored!=null);
+    }
+    private Map<String,String> automaticTaxAmounts(ObjectNode draft) {
+        Map<String,String> result=new LinkedHashMap<>();
+        for(JsonNode payment:draft.path("taxPayments")) {
+            String year=text(payment,"tax_yr"),type=text(payment,"pay_type_cd");
+            BigDecimal annual=null,mid=BigDecimal.ZERO;
+            for(JsonNode tax:draft.path("taxes"))if(Objects.equals(year,text(tax,"tax_yr")))annual=nullableNumber(tax,"est_tax_amt");
+            for(JsonNode other:draft.path("taxPayments"))if(Objects.equals(year,text(other,"tax_yr"))&&"MID".equals(text(other,"pay_type_cd")))mid=number(other,"pay_amt");
+            result.put(year+":"+type,money("MID".equals(type)?BigDecimal.ZERO:annual==null?null:annual.subtract(mid).max(BigDecimal.ZERO)));
+        }
+        return result;
     }
     public String revision(YearMonth month){return revisions.revision(FinancialRepository.canonical(editorRepository.snapshot(month)));}
     private void apply(ObjectNode draft,JsonNode changes,String collection,YearMonth month){

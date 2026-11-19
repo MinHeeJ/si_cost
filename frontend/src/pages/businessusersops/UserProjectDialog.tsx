@@ -249,7 +249,8 @@ export function UserProjectDialog({
             </label>
             <label className="sicost-field">
               상태
-              <FieldHelp label="상태" /><select
+              <FieldHelp label="상태" />
+              <select
                 data-testid="user-project-status"
                 value={status}
                 disabled={pending}

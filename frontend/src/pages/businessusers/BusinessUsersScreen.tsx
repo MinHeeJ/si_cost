@@ -272,7 +272,8 @@ export function BusinessUsersScreen({
         >
           <label className="sicost-field">
             역할
-            <FieldHelp label="역할" /><select
+            <FieldHelp label="역할" />
+            <select
               data-testid="business-users-role-filter"
               value={draft.role}
               onChange={(e) => setDraft({ ...draft, role: e.target.value })}
@@ -280,7 +281,7 @@ export function BusinessUsersScreen({
               <option value="">전체</option>
               {roleOptions.map((option) => (
                 <option
-                  data-testid={`business-users-role-option-${option.roleId.toLowerCase().replace(/_/g, "-")}`}
+                  data-testid={`business-users-role-option-${Array.from(String(option.roleId), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                   key={option.roleId}
                   value={option.roleId}
                 >
@@ -291,7 +292,8 @@ export function BusinessUsersScreen({
           </label>
           <label className="sicost-field">
             상태
-            <FieldHelp label="상태" /><select
+            <FieldHelp label="상태" />
+            <select
               data-testid="business-users-status-filter"
               value={draft.status}
               onChange={(e) => setDraft({ ...draft, status: e.target.value })}

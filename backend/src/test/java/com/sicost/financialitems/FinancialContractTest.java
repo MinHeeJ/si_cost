@@ -64,6 +64,22 @@ class FinancialContractTest {
     @ParameterizedTest @ValueSource(strings={"2026-13","2026-7","0000-01","July"}) void malformedReadMonth(String month)throws Exception{read(month).andExpect(status().isBadRequest());noWrites();}
     @Test void futureReadIsReadOnlyConflict()throws Exception{read("2026-08").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PERIOD_READ_ONLY"));noWrites();}
     @Test void recurringDraftOnlyWhenNoStoredItemsAndClampsMonthEnd()throws Exception{item("202606",1,"10").put("io_dt","2026-05-31");read("2026-07").andExpect(jsonPath("$.data.automaticDrafts[0].ioDate").value("2026-07-31")).andExpect(jsonPath("$.data.automaticDrafts[0].autoFill").value("Y"));item("202607",2,"0");read("2026-07").andExpect(jsonPath("$.data.automaticDrafts").isEmpty());noWrites();}
+    @Test void deletingAnAutomaticDraftThenSavingDoesNotRegenerateItOrChangePreviousMonth()throws Exception {
+        item("202606",1,"10").put("item_nm","임대료");
+        item("202606",2,"20").put("item_nm","통신비");
+        item("202606",3,"30").put("item_nm","일회성").put("rpt_yn","N");
+        String previous=rows.get(Kind.ITEMS).toString();
+        read("2026-07").andExpect(status().isOk()).andExpect(jsonPath("$.data.automaticDrafts.length()").value(2));
+        ObjectNode b=body(),rent=value().put("itemName","임대료");
+        rent.putObject("copySource").put("month","2026-06").put("itemSn","1").put("mode","REPEAT");
+        b.putObject("items").putArray("add").add(rent);
+        save(b).andExpect(status().isOk());
+        read("2026-07").andExpect(jsonPath("$.data.items.length()").value(1)).andExpect(jsonPath("$.data.automaticDrafts").isEmpty());
+        when(clock.instant()).thenReturn(Instant.parse("2026-08-15T00:00:00Z"));
+        read("2026-08").andExpect(jsonPath("$.data.automaticDrafts.length()").value(1))
+            .andExpect(jsonPath("$.data.automaticDrafts[0].itemName").value("임대료"));
+        assertThat(rows.get(Kind.ITEMS).stream().filter(row->"202606".equals(text(row,"fin_ym"))).toList().toString()).isEqualTo(previous);
+    }
     @Test void closedReadNeverCreatesDrafts()throws Exception{item("202606",1,"10");closed.add("202607");read("2026-07").andExpect(jsonPath("$.data.editable").value(false)).andExpect(jsonPath("$.data.automaticDrafts").isEmpty());noWrites();}
     @Test void previousYearNeverCreatesDrafts()throws Exception{item("202506",1,"10");read("2025-07").andExpect(jsonPath("$.data.editable").value(false)).andExpect(jsonPath("$.data.automaticDrafts").isEmpty());noWrites();}
     @Test void beforeOperatingStartIsReadableWithoutDrafts()throws Exception{read("2024-12").andExpect(status().isOk()).andExpect(jsonPath("$.data.editable").value(false));noWrites();}

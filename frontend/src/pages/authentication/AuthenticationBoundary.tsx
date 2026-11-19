@@ -177,7 +177,16 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
       navigate(`/${active}`, { replace: true, state: null });
     }
   }, [permissions, location.pathname, location.hash, mobile]);
-  if (!state) return <main className="authentication-loading" role="status">인증 정보를 확인하는 중입니다.</main>;
+  if (!state)
+    return (
+      <main
+        data-testid="authentication-session-loading"
+        className="authentication-loading"
+        role="status"
+      >
+        인증 정보를 확인하는 중입니다.
+      </main>
+    );
   if (state.nextStep !== "AUTHENTICATED")
     return (
       <main className="authentication-page" data-testid="authentication-page">
@@ -519,7 +528,10 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
     );
   if (!permissions)
     return (
-      <main className="authentication-loading" data-testid="authentication-permissions-loading">
+      <main
+        className="authentication-loading"
+        data-testid="authentication-permissions-loading"
+      >
         {error ? (
           <ErrorBanner message={error} />
         ) : (
@@ -542,7 +554,15 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
       </main>
     );
   if (!usableScreens.includes(location.pathname.slice(1)))
-    return <main className="authentication-loading" role="status">허용된 화면으로 이동하는 중입니다.</main>;
+    return (
+      <main
+        data-testid="authentication-redirect-loading"
+        className="authentication-loading"
+        role="status"
+      >
+        허용된 화면으로 이동하는 중입니다.
+      </main>
+    );
   return (
     <PermissionContext.Provider value={permissions}>
       {error && <ErrorBanner message={error} />}

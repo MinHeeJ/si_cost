@@ -32,7 +32,7 @@ class CashFlowReadContractTest {
         standards=new ArrayList<>(List.of(new Standard("CASH_BASE_AMT","202601",new BigDecimal("1150000000")),new Standard("MIN_CASH","202601",new BigDecimal("1150000070")),new Standard("VAT_RT","202601",new BigDecimal("10"))));
         financial=new HashMap<>();receipts=new HashMap<>();
         financial.put("2026-01",json.readTree("""
-            {"items":[{"fin_ym":"202601","item_sn":1,"fin_cls_cd":"NOPR_IN","amt":100,"vat_amt":0},{"fin_ym":"202601","item_sn":2,"fin_cls_cd":"SGA","amt":30,"vat_amt":0}]}
+            {"items":[{"fin_ym":"202601","item_sn":1,"fin_cls_cd":"NOPR_IN","amt":100,"vat_amt":0,"io_dt":"2026-01-05"},{"fin_ym":"202601","item_sn":2,"fin_cls_cd":"SGA","amt":30,"vat_amt":0}]}
             """));
         when(repository.base()).thenReturn(YearMonth.of(2026,1));
         when(repository.load(anyInt())).thenAnswer(c->new CashFlowRepository.Snapshot(YearMonth.of(2026,1),people,payroll,standards,closes,List.of()));
@@ -52,6 +52,12 @@ class CashFlowReadContractTest {
             .andExpect(jsonPath("$.data.months[0].closingBalance").value("1150000070")).andExpect(jsonPath("$.data.months[0].shortage").value(false))
             .andExpect(jsonPath("$.data.timezone").value("Asia/Seoul"));
         verify(users).currentUser();
+    }
+    @Test void undatedIncomeDoesNotEnterAnnualMiscIncomeOrCarriedCash() throws Exception {
+        ((com.fasterxml.jackson.databind.node.ObjectNode)financial.get("2026-01").path("items").get(0)).remove("io_dt");
+        read().andExpect(status().isOk()).andExpect(jsonPath("$.data.months[0].incomeTotal").value("0"))
+            .andExpect(jsonPath("$.data.months[0].expenseTotal").value("30"))
+            .andExpect(jsonPath("$.data.months[0].closingBalance").value("1149999970"));
     }
     @Test void publicDefaultsUseSeoulYearAndThousandWon() throws Exception {
         mvc.perform(get("/api/cash-flow")).andExpect(status().isOk()).andExpect(jsonPath("$.data.year").value(2026)).andExpect(jsonPath("$.data.unit").value("THOUSAND_WON"));

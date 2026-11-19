@@ -130,6 +130,26 @@ class FinancialPreviewContractTest {
     @Test void missingClosedSnapshotIsUnknownNotZero()throws Exception{when(mapper.taxMonths(anyString())).thenReturn(List.of(new FinancialCalculation.TaxMonth("2026-01","CLOSE",null,null,null),new FinancialCalculation.TaxMonth("2026-07","WORK",null,null,null)));post(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.allocation.verified").value(false)).andExpect(jsonPath("$.data.allocation.remainingAmount").value(org.hamcrest.Matchers.nullValue()));}
     @Test void annualChangeCannotHideMissingClosedSnapshot()throws Exception{when(mapper.taxMonths(anyString())).thenReturn(List.of(new FinancialCalculation.TaxMonth("2026-01","CLOSE",null,null,null)));post(body().put("estimatedTax","1")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PERIOD_READ_ONLY"));}
     @Test void cardManualZeroIsCashZeroEvenWithPayments()throws Exception{((ArrayNode)stored.get("cards")).addObject().put("card_id","K-01").put("use_yn","Y");ObjectNode b=body();ObjectNode c=b.putObject("cards");c.putArray("payments").addObject().put("cardId","K-01").put("amount","9");c.putObject("cashOverride").put("mode","MANUAL").put("amount","0");post(b).andExpect(status().isOk()).andExpect(jsonPath("$.data.contributions.cashCardExpense").value("0"));}
+    @Test void previewReturnsServerCardTotalsDifferenceAndAutomaticTaxWithoutWriting()throws Exception {
+        ((ArrayNode)stored.get("cards")).addObject().put("card_id","K-01").put("use_yn","Y");
+        ((ArrayNode)stored.get("taxPayments")).addObject().put("tax_yr","2026").put("pay_type_cd","MID").put("pay_amt","4000000");
+        ((ArrayNode)stored.get("taxPayments")).addObject().put("tax_yr","2026").put("pay_type_cd","CNFM").putNull("pay_amt");
+        String before=stored.toString();ObjectNode b=body(),cards=b.putObject("cards");
+        cards.putArray("payments").addObject().put("cardId","K-01").put("amount","100");
+        cards.putArray("add").addObject().put("clientKey","new-card").put("cardName","신규").put("last4","1234").put("amount","200");
+        cards.putObject("cashOverride").put("mode","MANUAL").put("amount","500");
+        post(b).andExpect(status().isOk()).andExpect(jsonPath("$.data.cardMonth.cardSumAmount").value("300"))
+            .andExpect(jsonPath("$.data.cardMonth.cashAmount").value("500"))
+            .andExpect(jsonPath("$.data.cardMonth.difference").value("200"))
+            .andExpect(jsonPath("$.data.automaticTaxAmounts['2026:CNFM']").value("14400000"));
+        assertThat(stored.toString()).isEqualTo(before);verifyNoInteractions(history);
+    }
+    @Test void undatedIncomePreviewAffectsProfitOnly()throws Exception {
+        ObjectNode b=add(body(),"items",item("수익","100000").put("finClass","NOPR_IN"));
+        post(b).andExpect(status().isOk()).andExpect(jsonPath("$.data.contributions.nonOperatingIncome").value("100000"))
+            .andExpect(jsonPath("$.data.contributions.cashMiscIncome").value("0"));
+        assertThat(stored.path("items")).isEmpty();verifyNoInteractions(history);
+    }
     @Test void automaticCashOverrideCannotCarryAmount()throws Exception{ObjectNode b=body();b.putObject("cards").putObject("cashOverride").put("mode","AUTO").put("amount","0");invalid(b,"cards.cashOverride.amount");}
     @Test void explicitDeletionDoesNotDeleteOmittedRowsOrOtherMonthSameOrdinal()throws Exception{
         storedItem((ArrayNode)stored.get("items"),"202606","1","현금월 참조").put("io_dt","2026-07-01");storedItem((ArrayNode)stored.get("items"),"202607","1","선택월").putNull("io_dt");storedItem((ArrayNode)stored.get("items"),"202607","2","유지").putNull("io_dt");

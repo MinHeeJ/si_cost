@@ -62,10 +62,15 @@ export type YearStatus = {
   }[];
 };
 export type Preview = {
+  month: string;
+  revision: string;
+  copiedCount: number;
   addedDrafts: StoredRow[];
   allocation: CorporateTaxAllocation;
   contributions: FinancialContributions;
   message: string;
+  cardMonth: FinancialEditor["cardMonth"];
+  automaticTaxAmounts: Record<string, string | null>;
 };
 export const getFinancialItems = (month?: string, signal?: AbortSignal) =>
   request<FinancialEditor>(
@@ -85,10 +90,12 @@ export const getFinancialYearStatus = (year: string, signal?: AbortSignal) =>
 export const createFinancialPreview = (
   body: Record<string, unknown>,
   action: "CALCULATE" | "LOAD_PREVIOUS",
+  signal?: AbortSignal,
 ) =>
   request<Preview>("/api/financial-items/preview", {
     method: "POST",
     body: JSON.stringify({ ...body, action }),
+    signal,
   });
 export const financialIds: Record<Collection, string> = {
   items: "itemSn",

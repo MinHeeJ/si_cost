@@ -77,6 +77,7 @@ public class FinancialImportService implements UploadResultProvider {
         }
         throw new ApiException(409,"STALE_WRITE","잠금 범위가 변경되었습니다. 다시 검사해 주세요.");
     }
+    public List<Code> templateCodes() { return mapper.codes(); }
     private Checked check(Parsed parsed,String month) {
         List<StoredItem> old=mapper.items(month);int replace=(int)old.stream().filter(r->r.uploadId()!=null).count();
         return definition.check(parsed,mapper.codes(),replace,old.size()-replace);
