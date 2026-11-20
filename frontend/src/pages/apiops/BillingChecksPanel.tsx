@@ -253,12 +253,6 @@ function BillingChecksContent({
               </article>
             ))}
           </div>
-          <p className="sicost-banner sicost-tone-info">
-            계산방법: E=유상 배정별 적용단가×월 MM 절사합, B=미취소 청구
-            공급가합, D=E−B, T=max(최소 허용오차, E×허용율/100). 허용오차는
-            반올림하지 않습니다. 취소 청구·무상 제외, 보호 스냅샷 보존, 예정
-            포함.
-          </p>
           <p className="billing-review-caption">
             점검월 {data.month} · 단위 {amountUnit} · MM 소수 2자리 · 허용오차
             원 단위{" "}

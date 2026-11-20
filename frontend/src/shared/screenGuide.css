@@ -43,9 +43,13 @@
 }
 
 .sicost-screen-guide-content dl {
-  display: grid;
-  gap: 22px;
   margin: 0;
+}
+
+.sicost-screen-guide-content dl > div + div {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--divider) 75%, var(--surface));
 }
 
 .sicost-screen-guide-content dt {
