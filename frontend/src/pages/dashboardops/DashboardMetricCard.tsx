@@ -31,6 +31,11 @@ export function DashboardMetricCard({
           : card.metricCode === "UTILIZATION"
             ? "가동률"
             : "미수금";
+  const value = card.unit === "PERCENT" ? formatRate(card.value) : money(card.value);
+  const isLoss =
+    (card.metricCode === "OPERATING_PROFIT" || card.metricCode === "YTD_OPERATING_PROFIT") &&
+    value.startsWith("−");
+
   return (
     <button
       className={`dashboard-metric dashboard-metric-${card.metricCode.toLowerCase().replaceAll("_", "-")}`}
@@ -38,14 +43,10 @@ export function DashboardMetricCard({
       onClick={onOpen}
     >
       <span>{label}</span>
-      <strong>
-        {card.unit === "PERCENT" ? (
-          formatRate(card.value)
-        ) : (
-          <>
-            <span>{money(card.value)}</span>{" "}
-            <span className="dashboard-unit">{amountUnit}</span>
-          </>
+      <strong className={isLoss ? "dashboard-danger" : undefined}>
+        <span>{value}</span>
+        {card.unit !== "PERCENT" && (
+          <>{" "}<span className="dashboard-unit">{amountUnit}</span></>
         )}
       </strong>
       <div className="dashboard-metric-details">

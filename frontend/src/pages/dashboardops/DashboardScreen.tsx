@@ -652,7 +652,7 @@ export function DashboardScreen({
                     <p className="dashboard-empty">확인할 일이 없습니다</p>
                   )}
                 {actions.length > 0 && (
-                  <div className="dashboard-actions-list">
+                  <div className="dashboard-compact-list">
                     {actions.slice(0, 5).map((action) => actionRow(action))}
                   </div>
                 )}
@@ -684,11 +684,18 @@ export function DashboardScreen({
                     >
                       월 마감
                     </button>
-                    <p>
-                      {count(closeProgress.passedCheckCount)}/
-                      {closeProgress.totalCheckCount} ·{" "}
-                      {closeProgress.snapshot ? "당시 마감 사본" : "현재 점검"}
-                    </p>
+                    <div className="dashboard-close-summary">
+                      <strong>
+                        {closeProgress.totalCheckCount === 0
+                          ? "점검 항목 없음"
+                          : closeProgress.passedCheckCount === null
+                            ? "점검 결과 미확인"
+                            : `점검 항목 ${closeProgress.totalCheckCount}개 중 ${closeProgress.passedCheckCount}개 통과`}
+                      </strong>
+                      <StatusBadge tone="neutral">
+                        {closeProgress.snapshot ? "당시 마감 사본" : "현재 점검"}
+                      </StatusBadge>
+                    </div>
                     {closeProgress.passedCheckCount !== null &&
                       closeProgress.totalCheckCount > 0 && (
                         <div
@@ -735,7 +742,7 @@ export function DashboardScreen({
                     title={`프로젝트 경보 ${data.projectAlerts.length}건`}
                     testId="dashboard-alerts"
                   >
-                    <DashboardBasis basis={data.projectAlertsBasis} />
+                    <DashboardBasis basis={data.projectAlertsBasis} hidePeriod />
                     {data.projectAlerts.length === 0 &&
                       ["AVAILABLE", "EMPTY"].includes(
                         data.projectAlertsBasis.status,
@@ -744,38 +751,42 @@ export function DashboardScreen({
                           프로젝트 경보가 없습니다.
                         </p>
                       )}
-                    {data.projectAlerts.map((alert) => (
-                      <button
-                        className="dashboard-list-row"
-                        key={`${alert.projectId}-${alert.alertType}`}
-                        data-testid={`dashboard-alert-${testKey(alert.projectId)}-${testKey(alert.alertType)}`}
-                        onClick={() =>
-                          go(alert.link, alert.basis, {
-                            projectId: alert.projectId,
-                          })
-                        }
-                      >
-                        <span>
-                          <strong>{alert.projectName}</strong>
-                          <small>{dashboardMessage(alert.reason)}</small>
-                          <small>
-                            {contractTypeLabels[alert.contractTypeCode] ??
-                              "계약 구분 미확인"}{" "}
-                            마진율 {formatRate(alert.marginRate)} · 예산 소진{" "}
-                            {formatRate(alert.budgetConsumptionRate)}
-                          </small>
-                        </span>
-                        <StatusBadge
-                          tone={
-                            alert.alertType === "BUDGET_EXCEEDED"
-                              ? "bad"
-                              : "warn"
-                          }
-                        >
-                          {alertLabels[alert.alertType] ?? "프로젝트 점검"}
-                        </StatusBadge>
-                      </button>
-                    ))}
+                    {data.projectAlerts.length > 0 && (
+                      <div className="dashboard-compact-list">
+                        {data.projectAlerts.map((alert) => (
+                          <button
+                            className="dashboard-list-row"
+                            key={`${alert.projectId}-${alert.alertType}`}
+                            data-testid={`dashboard-alert-${testKey(alert.projectId)}-${testKey(alert.alertType)}`}
+                            onClick={() =>
+                              go(alert.link, alert.basis, {
+                                projectId: alert.projectId,
+                              })
+                            }
+                          >
+                            <span>
+                              <strong>{alert.projectName}</strong>
+                              <small>{dashboardMessage(alert.reason)}</small>
+                              <small>
+                                {contractTypeLabels[alert.contractTypeCode] ??
+                                  "계약 구분 미확인"}{" "}
+                                마진율 {formatRate(alert.marginRate)} · 예산 소진{" "}
+                                {formatRate(alert.budgetConsumptionRate)}
+                              </small>
+                            </span>
+                            <StatusBadge
+                              tone={
+                                alert.alertType === "BUDGET_EXCEEDED"
+                                  ? "bad"
+                                  : "warn"
+                              }
+                            >
+                              {alertLabels[alert.alertType] ?? "프로젝트 점검"}
+                            </StatusBadge>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </Panel>
                 )}
               </div>
@@ -983,7 +994,7 @@ export function DashboardScreen({
               testId="dashboard-actions-dialog"
               confirmTestId="dashboard-actions-close"
             >
-              <div className="dashboard-actions-list">
+              <div className="dashboard-compact-list">
                 {actions.map((action) => actionRow(action, true))}
               </div>
             </Dialog>
@@ -997,7 +1008,7 @@ export function DashboardScreen({
 function DashboardSupply({ data }: { data: api.DashboardData }) {
   return (
     <Panel title="앞으로 6개월 인력 수급 예측" testId="dashboard-supply">
-      <DashboardBasis basis={data.supplyBasis} periodLabel="예측 기준월" />
+      <DashboardBasis basis={data.supplyBasis} hidePeriod />
       <p>
         {data.scope === "ALL" ? "전체 인력" : "허용된 담당 범위의 인력"} ·
         미충원 포함 · 단위: 명

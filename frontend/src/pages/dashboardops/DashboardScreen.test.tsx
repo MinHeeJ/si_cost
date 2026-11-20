@@ -358,7 +358,7 @@ it.each([null, 0])("마감점검 미확인과 실제0을 구별한다: %s", asyn
   expect(panel).toHaveTextContent(
     value === null ? "MM 초과 –건" : "MM 초과 0건",
   );
-  expect(panel).toHaveTextContent("5/6");
+  expect(panel).toHaveTextContent("점검 항목 6개 중 5개 통과");
   expect(panel).toHaveTextContent(value === null ? "원천 미확인" : "실제 0건");
 });
 it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 이동한다", async () => {
@@ -601,8 +601,11 @@ it("모든 위젯·배지·툴팁에서 내부 원천을 제거하고 실제 기
   expect(screen.getByTestId("dashboard-trend")).toHaveTextContent(
     "조회 기준월 2026-06",
   );
-  expect(screen.getByTestId("dashboard-supply")).toHaveTextContent(
-    "예측 기준월 2026-07",
+  expect(screen.getByTestId("dashboard-supply")).not.toHaveTextContent(
+    "예측 기준월",
+  );
+  expect(screen.getByTestId("dashboard-alerts")).not.toHaveTextContent(
+    "기준월",
   );
   expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent(
     "집계 기준월 2026-08",
