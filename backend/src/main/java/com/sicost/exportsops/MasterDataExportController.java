@@ -19,6 +19,9 @@ public class MasterDataExportController {
     public void setPermissions(com.sicost.permission.PermissionService permissions) {this.permissions=permissions;}
     private BillingReviewExportService billingReviews;
     private SettlementExportService settlements;
+    private ProjectExportService projects;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void projects(ProjectExportService projects) { this.projects = projects; }
     @org.springframework.beans.factory.annotation.Autowired(required=false)
     public void settlements(SettlementExportService settlements) { this.settlements = settlements; }
     @org.springframework.beans.factory.annotation.Autowired(required=false)
@@ -33,6 +36,7 @@ public class MasterDataExportController {
                 case "CLIENTS","PARTS" -> "UI-15";
                 case "DEVELOPERS" -> "UI-02";
                 case "CANDIDATES" -> "UI-33";
+                case "PROJECTS" -> "UI-01";
                 case "ASSIGNMENTS" -> "UI-12";
                 case "BILLS","BILLING_CHECKS","RECEIVABLES" -> "UI-13";
                 case "SALES_PART_SETTLEMENTS" -> "UI-19";
@@ -44,7 +48,7 @@ public class MasterDataExportController {
             request.setAttribute(com.sicost.permission.PermissionOperationRegistry.OPERATION,new com.sicost.permission.PermissionOperationRegistry.Operation("POST","/api/exports/master-data",screen,"DNLD","MasterDataExportController.createMasterDataExport"));
         }
         // 개발자·후보 목록(UI-02/UI-33)은 각 목록 서비스를 재사용하고, 거래처·영업 파트는 기존 경로를 그대로 쓴다.
-        try (var download = SettlementExportService.handles(body) ? settlements.create(body, request) : AssignmentExportService.handles(body) ? assignments.create(body, request) : BillingReviewExportService.handles(body) ? billingReviews.create(body, request) : PeopleExportInput.handles(body) ? people.create(body, request) : service.create(MasterDataExportInput.parse(body), request)) {
+        try (var download = ProjectExportService.handles(body) ? projects.create(body, request) : SettlementExportService.handles(body) ? settlements.create(body, request) : AssignmentExportService.handles(body) ? assignments.create(body, request) : BillingReviewExportService.handles(body) ? billingReviews.create(body, request) : PeopleExportInput.handles(body) ? people.create(body, request) : service.create(MasterDataExportInput.parse(body), request)) {
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", ContentDisposition.attachment().filename(download.filename(), StandardCharsets.UTF_8).build().toString());
             response.setHeader("Cache-Control", "no-store");

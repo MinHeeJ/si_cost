@@ -7,7 +7,7 @@ import {
 const query = { from: "2027-01", months: 12, includeUnfilled: true };
 const mime =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const filename = "인력수요예측_2027_20261012_090000.xlsx";
+const filename = "인력 수요 예측_2027_20261012_090000.xlsx";
 afterEach(() => vi.unstubAllGlobals());
 it("read sends only approved query fields and unwraps the response", async () => {
   const fetcher = vi.fn().mockResolvedValue(
@@ -79,7 +79,7 @@ it.each(["text/html", "application/octet-stream"])(
     );
   },
 );
-it.each(["../export.xlsx", "=forecast.xlsx", "%broken", "인력수요예측.xlsx"])(
+it.each(["../export.xlsx", "=forecast.xlsx", "%broken", "인력수요예측.xlsx", "../인력 수요 예측_2027_20261012_090000.xlsx", "=인력 수요 예측_2027_20261012_090000.xlsx", "인력\n수요 예측_2027_20261012_090000.xlsx"])(
   "rejects unsafe or unexpected filename %s",
   async (name) => {
     vi.stubGlobal(

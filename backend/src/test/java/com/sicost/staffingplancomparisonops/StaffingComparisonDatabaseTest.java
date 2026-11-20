@@ -41,7 +41,11 @@ class StaffingComparisonDatabaseTest {
         var monthly=new AssignmentMonthlyService(session.getMapper(AssignmentMonthlyMapper.class),users,new ChangeHistoryWriter(session.getMapper(ChangeHistoryMapper.class),users,clock,new com.fasterxml.jackson.databind.ObjectMapper()),clock);
         var repository=new StaffingComparisonRepository(session.getMapper(StaffingComparisonMapper.class),monthly);
         var excel=new ExcelExportService(users,new AccessLogWriter(session.getMapper(AccessLogMapper.class),users,clock),clock,transactions);
-        mvc=MockMvcBuilders.standaloneSetup(new StaffingComparisonExportController(new StaffingComparisonExportService(repository,excel,clock))).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
+        var codes=session.getMapper(com.sicost.shared.SharedQueriesMapper.class);
+        excel.setMenuQueries(codes);
+        var exporter=new StaffingComparisonExportService(repository,excel,clock);
+        exporter.setLabels(new com.sicost.common.excel.ExportLabels(codes));
+        mvc=MockMvcBuilders.standaloneSetup(new StaffingComparisonExportController(exporter)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         String part=db.sql.queryForObject("SELECT part_id FROM tb_bs_part WHERE use_yn='Y' ORDER BY part_id LIMIT 1",String.class);
         db.sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES('D-export','M-export','다운로드 검증','FT','DEV','DRCT',?,'WORK',?)",part,actor);
         db.sql.update("INSERT INTO tb_pj_proj(proj_id,proj_nm,ctrt_type_cd,proj_stat_cd,ctrt_bgn_dt,ctrt_end_dt,ctrt_amt,team_exps_amt,proj_exps_amt,reg_user_id) VALUES('P-export','=SUM(A1)','MO','ING','2025-07-01','2026-06-30',100,0,0,?)",actor);
@@ -63,7 +67,7 @@ class StaffingComparisonDatabaseTest {
         var before=snapshot();long logs=db.count("tb_sy_accs_log");
         var response=mvc.perform(get("/api/staffing-plan-comparison/export?year=2026&projectId=P-export")).andExpect(status().isOk()).andExpect(header().exists("Content-Disposition")).andReturn().getResponse();
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
-            var row=book.getSheetAt(0).getRow(1);assertThat(row.getCell(0).getStringCellValue()).isEqualTo("P-export");assertThat(row.getCell(3).getNumericCellValue()).isEqualTo(6);assertThat(row.getCell(4).getNumericCellValue()).isEqualTo(7);assertThat(row.getCell(5).getNumericCellValue()).isEqualTo(1);
+            var row=book.getSheetAt(0).getRow(1);assertThat(row.getCell(0).getStringCellValue()).isEqualTo("=SUM(A1)");assertThat(row.getCell(2).getNumericCellValue()).isEqualTo(6);assertThat(row.getCell(3).getNumericCellValue()).isEqualTo(7);assertThat(row.getCell(4).getNumericCellValue()).isEqualTo(1);
         }
         assertThat(snapshot()).isEqualTo(before);assertThat(db.count("tb_sy_accs_log")).isEqualTo(logs+1);
         var log=db.sql.queryForMap("SELECT * FROM tb_sy_accs_log WHERE scrn_id='UI-11'");assertThat(log.get("act_type_cd")).isEqualTo("DNLD");assertThat(log.get("reg_user_id")).isEqualTo(log.get("user_id"));

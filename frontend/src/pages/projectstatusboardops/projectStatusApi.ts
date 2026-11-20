@@ -137,7 +137,7 @@ export async function getProjectAnalysisDownload(
   }
   const pattern =
     view === "statusBoard"
-      ? /^프로젝트현황_[0-9]{8}_[0-9]{6}\.xlsx$/
+      ? /^(?![=+@.-])[^/\\\r\n]+_[0-9]{8}_[0-9]{8}_[0-9]{6}\.xlsx$/
       : /^프로젝트 원가_[0-9]{6}_[0-9]{8}_[0-9]{6}\.xlsx$/;
   if (!pattern.test(filename))
     throw new Error("다운로드 파일명을 확인할 수 없습니다.");

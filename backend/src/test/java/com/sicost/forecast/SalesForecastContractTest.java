@@ -43,7 +43,11 @@ class SalesForecastContractTest {
     @MockBean AccessLogMapper audit;
     @MockBean PlatformTransactionManager manager;
     @MockBean Clock clock;
+    @Autowired com.sicost.common.excel.ExcelExportService excel;
+    @MockBean com.sicost.common.excel.ExportLabels exportLabels;
     @BeforeEach void setup() {
+        com.sicost.common.excel.ExportTestLookups.configure(exportLabels);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
         when(clock.instant()).thenReturn(Instant.parse("2026-07-15T00:00:00Z"));when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));when(clock.withZone(any())).thenReturn(clock);
         when(manager.getTransaction(any())).thenAnswer(c -> new SimpleTransactionStatus());
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),true));when(users.userId()).thenReturn("admin");
@@ -108,6 +112,8 @@ class SalesForecastContractTest {
         var response=mvc.perform(get("/api/sales-opportunities/forecast/export")).andExpect(status().isOk()).andReturn().getResponse();
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
             var row=book.getSheet("매출 원천").getRow(1);assertThat(row.getCell(1).getStringCellValue()).isEqualTo("0001");
+            assertThat(row.getCell(0).getStringCellValue()).isEqualTo("프로젝트");
+            assertThat(row.getCell(6).getStringCellValue()).doesNotContain("05", "preview", "TB_");
             assertThat(row.getCell(2).getCellType()).isEqualTo(CellType.STRING);assertThat(row.getCell(2).getStringCellValue()).isEqualTo("=SUM(1,2)");
             assertThat(row.getCell(4).getCellType()).isEqualTo(CellType.NUMERIC);assertThat(row.getCell(4).getNumericCellValue()).isZero();assertThat(row.getCell(5).getCellType()).isEqualTo(CellType.BLANK);
         }

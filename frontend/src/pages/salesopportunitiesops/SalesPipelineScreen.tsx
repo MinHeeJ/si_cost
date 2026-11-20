@@ -74,6 +74,7 @@ export function SalesPipelinePanel({
     direction: "ASC" | "DESC";
   }>();
   const [page, setPage] = useState(1),
+    [size, setSize] = useState<20 | 50 | 100>(50),
     [data, setData] = useState<api.OpportunityPage>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
@@ -109,6 +110,7 @@ export function SalesPipelinePanel({
         includeStopped,
         page,
         tab === "CLOSED" ? ordering : undefined,
+        tab === "CLOSED" ? size : 50,
       )
       .then((v) => {
         if (live) setData(v);
@@ -122,7 +124,7 @@ export function SalesPipelinePanel({
     return () => {
       live = false;
     };
-  }, [tab, result, includeStopped, page, generation, ordering]);
+  }, [tab, result, includeStopped, page, size, generation, ordering]);
   useEffect(() => {
     let live = true;
     setDetail((previous) =>
@@ -164,6 +166,7 @@ export function SalesPipelinePanel({
         includeStopped,
         page,
         tab === "CLOSED" ? ordering : undefined,
+        tab === "CLOSED" ? size : 50,
       ),
       selectedId
         ? api.getSalesOpportunity(selectedId)
@@ -283,6 +286,8 @@ export function SalesPipelinePanel({
       ) : (
         <>
           <FilterBar
+            testId="pipeline-filters"
+            appliedCount={tab === "CLOSED" ? Number(result !== "WIN") + Number(includeStopped) : undefined}
             onSubmit={() => setGeneration((v) => v + 1)}
             onReset={() => {
               setResult("WIN");
@@ -462,6 +467,8 @@ export function SalesPipelinePanel({
                   ))}
                 </div>
               ) : (
+                <>
+                <div className="sales-command-toolbar"><strong>총 {data.total}건</strong></div>
                 <div className="sicost-table-viewport">
                   <table className="sicost-table">
                     <thead>
@@ -556,8 +563,9 @@ export function SalesPipelinePanel({
                   </table>
                   {data.items.length === 0 && (
                     <div className="sales-command-empty">
-                      <p>종료 기회 없음</p>
+                      <p>조건에 맞는 결과가 없습니다.</p>
                       <button
+                        data-testid="pipeline-empty-reset"
                         type="button"
                         onClick={() => {
                           setResult("WIN");
@@ -571,8 +579,14 @@ export function SalesPipelinePanel({
                     </div>
                   )}
                 </div>
+                </>
               )}
               <div className="sales-command-toolbar">
+                {tab === "CLOSED" && (
+                  <select aria-label="한 화면 건수" data-testid="pipeline-page-size" value={size} onChange={(e) => { setSize(Number(e.target.value) as 20 | 50 | 100); setPage(1); }}>
+                    {[20, 50, 100].map((value) => <option key={value} value={value}>{value}건씩</option>)}
+                  </select>
+                )}
                 <button
                   data-testid="pipeline-previous-button"
                   disabled={page <= 1 || loading}

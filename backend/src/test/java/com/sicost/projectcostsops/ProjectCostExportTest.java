@@ -40,6 +40,7 @@ class ProjectCostExportTest {
         when(preferences.getPreferences()).thenReturn(new PreferenceDtos.PreferencesData(List.of()));
         when(costs.getProjectCosts(any())).thenAnswer(c->{var q=(ProjectAnalysisInput.Query)c.getArgument(0);assertThat(q.size()).isEqualTo(Integer.MAX_VALUE);assertThat(q.page()).isEqualTo(1);return page(57);});
         excel=new ExcelExportService(users,new AccessLogWriter(logs,users,clock),clock,transactions);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
         var exports=new ProjectCostExportService(excel,costs,preferences);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectCostExportController(costs,exports)).setControllerAdvice(new ApiExceptionHandler()).build();
     }
@@ -96,7 +97,7 @@ class ProjectCostExportTest {
             String kind=screen.equals("UI-03")?"개인원가수익":"프로젝트현황",qualifier=screen.equals("UI-03")?"2026":"20260701";
             var columns=List.of(new ExcelExportService.Column("name","이름",ExcelExportService.CellType.TEXT));
             try(var file=excel.generateWorkbook(new ExcelExportService.Specification(kind,null,columns,"","원",screen),()->new ExcelExportService.WorkbookData(List.of(new ExcelExportService.Sheet("목록",columns,sink->{})),List.of(),0,qualifier),new org.springframework.mock.web.MockHttpServletRequest())) {
-                assertThat(file.filename()).isEqualTo(kind+(screen.equals("UI-03")?"_2026":"")+"_20260701_000000.xlsx");
+                assertThat(file.filename()).isEqualTo((screen.equals("UI-03") ? "개인원가수익_2026" : "프로젝트 현황판_20260701")+"_20260701_000000.xlsx");
             }
         }
     }

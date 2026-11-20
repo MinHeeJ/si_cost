@@ -1,7 +1,7 @@
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FilterBar } from "../../shared/FilterBar";
+import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -495,6 +495,7 @@ export function CandidatesScreen({
       <FilterBar
         className="candidate-filters"
         testId="candidate-filters"
+        appliedCount={countAppliedFilters(filters, initialFilters)}
         resetTestId="candidate-reset"
         searchTestId="candidate-query"
         onSubmit={() => apply()}
@@ -637,7 +638,10 @@ export function CandidatesScreen({
         <div className="candidate-cards" aria-busy={loading}>
           {loading && <p role="status">불러오는 중입니다.</p>}
           {!loading && !sortedRows.length && (
-            <p className="sicost-empty">조회된 후보가 없습니다.</p>
+            <div className="sicost-empty">
+              <p>조건에 맞는 결과가 없습니다.</p>
+              <button type="button" data-testid="candidate-card-empty-reset" onClick={() => apply(true)}>조건 초기화</button>
+            </div>
           )}
           {sortedRows.map((r) => (
             <article
@@ -674,7 +678,7 @@ export function CandidatesScreen({
           columns={visible}
           rowKey={(r) => r.id}
           loading={loading}
-          empty="조회된 후보가 없습니다."
+          empty="조건에 맞는 결과가 없습니다."
           sort={
             filters.sort
               ? {

@@ -63,6 +63,8 @@ class WorkforceOperationsExportDatabaseTest {
         context.registerBean(CurrentUserMapper.class, () -> session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class, () -> session.getMapper(ChangeHistoryMapper.class));
         context.registerBean(AccessLogMapper.class, () -> session.getMapper(AccessLogMapper.class));
+        context.registerBean(com.sicost.shared.SharedQueriesMapper.class, () -> session.getMapper(com.sicost.shared.SharedQueriesMapper.class));
+        context.register(com.sicost.common.excel.ExportLabels.class);
         context.register(Transactions.class, CurrentUserProvider.class, ChangeHistoryWriter.class, AssignmentMonthlyService.class,
             AccessLogWriter.class, ExcelExportService.class, SalesForecastRepository.class, SalesWorkforceProjectionService.class,
             WorkforceCalendarService.class, WorkforceForecastExportService.class, WorkforceOperationsExportService.class,

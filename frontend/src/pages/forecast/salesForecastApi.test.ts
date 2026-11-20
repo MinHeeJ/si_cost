@@ -26,7 +26,7 @@ it("forecast sends no period, page or caller fields", async () => {
   expect(fetcher.mock.calls[0][0]).toBe("/api/sales-opportunities/forecast");
 });
 it("export sends only amountUnit and accepts an actual server xlsx filename", async () => {
-  const filename = "영업예측_2026_20260715_090000.xlsx";
+  const filename = "영업 파이프라인_2026_20260715_090000.xlsx";
   const fetcher = vi.fn().mockResolvedValue(
     new Response(new Blob(["xlsx"]), {
       headers: {
@@ -79,7 +79,7 @@ it.each(["text/html", "application/octet-stream"])(
     );
   },
 );
-it.each(["../forecast.xlsx", "=forecast.xlsx", "영업예측.xlsx", "%broken"])(
+it.each(["../forecast.xlsx", "=forecast.xlsx", "영업예측.xlsx", "%broken", "../영업 파이프라인_2026_20260715_090000.xlsx", "=영업 파이프라인_2026_20260715_090000.xlsx", "영업\n파이프라인_2026_20260715_090000.xlsx"])(
   "rejects an untrusted filename %s",
   async (filename) => {
     vi.stubGlobal(
@@ -105,7 +105,7 @@ it("rejects an empty successful xlsx response", async () => {
       new Response(null, {
         headers: {
           "Content-Type": mime,
-          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent("영업예측_2026_20260715_090000.xlsx")}`,
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent("영업 파이프라인_2026_20260715_090000.xlsx")}`,
         },
       }),
     ),

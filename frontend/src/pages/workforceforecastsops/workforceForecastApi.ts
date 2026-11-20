@@ -58,7 +58,7 @@ export async function getWorkforceForecastExport(
   } catch {
     /* Reject an invalid server filename. */
   }
-  if (!/^인력수요예측_\d{4}_\d{8}_\d{6}\.xlsx$/.test(filename))
+  if (!/^(?![=+@.-])[^/\\\r\n]+_\d{4}_\d{8}_\d{6}\.xlsx$/.test(filename))
     throw new Error("다운로드 파일명을 확인할 수 없습니다.");
   const blob = await response.blob();
   if (!blob.size) throw new Error("다운로드 파일이 비어 있습니다.");

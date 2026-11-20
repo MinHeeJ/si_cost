@@ -25,7 +25,7 @@
       WHERE a.dev_id=#{developerId} AND a.asgn_id!=#{assignmentId} AND a.asgn_stat_cd='ACT' AND p.proj_stat_cd!='LOSE' AND a.input_bgn_dt &gt; #{withdrawalDate}
       UNION ALL
       SELECT CASE WHEN t.tent_stat_cd='CNVT' THEN 'CANDIDATE' ELSE 'TENTATIVE' END,NULL::text,t.tent_id::text,
-        o.proj_id,o.opp_id,CASE WHEN t.tent_stat_cd='CNVT' THEN p.proj_nm ELSE o.opp_nm END,
+        o.proj_id,o.opp_id,CASE WHEN t.tent_stat_cd='CNVT' THEN COALESCE(p.proj_nm,o.opp_nm) ELSE o.opp_nm END,
         CASE WHEN t.tent_stat_cd='CNVT' THEN p.ctrt_bgn_dt ELSE NULL::date END,
         to_char(to_date(t.bgn_ym,'YYYYMM'),'YYYY-MM')
       FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id LEFT JOIN tb_pj_proj p ON p.proj_id=o.proj_id

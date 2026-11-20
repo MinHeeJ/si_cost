@@ -86,6 +86,7 @@ it("renders real columns, full filtered totals rather than page sums, and existi
     "/UI-01?projectId=P-101&tab=plans&year=2026",
   );
   expect(screen.getByText("계획 MM")).toBeInTheDocument();
+  expect(screen.getByText("총 57건")).toBeInTheDocument();
   expect(screen.getByText("실제·예정 MM")).toBeInTheDocument();
   expect(screen.getByText("필터 전체 합계")).toBeInTheDocument();
   expect(screen.getByText("90")).toBeInTheDocument();
@@ -99,6 +100,7 @@ it("draft filters apply only on query and reset clears them", async () => {
   content();
   await screen.findByRole("link", { name: row.projectName });
   const count = vi.mocked(api.getStaffingComparison).mock.calls.length;
+  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.change(screen.getByLabelText("프로젝트"), {
     target: { value: row.projectId },
   });
@@ -106,6 +108,7 @@ it("draft filters apply only on query and reset clears them", async () => {
     target: { value: "SHORT" },
   });
   expect(api.getStaffingComparison).toHaveBeenCalledTimes(count);
+  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.click(screen.getByRole("button", { name: "조회" }));
   await waitFor(() =>
     expect(api.getStaffingComparison).toHaveBeenLastCalledWith(
@@ -117,6 +120,7 @@ it("draft filters apply only on query and reset clears them", async () => {
       expect.any(AbortSignal),
     ),
   );
+  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (2)]");
   fireEvent.click(screen.getByRole("button", { name: "초기화" }));
   await waitFor(() =>
     expect(api.getStaffingComparison).toHaveBeenLastCalledWith(
@@ -125,6 +129,7 @@ it("draft filters apply only on query and reset clears them", async () => {
     ),
   );
   expect(screen.getByLabelText("프로젝트")).toHaveValue("");
+  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("export uses applied filter, not draft or pagination", async () => {
   content();
@@ -157,7 +162,7 @@ it("empty is explicit and still has authoritative zero totals", async () => {
   });
   content();
   expect(
-    await screen.findByText("조회된 자료가 없습니다."),
+    await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
   expect(
     within(screen.getByTestId("staffing-comparison-table")).getByText("맞음"),
@@ -179,7 +184,7 @@ it("request failure shows Korean field message and request id, retry gets real r
     "연도를 확인해 주세요.",
   );
   expect(screen.getByRole("alert")).toHaveTextContent("comparison-error");
-  expect(screen.queryByText("조회된 자료가 없습니다.")).not.toBeInTheDocument();
+  expect(screen.queryByText("조건에 맞는 결과가 없습니다.")).not.toBeInTheDocument();
   expect(screen.getByTestId("comparison-download-button")).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
   expect(
@@ -288,7 +293,7 @@ it("source option failure is not silently replaced with sample projects", async 
 it("계획대비 빈 상태 안에 조건 초기화 동작을 제공한다", async () => {
   vi.mocked(api.getStaffingComparison).mockResolvedValue({ items: [], total: 0, page: 1, size: 50, year: 2026, totals: { planMm: "0", actualMm: "0", differenceMm: "0" } });
   content();
-  await screen.findByText("조회된 자료가 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
   expect(api.getStaffingComparison).toHaveBeenCalled();
 });
