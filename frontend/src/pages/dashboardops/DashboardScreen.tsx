@@ -794,11 +794,24 @@ export function DashboardScreen({
             <div className="dashboard-bottom-grid">
               {data.salesParts && (
                 <Panel
-                  title={`영업 파트별 ${data.selectedMonth.slice(5)}월`}
+                  title={`${Number(data.selectedMonth.slice(5))}월 영업파트별 현황`}
                   testId="dashboard-parts"
+                  actions={
+                    <button
+                      type="button"
+                      data-testid="dashboard-parts-open"
+                      onClick={() =>
+                        go(
+                          { screenId: "UI-07", linkKey: null },
+                          { ...data.salesPartsBasis, basisMonth: data.selectedMonth },
+                        )
+                      }
+                    >
+                      자세히
+                    </button>
+                  }
                 >
                   <DashboardBasis basis={data.salesPartsBasis} hidePeriod />
-                  <p>{dashboardMessage(data.salesPartExplanation)}</p>
                   {data.salesParts.length === 0 &&
                     ["AVAILABLE", "EMPTY"].includes(
                       data.salesPartsBasis.status,
@@ -809,15 +822,19 @@ export function DashboardScreen({
                     )}
                   <div className="sicost-table-viewport">
                     <table
-                      className="sicost-table"
+                      className="sicost-table dashboard-parts-table"
                       aria-label="영업 파트별 실적"
                     >
                       <thead>
                         <tr>
-                          <th>파트</th>
-                          <th>매출 ({amountUnit})</th>
-                          <th>전체원가 ({amountUnit})</th>
-                          <th>기여이익률</th>
+                          <th scope="col">파트</th>
+                          <th scope="col">
+                            매출 <small>({amountUnit})</small>
+                          </th>
+                          <th scope="col">
+                            전체원가 <small>({amountUnit})</small>
+                          </th>
+                          <th scope="col">기여이익률</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -835,6 +852,9 @@ export function DashboardScreen({
                       </tbody>
                     </table>
                   </div>
+                  <p className="dashboard-parts-note">
+                    {dashboardMessage(data.salesPartExplanation)}
+                  </p>
                 </Panel>
               )}
               <Panel
@@ -855,10 +875,7 @@ export function DashboardScreen({
                   </button>
                 }
               >
-                <DashboardBasis
-                  basis={data.pipeline.basis}
-                  periodLabel="집계 기준월"
-                />
+                <DashboardBasis basis={data.pipeline.basis} hidePeriod />
                 <p>진행 기회 {count(data.pipeline.opportunityCount)}건</p>
                 <strong>
                   확률 반영 예상액 {money(data.pipeline.weightedExpectedAmount)}{" "}
@@ -872,28 +889,32 @@ export function DashboardScreen({
                       곧 시작할 기회가 없습니다.
                     </p>
                   )}
-                {data.pipeline.startingSoon.map((row) => (
-                  <button
-                    className="dashboard-list-row"
-                    key={row.opportunityId}
-                    data-testid={`dashboard-opportunity-${testKey(row.opportunityId)}`}
-                    onClick={() =>
-                      go(row.link, data.pipeline.basis, {
-                        opportunityId: row.opportunityId,
-                      })
-                    }
-                  >
-                    <span>
-                      <strong>{row.opportunityName}</strong>
-                      <small>
-                        {row.startMonth} · 확률{" "}
-                        {formatRate(row.winProbabilityRate)} ·{" "}
-                        {money(row.expectedAmount)} {amountUnit}
-                      </small>
-                    </span>
-                    <StatusBadge tone="info">예측</StatusBadge>
-                  </button>
-                ))}
+                {data.pipeline.startingSoon.length > 0 && (
+                  <div className="dashboard-compact-list">
+                    {data.pipeline.startingSoon.map((row) => (
+                      <button
+                        className="dashboard-list-row"
+                        key={row.opportunityId}
+                        data-testid={`dashboard-opportunity-${testKey(row.opportunityId)}`}
+                        onClick={() =>
+                          go(row.link, data.pipeline.basis, {
+                            opportunityId: row.opportunityId,
+                          })
+                        }
+                      >
+                        <span>
+                          <strong>{row.opportunityName}</strong>
+                          <small>
+                            {row.startMonth} · 확률{" "}
+                            {formatRate(row.winProbabilityRate)} ·{" "}
+                            {money(row.expectedAmount)} {amountUnit}
+                          </small>
+                        </span>
+                        <StatusBadge tone="info">예측</StatusBadge>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </Panel>
               {data.cashForecast && (
                 <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">
@@ -939,48 +960,52 @@ export function DashboardScreen({
                       </p>
                     </ChartHost>
                   </div>
-                  {data.cashForecast.map((row) => (
-                    <button
-                      className="dashboard-list-row"
-                      key={row.month}
-                      data-testid={`dashboard-cash-${row.month}`}
-                      onClick={() =>
-                        go(
-                          row.link,
-                          { ...data.cashBasis, basisMonth: row.month },
-                          {},
-                        )
-                      }
-                    >
-                      <span>
-                        <strong>{row.month} </strong>
-                        <small>
-                          월말 잔액 {money(row.closingBalance)} {amountUnit}
-                        </small>
-                        <small>
-                          최소 자금 {money(row.minimumCashAmount)} {amountUnit}
-                        </small>
-                        {row.unconfirmedReasons.map((reason, i) => (
-                          <small key={i}>{dashboardMessage(reason)}</small>
-                        ))}
-                      </span>
-                      <StatusBadge
-                        tone={
-                          row.shortage === true
-                            ? "bad"
-                            : row.shortage === null
-                              ? "warn"
-                              : "info"
-                        }
-                      >
-                        {row.shortage === true
-                          ? "자금 부족"
-                          : row.shortage === null
-                            ? "미확인"
-                            : "예측"}
-                      </StatusBadge>
-                    </button>
-                  ))}
+                  {data.cashForecast.length > 0 && (
+                    <div className="dashboard-compact-list">
+                      {data.cashForecast.map((row) => (
+                        <button
+                          className="dashboard-list-row"
+                          key={row.month}
+                          data-testid={`dashboard-cash-${row.month}`}
+                          onClick={() =>
+                            go(
+                              row.link,
+                              { ...data.cashBasis, basisMonth: row.month },
+                              {},
+                            )
+                          }
+                        >
+                          <span>
+                            <strong>{row.month} </strong>
+                            <small>
+                              월말 잔액 {money(row.closingBalance)} {amountUnit}
+                            </small>
+                            <small>
+                              최소 자금 {money(row.minimumCashAmount)} {amountUnit}
+                            </small>
+                            {row.unconfirmedReasons.map((reason, i) => (
+                              <small key={i}>{dashboardMessage(reason)}</small>
+                            ))}
+                          </span>
+                          <StatusBadge
+                            tone={
+                              row.shortage === true
+                                ? "bad"
+                                : row.shortage === null
+                                  ? "warn"
+                                  : "info"
+                            }
+                          >
+                            {row.shortage === true
+                              ? "자금 부족"
+                              : row.shortage === null
+                                ? "미확인"
+                                : "예측"}
+                          </StatusBadge>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </Panel>
               )}
             </div>

@@ -59,6 +59,7 @@ function ready() {
       <SharedScreenContext.Provider
         value={{
           menus: [
+            "UI-07",
             "UI-08",
             "UI-13",
             "UI-14",
@@ -90,6 +91,7 @@ function ready() {
         <Routes>
           <Route path="/UI-16" element={<DashboardScreen />} />
           {[
+            "UI-07",
             "UI-08",
             "UI-13",
             "UI-14",
@@ -370,6 +372,20 @@ it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 
   expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent("자세히");
 });
 
+it("영업파트별 현황에서 선택월을 유지하며 UI-07로 이동한다", async () => {
+  data.selectedMonth = "2026-06";
+  ready();
+  const parts = await screen.findByTestId("dashboard-parts");
+  expect(within(parts).getByRole("heading")).toHaveTextContent("6월 영업파트별 현황");
+  await userEvent.click(within(parts).getByRole("button", { name: "자세히" }));
+  expect(screen.getByTestId("destination")).toHaveTextContent("/UI-07");
+  expect(JSON.parse(screen.getByTestId("destination-state").textContent!)).toMatchObject({
+    fromDashboard: true,
+    month: "2026-06",
+    year: "2026",
+  });
+});
+
 const cardTargets = [
   ["sales", "UI-08"],
   ["operating-profit", "UI-08"],
@@ -607,8 +623,8 @@ it("모든 위젯·배지·툴팁에서 내부 원천을 제거하고 실제 기
   expect(screen.getByTestId("dashboard-alerts")).not.toHaveTextContent(
     "기준월",
   );
-  expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent(
-    "집계 기준월 2026-08",
+  expect(screen.getByTestId("dashboard-pipeline")).not.toHaveTextContent(
+    "집계 기준월",
   );
   expect(root).toHaveTextContent("세금계산서 번호 미입력 1건");
   expect(root).toHaveTextContent("영업 파트 정산 2건");

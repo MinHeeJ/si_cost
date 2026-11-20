@@ -312,16 +312,46 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-[data-testid="dashboard-parts"] .sicost-table {
+.dashboard-bottom-grid > .dashboard-panel > .sicost-section-heading {
+  min-block-size: 51px;
+  margin-bottom: 0;
+}
+.dashboard-bottom-grid > .dashboard-panel > .sicost-section-heading > button {
+  flex: none;
+}
+.dashboard-panel .dashboard-parts-table {
   table-layout: fixed;
 }
-[data-testid="dashboard-parts"] .sicost-table :is(th, td) {
-  padding: 6px;
+.dashboard-panel .dashboard-parts-table :is(th, td) {
+  padding: 8px 6px;
+  line-height: 1.4;
   white-space: normal;
   overflow-wrap: anywhere;
 }
-[data-testid="dashboard-parts"] .sicost-table th:first-child {
-  width: 32%;
+.dashboard-parts-table thead th {
+  background: var(--head-bg);
+  box-shadow: none;
+  border-bottom: 1px solid var(--divider);
+}
+.dashboard-parts-table thead th:first-child {
+  width: 34%;
+}
+.dashboard-parts-table thead th:not(:first-child) {
+  text-align: right;
+}
+.dashboard-parts-table thead small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+}
+.dashboard-parts-table td:first-child {
+  font-weight: 600;
+}
+.dashboard-parts-note {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.5;
 }
 .dashboard-panel > table {
   display: block;
@@ -408,8 +438,16 @@
   padding-block: 8px;
   box-shadow: none;
 }
-.dashboard-panel > .dashboard-compact-list > :first-child {
+:is([data-testid="dashboard-actions"], [data-testid="dashboard-alerts"]) > .dashboard-compact-list > :first-child {
   border-top: 0;
+}
+.dashboard-bottom-grid .dashboard-compact-list > .dashboard-list-row {
+  min-height: 68px;
+  padding-block: 12px;
+}
+.dashboard-bottom-grid .dashboard-compact-list > .dashboard-list-row > span:first-child {
+  display: grid;
+  gap: 3px;
 }
 .dashboard-action-count {
   display: inline-flex;
@@ -533,6 +571,9 @@
   }
 }
 @media screen and (max-width: 767px) {
+  .dashboard-bottom-grid > .dashboard-panel > .sicost-section-heading {
+    min-block-size: 57px;
+  }
   .dashboard-financial-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
