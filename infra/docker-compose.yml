@@ -55,10 +55,8 @@ services:
       retries: 6
 networks:
   default:
-    # Avoid Docker's default pools, which can be exhausted on shared QA hosts.
-    # Parallel deployments must choose distinct, non-overlapping private subnets.
-    ipam:
-      config:
-        - subnet: ${COMPOSE_SUBNET:-10.203.0.0/24}
+    # Docker allocates a free subnet for each Compose project, including QA/preview.
+    # Only opt into docker-compose.subnet.yml when a managed subnet is required.
+    driver: bridge
 volumes:
   postgres-data:

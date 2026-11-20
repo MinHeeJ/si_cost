@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { DashboardScreen } from "../dashboardops/DashboardScreen";
 import { dashboardFixture } from "../dashboardops/dashboardFixture";
 import type { DashboardData } from "../dashboardops/dashboardApi";
+import userEvent from "@testing-library/user-event";
 vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({ children }: { children: ReactNode }) => (
     <section>{children}</section>
@@ -38,6 +39,13 @@ it("binds the existing UI-16 host to the public dashboard envelope and renders a
   expect(screen.getByTestId("dashboard-metric-sales")).toHaveTextContent(
     "−1.001",
   );
+  await userEvent.click(screen.getByTestId("dashboard-trend-details"));
+  expect(
+    within(
+      screen.getByRole("table", { name: "매출·원가 추이 숫자표" }),
+    ).getAllByRole("row"),
+  ).toHaveLength(4);
+  await userEvent.click(screen.getByTestId("dashboard-trend-all"));
   expect(
     within(
       screen.getByRole("table", { name: "매출·원가 추이 숫자표" }),

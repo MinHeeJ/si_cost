@@ -595,29 +595,10 @@ input[type="radio"] {
   gap: 20px;
 }
 .sicost-screen-content:has(> .dashboard-content) {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-content: start;
-  align-items: start;
-}
-.sicost-screen-content:has(> .dashboard-content) > .sicost-period-bar {
-  grid-column: 1;
-  grid-row: 1;
-}
-.dashboard-content {
-  display: contents;
-}
-.dashboard-content > * {
-  grid-column: 1/-1;
-}
-.dashboard-content > .dashboard-dates {
-  grid-column: 2;
-  grid-row: 1;
-  min-height: 44px;
-  margin: 0;
-}
-.dashboard-content > .dashboard-toolbar {
-  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
 }
 .dashboard-toolbar small {
   font-size: 12px;

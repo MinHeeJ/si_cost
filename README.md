@@ -5,7 +5,7 @@
 저장소 루트에서 `docker compose -f infra/docker-compose.yml up --build -d`로 실행한다.
 프론트는 http://127.0.0.1:3000, 백엔드 health는 http://127.0.0.1:8080/api/health 이다.
 종료는 `docker compose -f infra/docker-compose.yml down`이다. PostgreSQL 지속 볼륨은 삭제하지 않는다.
-Compose 기본 네트워크는 Docker 자동 주소 풀 소진과 무관하게 생성되도록 `10.203.0.0/24`를 명시한다. 다른 배포·호스트/VPN 경로와 겹치면 실행 전에 `COMPOSE_SUBNET`으로 사용하지 않는 사설 `/24`를 지정한다. 동시 배포마다 서로 다른 서브넷을 사용한다. 공유 호스트의 다른 네트워크를 prune하거나 Docker 데몬 설정을 변경할 필요는 없다.
+Compose 기본 네트워크는 프로젝트별로 Docker가 비어 있는 서브넷을 자동 할당한다. QA·preview 동시 배포가 같은 고정 서브넷을 점유하지 않는다. 관리된 서브넷이 꼭 필요한 환경에서만 운영자가 다른 배포·호스트/VPN 경로와 겹치지 않는 사설 서브넷을 예약하고 `COMPOSE_SUBNET`을 지정한 뒤 `docker compose -f infra/docker-compose.yml -f infra/docker-compose.subnet.yml up -d --wait`를 실행한다. 이 선택적 override는 값이 없으면 실패하며 기본 QA 실행에는 사용하지 않는다. 자동 주소 풀이 실제로 소진된 경우 임의 고정값으로 되돌리지 말고 운영자가 주소 풀을 확보해야 한다. 공유 네트워크 prune이나 Docker 데몬 변경을 앱이 수행하지 않는다.
 DB를 호스트에 공개하지 않으며 앱 포트도 loopback에만 바인딩한다. 모든 업무 API에는 서버 세션 인증·현재 저장 권한 검사를 적용한다. 공개 배포 전 HTTPS·Secure 쿠키·SMTP 및 아래 미검증 통합을 확인해야 한다.
 기본 개발 설정으로 시작할 수 있다. 운영에서는 DB_NAME/DB_USER/DB_PASSWORD를 별도로 정하고 기본 개발 비밀번호를 반드시 교체한다.
 

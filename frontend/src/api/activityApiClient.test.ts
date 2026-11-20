@@ -1,6 +1,7 @@
 import { stubBusinessFetch } from "../shared/testSupport/businessFixtures";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as api from "./apiClient";
+import { dashboardFixture } from "../pages/dashboardops/dashboardFixture";
 
 const reminder = {
   expectedRevision: "selected-preview",
@@ -89,7 +90,10 @@ describe("activity API registry", () => {
   it.each(cases)(
     "$name reuses the feature transport and approved inputs",
     async (test) => {
-      const data = { value: "1.2300", completed: false };
+      const data =
+        test.name === "getDashboard"
+          ? dashboardFixture()
+          : { value: "1.2300", completed: false };
       const fetcher = vi.fn().mockResolvedValue(
         new Response(JSON.stringify({ success: true, meta: {}, data }), {
           status: test.method === "POST" ? 202 : 200,
