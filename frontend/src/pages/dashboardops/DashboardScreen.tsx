@@ -879,10 +879,6 @@ export function DashboardScreen({
                 <p className="dashboard-pipeline-count">
                   진행 기회 {count(data.pipeline.opportunityCount)}건
                 </p>
-                <strong>
-                  확률 반영 예상액 {money(data.pipeline.weightedExpectedAmount)}{" "}
-                  {amountUnit}
-                </strong>
                 {data.pipeline.startingSoon.length === 0 &&
                   ["AVAILABLE", "EMPTY"].includes(
                     data.pipeline.basis.status,
@@ -917,6 +913,12 @@ export function DashboardScreen({
                     ))}
                   </div>
                 )}
+                <footer className="dashboard-pipeline-total">
+                  <strong>
+                    확률 반영 예상액 {money(data.pipeline.weightedExpectedAmount)}{" "}
+                    {amountUnit}
+                  </strong>
+                </footer>
               </Panel>
               {data.cashForecast && (
                 <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">

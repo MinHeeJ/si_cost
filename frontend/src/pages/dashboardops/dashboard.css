@@ -350,6 +350,11 @@
 .dashboard-pipeline-count {
   text-align: right;
 }
+.dashboard-pipeline-total {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
 .dashboard-parts-note {
   margin: 0;
   color: var(--text-sub);
