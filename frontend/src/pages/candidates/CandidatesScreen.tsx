@@ -6,6 +6,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
+import { formatAmount } from "../../shared/format";
 import {
   useFieldPermission,
   usePermission,
@@ -64,7 +65,7 @@ export function CandidatesScreen({
   active = true,
   dense = false,
   pageSize = 50,
-  amountUnit = "원",
+
   onDirtyChange,
   columnView,
   onColumnsChange,
@@ -309,11 +310,7 @@ export function CandidatesScreen({
   }
   const money = (value: string | undefined) => {
     if (value === undefined) return "";
-    const divisor =
-      amountUnit === "백만원" ? 1000000 : amountUnit === "천원" ? 1000 : 1;
-    return (Number(value) / divisor).toLocaleString("ko-KR", {
-      maximumFractionDigits: 6,
-    });
+    return formatAmount(value, "원");
   };
   const days = (row: api.CandidateItem) =>
     today && row.lastContactDate
@@ -383,7 +380,7 @@ export function CandidatesScreen({
     { id: "homeAddress", label: "거주지", render: (r) => r.homeAddress ?? "–" },
     {
       id: "desiredRate",
-      label: `희망 단가 (${amountUnit})`,
+      label: "희망 단가",
       align: "right",
       render: (r) => money(r.desiredRate),
     },
@@ -583,7 +580,7 @@ export function CandidatesScreen({
                       ? shortageCandidateFilters(filters, shortageContext)
                       : filters,
                     visible.map((c) => c.id),
-                    amountUnit,
+                    "원",
                   );
                 } catch (e) {
                   setActionError(e);
@@ -798,10 +795,7 @@ export function CandidatesScreen({
                       ],
                       ["등급", detail.grade],
                       ["거주지", detail.homeAddress],
-                      [
-                        "희망 단가",
-                        `${money(detail.desiredRate)} ${amountUnit}`,
-                      ],
+                      ["희망 단가", `${money(detail.desiredRate)} 원`],
                       ["투입 가능일", detail.availableDate],
                       ["출처", detail.source],
                       ["개인정보 동의", detail.consent ? "동의" : "미동의"],
@@ -839,7 +833,7 @@ export function CandidatesScreen({
                     candidate={detail}
                     active={tab === "기본 정보"}
                     refreshKey={version}
-                    amountUnit={amountUnit}
+                    amountUnit="원"
                     label={(group, code) =>
                       code == null ? "–" : label(group, code)
                     }

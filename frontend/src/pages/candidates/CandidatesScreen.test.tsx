@@ -230,8 +230,12 @@ it("cancel and retained screen changes preserve dirty input until explicit disca
   await begin();
   await userEvent.type(screen.getByLabelText("이름 *"), "보존");
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  await begin();
+  expect(
+    screen.getByText(
+      "저장하지 않은 내용이 있습니다. 나가면 입력한 내용이 사라집니다.",
+    ),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "계속 작성" }));
   expect(screen.getByLabelText("이름 *")).toHaveValue("보존");
   view.rerender(<CandidatesScreen active={false} onDirtyChange={dirty} />);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -114,6 +114,18 @@ export const formatMm = (value: string | null | undefined): string =>
 export function formatRate(value: string | null | undefined): string {
   return value == null ? "–" : `${formatFixedDecimal(value, 1)}%`;
 }
+/** Display-only large summary amounts. Integer arithmetic preserves large won values. */
+export function formatSummaryAmount(value: string | null | undefined): string {
+  if (value == null) return "–";
+  if (!/^-?\d+$/.test(value)) return "–";
+  const absolute = BigInt(value.replace(/^-/, ""));
+  const sign = value.startsWith("-") && absolute !== 0n ? "−" : "";
+  if (absolute >= 100000000n) {
+    const tenths = (absolute + 5000000n) / 10000000n;
+    return `${sign}${formatDecimal(String(tenths / 10n))}.${tenths % 10n}억 원`;
+  }
+  return `${sign}${formatDecimal(String((absolute + 5000n) / 10000n))}만 원`;
+}
 /** LocalDate is a calendar date, not an instant: do not apply browser timezone conversion. */
 export function formatDate(value: string | null | undefined): string {
   if (value == null) return "–";

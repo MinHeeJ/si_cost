@@ -13,8 +13,13 @@ import { SalesQuotePanel } from "./SalesQuotePanel";
 import { SalesPipelinePanel } from "./SalesPipelineScreen";
 import { ApiError } from "../../shared/api";
 import * as api from "./salesCommandsApi";
+import { getSharedCodes } from "../shared/sharedApi";
 
 vi.mock("./salesCommandsApi");
+vi.mock("../shared/sharedApi", async (original) => ({
+  ...(await original<typeof import("../shared/sharedApi")>()),
+  getSharedCodes: vi.fn(),
+}));
 vi.mock("../forecast/SalesForecastScreen", () => ({
   SalesForecastPanel: () => <p>매출·인력 예측 결과</p>,
 }));
@@ -114,6 +119,22 @@ function mount(o = opportunity()) {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getSharedCodes).mockImplementation(async (group) => ({
+    items:
+      group === "JOB"
+        ? [
+            {
+              code: "BE",
+              name: "백엔드 개발",
+              addVal1: null,
+              addVal2: null,
+              addVal3: null,
+              codeVal: null,
+              unitNm: null,
+            },
+          ]
+        : [],
+  }));
   refresh.mockResolvedValue(undefined);
   vi.mocked(api.createSalesOpportunityApproval).mockResolvedValue(saved);
   vi.mocked(api.saveSalesOpportunityStage).mockResolvedValue(saved);
@@ -160,7 +181,7 @@ it("unknown is not zero and prevents approval", () => {
   mount(o);
   expect(screen.getByRole("button", { name: "승인" })).toBeDisabled();
   expect(
-    screen.getByText(/견적 원가 미확인 또는 승인 WAIT/),
+    screen.getByText(/견적 원가 미확인 또는 승인 대기\/반려/),
   ).toBeInTheDocument();
 });
 it("rejection retains full optional reason, submits once, and refreshes only after commit", async () => {
@@ -228,7 +249,11 @@ it("postcommit refresh failure does not repost and offers read retry through par
   refresh.mockRejectedValue(new Error("읽기 실패"));
   mount();
   await userEvent.click(screen.getByRole("button", { name: "삭제" }));
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  const confirm = within(
+    screen.getByRole("dialog", { name: "이 기회를 삭제할까요?" }),
+  ).getByRole("button", { name: "삭제" });
+  expect(confirm).toHaveClass("sicost-danger");
+  await userEvent.click(confirm);
   expect(await screen.findByRole("status")).toHaveTextContent(
     "저장은 됐지만 다시 불러오지 못했습니다",
   );
@@ -262,11 +287,15 @@ it("lose loads existing reason codes; missing required reason blocks submit", as
   mount();
   await userEvent.click(screen.getByRole("button", { name: "실주 처리" }));
   await screen.findByRole("option", { name: "가격" });
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  const confirm = within(
+    screen.getByRole("dialog", { name: "이 기회를 실주 처리할까요?" }),
+  ).getByRole("button", { name: "실주 처리" });
+  expect(confirm).toHaveClass("sicost-danger");
+  await userEvent.click(confirm);
   expect(api.createSalesOpportunityLoss).not.toHaveBeenCalled();
   expect(screen.getByRole("alert")).toHaveTextContent("실주 사유");
   await userEvent.selectOptions(screen.getByLabelText("실주 사유"), "PRICE");
-  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  await userEvent.click(confirm);
   await waitFor(() =>
     expect(api.createSalesOpportunityLoss).toHaveBeenCalledWith(
       expect.objectContaining({ id: "O-0101" }),
@@ -415,8 +444,10 @@ it("수주 모달은 서버 견적 수량의 직무합계와 큰 원정수 차�
   ];
   mount(o);
   await userEvent.click(screen.getByTestId("win-open-button"));
-  expect(screen.getByTestId("win-plan-totals")).toHaveTextContent(
-    "BE: 1.35 MM",
+  await waitFor(() =>
+    expect(screen.getByTestId("win-plan-totals")).toHaveTextContent(
+      "백엔드 개발: 1.35 MM",
+    ),
   );
   expect(screen.getByTestId("win-amount-difference")).toHaveTextContent(
     "99,280,074,525,900 원",

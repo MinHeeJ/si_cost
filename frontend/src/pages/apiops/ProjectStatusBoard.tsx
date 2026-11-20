@@ -166,7 +166,19 @@ export function ProjectStatusBoard({
                 data-testid={`status-reason-${Array.from(row.projectId, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${index}`}
                 key={`${reason.kind}-${index}`}
               >
-                <HelpTooltip label={`${reason.kind} ${reason.value}`} trigger={<StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>{reason.kind} {reason.value}</StatusBadge>}>{reason.formula} · 기준 {reason.threshold}</HelpTooltip>
+                {(() => {
+                  const name =
+                    reason.kind === "기한지난HIGH"
+                      ? "기한 지난 높음 이슈"
+                      : reason.kind === "기한지난이슈"
+                        ? "기한 지난 이슈"
+                        : reason.kind;
+                  return (
+                    <HelpTooltip label={`${name} ${reason.value}`} trigger={<StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>{name} {reason.value}</StatusBadge>}>
+                      {reason.kind === "기한지난HIGH" ? "기한 지난 높음 이슈가 있습니다." : `${reason.formula} · 기준 ${reason.threshold}`}
+                    </HelpTooltip>
+                  );
+                })()}
               </li>
             ))}
           </ul>
@@ -333,7 +345,7 @@ export function ProjectStatusBoard({
           <p>
             정상 {result.data.summary.normalCount} · 주의{" "}
             {result.data.summary.warningCount} · 위험{" "}
-            {result.data.summary.dangerCount} · 열린 HIGH{" "}
+            {result.data.summary.dangerCount} · 열린 높음{" "}
             {result.data.summary.openHighIssueCount} · 원가 미확인{" "}
             {result.data.summary.unknownCostProjectCount}
           </p>
@@ -527,8 +539,8 @@ export function ProjectStatusBoard({
         <p>
           일정 늦음 = 계획 − 실적: 10.0%p 이상 위험, 5.0%p 이상 주의. TK 진척
           대비 원가 = 사용률 − 실적: 15.0%p 이상 위험, 5.0%p 이상 주의. 기한
-          지난 HIGH 1건 이상 위험, 기한 지난 이슈 1건 이상 또는 메모 14일 초과
-          주의. 모든 사유를 함께 표시합니다.
+          지난 높음 이슈 1건 이상 위험, 기한 지난 이슈 1건 이상 또는 메모 14일
+          초과 주의. 모든 사유를 함께 표시합니다.
         </p>
         {result.data?.items
           .filter((row) => row.completeness.issues.length > 0)

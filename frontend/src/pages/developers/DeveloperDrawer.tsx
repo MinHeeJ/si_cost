@@ -14,6 +14,7 @@ import { DeveloperStatesPanel } from "../states/DeveloperStatesPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { priceHelp } from "./DeveloperForm";
 import * as api from "./peopleClient";
+import { useCodeNames, CodeName } from "../../shared/codeNames";
 import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 import { DeveloperSingleStatus } from "../developersops/DeveloperStatusToolbar";
 import {
@@ -60,31 +61,7 @@ export function DeveloperDrawer({
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [parts, setParts] = useState<PartOption[]>([]);
-  const [codeNames, setCodeNames] = useState<
-    Record<string, { code: string; name: string }[]>
-  >({});
-  useEffect(() => {
-    let current = true;
-    for (const group of ["EMP_TYPE", "DRCT_CLS", "WORK_STAT"]) {
-      void api
-        .getPeopleCodes(group)
-        .then((result) => {
-          if (current)
-            setCodeNames((previous) => ({
-              ...previous,
-              [group]: result.items,
-            }));
-        })
-        .catch(() => undefined);
-    }
-    return () => {
-      current = false;
-    };
-  }, []);
-  const label = (group: string, value: string) =>
-    codeNames[group]?.find((code) => code.code === value)?.name ??
-    suppliedLabel?.(group, value) ??
-    value;
+  const label = useCodeNames("EMP_TYPE", "DRCT_CLS", "WORK_STAT", "JBPS");
   const [positions, setPositions] = useState<{ code: string; name: string }[]>(
     [],
   );
@@ -213,8 +190,7 @@ export function DeveloperDrawer({
                       : null,
                     "직접/간접": label("DRCT_CLS", data.directClass),
                     "영업 파트":
-                      parts.find((p) => p.id === data.partId)?.name ??
-                      data.partId,
+                      parts.find((p) => p.id === data.partId)?.name ?? "–",
                     입사일: data.hireDate,
                     "근무 상태": label("WORK_STAT", data.status),
                     "사용 여부": data.useYn === "Y" ? "사용" : "중지",
@@ -317,6 +293,7 @@ export function DeveloperDrawer({
               <PeopleChangeHistoryTable
                 targetType="DEVELOPER"
                 targetId={id}
+                targetName={data.name}
                 refreshKey={refreshKey}
               />
             )}
@@ -383,7 +360,18 @@ function DeveloperAssignments({ id }: { id: string }) {
         { id: "start", label: "시작일", render: (r) => r.startDate },
         { id: "end", label: "종료일", render: (r) => r.endDate },
         { id: "mm", label: "계약 MM", render: (r) => r.contractMm },
-        { id: "status", label: "투입 상태", render: (r) => r.assignmentStatus },
+        {
+          id: "status",
+          label: "투입 상태",
+          render: (r) =>
+            r.assignmentStatus === "ACT" ? (
+              "투입 중"
+            ) : r.assignmentStatus === "CNCL" ? (
+              "취소"
+            ) : (
+              <CodeName group="ASGN_STAT" value={r.assignmentStatus} />
+            ),
+        },
       ]}
     />
   );

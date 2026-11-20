@@ -114,16 +114,15 @@ async function draw() {
     expect(screen.queryByTestId("payroll-read-only")).not.toBeInTheDocument(),
   );
 }
-it("저장 구분과 입력·계산값은 readonly, 기본천원·정밀도·음수·NULL 표시", async () => {
+it("저장 구분과 입력·계산값은 readonly, 단위 선택 없이 원·정밀도·음수·NULL 표시", async () => {
   await draw();
   expect(screen.getByText("정규직")).toHaveClass("sicost-tone-neutral");
   expect(screen.getByText("간접")).toBeInTheDocument();
   expect(screen.queryByLabelText("직원구분")).not.toBeInTheDocument();
-  expect(screen.getByText("999,999,999,999.999")).toBeInTheDocument();
-  expect(screen.getByText("−0.001")).toBeInTheDocument();
-  await userEvent.selectOptions(screen.getByLabelText("단위"), "백만원");
-  expect(screen.getByText("999,999,999.999999")).toBeInTheDocument();
-  expect(screen.getByText("−0.000001")).toBeInTheDocument();
+  expect(screen.getByText("999,999,999,999,999")).toBeInTheDocument();
+  expect(screen.getByText("−1")).toBeInTheDocument();
+  expect(screen.queryByTestId("payroll-unit")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("단위")).not.toBeInTheDocument();
   expect(api.getPayroll).toHaveBeenCalledOnce();
   vi.mocked(api.getPayroll).mockResolvedValue({
     month: row.month,
@@ -310,13 +309,12 @@ it("업로드 기록 빈목록·실패·재조회 구분", async () => {
   await userEvent.click(screen.getByTestId("payroll-history-refresh"));
   expect(await screen.findByText("선택월 기록 없음")).toBeInTheDocument();
 });
-it("다운로드는 선택월·검색·표시단위 전달, 페이지와 원금 변경 없음", async () => {
+it("다운로드는 선택월·검색·원 단위 전달, 페이지와 원금 변경 없음", async () => {
   vi.mocked(api.exportPayroll).mockResolvedValue({
     blob: new Blob(),
     filename: "payroll.xlsx",
   });
   await draw();
-  await userEvent.selectOptions(screen.getByLabelText("단위"), "원");
   await userEvent.click(screen.getByTestId("payroll-export"));
   await waitFor(() =>
     expect(api.exportPayroll).toHaveBeenCalledWith(

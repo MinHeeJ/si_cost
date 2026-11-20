@@ -7,7 +7,13 @@ import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { FilterBar } from "../../shared/FilterBar";
 import { DetailDrawer } from "../../shared/DetailDrawer";
-import { formatAmount, formatFixedDecimal, formatShortDateTime } from "../../shared/format";
+import {
+  formatAmount,
+  formatFixedDecimal,
+  formatShortDateTime,
+  formatSummaryAmount,
+  formatRate,
+} from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
 import { SALES_COMMITTED } from "../assignmentcandidatesops/assignmentCandidatesApi";
 import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
@@ -15,16 +21,31 @@ import { SalesQuotePanel, SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { SalesOpportunityForm } from "../salesopportunities/SalesOpportunityForm";
 import { getPeriodContext } from "../shared/sharedApi";
+import { useCodeNames } from "../../shared/codeNames";
+import { BusinessName } from "../../shared/BusinessName";
 import "./salesCommands.css";
 
-export function SalesPipelineScreen() {
+export function SalesPipelineScreen({
+  onDirtyChange,
+}: { onDirtyChange?(dirty: boolean): void } = {}) {
   return (
     <SharedScreenFrame screenId="UI-29">
-      <SalesPipelinePanel />
+      <SalesPipelinePanel onDirtyChange={onDirtyChange} />
     </SharedScreenFrame>
   );
 }
-export function SalesPipelinePanel() {
+export function SalesPipelinePanel({
+  onDirtyChange,
+}: { onDirtyChange?(dirty: boolean): void } = {}) {
+  const name = useCodeNames(
+    "JOB",
+    "GRADE",
+    "APRV_STAT",
+    "OPP_STAT",
+    "LOSE_RSN",
+    "CTRT_TYPE",
+    "APRV_ACT",
+  );
   const location = useLocation();
   const [editing, setEditing] = useState<"new" | api.Opportunity>(),
     [highlight, setHighlight] = useState<string>(),
@@ -197,6 +218,7 @@ export function SalesPipelinePanel() {
             detail={editing === "new" ? undefined : editing}
             onClose={() => setEditing(undefined)}
             onSaved={saved}
+            onDirtyChange={onDirtyChange}
           />
         </OpportunityModal>
       )}
@@ -220,11 +242,11 @@ export function SalesPipelinePanel() {
           </div>
           <div>
             <dt>예상 금액 합계</dt>
-            <dd>{formatAmount(data.summary.amount, "천원")} 천원</dd>
+            <dd>{formatSummaryAmount(data.summary.amount)}</dd>
           </div>
           <div>
             <dt>확률 반영 금액</dt>
-            <dd>{formatAmount(data.summary.weightedAmount, "천원")} 천원</dd>
+            <dd>{formatSummaryAmount(data.summary.weightedAmount)}</dd>
           </div>
           <div>
             <dt>확률 반영 필요 인력</dt>
@@ -333,7 +355,7 @@ export function SalesPipelinePanel() {
                         .filter((s) => s.stage === stage)
                         .map((s) => (
                           <p key={s.stage}>
-                            {s.count}건 · {formatAmount(s.amount, "천원")} 천원
+                            {s.count}건 · {formatAmount(s.amount, "원")} 원
                           </p>
                         ))}
                       {!loading &&
@@ -373,21 +395,26 @@ export function SalesPipelinePanel() {
                               {o.name}
                             </button>
                             <p>
-                              {o.customerId} · {o.startMonth}
+                              <BusinessName kind="client" id={o.customerId} /> ·{" "}
+                              {o.startMonth}
                             </p>
-                            <strong>
-                              {formatAmount(o.amount, "천원")} 천원
-                            </strong>
+                            <strong>{formatAmount(o.amount, "원")} 원</strong>
                             <p>
-                              확률 {o.probability}% ·{" "}
+                              확률 {formatRate(o.probability)} ·{" "}
                               {o.manualProbability ? "수동" : "기본"}
                             </p>
-                            <p>{o.needs.map((n) => n.jobCode).join(" · ")}</p>
-                            <span
-                              className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()}`}
-                            >
-                              {o.approvalStatus}
-                            </span>
+                            <p>
+                              {o.needs
+                                .map((n) => name("JOB", n.jobCode))
+                                .join(" · ")}
+                            </p>
+                            {o.approvalStatus !== "NONE" && (
+                              <span
+                                className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()}`}
+                              >
+                                {name("APRV_STAT", o.approvalStatus)}
+                              </span>
+                            )}
                             <p
                               className={
                                 today && o.nextDue && o.nextDue < today
@@ -444,7 +471,7 @@ export function SalesPipelinePanel() {
                         <th>결과</th>
                         {(
                           [
-                            ["amount", "예상액 (천원)"],
+                            ["amount", "예상액 (원)"],
                             ["resultDate", "결과일"],
                           ] as const
                         ).map(([key, title]) => {
@@ -503,9 +530,11 @@ export function SalesPipelinePanel() {
                               {o.name}
                             </button>
                           </td>
-                          <td>{o.customerId}</td>
-                          <td>{o.status}</td>
-                          <td>{formatAmount(o.amount, "천원")}</td>
+                          <td>
+                            <BusinessName kind="client" id={o.customerId} />
+                          </td>
+                          <td>{name("OPP_STAT", o.status)}</td>
+                          <td>{formatAmount(o.amount, "원")}</td>
                           <td>{o.resultDate ?? "–"}</td>
                           <td>
                             {o.projectId ? (
@@ -514,10 +543,11 @@ export function SalesPipelinePanel() {
                                 to="/UI-01"
                                 state={{ projectId: o.projectId }}
                               >
-                                {o.projectId}
+                                <BusinessName kind="project" id={o.projectId} />{" "}
+                                ({o.projectId})
                               </Link>
                             ) : (
-                              `${o.lossReasonCode ?? "–"} ${o.lossMemo ?? ""}`
+                              `${name("LOSE_RSN", o.lossReasonCode)} ${o.lossMemo ?? ""}`
                             )}
                           </td>
                         </tr>
@@ -625,8 +655,9 @@ export function SalesPipelinePanel() {
                 {detailTab === "기본 정보" && (
                   <>
                     <p>
-                      고객 {detail.customerId} · 영업파트 {detail.partId} ·{" "}
-                      {detail.contractType ?? "–"}
+                      고객 <BusinessName kind="client" id={detail.customerId} />{" "}
+                      · 영업파트 <BusinessName kind="part" id={detail.partId} />{" "}
+                      · {name("CTRT_TYPE", detail.contractType)}
                     </p>
                     <p>
                       {detail.startMonth} · {detail.months ?? "–"}개월 ·{" "}
@@ -651,8 +682,11 @@ export function SalesPipelinePanel() {
                       key={n.needSn ?? i}
                     >
                       <p>
-                        {n.jobCode} / {n.gradeCode ?? "등급 미지정"} · {n.count}
-                        명 · {n.startMonth}부터 {n.months}개월 · 월{" "}
+                        {name("JOB", n.jobCode)} /{" "}
+                        {n.gradeCode
+                          ? name("GRADE", n.gradeCode)
+                          : "등급 미지정"}{" "}
+                        · {n.count}명 · {n.startMonth}부터 {n.months}개월 · 월{" "}
                         {n.monthlyMm} MM
                       </p>
                       <p>예상단가 {n.expectedRate ?? "직무 기본단가"}</p>
@@ -674,7 +708,8 @@ export function SalesPipelinePanel() {
                         data-testid={`approval-history-${h.histSn}`}
                         key={h.histSn}
                       >
-                        {formatShortDateTime(h.registeredAt)} · {h.action} · {h.profitRate}% ·{" "}
+                        {formatShortDateTime(h.registeredAt)} ·{" "}
+                        {name("APRV_ACT", h.action)} · {h.profitRate}% ·{" "}
                         {h.reason} · {h.registeredBy}
                       </article>
                     ))}

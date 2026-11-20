@@ -180,7 +180,9 @@ it("requires reason and uses active server codes", async () => {
   render(<WorkforceRecommendationCandidates {...props} />);
   await userEvent.click(screen.getByRole("button", { name: "제외" }));
   await screen.findByRole("option", { name: "일정" });
-  await userEvent.click(screen.getByRole("button", { name: "확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "제외" }),
+  );
   expect(screen.getByText("사유를 선택해 주세요.")).toBeInTheDocument();
   expect(api.createWorkforceRecommendationExclusion).not.toHaveBeenCalled();
   expect(shared.getSharedCodes).toHaveBeenCalledWith("RCMD_EXCL");
@@ -195,7 +197,9 @@ it("exclusion removes only that card and never renumbers remaining rows", async 
   await userEvent.click(screen.getByTestId("recommendation-exclude-3"));
   await screen.findByRole("option", { name: "일정" });
   await userEvent.selectOptions(screen.getByLabelText("제외 사유*"), "SCHD");
-  await userEvent.click(screen.getByRole("button", { name: "확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "제외" }),
+  );
   await waitFor(() =>
     expect(
       screen.queryByTestId("recommendation-card-3"),
@@ -224,7 +228,9 @@ it("field validation remains beside reason and keeps modal input", async () => {
   await userEvent.click(screen.getByRole("button", { name: "제외" }));
   await screen.findByRole("option", { name: "일정" });
   await userEvent.selectOptions(screen.getByLabelText("제외 사유*"), "SCHD");
-  await userEvent.click(screen.getByRole("button", { name: "확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "제외" }),
+  );
   await waitFor(() =>
     expect(screen.getByLabelText("제외 사유*")).toHaveAttribute(
       "aria-invalid",
@@ -409,40 +415,119 @@ it("Escape closes exclusion without changing business data", async () => {
 
 it("empty recommendations offer the supplied condition reset without writing an action", async () => {
   const onReset = vi.fn();
-  render(<WorkforceRecommendationCandidates {...props} candidates={[]} onReset={onReset} />);
-  const empty = screen.getByRole("heading", { name: "맞는 인력이 없습니다." }).parentElement!;
-  await userEvent.click(within(empty).getByRole("button", { name: "조건 초기화" }));
+  render(
+    <WorkforceRecommendationCandidates
+      {...props}
+      candidates={[]}
+      onReset={onReset}
+    />,
+  );
+  const empty = screen.getByRole("heading", {
+    name: "맞는 인력이 없습니다.",
+  }).parentElement!;
+  await userEvent.click(
+    within(empty).getByRole("button", { name: "조건 초기화" }),
+  );
   expect(onReset).toHaveBeenCalledTimes(1);
   expect(api.createWorkforceRecommendationExclusion).not.toHaveBeenCalled();
-  expect(api.createWorkforceRecommendationTentativeAssignment).not.toHaveBeenCalled();
+  expect(
+    api.createWorkforceRecommendationTentativeAssignment,
+  ).not.toHaveBeenCalled();
 });
 
 it.each([
-  ["천원", "1000.001", "1,000"],
+  ["천원", "1000.001", "1,000,001"],
   ["원", "1000001", "1,000,001"],
-  ["백만원", "1.000001", "1"],
-] as const)("cost evidence displays integer won exactly in %s without changing the saved score", (unit, _decimal, expected) => {
-  render(<WorkforceRecommendationCandidates {...props} amountUnit={unit} candidates={[{ ...candidate,
-    scoreDetail: { m: "202611", c: "1000001", u: "0", f: 1 },
-    scoreItems: [{ itemCode: "COST", baseScore: "0", weight: "5", score: "0", basis: "raw cost" }],
-  }]} />);
-  expect(screen.getByText(new RegExp(`인건비 ${expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ${unit}`))).toHaveTextContent(`단가 0 ${unit}`);
-  expect(screen.getByText(/총점/)).toHaveTextContent("82.3");
-  expect(api.createWorkforceRecommendationTentativeAssignment).not.toHaveBeenCalled();
-});
+  ["백만원", "1.000001", "1,000,001"],
+] as const)(
+  "cost evidence displays integer won exactly in %s without changing the saved score",
+  (unit, _decimal, expected) => {
+    render(
+      <WorkforceRecommendationCandidates
+        {...props}
+        amountUnit={unit}
+        candidates={[
+          {
+            ...candidate,
+            scoreDetail: { m: "202611", c: "1000001", u: "0", f: 1 },
+            scoreItems: [
+              {
+                itemCode: "COST",
+                baseScore: "0",
+                weight: "5",
+                score: "0",
+                basis: "raw cost",
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText(new RegExp(`인건비 ${expected} 원`)),
+    ).toHaveTextContent("단가 0 원");
+    expect(screen.getByText(/총점/)).toHaveTextContent("82.3");
+    expect(
+      api.createWorkforceRecommendationTentativeAssignment,
+    ).not.toHaveBeenCalled();
+  },
+);
 
 it("cost evidence keeps unknown distinct from zero", () => {
-  render(<WorkforceRecommendationCandidates {...props} candidates={[{ ...candidate,
-    scoreDetail: { c: null, u: "0", f: 0 },
-    scoreItems: [{ itemCode: "COST", baseScore: "0", weight: "5", score: "0", basis: "raw cost" }],
-  }]} />);
-  expect(screen.getByText(/인건비 – 천원/)).toHaveTextContent("단가 0 천원 · 원천 미확인");
+  render(
+    <WorkforceRecommendationCandidates
+      {...props}
+      candidates={[
+        {
+          ...candidate,
+          scoreDetail: { c: null, u: "0", f: 0 },
+          scoreItems: [
+            {
+              itemCode: "COST",
+              baseScore: "0",
+              weight: "5",
+              score: "0",
+              basis: "raw cost",
+            },
+          ],
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText(/인건비 – 원/)).toHaveTextContent(
+    "단가 0 원 · 원천 미확인",
+  );
 });
 
-it.each([["1000000", "1,000"], ["-1000001", "−1,000"], ["5561666", "5,562"]])("cost evidence rounds %s for display without changing saved values", (value, expected) => {
-  render(<WorkforceRecommendationCandidates {...props} candidates={[{ ...candidate,
-    scoreDetail: { c: value, u: "8000000" },
-    scoreItems: [{ itemCode: "COST", baseScore: "5", weight: "5", score: "5", basis: "raw" }],
-  }]} />);
-  expect(screen.getByText(`인건비 ${expected} 천원 · 단가 8,000 천원`)).toBeInTheDocument();
-});
+it.each([
+  ["1000000", "1,000,000"],
+  ["-1000001", "−1,000,001"],
+  ["5561666", "5,561,666"],
+])(
+  "cost evidence displays %s in won without changing saved values",
+  (value, expected) => {
+    render(
+      <WorkforceRecommendationCandidates
+        {...props}
+        candidates={[
+          {
+            ...candidate,
+            scoreDetail: { c: value, u: "8000000" },
+            scoreItems: [
+              {
+                itemCode: "COST",
+                baseScore: "5",
+                weight: "5",
+                score: "5",
+                basis: "raw",
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText(`인건비 ${expected} 원 · 단가 8,000,000 원`),
+    ).toBeInTheDocument();
+  },
+);

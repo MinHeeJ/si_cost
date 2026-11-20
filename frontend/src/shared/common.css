@@ -133,9 +133,15 @@ button:disabled {
   background: var(--head-bg);
   color: var(--text-sub);
 }
+.sicost-field > [role="alert"],
 .sicost-field-error {
   font-size: 12px;
   color: var(--bad);
+}
+.sicost-danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: white;
 }
 .sicost-decimal {
   text-align: right;

@@ -116,7 +116,9 @@ function draw(override: Partial<ProjectStatusPanelProps> = {}) {
 }
 async function ready() {
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "진행 처리" })).not.toBeDisabled(),
+    expect(
+      screen.getByRole("button", { name: "진행 처리" }),
+    ).not.toBeDisabled(),
   );
 }
 async function openLoss() {
@@ -178,7 +180,11 @@ it("인원수와 배정건수·관리번호·전체 영향 및 빈 미래 배정
 it("사유 필수와 500자 제한은 입력을 보존하고 저장0이다", async () => {
   draw();
   await openLoss();
-  await userEvent.click(screen.getByRole("button", { name: "실주 확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  );
   expect(screen.getByLabelText("실주 사유 *")).toHaveAttribute(
     "aria-invalid",
     "true",
@@ -189,7 +195,11 @@ it("사유 필수와 500자 제한은 입력을 보존하고 저장0이다", asy
   fireEvent.change(screen.getByLabelText("메모"), {
     target: { value: "가".repeat(501) },
   });
-  await userEvent.click(screen.getByRole("button", { name: "실주 확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  );
   expect(screen.getByLabelText("메모")).toHaveAttribute("aria-invalid", "true");
   expect(api.saveProjectLoss).not.toHaveBeenCalled();
 });
@@ -199,7 +209,11 @@ it("실주 확인은 최신 미리보기 revision/token과 사유만 보낸다",
   fireEvent.change(screen.getByLabelText("실주 사유 *"), {
     target: { value: "ETC" },
   });
-  await userEvent.click(screen.getByRole("button", { name: "실주 확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  );
   await waitFor(() => expect(props.onChanged).toHaveBeenCalledWith(saved));
   expect(api.saveProjectLoss).toHaveBeenCalledWith(value.id, {
     year: 2026,
@@ -224,9 +238,17 @@ it("실패 요청ID·입력을 보존하고 stale이면 새 영향 확인 전 �
   fireEvent.change(screen.getByLabelText("실주 사유 *"), {
     target: { value: "ETC" },
   });
-  await userEvent.click(screen.getByRole("button", { name: "실주 확정" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  );
   await screen.findByText(/자동으로 재저장하지 않습니다/);
-  expect(screen.getByRole("button", { name: "실주 확정" })).toBeDisabled();
+  expect(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  ).toBeDisabled();
   expect(screen.getByLabelText("실주 사유 *")).toHaveValue("ETC");
   expect(screen.getByText(/loss-stale/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "영향 미리보기" }));
@@ -241,7 +263,11 @@ it("미리보기 실패는 확정 불가하고 명시 재조회만 허용", asyn
   await ready();
   await userEvent.click(screen.getByRole("button", { name: "실주 처리" }));
   await screen.findByText("영향 조회 실패");
-  expect(screen.getByRole("button", { name: "실주 확정" })).toBeDisabled();
+  expect(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "실주 처리",
+    }),
+  ).toBeDisabled();
   await userEvent.click(screen.getByRole("button", { name: "영향 미리보기" }));
   await screen.findByText("기준일 2026-07-01 (서버 오늘)");
   expect(api.saveProjectLoss).not.toHaveBeenCalled();

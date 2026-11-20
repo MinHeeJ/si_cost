@@ -32,7 +32,7 @@ export function ProjectStatusSummary({ query }: { query: AnalysisQuery }) {
           />
           <p>
             정상 {result.data.normalCount} · 주의 {result.data.warningCount} ·
-            위험 {result.data.dangerCount} · 열린 HIGH{" "}
+            위험 {result.data.dangerCount} · 열린 높음{" "}
             {result.data.openHighIssueCount} · 원가 미확인{" "}
             {result.data.unknownCostProjectCount}
           </p>

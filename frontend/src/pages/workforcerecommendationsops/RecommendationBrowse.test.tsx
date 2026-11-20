@@ -474,7 +474,7 @@ it("저장 회차 상세는 당시 점수·배점·조건·선택·사용자만 
     expect.any(AbortSignal),
   );
   expect(api.requestTargetRecommendation).not.toHaveBeenCalled();
-  expect(shared.getSharedCodes).not.toHaveBeenCalled();
+  expect(shared.getSharedCodes).toHaveBeenCalledWith("JOB", true);
 });
 it("기록 빈 목록은 별도 안내이며 이전·다음이 비활성이다", async () => {
   vi.mocked(api.getWorkforceRecommendationHistory).mockResolvedValue({
@@ -532,11 +532,20 @@ it("로딩 상태는 기록 조회 중을 표시하고 서버 응답 전 행동�
 
 it("빈 추천에서도 서버의 제외 집계와 겹치는 개인 사유를 표시한다", async () => {
   vi.mocked(api.requestTargetRecommendation).mockResolvedValue({
-    ...snapshot, rcmdId: null, candidates: [],
+    ...snapshot,
+    rcmdId: null,
+    candidates: [],
     exclusions: {
-      totalCandidateCount: 3, excludedUniqueCount: 2, reasonCountsOverlap: true,
-      byReason: [{ reason: "휴직", count: 2 }, { reason: "퇴사 또는 퇴사 예정", count: 1 }],
-      diagnostics: [{ developerId: "D-002", reasons: ["휴직", "퇴사 또는 퇴사 예정"] }],
+      totalCandidateCount: 3,
+      excludedUniqueCount: 2,
+      reasonCountsOverlap: true,
+      byReason: [
+        { reason: "휴직", count: 2 },
+        { reason: "퇴사 또는 퇴사 예정", count: 1 },
+      ],
+      diagnostics: [
+        { developerId: "D-002", reasons: ["휴직", "퇴사 또는 퇴사 예정"] },
+      ],
     },
   });
   render(<WorkforceRecommendationsScreen />);
@@ -549,14 +558,24 @@ it("빈 추천에서도 서버의 제외 집계와 겹치는 개인 사유를 �
 });
 
 it("기록의 빈 결과 안에서 조건 초기화하면 필터와 오류를 지우고 전체를 다시 조회한다", async () => {
-  vi.mocked(api.getWorkforceRecommendationHistory).mockResolvedValue({ items: [], page: 1, size: 50, totalCount: 0 });
+  vi.mocked(api.getWorkforceRecommendationHistory).mockResolvedValue({
+    items: [],
+    page: 1,
+    size: 50,
+    totalCount: 0,
+  });
   render(<RecommendationHistoryPanel onClose={vi.fn()} />);
   await screen.findByText("추천 기록이 없습니다.");
   await userEvent.type(screen.getByTestId("history-target-id"), "REMOVED");
   await userEvent.click(screen.getByTestId("history-search"));
   expect(screen.getByRole("alert")).toHaveTextContent("대상 유형과 대상 ID");
   await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
-  await waitFor(() => expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith({ page: 1, size: 50 }, expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
+      { page: 1, size: 50 },
+      expect.any(AbortSignal),
+    ),
+  );
   expect(screen.getByTestId("history-target-id")).toHaveValue("");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(screen.getByTestId("history-filters")).toHaveClass("sicost-filterbar");
@@ -564,19 +583,51 @@ it("기록의 빈 결과 안에서 조건 초기화하면 필터와 오류를 �
 });
 
 it("history headers request every ASC/DESC server sort and return to page one", async () => {
-  vi.mocked(api.getWorkforceRecommendationHistory).mockResolvedValue({ items: [round], page: 1, size: 50, totalCount: 120 });
+  vi.mocked(api.getWorkforceRecommendationHistory).mockResolvedValue({
+    items: [round],
+    page: 1,
+    size: 50,
+    totalCount: 120,
+  });
   render(<RecommendationHistoryPanel onClose={() => undefined} />);
   await screen.findByTestId("history-round-12");
-  for (const [id, label] of [["rcmdId", "회차"], ["recommendationType", "유형"], ["targetId", "대상"], ["jobCode", "직무"], ["startMonth", "시작월"], ["requestedGradeCode", "요청등급"], ["executedAt", "실행시각"], ["executedBy", "사용자"], ["candidateCount", "후보 수"]]) {
+  for (const [id, label] of [
+    ["rcmdId", "회차"],
+    ["recommendationType", "유형"],
+    ["targetId", "대상"],
+    ["jobCode", "직무"],
+    ["startMonth", "시작월"],
+    ["requestedGradeCode", "요청등급"],
+    ["executedAt", "실행시각"],
+    ["executedBy", "사용자"],
+    ["candidateCount", "후보 수"],
+  ]) {
     for (const direction of ["ASC", "DESC"]) {
-      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}( |$)`) }));
-      await waitFor(() => expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(expect.objectContaining({ sort: id, direction, page: 1 }), expect.any(AbortSignal)));
+      fireEvent.click(
+        screen.getByRole("button", { name: new RegExp(`^${label}( |$)`) }),
+      );
+      await waitFor(() =>
+        expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
+          expect.objectContaining({ sort: id, direction, page: 1 }),
+          expect.any(AbortSignal),
+        ),
+      );
       await screen.findByTestId("history-round-12");
     }
   }
   fireEvent.click(screen.getByTestId("history-next"));
-  await waitFor(() => expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+      expect.any(AbortSignal),
+    ),
+  );
   await screen.findByTestId("history-round-12");
   fireEvent.click(screen.getByRole("button", { name: /^회차/ }));
-  await waitFor(() => expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort: "rcmdId", direction: "ASC" }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, sort: "rcmdId", direction: "ASC" }),
+      expect.any(AbortSignal),
+    ),
+  );
 });

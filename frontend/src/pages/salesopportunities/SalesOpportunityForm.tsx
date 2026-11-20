@@ -1,5 +1,10 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
+import {
+  errorOutsideFields,
+  useFieldErrorFocus,
+} from "../../shared/FieldErrors";
+import { NumericInput, sanitizeNumber } from "../../shared/NumericInput";
 import { useNavigate } from "react-router-dom";
 import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
@@ -13,6 +18,40 @@ import { stageNames } from "../salesopportunitiesops/SalesOpportunityActions";
 import type { SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./salesOpportunityApi";
 import "./salesOpportunity.css";
+/** 빈 칸 문구(SFR-017-03 형식, 고르는 칸은 원문 「개발자를 골라 주세요」처럼). */
+const requiredMessages = {
+  name: "기회명을 입력해 주세요.",
+  customerId: "고객사를 골라 주세요.",
+  partId: "영업 파트를 골라 주세요.",
+  probability: "수주 확률을 입력해 주세요.",
+  amount: "예상 금액을 입력해 주세요.",
+  startMonth: "시작 예정월을 입력해 주세요.",
+} as const;
+/** 이 창에서 칸 아래에 문구를 보여 주는 칸(field(...)로 그리는 곳). */
+const formFieldsWithMessage = new Set([
+  "name",
+  "customerId",
+  "partId",
+  "stage",
+  "probability",
+  "amount",
+  "contractType",
+  "startMonth",
+  "months",
+  "workplace",
+  "nextTask",
+  "nextDue",
+  "memo",
+  "needs",
+]);
+function formFieldWithMessage(key: string) {
+  return (
+    formFieldsWithMessage.has(key) ||
+    /^needs\[\d+\]\.(jobCode|gradeCode|count|startMonth|months|monthlyMm|expectedRate)$/.test(
+      key,
+    )
+  );
+}
 
 type Row = api.Need & { rowKey: string; selected: string[] };
 type Props = {
@@ -85,6 +124,7 @@ export function SalesOpportunityForm({
     [peopleLoading, setPeopleLoading] = useState(false),
     [peopleError, setPeopleError] = useState<unknown>();
   const [committed, setCommitted] = useState<api.Result>();
+  useFieldErrorFocus(node, fields);
   const destination = useRef<string>(),
     { pending, message, commit } = useCommitRefresh(
       "저장됐지만 다시 불러오지 못했습니다",
@@ -277,15 +317,10 @@ export function SalesOpportunityForm({
     setError(undefined);
     setFields({});
     const errors: Record<string, string> = {};
-    for (const key of [
-      "name",
-      "customerId",
-      "partId",
-      "probability",
-      "amount",
-      "startMonth",
-    ] as const)
-      if (!form[key]) errors[key] = "필수 입력입니다.";
+    for (const key of Object.keys(requiredMessages) as Array<
+      keyof typeof requiredMessages
+    >)
+      if (!form[key]) errors[key] = requiredMessages[key];
     if (form.nextDue && !form.nextTask?.trim())
       errors.nextDue = "할 일을 입력한 뒤 기한을 지정해 주세요.";
     if (Object.keys(errors).length) {
@@ -294,7 +329,10 @@ export function SalesOpportunityForm({
       node.current?.querySelector<HTMLElement>(`[name="${key}"]`)?.focus();
       return;
     }
-    const needs = rows.map(({ rowKey: _key, selected: _selected, ...n }) => n);
+    const needs = rows.map(({ rowKey: _key, selected: _selected, ...n }) => ({
+      ...n,
+      expectedRate: n.expectedRate?.replace(/,/g, "") ?? null,
+    }));
     const tentativeSelections = rows.flatMap((r, i) =>
       r.selected.map((developerId) => ({
         ...(r.needSn ? { needSn: r.needSn } : { needIndex: i + 1 }),
@@ -307,7 +345,12 @@ export function SalesOpportunityForm({
     try {
       await commit(
         async () => {
-          const payload = { ...form, needs, tentativeSelections };
+          const payload = {
+            ...form,
+            amount: form.amount.replace(/,/g, ""),
+            needs,
+            tentativeSelections,
+          };
           result = detail
             ? await api.putSalesOpportunity(detail.id, {
                 ...payload,
@@ -367,8 +410,13 @@ export function SalesOpportunityForm({
             </button>
           </>
         )}
-        {error != null && <SalesCommandError error={error} />}
-        {message && <p role="status">{message}</p>}
+        {errorOutsideFields(error, formFieldWithMessage) != null && (
+          <SalesCommandError error={error} />
+        )}
+        {message &&
+          !(error instanceof Error && error.message === message) && (
+            <p role="status">{message}</p>
+          )}
         {warning && (
           <p role="status" className="sales-command-warning">
             {warning}
@@ -476,7 +524,7 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 수주 확률 *
-                <input
+                <NumericInput
                   data-testid="opportunity-probability"
                   name="probability"
                   value={form.probability}
@@ -503,7 +551,8 @@ export function SalesOpportunityForm({
               </div>
               <label>
                 예상 금액 (원) *
-                <input
+                <NumericInput
+                  kind="amount"
                   data-testid="opportunity-amount"
                   name="amount"
                   inputMode="numeric"
@@ -546,10 +595,10 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 예상 기간 (개월)
-                <input
+                <NumericInput
+                  kind="integer"
                   data-testid="opportunity-months"
                   name="months"
-                  type="number"
                   value={form.months ?? ""}
                   onChange={(e) =>
                     set(
@@ -731,7 +780,8 @@ export function SalesOpportunityForm({
                             data-testid={`need-${key.toLowerCase()}-${r.rowKey}`}
                             name={`needs[${index}].${key}`}
                             aria-label={`${index + 1}번째 줄 ${label}`}
-                            type={type}
+                            type={type === "month" ? "month" : "text"}
+                            inputMode={type === "month" ? undefined : "decimal"}
                             value={r[key] ?? ""}
                             onChange={(e) =>
                               changeRow(index, {
@@ -739,10 +789,20 @@ export function SalesOpportunityForm({
                                   key === "count" || key === "months"
                                     ? e.target.value === ""
                                       ? undefined
-                                      : Number(e.target.value)
+                                      : Number(
+                                          sanitizeNumber(
+                                            e.target.value,
+                                            "integer",
+                                          ),
+                                        )
                                     : key === "expectedRate"
-                                      ? e.target.value || null
-                                      : e.target.value,
+                                      ? sanitizeNumber(
+                                          e.target.value,
+                                          "amount",
+                                        ) || null
+                                      : key === "monthlyMm"
+                                        ? sanitizeNumber(e.target.value)
+                                        : e.target.value,
                               })
                             }
                           />

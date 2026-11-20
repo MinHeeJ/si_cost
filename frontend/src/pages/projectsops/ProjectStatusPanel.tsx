@@ -261,19 +261,20 @@ function StatusContent({
           <p>
             {projectId} / {name}
           </p>
-          <p>수주예정(PRE) → 진행(ING)</p>
+          <p>수주예정 → 진행</p>
           <p>금액/예산/원계약금액/배정/영업기회는 그대로입니다.</p>
         </div>
       </Dialog>
       <Dialog
         open={mode === "loss"}
-        title="실주 처리"
+        title="이 프로젝트를 실주 처리할까요?"
+        danger
         wide
         pending={pending}
         onCancel={close}
         onConfirm={save}
         confirmDisabled={readonly || stale || loading || !preview}
-        confirmLabel="실주 확정"
+        confirmLabel="실주 처리"
       >
         <div className="project-loss-form" data-testid="project-loss-dialog">
           <p className="project-loss-target">

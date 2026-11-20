@@ -22,7 +22,11 @@ public class B8Controller {
     public void getB8Template(HttpServletRequest request,HttpServletResponse response) throws IOException {
         allow(request.getParameterMap().keySet(),Set.of());
         var columns=new ArrayList<ExcelExportService.Column>();
-        for(int i=0;i<B8ImportDefinition.HEADERS.size();i++)columns.add(new ExcelExportService.Column("b8Field"+i,B8ImportDefinition.HEADERS.get(i),ExcelExportService.CellType.TEXT));
+        for(int i=0;i<B8ImportDefinition.HEADERS.size();i++) {
+            String title=B8ImportDefinition.HEADERS.get(i);
+            if(Set.of("이름","직원구분","소속","주 직무","직접/간접","영업 파트").contains(title))title+="*";
+            columns.add(new ExcelExportService.Column("b8Field"+i,title,ExcelExportService.CellType.TEXT));
+        }
         var specification=new ExcelExportService.Specification("개발자_등록양식",null,columns,"B8 신규 등록","원","UI-02");
         try(var download=exports.generateTemplate(specification,B8ImportDefinition.GUIDE,request)) {
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

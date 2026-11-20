@@ -49,6 +49,7 @@ import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerfo
 import { CashFlowScreen } from "../pages/shared/CashFlowScreen";
 import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
+import { SalesPipelineScreen } from "../pages/salesopportunitiesops/SalesPipelineScreen";
 import { WorkforceRecommendationsScreen } from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
 import { WorkforceRecommendationCandidates } from "../pages/candidates/WorkforceRecommendationCandidates";
 import { DeveloperDrawer } from "../pages/developers/DeveloperDrawer";
@@ -578,7 +579,6 @@ function PeopleWorkspace({
     | ScreenColumnPreferences
     | undefined;
   const size = preferences.get("PAGE_SIZE")?.value;
-  const unit = preferences.get("AMT_UNIT")?.value;
   const dense = preferences.get("DENSE")?.value === "좁게";
   const pageSize: 20 | 50 | 100 = size === 20 || size === 100 ? size : 50;
   const props = {
@@ -619,7 +619,7 @@ function PeopleWorkspace({
                 }
               : undefined
           }
-          amountUnit={unit === "원" || unit === "백만원" ? unit : "천원"}
+          amountUnit="원"
         />
       )}
       {columnsOpen && (
@@ -1019,45 +1019,9 @@ function RegisteredProjectAnalysis({
 
 function RegisteredWorkforceRecommendations() {
   const navigate = useNavigate();
-  const preferences = usePreferences();
-  const [unitError, setUnitError] = useState("");
-  const storedUnit = preferences.get("AMT_UNIT")?.value;
-  const amountUnit =
-    storedUnit === "원" || storedUnit === "백만원" ? storedUnit : "천원";
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
-      {unitError && <ErrorBanner message={unitError} />}
-      <label className="sicost-field">
-        금액 단위
-        <select
-          data-testid="workforce-recommendations-amount-unit"
-          aria-label="추천 금액 단위"
-          value={amountUnit}
-          disabled={preferences.pending}
-          onChange={(e) => {
-            setUnitError("");
-            void preferences
-              .put("AMT_UNIT", "*", e.target.value)
-              .catch((e: unknown) =>
-                setUnitError(
-                  e instanceof Error
-                    ? e.message
-                    : "금액 단위를 저장하지 못했습니다.",
-                ),
-              );
-          }}
-        >
-          {["원", "천원", "백만원"].map((unit) => (
-            <option
-              data-testid={`workforce-recommendations-amount-unit-${{ 원: "won", 천원: "thousand-won", 백만원: "million-won" }[unit]}`}
-              key={unit}
-            >
-              {unit}
-            </option>
-          ))}
-        </select>
-      </label>
       <WorkforceRecommendationsScreen
         renderRecommendation={(value, currentNeedSn, canAct, context) => (
           <WorkforceRecommendationCandidates
@@ -1070,7 +1034,7 @@ function RegisteredWorkforceRecommendations() {
               name: context.target.name,
             }}
             candidates={value.candidates}
-            amountUnit={amountUnit}
+            amountUnit="원"
             selectedNeedSn={currentNeedSn}
             year={Number(context.serverDate.slice(0, 4))}
             today={context.serverDate}
@@ -1126,6 +1090,7 @@ function RegisteredApplication() {
   const [developersDirty, setDevelopersDirty] = useState(false),
     [candidatesDirty, setCandidatesDirty] = useState(false);
   const [projectsDirty, setProjectsDirty] = useState(false);
+  const [salesDirty, setSalesDirty] = useState(false);
   const [costDirty, setCostDirty] = useState(false),
     [boardDirty, setBoardDirty] = useState(false);
   const [assignmentsDirty, setAssignmentsDirty] = useState(false);
@@ -1186,34 +1151,37 @@ function RegisteredApplication() {
     <SharedApplication
       preferences={adapter}
       isDirty={(id) =>
-        id === "UI-27"
-          ? codesDirty || standardsDirty
-          : id === "UI-15"
-            ? partnersDirty
-            : id === "UI-02"
-              ? developersDirty
-              : id === "UI-33"
-                ? candidatesDirty
-                : id === "UI-01"
-                  ? projectsDirty
-                  : id === "UI-04"
-                    ? costDirty
-                    : id === "UI-31"
-                      ? boardDirty
-                      : id === "UI-12"
-                        ? assignmentsDirty
-                        : id === "UI-13"
-                          ? billingDirty
-                          : id === "UI-10"
-                            ? financialDirty
-                            : id === "UI-24"
-                              ? permissionsDirty
-                              : id === "UI-25"
-                                ? menusDirty
-                                : id === "UI-23" && usersDirty
+        id === "UI-29"
+          ? salesDirty
+          : id === "UI-27"
+            ? codesDirty || standardsDirty
+            : id === "UI-15"
+              ? partnersDirty
+              : id === "UI-02"
+                ? developersDirty
+                : id === "UI-33"
+                  ? candidatesDirty
+                  : id === "UI-01"
+                    ? projectsDirty
+                    : id === "UI-04"
+                      ? costDirty
+                      : id === "UI-31"
+                        ? boardDirty
+                        : id === "UI-12"
+                          ? assignmentsDirty
+                          : id === "UI-13"
+                            ? billingDirty
+                            : id === "UI-10"
+                              ? financialDirty
+                              : id === "UI-24"
+                                ? permissionsDirty
+                                : id === "UI-25"
+                                  ? menusDirty
+                                  : id === "UI-23" && usersDirty
       }
       screens={{
         "UI-16": <DashboardScreen />,
+        "UI-29": <SalesPipelineScreen onDirtyChange={setSalesDirty} />,
         "UI-01": (
           <SharedScreenFrame screenId="UI-01">
             <RegisteredProjectsWorkspace onDirtyChange={onProjectsDirty} />

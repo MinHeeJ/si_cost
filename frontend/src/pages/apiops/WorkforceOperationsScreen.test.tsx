@@ -1,5 +1,11 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+vi.mock("../projects/projectsApi", () => ({
+  getProject: async () => ({ project: { name: "계약 프로젝트" } }),
+}));
+vi.mock("../salesopportunitiesops/salesCommandsApi", () => ({
+  getSalesOpportunity: async () => ({ name: "영업 기회" }),
+}));
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import {
@@ -207,7 +213,12 @@ it("renders successful empty data and no fabricated people", async () => {
   mount();
   await screen.findByText("조회된 인력이 없습니다.");
   await userEvent.click(screen.getByRole("button", { name: "조건 초기화" }));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, remainingOnly: false }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, remainingOnly: false }),
+      expect.any(AbortSignal),
+    ),
+  );
   expect(
     screen.queryByRole("button", { name: "개발자" }),
   ).not.toBeInTheDocument();
@@ -278,7 +289,7 @@ it("shows actual before tentative and opens full cell evidence on activation", a
   expect(button.closest(".workforce-calendar-cell")).not.toHaveClass("workforce-calendar-tentative");
   await userEvent.click(button);
   expect(screen.getByRole("tooltip")).toHaveTextContent("P-1 · 0.50 MM");
-  expect(screen.getByRole("tooltip")).toHaveTextContent("가배정 O-1");
+  expect(screen.getByRole("tooltip")).toHaveTextContent("가배정 영업 기회");
 });
 it.each([
   "BEFORE_JOIN",
@@ -310,22 +321,55 @@ it("distinguishes precontract, concurrent and over-one cues", async () => {
 });
 
 it("name header toggles server sorting, resets the page and exports the same ordering", async () => {
-  vi.mocked(api.getWorkforceOperations).mockResolvedValue({ ...result(), total: 55 });
-  render(<MemoryRouter><WorkforceOperationsScreen /></MemoryRouter>);
+  vi.mocked(api.getWorkforceOperations).mockResolvedValue({
+    ...result(),
+    total: 55,
+  });
+  render(
+    <MemoryRouter>
+      <WorkforceOperationsScreen />
+    </MemoryRouter>,
+  );
   await screen.findByRole("button", { name: "이름 ↕" });
   await userEvent.click(screen.getByTestId("calendar-next-page"));
   await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }), expect.any(AbortSignal)));
   await userEvent.click(await screen.findByRole("button", { name: "이름 ↕" }));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort: "name", direction: "ASC" }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, sort: "name", direction: "ASC" }),
+      expect.any(AbortSignal),
+    ),
+  );
   await userEvent.click(screen.getByRole("button", { name: "이름 ↑" }));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, sort: "name", direction: "DESC" }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, sort: "name", direction: "DESC" }),
+      expect.any(AbortSignal),
+    ),
+  );
   await userEvent.click(screen.getByTestId("calendar-download"));
-  expect(api.downloadWorkforceCalendar).toHaveBeenCalledWith(expect.objectContaining({ sort: "name", direction: "DESC" }));
+  expect(api.downloadWorkforceCalendar).toHaveBeenCalledWith(
+    expect.objectContaining({ sort: "name", direction: "DESC" }),
+  );
 });
 
 it("대시보드 인력부족 진입은 기존 수요·공급 탭을 연다", async () => {
-  render(<MemoryRouter initialEntries={[{pathname:"/UI-28",state:{fromDashboard:true,section:"supply",month:"2026-11"}}]}><WorkforceOperationsScreen /></MemoryRouter>);
-  expect(await screen.findByTestId("supply-tab")).toHaveAttribute("aria-selected","true");
+  render(
+    <MemoryRouter
+      initialEntries={[
+        {
+          pathname: "/UI-28",
+          state: { fromDashboard: true, section: "supply", month: "2026-11" },
+        },
+      ]}
+    >
+      <WorkforceOperationsScreen />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByTestId("supply-tab")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   expect(screen.getByTestId("supply-panel")).toBeVisible();
 });
 

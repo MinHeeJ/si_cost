@@ -1,6 +1,13 @@
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import type { RecommendationSnapshot } from "./recommendationBrowseApi";
+import { useCodeNames } from "../../shared/codeNames";
+import { BusinessName } from "../../shared/BusinessName";
+import {
+  recommendationBasis,
+  recommendationReason,
+  recommendationItemLabel,
+} from "../candidates/recommendationPresentation";
 
 export function RecommendationBrowseError({
   error,
@@ -24,6 +31,13 @@ export function RecommendationSavedValues({
 }: {
   value: RecommendationSnapshot;
 }) {
+  const name = useCodeNames(
+    "RCMD_TYPE",
+    "JOB",
+    "GRADE",
+    "RCMD_ACT",
+    "RCMD_EXCL",
+  );
   return (
     <section
       className="recommendation-saved"
@@ -31,16 +45,26 @@ export function RecommendationSavedValues({
       data-screen-id="SCR-UI-19-B140-HISTORY-VALUE"
     >
       <h3>
-        회차 {value.rcmdId ?? "–"} · {value.recommendationType}
+        회차 {value.rcmdId ?? "–"} ·{" "}
+        {name("RCMD_TYPE", value.recommendationType)}
       </h3>
       <p>
         {value.executedAt ?? "–"} / {value.executedBy ?? "–"}
       </p>
       {value.appliedCondition && (
         <p>
-          조건 {value.appliedCondition.targetId} /{" "}
-          {value.appliedCondition.jobCode} / {value.appliedCondition.startMonth}{" "}
-          / {value.appliedCondition.requestedGradeCode}
+          조건{" "}
+          <BusinessName
+            kind={
+              value.appliedCondition.targetType === "PROJECT"
+                ? "project"
+                : "opportunity"
+            }
+            id={value.appliedCondition.targetId}
+          />{" "}
+          · {name("JOB", value.appliedCondition.jobCode)} ·{" "}
+          {value.appliedCondition.startMonth} ·{" "}
+          {name("GRADE", value.appliedCondition.requestedGradeCode)}
         </p>
       )}
       {value.sourceAssignmentId && <p>원천 배정 {value.sourceAssignmentId}</p>}
@@ -55,8 +79,9 @@ export function RecommendationSavedValues({
             {candidate.developer.managementNumber}
           </h3>
           <p>
-            {candidate.jobCode} / {candidate.startMonth} /{" "}
-            {candidate.requestedGradeCode} · 총점 {candidate.totalScore}
+            {name("JOB", candidate.jobCode)} · {candidate.startMonth} ·{" "}
+            {name("GRADE", candidate.requestedGradeCode)} · 총점{" "}
+            {candidate.totalScore}
           </p>
           <div className="sicost-table-viewport">
             <table className="sicost-table">
@@ -75,17 +100,17 @@ export function RecommendationSavedValues({
                     key={item.itemCode}
                     data-testid={`saved-score-${candidate.rank}-${item.itemCode.toLowerCase()}`}
                   >
-                    <td>{item.itemCode}</td>
+                    <td>{recommendationItemLabel(item.itemCode)}</td>
                     <td className="sicost-decimal">{item.baseScore}</td>
                     <td className="sicost-decimal">{item.weight}</td>
                     <td className="sicost-decimal">{item.score}</td>
-                    <td>{item.basis}</td>
+                    <td>{recommendationBasis(item)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p>{candidate.reason}</p>
+          <p>{recommendationReason(candidate.reason)}</p>
           <p>
             최종 선택{" "}
             <StatusBadge
@@ -97,9 +122,11 @@ export function RecommendationSavedValues({
                     : "neutral"
               }
             >
-              {candidate.selection.actionCode ?? "미선택"}
+              {candidate.selection.actionCode
+                ? name("RCMD_ACT", candidate.selection.actionCode)
+                : "미선택"}
             </StatusBadge>{" "}
-            / {candidate.selection.exclusionReasonCode ?? "–"}
+            / {name("RCMD_EXCL", candidate.selection.exclusionReasonCode)}
           </p>
           <p>
             처리자 {candidate.selection.actedBy ?? "–"} /{" "}

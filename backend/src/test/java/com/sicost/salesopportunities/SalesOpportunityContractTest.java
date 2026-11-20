@@ -59,6 +59,22 @@ class SalesOpportunityContractTest {
         when(tentatives.resolve(any(),any())).thenAnswer(c->c.getArgument(0));when(tentatives.changes(any(),any(),any(),any())).thenReturn(List.of());when(tentatives.apply(anyString(),any())).thenReturn(List.of());
     }
     ObjectNode edit(){ObjectNode b=body();((ObjectNode)b.withArray("needs").get(0)).put("needSn",1);return b.put("expectedRevision",revision());}
+    @Test void validationReturnsSpecificMessagesAndAllIndependentFields() throws Exception {
+        mvc.perform(post("/api/sales-opportunities").contentType("application/json")
+            .content(body().put("probability","101").put("amount","0").toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("probability"))
+            .andExpect(jsonPath("$.details.violations[0].message").value("0~100 사이 숫자로 입력해 주세요."))
+            .andExpect(jsonPath("$.details.violations[1].field").value("amount"))
+            .andExpect(jsonPath("$.details.violations[1].message").value("예상 금액은 0보다 커야 합니다."));
+        ObjectNode invalid=body();
+        ((ObjectNode)invalid.withArray("needs").get(0)).put("monthlyMm","1.5");
+        invalid.withArray("needs").add(invalid.withArray("needs").get(0).deepCopy());
+        mvc.perform(post("/api/sales-opportunities").contentType("application/json").content(invalid.toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("needs[0].monthlyMm"))
+            .andExpect(jsonPath("$.details.violations[0].message").value("1번째 줄의 월 MM 칸을 확인해 주세요"))
+            .andExpect(jsonPath("$.details.violations[1].message").value("2번째 줄의 월 MM 칸을 확인해 주세요"));
+        noWrites();
+    }
     void noWrites(){verify(mapper,never()).insert(any());verify(mapper,never()).update(any());verify(mapper,never()).insertNeed(any());verify(mapper,never()).deleteNeed(any());verifyNoInteractions(audit);}
     @Test void listIsPublicExactWeightedPeopleAndFourteenDaysIsNotStale()throws Exception{mvc.perform(get("/api/sales-opportunities")).andExpect(status().isOk()).andExpect(jsonPath("$.success").value(true)).andExpect(jsonPath("$.meta").exists()).andExpect(jsonPath("$.data.summary.weightedAmount").value("50")).andExpect(jsonPath("$.data.summary.weightedPeople").value("0.5")).andExpect(jsonPath("$.data.summary.staleCount").value(0));noWrites();}
     @Test void detailContainsNullsNeedsHistoryQuoteAndCompleteRevision()throws Exception{mvc.perform(get("/api/sales-opportunities/O-0101")).andExpect(status().isOk()).andExpect(jsonPath("$.data.id").value("O-0101")).andExpect(jsonPath("$.data.needs[0].needSn").value(1)).andExpect(jsonPath("$.data.quote.cost").isEmpty()).andExpect(jsonPath("$.data.quote.judgement").value("UNKNOWN")).andExpect(jsonPath("$.data.revision").value(revision()));noWrites();}

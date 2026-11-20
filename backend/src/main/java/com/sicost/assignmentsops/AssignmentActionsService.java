@@ -127,8 +127,11 @@ public class AssignmentActionsService {
         if(mapper().duplicate(row))throw conflict("DUPLICATE_ASSIGNMENT","동일한 배정이 있습니다.");return row;
     }
     private void period(LocalDate start,LocalDate end,Project p,Developer d) {
-        dateRange(start,end);if(start.isBefore(p.startDate())||end.isAfter(p.endDate()))throw invalid("endDate");
-        if(d.joinDate()!=null&&start.isBefore(d.joinDate()))throw invalid("startDate");if(d.retireDate()!=null&&end.isAfter(d.retireDate()))throw invalid("endDate");
+        dateRange(start,end);
+        if(start.isBefore(p.startDate()))throw invalid("startDate");
+        if(end.isAfter(p.endDate()))throw new ApiException(400,"INVALID_INPUT","철수일이 프로젝트 계약 종료일("+p.endDate()+")보다 늦습니다. 「프로젝트·투입 › 프로젝트」에서 계약 기간을 먼저 연장해 주세요.","endDate",null);
+        if(d.joinDate()!=null&&start.isBefore(d.joinDate()))throw invalid("startDate");
+        if(d.retireDate()!=null&&end.isAfter(d.retireDate()))throw new ApiException(400,"INVALID_INPUT","철수일이 "+d.name()+"님의 퇴사일("+d.retireDate()+")보다 늦습니다.","endDate",null);
     }
     private ValueHistory input(Source row,int serial) {return new ValueHistory(serial,"INPUT",row.startDate(),row.contractMm(),row.price(),"N",null);}
     private List<Warning> warnings(Source source,Project p,List<Month> values) {

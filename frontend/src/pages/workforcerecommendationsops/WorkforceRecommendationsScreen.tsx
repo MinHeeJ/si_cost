@@ -8,6 +8,7 @@ import {
   RecommendationSavedValues,
 } from "./RecommendationSavedValues";
 import * as api from "./recommendationBrowseApi";
+import { useCodeNames } from "../../shared/codeNames";
 import "./recommendationBrowse.css";
 
 const targetKey = (t: api.RecommendationTarget) =>
@@ -40,6 +41,7 @@ export function WorkforceRecommendationsScreen({
   ): ReactNode;
 } = {}) {
   const [targets, setTargets] = useState<api.RecommendationTargets>();
+  const name = useCodeNames("GRADE", "JOB");
   const [jobs, setJobs] = useState<SharedCodeLookup[]>([]);
   const [selected, setSelected] = useState<api.RecommendationTarget>();
   const [draft, setDraft] = useState<api.RecommendationCondition>();
@@ -353,7 +355,7 @@ export function WorkforceRecommendationsScreen({
                     <option key={n.needSn} value={n.needSn}>
                       {n.needSn}.{" "}
                       {jobs.find((j) => j.code === n.jobCode)?.name ??
-                        n.jobCode}{" "}
+                        name("JOB", n.jobCode)}{" "}
                       {n.needCount}명 · {n.startMonth}
                     </option>
                   ))}
@@ -393,10 +395,11 @@ export function WorkforceRecommendationsScreen({
                   update({ ...draft, requestedGradeCode: e.target.value })
                 }
               >
-                <option value="JR">초급 (JR)</option>
-                <option value="MD">중급 (MD)</option>
-                <option value="SR">고급 (SR)</option>
-                <option value="EX">특급 (EX)</option>
+                {["JR", "MD", "SR", "EX"].map((code) => (
+                  <option key={code} value={code}>
+                    {name("GRADE", code)}
+                  </option>
+                ))}
               </select>
             </label>
             <button

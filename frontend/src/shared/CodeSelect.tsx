@@ -29,6 +29,7 @@ export function CodeSelect({
         {...props}
         id={id}
         aria-label={label}
+        data-testid={`code-select-${id.replace(/[^a-z0-9-]/gi, "").toLowerCase()}`}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onSelectionConfirmed}

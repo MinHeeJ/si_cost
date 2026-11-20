@@ -11,6 +11,7 @@ import {
   ReasonFields,
 } from "./AssignmentDialogs";
 import * as api from "./assignmentActionsApi";
+import { useCodeNames } from "../../shared/codeNames";
 /** 단가가 비는 이유를 말로 보여 준다(요구서 4절): 무상지원·턴키 배분표·내부 매출 없음. 그 밖의 빈 값은 null. */
 export function unitPriceNote(
   inputType: string,
@@ -52,6 +53,12 @@ export function AssignmentDrawer({
   onClose(): void;
   onChange(row: api.Assignment): void;
 }) {
+  const name = useCodeNames(
+    "ASGN_CHG_TYPE",
+    "ASGN_CHG_RSN",
+    "EXT_PSBL",
+    "INPUT_TYPE",
+  );
   const [row, setRow] = useState<api.Assignment>(),
     [months, setMonths] = useState<api.Page<api.Month>>(),
     [history, setHistory] = useState<api.Page<api.History>>(),
@@ -87,7 +94,11 @@ export function AssignmentDrawer({
     void load().catch(() => {});
   }, [load]);
   const value = (type: string, v: string | null) =>
-    type === "EXTP" || type === "KIND" ? kindName(v) : (v ?? "–");
+    type === "EXTP"
+      ? name("EXT_PSBL", v)
+      : type === "KIND"
+        ? name("INPUT_TYPE", v)
+        : (v ?? "–");
   return (
     <DetailDrawer
       title={
@@ -166,8 +177,8 @@ export function AssignmentDrawer({
                     contractType,
                   ) ?? `${formatDecimal(row.billingUnitPrice)} 원`,
                 ],
-                ["투입 구분", kindName(row.inputType)],
-                ["연장 가능성", kindName(row.extensionPossibility)],
+                ["투입 구분", name("INPUT_TYPE", row.inputType)],
+                ["연장 가능성", name("EXT_PSBL", row.extensionPossibility)],
               ] as const
             ).map(([label, v]) => (
               <div
@@ -231,7 +242,11 @@ export function AssignmentDrawer({
                 render: (m) => formatDecimal(m.salesAmount),
                 align: "right",
               },
-              { id: "fixed", label: "고정", render: (m) => m.fixed },
+              {
+                id: "fixed",
+                label: "고정",
+                render: (m) => (m.fixed === "Y" ? "예" : "아니오"),
+              },
             ]}
           />
         </section>
@@ -262,8 +277,9 @@ export function AssignmentDrawer({
                 <option
                   data-testid={`assignment-history-type-option-${t.toLowerCase()}`}
                   key={t}
+                  value={t}
                 >
-                  {t}
+                  {name("ASGN_CHG_TYPE", t)}
                 </option>
               ))}
             </select>
@@ -278,7 +294,11 @@ export function AssignmentDrawer({
             empty="해당 종류 이력이 없습니다."
             columns={[
               { id: "date", label: "적용일", render: (h) => h.applyDate },
-              { id: "type", label: "종류", render: (h) => h.type },
+              {
+                id: "type",
+                label: "종류",
+                render: (h) => name("ASGN_CHG_TYPE", h.type),
+              },
               {
                 id: "before",
                 label: "이전",
@@ -300,12 +320,14 @@ export function AssignmentDrawer({
               {
                 id: "reason",
                 label: "사유/메모",
-                render: (h) => `${h.reasonCode ?? "–"} / ${h.memo ?? "–"}`,
+                render: (h) =>
+                  `${name("ASGN_CHG_RSN", h.reasonCode)} / ${h.memo ?? "–"}`,
               },
               {
                 id: "actor",
                 label: "입력자/시각",
-                render: (h) => `${h.actor} / ${formatShortDateTime(h.registeredAt)}`,
+                render: (h) =>
+                  `${h.actor} / ${formatShortDateTime(h.registeredAt)}`,
               },
               {
                 id: "badge",
@@ -364,7 +386,9 @@ export function AssignmentDrawer({
       >
         <div data-testid="assignment-correction-dialog">
           <p>
-            {correcting?.type} / {correcting?.applyDate} / {correcting?.after}
+            {row?.projectName} · {row?.developerName} ·{" "}
+            {name("ASGN_CHG_TYPE", correcting?.type)} {correcting?.applyDate} ~{" "}
+            {correcting?.after}
           </p>
           <p>
             원래 기록은 그대로 남고 정정됨으로 표시됩니다. 지금 값을 바꾸려면

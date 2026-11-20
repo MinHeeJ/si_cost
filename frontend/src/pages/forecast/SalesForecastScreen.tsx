@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import {
   formatIntegerAmount,
+  formatSummaryAmount,
   formatFixedDecimal,
   type AmountUnit,
 } from "../../shared/format";
@@ -71,7 +72,8 @@ export function SalesForecastPanel() {
       events.forEach((name) => window.removeEventListener(name, refresh));
   }, []);
   const unit = unitNames[amountUnit];
-  const money = (value: string | null | undefined) => formatIntegerAmount(value, unit);
+  const money = (value: string | null | undefined) =>
+    formatIntegerAmount(value, unit);
   const people = (value: string | null | undefined) =>
     formatFixedDecimal(value, 1);
   const identities = data
@@ -92,21 +94,7 @@ export function SalesForecastPanel() {
         <h2>
           매출·인력 예측 <span className="sales-forecast-badge">예측</span>
         </h2>
-        <div className="sicost-field">
-          <label htmlFor="sales-forecast-unit">금액 단위</label>
-          <select
-            id="sales-forecast-unit"
-            data-testid="forecast-unit-select"
-            value={amountUnit}
-            onChange={(e) =>
-              setAmountUnit(e.target.value as api.ForecastAmountUnit)
-            }
-          >
-            <option value="WON">원</option>
-            <option value="THOUSAND">천원</option>
-            <option value="MILLION">백만원</option>
-          </select>
-        </div>
+
         <SalesForecastDownloadPanel amountUnit={amountUnit} />
         <button
           data-testid="forecast-refresh-button"
@@ -153,17 +141,15 @@ export function SalesForecastPanel() {
             <article data-testid="forecast-revenue-card">
               <p>6개월 예상매출</p>
               <strong>
-                {money(data.summary.sixMonthRevenue)} <small>{unit}</small>
+                {formatSummaryAmount(data.summary.sixMonthRevenue)}
               </strong>
             </article>
             <article data-testid="forecast-opportunity-card">
               <p>그중 기회 매출</p>
               <strong>
-                {money(data.summary.opportunityRevenue)} <small>{unit}</small>
+                {formatSummaryAmount(data.summary.opportunityRevenue)}
               </strong>
-              <p>
-                모두 따면 {money(data.summary.allWonRevenue)} {unit}
-              </p>
+              <p>모두 따면 {formatSummaryAmount(data.summary.allWonRevenue)}</p>
             </article>
             <article data-testid="forecast-people-card">
               <p>6개월 평균 필요 / 공급</p>
@@ -189,7 +175,7 @@ export function SalesForecastPanel() {
               }))}
               labels={["프로젝트 매출", "확률반영 기회 매출"]}
               stacked
-              unit={unit}
+              unit="원"
             />
             <ForecastBars
               title="수요·공급"
@@ -205,6 +191,21 @@ export function SalesForecastPanel() {
             <h2>
               월별 매출 <small>단위: {unit}</small>
             </h2>
+            <label className="sicost-field" htmlFor="sales-forecast-unit">
+              금액 단위
+              <select
+                id="sales-forecast-unit"
+                data-testid="forecast-unit-select"
+                value={amountUnit}
+                onChange={(e) =>
+                  setAmountUnit(e.target.value as api.ForecastAmountUnit)
+                }
+              >
+                <option value="WON">원</option>
+                <option value="THOUSAND">천원</option>
+                <option value="MILLION">백만원</option>
+              </select>
+            </label>
             {identities.length === 0 && (
               <div className="sales-forecast-empty">
                 <p>예측 대상 프로젝트·기회가 없습니다.</p>

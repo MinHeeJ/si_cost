@@ -68,7 +68,7 @@ public class B8ImportDefinition {
             if(direct!=null&&!Set.of("DRCT","INDRCT").contains(direct))issue(row,"직접/간접","ERR","직접/간접 값을 확인해 주세요.",problems);
             String part=part(row,parts,problems);
             LocalDate hire=null;String date=text(row,"입사일",10,false,problems);
-            if(date!=null)try{hire=PeopleInputPolicy.date(date.replace('.','-'),"hireDate");}catch(ApiException e){issue(row,"입사일","ERR","실제 날짜를 YYYY-MM-DD 또는 YYYY.MM.DD로 입력해 주세요.",problems);}
+            if(date!=null)try{hire=PeopleInputPolicy.date(date.replace('.','-'),"hireDate");}catch(ApiException e){issue(row,"입사일","ERR",com.sicost.common.validation.InputValidator.DATE_MESSAGE,problems);}
             if(hire!=null)for(Existing d:existing)if(Objects.equals(name,d.name())&&hire.equals(d.hireDate()))issue(row,"이름","WARN","같은 이름과 입사일이 있습니다: "+d.managementNo(),problems);
             BigDecimal rate=amount(row,"월 단가",problems),pay=amount(row,"월 급여·지급액",problems);
             String skillText=text(row,"보유 스킬",51000,false,problems);List<String> skills=List.of();
@@ -115,9 +115,9 @@ public class B8ImportDefinition {
         if(named.isEmpty()) {
             var mapped=codes.stream().filter(c->c.groupId().equals(group)&&value.equals(c.source())).toList();
             var ids=mapped.stream().map(Code::code).distinct().toList();
-            if(ids.size()==1&&mapped.stream().allMatch(Code::active)){issue(row,title,"WARN","이전 표기의 코드명 대응을 적용했습니다.",issues);return ids.get(0);}
+            if(ids.size()==1&&mapped.stream().allMatch(Code::active)){issue(row,title,"WARN",com.sicost.common.validation.InputValidator.codeConversionMessage(value,mapped.get(0).name()),issues);return ids.get(0);}
         }
-        issue(row,title,"ERR","활성 코드명 또는 유일한 활성 대응값을 입력해 주세요. 코드ID는 사용할 수 없습니다.",issues);return null;
+        issue(row,title,"ERR","’"+value+"’는 등록되지 않은 "+title+"입니다.",issues);return null;
     }
     private BigDecimal amount(SourceRow row,String title,List<Issue> issues) {
         String value=text(row,title,100,false,issues);try{return PeopleInputPolicy.amount(value,title);}catch(ApiException e){issue(row,title,"ERR","금액은 0~999999999999999원 정수로 입력해 주세요.",issues);return null;}

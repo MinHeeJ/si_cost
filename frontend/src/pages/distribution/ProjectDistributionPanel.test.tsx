@@ -186,15 +186,26 @@ it("viewing another stage fetches only GET data and never switches calculation s
     "PLAN 배분표",
   );
 });
-it("uses exact decimal unit conversion without changing API data", async () => {
-  const change = vi.fn();
-  show({ onAmountUnitChange: change });
-  await screen.findByTestId("distribution-unit");
-  fireEvent.change(screen.getByLabelText("배분표 금액 단위"), {
-    target: { value: "원" },
+it("배분표는 단위 선택 없이 원 단위 콤마로 보인다(SFR-006-01, B.6 월 칸 원)", async () => {
+  vi.mocked(api.getProjectDistribution).mockResolvedValue({
+    ...data,
+    rows: [
+      {
+        ...data.rows[0],
+        cells: [
+          { month: "2026-06", amount: "1234567" },
+          { month: "2026-07", amount: "0" },
+        ],
+        totalAmount: "1234567",
+      },
+    ],
   });
-  expect(change).toHaveBeenCalledWith("원");
-  expect(screen.getByTestId("distribution-row-1")).toHaveTextContent("100");
+  show();
+  expect(await screen.findByTestId("distribution-row-1")).toHaveTextContent(
+    "1,234,567",
+  );
+  expect(screen.queryByTestId("distribution-unit")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("배분표 금액 단위")).not.toBeInTheDocument();
   expect(api.getProjectDistribution).toHaveBeenCalledTimes(1);
   expect(formatDistributionAmount("1999999999999998", "천원")).toBe(
     "1,999,999,999,999.998",
@@ -293,7 +304,7 @@ it("list button restores the parent list instead of navigating to a new URL", as
   fireEvent.click(screen.getByRole("button", { name: "목록" }));
   expect(onBack).toHaveBeenCalledOnce();
 });
-it("template excludes year and export uses viewed stage and selected unit", async () => {
+it("template excludes year and export uses viewed stage and won unit", async () => {
   show();
   await screen.findByTestId("distribution-matrix");
   fireEvent.click(screen.getByRole("button", { name: "양식 받기" }));
@@ -310,7 +321,7 @@ it("template excludes year and export uses viewed stage and selected unit", asyn
     expect(api.downloadDistribution).toHaveBeenCalledWith(
       project.id,
       "EST",
-      "천원",
+      "원",
     ),
   );
 });

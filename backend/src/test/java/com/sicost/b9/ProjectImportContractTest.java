@@ -90,7 +90,8 @@ class ProjectImportContractTest {
             .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andReturn();
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(result.getResponse().getContentAsByteArray()))) {
             var sheet=book.getSheetAt(0);assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short)15);assertThat(sheet.getPhysicalNumberOfRows()).isEqualTo(1);
-            List<String> titles=new ArrayList<>();for(var cell:sheet.getRow(0))titles.add(cell.getStringCellValue());assertThat(titles).containsExactlyElementsOf(B9ImportDefinition.HEADERS);
+            List<String> titles=new ArrayList<>();for(var cell:sheet.getRow(0))titles.add(cell.getStringCellValue());
+            assertThat(titles).containsExactly("프로젝트ID","프로젝트명*","고객사*","계약유형*","시작일*","종료일*","영업 파트*","근무지","상태","견적 금액","계약금액","예산","팀비","프로젝트경비","특징");
             assertThat(sheet.getColumnStyle(0).getDataFormatString()).isEqualTo("@");StringBuilder guide=new StringBuilder();for(var row:book.getSheet("입력안내"))guide.append(row.getCell(0).getStringCellValue());
             assertThat(guide.toString()).contains("기존 프로젝트 수정은 화면", "사업자", "MANUAL", "TGT_MRGN_RT", "TEAM_FEE");
             assertThat(book.getSheet("다운로드정보").getRow(0).getCell(1).getStringCellValue()).isEqualTo("admin");

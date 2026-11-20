@@ -136,22 +136,22 @@ beforeEach(() => {
 it("new form uses DB month and middle grade while independent needs start with six and monthly MM one", async () => {
   mount();
   await ready();
-  expect(screen.getByTestId("opportunity-months")).toHaveValue(6);
+  expect(screen.getByTestId("opportunity-months")).toHaveValue("6");
   expect(screen.getByTestId("opportunity-start-month")).toHaveValue("2026-07");
   expect(screen.getByLabelText("1번째 줄 등급")).toHaveValue("MD");
   expect(screen.getByLabelText("1번째 줄 월MM")).toHaveValue("1.00");
   fireEvent.change(screen.getByTestId("opportunity-months"), {
     target: { value: "12" },
   });
-  expect(screen.getByLabelText("1번째 줄 개월")).toHaveValue(6);
+  expect(screen.getByLabelText("1번째 줄 개월")).toHaveValue("6");
   await userEvent.click(screen.getByRole("button", { name: "행 추가" }));
-  expect(screen.getByLabelText("2번째 줄 개월")).toHaveValue(12);
+  expect(screen.getByLabelText("2번째 줄 개월")).toHaveValue("12");
 });
 it("edit preserves existing needSn nullable grade/months/rate and sends separate PUT with full revision", async () => {
   mount(detail());
   await ready();
   expect(screen.getByTestId("opportunity-name")).toHaveValue("기회 원본");
-  expect(screen.getByTestId("opportunity-months")).toHaveValue(null);
+  expect(screen.getByTestId("opportunity-months")).toHaveValue("");
   expect(screen.getByTestId("opportunity-next-due")).toHaveClass(
     "sales-opportunity-overdue",
   );
@@ -199,6 +199,27 @@ it("field validation keeps deadline without task and focuses field", async () =>
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   expect(screen.getByRole("alert")).toHaveTextContent("할 일을 입력");
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
+});
+it("actual form sanitizes money, probability and monthly MM immediately", async () => {
+  mount(detail());
+  await ready();
+  fireEvent.change(screen.getByTestId("opportunity-amount"), {
+    target: { value: "12a,3b4" },
+  });
+  fireEvent.change(screen.getByTestId("opportunity-probability"), {
+    target: { value: "5x0" },
+  });
+  fireEvent.change(screen.getByLabelText("1번째 줄 월MM"), {
+    target: { value: "0.a5" },
+  });
+  expect(screen.getByTestId("opportunity-amount")).toHaveValue("12,34");
+  expect(screen.getByTestId("opportunity-probability")).toHaveValue("50");
+  expect(screen.getByLabelText("1번째 줄 월MM")).toHaveValue("0.5");
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(api.putSalesOpportunity).toHaveBeenCalledWith(
+    "O-0101",
+    expect.objectContaining({ amount: "1234", probability: "50" }),
+  );
 });
 it("server row errors preserve input and do not retry mutation", async () => {
   vi.mocked(api.putSalesOpportunity).mockRejectedValue(
@@ -276,6 +297,56 @@ it("developer picker loads real direct active list and empty state; selection is
 });
 
 it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
-  mount(); await ready();
-  expect(screen.getByTestId("opportunity-form-save")).toHaveClass("sicost-primary");
+  mount();
+  await ready();
+  expect(screen.getByTestId("opportunity-form-save")).toHaveClass(
+    "sicost-primary",
+  );
+});
+it("빈 필수 칸은 칸 이름이 든 원문 형식 문구를 보이고 「필수 입력입니다.」를 쓰지 않는다", async () => {
+  mount();
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  for (const text of [
+    "기회명을 입력해 주세요.",
+    "고객사를 골라 주세요.",
+    "영업 파트를 골라 주세요.",
+    "예상 금액을 입력해 주세요.",
+  ])
+    expect(screen.getByText(text)).toBeInTheDocument();
+  expect(screen.queryByText("필수 입력입니다.")).not.toBeInTheDocument();
+  expect(api.createSalesOpportunity).not.toHaveBeenCalled();
+});
+it("칸 아래에 보이는 서버 거절 문구는 위쪽 오류 띠에 다시 나오지 않는다", async () => {
+  vi.mocked(api.putSalesOpportunity).mockRejectedValue(
+    new ApiError(400, {
+      success: false,
+      meta: {},
+      code: "VALIDATION_ERROR",
+      message: "고객사를 입력해 주세요.",
+      field: "customerId",
+      requestId: "field-request",
+    }),
+  );
+  mount(detail());
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(await screen.findAllByText("고객사를 입력해 주세요.")).toHaveLength(1);
+});
+it("칸에 붙지 않는 서버 거절은 위쪽 오류 띠에 그대로 나온다", async () => {
+  vi.mocked(api.putSalesOpportunity).mockRejectedValue(
+    new ApiError(409, {
+      success: false,
+      meta: {},
+      code: "STALE_WRITE",
+      message: "다른 사용자가 먼저 고쳤습니다.",
+      requestId: "stale-request",
+    }),
+  );
+  mount(detail());
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(
+    await screen.findByText("다른 사용자가 먼저 고쳤습니다."),
+  ).toBeInTheDocument();
 });

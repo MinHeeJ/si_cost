@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { PeopleChangeHistoryTable } from "./PeopleChangeHistoryTable";
 import type { PeopleHistoryEntry, PeopleHistoryPage } from "./peopleClient";
+import { getSharedCodes } from "../shared/sharedApi";
+vi.mock("../shared/sharedApi", () => ({
+  getSharedCodes: vi.fn(async () => ({ items: [] })),
+}));
 
 const entry: PeopleHistoryEntry = {
   historyId: 9,
@@ -26,6 +30,7 @@ const response = (data: PeopleHistoryPage) =>
 const fetcher = vi.fn<typeof fetch>();
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getSharedCodes).mockResolvedValue({ items: [] });
   vi.stubGlobal("fetch", fetcher);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -38,6 +43,7 @@ it.each(["DEVELOPER", "CANDIDATE"] as const)(
       <PeopleChangeHistoryTable
         targetType={targetType}
         targetId="selected-person"
+        targetName="조회한 사람"
       />,
     );
     await screen.findByText("저장 당시 값");
@@ -53,7 +59,10 @@ it.each(["DEVELOPER", "CANDIDATE"] as const)(
       "data-screen-id",
       targetType === "DEVELOPER" ? "UI-02" : "UI-33",
     );
-    expect(screen.getByText("TB_HR_DEV / selected-person")).toBeInTheDocument();
+    expect(
+      screen.queryByText("TB_HR_DEV / selected-person"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("조회한 사람")).toBeInTheDocument();
   },
 );
 it("로딩 중에는 빈 목록을 잘못 표시하지 않고 완료 뒤 빈 이력을 표시한다", async () => {
@@ -155,7 +164,7 @@ it("기본·가격·스킬·상태의 서버 정렬과 유형별 공통 색을 �
   const rows = screen.getAllByRole("row").slice(1);
   expect(
     rows.map((row) => within(row).getAllByRole("cell")[1].textContent),
-  ).toEqual(items.map((row) => `${row.targetTable} / ${row.targetKey}`));
+  ).toEqual(items.map(() => "–"));
   expect(screen.getByRole("table")).toHaveClass("sicost-dense");
 });
 it("후보 연락처/이메일은 UI에서도 마스킹하며 금액과 일반 감사값은 유지한다", async () => {

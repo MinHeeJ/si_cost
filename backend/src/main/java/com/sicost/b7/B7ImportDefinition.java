@@ -62,10 +62,10 @@ public class B7ImportDefinition {
             List<Code> mapped=codes.stream().filter(c->c.groupId().equals(group)&&value.equals(c.source())).toList();
             mapped.forEach(c->ids.add(c.code()));
             if(ids.size()==1&&!mapped.isEmpty()&&mapped.stream().allMatch(Code::active)) {
-                issue(row,title,"WARN","코드명 대응을 적용했습니다.",issues);return ids.iterator().next();
+                issue(row,title,"WARN",com.sicost.common.validation.InputValidator.codeConversionMessage(value,mapped.get(0).name()),issues);return ids.iterator().next();
             }
         }
-        issue(row,title,"ERR","활성 코드명 또는 유일한 활성 대응값을 입력해 주세요.",issues);return null;
+        issue(row,title,"ERR","’"+value+"’는 등록되지 않은 "+title+"입니다.",issues);return null;
     }
     private String text(SourceRow row,String title,int max,boolean required,List<Issue> issues) {
         CellValue cell=row.cells().get(title); String value=cell.text();

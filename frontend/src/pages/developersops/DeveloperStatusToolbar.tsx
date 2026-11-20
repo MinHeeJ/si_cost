@@ -371,6 +371,7 @@ function DeveloperStatusAction({
             : `개발자 ${confirm ? label(confirm.target) : "상태 변경"}`
         }
         confirmLabel={confirm?.target === "N" ? "사용 중지" : "확인"}
+        danger={confirm?.target === "N"}
         confirmTestId="developer-status-confirm"
         cancelTestId="developer-status-cancel"
         pending={pending}

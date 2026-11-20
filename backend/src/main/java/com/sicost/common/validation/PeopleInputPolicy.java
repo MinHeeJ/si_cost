@@ -15,9 +15,9 @@ public final class PeopleInputPolicy {
 
     public static LocalDate date(String input, String field) {
         String value = InputValidator.text(input, 10, field);
-        if (!value.matches("(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}")) throw InputValidator.invalid(field);
+        if (!value.matches("(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}")) throw new ApiException(400, "VALIDATION_ERROR", InputValidator.DATE_MESSAGE, field, null);
         try { return LocalDate.parse(value); }
-        catch (DateTimeParseException e) { throw InputValidator.invalid(field); }
+        catch (DateTimeParseException e) { throw new ApiException(400, "VALIDATION_ERROR", InputValidator.DATE_MESSAGE, field, null); }
     }
     public static LocalDate today(Clock clock) { return LocalDate.now(clock.withZone(TimeConfiguration.SEOUL)); }
     public static BigDecimal amount(String input, String field) {

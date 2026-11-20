@@ -21,6 +21,7 @@ import {
 } from "../salespartsops/partStandardsApi";
 import { projectMoneyInput } from "./projectFormat";
 import * as api from "./projectsApi";
+import { CodeName } from "../../shared/codeNames";
 
 type Props = {
   year: number;
@@ -305,6 +306,9 @@ export function ProjectForm({
       label={label}
       unit={key.endsWith("Amount") ? "원" : undefined}
       value={form[key]}
+      numericKind={
+        ["contractAmount", "budgetAmount"].includes(key) ? "amount" : undefined
+      }
       onChange={(v) => change(key, v)}
       error={fields[key]}
       placeholder={key === "teamExpenseAmount" ? preview?.teamExpenseAmount ?? undefined : key === "projectExpenseAmount" ? preview?.projectExpenseAmount ?? undefined : undefined}
@@ -318,8 +322,13 @@ export function ProjectForm({
     options: { code: string; name: string }[],
   ) => (
     <CodeSelect
-      required
       label={label}
+      required={[
+        "customerId",
+        "contractType",
+        "initialStatus",
+        "partId",
+      ].includes(key)}
       value={form[key]}
       options={options}
       onChange={(v) => change(key, v)}
@@ -425,7 +434,8 @@ export function ProjectForm({
               select("initialStatus", "상태", codes.PROJ_STAT ?? [])
             ) : (
               <div>
-                상태 {detail?.effectiveStatus}
+                상태{" "}
+                <CodeName group="PROJ_STAT" value={detail?.effectiveStatus} />
                 <p>
                   상태는 여기서 바꿀 수 없습니다. 수주예정이면 프로젝트 상세의
                   [⋯]에서 진행 또는 실주로 바꿉니다.

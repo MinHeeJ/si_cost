@@ -7,11 +7,13 @@ export function SkillsInput({
   onChange,
   disabled,
   error,
+  required = false,
 }: {
   value: string[];
   onChange(value: string[]): void;
   disabled?: boolean;
   error?: string;
+  required?: boolean;
 }) {
   const id = useId();
   const [text, setText] = useState(value.join(", "));
@@ -33,9 +35,10 @@ export function SkillsInput({
   }, []);
   return (
     <div className="sicost-field">
-      <label htmlFor={id}>보유 스킬<FieldHelp label="보유 스킬" /></label>
+      <label htmlFor={id}>보유 스킬{required && <span aria-hidden="true"> *</span>}<FieldHelp label="보유 스킬" /></label>
       <input
         id={id}
+        aria-label="보유 스킬"
         data-testid="people-skills-input"
         list={`${id}-options`}
         value={text}

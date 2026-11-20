@@ -1,5 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
+import { useFieldErrorFocus, FieldError } from "../../shared/FieldErrors";
+import { NumericInput } from "../../shared/NumericInput";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import * as api from "./projectProgressApi";
@@ -46,6 +48,8 @@ export function ProjectProgressEditor({
     [leaving, setLeaving] = useState(false);
   const [stale, setStale] = useState(false);
   const inFlight = useRef(false);
+  const formRoot = useRef<HTMLElement>(null);
+  useFieldErrorFocus(formRoot, fields);
   const actualAllowed =
     data.status.contractType === "TK" || data.status.contractType === "IN";
   const title =
@@ -197,6 +201,7 @@ export function ProjectProgressEditor({
       >
         <section
           data-testid="progress-editor"
+          ref={formRoot}
           data-screen-id="SCR-UI-01"
           className="project-progress-editor"
         >
@@ -292,7 +297,9 @@ export function ProjectProgressEditor({
                               s.completedDate !== null ||
                               index === data.steps.length - 1
                             }
-                            aria-invalid={Boolean(fields.steps)}
+                            aria-invalid={Boolean(
+                              fields[`steps[${index}].endDate`],
+                            )}
                             onChange={(e) => {
                               setDates((values) =>
                                 values.map((v, i) =>
@@ -305,11 +312,9 @@ export function ProjectProgressEditor({
                               setDirty(true);
                             }}
                           />
-                          {fields.steps && (
-                            <small className="sicost-field-error">
-                              {fields.steps}
-                            </small>
-                          )}
+                          <FieldError
+                            message={fields[`steps[${index}].endDate`]}
+                          />
                         </td>
                         <td>{s.completedDate ?? "–"}</td>
                         <td>{s.status}</td>
@@ -326,6 +331,7 @@ export function ProjectProgressEditor({
               >
                 미리보기
               </button>
+              <FieldError message={fields.steps} />
               {preview && (
                 <p role="status">
                   미리보기 · 저장되지 않음 ·{" "}
@@ -372,10 +378,10 @@ export function ProjectProgressEditor({
               {actualAllowed && (
                 <label className="sicost-field">
                   실적 진척률
-                  <input
+                  <NumericInput
                     data-testid="progress-memo-actual"
                     aria-label="실적 진척률"
-                    inputMode="numeric"
+                    kind="decimal"
                     value={draft.actualProgress}
                     aria-invalid={Boolean(fields.actualProgress)}
                     disabled={pending}

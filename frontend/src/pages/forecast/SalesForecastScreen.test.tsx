@@ -135,7 +135,7 @@ it("renders the forecast screen, four authoritative cards, six month tables and 
     ),
   ).toBeInTheDocument();
   expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent(
-    "9,007,199,254,741",
+    "90,071,992.5억 원",
   );
   expect(screen.getByTestId("forecast-people-card")).toHaveTextContent(
     "1.1 / 0.5",
@@ -158,8 +158,11 @@ it("changes only exact string formatting and passes the selected unit to the dow
   await screen.findByTestId("forecast-revenue-card");
   await userEvent.selectOptions(screen.getByLabelText("금액 단위"), "WON");
   expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent(
-    "9,007,199,254,740,993",
+    "90,071,992.5억 원",
   );
+  expect(
+    screen.getByTestId("forecast-source-project-P-live"),
+  ).toHaveTextContent("9,007,199,254,740,993");
   expect(api.getSalesOpportunityForecast).toHaveBeenCalledTimes(1);
   await userEvent.click(screen.getByRole("button", { name: "엑셀 다운로드" }));
   await waitFor(() =>
@@ -198,7 +201,9 @@ it("loading is distinct from an empty forecast", async () => {
   expect(
     screen.getByText("채용 검토가 필요한 직무가 없습니다."),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "조건 초기화" })).toHaveLength(2);
+  expect(screen.getAllByRole("button", { name: "조건 초기화" })).toHaveLength(
+    2,
+  );
 });
 it("failed reads expose request id, retry only the GET, and recover", async () => {
   vi.mocked(api.getSalesOpportunityForecast).mockRejectedValueOnce(
@@ -327,9 +332,16 @@ it("does not transmit twice while file generation is pending", async () => {
   expect(screen.getByRole("status")).toHaveTextContent("다운로드했습니다.");
 });
 
-it.each(["sicost:sales-committed", "sicost:bills-committed", "sicost:assignments-committed"])("원천 변경 %s 뒤 예측을 재조회한다", async (name) => {
-  mount(); await screen.findByTestId("forecast-revenue-card");
+it.each([
+  "sicost:sales-committed",
+  "sicost:bills-committed",
+  "sicost:assignments-committed",
+])("원천 변경 %s 뒤 예측을 재조회한다", async (name) => {
+  mount();
+  await screen.findByTestId("forecast-revenue-card");
   const before = vi.mocked(api.getSalesOpportunityForecast).mock.calls.length;
   act(() => window.dispatchEvent(new Event(name)));
-  await waitFor(() => expect(api.getSalesOpportunityForecast).toHaveBeenCalledTimes(before + 1));
+  await waitFor(() =>
+    expect(api.getSalesOpportunityForecast).toHaveBeenCalledTimes(before + 1),
+  );
 });

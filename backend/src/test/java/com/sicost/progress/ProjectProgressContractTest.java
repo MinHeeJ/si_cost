@@ -52,6 +52,15 @@ class ProjectProgressContractTest {
     LocalDate today=LocalDate.of(2026,7,1);
     LocalDateTime created=LocalDateTime.of(2026,1,1,0,0);
     String root="/api/projects/P-0009/progress";
+    @Test void malformedStepDatesIdentifyEveryRowWithoutWrites() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(root+"/steps/preview").contentType("application/json")
+            .content("{\"year\":2026,\"steps\":[{\"stepSn\":1,\"endDate\":\"2026/13/01\"},{\"stepSn\":2,\"endDate\":\"2026-02-30\"}]}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.details.violations[0].field").value("steps[0].endDate"))
+            .andExpect(jsonPath("$.details.violations[1].field").value("steps[1].endDate"))
+            .andExpect(jsonPath("$.details.violations[1].message").value("날짜 형식이 맞지 않습니다. YYYY-MM-DD로 적어 주세요."));
+        noWrites();
+    }
     @Test void shortContractExplainsWhyThereAreNoStagesWithoutRequiringFailedInitialization() throws Exception {
         project=new ProjectRow(project.projectId(),project.projectName(),project.contractType(),project.sourceStatus(),today,today.plusDays(2),project.budget(),project.registeredAt(),project.partId(),project.partName(),project.hq());
         mvc.perform(get(root)).andExpect(status().isOk()).andExpect(jsonPath("$.data.steps").isEmpty())
@@ -106,7 +115,7 @@ class ProjectProgressContractTest {
         ((ObjectNode)body.get("steps").get(1)).put("stepSn",1);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/projects/P-0009/progress/steps/preview").contentType("application/json").content(body.toString()))
             .andExpect(DurableOpenApi.response("POST","/api/projects/{id}/progress/steps/preview",400))
-            .andExpect(jsonPath("$.field").value("steps"));noWrites();
+            .andExpect(jsonPath("$.field").value("steps[1].endDate"));noWrites();
     }
     @Test void literalStepSaveCommitsDateFieldsAndRejectsStaleRevision() throws Exception {
         initialized();var body=dates(false);((ObjectNode)body.get("steps").get(0)).put("endDate","2026-01-11");
@@ -223,8 +232,9 @@ class ProjectProgressContractTest {
         initialized();if(kind.equals("completed")){var s=steps.get(0);steps.set(0,ProjectProgressCalculation.withDates(s,s.startDate(),s.endDate(),today));}
         var b=dates(true);var a=(com.fasterxml.jackson.databind.node.ArrayNode)b.get("steps");
         switch(kind){case "missing"->a.remove(0);case "duplicate"->((ObjectNode)a.get(1)).put("stepSn",1);case "order"->((ObjectNode)a.get(0)).put("stepSn",2);case "reverse"->((ObjectNode)a.get(1)).put("endDate","2026-01-01");case "outside"->((ObjectNode)a.get(0)).put("endDate","2027-01-01");case "last"->((ObjectNode)a.get(6)).put("endDate","2026-07-18");default->((ObjectNode)a.get(0)).put("endDate","2026-01-11");}
-        var before=raw();post("/steps/preview",b).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("steps"));
-        put("/steps",b.put("expectedRevision",revisions.revision(raw()))).andExpect(status().isBadRequest());assertThat(raw()).isEqualTo(before);noWrites();
+        String field=switch(kind){case "missing"->"steps";case "duplicate","reverse"->"steps[1].endDate";case "last"->"steps[6].endDate";default->"steps[0].endDate";};
+        var before=raw();post("/steps/preview",b).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field));
+        put("/steps",b.put("expectedRevision",revisions.revision(raw()))).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field));assertThat(raw()).isEqualTo(before);noWrites();
     }
     @Test void identicalDatesNoAuditAndStaleWinsOverNoop()throws Exception{initialized();var b=dates(false);put("/steps",b).andExpect(jsonPath("$.data.changed").value(false));noWrites();put("/steps",b.put("expectedRevision","old")).andExpect(status().isConflict());noWrites();}
     @Test void completionUsesSeoulTodayWithoutPredecessorOrActualIncrease()throws Exception{initialized();memos.add(memo(1,today.minusDays(1),0));post("/steps/2/complete",write()).andExpect(status().isOk()).andExpect(jsonPath("$.data.progress.steps[1].completedDate").value("2026-07-01")).andExpect(jsonPath("$.data.progress.status.actualProgress").value("0.0")).andExpect(jsonPath("$.data.progress.status.lastUpdatedDate").value("2026-06-30"));assertThat(steps.get(0).completedDate()).isNull();verify(history).append(argThat(c->c.item().equals("CMPL_DT")&&c.before()==null&&c.after().equals("2026-07-01")));}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { formatDecimal } from "../../shared/format";
+import { formatDecimal, formatRate } from "../../shared/format";
 import { Link } from "react-router-dom";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { Dialog } from "../../shared/Dialog";
@@ -8,6 +8,7 @@ import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { getDeveloper } from "../developers/peopleClient";
 import * as api from "./withdrawalsApi";
+import { useCodeNames } from "../../shared/codeNames";
 
 const scoreLabels: Record<string, string> = {
   JOB: "직무",
@@ -46,6 +47,7 @@ export function WithdrawalNextPanel({
   onClose(): void;
   onChanged(): Promise<void>;
 }) {
+  const name = useCodeNames("SALES_STEP", "JOB", "GRADE", "EXT_PSBL");
   const [data, setData] = useState<api.NextPositionData>();
   const [skills, setSkills] = useState<string[]>();
   const [error, setError] = useState<unknown>();
@@ -148,7 +150,9 @@ export function WithdrawalNextPanel({
       <div className="withdrawal-next" data-screen-id="SCR-UI-05-NEXT">
         <p>
           보유스킬 {skills?.join(", ") || "–"} · 연장가능성{" "}
-          {row.extensionPossibility ?? "미정"}
+          {row.extensionPossibility
+            ? name("EXT_PSBL", row.extensionPossibility)
+            : "미정"}
         </p>
         <p>대기 시작: 철수일 {row.withdrawalDate} 다음 날</p>
         <button
@@ -202,9 +206,10 @@ export function WithdrawalNextPanel({
                       </Link>
                     </h3>
                     <p>
-                      수주 확률 {formatDecimal(position.probability)}% · 단계{" "}
-                      {position.salesStepCode} · {candidate.jobCode} ·{" "}
-                      {position.gradeCode}
+                      수주 확률 {formatRate(position.probability)} · 단계{" "}
+                      {name("SALES_STEP", position.salesStepCode)} ·{" "}
+                      {name("JOB", candidate.jobCode)} ·{" "}
+                      {name("GRADE", position.gradeCode)}
                     </p>
                     <p>
                       자리 시작 {position.originalStartMonth} · 실제 예정{" "}
@@ -266,7 +271,7 @@ export function WithdrawalNextPanel({
                   className="sicost-banner sicost-tone-warn"
                   key={`${month.month}-${month.jobCode}`}
                 >
-                  부족 안내: {month.month} · {month.jobCode} ·{" "}
+                  부족 안내: {month.month} · {name("JOB", month.jobCode)} ·{" "}
                   {month.shortagePeople}명
                 </p>
               ))}

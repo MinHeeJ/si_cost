@@ -371,6 +371,7 @@ export function DeveloperForm({
                 {canRate && (
                   <Decimal
                     label="월 단가 (원/월)"
+                    numericKind="amount"
                     data-testid="developer-rate-input"
                     value={form.monthlyRate}
                     onChange={(v) => change("monthlyRate", v)}
@@ -380,6 +381,7 @@ export function DeveloperForm({
                 {canPay && (
                   <Decimal
                     label="월 급여·지급액 (원/월)"
+                    numericKind="amount"
                     data-testid="developer-pay-input"
                     value={form.monthlyPay}
                     onChange={(v) => change("monthlyPay", v)}

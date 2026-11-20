@@ -20,6 +20,7 @@ vi.mock("./workforceForecastApi", async (original) => ({
 vi.mock("../shared/sharedApi", async (original) => ({
   ...(await original<typeof import("../shared/sharedApi")>()),
   getPeriodContext: vi.fn(),
+  getSharedCodes: vi.fn(),
   getSharedPreferences: vi.fn(),
   putSharedPreference: vi.fn(),
 }));
@@ -64,6 +65,9 @@ function mount() {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(shared.getSharedCodes).mockResolvedValue({
+    items: [{ code: "BE", name: "백엔드 개발" }] as shared.SharedCodeLookup[],
+  });
   vi.stubGlobal(
     "matchMedia",
     vi.fn().mockReturnValue({
@@ -103,7 +107,11 @@ it("loads server year remaining months and displays three authoritative table ro
   expect(screen.getByTestId("workforce-demand-card")).toHaveTextContent(
     "미충원 0.5명",
   );
-  expect(screen.getByTestId("workforce-shortage-card")).toHaveTextContent("BE");
+  await waitFor(() =>
+    expect(screen.getByTestId("workforce-shortage-card")).toHaveTextContent(
+      "백엔드 개발",
+    ),
+  );
   expect(
     screen.getByRole("img", { name: "월별 가용 vs 필요" }),
   ).toBeInTheDocument();
@@ -296,13 +304,10 @@ it("uses server strict-boundary statuses and formats shortage, surplus and exact
 it("downloads exact selected filters and unit and does not recompute the table", async () => {
   render(<WorkforceForecastPanel query={query} />);
   await screen.findByTestId("workforce-supply-card");
-  await userEvent.selectOptions(screen.getByLabelText("금액 단위"), "MILLION");
+  expect(screen.queryByLabelText("금액 단위")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "엑셀 다운로드" }));
   await waitFor(() =>
-    expect(api.getWorkforceForecastExport).toHaveBeenCalledWith(
-      query,
-      "MILLION",
-    ),
+    expect(api.getWorkforceForecastExport).toHaveBeenCalledWith(query, "WON"),
   );
   expect(api.saveWorkforceForecastDownload).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("status")).toHaveTextContent("다운로드했습니다");

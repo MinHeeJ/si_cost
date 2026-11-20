@@ -79,9 +79,9 @@ export function ProjectsWorkspace({
           Math.min(rawYear, Number(context.currentMonth.slice(0, 4)) + 1),
         )
       : undefined;
-  const size = preferences.get("PAGE_SIZE")?.value,
-    unit = preferences.get("AMT_UNIT")?.value;
-  const amountUnit = unit === "원" || unit === "백만원" ? unit : "천원";
+  const size = preferences.get("PAGE_SIZE")?.value;
+  // UI-01은 목록·상세·배분표 모두 원 단위 콤마(SFR-006-01 「그 외 화면은 원」, 사용자 결정 2026-11-19).
+  const amountUnit = "원" as const;
   const dense = preferences.get("DENSE")?.value === "좁게";
   const view = (
     preferences.get("COLS", "UI-01")?.value as
@@ -133,9 +133,6 @@ export function ProjectsWorkspace({
           }
           onPageSizeChange={(size) =>
             setting(() => preferences.put("PAGE_SIZE", "*", size))
-          }
-          onAmountUnitChange={(unit) =>
-            setting(() => preferences.put("AMT_UNIT", "*", unit))
           }
         />
       )}

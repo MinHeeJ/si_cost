@@ -129,12 +129,7 @@ function MasterHistoryContent<Target extends string>({
     const load = loader ?? loadDefaultHistory;
     void load(targetType, targetId, page, size, controller.signal)
       .then((result) => {
-        if (!controller.signal.aborted)
-          setData(
-            rowAdapter
-              ? { ...result, items: result.items.map(rowAdapter) }
-              : result,
-          );
+        if (!controller.signal.aborted) setData(result);
       })
       .catch((failure: unknown) => {
         if (!controller.signal.aborted) setError(failure);
@@ -143,7 +138,7 @@ function MasterHistoryContent<Target extends string>({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [targetType, targetId, page, size, refreshKey, retry, loader, rowAdapter]);
+  }, [targetType, targetId, page, size, refreshKey, retry, loader]);
   return (
     <section
       aria-label="변경 이력"
@@ -167,7 +162,11 @@ function MasterHistoryContent<Target extends string>({
         />
       ) : (
         <DataTable
-          rows={data?.items ?? []}
+          rows={
+            rowAdapter
+              ? (data?.items.map(rowAdapter) ?? [])
+              : (data?.items ?? [])
+          }
           columns={
             showTargetTable
               ? columns.map((column) =>

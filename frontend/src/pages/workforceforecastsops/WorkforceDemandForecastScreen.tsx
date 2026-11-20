@@ -17,6 +17,7 @@ import {
   type SharedPreference,
 } from "../shared/sharedApi";
 import * as api from "./workforceForecastApi";
+import { CodeName } from "../../shared/codeNames";
 import "./workforceForecast.css";
 
 const sourceEvents = [
@@ -173,7 +174,7 @@ export function WorkforceForecastPanel({
   const [error, setError] = useState<unknown>();
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
-  const [unit, setUnit] = useState<api.WorkforceAmountUnit>("THOUSAND");
+  const unit: api.WorkforceAmountUnit = "WON";
   const [downloading, setDownloading] = useState(false);
   const downloadActive = useRef(false);
   const [downloadError, setDownloadError] = useState<unknown>();
@@ -255,21 +256,6 @@ export function WorkforceForecastPanel({
           직무
         </p>
         <ScreenTitleActions>
-          <label>
-            금액 단위
-            <select
-              data-testid="workforce-unit"
-              aria-label="금액 단위"
-              value={unit}
-              onChange={(e) =>
-                setUnit(e.target.value as api.WorkforceAmountUnit)
-              }
-            >
-              <option value="WON">원</option>
-              <option value="THOUSAND">천원</option>
-              <option value="MILLION">백만원</option>
-            </select>
-          </label>
           {!mobile && (
             <button
               data-testid="workforce-download"
@@ -330,8 +316,13 @@ export function WorkforceForecastPanel({
             <article data-testid="workforce-shortage-card">
               <p>가장 부족한 직무</p>
               <strong>
-                {data.mostShortageJobCode ??
-                  (data.issues.length ? "미확인" : "부족 없음")}
+                {data.mostShortageJobCode ? (
+                  <CodeName group="JOB" value={data.mostShortageJobCode} />
+                ) : data.issues.length ? (
+                  "미확인"
+                ) : (
+                  "부족 없음"
+                )}
               </strong>
               <p>최대부족 {people(data.maximumShortage)}명</p>
             </article>

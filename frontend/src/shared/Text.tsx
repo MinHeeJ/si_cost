@@ -1,5 +1,6 @@
 import { FieldHelp } from "./FieldHelp";
 import { useId, type InputHTMLAttributes } from "react";
+import { NumericInput, type NumericKind } from "./NumericInput";
 
 export type TextProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -9,6 +10,7 @@ export type TextProps = Omit<
   value: string;
   onChange(value: string): void;
   error?: string;
+  numericKind?: NumericKind;
   unit?: string;
   helpScreenId?: string;
 };
@@ -18,12 +20,14 @@ export function Text({
   onChange,
   error,
   id,
+  numericKind,
   unit,
   helpScreenId,
   ...props
 }: TextProps) {
   const generated = useId();
   const inputId = id ?? generated;
+  const Input = numericKind ? NumericInput : "input";
   return (
     <div className="sicost-field">
       <label htmlFor={inputId}>
@@ -31,8 +35,13 @@ export function Text({
         {props.required && <span aria-hidden="true"> *</span>}
         <FieldHelp label={label} screenId={helpScreenId} />
       </label>
-      <div className={unit ? "sicost-input-unit" : undefined}><input
+      <div className={unit ? "sicost-input-unit" : undefined}><Input
         {...props}
+        {...(numericKind ? { kind: numericKind } : {})}
+        data-testid={
+          props["data-testid" as keyof typeof props] ??
+          `text-${inputId.replace(/[^a-z0-9-]/gi, "").toLowerCase()}`
+        }
         id={inputId}
         aria-label={props["aria-label"] ?? label}
         value={value}

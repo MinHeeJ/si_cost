@@ -33,11 +33,16 @@ public final class ProjectInputPolicy {
         return new BigDecimal(value).setScale(2, RoundingMode.UNNECESSARY);
     }
     public static LocalDate date(String input, String field) {
-        return legacy(() -> PeopleInputPolicy.date(strip(input), field), field);
+        try {
+            return PeopleInputPolicy.date(strip(input), field);
+        } catch (ApiException e) {
+            throw new ApiException(400, "INVALID_INPUT", InputValidator.DATE_MESSAGE, field, null);
+        }
     }
     public static void dateRange(LocalDate start, LocalDate end) {
         if (start == null) throw invalid("startDate");
-        if (end == null || start.isAfter(end)) throw invalid("endDate");
+        if (end == null) throw invalid("endDate");
+        if (start.isAfter(end)) throw new ApiException(400, "INVALID_INPUT", "종료일이 시작일보다 앞입니다. 날짜를 확인해 주세요.", "endDate", null);
     }
     public static YearMonth month(String input, String field) {
         return legacy(() -> MasterDataValidator.month(strip(input), field), field);
@@ -66,11 +71,11 @@ public final class ProjectInputPolicy {
         return PeopleInputPolicy.nextSerial(greatestPersistedOrAudited);
     }
     public static ApiException invalid(String field) {
-        return new ApiException(400, "INVALID_INPUT", "입력 항목의 형식과 길이를 확인해 주세요.", field, null);
+        return new ApiException(400, "INVALID_INPUT", InputValidator.message(field), field, null);
     }
     private static <T> T legacy(Supplier<T> value, String field) {
         try { return value.get(); }
-        catch (ApiException e) { throw invalid(field); }
+        catch (ApiException e) { throw new ApiException(400, "INVALID_INPUT", e.getMessage(), field, e.details()); }
     }
     private static String strip(String input) {
         return input == null ? null : input.replaceAll("^[\\s\\p{Z}]+|[\\s\\p{Z}]+$", "");

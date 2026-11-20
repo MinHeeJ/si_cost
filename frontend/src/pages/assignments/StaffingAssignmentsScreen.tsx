@@ -53,11 +53,7 @@ function AssignmentDownloads({ context }: { context: AssignmentListActions }) {
     setSuccess(false);
     try {
       saveDownload(
-        await downloadAssignments(
-          context.filters,
-          context.sort,
-          context.amountUnit,
-        ),
+        await downloadAssignments(context.filters, context.sort, "원"),
       );
       setSuccess(true);
     } catch (e) {

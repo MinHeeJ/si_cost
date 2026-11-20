@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePermission } from "./permission/PermissionBoundary";
+import { focusFirstError } from "./FieldErrors";
 import { useOverlayLayer } from "./useOverlayLayer";
 
 export type DialogProps = {
@@ -12,6 +13,7 @@ export type DialogProps = {
   onCancel(): void;
   confirmLabel?: string;
   confirmClassName?: string;
+  danger?: boolean;
   confirmDisabled?: boolean;
   cancelLabel?: string;
   wide?: boolean;
@@ -39,6 +41,7 @@ export function Dialog({
   onCancel,
   confirmLabel = "확인",
   confirmClassName = "sicost-primary",
+  danger = false,
   confirmDisabled = false,
   cancelLabel = "취소",
   wide,
@@ -64,6 +67,7 @@ export function Dialog({
   const inFlight = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const titleId = useId();
+  const errorSignature = useRef("");
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -82,8 +86,20 @@ export function Dialog({
     };
   }, [open]);
   useEffect(() => {
-    if (open)
-      ref.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    const signature = open
+      ? Array.from(
+          ref.current?.querySelectorAll<HTMLElement>('[aria-invalid="true"]') ??
+            [],
+        )
+          .map(
+            (node) =>
+              `${node.getAttribute("name") ?? node.id ?? node.dataset.testid}:${node.parentElement?.textContent}`,
+          )
+          .join("|")
+      : "";
+    if (signature && signature !== errorSignature.current)
+      focusFirstError(ref.current);
+    errorSignature.current = signature;
   });
   if (!open) return null;
   const confirm = async () => {
@@ -221,7 +237,7 @@ export function Dialog({
               data-testid={confirmTestId}
               data-action-id={confirmActionId}
               data-confirm
-              className={confirmClassName}
+              className={danger ? "sicost-danger" : confirmClassName}
               disabled={pending || confirmDisabled}
             >
               {pending ? "처리 중…" : confirmLabel}

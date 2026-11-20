@@ -4,7 +4,8 @@ import { Decimal } from "../../shared/Decimal";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { AddressSelector } from "../../shared/AddressSelector";
 import { SkillsInput } from "../../shared/SkillsInput";
-import { Dialog, ConfirmDialog } from "../../shared/Dialog";
+import { Dialog } from "../../shared/Dialog";
+import { UnsavedDialog } from "../../shared/UnsavedDialog";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { ClientSelect } from "../clientsops/ClientSelect";
@@ -252,6 +253,10 @@ export function CandidateForm({
         pending={pending}
         onConfirm={save}
         onCancel={() => {
+          if (changed.current) {
+            setLeaving(true);
+            return;
+          }
           if (!candidate && (resume.pending || resume.notice || resume.error)) {
             changed.current = false;
             onDirtyChange?.(false);
@@ -300,6 +305,7 @@ export function CandidateForm({
           <div className="sicost-field">
             <ClientSelect
               purpose="VENDOR"
+              required={form.employeeType === "OS"}
               value={form.companyId ?? ""}
               selectedLabel={candidate?.companyName ?? undefined}
               disabled={pending || form.employeeType !== "OS"}
@@ -348,6 +354,7 @@ export function CandidateForm({
             disabled={pending}
           />
           <SkillsInput
+            required
             value={form.skills}
             onChange={(v) => change("skills", v)}
             error={fields.skills}
@@ -363,6 +370,7 @@ export function CandidateForm({
           />
           {canRate && (
             <Decimal
+              numericKind="amount"
               label="희망 단가 (원/월) *"
               value={form.desiredRate}
               data-testid="candidate-rate"
@@ -418,20 +426,16 @@ export function CandidateForm({
           )}
         </div>
       </Dialog>
-      <ConfirmDialog
+      <UnsavedDialog
         open={open && leaving}
-        title="입력 내용 버리기"
-        confirmLabel="버리고 나가기"
-        onCancel={() => setLeaving(false)}
-        onConfirm={() => {
+        onContinue={() => setLeaving(false)}
+        onLeave={() => {
           setLeaving(false);
           changed.current = false;
           onDirtyChange?.(false);
           onSaved("", "", false);
         }}
-      >
-        <p>작성한 후보 정보를 버리시겠습니까?</p>
-      </ConfirmDialog>
+      />
     </>
   );
 }

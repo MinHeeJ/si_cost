@@ -54,36 +54,33 @@ beforeEach(() => {
   vi.mocked(sales.getSalesOpportunityForecast).mockResolvedValue(forecast());
   vi.mocked(workforce.getWorkforceForecasts).mockResolvedValue(forecast().workforce);
 });
-it("keeps forecast chart coordinates, table and tooltip in the chosen currency unit with main's integer rounding", async () => {
+it("keeps the forecast chart in won while only the monthly table follows the chosen unit (SFR-006-01)", async () => {
   render(<MemoryRouter><SalesForecastPanel /></MemoryRouter>);
   await screen.findByRole("img", {name: "월별 예상매출"});
-  for (const [code, unit, coordinate, displayed] of [
-    ["WON", "원", 1500500, "1,500,500"],
-    ["THOUSAND", "천원", 1500.5, "1,501"],
-    ["MILLION", "백만원", 1.5005, "2"],
-  ] as const) {
+  for (const [code, unit] of [["WON", "원"], ["THOUSAND", "천원"], ["MILLION", "백만원"]] as const) {
     await userEvent.selectOptions(screen.getByTestId("forecast-unit-select"), code);
+    // 단위 전환은 「UI-29 예측 월별 표」에만 있다. 차트·툴팁은 원 단위 그대로다.
+    expect(screen.getByRole("heading", {name: `월별 매출 단위: ${unit}`})).toBeVisible();
     const option = charts.get("월별 예상매출")!;
-    expect(option.yAxis.name).toBe(unit);
-    expect(option.series[0].data).toEqual([coordinate, null]);
-    expect(option.tooltip.formatter([{dataIndex: 0}])).toHaveTextContent(`${displayed} ${unit}`);
-    expect(option.tooltip.formatter([{dataIndex: 1}])).toHaveTextContent(`– ${unit}`);
-    expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent(`${displayed} ${unit}`);
+    expect(option.yAxis.name).toBe("원");
+    expect(option.series[0].data).toEqual([1500500, null]);
+    expect(option.tooltip.formatter([{dataIndex: 0}])).toHaveTextContent("1,500,500 원");
+    expect(option.tooltip.formatter([{dataIndex: 1}])).toHaveTextContent("– 원");
+    // 요약 카드는 단위 선택과 무관하게 큰 금액을 ○만 원/○.○억 원으로 보인다(SFR-006-02).
+    expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent("150만 원");
     expect(charts.get("수요·공급")!.yAxis.name).toBe("명");
     expect(charts.get("수요·공급")!.tooltip.formatter([{dataIndex: 0}])).toHaveTextContent("0.5명");
   }
 });
-it("keeps workforce chart in people even when the Excel currency unit changes", async () => {
+it("keeps workforce chart in people; UI-17 has no currency unit selector (SFR-006-01)", async () => {
   render(<MemoryRouter><WorkforceForecastPanel query={{from: "2026-12", months: 2, includeUnfilled: true}} /></MemoryRouter>);
   await screen.findByRole("img", {name: "월별 가용 vs 필요"});
-  for (const unit of ["WON", "THOUSAND", "MILLION"]) {
-    await userEvent.selectOptions(screen.getByTestId("workforce-unit"), unit);
-    const option = charts.get("월별 가용 vs 필요")!;
-    expect(option.yAxis.name).toBe("명");
-    expect(option.series[0].data).toEqual([0.5, 0.5]);
-    expect(option.tooltip.formatter([{dataIndex: 0}])).toHaveTextContent("1.1명");
-    expect(screen.getByTestId("workforce-supply-card")).toHaveTextContent("0.5명");
-  }
+  expect(screen.queryByTestId("workforce-unit")).toBeNull();
+  const option = charts.get("월별 가용 vs 필요")!;
+  expect(option.yAxis.name).toBe("명");
+  expect(option.series[0].data).toEqual([0.5, 0.5]);
+  expect(option.tooltip.formatter([{dataIndex: 0}])).toHaveTextContent("1.1명");
+  expect(screen.getByTestId("workforce-supply-card")).toHaveTextContent("0.5명");
 });
 it.each(["원", "천원", "백만원"] as const)("keeps business-plan axes in millions while detailed values use %s", unit => {
   const months = [{month: "2026-11", salesActualAmt: "-1500500", salesTargetAmt: "0"}] as PlanMonth[];

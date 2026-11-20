@@ -183,7 +183,6 @@ export function AssignmentsContent({
     [creating, setCreating] = useState(false),
     [dirty, setDirty] = useState(false),
     [leaving, setLeaving] = useState(false),
-    [unit, setUnit] = useState("천원"),
     [dense, setDense] = useState(false),
     [columnsOpen, setColumnsOpen] = useState(false),
     [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
@@ -330,7 +329,7 @@ export function AssignmentsContent({
   }
   function amount(value: string | null) {
     if (value === null) return "–";
-    const digits = unit === "원" ? 0 : unit === "천원" ? 3 : 6;
+    const digits = 0;
     const padded = value.padStart(digits + 1, "0");
     return formatDecimal(
       digits ? `${padded.slice(0, -digits)}.${padded.slice(-digits)}` : padded,
@@ -634,39 +633,13 @@ export function AssignmentsContent({
           <strong>{loading ? "조회 중…" : <>총 {data?.total ?? 0}건</>}</strong>
         )}
         <div className="assignment-toolbar assignment-bar-actions">
-          <label className="assignment-control">
-            단위
-            <select
-              data-testid="assignments-unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-            >
-              <option>원</option>
-              <option>천원</option>
-              <option>백만원</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            data-testid="assignments-columns"
-            onClick={() => setColumnsOpen(true)}
-          >
-            열 설정
-          </button>
-          <button
-            type="button"
-            className="assignment-density-toggle"
-            data-testid="assignments-density"
-            aria-pressed={dense}
-            onClick={() => setDense(!dense)}
-          >
-            좁게 보기
-          </button>
+          <button type="button" data-testid="assignments-columns" onClick={()=>setColumnsOpen(true)}>열 설정</button>
+          <button type="button" className="assignment-density-toggle" data-testid="assignments-density" aria-pressed={dense} onClick={()=>setDense(!dense)}>좁게 보기</button>
           {renderActions?.({
             year,
             filters,
             sort,
-            amountUnit: unit,
+            amountUnit: "원",
             readonly,
             refresh: refreshed,
           })}

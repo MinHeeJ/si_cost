@@ -152,6 +152,7 @@ export function CandidatePositionsPanel({
         <>
           {result?.issues.map((issue, index) => (
             <p
+              data-testid={`candidate-positions-issue-${index}`}
               key={index}
               role="status"
               className="sicost-banner sicost-tone-warn"
@@ -172,7 +173,11 @@ export function CandidatePositionsPanel({
               rowKey={(row) => `${row.opportunityId}-${row.needSn}`}
               empty="조건에 맞는 자리가 없습니다."
               emptyAction={
-                <button type="button" onClick={() => setRetry((n) => n + 1)}>
+                <button
+                  data-testid="candidate-positions-empty-reset"
+                  type="button"
+                  onClick={() => setRetry((n) => n + 1)}
+                >
                   조건 초기화
                 </button>
               }
