@@ -24,7 +24,7 @@ export function ScreenGuide({
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <Icon name="info" size={15} />
+        <Icon name="info" size={18} />
         화면 안내
       </button>
       <Dialog

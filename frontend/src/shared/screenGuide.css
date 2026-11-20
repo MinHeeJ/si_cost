@@ -1,25 +1,45 @@
 .sicost-title-row > .sicost-screen-guide {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding-inline: 10px;
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 600;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  min-height: 34px;
+  padding-inline: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--divider));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-bg) 80%, var(--surface));
+  color: var(--info);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1;
   white-space: nowrap;
   box-shadow: none;
 }
 
 .sicost-title-row > .sicost-screen-guide:hover {
-  background: var(--primary-bg);
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+}
+
+.sicost-dialog:has(> .sicost-dialog-body > .sicost-screen-guide-content) {
+  width: min(520px, 100%);
+  border-radius: 14px;
+}
+
+.sicost-dialog:has(> .sicost-dialog-body > .sicost-screen-guide-content) > header h2 {
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.sicost-screen-guide-content {
+  padding-block: 4px;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .sicost-screen-guide-content dl {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin: 0;
 }
 
@@ -32,12 +52,16 @@
   margin: 0;
   line-height: 1.55;
   color: var(--text-sub);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .sicost-screen-guide-id {
-  margin: 16px 0 0;
+  margin: 8px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
   color: var(--text-sub);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 @media (max-width: 767px) {

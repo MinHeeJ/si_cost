@@ -233,23 +233,20 @@ export function BusinessUsersScreen({
     >
       <p className="businessusers-mobile">이 화면은 PC에서 사용해 주세요.</p>
       <div className="businessusers-desktop">
-        <div className="businessusers-toolbar">
-          <h2>사용자</h2>
-          {canRegister && (
-            <ScreenTitleActions>
-              <button
-                className="sicost-primary"
-                data-testid="business-user-register"
-                onClick={() => {
-                  setNotice("");
-                  setForm({});
-                }}
-              >
-                등록
-              </button>
-            </ScreenTitleActions>
-          )}
-        </div>
+        {canRegister && (
+          <ScreenTitleActions>
+            <button
+              className="sicost-primary"
+              data-testid="business-user-register"
+              onClick={() => {
+                setNotice("");
+                setForm({});
+              }}
+            >
+              등록
+            </button>
+          </ScreenTitleActions>
+        )}
         {roleError != null && (
           <ErrorBanner
             message={
