@@ -359,7 +359,7 @@ export function DashboardScreen({
             있음 {count(action.recommendedPlacementCount)}명
           </small>
         )}
-        <DashboardBasis basis={action.basis} />
+        <DashboardBasis basis={action.basis} hidePeriod />
       </span>
       <span className="dashboard-row-target">
         {flattenMenus(menus).find(
@@ -546,6 +546,12 @@ export function DashboardScreen({
                 {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
               </span>
             </PeriodStatus>
+            {data.metrics.length > 0 && (
+              <div className="dashboard-kpi-grid">
+                {metrics(true)}
+                {metrics(false)}
+              </div>
+            )}
             <div className="dashboard-main-grid">
               {data.salesCostTrend && (
                 <Panel
@@ -576,7 +582,6 @@ export function DashboardScreen({
                     </div>
                   }
                 >
-                  {metrics(true)}
                   <DashboardBasis
                     basis={data.salesCostTrendBasis}
                     periodLabel="조회 기준월"
@@ -620,47 +625,48 @@ export function DashboardScreen({
                   </details>
                 </Panel>
               )}
-              <div className="dashboard-stack dashboard-top-stack">
-                {metrics(false)}
-                <Panel
-                  title={
-                    <>
-                      확인할 일{" "}
-                      <span className="dashboard-action-count">
-                        전체{" "}
-                        {data.actionTypeCount === null ? "–" : actions.length}
-                      </span>
-                      <span
-                        className={`dashboard-action-count${actions.some((action) => action.urgent) ? " urgent" : ""}`}
-                      >
-                        급함{" "}
-                        {data.urgentActionTypeCount === null
-                          ? "–"
-                          : actions.filter((action) => action.urgent).length}
-                      </span>
-                    </>
-                  }
-                  testId="dashboard-actions"
-                >
-                  <DashboardBasis basis={data.actionsBasis} />
-                  {actions.length === 0 &&
-                    (data.actionsBasis.status === "AVAILABLE" ||
-                      data.actionsBasis.status === "EMPTY") && (
-                      <p className="dashboard-empty">확인할 일이 없습니다</p>
-                    )}
-                  {actions.slice(0, 5).map((action) => actionRow(action))}
-                  {actions.length > 5 && (
-                    <button
-                      type="button"
-                      className="dashboard-actions-all"
-                      data-testid="dashboard-actions-all"
-                      onClick={() => setActionsOpen(true)}
+              <Panel
+                title="확인할 일"
+                actions={
+                  <div className="dashboard-action-counts">
+                    <span className="dashboard-action-count">
+                      전체{" "}
+                      {data.actionTypeCount === null ? "–" : actions.length}
+                    </span>
+                    <span
+                      className={`dashboard-action-count${actions.some((action) => action.urgent) ? " urgent" : ""}`}
                     >
-                      전체 {actions.length}유형 보기
-                    </button>
+                      급함{" "}
+                      {data.urgentActionTypeCount === null
+                        ? "–"
+                        : actions.filter((action) => action.urgent).length}
+                    </span>
+                  </div>
+                }
+                testId="dashboard-actions"
+              >
+                <DashboardBasis basis={data.actionsBasis} hidePeriod />
+                {actions.length === 0 &&
+                  (data.actionsBasis.status === "AVAILABLE" ||
+                    data.actionsBasis.status === "EMPTY") && (
+                    <p className="dashboard-empty">확인할 일이 없습니다</p>
                   )}
-                </Panel>
-              </div>
+                {actions.length > 0 && (
+                  <div className="dashboard-actions-list">
+                    {actions.slice(0, 5).map((action) => actionRow(action))}
+                  </div>
+                )}
+                {actions.length > 5 && (
+                  <button
+                    type="button"
+                    className="dashboard-actions-all"
+                    data-testid="dashboard-actions-all"
+                    onClick={() => setActionsOpen(true)}
+                  >
+                    전체 {actions.length}유형 보기
+                  </button>
+                )}
+              </Panel>
             </div>
             <div className="dashboard-two-grid">
               <DashboardSupply data={data} />

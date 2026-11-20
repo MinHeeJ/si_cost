@@ -43,7 +43,7 @@ export function DashboardMetricCard({
           formatRate(card.value)
         ) : (
           <>
-            {money(card.value)}{" "}
+            <span>{money(card.value)}</span>{" "}
             <span className="dashboard-unit">{amountUnit}</span>
           </>
         )}
@@ -53,8 +53,9 @@ export function DashboardMetricCard({
           card.metricCode === "OPERATING_PROFIT") && (
           <small>
             전월 대비 {formatRate(card.changeRate)} · 차액{" "}
-            {money(card.difference)}{" "}
-            <span className="dashboard-unit">{amountUnit}</span>
+            <span className="dashboard-metric-amount">
+              {money(card.difference)} {amountUnit}
+            </span>
           </small>
         )}
         {card.metricCode === "OPERATING_PROFIT" && (
@@ -78,8 +79,10 @@ export function DashboardMetricCard({
         )}
         {card.metricCode === "RECEIVABLE" && (
           <small className="dashboard-danger">
-            연체 {card.overdueCount ?? "–"}건 {money(card.overdueAmount)}{" "}
-            <span className="dashboard-unit">{amountUnit}</span>
+            연체 {card.overdueCount ?? "–"}건{" "}
+            <span className="dashboard-metric-amount">
+              {money(card.overdueAmount)} {amountUnit}
+            </span>
           </small>
         )}
       </div>

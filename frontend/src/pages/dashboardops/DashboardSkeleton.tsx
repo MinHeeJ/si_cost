@@ -1,27 +1,25 @@
-function SkeletonCard({
-  kind,
-  metrics = false,
-}: {
-  kind: "chart" | "list";
-  metrics?: boolean;
-}) {
+function SkeletonMetrics({ financial }: { financial: boolean }) {
+  return (
+    <div className={`dashboard-metrics dashboard-${financial ? "financial" : "operational"}-metrics`}>
+      {Array.from({ length: financial ? 3 : 2 }, (_, index) => (
+        <div className="dashboard-metric dashboard-skeleton-card" key={index}>
+          <div className="dashboard-skeleton-bar" />
+          <div className="dashboard-skeleton-bar dashboard-skeleton-number" />
+          <div className="dashboard-skeleton-bar" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SkeletonCard({ kind, rows = 3 }: { kind: "chart" | "list"; rows?: number }) {
   return (
     <div className="dashboard-panel dashboard-skeleton-card">
       <div className="dashboard-skeleton-bar dashboard-skeleton-heading" />
-      {metrics && (
-        <div className="dashboard-metrics dashboard-financial-metrics">
-          {Array.from({ length: 3 }, (_, index) => (
-            <div className="dashboard-metric" key={index}>
-              <div className="dashboard-skeleton-bar" />
-              <div className="dashboard-skeleton-bar dashboard-skeleton-number" />
-            </div>
-          ))}
-        </div>
-      )}
       {kind === "chart" ? (
         <div className="dashboard-skeleton-chart" />
       ) : (
-        Array.from({ length: 3 }, (_, index) => (
+        Array.from({ length: rows }, (_, index) => (
           <div className="dashboard-skeleton-row" key={index}>
             <div className="dashboard-skeleton-bar" />
             <div className="dashboard-skeleton-bar" />
@@ -40,15 +38,13 @@ export function DashboardSkeleton() {
       data-testid="dashboard-skeleton"
       aria-hidden="true"
     >
+      <div className="dashboard-kpi-grid">
+        <SkeletonMetrics financial />
+        <SkeletonMetrics financial={false} />
+      </div>
       <div className="dashboard-main-grid">
-        <SkeletonCard kind="chart" metrics />
-        <div className="dashboard-stack">
-          <div className="dashboard-metrics dashboard-operational-metrics">
-            <SkeletonCard kind="list" />
-            <SkeletonCard kind="list" />
-          </div>
-          <SkeletonCard kind="list" />
-        </div>
+        <SkeletonCard kind="chart" />
+        <SkeletonCard kind="list" rows={5} />
       </div>
       <div className="dashboard-two-grid">
         <SkeletonCard kind="chart" />
