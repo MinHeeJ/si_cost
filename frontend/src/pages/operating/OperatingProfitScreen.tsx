@@ -15,11 +15,7 @@ import {
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { HistoricalProfitLossImportDialog } from "../migration/HistoricalProfitLossImportDialog";
-import {
-  getHistoricalProfitLossImportTemplate,
-  saveDownload,
-  HISTORICAL_PROFIT_LOSS_IMPORT_COMMITTED,
-} from "../migration/historicalProfitLossImportsApi";
+import { HISTORICAL_PROFIT_LOSS_IMPORT_COMMITTED } from "../migration/historicalProfitLossImportsApi";
 import { FinancialHistoryPanel } from "../apiops/FinancialHistoryPanel";
 import type { Comparison } from "../structure/profitStructureApi";
 import { FinancialStatementTable } from "../shared/FinancialStatementTable";
@@ -164,22 +160,20 @@ export function OperatingProfitScreen({
       });
     return () => controller.abort();
   }, [period, revision]);
-  async function download(template: boolean) {
+  async function download() {
     if (pending || !period) return;
     setPending(true);
     setError(undefined);
     try {
-      if (template) saveDownload(await getHistoricalProfitLossImportTemplate());
-      else
-        await api.downloadOperatingProfitLoss(
-          period.year,
-          period.month,
-          unit === "원"
-            ? "WON"
-            : unit === "천원"
-              ? "THOUSAND_WON"
-              : "MILLION_WON",
-        );
+      await api.downloadOperatingProfitLoss(
+        period.year,
+        period.month,
+        unit === "원"
+          ? "WON"
+          : unit === "천원"
+            ? "THOUSAND_WON"
+            : "MILLION_WON",
+      );
     } catch (failure) {
       setError(failure);
     } finally {
@@ -202,14 +196,6 @@ export function OperatingProfitScreen({
           <div className="operating-toolbar">
             <button
               type="button"
-              data-testid="operating-template"
-              disabled={!period || pending || mobile}
-              onClick={() => void download(true)}
-            >
-              전년 손익 양식
-            </button>
-            <button
-              type="button"
               data-testid="operating-upload"
               disabled={mobile}
               onClick={() => setUpload(true)}
@@ -221,7 +207,7 @@ export function OperatingProfitScreen({
               type="button"
               data-testid="operating-export"
               disabled={!data || loading || pending || mobile}
-              onClick={() => void download(false)}
+              onClick={() => void download()}
             >
               엑셀 다운로드
             </button>
@@ -242,18 +228,28 @@ export function OperatingProfitScreen({
         )}
         {data && (
           <>
-            <FinancialOverview context={data.context} months={data.months} provisional={data.cumulativeProvisional} notices={data.notices} unitControl={<label>
-              단위{" "}
-              <select
-                data-testid="operating-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>} />
+            <FinancialOverview
+              context={data.context}
+              months={data.months}
+              provisional={data.cumulativeProvisional}
+              notices={data.notices}
+              unitControl={
+                <label>
+                  단위{" "}
+                  <select
+                    data-testid="operating-unit"
+                    value={unit}
+                    onChange={(event) =>
+                      setUnit(event.target.value as AmountUnit)
+                    }
+                  >
+                    <option>원</option>
+                    <option>천원</option>
+                    <option>백만원</option>
+                  </select>
+                </label>
+              }
+            />
             {data.completeness.availableMonthCount === 0 && (
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
@@ -277,8 +273,11 @@ export function OperatingProfitScreen({
                   {card.metric === "oprtPrftAmt" && (
                     <p>영업이익률 {formatRate(card.rate)}</p>
                   )}
-                  <Change comparison={card.previousYear} label="전년 동기 " />
-                  <Change comparison={card.previous} label="전월 " />
+                  <Change
+                    comparison={card.previousYear}
+                    label="전년 같은 기간 대비 "
+                  />
+                  <Change comparison={card.previous} label="전월 대비 " />
                 </article>
               ))}
             </KpiStrip>
@@ -294,8 +293,10 @@ export function OperatingProfitScreen({
               testPrefix="operating"
             />
             <p className="operating-muted">
-              TK는 청구일 기준 공급가액, MO/DP는 투입 귀속월 매출입니다. 전월
-              조정은 원래 마감 사본을 변경하지 않습니다.
+              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의
+              매출입니다(부가세 제외). 전년 대비는 같은 기간 누계끼리 비교하며,
+              비용 항목은 늘면 빨강입니다. 전월 조정은 마감한 달의 숫자를 바꾸지
+              않고 이번 달 「전월 조정」 줄에 넣습니다.
             </p>
             <div className="operating-banner info">
               <span>
