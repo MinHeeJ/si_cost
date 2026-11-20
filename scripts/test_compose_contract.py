@@ -1,11 +1,11 @@
-"""Compose network regression: do not depend on Docker's exhausted default pools."""
-import ipaddress
+"""Compose network regression: parallel projects must not share a fixed subnet."""
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import unittest
+import uuid
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,12 +27,11 @@ class ComposeNetworkContractTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, "Compose configuration failed")
         return json.loads(result.stdout)
 
-    def test_default_network_has_explicit_private_subnet(self):
+    def test_default_network_leaves_subnet_allocation_to_docker(self):
         network = self.config()["networks"]["default"]
-        self.assertIn("ipam", network, "Default-pool allocation would fail before app boot")
-        subnet = ipaddress.ip_network(network["ipam"]["config"][0]["subnet"])
-        self.assertTrue(subnet.is_private)
-        self.assertEqual(subnet.prefixlen, 24)
+        self.assertIn("ipam", network)
+        self.assertIn(network["ipam"]["config"][0].get("subnet"), (None, ""),
+                      "A fixed default subnet collides with another QA project before app boot")
 
     def test_parallel_deployment_can_override_subnet(self):
         config = self.config("10.203.1.0/24")
@@ -43,6 +42,31 @@ class ComposeNetworkContractTest(unittest.TestCase):
             self.assertIn("default", config["services"][name]["networks"])
             self.assertIn("build", config["services"][name])
             self.assertIn("healthcheck", config["services"][name])
+
+    @unittest.skipUnless(os.environ.get("COMPOSE_NETWORK_INTEGRATION") == "true",
+                         "Opt in to disposable Docker network checks")
+    def test_parallel_default_networks_receive_non_overlapping_subnets(self):
+        import ipaddress
+
+        subnet = self.config()["networks"]["default"]["ipam"]["config"][0].get("subnet") or ""
+        created = []
+        try:
+            allocations = []
+            for _ in range(2):
+                name = "sicost-network-test-" + uuid.uuid4().hex
+                result = subprocess.run(["docker", "network", "create", "--subnet", subnet, name],
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, 0, "Disposable network allocation failed")
+                created.append(name)
+                result = subprocess.run(["docker", "network", "inspect", name],
+                                        capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, 0, "Disposable network readback failed")
+                allocations.append(ipaddress.ip_network(json.loads(result.stdout)[0]["IPAM"]["Config"][0]["Subnet"]))
+            self.assertFalse(allocations[0].overlaps(allocations[1]))
+        finally:
+            for name in reversed(created):
+                result = subprocess.run(["docker", "network", "rm", name], capture_output=True, check=False)
+                self.assertEqual(result.returncode, 0, "Disposable network cleanup failed")
 
 
 if __name__ == "__main__":

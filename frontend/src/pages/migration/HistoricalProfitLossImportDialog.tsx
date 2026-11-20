@@ -76,11 +76,11 @@ export function HistoricalProfitLossImportDialog({
       onDirtyChange={onDirtyChange}
       workflow={workflow}
       screenId="UI-08"
-      title="이관 손익 업로드"
+      title="전년 손익 업로드"
       applyLabel="반영"
       requireRecheckOnConflict
       confirmAllowed={!uncertain}
-      description="BASE 전년 1월~직전월 중 일부 월만 올릴 수 있습니다. 미사용 연월 행은 삭제하세요. 필수 금액 빈칸은 오류이며 선택 빈칸·–·누락 열은 NULL로 교체합니다. XLSX 10MiB 이하 · 첫 시트 최대 5,000행."
+      description="운영 시작 전 달(시작한 해의 전년 1월 ~ 시작한 달 전 달)만 올릴 수 있고, 올리고 싶은 달만 올려도 됩니다. 쓰지 않는 달의 줄은 지워 주세요. 필수 금액이 비면 오류이고, 선택 칸을 비우거나 –를 넣으면 「–」(값 없음)로 저장됩니다. XLSX 10MB 이하 · 첫 시트 최대 5,000줄."
       emptyRegistrationMessage="이관 손익은 변경되지 않았습니다."
       onTemplate={async () =>
         api.saveDownload(await api.getHistoricalProfitLossImportTemplate())
@@ -133,7 +133,10 @@ export function HistoricalProfitLossImportDialog({
                     <th>매출</th>
                     <th>매출원가</th>
                     <th>판관비 합계</th>
-                    <th>영업이익<FieldHelp label="영업이익" kind="B" /></th>
+                    <th>
+                      영업이익
+                      <FieldHelp label="영업이익" kind="B" />
+                    </th>
                     <th>매출총이익</th>
                     <th>당기순이익</th>
                     <th>변경</th>
