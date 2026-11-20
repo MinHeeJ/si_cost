@@ -347,6 +347,9 @@
 .dashboard-parts-table td:first-child {
   font-weight: 600;
 }
+.dashboard-pipeline-count {
+  text-align: right;
+}
 .dashboard-parts-note {
   margin: 0;
   color: var(--text-sub);

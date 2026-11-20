@@ -876,7 +876,9 @@ export function DashboardScreen({
                 }
               >
                 <DashboardBasis basis={data.pipeline.basis} hidePeriod />
-                <p>진행 기회 {count(data.pipeline.opportunityCount)}건</p>
+                <p className="dashboard-pipeline-count">
+                  진행 기회 {count(data.pipeline.opportunityCount)}건
+                </p>
                 <strong>
                   확률 반영 예상액 {money(data.pipeline.weightedExpectedAmount)}{" "}
                   {amountUnit}
