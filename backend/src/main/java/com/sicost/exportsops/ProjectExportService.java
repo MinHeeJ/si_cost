@@ -69,7 +69,12 @@ public class ProjectExportService {
         if (!ids.containsAll(List.of("id", "name"))) throw InputValidator.invalid("columns");
         var columns = ids.stream().map(id -> new Column(id, title(id),
             Set.of("contractAmount", "personCount").contains(id) ? CellType.NUMBER : CellType.TEXT)).toList();
-        var spec = new Specification("프로젝트", null, columns, query.toString(), "원", "UI-01");
+        String partName = query.containsKey("partId")
+            ? projects.getProjects(page(filter, 1)).items().stream().map(ProjectListItem::partName)
+                .filter(Objects::nonNull).findFirst().orElse(null)
+            : null;
+        var spec = new Specification("프로젝트", null, columns,
+            conditions(query, labels("CTRT_TYPE"), labels("PROJ_STAT"), partName), "원", "UI-01");
         return excel.generateWorkbook(spec, () -> {
             Map<String, String> types = labels("CTRT_TYPE"), statuses = labels("PROJ_STAT"), steps = labels("DSTRB_STEP");
             ProjectsPage first = projects.getProjects(page(filter, 1));
@@ -114,6 +119,20 @@ public class ProjectExportService {
                     + (row.distribution().mismatchCount() > 0 ? " 불일치 " + row.distribution().mismatchCount() : "");
             default -> throw InputValidator.invalid("columns");
         };
+    }
+    /** 다운로드정보 「조건」: 내부 키·코드 대신 화면 이름과 코드 이름으로 적는다(SFR-017-03). */
+    static String conditions(Map<String, String> query, Map<String, String> types,
+                             Map<String, String> statuses, String partName) {
+        List<String> parts = new ArrayList<>();
+        if (query.containsKey("year")) parts.add("연도=" + query.get("year"));
+        if (query.containsKey("contractType")) parts.add("계약유형=" + types.getOrDefault(query.get("contractType"), "–"));
+        if (query.containsKey("status")) parts.add("상태=" + statuses.getOrDefault(query.get("status"), "–"));
+        if (query.containsKey("partId")) parts.add("영업 파트=" + (partName == null ? "–" : partName));
+        if (query.containsKey("q")) parts.add("검색어=" + query.get("q"));
+        String sort = query.getOrDefault("sort", "startDate");
+        String direction = "ASC".equals(query.get("direction")) ? "오름차순" : "내림차순";
+        parts.add("정렬=" + ("startDate".equals(sort) ? "시작일" : title(sort)) + " " + direction);
+        return String.join("; ", parts);
     }
     private static String title(String id) {
         return switch (id) {
