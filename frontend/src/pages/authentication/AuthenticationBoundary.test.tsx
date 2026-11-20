@@ -69,7 +69,9 @@ describe("authentication consumer boundaries", () => {
       screens: { "UI-16": ["INQ"] },
     });
     function Consumer() {
-      return <output data-testid="allowed-route">{useLocation().pathname}</output>;
+      return (
+        <output data-testid="allowed-route">{useLocation().pathname}</output>
+      );
     }
     application(<Consumer />);
     expect(
@@ -138,16 +140,14 @@ describe("authentication consumer boundaries", () => {
     expect(screen.getByTestId("business")).toBeInTheDocument();
     expect(mounted).toHaveBeenCalledTimes(1);
   });
-  it("selects a device-usable first screen instead of a PC-only first grant on mobile", async () => {
+  it("preserves an authorized PC-only direct URL on mobile for the menu's notice", async () => {
     vi.stubGlobal(
       "matchMedia",
-      vi
-        .fn()
-        .mockReturnValue({
-          matches: true,
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-        }),
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
     );
     vi.mocked(api.capabilities).mockResolvedValue({
       ...empty,
@@ -159,11 +159,23 @@ describe("authentication consumer boundaries", () => {
     }
     application(<Consumer />);
     await waitFor(() =>
-      expect(screen.getByTestId("route")).toHaveTextContent("/UI-33"),
+      expect(screen.getByTestId("route")).toHaveTextContent("/UI-23"),
     );
+    expect(
+      screen.queryByText("이 화면을 볼 권한이 없습니다."),
+    ).not.toBeInTheDocument();
   });
   it("rechecks the server instead of clearing other tabs on a stale zero countdown", async () => {
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance"] });
+    vi.useFakeTimers({
+      toFake: [
+        "Date",
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "performance",
+      ],
+    });
     const base = Date.parse(authenticated.serverTime);
     vi.setSystemTime(base);
     vi.mocked(api.session)
@@ -220,9 +232,29 @@ describe("authentication consumer boundaries", () => {
   });
 });
 
-it.each([['UI-01', '/UI-01'], ['UI-33', '/UI-01']])('honors only a permitted legacy hash target (%s)', async (allowed, expected) => {
-  vi.mocked(api.capabilities).mockResolvedValue({ ...empty, screens: { 'UI-01': ['INQ'] } });
-  function Location() { const value = useLocation(); return <p data-testid="hash-location">{value.pathname + value.hash}</p>; }
-  render(<MemoryRouter initialEntries={['/#' + allowed]}><AuthenticationBoundary><Location /></AuthenticationBoundary></MemoryRouter>);
-  await waitFor(() => expect(screen.getByTestId('hash-location')).toHaveTextContent(expected));
-});
+it.each([
+  ["UI-01", "/UI-01"],
+  ["UI-33", "/UI-01"],
+])(
+  "honors only a permitted legacy hash target (%s)",
+  async (allowed, expected) => {
+    vi.mocked(api.capabilities).mockResolvedValue({
+      ...empty,
+      screens: { "UI-01": ["INQ"] },
+    });
+    function Location() {
+      const value = useLocation();
+      return <p data-testid="hash-location">{value.pathname + value.hash}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/#" + allowed]}>
+        <AuthenticationBoundary>
+          <Location />
+        </AuthenticationBoundary>
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("hash-location")).toHaveTextContent(expected),
+    );
+  },
+);

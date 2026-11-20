@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
+import {
+  PermissionContext,
+  ScreenPermissionContext,
+} from "../../shared/permission/PermissionBoundary";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, Toast } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
@@ -87,6 +90,7 @@ function SharedApplicationContent({
   }, []);
   const location = useLocation(),
     navigate = useNavigate();
+  const permissions = useContext(PermissionContext);
   const [menus, setMenus] = useState<MenusData | null>(null),
     [user, setUser] = useState<CurrentUser | null>(null),
     [localPrefs, setPrefs] = useState<SharedPreference[]>([]);
@@ -112,7 +116,11 @@ function SharedApplicationContent({
     ),
     [userMenu, setUserMenu] = useState(false);
   const [favoriteNotice, setFavoriteNotice] = useState("");
-  useEffect(() => { if (!favoriteNotice) return; const timer = setTimeout(() => setFavoriteNotice(""), 3500); return () => clearTimeout(timer); }, [favoriteNotice]);
+  useEffect(() => {
+    if (!favoriteNotice) return;
+    const timer = setTimeout(() => setFavoriteNotice(""), 3500);
+    return () => clearTimeout(timer);
+  }, [favoriteNotice]);
   const userButton = useRef<HTMLButtonElement>(null);
   const saving = useRef(false),
     recentActivation = useRef(""),
@@ -143,10 +151,13 @@ function SharedApplicationContent({
     current = byScreen(active);
   const visibleOnDevice = (id: string) => !mobile || !byScreen(id)?.pcOnly;
   const registered = management?.items.find((row) => row.screenId === active);
+  const pcOnlyNotice = Boolean(
+    current && mobile && (registered?.pcOnly ?? current.pcOnly),
+  );
   const restriction =
     registered && !registered.use
       ? "사용 중지된 메뉴입니다."
-      : mobile && (registered?.pcOnly ?? current?.pcOnly)
+      : pcOnlyNotice
         ? "PC에서 이용해 주세요. PC전용 메뉴입니다."
         : "";
   useEffect(() => {
@@ -436,7 +447,9 @@ function SharedApplicationContent({
       favorites.includes(id)
         ? favorites.filter((item) => item !== id)
         : [...favorites, id],
-    ).then(ok => { if (ok && adding) setFavoriteNotice("즐겨찾기에 추가했습니다."); });
+    ).then((ok) => {
+      if (ok && adding) setFavoriteNotice("즐겨찾기에 추가했습니다.");
+    });
   };
   const fold = () => {
     const next = !folded;
@@ -518,12 +531,13 @@ function SharedApplicationContent({
       }}
     >
       <div className="sicost-app" data-screen-id="SCR-UI">
-        {favoriteNotice && createPortal(
-          <div className="sicost-toast-stack">
-            <Toast key={favoriteNotice} message={favoriteNotice} />
-          </div>,
-          document.body,
-        )}
+        {favoriteNotice &&
+          createPortal(
+            <div className="sicost-toast-stack">
+              <Toast key={favoriteNotice} message={favoriteNotice} />
+            </div>,
+            document.body,
+          )}
         <header className="sicost-header">
           <button
             type="button"
@@ -814,7 +828,10 @@ function SharedApplicationContent({
               {tabs
                 .filter((id) => byScreen(id))
                 .map((id) => (
-                  <div key={id} className={`sicost-work-tab${id === active ? " active" : ""}`}>
+                  <div
+                    key={id}
+                    className={`sicost-work-tab${id === active ? " active" : ""}`}
+                  >
                     <button onClick={() => go(id)}>
                       {isDirty?.(id) && "● "}
                       {byScreen(id)?.name}
@@ -846,10 +863,45 @@ function SharedApplicationContent({
                 {item.menuId}: {item.message}
               </p>
             ))}
-            {restriction && (
-              <p role="alert" className="sicost-banner sicost-tone-warn">
-                {restriction}
-              </p>
+            {pcOnlyNotice ? (
+              <section
+                className="sicost-mobile-pc-notice"
+                data-testid="pc-only-notice"
+                role="note"
+              >
+                <h2>PC에서 이용해 주세요</h2>
+                <p>
+                  「{current!.name}」는 큰 표를 다루는 화면이라 휴대폰에서는
+                  열리지 않습니다
+                </p>
+                <button
+                  type="button"
+                  data-testid="pc-only-dashboard-button"
+                  onClick={() => {
+                    const allowed = permissions
+                      ? Object.keys(permissions.screens)
+                      : nodes.map((node) => node.screenId!);
+                    const usable = allowed.filter(
+                      (id) => byScreen(id) && visibleOnDevice(id),
+                    );
+                    const first = usable.includes("UI-16")
+                      ? "UI-16"
+                      : usable[0];
+                    navigate(`/${first ?? "UI-22"}`, {
+                      replace: true,
+                      state: null,
+                    });
+                  }}
+                >
+                  대시보드로
+                </button>
+              </section>
+            ) : (
+              restriction && (
+                <p role="alert" className="sicost-banner sicost-tone-warn">
+                  {restriction}
+                </p>
+              )
             )}
             {!restriction && screenRegistry[active] && !byScreen(active) && (
               <p role="alert">이 화면을 볼 권한이 없습니다.</p>

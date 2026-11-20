@@ -133,7 +133,11 @@ it("767px는 저장 PC설정으로 직접주소 안내·768px는 진입", async 
     value: 767,
   });
   open();
-  await screen.findByText("PC에서 이용해 주세요. PC전용 메뉴입니다.");
+  await screen.findByRole("heading", { name: "PC에서 이용해 주세요" });
+  expect(screen.getByTestId("pc-only-notice")).toHaveTextContent(
+    "「메뉴 편집」",
+  );
+  expect(screen.getByRole("button", { name: "대시보드로" })).toBeVisible();
   expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-25");
   expect(screen.queryByText("메뉴 편집 본문")).not.toBeInTheDocument();
   Object.defineProperty(window, "innerWidth", {

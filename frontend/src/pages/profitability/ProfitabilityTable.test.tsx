@@ -241,28 +241,35 @@ describe("UI-03 공통 표시 경계", () => {
     const api = preferenceApi();
     mount(api);
     await screen.findByText("독립 시험");
+    const settings = within(
+      screen.getByTestId("profitability-column-settings"),
+    );
+    const table = within(screen.getByTestId("profitability-table"));
     const other = (await api.getPreferences()).items.find(
       (item) => item.key === "UI-27",
     );
-    await userEvent.click(screen.getByRole("button", { name: "열 설정" }));
+    await userEvent.click(settings.getByRole("button", { name: "열 설정" }));
+    const dialog = within(
+      screen.getByRole("dialog", { name: "현재 표 열 설정" }),
+    );
     expect(screen.getByTestId("column-preferences-panel")).toHaveAttribute(
       "data-screen-id",
       "SCR-UI-03-M1",
     );
-    await userEvent.click(screen.getByRole("button", { name: "소속 위로" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "직위 숨김" }));
+    await userEvent.click(dialog.getByRole("button", { name: "소속 위로" }));
+    await userEvent.click(dialog.getByRole("checkbox", { name: "직위 숨김" }));
     for (const label of ["이름", "개인 단가", "원가합계", "영업이익"])
       expect(
-        screen.getByRole("checkbox", { name: `${label} 숨김` }),
+        dialog.getByRole("checkbox", { name: `${label} 숨김` }),
       ).toBeDisabled();
-    await userEvent.click(screen.getByRole("button", { name: "적용" }));
+    await userEvent.click(dialog.getByRole("button", { name: "적용" }));
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     expect(
-      screen.queryByRole("columnheader", { name: "직위" }),
+      table.queryByRole("columnheader", { name: "직위" }),
     ).not.toBeInTheDocument();
-    expect(screen.getAllByRole("columnheader")[1]).toHaveTextContent("소속");
+    expect(table.getAllByRole("columnheader")[1]).toHaveTextContent("소속");
     const saved = (await api.getPreferences()).items.find(
       (item) => item.key === "UI-03",
     );
@@ -279,12 +286,17 @@ describe("UI-03 공통 표시 경계", () => {
     expect(
       (await api.getPreferences()).items.find((item) => item.key === "UI-27"),
     ).toEqual(other);
-    await userEvent.click(screen.getByRole("button", { name: "열 설정" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "소속 숨김" }));
-    await userEvent.click(screen.getByRole("button", { name: "취소" }));
+    await userEvent.click(settings.getByRole("button", { name: "열 설정" }));
+    const reopenedDialog = within(
+      screen.getByRole("dialog", { name: "현재 표 열 설정" }),
+    );
+    await userEvent.click(
+      reopenedDialog.getByRole("checkbox", { name: "소속 숨김" }),
+    );
+    await userEvent.click(reopenedDialog.getByRole("button", { name: "취소" }));
     expect(api.putPreference).toHaveBeenCalledTimes(1);
     expect(
-      screen.getByRole("columnheader", { name: "소속" }),
+      table.getByRole("columnheader", { name: "소속" }),
     ).toBeInTheDocument();
   });
   it("금액단위·밀도·건수는 기존 공통 설정으로 저장·복원하며 원값은 변하지 않는다", async () => {

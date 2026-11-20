@@ -165,8 +165,10 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     if (!permissions) return;
-    const screens = usableScreens,
-      first = screens.includes("UI-16") ? "UI-16" : screens[0];
+    // Device visibility chooses a landing page; it does not revoke menu access.
+    // Authorized PC-only URLs reach the shared menu's mobile notice.
+    const screens = Object.keys(permissions.screens),
+      first = usableScreens.includes("UI-16") ? "UI-16" : usableScreens[0];
     const active =
       location.hash.match(/^#(UI-\d{2})$/)?.[1] ?? location.pathname.slice(1);
     if (first && !screens.includes(active)) {
@@ -546,14 +548,14 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
         <SessionIndicator logoutOnly />
       </main>
     );
-  if (!usableScreens.length)
+  if (!usableScreens.length && !permissions.screens[location.pathname.slice(1)])
     return (
       <main data-testid="authentication-pc-required">
         <p>이 화면은 PC에서 이용해 주세요.</p>
         <SessionIndicator logoutOnly />
       </main>
     );
-  if (!usableScreens.includes(location.pathname.slice(1)))
+  if (!permissions.screens[location.pathname.slice(1)])
     return (
       <main
         data-testid="authentication-redirect-loading"

@@ -354,6 +354,19 @@
 .sicost-pc-notice {
   display: none;
 }
+.sicost-mobile-pc-notice {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--text-sub);
+}
+.sicost-mobile-pc-notice h2,
+.sicost-mobile-pc-notice p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .sicost-code-tabs {
   display: flex;
   gap: 4px;

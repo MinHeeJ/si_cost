@@ -209,10 +209,11 @@ it("registers the real dashboard once and keeps internal regions out of routes",
 });
 it("opens profile from the persistent shell and restores header focus after Escape", async () => {
   open();
-  const user = await screen.findByRole("button", { name: "임시 관리자" });
+  const header = within(await screen.findByRole("banner"));
+  const user = header.getByRole("button", { name: "임시 관리자" });
   expect(calls.some((call) => call.path === "/api/me/profile")).toBe(false);
   await userEvent.click(user);
-  await userEvent.click(screen.getByRole("button", { name: "내 정보" }));
+  await userEvent.click(header.getByRole("button", { name: "내 정보" }));
   const dialog = await screen.findByRole("dialog", { name: "내 정보" });
   expect(await within(dialog).findByText("실제 조회 사용자")).toBeVisible();
   expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();

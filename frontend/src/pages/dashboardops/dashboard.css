@@ -289,7 +289,81 @@
     font-size: 21px;
   }
 }
+.dashboard-print-period {
+  display: none;
+}
 @media print {
+  .sicost-app:has(.sicost-screen-host:not([hidden]) .dashboard-content),
+  .sicost-app:has(.sicost-screen-host:not([hidden]) .dashboard-content)
+    :is(
+      .sicost-app-body,
+      .sicost-main,
+      .sicost-screen-host:not([hidden]),
+      .sicost-screen
+    ) {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    container-type: normal;
+  }
+  .sicost-screen:has(.dashboard-content) .sicost-titlebar {
+    position: static;
+  }
+  .sicost-screen:has(.dashboard-content),
+  .sicost-screen:has(.dashboard-content) * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .sicost-app .sicost-screen-content:has(> .dashboard-content) {
+    display: block;
+    container-type: normal;
+  }
+  .sicost-screen-content > .dashboard-content {
+    display: block;
+  }
+  .dashboard-print-period {
+    display: block;
+    margin: 0 0 8px;
+  }
+  .dashboard-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* These buttons are data cards, not print controls. Override only them. */
+  .dashboard-content button.dashboard-metric,
+  .dashboard-content button.dashboard-list-row {
+    display: flex !important;
+    color: #111;
+    border: 1px solid #aaa;
+    background: #fff;
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .dashboard-metric {
+    padding: 12px;
+  }
+  .dashboard-metric > strong {
+    font-size: 21px;
+    line-height: 1.3;
+  }
+  .dashboard-compact-basis.sicost-sr-only {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+  }
+  .dashboard-row-target {
+    display: none;
+  }
   .dashboard-toolbar {
     display: none;
   }
