@@ -20,6 +20,7 @@ import { DashboardScreen } from "./DashboardScreen";
 import { SharedScreenContext } from "../shared/SharedScreenContext";
 import { dashboardFixture } from "./dashboardFixture";
 import * as api from "./dashboardApi";
+import { dashboardMessage } from "./dashboardPresentation";
 vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({ children }: { children: ReactNode }) => (
     <section>{children}</section>
@@ -159,7 +160,7 @@ it("renders the five summaries and all twelve, six and three rows without comput
     "1유형 · 급함 1유형",
   );
   expect(screen.getByRole("img")).toHaveAccessibleName(
-    "매출·매출원가 실선과 ALL 매출목표 점선",
+    "매출·매출원가 실선과 회사 전체 매출목표 점선",
   );
   expect(
     screen.queryByRole("button", { name: "저장" }),
@@ -348,7 +349,7 @@ it.each([null, 0])("마감점검 미확인과 실제0을 구별한다: %s", asyn
   ready();
   const panel = await screen.findByTestId("dashboard-close");
   expect(panel).toHaveTextContent(
-    value === null ? "MM_OVER –건" : "MM_OVER 0건",
+    value === null ? "MM 초과 –건" : "MM 초과 0건",
   );
   expect(panel).toHaveTextContent("5/6");
   expect(panel).toHaveTextContent(value === null ? "원천 미확인" : "실제 0건");
@@ -369,6 +370,176 @@ const cardTargets = [
   ["utilization", "UI-28"],
   ["receivable", "UI-13"],
 ] as const;
+it("인쇄 이벤트와 복귀 포커스는 현재 표시 결과를 추가 조회하지 않는다", async () => {
+  let clock = 100_000;
+  const now = vi.spyOn(Date, "now").mockImplementation(() => clock);
+  try {
+    ready();
+    await screen.findByTestId("dashboard-metric-sales");
+    await waitFor(() =>
+      expect(screen.getByTestId("dashboard-screen")).toHaveAttribute(
+        "aria-busy",
+        "false",
+      ),
+    );
+    const before = cardTargets.map(
+      ([id]) => screen.getByTestId(`dashboard-metric-${id}`).textContent,
+    );
+    clock += 31_000;
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"));
+      window.dispatchEvent(new Event("focus"));
+    });
+    clock += 60_000;
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"));
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(api.getDashboard).toHaveBeenCalledTimes(1);
+    expect(
+      cardTargets.map(
+        ([id]) => screen.getByTestId(`dashboard-metric-${id}`).textContent,
+      ),
+    ).toEqual(before);
+    expect(screen.getByTestId("dashboard-metric-receivable")).toHaveTextContent(
+      "기준일 2026-07-15",
+    );
+  } finally {
+    now.mockRestore();
+  }
+});
+it("모든 위젯·배지·툴팁에서 내부 원천을 제거하고 실제 기준월과 업무 이름을 보존한다", async () => {
+  data.selectedMonth = "2026-06";
+  data.salesCostTrendBasis = {
+    ...data.salesCostTrendBasis,
+    basisMonth: "2026-06",
+    sourceService: "OperatingProfit",
+  };
+  data.supplyBasis = {
+    ...data.supplyBasis,
+    basisMonth: "2026-07",
+    sourceService: "WorkforceForecast/SalesPipeline",
+  };
+  data.pipeline.basis = {
+    ...data.pipeline.basis,
+    basisMonth: "2026-08",
+    sourceService: "WorkforceForecast/SalesPipeline",
+  };
+  data.actionsBasis = {
+    ...data.actionsBasis,
+    sourceService:
+      "Receivables/CorporateTax/CashFlow/Workforce/Project/MonthClose",
+  };
+  data.closeProgress.remainingChecks = [
+    "BILL",
+    "SETL",
+    "BILL_MISS",
+    "NEW_CHECK",
+  ].map((checkCode, i) => ({
+    checkCode,
+    status: "WARN",
+    count: i + 1,
+    reason: "상세 상태 확인",
+  }));
+  data.projectAlerts[0].projectName = "API/ALL Project";
+  data.pipeline.startingSoon = [
+    {
+      opportunityId: "opportunity",
+      opportunityName: "SalesPipeline/ALL 기회",
+      startMonth: "2026-08",
+      expectedAmount: "1001",
+      winProbabilityRate: "50",
+      link: { screenId: "UI-29", linkKey: null },
+    },
+  ];
+  ready();
+  const root = await screen.findByTestId("dashboard-screen");
+  expect(screen.getByTestId("dashboard-trend")).toHaveTextContent(
+    "조회 기준월 2026-06",
+  );
+  expect(screen.getByTestId("dashboard-supply")).toHaveTextContent(
+    "예측 기준월 2026-07",
+  );
+  expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent(
+    "집계 기준월 2026-08",
+  );
+  expect(root).toHaveTextContent("세금계산서 번호 미입력 1건");
+  expect(root).toHaveTextContent("영업 파트 정산 2건");
+  expect(root).toHaveTextContent("청구 누락 점검 3건");
+  expect(root).toHaveTextContent("마감 점검 4건");
+  expect(root).not.toHaveTextContent(
+    /OperatingProfit|Receivables|NEW_CHECK|BILL_MISS|SETL|·\s*·|·\s*$/,
+  );
+  expect(root).toHaveTextContent("월단위 마진율");
+  expect(root).toHaveTextContent("API/ALL Project");
+  expect(root).toHaveTextContent("SalesPipeline/ALL 기회");
+  for (const id of ["dashboard-close", "dashboard-parts", "dashboard-cash"])
+    expect(screen.getByTestId(id).querySelector(".dashboard-basis")).toBeNull();
+  await userEvent.click(screen.getByTestId("dashboard-basis-help"));
+  expect(screen.getByRole("tooltip")).not.toHaveTextContent(
+    /OperatingProfit|회사 손익|sourceService/,
+  );
+  expect(root.querySelector('[title*="OperatingProfit"]')).toBeNull();
+});
+it.each(["FAILED", "UNCONFIRMED", "EMPTY"] as const)(
+  "%s 상태에서도 진단 식별자 대신 안내와 상태를 표시한다",
+  async (status) => {
+    data.actionsBasis = {
+      ...data.actionsBasis,
+      status,
+      reasons: ["OperatingProfit /api/dashboard 조회 실패"],
+    };
+    data.cashForecast![0].unconfirmedReasons = [
+      "저장 REAL_PAY_AMT · 현재구분 OS 예정",
+      "NEW_INTERNAL_CODE",
+    ];
+    ready();
+    await screen.findByTestId("dashboard-actions");
+    expect(screen.getByTestId("dashboard-actions")).not.toHaveTextContent(
+      /OperatingProfit|\/api\//,
+    );
+    expect(screen.getByTestId("dashboard-actions")).toHaveTextContent(
+      "자료 상태를 확인해 주세요.",
+    );
+    expect(screen.getByTestId("dashboard-cash")).toHaveTextContent(
+      "저장 실지급액 · 현재구분 외주 예정",
+    );
+    expect(screen.getByTestId("dashboard-cash")).not.toHaveTextContent(
+      /REAL_PAY_AMT|NEW_INTERNAL_CODE/,
+    );
+  },
+);
+it("조회 오류의 요청 번호·API 경로를 화면에 내보내지 않는다", async () => {
+  const { ApiError } = await import("../../shared/api");
+  vi.mocked(api.getDashboard).mockRejectedValue(
+    new ApiError(500, {
+      success: false,
+      meta: {},
+      code: "FAILED",
+      message: "OperatingProfit /api/dashboard",
+      requestId: "internal-request-id",
+    }),
+  );
+  ready();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "대시보드를 불러오지 못했습니다.",
+  );
+  expect(screen.getByRole("alert")).not.toHaveTextContent(
+    /internal-request-id|OperatingProfit|\/api\//,
+  );
+});
+it("시스템 계산 설명만 번역하며 업무 약어와 기간은 유지한다", () => {
+  expect(dashboardMessage("AMT + VAT_AMT · IO_DT 없으면 FIN_YM")).toBe(
+    "금액 + 부가세 · 입출금일 없으면 재무 기준월",
+  );
+  expect(dashboardMessage("MM 초과 2명 · 2026-07")).toBe(
+    "MM 초과 2명 · 2026-07",
+  );
+  expect(dashboardMessage("현재구분 CT 예정")).toBe("현재구분 계약직 예정");
+  expect(dashboardMessage("신규 점검 FUTURE 결과")).toBe(
+    "자료 상태를 확인해 주세요.",
+  );
+});
 it.each(
   cardTargets.flatMap(([card, target]) =>
     [null, "0", "12.3"].map((value) => ({ card, target, value })),
@@ -472,11 +643,17 @@ it("등록되지 않은 대상과 0건 할일은 업무 화면으로 이동하�
 it("retains cards through throttled focus refresh, rejects duplicate/hidden requests and offers retry after failure", async () => {
   let clock = 100_000;
   const now = vi.spyOn(Date, "now").mockImplementation(() => clock);
-  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  const visibility = vi
+    .spyOn(document, "visibilityState", "get")
+    .mockReturnValue("visible");
   try {
     ready();
     const card = await screen.findByTestId("dashboard-metric-sales");
-    await waitFor(() => expect(screen.queryByText("대시보드를 불러오는 중입니다.")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByText("대시보드를 불러오는 중입니다."),
+      ).not.toBeInTheDocument(),
+    );
     act(() => window.dispatchEvent(new Event("focus")));
     expect(api.getDashboard).toHaveBeenCalledTimes(1);
     clock += 31_000;
@@ -485,28 +662,53 @@ it("retains cards through throttled focus refresh, rejects duplicate/hidden requ
     expect(api.getDashboard).toHaveBeenCalledTimes(1);
     visibility.mockReturnValue("visible");
     let fail!: (reason: Error) => void;
-    vi.mocked(api.getDashboard).mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+    vi.mocked(api.getDashboard).mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
     act(() => window.dispatchEvent(new Event("focus")));
     await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(2));
     expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
     expect(screen.getByText("갱신 중…")).toBeVisible();
-    act(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("focus")); });
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new Event("focus"));
+    });
     expect(api.getDashboard).toHaveBeenCalledTimes(2);
     await act(async () => fail(new Error("temporary network failure")));
     expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
     expect(screen.getByText(/갱신 실패/)).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(3));
-    await waitFor(() => expect(screen.queryByText(/갱신 실패/)).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText(/갱신 실패/)).not.toBeInTheDocument(),
+    );
     expect(screen.getByTestId("dashboard-metric-sales")).toBe(card);
-  } finally { now.mockRestore(); visibility.mockRestore(); }
+  } finally {
+    now.mockRestore();
+    visibility.mockRestore();
+  }
 });
 it("clears cached business cards when a refresh loses authorization", async () => {
   ready();
   await screen.findByTestId("dashboard-metric-sales");
-  vi.mocked(api.getDashboard).mockRejectedValueOnce(new (await import("../../shared/api")).ApiError(403, {success:false,meta:{},code:"FORBIDDEN",message:"권한이 변경됐습니다.",requestId:"revoked"}));
+  vi.mocked(api.getDashboard).mockRejectedValueOnce(
+    new (await import("../../shared/api")).ApiError(403, {
+      success: false,
+      meta: {},
+      code: "FORBIDDEN",
+      message: "권한이 변경됐습니다.",
+      requestId: "revoked",
+    }),
+  );
   act(() => window.dispatchEvent(new CustomEvent("sicost:bills-committed")));
-  await waitFor(() => expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(
+      screen.queryByTestId("dashboard-metric-sales"),
+    ).not.toBeInTheDocument(),
+  );
   expect(screen.getByText("권한이 변경됐습니다.")).toBeVisible();
 });
 
@@ -523,7 +725,10 @@ it("shows the design's provisional month notice once and keeps detailed number s
   expect(bar).toHaveTextContent("마감 전이라 바뀔 수 있습니다");
   expect(within(bar).queryByText("오늘 기준")).not.toBeInTheDocument();
   await userEvent.click(within(bar).getByTestId("dashboard-basis-help"));
-  expect(screen.getByRole("tooltip")).toHaveTextContent("회사 손익");
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "이번 달 매출 · 2026-07",
+  );
+  expect(screen.getByRole("tooltip")).not.toHaveTextContent("회사 손익");
   expect(screen.getByRole("tooltip")).toHaveTextContent("조회 시각");
 });
 
@@ -551,33 +756,58 @@ it("does not invent a closed month and includes the year for a previous year's c
   expect(await screen.findByText("2025년 12월까지")).toBeInTheDocument();
 });
 
-it.each(["success", "failure"])("hides previous-month cards during a different-month request and after %s", async (outcome) => {
-  ready();
-  await screen.findByTestId("dashboard-metric-sales");
-  let resolve!: (value: api.DashboardData) => void;
-  let reject!: (reason: Error) => void;
-  vi.mocked(api.getDashboard).mockImplementationOnce(() => new Promise((ok, fail) => {
-    resolve = ok;
-    reject = fail;
-  }));
-  act(() => window.dispatchEvent(new CustomEvent("sicost:screen-period-changed", {
-    detail: { screenId: "UI-16", value: { type: "YEAR_MONTH", value: "2026-06" } },
-  })));
-  await waitFor(() => expect(api.getDashboard).toHaveBeenLastCalledWith("2026-06", expect.any(AbortSignal)));
-  expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument();
-  expect(screen.getByTestId("dashboard-export")).toBeDisabled();
-  expect(screen.queryByText(/선택월 2026-07/)).not.toBeInTheDocument();
-  if (outcome === "success") {
-    await act(async () => resolve({ ...data, selectedMonth: "2026-06" }));
-    expect(screen.getByTestId("dashboard-metric-sales")).toBeInTheDocument();
-    expect(screen.getByText(/선택월 2026-06/)).toBeInTheDocument();
-  } else {
-    await act(async () => reject(new Error("다른 월 조회 실패")));
-    expect(screen.getByText("다른 월 조회 실패")).toBeVisible();
-    expect(screen.queryByTestId("dashboard-metric-sales")).not.toBeInTheDocument();
+it.each(["success", "failure"])(
+  "hides previous-month cards during a different-month request and after %s",
+  async (outcome) => {
+    ready();
+    await screen.findByTestId("dashboard-metric-sales");
+    let resolve!: (value: api.DashboardData) => void;
+    let reject!: (reason: Error) => void;
+    vi.mocked(api.getDashboard).mockImplementationOnce(
+      () =>
+        new Promise((ok, fail) => {
+          resolve = ok;
+          reject = fail;
+        }),
+    );
+    act(() =>
+      window.dispatchEvent(
+        new CustomEvent("sicost:screen-period-changed", {
+          detail: {
+            screenId: "UI-16",
+            value: { type: "YEAR_MONTH", value: "2026-06" },
+          },
+        }),
+      ),
+    );
+    await waitFor(() =>
+      expect(api.getDashboard).toHaveBeenLastCalledWith(
+        "2026-06",
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(
+      screen.queryByTestId("dashboard-metric-sales"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("dashboard-export")).toBeDisabled();
-    await userEvent.click(screen.getByTestId("dashboard-retry"));
-    await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(3));
-    expect(api.getDashboard).toHaveBeenLastCalledWith("2026-06", expect.any(AbortSignal));
-  }
-});
+    expect(screen.queryByText(/선택월 2026-07/)).not.toBeInTheDocument();
+    if (outcome === "success") {
+      await act(async () => resolve({ ...data, selectedMonth: "2026-06" }));
+      expect(screen.getByTestId("dashboard-metric-sales")).toBeInTheDocument();
+      expect(screen.getByText(/선택월 2026-06/)).toBeInTheDocument();
+    } else {
+      await act(async () => reject(new Error("다른 월 조회 실패")));
+      expect(screen.getByText("다른 월 조회 실패")).toBeVisible();
+      expect(
+        screen.queryByTestId("dashboard-metric-sales"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("dashboard-export")).toBeDisabled();
+      await userEvent.click(screen.getByTestId("dashboard-retry"));
+      await waitFor(() => expect(api.getDashboard).toHaveBeenCalledTimes(3));
+      expect(api.getDashboard).toHaveBeenLastCalledWith(
+        "2026-06",
+        expect.any(AbortSignal),
+      );
+    }
+  },
+);

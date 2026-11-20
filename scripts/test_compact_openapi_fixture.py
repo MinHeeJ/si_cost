@@ -43,9 +43,13 @@ class CompactOpenApiFixtureTest(unittest.TestCase):
                 "responses": {"200": {"description": "contract description " * 150}},
             }} for index in range(400)
         }}
-        self.assertGreater(len(yaml.safe_dump(document).encode("utf-8")), LIMIT)
-        encoded = compact(document)
-        self.assertLessEqual(len(encoded), LIMIT)
+        # Exercise compaction with a bounded small reader, independently of the
+        # production reader budget and without constructing an oversized fixture.
+        limit = 1024 * 1024
+        self.assertGreater(len(yaml.safe_dump(document).encode("utf-8")), limit)
+        with patch("compact_openapi_fixture.LIMIT", limit):
+            encoded = compact(document)
+        self.assertLessEqual(len(encoded), limit)
         self.assertEqual(yaml.safe_load(encoded), document)
 
     def test_durable_fixture_is_complete_within_runtime_read_window(self):
@@ -68,13 +72,16 @@ class CompactOpenApiFixtureTest(unittest.TestCase):
                 self.assertLessEqual(len(fixture_bytes), limit)
                 self.assertEqual(json.loads(root_bytes), json.loads(fixture_bytes))
 
-    def test_bounded_reader_resolves_runtime_operations_without_authentication(self):
+    def test_bounded_reader_preserves_authenticated_runtime_contract(self):
         with FIXTURE.open("rb") as stream:
             document = yaml.safe_load(stream.read(LIMIT + 1))
         runtime = json.loads(Path("aiops.runtime-check.json").read_bytes())
-        self.assertFalse(runtime["auth"]["required"])
+        self.assertTrue(runtime["auth"]["required"])
         self.assertFalse(document.get("security"))
-        self.assertFalse(document.get("components", {}).get("securitySchemes"))
+        session = document["components"]["securitySchemes"]["sessionAuth"]
+        self.assertEqual(session["type"], "apiKey")
+        self.assertEqual(session["in"], "cookie")
+        self.assertEqual(session["name"], "JSESSIONID")
         for operation in (runtime["backend"]["health"], runtime["first_menu"]):
             with self.subTest(operation=operation["operation_id"]):
                 definition = document["paths"][operation["path"]][operation["method"].lower()]
