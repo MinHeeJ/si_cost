@@ -93,7 +93,7 @@ beforeEach(() => {
   vi.mocked(api.getWorkforceForecasts).mockResolvedValue(result());
   vi.mocked(api.getWorkforceForecastExport).mockResolvedValue({
     blob: new Blob(["xlsx"]),
-    filename: "인력수요예측_2026_20261012_090000.xlsx",
+    filename: "인력 수요 예측_2026_20261012_090000.xlsx",
   });
 });
 it("loads server year remaining months and displays three authoritative table rows, cards and chart", async () => {
@@ -362,7 +362,7 @@ it("blocks duplicate downloads while generation is pending", async () => {
   await act(async () => {
     resolve({
       blob: new Blob(["xlsx"]),
-      filename: "인력수요예측_2026_20261012_090000.xlsx",
+      filename: "인력 수요 예측_2026_20261012_090000.xlsx",
     });
   });
 });
