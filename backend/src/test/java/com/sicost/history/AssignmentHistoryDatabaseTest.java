@@ -59,7 +59,7 @@ class AssignmentHistoryDatabaseTest {
     }
     @Test void correctionPreservesSourceTypedRegistrationAndMonthsAcrossFreshCalculation() {
         var source=source();var monthly=monthly();var original=original();var before=months.calculate(months.required(id),months.mapper().histories(id),"ING","MO");
-        var saved=service.createAssignmentHistoryCorrection(id,2,input());assertThat(saved.original().corrected()).isEqualTo("Y");assertThat(saved.correction().correctionTargetSequence()).isEqualTo(2);assertThat(saved.correction().newUnitPrice()).isNull();assertThat(saved.correction().newContractMm()).isNull();assertThat(saved.correction().corrected()).isEqualTo("N");assertThat(saved.correction().actor()).isEqualTo("admin");
+        var saved=service.createAssignmentHistoryCorrection(id,2,input());assertThat(saved.original().corrected()).isEqualTo("Y");assertThat(saved.correction().correctionTargetSequence()).isEqualTo(2);assertThat(saved.correction().newUnitPrice()).isNull();assertThat(saved.correction().newContractMm()).isNull();assertThat(saved.correction().corrected()).isEqualTo("N");assertThat(saved.correction().actor()).isEqualTo("시스템 관리자");
         var after=original();original.put("crct_yn","Y");assertThat(after).isEqualTo(original);assertThat(source()).isEqualTo(source);assertThat(monthly()).isEqualTo(monthly);
         assertThat(months.calculate(months.required(id),months.mapper().histories(id),"ING","MO")).isEqualTo(before);
         assertThatThrownBy(()->service.createAssignmentHistoryCorrection(id,2,input())).isInstanceOf(ApiException.class);assertThat(repository.mapper().count(new Query(id,"CRCT",1,50,0))).isEqualTo(1);
