@@ -41,6 +41,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .dashboard-metric {
+  --dashboard-metric-tint: var(--primary-bg);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -52,19 +53,21 @@
   text-align: left;
   border: 1px solid var(--divider);
   border-radius: 10px;
-  background: var(--primary-bg);
+  background: color-mix(in oklab, var(--dashboard-metric-tint) 72%, var(--surface));
   color: var(--text);
   box-shadow: none;
 }
-.dashboard-metric-operating-profit,
+.dashboard-metric-operating-profit {
+  --dashboard-metric-tint: var(--info-bg);
+}
 .dashboard-metric-ytd-operating-profit {
-  background: var(--ok-bg);
+  --dashboard-metric-tint: color-mix(in oklab, var(--info-bg), var(--ok-bg));
 }
 .dashboard-metric-utilization {
-  background: var(--info-bg);
+  --dashboard-metric-tint: var(--ok-bg);
 }
 .dashboard-metric-receivable {
-  background: var(--warn-bg);
+  --dashboard-metric-tint: var(--warn-bg);
 }
 .dashboard-metric-details {
   margin-top: auto;
