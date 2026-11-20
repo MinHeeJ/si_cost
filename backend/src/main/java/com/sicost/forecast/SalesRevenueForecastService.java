@@ -63,10 +63,12 @@ public class SalesRevenueForecastService {
                 YearMonth start=parse(opportunity.startMonth());
                 int count=opportunity.months()==null?6:opportunity.months();
                 if (month.isBefore(start)||month.isAfter(start.plusMonths(count-1))) continue;
-                BigDecimal amount=opportunity.amount().multiply(opportunity.probability()).divide(BigDecimal.valueOf(count).multiply(new BigDecimal("100")),0,RoundingMode.DOWN);
-                BigDecimal all=opportunity.amount().divide(BigDecimal.valueOf(count),0,RoundingMode.DOWN);
+                // 식-57: 확률 반영 금액을 원 단위로 한 번 버린 뒤 달마다 버림으로 나누고, 끝자리는 마지막 달에 모아 합계를 맞춘다.
+                BigDecimal weighted=opportunity.amount().multiply(opportunity.probability()).divide(new BigDecimal("100"),0,RoundingMode.DOWN);
+                BigDecimal amount=spread(weighted,count,start,month);
+                BigDecimal all=spread(opportunity.amount(),count,start,month);
                 rows.add(new RevenueSource("OPPORTUNITY",opportunity.id(),opportunity.name(),opportunity.type(),month.toString(),amount.toPlainString(),all.toPlainString(),
-                    "DOWN(예상금액 / "+count+"개월 × "+opportunity.probability().toPlainString()+" / 100) · 모두 따면 확률100% 참고"));
+                    "버림(예상금액 × "+opportunity.probability().toPlainString()+" / 100) ÷ "+count+"개월 · 끝자리는 마지막 달(식-57) · 모두 따면 확률100% 참고"));
             }
             var selected=rows.stream().filter(r -> month.toString().equals(r.month())).toList();
             BigDecimal project=sum(selected.stream().filter(r -> "PROJECT".equals(r.sourceType())).map(RevenueSource::amount).toList());
@@ -79,6 +81,11 @@ public class SalesRevenueForecastService {
             plain(sum(months.stream().map(RevenueMonth::opportunityRevenue).toList())),plain(sum(months.stream().map(RevenueMonth::allWonRevenue).toList())),
             average(people.totals().stream().map(WorkforceMonth::demand).toList()),average(people.totals().stream().map(WorkforceMonth::supply).toList()),people.hiring().size());
         return new Result(from.toString(),6,summary,List.copyOf(months),List.copyOf(rows),people);
+    }
+    /** 식-57: 각 달 = 버림(합계 ÷ 개월), 마지막 달 = 합계 − 앞 달들의 합. */
+    static BigDecimal spread(BigDecimal total,int count,YearMonth start,YearMonth month) {
+        BigDecimal share=total.divide(BigDecimal.valueOf(count),0,RoundingMode.DOWN);
+        return month.equals(start.plusMonths(count-1L))?total.subtract(share.multiply(BigDecimal.valueOf(count-1L))):share;
     }
     private static BigDecimal sum(List<String> values) {return values.stream().anyMatch(Objects::isNull)?null:values.stream().map(BigDecimal::new).reduce(BigDecimal.ZERO,BigDecimal::add);}
     private static BigDecimal add(BigDecimal a,BigDecimal b){return a==null||b==null?null:a.add(b);}
