@@ -1,8 +1,14 @@
-import { formatAmount } from "../../shared/format";
+import { formatAmount, type AmountUnit } from "../../shared/format";
 import type { DashboardTrend } from "./dashboardApi";
 import { ChartHost } from "../../shared/charts/ChartHost";
 import { seriesChartOptions } from "../../shared/charts/chartAdapters";
-export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
+export function DashboardTrendChart({
+  rows,
+  amountUnit = "천원",
+}: {
+  rows: DashboardTrend[];
+  amountUnit?: AmountUnit;
+}) {
   const series = [
     { key: "salesAmount", label: "매출", style: "sales" },
     { key: "salesCostAmount", label: "매출원가", style: "cost" },
@@ -17,24 +23,37 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
   // Number conversion is limited to bounded SVG pixel coordinates, never business amounts.
   const y = (value: string) =>
     170 - Number(((BigInt(value) - low) * 14000n) / span) / 100;
-  const x = (index: number) => 80 + index * 39;
+  const x = (index: number) =>
+    rows.length <= 1 ? 305 : 80 + (index * 450) / (rows.length - 1);
   return (
     <div className="dashboard-chart">
       <small>
-        단위: 백만원 · 실적 실선 / 회사 전체 매출목표 점선 · 미확인은 연결하지
-        않음
+        단위: {amountUnit} · 실적 실선 / 회사 전체 매출목표 점선 · 미확인은
+        연결하지 않음
       </small>
       <ChartHost
-        option={seriesChartOptions({
-          categories: rows.map((row) => `${row.month.slice(5)}월`),
-          series: series.map((s) => ({
-            name: s.label,
-            values: rows.map((row) => row[s.key]),
-            dashed: s.style === "target",
-          })),
-          formatValue: (value) => `${formatAmount(value, "백만원")} 백만원`,
-          axisUnit: "백만원",
-        })}
+        option={{
+          ...seriesChartOptions({
+            categories: rows.map((row) => row.month),
+            series: series.map((s) => ({
+              name: s.label,
+              values: rows.map((row) => row[s.key]),
+              dashed: s.style === "target",
+              showEndLabel: false,
+            })),
+            formatValue: (value) =>
+              `${formatAmount(value, amountUnit)} ${amountUnit}`,
+            axisUnit: amountUnit,
+            edgeLabelsInside: true,
+          }),
+          grid: {
+            left: 12,
+            right: 16,
+            top: 64,
+            bottom: 30,
+            containLabel: true,
+          },
+        }}
       >
         <svg
           viewBox="0 0 560 215"
@@ -44,7 +63,7 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
           {[low, high].map((value, index) => (
             <g key={index}>
               <text x="72" y={y(String(value))} textAnchor="end">
-                {formatAmount(String(value), "백만원")}
+                {formatAmount(String(value), amountUnit)}
               </text>
               <line
                 x1="80"
@@ -73,7 +92,7 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
                     <circle cx={x(index)} cy={y(row[s.key]!)} r="3">
                       <title>
                         {row.month} {s.label}{" "}
-                        {formatAmount(row[s.key], "백만원")} 백만원
+                        {formatAmount(row[s.key], amountUnit)} {amountUnit}
                       </title>
                     </circle>
                   )}
@@ -83,7 +102,7 @@ export function DashboardTrendChart({ rows }: { rows: DashboardTrend[] }) {
           ))}
           {rows.map((row, index) => (
             <text key={row.month} x={x(index)} y="199" textAnchor="middle">
-              {row.month.slice(5)}월
+              {row.month}
             </text>
           ))}
         </svg>

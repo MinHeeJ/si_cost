@@ -12,6 +12,9 @@ import {
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { Dialog } from "../../shared/Dialog";
+import { DashboardSkeleton } from "./DashboardSkeleton";
+import { DashboardMetricCard } from "./DashboardMetricCard";
 import { SectionCard } from "../../shared/Surface";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { Icon } from "../../shared/Icon";
@@ -111,13 +114,20 @@ function Panel({
   title,
   children,
   testId,
+  actions,
 }: {
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   testId: string;
+  actions?: ReactNode;
 }) {
   return (
-    <SectionCard title={title} className="dashboard-panel" testId={testId}>
+    <SectionCard
+      title={title}
+      actions={actions}
+      className="dashboard-panel"
+      testId={testId}
+    >
       {children}
     </SectionCard>
   );
@@ -126,6 +136,8 @@ export function DashboardScreen({
   amountUnit = "천원",
 }: { amountUnit?: AmountUnit } = {}) {
   const [month, setMonth] = useState<string>();
+  const [trendRange, setTrendRange] = useState<"recent" | "all">("recent");
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [receivedData, setData] = useState<api.DashboardData>();
   // Retain cards only while refreshing the same selected period.
   const data =
@@ -144,6 +156,18 @@ export function DashboardScreen({
     { menus } = useSharedScreen("UI-16");
   const money = (value: string | null) => formatAmount(value, amountUnit);
   const closeProgress = data?.closeProgress;
+  const actions =
+    data?.actions
+      .filter((action) => action.count > 0)
+      .sort((a, b) => Number(b.urgent) - Number(a.urgent)) ?? [];
+  const trendRows = (data?.salesCostTrend ?? []).filter((row) => {
+    if (!data || trendRange === "all") return true;
+    const [year, monthNumber] = data.selectedMonth.split("-").map(Number);
+    const [rowYear, rowMonth] = row.month.split("-").map(Number);
+    const distance = (year - rowYear) * 12 + monthNumber - rowMonth;
+    return distance >= 0 && distance < 3;
+  });
+  useEffect(() => setActionsOpen(false), [month]);
   const requestPending = useRef(false),
     lastReceived = useRef(0);
   const printing = useRef(false),
@@ -273,6 +297,117 @@ export function DashboardScreen({
       retryTestId="dashboard-retry"
     />
   );
+  const actionRow = (action: api.DashboardAction, inDialog = false) => (
+    <button
+      className={`dashboard-list-row ${action.urgent ? "urgent" : "warning"}`}
+      key={action.actionCode}
+      type="button"
+      data-testid={`dashboard-${inDialog ? "modal-action" : "action"}-${testKey(action.actionCode)}`}
+      onClick={() => {
+        if (inDialog) setActionsOpen(false);
+        go(
+          action.link,
+          action.actionCode === "CASH_SHORTAGE" && action.link.linkKey
+            ? { ...action.basis, basisMonth: action.link.linkKey }
+            : action.basis,
+          {
+            section:
+              action.actionCode === "OVERDUE_RECEIVABLE"
+                ? "receivables"
+                : action.actionCode === "BILLING_MISSING"
+                  ? "checks"
+                  : action.actionCode === "CORPORATE_TAX_DUE"
+                    ? "tax"
+                    : action.actionCode === "STAFF_SHORTAGE" &&
+                        action.link.screenId === "UI-28"
+                      ? "supply"
+                      : undefined,
+            filter:
+              action.actionCode === "OVERDUE_RECEIVABLE"
+                ? "overdue"
+                : action.actionCode === "MM_OVER"
+                  ? "MM_OVER"
+                  : undefined,
+          },
+        );
+      }}
+    >
+      <span className="dashboard-row-icon">
+        <Icon name="warning" size={18} />
+      </span>
+      <span>
+        <strong>
+          {actionLabels[action.actionCode] ?? "확인할 일"} {action.count}건
+        </strong>
+        <small>{dashboardMessage(action.reason)}</small>
+        <small>
+          {[
+            ...action.months,
+            action.amount !== null
+              ? `${money(action.amount)} ${amountUnit}`
+              : null,
+            action.personCount !== null
+              ? `${formatFixedDecimal(action.personCount, 1)}명`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </small>
+        {action.withoutNextAssignmentCount !== null && (
+          <small>
+            다음 배정 없음 {action.withoutNextAssignmentCount}명 · 추천 자리
+            있음 {count(action.recommendedPlacementCount)}명
+          </small>
+        )}
+        <DashboardBasis basis={action.basis} />
+      </span>
+      <span className="dashboard-row-target">
+        {flattenMenus(menus).find(
+          (menu) => menu.screenId === action.link.screenId,
+        )?.name ?? "원천 보기"}{" "}
+        ›
+      </span>
+    </button>
+  );
+  const metrics = (financial: boolean) =>
+    data && (
+      <div
+        className={`dashboard-metrics dashboard-${financial ? "financial" : "operational"}-metrics`}
+      >
+        {data.metrics
+          .filter(
+            (card) =>
+              !["UTILIZATION", "RECEIVABLE"].includes(card.metricCode) ===
+              financial,
+          )
+          .map((card) => (
+            <DashboardMetricCard
+              key={card.metricCode}
+              card={card}
+              month={data.selectedMonth}
+              amountUnit={amountUnit}
+              onOpen={() =>
+                go(
+                  card.link,
+                  card.basis,
+                  card.metricCode === "RECEIVABLE"
+                    ? { section: "receivables" }
+                    : {},
+                )
+              }
+            >
+              <DashboardBasis
+                basis={
+                  card.metricCode === "RECEIVABLE"
+                    ? { ...card.basis, basisMonth: null }
+                    : card.basis
+                }
+                compact
+              />
+            </DashboardMetricCard>
+          ))}
+      </div>
+    );
   return (
     <SharedScreenFrame screenId="UI-16">
       <div
@@ -282,10 +417,6 @@ export function DashboardScreen({
       >
         <ScreenTitleActions>
           <div className="dashboard-toolbar">
-            <small>
-              {data?.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} · 단위:{" "}
-              {amountUnit}
-            </small>
             {!mobile && (
               <button
                 data-testid="dashboard-export"
@@ -297,12 +428,15 @@ export function DashboardScreen({
             )}
           </div>
         </ScreenTitleActions>
-        {loading && !data && <p role="status">대시보드를 불러오는 중입니다.</p>}
-        {data && loading && (
-          <p role="status" className="sicost-refresh-status">
-            갱신 중…
-          </p>
+        {loading && (
+          <PeriodStatus className="dashboard-loading-status">
+            <span role="status" className="dashboard-loading-label">
+              <span className="dashboard-loading-spinner" aria-hidden="true" />
+              {data ? "갱신 중…" : "대시보드를 불러오는 중입니다."}
+            </span>
+          </PeriodStatus>
         )}
+        {loading && !data && <DashboardSkeleton />}
         {data && error != null && (
           <p role="status" className="sicost-refresh-status">
             갱신 실패 ·{" "}
@@ -331,9 +465,11 @@ export function DashboardScreen({
         {data && (
           <>
             <PeriodStatus className="dashboard-dates">
-              <span>
-                조회월 {data.selectedMonth} · 단위: {amountUnit}
+              <span className="dashboard-date-item">
+                {data.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} ·
+                단위: {amountUnit}
               </span>
+              <span>조회월 {data.selectedMonth}</span>
               <span className="dashboard-print-date">기준일 {data.today}</span>
               <span className="dashboard-date-item">
                 <HelpTooltip
@@ -347,7 +483,8 @@ export function DashboardScreen({
                   }
                 >
                   현재 미수·할일·경보·수급·기회·자금은 오늘 {data.today} /
-                  현재월 {data.currentMonth} 기준입니다.
+                  현재월 {data.currentMonth} 기준입니다. 청구 누락 의심은 선택월{" "}
+                  {data.selectedMonth} 기준입니다.
                   <br />
                   조회 시각 {formatDateTime(data.observedAt)}
                   {data.metrics.map((card) => (
@@ -397,8 +534,9 @@ export function DashboardScreen({
                 <span className="dashboard-date-item dashboard-date-current-note">
                   <Icon name="info" size={14} />
                   <span>
-                    미수금·확인할 일·경보·인력 수급·파이프라인·자금은{" "}
-                    <b>오늘 기준</b>입니다 (청구 누락 의심만 고른 달)
+                    재무 지표는 {data.selectedMonth} 기준, 미수금·확인할
+                    일·경보·인력 수급·파이프라인·자금은 <b>오늘 기준</b>입니다
+                    (청구 누락 의심만 고른 달)
                   </span>
                 </span>
               )}
@@ -408,167 +546,124 @@ export function DashboardScreen({
                 {data.currentMonth} 기준 · {formatDateTime(data.observedAt)}
               </span>
             </PeriodStatus>
-            <div className="dashboard-metrics">
-              {data.metrics.map((card) => (
-                <button
-                  className="dashboard-metric"
-                  key={card.metricCode}
-                  data-testid={`dashboard-metric-${testKey(card.metricCode)}`}
-                  onClick={() =>
-                    go(
-                      card.link,
-                      card.basis,
-                      card.metricCode === "RECEIVABLE"
-                        ? { section: "receivables" }
-                        : {},
-                    )
+            <div className="dashboard-main-grid">
+              {data.salesCostTrend && (
+                <Panel
+                  title="매출·원가 추이"
+                  testId="dashboard-trend"
+                  actions={
+                    <div
+                      className="dashboard-range"
+                      role="group"
+                      aria-label="추이 기간"
+                    >
+                      <button
+                        type="button"
+                        data-testid="dashboard-trend-recent"
+                        aria-pressed={trendRange === "recent"}
+                        onClick={() => setTrendRange("recent")}
+                      >
+                        최근 3개월
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="dashboard-trend-all"
+                        aria-pressed={trendRange === "all"}
+                        onClick={() => setTrendRange("all")}
+                      >
+                        전체 기간
+                      </button>
+                    </div>
                   }
                 >
-                  <span>
-                    {card.metricCode === "SALES"
-                      ? `${data.selectedMonth.slice(5)}월 매출`
-                      : card.metricCode === "OPERATING_PROFIT"
-                        ? `${data.selectedMonth.slice(5)}월 영업이익`
-                        : metricLabels[card.metricCode]}
-                  </span>
-                  <strong>
-                    {card.unit === "PERCENT"
-                      ? formatRate(card.value)
-                      : `${money(card.value)} ${amountUnit}`}
-                  </strong>
-                  {(card.metricCode === "SALES" ||
-                    card.metricCode === "OPERATING_PROFIT") && (
-                    <small>
-                      전월 대비 {formatRate(card.changeRate)} · 차액{" "}
-                      {money(card.difference)} {amountUnit}
-                    </small>
-                  )}
-                  {card.metricCode === "OPERATING_PROFIT" && (
-                    <small>이익률 {formatRate(card.profitRate)}</small>
-                  )}
-                  {(card.metricCode === "SALES" ||
-                    card.metricCode === "YTD_OPERATING_PROFIT") && (
-                    <small>
-                      {card.metricCode === "YTD_OPERATING_PROFIT"
-                        ? `1~${data.selectedMonth.slice(5)}월 · `
-                        : ""}
-                      목표 달성 {formatRate(card.achievementRate)}
-                    </small>
-                  )}
-                  {card.metricCode === "UTILIZATION" && (
-                    <small>
-                      목표 {formatRate(card.targetValue)} 대비{" "}
-                      {formatFixedDecimal(card.targetGapPercentagePoints, 1)}%p
-                      · 대기 {count(card.idlePersonCount)}명
-                    </small>
-                  )}
-                  {card.metricCode === "RECEIVABLE" && (
-                    <small className="dashboard-danger">
-                      연체 {count(card.overdueCount)}건{" "}
-                      {money(card.overdueAmount)} {amountUnit}
-                    </small>
-                  )}
+                  {metrics(true)}
                   <DashboardBasis
-                    basis={
-                      card.metricCode === "RECEIVABLE"
-                        ? { ...card.basis, basisMonth: null }
-                        : card.basis
-                    }
-                    compact
+                    basis={data.salesCostTrendBasis}
+                    periodLabel="조회 기준월"
                   />
-                </button>
-              ))}
-            </div>
-            <div className="dashboard-main-grid">
-              <Panel
-                title={`확인할 일 ${count(data.actionTypeCount)}유형 · 급함 ${count(data.urgentActionTypeCount)}유형`}
-                testId="dashboard-actions"
-              >
-                <DashboardBasis basis={data.actionsBasis} />
-                {data.actions.length === 0 &&
-                  (data.actionsBasis.status === "AVAILABLE" ||
-                    data.actionsBasis.status === "EMPTY") && (
-                    <p className="dashboard-empty">확인할 일이 없습니다</p>
-                  )}
-                {data.actions
-                  .filter((a) => a.count > 0)
-                  .map((action) => (
+                  <DashboardTrendChart
+                    rows={trendRows}
+                    amountUnit={amountUnit}
+                  />
+                  <details className="dashboard-trend-details">
+                    <summary data-testid="dashboard-trend-details">
+                      상세 숫자표
+                    </summary>
+                    <div className="sicost-table-viewport">
+                      <table
+                        className="sicost-table"
+                        aria-label="매출·원가 추이 숫자표"
+                      >
+                        <thead>
+                          <tr>
+                            <th>월</th>
+                            <th>매출 ({amountUnit})</th>
+                            <th>매출원가 ({amountUnit})</th>
+                            <th>목표 ({amountUnit})</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {trendRows.map((row) => (
+                            <tr
+                              key={row.month}
+                              data-testid={`dashboard-trend-${row.month}`}
+                            >
+                              <td>{row.month}</td>
+                              <td>{money(row.salesAmount)}</td>
+                              <td>{money(row.salesCostAmount)}</td>
+                              <td>{money(row.salesTargetAmount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                </Panel>
+              )}
+              <div className="dashboard-stack dashboard-top-stack">
+                {metrics(false)}
+                <Panel
+                  title={
+                    <>
+                      확인할 일{" "}
+                      <span className="dashboard-action-count">
+                        전체{" "}
+                        {data.actionTypeCount === null ? "–" : actions.length}
+                      </span>
+                      <span
+                        className={`dashboard-action-count${actions.some((action) => action.urgent) ? " urgent" : ""}`}
+                      >
+                        급함{" "}
+                        {data.urgentActionTypeCount === null
+                          ? "–"
+                          : actions.filter((action) => action.urgent).length}
+                      </span>
+                    </>
+                  }
+                  testId="dashboard-actions"
+                >
+                  <DashboardBasis basis={data.actionsBasis} />
+                  {actions.length === 0 &&
+                    (data.actionsBasis.status === "AVAILABLE" ||
+                      data.actionsBasis.status === "EMPTY") && (
+                      <p className="dashboard-empty">확인할 일이 없습니다</p>
+                    )}
+                  {actions.slice(0, 5).map((action) => actionRow(action))}
+                  {actions.length > 5 && (
                     <button
-                      className={`dashboard-list-row ${action.urgent ? "urgent" : "warning"}`}
-                      key={action.actionCode}
-                      data-testid={`dashboard-action-${testKey(action.actionCode)}`}
-                      onClick={() =>
-                        go(
-                          action.link,
-                          action.actionCode === "CASH_SHORTAGE" &&
-                            action.link.linkKey
-                            ? {
-                                ...action.basis,
-                                basisMonth: action.link.linkKey,
-                              }
-                            : action.basis,
-                          {
-                            section:
-                              action.actionCode === "OVERDUE_RECEIVABLE"
-                                ? "receivables"
-                                : action.actionCode === "BILLING_MISSING"
-                                  ? "checks"
-                                  : action.actionCode === "CORPORATE_TAX_DUE"
-                                    ? "tax"
-                                    : action.actionCode === "STAFF_SHORTAGE" &&
-                                        action.link.screenId === "UI-28"
-                                      ? "supply"
-                                      : undefined,
-                            filter:
-                              action.actionCode === "OVERDUE_RECEIVABLE"
-                                ? "overdue"
-                                : action.actionCode === "MM_OVER"
-                                  ? "MM_OVER"
-                                  : undefined,
-                          },
-                        )
-                      }
+                      type="button"
+                      className="dashboard-actions-all"
+                      data-testid="dashboard-actions-all"
+                      onClick={() => setActionsOpen(true)}
                     >
-                      <span className="dashboard-row-icon">
-                        <Icon name="warning" size={18} />
-                      </span>
-                      <span>
-                        <strong>
-                          {actionLabels[action.actionCode] ?? "확인할 일"}{" "}
-                          {action.count}건
-                        </strong>
-                        <small>{dashboardMessage(action.reason)}</small>
-                        <small>
-                          {[
-                            ...action.months,
-                            action.amount !== null
-                              ? `${money(action.amount)} ${amountUnit}`
-                              : null,
-                            action.personCount !== null
-                              ? `${formatFixedDecimal(action.personCount, 1)}명`
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </small>
-                        {action.withoutNextAssignmentCount !== null && (
-                          <small>
-                            다음 배정 없음 {action.withoutNextAssignmentCount}명
-                            · 추천 자리 있음{" "}
-                            {count(action.recommendedPlacementCount)}명
-                          </small>
-                        )}
-                        <DashboardBasis basis={action.basis} compact />
-                      </span>
-                      <span className="dashboard-row-target">
-                        {flattenMenus(menus).find(
-                          (menu) => menu.screenId === action.link.screenId,
-                        )?.name ?? "원천 보기"}{" "}
-                        ›
-                      </span>
+                      전체 {actions.length}유형 보기
                     </button>
-                  ))}
-              </Panel>
+                  )}
+                </Panel>
+              </div>
+            </div>
+            <div className="dashboard-two-grid">
+              <DashboardSupply data={data} />
               <div className="dashboard-stack">
                 {closeProgress && (
                   <Panel
@@ -588,13 +683,32 @@ export function DashboardScreen({
                       {closeProgress.totalCheckCount} ·{" "}
                       {closeProgress.snapshot ? "당시 마감 사본" : "현재 점검"}
                     </p>
-                    {closeProgress.passedCheckCount !== null && (
-                      <progress
-                        max={closeProgress.totalCheckCount}
-                        value={closeProgress.passedCheckCount}
-                        aria-label="마감 점검 진행"
-                      />
-                    )}
+                    {closeProgress.passedCheckCount !== null &&
+                      closeProgress.totalCheckCount > 0 && (
+                        <div
+                          className="dashboard-close-segments"
+                          role="progressbar"
+                          aria-label="마감 점검 진행"
+                          aria-valuemin={0}
+                          aria-valuemax={closeProgress.totalCheckCount}
+                          aria-valuenow={closeProgress.passedCheckCount}
+                        >
+                          {Array.from(
+                            { length: closeProgress.totalCheckCount },
+                            (_, index) => (
+                              <span
+                                key={index}
+                                aria-hidden="true"
+                                className={
+                                  index < closeProgress.passedCheckCount!
+                                    ? "passed"
+                                    : ""
+                                }
+                              />
+                            ),
+                          )}
+                        </div>
+                      )}
                     {closeProgress.remainingChecks.map((check) => (
                       <p
                         key={check.checkCode}
@@ -660,124 +774,6 @@ export function DashboardScreen({
                 )}
               </div>
             </div>
-            <div className="dashboard-two-grid">
-              {data.salesCostTrend && (
-                <Panel title="매출·원가 추이" testId="dashboard-trend">
-                  <DashboardBasis
-                    basis={data.salesCostTrendBasis}
-                    periodLabel="조회 기준월"
-                  />
-                  <DashboardTrendChart rows={data.salesCostTrend} />
-                  <div className="sicost-table-viewport">
-                    <table
-                      className="sicost-table"
-                      aria-label="매출·원가 추이 숫자표"
-                    >
-                      <thead>
-                        <tr>
-                          <th>월</th>
-                          <th>매출 ({amountUnit})</th>
-                          <th>매출원가 ({amountUnit})</th>
-                          <th>목표 ({amountUnit})</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.salesCostTrend.map((row) => (
-                          <tr
-                            key={row.month}
-                            data-testid={`dashboard-trend-${row.month}`}
-                          >
-                            <td>{row.month}</td>
-                            <td>{money(row.salesAmount)}</td>
-                            <td>{money(row.salesCostAmount)}</td>
-                            <td>{money(row.salesTargetAmount)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Panel>
-              )}
-              <Panel
-                title="앞으로 6개월 인력 수급 예측"
-                testId="dashboard-supply"
-              >
-                <DashboardBasis
-                  basis={data.supplyBasis}
-                  periodLabel="예측 기준월"
-                />
-                <p>
-                  {data.scope === "ALL"
-                    ? "전체 인력"
-                    : "허용된 담당 범위의 인력"}{" "}
-                  · 미충원 포함 · 단위: 명
-                </p>
-                <ChartHost
-                  option={seriesChartOptions({
-                    categories: data.supplyForecast.map((row) => row.month),
-                    series: [
-                      {
-                        name: "필요",
-                        type: "bar",
-                        values: data.supplyForecast.map(
-                          (row) => row.requiredPersons,
-                        ),
-                      },
-                      {
-                        name: "가용",
-                        type: "bar",
-                        values: data.supplyForecast.map(
-                          (row) => row.availablePersons,
-                        ),
-                      },
-                    ],
-                    formatValue: (value) => `${formatFixedDecimal(value, 1)}명`,
-                    axisUnit: "명",
-                  })}
-                >
-                  <p className="dashboard-empty">
-                    차트 대신 아래 숫자표에서 인력 수급 예측을 확인할 수
-                    있습니다.
-                  </p>
-                </ChartHost>
-                <div className="sicost-table-viewport">
-                  <table
-                    className="sicost-table"
-                    aria-label="인력 수급 예측 숫자표"
-                  >
-                    <thead>
-                      <tr>
-                        <th>월</th>
-                        <th>필요</th>
-                        <th>가용</th>
-                        <th>차이</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.supplyForecast.map((row) => (
-                        <tr
-                          key={row.month}
-                          data-testid={`dashboard-supply-${row.month}`}
-                        >
-                          <td>{row.month}</td>
-                          <td>{formatFixedDecimal(row.requiredPersons, 1)}</td>
-                          <td>{formatFixedDecimal(row.availablePersons, 1)}</td>
-                          <td
-                            className={
-                              row.differencePersons?.startsWith("-")
-                                ? "dashboard-danger"
-                                : ""
-                            }
-                          >
-                            {formatFixedDecimal(row.differencePersons, 1)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-            </div>
             <div className="dashboard-bottom-grid">
               {data.salesParts && (
                 <Panel
@@ -794,44 +790,54 @@ export function DashboardScreen({
                         영업 파트 자료가 없습니다.
                       </p>
                     )}
-                  <table className="sicost-table" aria-label="영업 파트별 실적">
-                    <thead>
-                      <tr>
-                        <th>파트</th>
-                        <th>매출 ({amountUnit})</th>
-                        <th>전체원가 ({amountUnit})</th>
-                        <th>기여이익률</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.salesParts.map((row) => (
-                        <tr
-                          key={row.partId ?? "unassigned"}
-                          data-testid={`dashboard-part-${testKey(row.partId ?? "unassigned")}`}
-                        >
-                          <td>{row.partName}</td>
-                          <td>{money(row.salesAmount)}</td>
-                          <td>{money(row.projectCostAmount)}</td>
-                          <td>{formatRate(row.contributionMarginRate)}</td>
+                  <div className="sicost-table-viewport">
+                    <table
+                      className="sicost-table"
+                      aria-label="영업 파트별 실적"
+                    >
+                      <thead>
+                        <tr>
+                          <th>파트</th>
+                          <th>매출 ({amountUnit})</th>
+                          <th>전체원가 ({amountUnit})</th>
+                          <th>기여이익률</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {data.salesParts.map((row) => (
+                          <tr
+                            key={row.partId ?? "unassigned"}
+                            data-testid={`dashboard-part-${testKey(row.partId ?? "unassigned")}`}
+                          >
+                            <td>{row.partName}</td>
+                            <td>{money(row.salesAmount)}</td>
+                            <td>{money(row.projectCostAmount)}</td>
+                            <td>{formatRate(row.contributionMarginRate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Panel>
               )}
-              <Panel title="영업 파이프라인" testId="dashboard-pipeline">
-                <button
-                  type="button"
-                  data-testid="dashboard-pipeline-open"
-                  onClick={() =>
-                    go(
-                      { screenId: "UI-29", linkKey: null },
-                      data.pipeline.basis,
-                    )
-                  }
-                >
-                  자세히
-                </button>
+              <Panel
+                title="영업 파이프라인"
+                testId="dashboard-pipeline"
+                actions={
+                  <button
+                    type="button"
+                    data-testid="dashboard-pipeline-open"
+                    onClick={() =>
+                      go(
+                        { screenId: "UI-29", linkKey: null },
+                        data.pipeline.basis,
+                      )
+                    }
+                  >
+                    자세히
+                  </button>
+                }
+              >
                 <DashboardBasis
                   basis={data.pipeline.basis}
                   periodLabel="집계 기준월"
@@ -875,6 +881,47 @@ export function DashboardScreen({
               {data.cashForecast && (
                 <Panel title="자금 (앞으로 3개월)" testId="dashboard-cash">
                   <DashboardBasis basis={data.cashBasis} hidePeriod />
+                  <div data-testid="dashboard-cash-chart">
+                    <ChartHost
+                      option={{
+                        ...seriesChartOptions({
+                          categories: data.cashForecast.map((row) => row.month),
+                          series: [
+                            {
+                              name: "월말 잔액",
+                              values: data.cashForecast.map(
+                                (row) => row.closingBalance,
+                              ),
+                              showEndLabel: false,
+                            },
+                            {
+                              name: "최소 자금",
+                              values: data.cashForecast.map(
+                                (row) => row.minimumCashAmount,
+                              ),
+                              dashed: true,
+                            },
+                          ],
+                          formatValue: (value) =>
+                            `${money(value)} ${amountUnit}`,
+                          axisUnit: amountUnit,
+                          edgeLabelsInside: true,
+                        }),
+                        grid: {
+                          left: 12,
+                          right: 16,
+                          top: 64,
+                          bottom: 30,
+                          containLabel: true,
+                        },
+                      }}
+                    >
+                      <p>
+                        아래 월별 행에서 월말 잔액과 최소 자금을 확인할 수
+                        있습니다.
+                      </p>
+                    </ChartHost>
+                  </div>
                   {data.cashForecast.map((row) => (
                     <button
                       className="dashboard-list-row"
@@ -889,24 +936,7 @@ export function DashboardScreen({
                       }
                     >
                       <span>
-                        <strong>
-                          {row.month}{" "}
-                          <StatusBadge
-                            tone={
-                              row.shortage === true
-                                ? "bad"
-                                : row.shortage === null
-                                  ? "warn"
-                                  : "info"
-                            }
-                          >
-                            {row.shortage === true
-                              ? "자금 부족"
-                              : row.shortage === null
-                                ? "미확인"
-                                : "예측"}
-                          </StatusBadge>
-                        </strong>
+                        <strong>{row.month} </strong>
                         <small>
                           월말 잔액 {money(row.closingBalance)} {amountUnit}
                         </small>
@@ -917,14 +947,108 @@ export function DashboardScreen({
                           <small key={i}>{dashboardMessage(reason)}</small>
                         ))}
                       </span>
+                      <StatusBadge
+                        tone={
+                          row.shortage === true
+                            ? "bad"
+                            : row.shortage === null
+                              ? "warn"
+                              : "info"
+                        }
+                      >
+                        {row.shortage === true
+                          ? "자금 부족"
+                          : row.shortage === null
+                            ? "미확인"
+                            : "예측"}
+                      </StatusBadge>
                     </button>
                   ))}
                 </Panel>
               )}
             </div>
+            <Dialog
+              open={actionsOpen}
+              title={`확인할 일 전체 ${actions.length}유형`}
+              onCancel={() => setActionsOpen(false)}
+              onConfirm={() => setActionsOpen(false)}
+              confirmLabel="닫기"
+              hideCancel
+              testId="dashboard-actions-dialog"
+              confirmTestId="dashboard-actions-close"
+            >
+              <div className="dashboard-actions-list">
+                {actions.map((action) => actionRow(action, true))}
+              </div>
+            </Dialog>
           </>
         )}
       </div>
     </SharedScreenFrame>
+  );
+}
+
+function DashboardSupply({ data }: { data: api.DashboardData }) {
+  return (
+    <Panel title="앞으로 6개월 인력 수급 예측" testId="dashboard-supply">
+      <DashboardBasis basis={data.supplyBasis} periodLabel="예측 기준월" />
+      <p>
+        {data.scope === "ALL" ? "전체 인력" : "허용된 담당 범위의 인력"} ·
+        미충원 포함 · 단위: 명
+      </p>
+      <ChartHost
+        option={seriesChartOptions({
+          categories: data.supplyForecast.map((row) => row.month),
+          series: [
+            {
+              name: "필요",
+              type: "bar",
+              values: data.supplyForecast.map((row) => row.requiredPersons),
+            },
+            {
+              name: "가용",
+              type: "bar",
+              values: data.supplyForecast.map((row) => row.availablePersons),
+            },
+          ],
+          formatValue: (value) => `${formatFixedDecimal(value, 1)}명`,
+          axisUnit: "명",
+        })}
+      >
+        <p className="dashboard-empty">
+          차트 대신 아래 숫자표에서 인력 수급 예측을 확인할 수 있습니다.
+        </p>
+      </ChartHost>
+      <div className="sicost-table-viewport">
+        <table className="sicost-table" aria-label="인력 수급 예측 숫자표">
+          <thead>
+            <tr>
+              <th>월</th>
+              <th>필요</th>
+              <th>가용</th>
+              <th>차이</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.supplyForecast.map((row) => (
+              <tr key={row.month} data-testid={`dashboard-supply-${row.month}`}>
+                <td>{row.month}</td>
+                <td>{formatFixedDecimal(row.requiredPersons, 1)}</td>
+                <td>{formatFixedDecimal(row.availablePersons, 1)}</td>
+                <td
+                  className={
+                    row.differencePersons?.startsWith("-")
+                      ? "dashboard-danger"
+                      : ""
+                  }
+                >
+                  {formatFixedDecimal(row.differencePersons, 1)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
   );
 }
