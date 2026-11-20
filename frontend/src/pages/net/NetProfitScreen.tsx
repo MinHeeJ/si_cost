@@ -165,7 +165,6 @@ export function NetProfitScreen({
       >
         <ScreenTitleActions>
           <div className="operating-toolbar">
-
             <button
               type="button"
               data-testid="net-export"
@@ -189,18 +188,28 @@ export function NetProfitScreen({
         )}
         {data && (
           <>
-            <FinancialOverview context={data.context} months={data.months} provisional={data.cumulativeProvisional} notices={data.notices} unitControl={<label>
-              단위{" "}
-              <select
-                data-testid="net-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>} />
+            <FinancialOverview
+              context={data.context}
+              months={data.months}
+              provisional={data.cumulativeProvisional}
+              notices={data.notices}
+              unitControl={
+                <label>
+                  단위{" "}
+                  <select
+                    data-testid="net-unit"
+                    value={unit}
+                    onChange={(event) =>
+                      setUnit(event.target.value as AmountUnit)
+                    }
+                  >
+                    <option>원</option>
+                    <option>천원</option>
+                    <option>백만원</option>
+                  </select>
+                </label>
+              }
+            />
             {data.completeness.availableMonthCount === 0 && (
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
@@ -221,7 +230,7 @@ export function NetProfitScreen({
                 >
                   <h2>
                     {card.metric === "netPrftAmt"
-                      ? "누계 순이익"
+                      ? "누계 당기순이익"
                       : "기준월 순이익"}
                   </h2>
                   <strong
@@ -232,7 +241,7 @@ export function NetProfitScreen({
                   <p>순이익률 {formatRate(card.rate)}</p>
                   <FinancialStatementChange
                     comparison={card.previousYear}
-                    label="전년 동기 "
+                    label="전년 같은 기간 대비 "
                   />
                   <FinancialStatementChange
                     comparison={card.previous}
@@ -258,8 +267,9 @@ export function NetProfitScreen({
             >
               <h2>계약 유형별 기여도</h2>
               <p className="operating-muted">
-                {data.contributionMonth} 기준월 · 매출 − 배분 노동비 · 양수
-                기여이익끼리의 구성비이며 회사 순이익과 다릅니다.
+                {data.contributionMonth} 매출총이익 기준 · 유형별 매출총이익 =
+                매출 − 배분 원가 · 흑자 유형끼리 100%. 대기 원가·직접 경비는
+                나누지 않아 회사 매출총이익과 다릅니다.
               </p>
               {!data.contributions.visible ? (
                 <p className="operating-empty">{data.contributions.reason}</p>
@@ -284,12 +294,17 @@ export function NetProfitScreen({
                         {group.loss && "적자 "}
                         {formatAmount(group.contributionAmt, unit)} {unit}
                       </span>
-                      <span>{formatRate(group.positiveContributionShare)}</span>
-                      {group.showBar &&
+                      {!group.loss && (
+                        <span>
+                          {formatRate(group.positiveContributionShare)}
+                        </span>
+                      )}
+                      {!group.loss &&
+                        group.showBar &&
                         group.positiveContributionShare != null && (
                           <div
                             className="net-contribution-track"
-                            aria-label={`${group.groupName} 양수 기여도 ${group.positiveContributionShare}%`}
+                            aria-label={`${group.groupName} 기여도 ${group.positiveContributionShare}%`}
                           >
                             <div
                               style={{
@@ -300,26 +315,34 @@ export function NetProfitScreen({
                         )}
                     </div>
                   ))}
+                  {data.contributions.contractTypes.some(
+                    (group) => group.loss,
+                  ) && (
+                    <p role="note" data-testid="net-contribution-loss-note">
+                      적자 유형은 비율에서 빼고 금액만 표시합니다.
+                    </p>
+                  )}
                   {!data.contributions.contractTypes.some(
                     (group) =>
                       group.contributionAmt != null &&
                       compareDecimal(group.contributionAmt, "0") > 0,
                   ) && (
                     <p role="note">
-                      양수 기여이익이 없어 비율과 막대를 표시하지 않습니다.
+                      흑자인 유형이 없어 비율과 막대를 표시하지 않습니다.
                     </p>
                   )}
                 </>
               )}
             </section>
             <p className="operating-muted">
-              TK는 청구일 기준 공급가액, MO/DP는 투입 귀속월 매출입니다. IN
-              매출은 0이며 IN 비용은 연구개발비에 포함됩니다.
+              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의
+              매출입니다(부가세 제외). 법인세는 연간 예상액을 달마다 나눈
+              금액(월할)입니다. 실제로 낸 법인세는 자금수지표에만 잡힙니다.
+              내부(자체 개발) 비용은 판관비(연구개발비)로 처리합니다.
             </p>
             <div className="operating-banner info">
               <span>
-                법인세는 연간 예상액의 월할이며 실제 세금 납부액과 다릅니다.
-                전월 조정·법인세 입력은 재무 항목에서 확인합니다.
+                전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다.
               </span>
               <button
                 type="button"
