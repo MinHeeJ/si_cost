@@ -34,10 +34,16 @@ public class ProfitStructureExportService {
                 }
             }));
         }
-        sheets.add(new Sheet("계산 방법",List.of(new Column("metric","항목",CellType.TEXT),new Column("sources","원천",CellType.TEXT),new Column("formula","계산식·VAT 제외·참고 구분",CellType.TEXT)),sink->data.calculationMethods().forEach(m->sink.accept(List.of(m.metric(),String.join(", ",m.sources()),m.formula()+" · 부가세 제외"+(m.referenceOnly()?" · 참고액":""))))));
+        sheets.add(new Sheet("계산 방법",List.of(
+            new Column("metric","항목",CellType.TEXT),
+            new Column("formula","계산",CellType.TEXT),
+            new Column("sources","참고",CellType.TEXT)),
+            sink->data.calculationMethods().forEach(method->sink.accept(
+                List.of(method.metric(),method.formula(),String.join(" ",method.sources()))))));
         List<Information> information=new ArrayList<>();information.add(new Information("조회 기준월",data.context().month()));information.add(new Information("기간단위",data.context().aggregation()));information.add(new Information("단위",unit));information.add(new Information("조회시각",data.context().snapshotAt().toString()));
         data.notices().forEach(n->information.add(new Information("미확인·이관 범위",n)));
         information.add(new Information("안내","영업 파트 이익금은 사람 소속 파트 기준이라 이 숫자와 다를 수 있습니다"));
+        information.add(new Information("금액 기준","금액은 모두 부가세 제외입니다."));
         return new WorkbookData(sheets,information,data.numericRows().size(),data.context().month().replace("-","")+"_"+data.context().aggregation());
     }
     private String identity(Group group) {return Objects.toString(group.groupId(),"UNASSIGNED");}

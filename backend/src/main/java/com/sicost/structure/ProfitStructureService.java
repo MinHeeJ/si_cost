@@ -1,6 +1,7 @@
 package com.sicost.structure;
 
 import com.sicost.businessplansops.BusinessPlanPerformanceDtos.*;
+import com.sicost.codegroups.CodeGroupMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
@@ -20,16 +21,24 @@ public class ProfitStructureService {
     static {
         Map<String,String> labels=new LinkedHashMap<>();
         String[] keys={"salesAmt","salesCostAmt","allocCostAmt","idleCostAmt","drctExpsAmt","grossPrftAmt","grossProfitRate","sgaTotAmt","prevAdjAmt","oprtPrftAmt","operatingProfitRate","noprIncmAmt","noprExpsAmt","corpTaxAmt","netPrftAmt","idleCostShare","referenceRevenue"};
-        String[] names={"매출","매출원가","배분 원가","대기 원가","직접 경비","매출총이익","총이익률","판관비","전월 조정","영업이익","영업이익률","영업외수익","영업외비용","월할 세금","순이익","대기 비중","배분 기준 매출(참고)"};
+        String[] names={"매출","매출원가","배분 원가","대기 원가","직접 경비","매출총이익","매출총이익률","판관비","전월 조정","영업이익","영업이익률","영업외수익","영업외비용","법인세(월할)","당기순이익","대기 원가 비중","배분 기준 매출(참고)"};
         for(int i=0;i<keys.length;i++)labels.put(keys[i],names[i]);LABELS=Collections.unmodifiableMap(labels);
     }
     private final ProfitStructureRepository repository;
     private final RevenueCompositionCalculation compositions;
-    public ProfitStructureService(ProfitStructureRepository repository,RevenueCompositionCalculation compositions) {this.repository=repository;this.compositions=compositions;}
+    private final CodeGroupMapper codes;
+    public ProfitStructureService(ProfitStructureRepository repository,
+        RevenueCompositionCalculation compositions,CodeGroupMapper codes) {
+        this.repository=repository;
+        this.compositions=compositions;
+        this.codes=codes;
+    }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Data getProfitLossStructure(Query query) {
         Read read=repository.read(query);List<List<String>> sets=bucketMonths(query);
         var entries=compositions.entries(read);List<String> top=compositions.topCustomers(entries,sets.get(sets.size()-1));
+        Map<String,String> typeNames=new HashMap<>();
+        if(!entries.isEmpty())codes.codes("CTRT_TYPE",false).forEach(code->typeNames.put(code.code(),code.name()));
         List<Bucket> buckets=new ArrayList<>();
         for(var keys:sets) {
             List<Actual> months=keys.stream().map(read.all()::get).toList();Map<String,String> amounts=aggregate(months);
@@ -39,12 +48,15 @@ public class ProfitStructureService {
                 comparisons.add(compare(metric,keys,keys.stream().map(k->YearMonth.parse(k).minusYears(1).toString()).toList(),read.all()));
             }
             String through=keys.get(keys.size()-1),key=switch(query.aggregation()){case "QUARTER"->query.year()+"-Q"+((YearMonth.parse(through).getMonthValue()-1)/3+1);case "YTD"->through+" 누계";default->through;};
-            buckets.add(new Bucket(key,keys,through,keys.size(),amounts,coverage(months),months.stream().anyMatch(Actual::provisional),List.copyOf(comparisons),compositions.composition(entries,months,amounts,top),compositions.reference(read,months)));
+            Composition composition=displayComposition(
+                compositions.composition(entries,months,amounts,top),entries,keys,top,typeNames);
+            buckets.add(new Bucket(key,keys,through,keys.size(),amounts,coverage(months),months.stream().anyMatch(Actual::provisional),List.copyOf(comparisons),composition,compositions.reference(read,months)));
         }
         Bucket last=buckets.get(buckets.size()-1);List<Card> summary=new ArrayList<>();
         for(String metric:List.of("salesAmt","grossPrftAmt","oprtPrftAmt","idleCostAmt")) {
             String rate=switch(metric){case "grossPrftAmt"->"grossProfitRate";case "oprtPrftAmt"->"operatingProfitRate";case "idleCostAmt"->"idleCostShare";default->null;};
-            var matches=last.comparisons().stream().filter(c->metric.equals(c.metric())).toList();
+            String comparisonMetric="idleCostAmt".equals(metric)?"idleCostShare":metric;
+            var matches=last.comparisons().stream().filter(c->comparisonMetric.equals(c.metric())).toList();
             Comparison prev="YTD".equals(query.aggregation())?null:matches.get(0),year=matches.get(matches.size()-1);
             if(year.availableMonthCount()==0)year=null;
             summary.add(new Card(metric,last.amounts().get(metric),rate==null?null:last.amounts().get(rate),prev,year));
@@ -60,6 +72,26 @@ public class ProfitStructureService {
         if(!last.composition().visible()&&waterfall.stream().anyMatch(w->"CHANGE".equals(w.kind())&&!w.connected()))
             notices.add("이관 세부금액 없음/구성 불일치: 확인되지 않는 폭포 구간은 연결하지 않습니다.");
         return new Data(read.context(),read.months(),List.copyOf(buckets),List.copyOf(summary),waterfall,List.copyOf(numeric),methods(),notices.stream().distinct().toList());
+    }
+    // UI-07 names only: the shared composition calculation also serves the net profit screen.
+    private static Composition displayComposition(Composition source,
+        List<RevenueCompositionCalculation.Entry> entries,List<String> months,
+        List<String> top,Map<String,String> typeNames) {
+        if(!source.visible())return source;
+        long otherCount=entries.stream().filter(entry->months.contains(entry.month()))
+            .map(entry->Objects.toString(entry.customerId(),"UNASSIGNED"))
+            .filter(id->!top.contains(id)).distinct().count();
+        List<Group> types=source.contractTypes().stream()
+            .map(group->named(group,typeNames.getOrDefault(group.groupId(),group.groupName()))).toList();
+        List<Group> customers=source.customers().stream()
+            .map(group->group.other()?named(group,"그 밖 "+otherCount+"곳"):group).toList();
+        return new Composition(source.visible(),source.reason(),source.complete(),source.revenueDifference(),
+            types,customers,source.salesParts());
+    }
+    private static Group named(Group group,String name) {
+        return new Group(group.groupKind(),group.groupId(),name,group.other(),group.salesAmt(),
+            group.allocatedLaborCostAmt(),group.contributionAmt(),group.revenueShare(),
+            group.contributionRate(),group.positiveContributionShare(),group.loss(),group.showBar());
     }
     static List<List<String>> bucketMonths(Query query) {
         List<List<String>> result=new ArrayList<>();int end=YearMonth.parse(query.month()).getMonthValue();
@@ -130,12 +162,28 @@ public class ProfitStructureService {
         return stored!=null&&calculated!=null&&new BigDecimal(stored).compareTo(new BigDecimal(calculated))==0;
     }
     static List<Method> methods() {
-        return List.of(new Method("salesAmt",List.of("TB_PJ_ASGN_MON","TB_BL_BILL"),"MO/DP 유상 귀속월 SALES_AMT + TK BILL_DT월 유효 SPLY_AMT; MM 재곱 없음; 입금액 아님",false,true),
-            new Method("salesCostAmt",List.of("TB_CO_MON_COST","TB_PJ_DRCT_EXPS"),"배분 노동비 + 대기 노동비 + 직접 경비(팀비·프로젝트경비 포함) + 비IN 추가경비",false,true),
-            new Method("oprtPrftAmt",List.of("TB_FI_ITEM","TB_CO_PREV_ADJ","TB_CO_MON_COST"),"매출총이익 − (판관비 입력 + 간접 인건비 + 연구개발비) + 전월 조정",false,true),
-            new Method("netPrftAmt",List.of("TB_FI_ITEM","TB_FI_CORP_TAX","TB_CO_MON_PL"),"영업이익 + 영업외수익 − 영업외비용 − 공통 법인세 월할; 마감/이관 사본은 원값",false,true),
-            new Method("rates",List.of("TB_CO_MON_PL","월 계산 결과"),"기간 이익 합 ÷ 기간 매출 합 × 100; 대기 비중 = 기간 대기 원가 합 ÷ 매출원가 합; 분모0은 미확인",false,true),
-            new Method("referenceRevenue",List.of("TB_PJ_TK_DSTRB","TB_PJ_PROJ","전체 월 원가"),"MO/DP + TK PLAN>CTRT>EST 월 DEV+ITEM 합; 표 없을 때만 DOWN(전체 월 원가×현재 계약액/저장 예산); 누적 진행률 매출과 다를 수 있음",true,true),
-            new Method("composition",List.of("TB_BL_BILL","TB_CO_MON_COST","TB_PJ_PROJ_PART","TB_BS_CLNT"),"프로젝트 실제 매출 R·ALLOC/PRE 노동비 L을 유형/고객사/영업파트로 합산; 기여이익=R−L, 회사 이익과 다름",false,true));
+        return List.of(
+            new Method("기간",
+                List.of("요약 카드와 폭포 차트는 맨 오른쪽(가장 최근) 기간 기준"),
+                "월: 그 달 · 분기: 그 분기 안의 달을 더함(진행 중인 분기는 기준월까지) · 연 누계: 1월부터 그 달까지 더함",
+                false,true),
+            new Method("매출총이익(률)",
+                List.of("매출원가 = 배분 원가(내부 제외) + 대기 원가 + 직접 경비"),
+                "매출 − 매출원가 · 매출총이익 ÷ 매출 × 100",false,true),
+            new Method("영업이익(률)",
+                List.of("판관비 = 재무 항목 입력 + 간접 인건비 + 연구개발비"),
+                "매출총이익 − 판관비 ± 전월 조정 · 영업이익 ÷ 매출 × 100",false,true),
+            new Method("당기순이익",
+                List.of("법인세(월할)는 재무 항목 화면의 연간 예상액에서 계산"),
+                "영업이익 + 영업외수익 − 영업외비용 − 법인세(월할)",false,true),
+            new Method("대기 원가 비중",
+                List.of("투입되지 않은 정규·계약직 인건비가 원가에서 차지하는 몫"),
+                "대기 원가 ÷ 매출원가 × 100",false,true),
+            new Method("배분 기준 매출(참고선)",
+                List.of("턴키는 청구한 달에만 매출이 잡혀 출렁이므로, 일한 만큼 나눈 금액으로 바꿔 본 선. 회사 매출에 더하지 않음"),
+                "월단위·파견 매출 + 턴키 배분표 금액(배분표가 없으면 그 달 원가 × 계약금액 ÷ 예산)",true,true),
+            new Method("매출 구성",
+                List.of("영업 파트는 프로젝트를 따온 파트 기준 · 대기 원가·판관비는 나누지 않음 · 회사 이익과 다름"),
+                "계약 유형·고객사·영업 파트별로 매출과 배분 원가를 더함 · 이익률 = (매출 − 배분 원가) ÷ 매출",false,true));
     }
 }

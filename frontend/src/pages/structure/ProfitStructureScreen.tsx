@@ -56,8 +56,10 @@ const tabs: [api.Aggregation, string][] = [
 ];
 function monthRange(months: string[]) {
   if (!months.length) return "조회 기간";
-  const first = months[0], last = months[months.length - 1];
-  const label = (month: string) => `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
+  const first = months[0],
+    last = months[months.length - 1];
+  const label = (month: string) =>
+    `${month.slice(0, 4)}년 ${Number(month.slice(5))}월`;
   if (first === last) return label(first);
   return first.slice(0, 4) === last.slice(0, 4)
     ? `${first.slice(0, 4)}년 ${Number(first.slice(5))}~${Number(last.slice(5))}월`
@@ -110,8 +112,14 @@ function RevenueComposition({
     ...groups.map((g) => Math.abs(Number(g.salesAmt ?? "0"))),
   );
   return (
-    <section className="profit-structure-card">
-      <h2>{title}</h2>
+    <section
+      className="profit-structure-card"
+      data-testid={`structure-${id}-composition`}
+    >
+      <div className="profit-structure-section-title">
+        <h2>{title}</h2>
+        {id === "part" && <small>프로젝트를 따온 파트 기준</small>}
+      </div>
       {groups.length === 0 ? (
         <p className="profit-structure-empty">표시할 구성 자료가 없습니다.</p>
       ) : (
@@ -161,6 +169,11 @@ function RevenueComposition({
           ))}
         </div>
       )}
+      {id === "part" && (
+        <p role="note" className="profit-structure-muted">
+          영업 파트 이익금은 사람 소속 파트 기준이라 이 숫자와 다를 수 있습니다
+        </p>
+      )}
     </section>
   );
 }
@@ -188,9 +201,7 @@ export function ProfitStructureScreen({
   const [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0),
     [download, setDownload] = useState(false);
-  const [numbers, setNumbers] = useState(false),
-    [methods, setMethods] = useState(false),
-    [mobile, setMobile] = useState(() => window.innerWidth < 768);
+  const [mobile, setMobile] = useState(() => window.innerWidth < 768);
   const sequence = useRef(0),
     committed = useRef(false);
   useEffect(() => {
@@ -326,22 +337,6 @@ export function ProfitStructureScreen({
               </select>
             </label>
             <button
-              data-testid="structure-numbers"
-              type="button"
-              aria-expanded={numbers}
-              onClick={() => setNumbers(!numbers)}
-            >
-              숫자로 보기
-            </button>
-            <button
-              data-testid="structure-methods"
-              type="button"
-              aria-expanded={methods}
-              onClick={() => setMethods(!methods)}
-            >
-              계산 방법
-            </button>
-            <button
               data-testid="structure-export"
               type="button"
               disabled={!data || loading || download || mobile}
@@ -371,11 +366,15 @@ export function ProfitStructureScreen({
             <FinancialOverview
               context={data.context}
               months={data.months}
-              provisional={last?.provisional ?? data.months.some(m=>m.provisional)}
+              provisional={
+                last?.provisional ?? data.months.some((m) => m.provisional)
+              }
               notices={data.notices}
-              caption={last
-                ? `${monthRange(last.months)} · ${tabs.find(([mode]) => mode === data.context.aggregation)?.[1]} 실적 · ${comparisonLabels[data.context.aggregation]} · 부가세 제외`
-                : `${data.context.year}년 · 조회 기간의 손익 자료가 없습니다 · 부가세 제외`}
+              caption={
+                last
+                  ? `${monthRange(last.months)} · ${tabs.find(([mode]) => mode === data.context.aggregation)?.[1]} 실적 · ${comparisonLabels[data.context.aggregation]} · 부가세 제외`
+                  : `${data.context.year}년 · 조회 기간의 손익 자료가 없습니다 · 부가세 제외`
+              }
             />
             {!data.months.some(
               (m) => m.sourceKind !== "MISSING" && m.sourceKind !== "FUTURE",
@@ -415,16 +414,25 @@ export function ProfitStructureScreen({
                   )}
                   <p>
                     {card.metric === "idleCostAmt"
-                      ? `대기 원가 ${formatAmount(card.amount, unit)} ${unit}`
+                      ? `대기 원가 ${formatAmount(card.amount, unit)} ${unit} ÷ 매출원가`
                       : card.rate != null
-                        ? `이익률 ${formatRate(card.rate)}`
+                        ? `${card.metric === "grossPrftAmt" ? "매출총이익률" : "영업이익률"} ${formatRate(card.rate)}`
                         : "부가세 제외"}
                   </p>
                   <Change
                     comparison={card.previous}
-                    label={quarterly ? "직전 분기" : "전월"}
+                    label={
+                      quarterly
+                        ? last && last.monthCount < 3
+                          ? "전 분기 같은 기간 대비"
+                          : "전 분기 대비"
+                        : "전월 대비"
+                    }
                   />
-                  <Change comparison={card.previousYear} label="전년 동기" />
+                  <Change
+                    comparison={card.previousYear}
+                    label="전년 같은 기간 대비"
+                  />
                 </article>
               ))}
             </KpiStrip>
@@ -465,7 +473,7 @@ export function ProfitStructureScreen({
                   unit={unit}
                 />
                 <RevenueComposition
-                  title="고객사 상위 5 / 그 밖"
+                  title="고객사 상위 5곳"
                   id="customer"
                   groups={last.composition.customers}
                   unit={unit}
@@ -494,87 +502,122 @@ export function ProfitStructureScreen({
               기여이익은 매출−배분 노동비로 회사 매출총이익·영업이익과 다른
               지표입니다.
             </p>
-            <p role="note">
-              영업 파트 이익금은 사람 소속 파트 기준이라 이 숫자와 다를 수
-              있습니다
-            </p>
-            {numbers && (
-              <section
-                className="profit-structure-card"
-                data-testid="structure-numeric-panel"
-              >
+            <section
+              className="profit-structure-card"
+              data-testid="structure-numeric-panel"
+            >
+              <div className="profit-structure-section-title">
                 <h2>숫자로 보기</h2>
-                <div className="profit-structure-table-scroll">
-                  <table aria-label="기간별 손익 숫자표">
-                    <thead>
-                      <tr>
-                        <th>항목 ({unit})</th>
-                        {data.buckets.map((b, i) => (
-                          <th
-                            key={b.key}
+                <small>
+                  {aggregation === "MONTH"
+                    ? "월별"
+                    : quarterly
+                      ? "분기별"
+                      : "월별 누계"}
+                  {" · 단위 "}
+                  {unit}
+                </small>
+              </div>
+              <div className="profit-structure-table-scroll">
+                <table aria-label="기간별 손익 숫자표">
+                  <thead>
+                    <tr>
+                      <th>항목 ({unit})</th>
+                      {data.buckets.map((b, i) => (
+                        <th
+                          key={b.key}
+                          className={
+                            i === data.buckets.length - 1 ? "latest" : ""
+                          }
+                        >
+                          {bucketLabel(b, quarterly)}
+                          <br />
+                          자료 {b.completeness.availableMonthCount}/
+                          {b.monthCount}개월
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.numericRows.map((row) => (
+                      <tr
+                        key={row.metric}
+                        className={
+                          [
+                            "salesAmt",
+                            "grossPrftAmt",
+                            "oprtPrftAmt",
+                            "netPrftAmt",
+                          ].includes(row.metric)
+                            ? "profit-structure-subtotal"
+                            : [
+                                  "allocCostAmt",
+                                  "idleCostAmt",
+                                  "drctExpsAmt",
+                                ].includes(row.metric)
+                              ? "profit-structure-child-row"
+                              : undefined
+                        }
+                        data-testid={`structure-numeric-${kebab(row.metric)}`}
+                      >
+                        <th scope="row">
+                          {[
+                            "allocCostAmt",
+                            "idleCostAmt",
+                            "drctExpsAmt",
+                          ].includes(row.metric)
+                            ? "└ "
+                            : ""}
+                          {row.label}
+                        </th>
+                        {row.bucketValues.map((value, i) => (
+                          <td
+                            key={row.bucketKeys[i]}
+                            data-financial-negative={value?.startsWith("-")}
                             className={
-                              i === data.buckets.length - 1 ? "latest" : ""
+                              i === row.bucketValues.length - 1 ? "latest" : ""
                             }
                           >
-                            {bucketLabel(b, quarterly)}
-                            <br />
-                            자료 {b.completeness.availableMonthCount}/
-                            {b.monthCount}개월
-                          </th>
+                            {row.isRate
+                              ? formatRate(value)
+                              : formatAmount(value, unit)}
+                          </td>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {data.numericRows.map((row) => (
-                        <tr
-                          key={row.metric}
-                          data-testid={`structure-numeric-${kebab(row.metric)}`}
-                        >
-                          <th>{row.label}</th>
-                          {row.bucketValues.map((value, i) => (
-                            <td
-                              key={row.bucketKeys[i]}
-                              data-financial-negative={value?.startsWith("-")}
-                              className={
-                                i === row.bucketValues.length - 1
-                                  ? "latest"
-                                  : ""
-                              }
-                            >
-                              {row.isRate
-                                ? formatRate(value)
-                                : formatAmount(value, unit)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {(["contractTypes", "customers", "salesParts"] as const).map(
-                  (kind) => (
-                    <CompositionNumbers
-                      key={kind}
-                      kind={kind}
-                      data={data}
-                      unit={unit}
-                    />
-                  ),
-                )}
-              </section>
-            )}
-            {methods && (
-              <section
-                className="profit-structure-card"
-                data-testid="structure-method-panel"
-              >
-                <h2>계산 방법</h2>
-                <table aria-label="계산 방법">
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {(["contractTypes", "customers", "salesParts"] as const).map(
+                (kind) => (
+                  <CompositionNumbers
+                    key={kind}
+                    kind={kind}
+                    data={data}
+                    unit={unit}
+                  />
+                ),
+              )}
+              <p className="profit-structure-muted">
+                엑셀 다운로드는 이 표와 같습니다. 자세한 항목은
+                영업이익표·순이익표에서 봅니다. 같은 계산이라 숫자가 같습니다.
+              </p>
+            </section>
+            <section
+              className="profit-structure-card"
+              data-testid="structure-method-panel"
+            >
+              <h2>계산 방법</h2>
+              <div className="profit-structure-table-scroll">
+                <table
+                  aria-label="계산 방법"
+                  className="profit-structure-method-table"
+                >
                   <thead>
                     <tr>
                       <th>항목</th>
-                      <th>원천</th>
-                      <th>계산식</th>
+                      <th>계산</th>
+                      <th>참고</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -583,22 +626,22 @@ export function ProfitStructureScreen({
                         key={method.metric}
                         data-testid={`structure-method-${i}`}
                       >
-                        <th>{method.metric}</th>
-                        <td>{method.sources.join(", ")}</td>
-                        <td>
-                          {method.formula} · VAT 제외{" "}
-                          {method.referenceOnly && "· 참고액"}
-                        </td>
+                        <th scope="row">{method.metric}</th>
+                        <td>{method.formula}</td>
+                        <td>{method.sources.join(" ")}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </section>
-            )}
+              </div>
+              <p className="profit-structure-muted">
+                금액은 모두 부가세 제외입니다.
+              </p>
+            </section>
             <p className="profit-structure-muted">
-              TK는 청구일 기준 공급가액, MO/DP는 투입 귀속월 매출입니다. 점선은
-              참고 매출이며 회사 실제 매출·이익에 더하지 않습니다. 09의 누적
-              진행률 매출과 다를 수 있습니다.
+              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출입니다.
+              점선(배분 기준 매출)은 참고선이며 회사 매출·이익에 더하지
+              않습니다. 순이익표의 진행률 매출과 다를 수 있습니다.
             </p>
             <div className="profit-structure-toolbar">
               <button
