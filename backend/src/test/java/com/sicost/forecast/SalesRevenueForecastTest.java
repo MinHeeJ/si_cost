@@ -42,6 +42,33 @@ class SalesRevenueForecastTest {
         assertThat(result.revenueMonths().get(0).allWonRevenue()).isEqualTo("49");
         assertThat(result.revenueMonths().get(3).opportunityRevenue()).isEqualTo("8");
     }
+    @Test void opportunityRemainderGoesToLastMonthSoTotalsMatchFormula57() {
+        // 70,000,000 × 20% = 14,000,000 → 4,666,666 · 4,666,666 · 4,666,668 (끝자리는 마지막 달)
+        var result=service.calculate(snapshot(List.of(),List.of(opportunity("O","ING","202608",3,"70000000","20"))),DAY);
+        assertThat(result.revenueMonths().subList(0,3)).extracting(m -> m.opportunityRevenue()).containsExactly("4666666","4666666","4666668");
+        assertThat(result.revenueMonths().subList(0,3)).extracting(m -> m.allWonRevenue()).containsExactly("23333333","23333333","23333334");
+        assertThat(result.summary().opportunityRevenue()).isEqualTo("14000000");
+        assertThat(result.summary().allWonRevenue()).isEqualTo("70000000");
+    }
+    /** 식-57 경계: 기간 비움(6개월)·1개월·나누어떨어짐·확률 100%. 달 합계 = 버림(예상 금액 × 확률 ÷ 100). */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(delimiter='|', value={
+        "100000000|70|   |11666666,11666666,11666666,11666666,11666666,11666670|70000000",
+        "1000001  |50|1  |500000|500000",
+        "60000000 |50|3  |10000000,10000000,10000000|30000000",
+        "100      |100|3 |33,33,34|100"})
+    void opportunityMonthsSumToFlooredWeightedAmount(String amount,String probability,Integer months,String expectedMonths,String total) {
+        var result=service.calculate(snapshot(List.of(),List.of(opportunity("O","ING","202608",months,amount,probability))),DAY);
+        var expected=List.of(expectedMonths.split(","));
+        assertThat(result.revenueMonths().subList(0,expected.size())).extracting(m -> m.opportunityRevenue()).containsExactlyElementsOf(expected);
+        assertThat(result.summary().opportunityRevenue()).isEqualTo(total);
+    }
+    @Test void opportunityWeightedAmountIsFlooredOnceBeforeSpreading() {
+        // 100 × 99.99% = 99.99 → 버림 99 → 33 · 33 · 33
+        var result=service.calculate(snapshot(List.of(),List.of(opportunity("O","ING","202608",3,"100","99.99"))),DAY);
+        assertThat(result.revenueMonths().subList(0,3)).extracting(m -> m.opportunityRevenue()).containsExactly("33","33","33");
+        assertThat(result.summary().opportunityRevenue()).isEqualTo("99");
+    }
     @ParameterizedTest @ValueSource(strings={"WIN","LOSE","STOP"}) void closedOpportunitiesDoNotDuplicateRevenue(String status) {
         assertThat(service.calculate(snapshot(List.of(),List.of(opportunity("O",status,"202608",3,"100","100"))),DAY).revenueSources()).isEmpty();
     }
