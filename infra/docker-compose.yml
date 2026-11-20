@@ -53,5 +53,12 @@ services:
       interval: 10s
       timeout: 3s
       retries: 6
+networks:
+  default:
+    # Avoid Docker's exhausted automatic address pools without sharing networks.
+    # Concurrent deployments must set a distinct, non-overlapping subnet.
+    ipam:
+      config:
+        - subnet: ${SICOST_NETWORK_SUBNET:-10.254.154.0/24}
 volumes:
   postgres-data:

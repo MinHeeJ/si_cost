@@ -5,5 +5,5 @@
   "type": "module",
   "engines": { "node": "20.x", "npm": "10.x" },
   "scripts": { "test": "playwright test" },
-  "devDependencies": { "@playwright/test": "1.51.1" }
+  "devDependencies": { "@playwright/test": "1.51.1", "pdfjs-dist": "4.10.38" }
 }
