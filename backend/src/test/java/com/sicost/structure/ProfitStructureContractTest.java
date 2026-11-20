@@ -106,9 +106,9 @@ class ProfitStructureContractTest {
                 assertThat(value.cumulativeValue()).isEqualTo(row.cumulativeValue());
             });
         }
-        // UI-09 keeps its existing code labels; UI-07's display adaptation must not leak into it.
+        // Both screens resolve the same contract-type name without changing their amounts.
         assertThat(netStatement.contributions().contractTypes()).singleElement()
-            .satisfies(group->assertThat(group.groupName()).isEqualTo("TK"));
+            .satisfies(group->assertThat(group.groupName()).isEqualTo("턴키"));
     }
     @Test void displayNamesAndSevenReadableMethodsComeFromTheServer() throws Exception {
         var response=read("2026-07","MONTH").andExpect(status().isOk())

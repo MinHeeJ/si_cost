@@ -165,7 +165,7 @@ function response(): api.NetProfitData {
       amount: metric === "netPrftAmt" ? "9007199254740993" : "-20",
       rate: "-1.0",
       previous: metric === "currentMonthNetProfit" ? comparison : null,
-      previousYear: null,
+      previousYear: metric === "netPrftAmt" ? comparison : null,
     })),
     showPreviousYear: true,
     cumulativeProvisional: true,
@@ -181,7 +181,7 @@ function response(): api.NetProfitData {
         {
           ...group,
           groupId: "MO",
-          groupName: "MO",
+          groupName: "월단위",
           contributionAmt: "50",
           positiveContributionShare: "100.0",
           loss: false,
@@ -190,7 +190,7 @@ function response(): api.NetProfitData {
         {
           ...group,
           groupId: "DP",
-          groupName: "DP",
+          groupName: "파견",
           contributionAmt: "-20",
           positiveContributionShare: null,
           loss: true,
@@ -199,7 +199,7 @@ function response(): api.NetProfitData {
         {
           ...group,
           groupId: "TK",
-          groupName: "TK",
+          groupName: "턴키",
           contributionAmt: "0",
           positiveContributionShare: null,
           loss: false,
@@ -257,6 +257,13 @@ it("uses existing registration and fetches net data on entry with two cards and 
     expect.any(AbortSignal),
   );
   expect(screen.getAllByTestId(/^net-row-/)).toHaveLength(18);
+  expect(
+    within(screen.getByTestId("net-cumulative-card")).getByRole("heading"),
+  ).toHaveTextContent("누계 당기순이익");
+  expect(screen.getByTestId("net-cumulative-card")).toHaveTextContent(
+    "전년 같은 기간 대비",
+  );
+  expect(screen.getByTestId("net-month-card")).toHaveTextContent("전월 대비");
   const headings = within(
     screen.getByRole("table", { name: "순이익표" }),
   ).getAllByRole("rowheader");
@@ -306,8 +313,12 @@ it("uses adverse server comparison flags and independent provisional and estimat
 });
 it("distinguishes migrated closed and working states", async () => {
   await draw();
-  expect(screen.getByRole("columnheader", {name:/1월 이관/})).toBeInTheDocument();
-  expect(screen.getByRole("columnheader", {name:/2월 확정/})).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: /1월 이관/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: /2월 확정/ }),
+  ).toBeInTheDocument();
   expect(
     screen
       .getAllByText("작업중")
@@ -329,17 +340,22 @@ it("hides absent prior-year columns", async () => {
 it("renders basis-month positive-only contribution with loss and zero having no bars", async () => {
   await draw();
   expect(screen.getByTestId("net-contributions")).toHaveTextContent(
-    "2026-07 기준월",
+    "2026-07 매출총이익 기준 · 유형별 매출총이익 = 매출 − 배분 원가 · 흑자 유형끼리 100%. 대기 원가·직접 경비는 나누지 않아 회사 매출총이익과 다릅니다.",
   );
   const loss = screen.getByTestId("net-contribution-1");
   expect(within(loss).getByText(/적자/)).toHaveClass("adverse");
-  expect(within(loss).queryByLabelText(/양수 기여도/)).not.toBeInTheDocument();
-  expect(screen.getByLabelText("MO 양수 기여도 100.0%")).toBeInTheDocument();
+  expect(within(loss).queryByLabelText(/기여도/)).not.toBeInTheDocument();
+  expect(loss).not.toHaveTextContent(/%|–/);
+  expect(
+    screen.getByText("적자 유형은 비율에서 빼고 금액만 표시합니다."),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText("월단위 기여도 100.0%")).toBeInTheDocument();
+  expect(screen.getByTestId("net-contributions")).not.toHaveTextContent(
+    /\b(MO|TK|DP)\b/,
+  );
   expect(screen.getByTestId("net-contribution-2")).toHaveTextContent("0 천원");
   expect(
-    within(screen.getByTestId("net-contribution-2")).queryByLabelText(
-      /양수 기여도/,
-    ),
+    within(screen.getByTestId("net-contribution-2")).queryByLabelText(/기여도/),
   ).not.toBeInTheDocument();
 });
 it("hides migrated contribution rather than generating a breakdown", async () => {
@@ -356,14 +372,76 @@ it("hides migrated contribution rather than generating a breakdown", async () =>
     screen.getByText("월별 손익만 이관되어 세부 구성이 없습니다"),
   ).toBeInTheDocument();
   expect(screen.queryByTestId("net-contribution-0")).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("net-contribution-loss-note"),
+  ).not.toBeInTheDocument();
+});
+it("shows server shares unchanged and no loss notice when every type is profitable", async () => {
+  const data = response();
+  data.contributions.contractTypes = data.contributions.contractTypes
+    .map((group, index) => ({
+      ...group,
+      contributionAmt: index === 0 ? "200000000" : "80000000",
+      positiveContributionShare: index === 0 ? "71.4" : "28.6",
+      loss: false,
+      showBar: true,
+    }))
+    .slice(0, 2);
+  vi.mocked(api.getNetProfitLoss).mockResolvedValue(data);
+  await draw();
+  expect(screen.getByTestId("net-contribution-0")).toHaveTextContent("71.4%");
+  expect(screen.getByTestId("net-contribution-1")).toHaveTextContent("28.6%");
+  expect(
+    screen.queryByTestId("net-contribution-loss-note"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/흑자인 유형이 없어/)).not.toBeInTheDocument();
 });
 it("all loss or zero contributions explain the missing positive denominator", async () => {
   const data = response();
   data.contributions.contractTypes.shift();
   vi.mocked(api.getNetProfitLoss).mockResolvedValue(data);
   await draw();
-  expect(screen.getByText(/양수 기여이익이 없어/)).toBeInTheDocument();
-  expect(screen.queryByLabelText(/양수 기여도/)).not.toBeInTheDocument();
+  expect(
+    screen.getByText("흑자인 유형이 없어 비율과 막대를 표시하지 않습니다."),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText(/기여도/)).not.toBeInTheDocument();
+});
+it("shows the mixed-profit example as server shares and a loss amount only", async () => {
+  const data = response();
+  data.contributions.contractTypes = [
+    {
+      ...data.contributions.contractTypes[0],
+      contributionAmt: "200000000",
+      positiveContributionShare: "71.4",
+    },
+    {
+      ...data.contributions.contractTypes[1],
+      contributionAmt: "80000000",
+      positiveContributionShare: "28.6",
+      loss: false,
+      showBar: true,
+    },
+    {
+      ...data.contributions.contractTypes[2],
+      contributionAmt: "-40000000",
+      loss: true,
+    },
+  ];
+  vi.mocked(api.getNetProfitLoss).mockResolvedValue(data);
+  await draw();
+  expect(screen.getByTestId("net-contribution-0")).toHaveTextContent(
+    "월단위200,000 천원71.4%",
+  );
+  expect(screen.getByTestId("net-contribution-1")).toHaveTextContent(
+    "파견80,000 천원28.6%",
+  );
+  const loss = screen.getByTestId("net-contribution-2");
+  expect(loss).toHaveTextContent("턴키적자 −40,000 천원");
+  expect(loss).not.toHaveTextContent(/%|–/);
+  expect(loss.querySelector(".net-contribution-track")).toBeNull();
+  expect(screen.getByTestId("net-contribution-loss-note")).toHaveTextContent(
+    "적자 유형은 비율에서 빼고 금액만 표시합니다.",
+  );
 });
 it("incomplete contributions show source reason without substituting values", async () => {
   const data = response();
@@ -431,7 +509,20 @@ it("has no write close upload or actual cashflow results", async () => {
   expect(
     screen.queryByRole("button", { name: /삭제|마감|저장|업로드/ }),
   ).not.toBeInTheDocument();
-  expect(screen.getByText(/실제 세금 납부액과 다릅니다/)).toBeInTheDocument();
+  const note = screen.getByText(/턴키는 청구한 달의 공급가액/);
+  expect(note).toHaveTextContent(
+    "월단위·파견은 일한 달의 매출입니다(부가세 제외).",
+  );
+  expect(note).toHaveTextContent("실제로 낸 법인세는 자금수지표에만 잡힙니다.");
+  expect(note).toHaveTextContent(
+    "내부(자체 개발) 비용은 판관비(연구개발비)로 처리합니다.",
+  );
+  expect(note).not.toHaveTextContent(/TK|MO|DP|IN/);
+  expect(
+    screen.getByText(
+      "전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다.",
+    ),
+  ).toBeInTheDocument();
 });
 it("downloads selected period and unit", async () => {
   await draw();
