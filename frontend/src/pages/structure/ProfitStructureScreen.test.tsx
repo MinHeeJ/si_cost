@@ -32,7 +32,7 @@ function response(): api.StructureData {
   const group: api.RevenueGroup = {
     groupKind: "CONTRACT_TYPE",
     groupId: "TK",
-    groupName: "TK",
+    groupName: "턴키",
     other: false,
     salesAmt: "9007199254740993",
     allocatedLaborCostAmt: "500",
@@ -150,26 +150,37 @@ function response(): api.StructureData {
       },
       {
         metric: "corpTaxAmt",
-        label: "월할 세금",
+        label: "법인세(월할)",
         kind: "CHANGE",
         amount: null,
         connected: false,
       },
     ],
     numericRows: [
-      {
-        metric: "salesAmt",
-        label: "매출",
-        isRate: false,
-        bucketKeys: [bucket.key],
-        bucketValues: [bucket.amounts.salesAmt],
-      },
-    ],
+      ["salesAmt", "매출"],
+      ["salesCostAmt", "매출원가"],
+      ["allocCostAmt", "배분 원가"],
+      ["idleCostAmt", "대기 원가"],
+      ["drctExpsAmt", "직접 경비"],
+      ["grossPrftAmt", "매출총이익"],
+      ["grossProfitRate", "매출총이익률"],
+      ["oprtPrftAmt", "영업이익"],
+      ["corpTaxAmt", "법인세(월할)"],
+      ["netPrftAmt", "당기순이익"],
+      ["idleCostShare", "대기 원가 비중"],
+    ].map(([metric, label]) => ({
+      metric,
+      label,
+      isRate: metric.endsWith("Rate") || metric === "idleCostShare",
+      bucketKeys: [bucket.key],
+      bucketValues: [bucket.amounts[metric] ?? null],
+    })),
     calculationMethods: [
       {
-        metric: "salesAmt",
-        sources: ["TB_BL_BILL"],
-        formula: "TK 청구일 공급가액, MO/DP 귀속월",
+        metric: "기간",
+        sources: ["요약 카드와 폭포 차트는 맨 오른쪽(가장 최근) 기간 기준"],
+        formula:
+          "월: 그 달 · 분기: 그 분기 안의 달을 더함(진행 중인 분기는 기준월까지) · 연 누계: 1월부터 그 달까지 더함",
         referenceOnly: false,
         vatExcluded: true,
       },
@@ -275,9 +286,14 @@ it("switches aggregation and preserves it on period change", async () => {
     "true",
   );
 });
-it("provides numeric tables, latest highlight and calculation sources without cell editors", async () => {
+it("always provides numeric tables and readable methods without toggle buttons or editors", async () => {
   await draw();
-  await userEvent.click(screen.getByRole("button", { name: "숫자로 보기" }));
+  expect(
+    screen.queryByRole("button", { name: "숫자로 보기" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "계산 방법" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.getByRole("table", { name: "기간별 손익 숫자표" }),
   ).toBeInTheDocument();
@@ -287,9 +303,126 @@ it("provides numeric tables, latest highlight and calculation sources without ce
   expect(
     screen.getByRole("table", { name: "고객사 구성 숫자표" }),
   ).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "계산 방법" }));
-  expect(screen.getByText("TB_BL_BILL")).toBeInTheDocument();
+  expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
+  expect(
+    within(screen.getByTestId("structure-method-panel"))
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent),
+  ).toEqual(["항목", "계산", "참고"]);
+  expect(screen.getByTestId("structure-method-panel")).not.toHaveTextContent(
+    /TB_|salesAmt|VAT/,
+  );
+  expect(screen.getByText("금액은 모두 부가세 제외입니다.")).toBeVisible();
+  expect(screen.getByText("월별 · 단위 천원")).toBeVisible();
+  expect(screen.getByText(/엑셀 다운로드는 이 표와 같습니다/)).toBeVisible();
+  const numeric = screen.getByRole("table", { name: "기간별 손익 숫자표" });
+  expect(
+    numeric.querySelectorAll("tbody tr.profit-structure-subtotal"),
+  ).toHaveLength(4);
+  for (const metric of [
+    "sales-amt",
+    "gross-prft-amt",
+    "oprt-prft-amt",
+    "net-prft-amt",
+  ])
+    expect(screen.getByTestId(`structure-numeric-${metric}`)).toHaveClass(
+      "profit-structure-subtotal",
+    );
+  expect(
+    within(numeric)
+      .getAllByRole("rowheader")
+      .filter((cell) => cell.textContent?.startsWith("└")),
+  ).toHaveLength(3);
+  expect(
+    screen.getByTestId("structure-numeric-alloc-cost-amt"),
+  ).toHaveTextContent("└ 배분 원가");
+  expect(
+    screen.getByTestId("structure-numeric-idle-cost-amt"),
+  ).toHaveTextContent("└ 대기 원가");
+  expect(
+    screen.getByTestId("structure-numeric-drct-exps-amt"),
+  ).toHaveTextContent("└ 직접 경비");
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+});
+it("shows server share comparisons in percentage points and keeps the favorable/adverse tones", async () => {
+  const data = response(),
+    card = data.summary[3];
+  card.amount = "289";
+  card.rate = "28.9";
+  card.previous = {
+    ...card.previous!,
+    metric: "idleCostShare",
+    changeRate: null,
+    currentValue: "28.9",
+    comparisonValue: "33.2",
+    percentagePointChange: "-4.3",
+    direction: "FAVORABLE",
+  };
+  card.previousYear = {
+    ...card.previous,
+    percentagePointChange: "2.1",
+    direction: "ADVERSE",
+  };
+  data.summary[1].rate = "24.3";
+  data.summary[2].rate = "10.3";
+  vi.mocked(api.getProfitLossStructure).mockResolvedValue(data);
+  await draw();
+  const idle = within(screen.getByTestId("structure-card-idle-cost-amt"));
+  expect(idle.getByText("전월 대비 -4.3%p")).toHaveClass("favorable");
+  expect(idle.getByText("전년 같은 기간 대비 2.1%p")).toHaveClass("adverse");
+  expect(idle.getByText("28.9%")).toBeVisible();
+  expect(idle.getByText(/대기 원가 .* ÷ 매출원가/)).toBeVisible();
+  expect(screen.getByTestId("structure-card-gross-prft-amt")).toHaveTextContent(
+    "매출총이익률 24.3%",
+  );
+  expect(screen.getByTestId("structure-card-oprt-prft-amt")).toHaveTextContent(
+    "영업이익률 10.3%",
+  );
+});
+it.each([
+  [2, "전 분기 같은 기간 대비"],
+  [3, "전 분기 대비"],
+])(
+  "uses the server quarter's %i month count for its comparison label",
+  async (count, label) => {
+    vi.mocked(api.getProfitLossStructure).mockImplementation(
+      async (_year, _month, aggregation) => {
+        const data = response();
+        data.context.aggregation = aggregation;
+        data.buckets[0].monthCount = count as number;
+        return data;
+      },
+    );
+    await draw();
+    await userEvent.click(screen.getByRole("tab", { name: "분기" }));
+    expect(
+      await within(screen.getByTestId("structure-card-sales-amt")).findByText(
+        `${label} -200.0%`,
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("분기별 · 단위 천원")).toBeVisible();
+  },
+);
+it("keeps sales part guidance inside its card and uses the server's composition names", async () => {
+  await draw();
+  expect(
+    screen.getByRole("heading", { name: "고객사 상위 5곳" }),
+  ).toBeVisible();
+  const part = within(screen.getByTestId("structure-part-composition"));
+  expect(part.getByText("프로젝트를 따온 파트 기준")).toBeVisible();
+  expect(part.getByText(/영업 파트 이익금은 사람 소속/)).toBeVisible();
+  expect(screen.getByTestId("structure-type-group-0")).toHaveTextContent(
+    "턴키",
+  );
+  expect(
+    screen.getByTestId("structure-waterfall-corp-tax-amt"),
+  ).toHaveTextContent("법인세(월할)");
+  expect(
+    screen.getByTestId("structure-numeric-net-prft-amt"),
+  ).toHaveTextContent("당기순이익");
+  expect(screen.getByText(/턴키는 청구한 달의 공급가액/)).not.toHaveTextContent(
+    /TK|MO\/DP|09/,
+  );
 });
 it("passes selected month through router state to operating and net screens", async () => {
   await draw();
@@ -397,19 +530,57 @@ it.each([
 
 it.each([
   ["MONTH", "월", ["2026-08"], "2026년 8월 · 월 실적 · 전년 동월과 비교"],
-  ["QUARTER", "분기", ["2026-07", "2026-08"], "2026년 7~8월 · 분기 실적 · 전년 동분기의 같은 월 범위와 비교"],
-  ["YTD", "연 누계", Array.from({ length: 8 }, (_, i) => `2026-${String(i + 1).padStart(2, "0")}`), "2026년 1~8월 · 연 누계 실적 · 전년 동기 누계와 비교"],
-] as const)("describes the server's actual %s bucket period", async (mode, tab, months, expected) => {
-  vi.mocked(api.getProfitLossStructure).mockImplementation(async (year, month, aggregation) => {
-    const result = response();
-    result.context = { ...result.context, year, month, nowMonth: month, aggregation };
-    const bucketMonths = aggregation === mode ? [...months] : [month];
-    result.buckets[0] = { ...result.buckets[0], months: bucketMonths, throughMonth: month, monthCount: bucketMonths.length };
-    result.months = bucketMonths.map(value => ({ ...result.months[0], month: value }));
-    return result;
-  });
-  await draw("2026-08");
-  if (mode !== "MONTH") await userEvent.click(screen.getByRole("tab", { name: tab }));
-  expect(await screen.findByText(`${expected} · 부가세 제외`)).toBeVisible();
-  expect(api.getProfitLossStructure).toHaveBeenLastCalledWith(2026, "2026-08", mode, expect.any(AbortSignal));
-});
+  [
+    "QUARTER",
+    "분기",
+    ["2026-07", "2026-08"],
+    "2026년 7~8월 · 분기 실적 · 전년 동분기의 같은 월 범위와 비교",
+  ],
+  [
+    "YTD",
+    "연 누계",
+    Array.from(
+      { length: 8 },
+      (_, i) => `2026-${String(i + 1).padStart(2, "0")}`,
+    ),
+    "2026년 1~8월 · 연 누계 실적 · 전년 동기 누계와 비교",
+  ],
+] as const)(
+  "describes the server's actual %s bucket period",
+  async (mode, tab, months, expected) => {
+    vi.mocked(api.getProfitLossStructure).mockImplementation(
+      async (year, month, aggregation) => {
+        const result = response();
+        result.context = {
+          ...result.context,
+          year,
+          month,
+          nowMonth: month,
+          aggregation,
+        };
+        const bucketMonths = aggregation === mode ? [...months] : [month];
+        result.buckets[0] = {
+          ...result.buckets[0],
+          months: bucketMonths,
+          throughMonth: month,
+          monthCount: bucketMonths.length,
+        };
+        result.months = bucketMonths.map((value) => ({
+          ...result.months[0],
+          month: value,
+        }));
+        return result;
+      },
+    );
+    await draw("2026-08");
+    if (mode !== "MONTH")
+      await userEvent.click(screen.getByRole("tab", { name: tab }));
+    expect(await screen.findByText(`${expected} · 부가세 제외`)).toBeVisible();
+    expect(api.getProfitLossStructure).toHaveBeenLastCalledWith(
+      2026,
+      "2026-08",
+      mode,
+      expect.any(AbortSignal),
+    );
+  },
+);

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import type { StructureData } from "../../frontend/src/pages/structure/profitStructureApi";
 
 test.use({
   viewport: { width: 1440, height: 900 },
@@ -224,6 +225,169 @@ for (const id of screens) {
     expect(pageErrors).toEqual([]);
   });
 }
+
+test("UI-07: server-backed shares, permanent tables and readable methods preserve all period tabs", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  await login(page);
+  const received = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/profit-loss/structure" &&
+      response.request().method() === "GET",
+  );
+  await openScreen(page, "UI-07");
+  const initial = await received;
+  expect(initial.status()).toBe(200);
+  let data = (await initial.json()).data as StructureData;
+  const screen = page.getByTestId("profit-structure-screen");
+  await screen.getByTestId("structure-unit").selectOption("천원");
+  for (const [mode, tab, caption] of [
+    ["MONTH", "월", "월별"],
+    ["QUARTER", "분기", "분기별"],
+    ["YTD", "연 누계", "월별 누계"],
+  ] as const) {
+    if (mode !== "MONTH") {
+      const response = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return (
+          url.pathname === "/api/profit-loss/structure" &&
+          url.searchParams.get("aggregation") === mode
+        );
+      });
+      await screen.getByRole("tab", { name: tab, exact: true }).click();
+      const result = await response;
+      expect(result.status()).toBe(200);
+      data = (await result.json()).data as StructureData;
+    }
+    expect(data.context.aggregation).toBe(mode);
+    await expect(
+      screen.getByRole("tab", { name: tab, exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      screen.getByRole("button", { name: "숫자로 보기", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      screen.getByRole("button", { name: "계산 방법", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      screen.getByText(`${caption} · 단위 천원`, { exact: true }),
+    ).toBeVisible();
+    const numeric = screen.getByRole("table", { name: "기간별 손익 숫자표" });
+    await expect(numeric).toBeVisible();
+    await expect(
+      numeric.locator("tbody tr.profit-structure-subtotal"),
+    ).toHaveCount(4);
+    for (const metric of [
+      "sales-amt",
+      "gross-prft-amt",
+      "oprt-prft-amt",
+      "net-prft-amt",
+    ]) {
+      const row = screen.getByTestId(`structure-numeric-${metric}`);
+      await expect(row.getByRole("rowheader")).toHaveCSS("font-weight", "700");
+      await expect(row.getByRole("cell").last()).toHaveCSS(
+        "font-weight",
+        "700",
+      );
+    }
+    for (const label of ["└ 배분 원가", "└ 대기 원가", "└ 직접 경비"])
+      await expect(
+        numeric.getByRole("rowheader", { name: label, exact: true }),
+      ).toBeVisible();
+    for (const label of [
+      "당기순이익",
+      "법인세(월할)",
+      "매출총이익률",
+      "대기 원가 비중",
+    ])
+      await expect(
+        numeric.getByRole("rowheader", { name: label, exact: true }),
+      ).toBeVisible();
+    await expect(
+      numeric.getByRole("rowheader", {
+        name: /^(순이익|월할 세금|총이익률|대기 비중)$/,
+      }),
+    ).toHaveCount(0);
+    const methods = screen.getByRole("table", {
+      name: "계산 방법",
+      exact: true,
+    });
+    await expect(methods).toBeVisible();
+    await expect(methods.getByRole("columnheader")).toHaveText([
+      "항목",
+      "계산",
+      "참고",
+    ]);
+    await expect(methods.locator("tbody tr")).toHaveCount(7);
+    await expect(methods).not.toContainText(
+      /TB_|salesAmt|grossPrftAmt|idleCostShare/,
+    );
+    for (const method of data.calculationMethods) {
+      const row = methods
+        .getByRole("rowheader", { name: method.metric, exact: true })
+        .locator("..");
+      await expect(row.getByRole("cell")).toHaveText([
+        method.formula,
+        method.sources.join(" "),
+      ]);
+    }
+    const idle = data.summary.find((card) => card.metric === "idleCostAmt")!;
+    const idleCard = screen.getByTestId("structure-card-idle-cost-amt");
+    const previousLabel =
+      mode === "QUARTER"
+        ? data.buckets.at(-1)!.monthCount < 3
+          ? "전 분기 같은 기간 대비"
+          : "전 분기 대비"
+        : "전월 대비";
+    for (const [comparison, label] of [
+      [idle.previous, previousLabel],
+      [idle.previousYear, "전년 같은 기간 대비"],
+    ] as const) {
+      if (!comparison) continue;
+      expect(comparison.metric).toBe("idleCostShare");
+      expect(comparison.changeRate).toBeNull();
+      if (comparison.percentagePointChange !== null)
+        await expect(
+          idleCard.getByText(`${label} ${comparison.percentagePointChange}%p`, {
+            exact: true,
+          }),
+        ).toHaveClass(
+          new RegExp(`\\b${comparison.direction.toLowerCase()}\\b`),
+        );
+    }
+    if (mode === "YTD") expect(idle.previous).toBeNull();
+    const last = data.buckets.at(-1)!;
+    if (last.composition.visible) {
+      await expect(
+        screen.getByRole("heading", { name: "고객사 상위 5곳", exact: true }),
+      ).toBeVisible();
+      const part = screen.getByTestId("structure-part-composition");
+      await expect(
+        part.getByText("프로젝트를 따온 파트 기준", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        part.getByText(/영업 파트 이익금은 사람 소속 파트 기준/),
+      ).toBeVisible();
+      for (const group of last.composition.contractTypes)
+        await expect(
+          screen
+            .getByTestId("structure-type-composition")
+            .getByText(group.groupName, { exact: true }),
+        ).toBeVisible();
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(screen.getByTestId("structure-export")).toBeDisabled();
+  await expect(
+    screen.getByRole("table", { name: "계산 방법", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
 
 test("developer full-page registration preserves cancellation and does not issue a create request", async ({
   page,

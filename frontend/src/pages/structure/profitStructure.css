@@ -190,6 +190,35 @@
   color: var(--primary);
   font-weight: 600;
 }
+.profit-structure-section-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.profit-structure-section-title small {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.profit-structure tbody th {
+  font-weight: 400;
+}
+.profit-structure .profit-structure-subtotal > * {
+  font-weight: 700;
+}
+.profit-structure .profit-structure-child-row > th {
+  padding-left: 28px;
+}
+.profit-structure .profit-structure-method-table th,
+.profit-structure .profit-structure-method-table td {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.profit-structure-method-table td {
+  min-width: 220px;
+}
 @media (max-width: 1100px) {
   .profit-structure-summary,
   .profit-structure-compositions {
