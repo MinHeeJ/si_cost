@@ -1,4 +1,5 @@
 import { SharedScreenFrame } from "./FollowUpScreen";
+import { UsersScreen } from "./UsersScreen";
 import { SharedScreenContext } from "./SharedScreenContext";
 import * as dashboard from "../dashboardops/dashboardApi";
 import { dashboardFixture } from "../dashboardops/dashboardFixture";
@@ -782,3 +783,27 @@ it.each(["UI-01", "UI-05", "UI-14", "UI-18", "UI-21", "UI-28"])(
     }
   },
 );
+
+it("사용자 화면 안내를 제목 옆에서 열고 닫으면 초점을 되돌린다", async () => {
+  const notice = "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.";
+  render(
+    <MemoryRouter initialEntries={["/UI-23"]}>
+      <SharedScreenContext.Provider
+        value={{ menus, favorites: [], star: vi.fn(), pending: false }}
+      >
+        <UsersScreen>
+          <p>사용자 목록</p>
+        </UsersScreen>
+      </SharedScreenContext.Provider>
+    </MemoryRouter>,
+  );
+  const trigger = screen.getByRole("button", { name: "화면 안내" });
+  expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  await userEvent.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "DB UI-23 화면 안내" });
+  expect(within(dialog).getByText(notice)).toBeVisible();
+  expect(within(dialog).getByText("화면 번호 UI-23")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  expect(dialog).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+});

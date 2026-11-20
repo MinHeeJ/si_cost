@@ -233,9 +233,6 @@ export function BusinessUsersScreen({
     >
       <p className="businessusers-mobile">이 화면은 PC에서 사용해 주세요.</p>
       <div className="businessusers-desktop">
-        <p className="sicost-banner sicost-tone-info">
-          저장된 역할·메뉴 권한과 담당 범위를 적용합니다.
-        </p>
         <div className="businessusers-toolbar">
           <h2>사용자</h2>
           {canRegister && (
