@@ -12,6 +12,7 @@ import { BusinessPlanPerformanceScreen } from "./BusinessPlanPerformanceScreen";
 import { BusinessPlanPerformanceScreen as RegisteredScreen } from "../shared/BusinessPlanPerformanceScreen";
 import * as api from "./businessPlanPerformanceApi";
 import type { ReactNode } from "react";
+import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
 vi.mock("./businessPlanPerformanceApi", async (original) => ({
   ...(await original<typeof import("./businessPlanPerformanceApi")>()),
   getBusinessPlanPerformance: vi.fn(),
@@ -19,7 +20,9 @@ vi.mock("./businessPlanPerformanceApi", async (original) => ({
 }));
 vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+    <ScreenPermissionContext.Provider value="UI-18">
+      <section>{children}</section>
+    </ScreenPermissionContext.Provider>
   ),
 }));
 vi.mock("../apiops/FinancialHistoryPanel", () => ({
@@ -63,9 +66,11 @@ export function result(
         operatingProfitActualAmt: future ? null : "-50",
         salesAchievementRate:
           future || status === "UNREGISTERED" ? null : "100.0",
-        operatingMarginDifference: future ? null : "0.0",
+        operatingMarginDifference:
+          future || status === "UNREGISTERED" ? null : "0.0",
         salesUnderTarget: future || status === "UNREGISTERED" ? null : true,
-        operatingMarginAdverse: future ? null : true,
+        operatingMarginAdverse:
+          future || status === "UNREGISTERED" ? null : true,
         targetRegistered: status !== "UNREGISTERED",
         actual: {
           month,
@@ -100,9 +105,13 @@ export function result(
       status === "UNREGISTERED"
         ? ["2026년 사업계획 목표가 아직 없습니다. [목표 업로드]로 올려 주세요."]
         : status === "INCOMPLETE"
-          ? ["일부 월 사업계획 목표가 없습니다."]
+          ? [
+              "일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.",
+            ]
           : status === "ZERO_TARGETS"
-            ? ["목표 없음 (미등록 아님)"]
+            ? [
+                "12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.",
+              ]
             : ["잠정 · 예정 포함"],
   };
 }
@@ -155,6 +164,42 @@ it("keeps unregistered actuals and upload guidance", async () => {
   expect(
     screen.getByTestId("business-plan-summary-cumulative-sales"),
   ).toHaveTextContent("–");
+  const banner = screen.getByTestId("business-plan-unregistered");
+  expect(banner).toHaveClass("business-plan-warning");
+  expect(
+    banner.compareDocumentPosition(
+      screen.getByTestId("business-plan-summary-cumulative-sales"),
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(screen.queryByText(/확인 필요/)).not.toBeInTheDocument();
+  expect(
+    screen.getAllByText(/2026년 사업계획 목표가 아직 없습니다/),
+  ).toHaveLength(1);
+  for (const metric of [
+    "cumulative-sales",
+    "cumulative-operating-profit",
+    "current-month-sales",
+  ]) {
+    expect(
+      screen
+        .getByTestId(`business-plan-summary-${metric}`)
+        .querySelector("strong"),
+    ).toHaveTextContent("–");
+  }
+  for (const metric of [
+    "sales-target-amt",
+    "operating-profit-target-amt",
+    "sales-achievement-rate",
+    "operating-margin-difference",
+  ]) {
+    const cells = within(
+      screen.getByTestId(`business-plan-row-${metric}`),
+    ).getAllByRole("cell");
+    cells.forEach((cell) => expect(cell).toHaveTextContent("–"));
+  }
+  expect(
+    screen.getByTestId("business-plan-cell-sales-achievement-rate-2026-01"),
+  ).toHaveAttribute("title", "목표 없음");
 });
 it("shows registered zero and partial target notices distinctly", async () => {
   vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(
@@ -162,13 +207,17 @@ it("shows registered zero and partial target notices distinctly", async () => {
   );
   await draw();
   expect(
-    screen.getByText("일부 월 사업계획 목표가 없습니다."),
+    screen.getByText(
+      "일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.",
+    ),
   ).toBeInTheDocument();
   vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(
     result("ZERO_TARGETS"),
   );
   act(() => window.dispatchEvent(new Event(api.BUSINESS_PLAN_COMMITTED)));
-  await screen.findByText("목표 없음 (미등록 아님)");
+  await screen.findByText(
+    "12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.",
+  );
 });
 it("retains red color for rounded hundred and rounded zero margin", async () => {
   await draw();
@@ -201,7 +250,7 @@ it("does not color undefined denominators red", async () => {
     ).getByText("–"),
   ).not.toHaveClass("business-plan-adverse");
 });
-it("shows future targets but omits future bars and preserves source explanations", async () => {
+it("shows future targets but omits future bars and keeps only the existing FieldHelp for each source row", async () => {
   await draw();
   expect(
     screen.queryByTestId("business-plan-actual-bar-2026-12"),
@@ -209,15 +258,131 @@ it("shows future targets but omits future bars and preserves source explanations
   expect(
     screen.getByTestId("business-plan-row-sales-target-amt"),
   ).toHaveTextContent("99.001");
-  expect(screen.getByLabelText("매출 실적 원천 설명")).toHaveAttribute(
-    "title",
-    expect.stringContaining("TK는 청구일"),
+  for (const label of [
+    "매출 목표",
+    "매출 실적",
+    "영업이익 목표",
+    "영업이익 실적",
+  ]) {
+    const row = screen.getByRole("rowheader", { name: label });
+    expect(
+      within(row).getAllByRole("button", { name: `${label} 도움말` }),
+    ).toHaveLength(1);
+    expect(within(row).queryByText("ⓘ")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(`${label} 원천 설명`),
+    ).not.toBeInTheDocument();
+  }
+  await userEvent.click(
+    screen.getByRole("button", { name: "매출 실적 도움말" }),
   );
-  expect(screen.getByLabelText("영업이익 실적 원천 설명")).toHaveAttribute(
-    "title",
-    expect.stringContaining("입금액 아님"),
-  );
+  expect(screen.getByRole("tooltip")).toHaveTextContent("영업이익표");
   expect(screen.getAllByText("예정 포함").length).toBeGreaterThan(0);
+});
+it("emphasizes both rate rows and only explains missing rate cells without abbreviations", async () => {
+  const data = result();
+  Object.assign(data.months[0], {
+    salesTargetAmt: "0",
+    operatingProfitTargetAmt: "0",
+    salesAchievementRate: null,
+    operatingMarginDifference: null,
+    salesUnderTarget: null,
+    operatingMarginAdverse: null,
+  });
+  Object.assign(data.months[1], {
+    salesActualAmt: null,
+    operatingProfitActualAmt: null,
+    salesAchievementRate: null,
+    operatingMarginDifference: null,
+    salesUnderTarget: null,
+    operatingMarginAdverse: null,
+  });
+  Object.assign(data.months[2], {
+    salesActualAmt: "0",
+    salesAchievementRate: "0.0",
+    operatingMarginDifference: null,
+    operatingMarginAdverse: null,
+  });
+  Object.assign(data.months[3], {
+    salesTargetAmt: null,
+    operatingProfitTargetAmt: null,
+    salesAchievementRate: null,
+    operatingMarginDifference: null,
+    salesUnderTarget: null,
+    operatingMarginAdverse: null,
+  });
+  vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(data);
+  await draw();
+  for (const key of ["sales-achievement-rate", "operating-margin-difference"]) {
+    expect(screen.getByTestId(`business-plan-row-${key}`)).toHaveClass(
+      "business-plan-emphasis",
+    );
+    for (const month of ["01", "04"]) {
+      const cell = screen.getByTestId(
+        `business-plan-cell-${key}-2026-${month}`,
+      );
+      expect(cell).toHaveTextContent("–");
+      expect(cell).toHaveAttribute("title", "목표 없음");
+      expect(cell).not.toHaveClass("business-plan-adverse");
+    }
+    expect(
+      screen.getByTestId(`business-plan-cell-${key}-2026-02`),
+    ).toHaveAttribute("title", "실적 자료 미확인");
+    expect(
+      screen.getByTestId(`business-plan-cell-${key}-2026-12`),
+    ).not.toHaveAttribute("title");
+    expect(
+      screen.getByTestId(`business-plan-cell-${key}-2026-05`),
+    ).not.toHaveAttribute("title");
+  }
+  expect(
+    screen.getByTestId(
+      "business-plan-cell-operating-margin-difference-2026-03",
+    ),
+  ).toHaveAttribute("title", "매출 실적이 0이라 이익률을 비교하지 않습니다");
+  expect(
+    screen.getByTestId("business-plan-cell-sales-achievement-rate-2026-03"),
+  ).not.toHaveAttribute("title");
+  for (const cell of within(
+    screen.getByRole("table", { name: "사업계획 월별 실적" }),
+  ).getAllByRole("cell")) {
+    if (cell.textContent !== "–") expect(cell).not.toHaveAttribute("title");
+    expect(cell.getAttribute("title") ?? "").not.toMatch(/TK|MO|DP/);
+  }
+  expect(screen.getByTestId("business-plan-basis")).toHaveTextContent(
+    "실적은 영업이익표의 같은 달 매출액·영업이익입니다(턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출, 부가세 제외).",
+  );
+  expect(screen.getByTestId("business-plan-basis")).not.toHaveTextContent(
+    /TK|MO|DP/,
+  );
+});
+it("keeps unrelated server notices when moving the unregistered notice to its banner", async () => {
+  const data = result("UNREGISTERED");
+  data.notices.push("실적 자료를 확인해 주세요.");
+  vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(data);
+  await draw();
+  const details = screen.getByText(/확인 필요/).closest("details")!;
+  expect(details).toHaveTextContent("1건");
+  expect(details).toHaveTextContent("실적 자료를 확인해 주세요.");
+  expect(details).not.toHaveTextContent("사업계획 목표가 아직 없습니다");
+});
+it("renders server negative summary rates and exact actual/target amounts unchanged", async () => {
+  const data = result();
+  Object.assign(data.summary[1], {
+    actualAmt: "-36489146",
+    targetAmt: "270000000",
+    achievementRate: "-13.5",
+    underTarget: true,
+  });
+  vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(data);
+  await draw();
+  await userEvent.selectOptions(screen.getByLabelText("단위"), "원");
+  const card = screen.getByTestId(
+    "business-plan-summary-cumulative-operating-profit",
+  );
+  expect(card.querySelector("strong")).toHaveTextContent("−13.5%");
+  expect(card.querySelector("strong")).toHaveClass("business-plan-adverse");
+  expect(card).toHaveTextContent("실적 −36,489,146 / 목표 270,000,000");
 });
 it("formats large exact amounts by string scaling, not Number", async () => {
   const data = result();
@@ -229,7 +394,7 @@ it("formats large exact amounts by string scaling, not Number", async () => {
     screen.getByTestId("business-plan-summary-cumulative-sales"),
   ).toHaveTextContent("9,007,199,254,740,993");
 });
-it("downloads the selected year template and keeps past-year uploads read-only", async () => {
+it("removes the title template action and keeps past-year uploads read-only", async () => {
   const data = result();
   data.context.year = 2025;
   data.context.month = "2025-12";
@@ -237,8 +402,10 @@ it("downloads the selected year template and keeps past-year uploads read-only",
   render(<BusinessPlanPerformanceScreen />);
   period("2025", "2025-12");
   await screen.findByRole("table");
-  await userEvent.click(screen.getByTestId("business-plan-template"));
-  expect(api.downloadBusinessPlanTemplate).toHaveBeenCalledWith(2025);
+  expect(
+    screen.queryByRole("button", { name: "양식 내려받기" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/양식:.*업로드:/)).not.toBeInTheDocument();
   expect(screen.getByTestId("business-plan-upload")).toBeDisabled();
   expect(screen.queryByLabelText("파일 선택")).not.toBeInTheDocument();
 });
@@ -249,6 +416,7 @@ it("opens the current-year upload from the current-year view", async () => {
     await screen.findByTestId("business-plan-import-year"),
   ).toHaveTextContent("대상연도 2026");
   expect(screen.getByLabelText("파일 선택")).toBeEnabled();
+  expect(screen.getByRole("button", { name: "양식 내려받기" })).toBeEnabled();
 });
 it("refreshes on source commit without a write or polling", async () => {
   await draw();
@@ -292,9 +460,13 @@ it("ignores a stale response after period changes", async () => {
 it("disables PC-only actions on narrow screens without hiding actuals", async () => {
   Object.defineProperty(window, "innerWidth", { value: 600 });
   await draw();
-  expect(screen.getByTestId("business-plan-template")).toBeDisabled();
+  expect(
+    screen.queryByTestId("business-plan-template"),
+  ).not.toBeInTheDocument();
   expect(screen.getByTestId("business-plan-upload")).toBeDisabled();
-  expect(screen.getByText(/PC에서 이용/)).toBeInTheDocument();
+  expect(
+    screen.getByText("목표 업로드는 PC에서 이용해 주세요."),
+  ).toBeInTheDocument();
 });
 it.each([
   "sicost:business-plan-import-committed",

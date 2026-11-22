@@ -100,8 +100,8 @@ class BusinessPlanImportContractTest {
         try(var book=new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
             var sheet=book.getSheetAt(0);assertThat(sheet.getPhysicalNumberOfRows()).isEqualTo(13);
             assertThat(sheet.getRow(0).getCell(0).getStringCellValue()).isEqualTo("연월*");
-            assertThat(sheet.getRow(0).getCell(1).getStringCellValue()).isEqualTo("매출 목표*");
-            assertThat(sheet.getRow(0).getCell(2).getStringCellValue()).isEqualTo("영업이익 목표*");
+            assertThat(sheet.getRow(0).getCell(1).getStringCellValue()).isEqualTo("매출 목표(원)*");
+            assertThat(sheet.getRow(0).getCell(2).getStringCellValue()).isEqualTo("영업이익 목표(원)*");
             for(int m=1;m<=12;m++){assertThat(sheet.getRow(m).getCell(0).getStringCellValue()).isEqualTo(YearMonth.of(2079,m).toString());
                 assertThat(sheet.getRow(m).getCell(1).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);assertThat(sheet.getRow(m).getCell(2).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);}
         }

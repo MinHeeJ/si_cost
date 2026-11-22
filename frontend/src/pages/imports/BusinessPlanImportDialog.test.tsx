@@ -303,11 +303,25 @@ it("shared issues severity and pagination stay wired to string upload id", async
     ),
   );
 });
+it("explains won units and keeps the template download inside the upload dialog", async () => {
+  vi.mocked(api.getBusinessPlanImportTemplate).mockRejectedValue(
+    new Error("다운로드 실패"),
+  );
+  draw();
+  expect(
+    screen.getByText(
+      "연월 · 매출 목표 · 영업이익 목표, 올해 1~12월 12줄 · 금액은 원 단위 (예: 50,000,000) · 빈칸은 0(목표 없음)으로 올립니다 · 엑셀 10MB 이하",
+    ),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "양식 내려받기" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("다운로드 실패");
+  expect(api.getBusinessPlanImportTemplate).toHaveBeenCalledWith(2080);
+});
 it("PC-only notice prevents file entry", () => {
   vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
   draw();
   expect(
-    screen.getByText("엑셀 업로드는 PC에서 이용해 주세요."),
+    screen.getByText("목표 업로드는 PC에서 이용해 주세요."),
   ).toBeInTheDocument();
   expect(screen.queryByLabelText("파일 선택")).not.toBeInTheDocument();
 });
