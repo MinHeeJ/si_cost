@@ -64,9 +64,9 @@
   font: inherit;
 }
 .cash-flow th .sicost-badge {
-  display: block;
+  display: inline-block;
   width: max-content;
-  margin: 4px auto 0;
+  margin: 4px 4px 0;
 }
 .cash-source-panel {
   display: grid;
@@ -95,11 +95,52 @@
 }
 
 .cash-flow .cash-planned {
-  background: var(--primary-bg);
+  background: transparent;
 }
-.cash-flow .cash-shortage {
-  color: var(--bad);
+.cash-flow td.cash-planned {
+  /* Planned figures stay muted even when the shared negative-value rule applies. */
+  color: var(--text-sub) !important;
+}
+.cash-flow td.cash-shortage {
+  color: var(--bad) !important;
   font-weight: 600;
+}
+
+.cash-shortage-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--bad);
+  border-radius: 8px;
+  background: var(--bad-bg, #fef2f2);
+  color: var(--bad);
+}
+.cash-shortage-alert p {
+  flex: 1;
+  margin: 0;
+}
+.cash-shortage-alert button {
+  flex-shrink: 0;
+}
+.cash-shortage-warning {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--bad);
+}
+.cash-flow-guide {
+  line-height: 1.7;
+}
+@media (max-width: 767px) {
+  .cash-shortage-alert {
+    flex-wrap: wrap;
+  }
+  .cash-shortage-alert p {
+    flex-basis: calc(100% - 36px);
+  }
+  .cash-shortage-alert button {
+    margin-left: auto;
+  }
 }
 
 .cash-source-panel table {

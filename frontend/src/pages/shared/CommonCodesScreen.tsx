@@ -1,16 +1,25 @@
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { request } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ChangeHistoryPanel } from "./ChangeHistoryPanel";
 import { SharedScreenFrame } from "./FollowUpScreen";
 import { useSharedScreen } from "./SharedScreenContext";
 export function CommonCodesScreen() {
+  const location = useLocation();
+  const initialTab =
+    (location.state as { section?: string } | null)?.section === "standards"
+      ? "standards"
+      : "codes";
   const { codes, mappings, standards, pageSize, dense, savePageSize } =
     useSharedScreen("UI-27");
-  const [active, setActive] = useState("codes"),
+  const [active, setActive] = useState(initialTab),
     [groups, setGroups] = useState<{ groupId: string; name: string }[]>([]),
     [error, setError] = useState("");
+  useEffect(() => {
+    if (location.pathname === "/UI-27") setActive(initialTab);
+  }, [location.pathname, location.key, initialTab]);
   const loadGroups = () => {
     setError("");
     void request<{ items: { groupId: string; name: string }[] }>(
@@ -43,6 +52,7 @@ export function CommonCodesScreen() {
           <button
             key={id}
             role="tab"
+            data-testid={`common-${id}-tab`}
             id={`common-${id}-tab`}
             aria-selected={active === id}
             aria-controls={`common-${id}-panel`}
@@ -63,6 +73,7 @@ export function CommonCodesScreen() {
         <div
           key={id}
           role="tabpanel"
+          data-testid={`common-${id}-panel`}
           id={`common-${id}-panel`}
           aria-labelledby={`common-${id}-tab`}
           hidden={active !== id}
@@ -77,6 +88,7 @@ export function CommonCodesScreen() {
       <div
         role="tabpanel"
         id="common-history-panel"
+        data-testid="common-history-panel"
         aria-labelledby="common-history-tab"
         hidden={active !== "history"}
       >
