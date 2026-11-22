@@ -55,10 +55,10 @@ services:
       retries: 6
 networks:
   default:
-    # Let Docker allocate a free subnet per project instead of pinning all QA runs.
-    # An explicit unused subnet remains available for hosts with exhausted pools.
+    # Avoid Docker's default pools, which can be exhausted on shared QA hosts.
+    # Parallel deployments must choose distinct, non-overlapping private subnets.
     ipam:
       config:
-        - subnet: ${COMPOSE_SUBNET:-}
+        - subnet: ${COMPOSE_SUBNET:-10.203.0.0/24}
 volumes:
   postgres-data:
