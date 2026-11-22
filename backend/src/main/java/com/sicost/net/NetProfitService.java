@@ -2,6 +2,7 @@ package com.sicost.net;
 
 import com.sicost.businessplansops.BusinessPlanPerformanceDtos.Actual;
 import com.sicost.common.api.ApiException;
+import com.sicost.codegroups.CodeGroupMapper;
 import com.sicost.operating.OperatingProfitDtos.Query;
 import com.sicost.operating.OperatingProfitDtos.StatementRow;
 import com.sicost.operating.OperatingProfitService;
@@ -20,8 +21,12 @@ import static com.sicost.structure.ProfitStructureService.*;
 public class NetProfitService {
     private final ProfitStructureRepository repository;
     private final RevenueCompositionCalculation compositions;
-    public NetProfitService(ProfitStructureRepository repository,RevenueCompositionCalculation compositions) {
-        this.repository=repository;this.compositions=compositions;
+    private final CodeGroupMapper codes;
+    public NetProfitService(ProfitStructureRepository repository,
+        RevenueCompositionCalculation compositions,CodeGroupMapper codes) {
+        this.repository=repository;
+        this.compositions=compositions;
+        this.codes=codes;
     }
     public static final List<String> METRICS;
     private static final List<String> LABELS=List.of("매출액","매출원가","배분 원가","대기 원가","직접 경비","매출총이익","판관비","입력 항목","간접 인건비","연구개발비(내부)","전월 조정","영업이익","영업이익률","영업외수익","영업외비용","법인세(월할)","당기순이익","순이익률");
@@ -57,6 +62,7 @@ public class NetProfitService {
         var entries=compositions.entries(read);
         var composition=compositions.composition(entries,List.of(selected),selected.amounts(),compositions.topCustomers(entries,List.of(query.month())));
         composition=contribution(composition);
+        composition=displayNames(composition);
         List<String> notices=new ArrayList<>(read.notices());
         notices.add("자료 "+completeness.availableMonthCount()+"/"+keys.size()+"개월");
         if(!completeness.missingMonths().isEmpty())notices.add("빠진 월: "+String.join(", ",completeness.missingMonths()));
@@ -64,9 +70,22 @@ public class NetProfitService {
             var comparison=rows.get(0).comparison();
             notices.add("전년 자료 "+comparison.availableMonthCount()+"/"+comparison.requestedMonthCount()+"개월"+(comparison.missingMonths().isEmpty()?"":" · 빠진 월: "+String.join(", ",comparison.missingMonths())));
         }
-        if(composition.visible()&&composition.contractTypes().stream().noneMatch(g->g.showBar()))notices.add("기준월 양수 기여이익이 없어 기여도 비율을 표시하지 않습니다.");
+        if(composition.visible()&&composition.contractTypes().stream().noneMatch(g->g.showBar()))notices.add("흑자인 유형이 없어 비율과 막대를 표시하지 않습니다.");
         return new NetProfitDtos.Data(read.context(),read.months(),summary,List.copyOf(rows),showPrevious,
             months.stream().anyMatch(Actual::provisional),completeness,notices.stream().distinct().toList(),query.month(),composition);
+    }
+    private Composition displayNames(Composition source) {
+        if(!source.visible() || source.contractTypes().isEmpty())return source;
+        Map<String,String> names=new HashMap<>();
+        codes.codes("CTRT_TYPE",false).forEach(code->names.put(code.code(),code.name()));
+        List<Group> groups=source.contractTypes().stream().map(group->new Group(
+            group.groupKind(),group.groupId(),names.getOrDefault(group.groupId(),group.groupName()),
+            group.other(),group.salesAmt(),group.allocatedLaborCostAmt(),group.contributionAmt(),
+            group.revenueShare(),group.contributionRate(),group.positiveContributionShare(),
+            group.loss(),group.showBar()
+        )).toList();
+        return new Composition(source.visible(),source.reason(),source.complete(),
+            source.revenueDifference(),groups,source.customers(),source.salesParts());
     }
     static Composition contribution(Composition source) {
         if(!source.visible())return source;

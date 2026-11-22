@@ -39,8 +39,11 @@ import static org.hamcrest.Matchers.nullValue;
     NetProfitExportService.class,ExcelExportService.class,ApiExceptionHandler.class,RequestIdFilter.class,JsonConfiguration.class})
 class NetProfitContractTest {
     @Autowired MockMvc mvc;
+    @Autowired NetProfitService net;
+    @Autowired NetProfitExportService exports;
     @MockBean BusinessPlanPerformanceMapper financial;
     @MockBean ProfitStructureMapper mapper;
+    @MockBean com.sicost.codegroups.CodeGroupMapper codes;
     @MockBean MonthlyCostService costs;
     @MockBean TurnkeyRevenueCalculation turnkey;
     @MockBean CurrentUserProvider users;
@@ -50,6 +53,8 @@ class NetProfitContractTest {
     final OffsetDateTime at=OffsetDateTime.parse("2026-07-15T09:00:00+09:00");
     static final String READ="/api/profit-loss/net",EXPORT=READ+"/export";
     @BeforeEach void setup() {
+        when(codes.codes("CTRT_TYPE",false)).thenReturn(List.of(
+            code("MO","월단위"),code("TK","턴키"),code("DP","파견")));
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","임시 관리자",List.of("ADMIN"),true));
         when(clock.instant()).thenReturn(at.toInstant());when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul"));when(clock.withZone(any())).thenReturn(clock);
         when(manager.getTransaction(any())).thenAnswer(c->new SimpleTransactionStatus());
@@ -60,6 +65,10 @@ class NetProfitContractTest {
         when(costs.loadYear(any())).thenReturn(sources);when(costs.calculate(any())).thenReturn(new MonthlyCostsData(sources.period(),List.of()));
     }
     static BigDecimal n(String value) {return value==null?null:new BigDecimal(value);}
+    static com.sicost.codegroups.CodeGroupDtos.StoredCode code(String id,String name) {
+        return new com.sicost.codegroups.CodeGroupDtos.StoredCode(
+            "CTRT_TYPE",id,name,1,"Y","N",null,null,null,null,null,"SYSTEM",null,null,null);
+    }
     @Test void netAuthRejectsForgedActorBeforeFinancialSources() throws Exception {
         mvc.perform(get("/api/profit-loss/net").param("year","2026").param("month","2026-07").param("actor","other"))
             .andExpect(DurableOpenApi.response("GET","/api/profit-loss/net",400))
@@ -150,13 +159,128 @@ class NetProfitContractTest {
             .andExpect(jsonPath("$.data.contributions.contractTypes[?(@.groupId == 'TK')].contributionAmt").value(org.hamcrest.Matchers.contains("0")))
             .andExpect(jsonPath("$.data.contributions.contractTypes[?(@.groupId == 'TK')].showBar").value(org.hamcrest.Matchers.contains(false)));
     }
-    @Test void noPositiveContributionsHaveNoArtificialDenominator()throws Exception {people(List.of(cost("tk","TK","9999","2000")));read("2026-07").andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value(nullValue())).andExpect(jsonPath("$.data.contributions.contractTypes[0].showBar").value(false));}
+    @Test void noPositiveContributionsHaveNoArtificialDenominator()throws Exception {
+        people(List.of(cost("tk","TK","9999","2000")));
+        read("2026-07")
+            .andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value(nullValue()))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[0].showBar").value(false))
+            .andExpect(jsonPath("$.data.notices").value(org.hamcrest.Matchers.hasItem(
+                "흑자인 유형이 없어 비율과 막대를 표시하지 않습니다.")));
+    }
+    @Test void commonCodeNamesAndPositiveOnlySharesReachResponseAndWorkbook()throws Exception {
+        people(List.of(cost("mo","MO","300000000","100000000"),
+            cost("dp","DP","180000000","100000000"),cost("tk","TK","0","40000000")));
+        when(mapper.bills(any())).thenReturn(List.of());
+        read("2026-07")
+            .andExpect(jsonPath("$.data.contributions.contractTypes[0].groupName").value("월단위"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value("71.4"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[1].groupName").value("파견"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[1].positiveContributionShare").value("28.6"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[2].groupName").value("턴키"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[2].contributionAmt").value("-40000000"))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[2].positiveContributionShare").value(nullValue()))
+            .andExpect(jsonPath("$.data.contributions.contractTypes[2].showBar").value(false));
+        var response=mvc.perform(request(EXPORT,"2026-07")).andExpect(status().isOk()).andReturn().getResponse();
+        try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
+            var sheet=workbook.getSheet("기준월 기여도");
+            assertThat((Iterable<org.apache.poi.ss.usermodel.Cell>)sheet.getRow(0)).extracting(c->c.getStringCellValue()).containsExactly(
+                "계약 유형","기준월 매출","배분 원가","유형별 매출총이익","기여도(%)","상태");
+            assertThat(sheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("월단위");
+            assertThat(sheet.getRow(2).getCell(0).getStringCellValue()).isEqualTo("파견");
+            assertThat(sheet.getRow(3).getCell(0).getStringCellValue()).isEqualTo("턴키");
+            assertThat(sheet.getRow(1).getCell(4).getNumericCellValue()).isEqualTo(71.4);
+            assertThat(sheet.getRow(2).getCell(4).getNumericCellValue()).isEqualTo(28.6);
+            assertThat(sheet.getRow(1).getCell(5).getStringCellValue()).isEqualTo("흑자");
+            assertThat(sheet.getRow(3).getCell(3).getNumericCellValue()).isEqualTo(-40000);
+            assertThat(sheet.getRow(3).getCell(4).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);
+            assertThat(sheet.getRow(3).getCell(5).getStringCellValue()).isEqualTo("적자");
+        }
+        when(codes.codes("CTRT_TYPE",false)).thenReturn(List.of(code("MO","공통코드 변경명")));
+        read("2026-07").andExpect(jsonPath("$.data.contributions.contractTypes[0].groupName").value("공통코드 변경명"));
+    }
+    @Test void exportSummaryCopiesBothCardComparisonsAndKeepsMissingValuesBlank()throws Exception {
+        when(financial.snapshots(any())).thenReturn(List.of(copy("202501","Y","Y")));
+        var data=new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+            read("2026-07").andReturn().getResponse().getContentAsString()).path("data");
+        var response=mvc.perform(request(EXPORT,"2026-07")).andExpect(status().isOk()).andReturn().getResponse();
+        try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
+            var sheet=workbook.getSheet("요약");
+            assertThat(sheet.getLastRowNum()).isEqualTo(2);
+            assertThat((Iterable<org.apache.poi.ss.usermodel.Cell>)sheet.getRow(0)).extracting(c->c.getStringCellValue()).containsExactly(
+                "항목","금액","순이익률(%)","비교 기준","비교 금액","증감률(%)");
+            for(int i=0;i<2;i++) {
+                var row=sheet.getRow(i+1);var card=data.path("summary").get(i);
+                var comparison=card.path(i==0?"previousYear":"previous");
+                assertThat(row.getLastCellNum()).isEqualTo((short)6);
+                assertThat(row.getCell(0).getStringCellValue()).isEqualTo(i==0?"누계 당기순이익":"기준월 순이익");
+                assertThat(row.getCell(1).getNumericCellValue()).isEqualTo(n(card.path("amount").asText()).movePointLeft(3).doubleValue());
+                assertThat(row.getCell(3).getStringCellValue()).isEqualTo(i==0?"전년 같은 기간":"전월");
+                assertThat(row.getCell(4).getNumericCellValue()).isEqualTo(n(comparison.path("comparisonValue").asText()).movePointLeft(3).doubleValue());
+                if(comparison.path("changeRate").isNull())
+                    assertThat(row.getCell(5).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);
+                else assertThat(row.getCell(5).getNumericCellValue()).isEqualTo(n(comparison.path("changeRate").asText()).doubleValue());
+            }
+        }
+    }
     @Test void registeredZeroTypeIsVisibleWithZeroAmountNoRateAndNoBar()throws Exception {
         when(mapper.bills(any())).thenReturn(List.of());people(List.of(cost("mo","MO","0","0")));
         read("2026-07").andExpect(jsonPath("$.data.contributions.contractTypes[0].groupId").value("MO"))
             .andExpect(jsonPath("$.data.contributions.contractTypes[0].contributionAmt").value("0"))
             .andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value(nullValue()))
             .andExpect(jsonPath("$.data.contributions.contractTypes[0].showBar").value(false));
+        var response=mvc.perform(request(EXPORT,"2026-07")).andExpect(status().isOk()).andReturn().getResponse();
+        try(var workbook=new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
+            assertThat(workbook.getSheet("기준월 기여도").getRow(1).getCell(5).getStringCellValue()).isEqualTo("비율 없음");
+        }
+    }
+    @Test void downloadInformationTranslatesMetricsAndSourcesWithoutDroppingLines() {
+        var data=net.getNetProfitLoss(new com.sicost.operating.OperatingProfitDtos.Query(2026,"2026-07","WON"));
+        var month=data.months().get(6);var original=month.completeness();
+        var issues=data.rows().stream().map(row->new Issue(month.month(),row.metric(),
+            "SOURCE_UNCONFIRMED","TB_PJ_TK_DSTRB 원천 미확인",false)).toList();
+        var coverage=new Completeness(original.costComplete(),original.revenueComplete(),original.taxComplete(),
+            original.missing(),List.of("TB_HR_MON_PAY 급여 예정"),original.sourceMonths(),issues,
+            original.availableMonthCount(),original.requestedMonthCount(),original.missingMonths());
+        var months=new ArrayList<>(data.months());
+        months.set(6,new Actual(month.month(),month.sourceKind(),month.closeStatus(),month.fixed(),month.migrated(),
+            month.provisional(),month.amounts(),coverage,month.sources(),month.calculatedAt()));
+        var composition=data.contributions();
+        var localized=new NetProfitDtos.Data(data.context(),months,data.summary(),data.rows(),data.showPreviousYear(),
+            data.cumulativeProvisional(),data.completeness(),List.of("allocCostAmt · noprIncmAmt · corpTaxAmt · TB_CO_MON_COST"),
+            data.contributionMonth(),new ProfitStructureDtos.Composition(composition.visible(),
+                "TB_PJ_TK_DSTRB 배분 원천 미확인",composition.complete(),composition.revenueDifference(),
+                composition.contractTypes(),composition.customers(),composition.salesParts()));
+        var information=exports.workbook(localized,"천원").information();
+        int expected=5+localized.notices().size()+1+months.stream()
+            .filter(m->m.month().compareTo(data.context().month())<=0)
+            .mapToInt(m->1+m.completeness().estimated().size()+m.completeness().issues().size()).sum();
+        assertThat(information).hasSize(expected);
+        assertThat(information).anySatisfy(item->{
+            assertThat(item.label()).isEqualTo("기간단위");assertThat(item.value()).isEqualTo("연 누계");
+        });
+        assertThat(information).anySatisfy(item->assertThat(item.value()).isEqualTo(
+            "배분 원가 · 영업외수익 · 법인세(월할) · 월별 원가표"));
+        assertThat(information).anySatisfy(item->assertThat(item.value()).isEqualTo("턴키 배분표 배분 원천 미확인"));
+        for(var item:information)assertThat(item.value().toString())
+            .doesNotContainPattern("TB_[A-Z0-9_]+|[a-z][A-Za-z]*(Amt|Rate|Share)");
+    }
+    @ParameterizedTest @ValueSource(strings={"원","천원","백만원"})
+    void summaryRetainsNegativeComparisonAndServerChangeRateInEveryUnit(String unit) {
+        var data=net.getNetProfitLoss(new com.sicost.operating.OperatingProfitDtos.Query(2026,"2026-07","WON"));
+        var comparison=new ProfitStructureDtos.Comparison("netPrftAmt",List.of("2026-07"),List.of("2026-06"),
+            "9598000","-22197000","143.2",null,true,1,1,List.of(),"FAVORABLE");
+        var cards=List.of(new ProfitStructureDtos.Card("netPrftAmt",null,null,null,null),
+            new ProfitStructureDtos.Card("currentMonthNetProfit","9598000","9.0",comparison,null));
+        var cardResponse=new NetProfitDtos.Data(data.context(),data.months(),cards,data.rows(),data.showPreviousYear(),
+            data.cumulativeProvisional(),data.completeness(),data.notices(),data.contributionMonth(),data.contributions());
+        var summary=exports.workbook(cardResponse,unit).sheets().stream()
+            .filter(sheet->sheet.name().equals("요약")).findFirst().orElseThrow();
+        List<List<Object>> rows=new ArrayList<>();summary.rows().read(rows::add);
+        int scale="원".equals(unit)?0:"천원".equals(unit)?3:6;
+        assertThat(rows).hasSize(2);
+        assertThat(rows.get(0)).containsExactly("누계 당기순이익",null,null,"전년 같은 기간",null,null);
+        assertThat(rows.get(1)).containsExactly("기준월 순이익",n("9598000").movePointLeft(scale),n("9.0"),
+            "전월",n("-22197000").movePointLeft(scale),n("143.2"));
     }
     @Test void unknownContributionDoesNotClaimFullPositiveDistribution()throws Exception {people(List.of(cost("mo","MO","100",null)));read("2026-07").andExpect(jsonPath("$.data.contributions.complete").value(false)).andExpect(jsonPath("$.data.contributions.contractTypes[0].positiveContributionShare").value(nullValue()));}
     @Test void publicExportContainsNumericWorkbookContributionAndCommittedUi09Log()throws Exception {
