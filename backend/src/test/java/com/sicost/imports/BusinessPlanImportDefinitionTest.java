@@ -21,6 +21,34 @@ class BusinessPlanImportDefinitionTest {
         assertThat(result.changes()).hasSize(12); assertThat(result.rows().get(0).profit()).isEqualByComparingTo("2000");
         assertThat(result.rows().get(11).profit()).isEqualByComparingTo("-12");
     }
+    @ParameterizedTest
+    @ValueSource(strings = {"매출 목표|영업이익 목표", "매출 목표*|영업이익 목표*",
+        "매출 목표(원)*|영업이익 목표(원)*", " 매출 목표 (원) * | 영업 이익 목표(원)* "})
+    void oldAndWonHeadersKeepExactAmountsAndBlankMonthRules(String headers) throws Exception {
+        var result = check(book -> {
+            var sheet = book.getSheetAt(0);
+            String[] names = headers.split("\\|");
+            sheet.getRow(0).getCell(0).setCellValue("연월*");
+            sheet.getRow(0).getCell(1).setCellValue(names[0]);
+            sheet.getRow(0).getCell(2).setCellValue(names[1]);
+            sheet.getRow(1).getCell(1).setCellValue("50,000,000");
+            sheet.getRow(1).getCell(2).setCellValue("-30,000,000");
+            sheet.getRow(3).getCell(1).setBlank();
+            sheet.getRow(4).getCell(2).setBlank();
+        });
+        assertThat(result.canApply()).isTrue();
+        assertThat(result.rows().get(0).sales()).isEqualByComparingTo("50000000");
+        assertThat(result.rows().get(0).profit()).isEqualByComparingTo("-30000000");
+        assertThat(result.rows().get(2).sales()).isZero();
+        assertThat(result.rows().get(3).profit()).isZero();
+        assertThat(result.warnings()).containsExactly("목표가 빈 달: 3월, 4월");
+        assertThat(result.summary().fileWarningCount()).isZero();
+    }
+    @Test void mixedOldAndWonDuplicateHeaderIsRejected() {
+        assertThatThrownBy(() -> check(book ->
+            book.getSheetAt(0).getRow(0).createCell(3).setCellValue("매출 목표(원)*")))
+            .isInstanceOf(ApiException.class);
+    }
     @Test void blankTargetsWarnOnEachColumnAndHaveMonthSummary() throws Exception {
         var result = check(book -> { for (int m : List.of(3,4)) { book.getSheetAt(0).getRow(m).getCell(1).setBlank(); book.getSheetAt(0).getRow(m).getCell(2).setBlank(); } });
         assertThat(result.summary()).isEqualTo(new Summary(12,10,2,0,0)); assertThat(result.blankTargetMonths()).containsExactly("2080-03","2080-04");

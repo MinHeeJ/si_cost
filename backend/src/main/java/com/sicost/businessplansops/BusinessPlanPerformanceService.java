@@ -21,8 +21,12 @@ public class BusinessPlanPerformanceService {
         String status=targets.isEmpty()?"UNREGISTERED":targets.size()!=12?"INCOMPLETE":read.targets().stream().allMatch(t->zero(t.sales())&&zero(t.profit()))?"ZERO_TARGETS":"REGISTERED";
         List<Month> months=new ArrayList<>();List<String> notices=new ArrayList<>(read.notices());
         if("UNREGISTERED".equals(status))notices.add(query.year()+"년 사업계획 목표가 아직 없습니다. [목표 업로드]로 올려 주세요.");
-        if("INCOMPLETE".equals(status))notices.add("일부 월 사업계획 목표가 없습니다. 누계 목표·달성률은 미확인입니다. 12개월 목표를 업로드해 주세요.");
-        if("ZERO_TARGETS".equals(status))notices.add("12개월 목표가 모두 0으로 등록되었습니다. 목표 없음 (미등록 아님).");
+        if ("INCOMPLETE".equals(status)) {
+            notices.add("일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.");
+        }
+        if ("ZERO_TARGETS".equals(status)) {
+            notices.add("12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.");
+        }
         for(Actual actual:read.months()) {
             Target target=targets.get(actual.month());String sales=actual.amounts().get("salesAmt"),profit=actual.amounts().get("oprtPrftAmt");
             String salesTarget=target==null?null:money(target.sales()),profitTarget=target==null?null:money(target.profit());

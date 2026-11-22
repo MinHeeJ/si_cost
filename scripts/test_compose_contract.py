@@ -1,5 +1,4 @@
-"""Compose network regression: do not depend on Docker's exhausted default pools."""
-import ipaddress
+"""Compose network regression: parallel projects must not share a fixed subnet."""
 import json
 import os
 from pathlib import Path
@@ -27,12 +26,15 @@ class ComposeNetworkContractTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, "Compose configuration failed")
         return json.loads(result.stdout)
 
-    def test_default_network_has_explicit_private_subnet(self):
+    def test_default_network_uses_docker_non_overlapping_allocation(self):
         network = self.config()["networks"]["default"]
-        self.assertIn("ipam", network, "Default-pool allocation would fail before app boot")
-        subnet = ipaddress.ip_network(network["ipam"]["config"][0]["subnet"])
-        self.assertTrue(subnet.is_private)
-        self.assertEqual(subnet.prefixlen, 24)
+        for allocation in network.get("ipam", {}).get("config", []):
+            self.assertFalse(allocation.get("subnet"),
+                             "A fixed default subnet collides with another QA project")
+        self.assertFalse(network.get("external", False))
+
+    def test_empty_subnet_also_uses_automatic_allocation(self):
+        self.assertEqual(self.config("")["networks"], self.config()["networks"])
 
     def test_parallel_deployment_can_override_subnet(self):
         config = self.config("10.203.1.0/24")
