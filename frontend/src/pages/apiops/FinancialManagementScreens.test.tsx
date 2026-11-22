@@ -170,8 +170,8 @@ it("shared cash route uses the merged screen with fixed rows, twelve months and 
 it("shows every server shortage and keeps the chart in million won after a table unit change", async () => {
   mountCash();
   await screen.findByRole("table");
-  expect(screen.getByText(/자금 부족 예정월:/)).toHaveTextContent("2026-11");
-  expect(screen.getByText(/자금 부족 예정월:/)).toHaveTextContent("2026-12");
+  expect(screen.getByTestId("cash-shortage-alert")).toHaveTextContent("11월");
+  expect(screen.getByTestId("cash-shortage-alert")).toHaveTextContent("12월");
   await userEvent.selectOptions(
     screen.getByRole("combobox", { name: "단위" }),
     "백만원",
@@ -184,7 +184,7 @@ it("shows every server shortage and keeps the chart in million won after a table
     ).toBe(true),
   );
   expect(screen.getByText("단위: 백만 원 · 부가세 포함")).toBeInTheDocument();
-  expect(screen.getByText(/자금 부족 예정월:/)).toHaveTextContent("2026-12");
+  expect(screen.getByTestId("cash-shortage-alert")).toHaveTextContent("12월");
 });
 it("does not falsely bridge a NULL balance in the chart or turn unknown into zero", async () => {
   cash.months[10] = {

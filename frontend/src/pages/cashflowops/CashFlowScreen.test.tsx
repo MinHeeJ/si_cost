@@ -12,6 +12,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { CashFlowScreen } from "./CashFlowScreen";
 import { cashItems, type CashFlowResult, type CashSource } from "./cashFlowApi";
+import { SharedScreenContext } from "../shared/SharedScreenContext";
 vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({ children }: { children: ReactNode }) => (
     <section>{children}</section>
@@ -24,6 +25,7 @@ let data: CashFlowResult;
 let sources: CashSource[];
 const source = (status: CashSource["status"] = "PLANNED"): CashSource => ({
   sourceType: "TB_HR_MON_PAY",
+  sourceTypeLabel: "급여",
   sourceId: "202610:001",
   item: "REG_PAY",
   attributionDate: null,
@@ -96,6 +98,12 @@ beforeEach(() => {
     String(url).startsWith("/api/cash-flow/sources")
       ? response({
           month: "2026-11",
+          employeeTypeLabels: {
+            FT: "정규직",
+            CT: "계약직",
+            FL: "프리랜서",
+            OS: "외주",
+          },
           item: "REG_PAY",
           items: sources,
           total: 21,
@@ -143,16 +151,44 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
   expect(
     screen.queryByRole("button", { name: "저장" }),
   ).not.toBeInTheDocument();
+  for (const label of [
+    "현금매출",
+    "인건비(정규직)",
+    "인건비(계약직·프리랜서)",
+    "용역비(외주)",
+    "법인세 납부",
+    "이월금",
+  ])
+    expect(
+      within(table).getByRole("rowheader", { name: label }),
+    ).toBeInTheDocument();
+  for (const label of ["외주비", "월말 잔액", "정규직 급여"])
+    expect(
+      within(table).queryByRole("rowheader", { name: label }),
+    ).not.toBeInTheDocument();
+  expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent(
+    "예정(회색 글자)",
+  );
 });
 it("opens a NULL leaf in the right detail drawer, shows reference and unknown evidence and closes without writes", async () => {
   ready();
   const button = await screen.findByRole("button", {
-    name: "11월 정규직 급여 계산근거",
+    name: "11월 인건비(정규직) 계산근거",
   });
   await userEvent.click(button);
   const panel = await screen.findByTestId("cash-source-panel");
   expect(panel).toHaveRole("dialog");
   expect(panel).toHaveClass("sicost-drawer");
+  expect(within(panel).getByRole("heading")).toHaveTextContent(
+    "2026-11 인건비(정규직) 계산근거",
+  );
+  const evidence = await within(panel).findByTestId("cash-source-row-0");
+  expect(evidence).toHaveTextContent("급여");
+  expect(evidence).toHaveTextContent("정규직");
+  expect(evidence).toHaveTextContent("부가세");
+  expect(evidence.textContent).not.toMatch(
+    /TB_|VAT|AMT|IO_DT|REAL_PAY_AMT|\b(FT|CT|FL|OS|ACTUAL|PLANNED)\b/,
+  );
   expect(screen.getByRole("table", { name: "자금수지표" })).toBeInTheDocument();
   await within(panel).findByText("필수 급여 미확인", { exact: false });
   expect(
@@ -174,7 +210,7 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
 it("paginates full sources using server count and resets page on size change", async () => {
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "11월 정규직 급여 계산근거" }),
+    await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
   await screen.findByText("전체 21건", { exact: false });
   await userEvent.click(screen.getByTestId("cash-source-next"));
@@ -210,7 +246,7 @@ it("keeps table when sources fail and retries only the failed read", async () =>
   );
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "11월 정규직 급여 계산근거" }),
+    await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
   await screen.findByText("원천 조회 실패", { exact: false });
   expect(screen.getByRole("table", { name: "자금수지표" })).toBeInTheDocument();
@@ -229,7 +265,7 @@ it("shows an empty source list without treating it as unverified", async () => {
   sources = [];
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "11월 정규직 급여 계산근거" }),
+    await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
   await screen.findByText("조회된 원천이 없습니다.");
 });
@@ -237,7 +273,7 @@ it("sends source month and tax section as one-time navigation context without sa
   sources = [{ ...source(), item: "CORP_TAX", sourceType: "TB_FI_TAX_PAY" }];
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "11월 법인세 계산근거" }),
+    await screen.findByRole("button", { name: "11월 법인세 납부 계산근거" }),
   );
   await screen.findByTestId("cash-source-link-0");
   await userEvent.click(screen.getByTestId("cash-source-link-0"));
@@ -255,7 +291,7 @@ it("refuses future destination navigation but allows future evidence", async () 
   sources = [{ ...source(), attributionMonth: "2026-12" }];
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "12월 정규직 급여 계산근거" }),
+    await screen.findByRole("button", { name: "12월 인건비(정규직) 계산근거" }),
   );
   await screen.findByTestId("cash-source-link-0");
   await userEvent.click(screen.getByTestId("cash-source-link-0"));
@@ -267,7 +303,7 @@ it("refuses future destination navigation but allows future evidence", async () 
 it("refreshes annual table and selected evidence after an actual commit event", async () => {
   ready();
   await userEvent.click(
-    await screen.findByRole("button", { name: "11월 정규직 급여 계산근거" }),
+    await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
   await screen.findByTestId("cash-source-row-0");
   const before = fetcher.mock.calls.length;
@@ -368,7 +404,9 @@ it("marks planned columns and only server shortage closing balances, preserving 
   data.months[11].closingBalance = "0";
   ready();
   await screen.findByRole("table", { name: "자금수지표" });
-  const cells = within(screen.getByTestId("cash-row-balance")).getAllByRole("cell");
+  const cells = within(screen.getByTestId("cash-row-balance")).getAllByRole(
+    "cell",
+  );
   expect(cells[10]).toHaveClass("cash-shortage", "cash-planned");
   expect(cells[10]).toHaveTextContent("−0.001");
   expect(cells[11]).not.toHaveClass("cash-shortage");
@@ -382,18 +420,130 @@ it("renders BASE-before months as unavailable without calculation-source actions
     month.status = "BEFORE_BASE";
     month.openingBalance = null;
     month.closingBalance = null;
-    month.items = month.items.map(item => ({ ...item, amount: null }));
+    month.items = month.items.map((item) => ({ ...item, amount: null }));
   }
   ready();
   await screen.findByRole("table", { name: "자금수지표" });
-  expect(screen.queryByTestId("cash-source-cash-sales-2026-05")).not.toBeInTheDocument();
-  expect(screen.getByTestId("cash-source-cash-sales-2026-06")).toBeInTheDocument();
-  expect(within(screen.getByTestId("cash-row-opening")).getAllByRole("cell")[0]).toHaveTextContent("–");
+  expect(
+    screen.queryByTestId("cash-source-cash-sales-2026-05"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByTestId("cash-source-cash-sales-2026-06"),
+  ).toBeInTheDocument();
+  expect(
+    within(screen.getByTestId("cash-row-opening")).getAllByRole("cell")[0],
+  ).toHaveTextContent("–");
 });
 
 it("대시보드의 다음연도 요청월은 연도범위 확장·다른 원천 상세 없이 안내한다", async () => {
- render(<MemoryRouter initialEntries={[{pathname:"/UI-21",state:{fromDashboard:true,month:"2027-01"}}]}><CashFlowScreen /></MemoryRouter>);
- expect(await screen.findByText(/대시보드 요청월 2027-01/)).toBeVisible();
- await waitFor(() => expect(screen.getByText(/조회 가능 연도 밖/)).toBeVisible());
- expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  render(
+    <MemoryRouter
+      initialEntries={[
+        {
+          pathname: "/UI-21",
+          state: { fromDashboard: true, month: "2027-01" },
+        },
+      ]}
+    >
+      <CashFlowScreen />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText(/대시보드 요청월 2027-01/)).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByText(/조회 가능 연도 밖/)).toBeVisible(),
+  );
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("uses server shortages for a red alert, won balances, header warnings and receivables navigation", async () => {
+  data.minimumCash = "1000000000";
+  data.shortages = [
+    {
+      month: "2026-10",
+      balance: "950000000",
+      status: "PLANNED",
+      shortage: true,
+    },
+    {
+      month: "2026-12",
+      balance: "980000000",
+      status: "PLANNED",
+      shortage: true,
+    },
+  ];
+  data.months[9].shortage = true;
+  data.months[11].shortage = true;
+  ready();
+  const banner = await screen.findByTestId("cash-shortage-alert");
+  expect(banner).toHaveRole("alert");
+  expect(banner).toHaveTextContent(
+    "10월, 12월 월말 잔액이 최소 운영자금(1,000,000,000원)보다 적을 것으로 예상됩니다.",
+  );
+  expect(banner).toHaveTextContent(
+    "예상 잔액: 10월 950,000,000원 · 12월 980,000,000원",
+  );
+  expect(screen.getAllByTestId(/cash-shortage-warning-/)).toHaveLength(2);
+  expect(screen.getByTestId("cash-shortage-warning-2026-10")).toHaveAttribute(
+    "title",
+    "월말 잔액이 최소 운영자금보다 적을 것으로 예상",
+  );
+  await userEvent.click(
+    within(banner).getByRole("button", { name: "미수금 보기" }),
+  );
+  expect(await screen.findByTestId("destination")).toHaveTextContent(
+    '"section":"receivables"',
+  );
+});
+
+it("does not infer shortages locally and hides settings when the menu is unavailable", async () => {
+  data.minimumCash = "1000000000";
+  data.months[10].closingBalance = "1";
+  ready();
+  await screen.findByRole("table", { name: "자금수지표" });
+  expect(screen.queryByTestId("cash-shortage-alert")).not.toBeInTheDocument();
+  expect(screen.queryAllByTestId(/cash-shortage-warning-/)).toHaveLength(0);
+  expect(screen.queryByTestId("cash-standards")).not.toBeInTheDocument();
+});
+
+it("only exposes standards through the user's menu and sends the standards tab", async () => {
+  render(
+    <SharedScreenContext.Provider
+      value={{
+        menus: [
+          {
+            menuId: "settings",
+            parentId: null,
+            name: "공통코드",
+            screenId: "UI-27",
+            sortOrder: 1,
+            icon: null,
+            pcOnly: true,
+            children: [],
+          },
+        ],
+        favorites: [],
+        star: () => {},
+        pending: false,
+      }}
+    >
+      <MemoryRouter initialEntries={["/UI-21"]}>
+        <Routes>
+          <Route path="/UI-21" element={<CashFlowScreen />} />
+          <Route path="/UI-27" element={<Destination />} />
+        </Routes>
+      </MemoryRouter>
+    </SharedScreenContext.Provider>,
+  );
+  const button = await screen.findByRole("button", {
+    name: "기초 잔액·최소 운영자금 설정",
+  });
+  expect(
+    screen.getByText(
+      "자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서 관리자가 정합니다.",
+    ),
+  ).toBeInTheDocument();
+  await userEvent.click(button);
+  expect(await screen.findByTestId("destination")).toHaveTextContent(
+    '"section":"standards"',
+  );
 });

@@ -1,5 +1,6 @@
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
@@ -49,16 +50,23 @@ const extraLabels = (group: string): string[] =>
 const cleanCode = (value: string) => value.trim().toUpperCase();
 function CodeGroupLockMark() {
   return (
-    <HelpTooltip label="시스템 코드" trigger={<svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      aria-label="시스템 잠금"
+    <HelpTooltip
+      label="시스템 코드"
+      trigger={
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          aria-label="시스템 잠금"
+        >
+          <path d="M5 7V4a3 3 0 0 1 6 0v3M4 7h8v7H4z" />
+        </svg>
+      }
     >
-      <path d="M5 7V4a3 3 0 0 1 6 0v3M4 7h8v7H4z" />
-    </svg>}>시스템 코드: 이름만 바꿀 수 있습니다.</HelpTooltip>
+      시스템 코드: 이름만 바꿀 수 있습니다.
+    </HelpTooltip>
   );
 }
 
@@ -75,9 +83,17 @@ export function CommonCodesScreen({
   onDensityChange,
   onPageSizeChange,
 }: CommonCodesScreenProps) {
+  const location = useLocation();
+  const initialTab =
+    (location.state as { section?: string } | null)?.section === "standards"
+      ? "standards"
+      : "codes";
   const [groups, setGroups] = useState<CodeGroup[]>([]),
     [group, setGroup] = useState<CodeGroup>();
-  const [tab, setTab] = useState<CommonCodeTab>("codes");
+  const [tab, setTab] = useState<CommonCodeTab>(initialTab);
+  useEffect(() => {
+    if (location.pathname === "/UI-27") setTab(initialTab);
+  }, [location.pathname, location.key, initialTab]);
   const [data, setData] = useState<GroupCodesPage>(),
     [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(50);
@@ -651,21 +667,24 @@ export function CommonCodesScreen({
                   </div>
                 )}
                 {groups.map((item) => (
-                  <div className="codegroups-group-entry" key={item.groupId}><button
-                    data-testid={`common-codes-group-${item.groupId.toLowerCase().replace(/_/g, "-")}`}
-                    key={item.groupId}
-                    aria-current={
-                      item.groupId === group?.groupId ? "true" : undefined
-                    }
-                    disabled={pending}
-                    onClick={() => {
-                      if (item.groupId !== group?.groupId)
-                        guard(() => select(item));
-                    }}
-                  >
-                    <span>{item.name}</span>
-                    <small>{item.codeCount}</small>
-                  </button>{item.sysCodeYn === "Y" && <CodeGroupLockMark />}</div>
+                  <div className="codegroups-group-entry" key={item.groupId}>
+                    <button
+                      data-testid={`common-codes-group-${item.groupId.toLowerCase().replace(/_/g, "-")}`}
+                      key={item.groupId}
+                      aria-current={
+                        item.groupId === group?.groupId ? "true" : undefined
+                      }
+                      disabled={pending}
+                      onClick={() => {
+                        if (item.groupId !== group?.groupId)
+                          guard(() => select(item));
+                      }}
+                    >
+                      <span>{item.name}</span>
+                      <small>{item.codeCount}</small>
+                    </button>
+                    {item.sysCodeYn === "Y" && <CodeGroupLockMark />}
+                  </div>
                 ))}
                 {!groups.length && !loading && !error && (
                   <p className="sicost-empty">등록된 그룹이 없습니다.</p>

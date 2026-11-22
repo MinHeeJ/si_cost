@@ -1,9 +1,19 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { MemoryRouter, useNavigate } from "react-router-dom";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { CommonCodesScreen } from "./CommonCodesScreen";
 import * as api from "./codeGroupsApi";
 import { ApiError } from "../../shared/api";
+
+const render = (ui: ReactElement) =>
+  renderUi(<MemoryRouter>{ui}</MemoryRouter>);
 
 vi.mock("./codeGroupsApi", () => ({
   getCodeGroups: vi.fn(),
@@ -70,6 +80,44 @@ beforeEach(() => {
   });
 });
 describe("공통코드 편집 계약", () => {
+  it("운영 기준값 진입과 캐시된 화면의 메뉴 재진입은 최초 탭만 바꾼다", async () => {
+    function Entries() {
+      const navigate = useNavigate();
+      return (
+        <>
+          <button
+            onClick={() =>
+              navigate("/UI-27", { state: { section: "standards" } })
+            }
+          >
+            자금수지 설정 진입
+          </button>
+          <button onClick={() => navigate("/UI-21")}>자금수지</button>
+          <button onClick={() => navigate("/UI-27")}>메뉴 진입</button>
+          <CommonCodesScreen panels={{ standards: <p>운영 기준값 패널</p> }} />
+        </>
+      );
+    }
+    renderUi(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: "/UI-27", state: { section: "standards" } },
+        ]}
+      >
+        <Entries />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("운영 기준값 패널")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "자금수지" }));
+    await userEvent.click(screen.getByRole("button", { name: "메뉴 진입" }));
+    expect(await screen.findByLabelText("A 이름")).toBeVisible();
+    expect(screen.queryByText("운영 기준값 패널")).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "자금수지 설정 진입" }),
+    );
+    expect(await screen.findByText("운영 기준값 패널")).toBeVisible();
+    expect(api.saveGroupCodes).not.toHaveBeenCalled();
+  });
   it("현재 코드 탭을 다시 누르면 폐기 확인 없이 입력을 유지한다", async () => {
     render(<CommonCodesScreen />);
     fireEvent.change(await screen.findByLabelText("A 이름"), {

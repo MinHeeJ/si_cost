@@ -98,6 +98,7 @@ export function CashFlowStatementTable({
                 className={c.status === "PLANNED" ? "cash-planned" : undefined}
               >
                 {c.label}
+                {c.status && <br />}
                 {c.status && (
                   <StatusBadge
                     tone={
@@ -114,6 +115,17 @@ export function CashFlowStatementTable({
                         ? "운영 시작 전"
                         : "예정"}
                   </StatusBadge>
+                )}
+                {c.status === "PLANNED" && c.shortage && (
+                  <span
+                    data-testid={`cash-shortage-warning-${c.key}`}
+                    className="cash-shortage-warning"
+                    role="img"
+                    aria-label={`${c.label} 자금 부족 예상`}
+                    title="월말 잔액이 최소 운영자금보다 적을 것으로 예상"
+                  >
+                    ⚠
+                  </span>
                 )}
               </th>
             ))}

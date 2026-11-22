@@ -6,6 +6,7 @@ import { ErrorBanner } from "../../shared/Feedback";
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { CashFlowStatementTable } from "../shared/FinancialStatementTable";
+import { flattenMenus, useSharedScreen } from "../shared/SharedScreenContext";
 import { SourceBreakdown, type CashSelection } from "./SourceBreakdown";
 import { BalanceTrendChart } from "./BalanceTrendChart";
 import * as api from "./cashFlowApi";
@@ -35,6 +36,10 @@ export function CashFlowScreen({
 } = {}) {
   const navigate = useNavigate(),
     location = useLocation();
+  const { menus } = useSharedScreen("UI-21");
+  const canOpenStandards = flattenMenus(menus).some(
+    (menu) => menu.screenId === "UI-27",
+  );
   const incoming = location.state as {
     cashFlowSource?: CashSelection;
     fromDashboard?: boolean;
@@ -58,7 +63,8 @@ export function CashFlowScreen({
     unit = amountUnit ?? localUnit;
   const restoredUnit = useRef<api.CashUnit>();
   const [retainResult, setRetainResult] = useState(false);
-  const requestPending=useRef(false),lastReceived=useRef(0);
+  const requestPending = useRef(false),
+    lastReceived = useRef(0);
   useEffect(() => {
     const period = (event: Event) => {
       const detail = (
@@ -79,7 +85,14 @@ export function CashFlowScreen({
     const changed = () => setRefresh((n) => n + 1),
       resize = () => setMobile(window.innerWidth < 768);
     window.addEventListener("sicost:screen-period-changed", period);
-    const focus=()=>{if(document.visibilityState === "visible" && !requestPending.current && Date.now()-lastReceived.current>=30_000)changed()};
+    const focus = () => {
+      if (
+        document.visibilityState === "visible" &&
+        !requestPending.current &&
+        Date.now() - lastReceived.current >= 30_000
+      )
+        changed();
+    };
     window.addEventListener("focus", focus);
     window.addEventListener("resize", resize);
     events.forEach((name) => window.addEventListener(name, changed));
@@ -98,20 +111,27 @@ export function CashFlowScreen({
       return;
     }
     const abort = new AbortController();
-    requestPending.current=true;
+    requestPending.current = true;
     setLoading(true);
     setError(undefined);
     setRetainResult(false);
     void api
       .getCashFlow(year, unitCode(unit), abort.signal)
       .then((value) => {
-        if (!abort.signal.aborted) {setData(value);lastReceived.current=Date.now();}
+        if (!abort.signal.aborted) {
+          setData(value);
+          lastReceived.current = Date.now();
+        }
       })
       .catch((e) => {
         if (abort.signal.aborted) return;
         setError(e);
-        if(e instanceof ApiError && (e.status===401 || e.status===403)) {setData(undefined);setRetainResult(false);return;}
-        if(data)setRetainResult(true);
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+          setData(undefined);
+          setRetainResult(false);
+          return;
+        }
+        if (data) setRetainResult(true);
         if (
           data &&
           (year === undefined || data.year === year) &&
@@ -130,7 +150,10 @@ export function CashFlowScreen({
         }
       })
       .finally(() => {
-        if (!abort.signal.aborted) {requestPending.current=false;setLoading(false);}
+        if (!abort.signal.aborted) {
+          requestPending.current = false;
+          setLoading(false);
+        }
       });
     return () => abort.abort();
   }, [year, unit, refresh]);
@@ -229,9 +252,19 @@ export function CashFlowScreen({
           ),
         })),
         row("expense", "지출 합계", "expenseTotal"),
-        row("balance", "월말 잔액", "closingBalance"),
+        row("balance", "이월금", "closingBalance"),
       ]
     : [];
+  function openReceivables() {
+    if (!displayed) return;
+    navigate("/UI-13", {
+      state: {
+        section: "receivables",
+        month: displayed.asOfDate.slice(0, 7),
+        fromCashFlow: true,
+      },
+    });
+  }
   return (
     <SharedScreenFrame screenId="UI-21">
       {incoming?.fromDashboard &&
@@ -279,8 +312,14 @@ export function CashFlowScreen({
             </label>
           </div>
         </ScreenTitleActions>
-        {loading && !data && <p role="status">자금수지표를 불러오는 중입니다.</p>}
-        {data && loading && <p role="status" className="sicost-refresh-status">갱신 중…</p>}
+        {loading && !data && (
+          <p role="status">자금수지표를 불러오는 중입니다.</p>
+        )}
+        {data && loading && (
+          <p role="status" className="sicost-refresh-status">
+            갱신 중…
+          </p>
+        )}
         {error != null && (
           <ErrorBanner
             message={
@@ -322,11 +361,32 @@ export function CashFlowScreen({
               {displayed.minimumCashMonth})
             </p>
             {displayed.shortages.length > 0 && (
-              <div className="operating-banner">
-                자금 부족 예정월:{" "}
-                {displayed.shortages
-                  .map((p) => `${p.month} (${formatAmount(p.balance, "원")}원)`)
-                  .join(" · ")}
+              <div
+                className="cash-shortage-alert"
+                role="alert"
+                data-testid="cash-shortage-alert"
+              >
+                <span aria-hidden="true">⚠</span>
+                <p>
+                  {displayed.shortages
+                    .map((p) => `${Number(p.month.slice(5))}월`)
+                    .join(", ")}{" "}
+                  월말 잔액이 최소 운영자금(
+                  {formatAmount(displayed.minimumCash, "원")}원)보다 적을 것으로
+                  예상됩니다. 예상 잔액:{" "}
+                  {displayed.shortages
+                    .map(
+                      (p) =>
+                        `${Number(p.month.slice(5))}월 ${formatAmount(p.balance, "원")}원`,
+                    )
+                    .join(" · ")}
+                </p>
+                <button
+                  data-testid="cash-shortage-receivables"
+                  onClick={openReceivables}
+                >
+                  미수금 보기
+                </button>
               </div>
             )}
             {displayed.issues.length > 0 && (
@@ -375,35 +435,43 @@ export function CashFlowScreen({
                 });
               }}
             />
+            <p
+              className="operating-muted cash-flow-guide"
+              data-testid="cash-flow-guide"
+            >
+              마감한 달은 실적, 마감 전 달은 예정(회색 글자)입니다. 금액은 모두
+              부가세 포함입니다. 현금매출은 입금 등록한 금액과 아직 받지 못한
+              청구 금액(입금 예정일 달)입니다. 급여는 급여 업로드에서 오고,
+              4대보험·원천세·근로소득세는 다음 달 제경비로 잡힙니다. 외주는
+              공급가액에 부가세 10%를 더합니다. 판관비·영업외비용, 법인카드
+              대금, 계좌이체 지출(「계좌이체」는 제경비, 「특별비」는 미지급
+              인건비), 대여금, 법인세 납부는 재무 항목에서 옵니다. 지급은 모두
+              냈다고 보고, 실제와 안 맞는 금액은 재무 항목에 줄을 더해 맞춥니다.
+            </p>
             <div className="operating-toolbar">
-              <button
-                data-testid="cash-receivables"
-                onClick={() =>
-                  navigate("/UI-13", {
-                    state: {
-                      section: "receivables",
-                      month: displayed.asOfDate.slice(0, 7),
-                      fromCashFlow: true,
-                    },
-                  })
-                }
-              >
+              <button data-testid="cash-receivables" onClick={openReceivables}>
                 미수금 보기
               </button>
-              <button
-                data-testid="cash-standards"
-                onClick={() =>
-                  navigate("/UI-27", {
-                    state: {
-                      section: "standards",
-                      key: "MIN_CASH",
-                      month: displayed.minimumCashMonth,
-                    },
-                  })
-                }
-              >
-                기준 확인
-              </button>
+              {canOpenStandards && (
+                <button
+                  data-testid="cash-standards"
+                  onClick={() =>
+                    navigate("/UI-27", {
+                      state: {
+                        section: "standards",
+                        key: "MIN_CASH",
+                        month: displayed.minimumCashMonth,
+                      },
+                    })
+                  }
+                >
+                  기초 잔액·최소 운영자금 설정
+                </button>
+              )}
+              <small className="operating-muted">
+                자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서
+                관리자가 정합니다.
+              </small>
             </div>
             {selection && (
               <SourceBreakdown
