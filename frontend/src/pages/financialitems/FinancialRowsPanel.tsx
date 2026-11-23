@@ -1,6 +1,7 @@
 import { DataTable, type Column } from "../../shared/DataTable";
 import type { ReactNode } from "react";
 import { StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { WonInput } from "./WonInput";
 import type { Collection, DraftRow } from "./financialApi";
 
@@ -74,6 +75,17 @@ const fields: Record<Collection, Field[]> = {
     { key: "remark", label: "메모", max: 200 },
   ],
 };
+const sectionHelp: Record<Collection, string> = {
+  items:
+    "판관비와 영업외손익은 손익에 반영됩니다. 판관비와 영업외비용은 자금수지표의 제경비에도 반영됩니다.",
+  adjustments:
+    "전월 조정은 조정을 입력한 달의 이익에 반영됩니다. 현금 흐름에는 반영되지 않습니다.",
+  transfers:
+    "계좌이체 지출은 자금수지표의 제경비에 반영됩니다. 특별비로 등록한 금액은 이체일이 속한 달의 미지급 인건비에 반영됩니다.",
+  loans:
+    "대여금 입출금은 자금수지에만 반영됩니다. 받은 금액은 더하고 갚은 금액은 뺍니다.",
+};
+
 export type FinancialRowsPanelProps = {
   collection: Collection;
   rows: DraftRow[];
@@ -276,6 +288,7 @@ export function FinancialRowsPanel({
       <header className="financial-section-heading sicost-section-heading">
         <div>
           <h2>{title}</h2>
+          <HelpTooltip label={title} iconOnly>{sectionHelp[collection]}</HelpTooltip>
           <small>{rows.length}건</small>
         </div>
         {!readOnly && (

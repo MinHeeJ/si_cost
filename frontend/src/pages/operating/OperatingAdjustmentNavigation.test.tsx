@@ -39,7 +39,10 @@ it("operating statement adjustment entry selects server writable month rather th
   });
   render(<FinancialItemsEditor openAdjustments />);
   await waitFor(() =>
-    expect(screen.getByLabelText("선택월")).toHaveValue("2026-07"),
+    expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    ),
   );
   expect(screen.getByTestId("financial-financial-panel")).not.toHaveAttribute(
     "hidden",
@@ -60,7 +63,10 @@ it("ordinary financial entry keeps its existing month without adjustment redirec
   });
   render(<FinancialItemsEditor />);
   await screen.findByTestId("financial-items-panel");
-  expect(screen.getByLabelText("선택월")).toHaveValue("2026-06");
+  expect(screen.getByTestId("financial-month-2026-06")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(
     fetcher.mock.calls.some(
       ([url]) => String(url) === "/api/financial-items?month=2026-07",
@@ -73,7 +79,12 @@ it("tax entry uses the editable month and opens the tax section without saving",
   const scroll = vi.fn();
   HTMLElement.prototype.scrollIntoView = scroll;
   render(<FinancialItemsEditor openTax />);
-  await waitFor(() => expect(screen.getByLabelText("선택월")).toHaveValue("2026-07"));
+  await waitFor(() =>
+    expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    ),
+  );
   await waitFor(() => expect(scroll).toHaveBeenCalled());
   expect(screen.getByTestId("financial-tax-panel")).toHaveAttribute("id", "financial-tax-section");
   expect(fetcher.mock.calls.some(([, options]) => options?.method === "PUT")).toBe(false);

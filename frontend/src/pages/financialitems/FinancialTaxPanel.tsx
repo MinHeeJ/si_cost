@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FinancialPaymentStatus } from "../corporatetaxesops/FinancialPaymentStatus";
 import type {
   CorporateTaxAllocation,
@@ -111,6 +112,10 @@ export function FinancialTaxPanel({
       <header className="financial-section-heading sicost-section-heading">
         <div>
           <h2>법인세</h2>
+          <HelpTooltip label="법인세 월별 배분" iconOnly>
+            연간 예상 법인세는 순이익표에 월별로 나눠 반영하는 관리용 금액입니다.
+            예상액을 수정하면 마감된 달의 금액을 유지하고 차액을 남은 달에 나눕니다.
+          </HelpTooltip>
           <small>{editor.month.slice(0, 4)}년</small>
         </div>
       </header>
@@ -167,7 +172,15 @@ export function FinancialTaxPanel({
         </div>
       </div>
       <div className="financial-subsection">
-        <h3>법인세 납부 일정</h3>
+        <header className="financial-subsection-heading">
+          <h3>법인세 납부 일정</h3>
+          <HelpTooltip label="법인세 납부 일정" iconOnly>
+            자금수지표에는 실제 납부월의 금액이 반영됩니다. 중간예납은
+            세무사 안내 금액을 입력합니다. 확정 신고의 기본값은 연간 예상액에서
+            중간예납을 뺀 금액입니다. 납부일이 지났는데 납부 확인을 하지 않았다면
+            ‘확인 필요’로 표시됩니다.
+          </HelpTooltip>
+        </header>
         <DataTable
           tableLabel="법인세 납부 일정"
           testId="financial-tax-payments-table"

@@ -4,9 +4,10 @@ export type PeriodSelectorProps = {
   value: string;
   min: string;
   max: string;
+  /** Keep earlier periods reachable with the arrow without listing them all. */
+  optionMin?: string;
   disabled?: boolean;
   label?: string;
-  testId?: string;
   onChange(value: string): void;
 };
 export function PeriodSelector({
@@ -14,13 +15,16 @@ export function PeriodSelector({
   value,
   min,
   max,
+  optionMin,
   disabled,
   label = "기간",
-  testId,
   onChange,
 }: PeriodSelectorProps) {
   const options = periodOptions(type, min, max),
     index = options.indexOf(value);
+  const listedOptions = optionMin
+    ? options.filter((option) => option >= optionMin || option === value)
+    : options;
   const select = (next: string) => {
     if (!disabled && options.includes(next) && next !== value) onChange(next);
   };
@@ -36,13 +40,12 @@ export function PeriodSelector({
       </button>
       <select
         aria-label={label}
-        data-testid={testId}
         disabled={disabled || !options.length}
         value={value}
         onChange={(event) => select(event.target.value)}
       >
         {!options.length && <option value={value}>선택할 수 없음</option>}
-        {options.map((option) => (
+        {listedOptions.map((option) => (
           <option key={option} value={option}>
             {type === "YEAR"
               ? `${option}년`

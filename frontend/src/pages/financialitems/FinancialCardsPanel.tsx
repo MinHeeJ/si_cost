@@ -1,6 +1,7 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import type { DraftRow, FinancialEditor } from "./financialApi";
 import type { FinancialDraft } from "./useFinancialEditor";
 import { FinancialAmount, type FinancialUnit } from "./FinancialAmount";
@@ -195,6 +196,9 @@ export function FinancialCardsPanel({
       <header className="financial-section-heading sicost-section-heading">
         <div>
           <h2>법인카드 대금</h2>
+          <HelpTooltip label="법인카드 대금" iconOnly>
+            법인카드 대금은 자금수지표의 제경비에 반영됩니다.
+          </HelpTooltip>
           <small>사용 중인 카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장</small>
         </div>
         <label>

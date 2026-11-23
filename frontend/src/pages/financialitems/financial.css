@@ -7,6 +7,7 @@
 }
 .financial-actions,
 .financial-unit-control,
+.financial-view-toolbar,
 .financial-year-controls,
 .financial-month-heading {
   display: flex;
@@ -25,7 +26,7 @@
   font-size: 13px;
   white-space: nowrap;
 }
-.financial-actions .financial-unit-control select {
+.financial-view-toolbar .financial-unit-control select {
   min-height: 38px;
   min-width: 82px;
   padding-inline: 10px;
@@ -38,9 +39,27 @@
   padding-bottom: 12px;
   border-bottom: 1px solid var(--divider);
 }
-.financial-year-controls strong {
-  min-width: 68px;
+.financial-year-controls .sicost-period-selector button {
+  min-width: 42px;
+  min-height: 40px;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+}
+.financial-editor .financial-year-controls select {
+  appearance: none;
+  min-width: 90px;
+  min-height: 40px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  color: var(--text);
   text-align: center;
+  font-size: 19px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.financial-editor .financial-year-controls select:hover:not(:disabled) {
+  background: var(--head-bg);
 }
 .financial-month-heading,
 .financial-section-heading,
@@ -110,10 +129,12 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-.financial-tabs {
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
+.financial-view-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.financial-view-toolbar .financial-unit-control {
+  margin-left: auto;
 }
 .financial-tab-panel {
   display: grid;
@@ -128,6 +149,7 @@
   margin: 0;
 }
 .financial-section-heading > div,
+.financial-subsection-heading,
 .financial-tax-value {
   display: flex;
   align-items: center;
