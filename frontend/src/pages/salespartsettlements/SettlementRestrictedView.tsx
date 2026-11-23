@@ -144,7 +144,7 @@ export function SettlementRestrictedView({
             {data.status === "WORK"
               ? "작업중"
               : data.status === "AUTO"
-                ? "마감자동"
+                ? "마감 시 자동 확정"
                 : "확정"}
           </p>
           <KpiStrip
@@ -213,7 +213,10 @@ export function SettlementRestrictedView({
                   <thead>
                     <tr>
                       <th>월</th>
-                      <th>상태<FieldHelp label="상태" kind="B" /></th>
+                      <th>
+                        상태
+                        <FieldHelp label="상태" kind="B" />
+                      </th>
                       <th>인원</th>
                       <th>흑자 인원</th>
                       <th>적자 인원</th>

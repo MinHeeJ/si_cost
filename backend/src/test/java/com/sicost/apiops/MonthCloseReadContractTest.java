@@ -30,7 +30,10 @@ class MonthCloseReadContractTest {
         when(calculation.sources(anyString(),anyMap())).thenReturn(mock(Sources.class));
         when(checks.calculate(anyString(),anyMap(),any())).thenAnswer(c->current(c.getArgument(0)));
         var repository=new MonthCloseRepository(mapper,json,new RevisionService(json));
-        var service=new MonthCloseReadService(repository,calculation,checks,users,Clock.fixed(Instant.parse("2026-11-15T00:00:00Z"),ZoneOffset.UTC));
+        var names=mock(com.sicost.common.context.CurrentUserMapper.class);
+        when(names.findName("original")).thenReturn("재무담당");
+        when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),false));
+        var service=new MonthCloseReadService(repository,calculation,checks,users,Clock.fixed(Instant.parse("2026-11-15T00:00:00Z"),ZoneOffset.UTC),names);
         mvc=MockMvcBuilders.standaloneSetup(new MonthCloseReadController(service)).setControllerAdvice(new ApiExceptionHandler()).build();
     }
     static Map<String,Object> row(Object... fields){Map<String,Object> r=new LinkedHashMap<>();for(int i=0;i<fields.length;i+=2)r.put(fields[i].toString(),fields[i+1]);return r;}
@@ -88,6 +91,7 @@ class MonthCloseReadContractTest {
         read("2026-01").andExpect(status().isOk()).andExpect(jsonPath("$.data.checkMode").value("CLOSE_SNAPSHOT"))
             .andExpect(jsonPath("$.data.checks[2].status").value("WARN")).andExpect(jsonPath("$.data.warningCount").value(1))
             .andExpect(jsonPath("$.data.closedBy").value("original")).andExpect(jsonPath("$.data.closedAt").value("2026-11-01 10:00:00"))
+            .andExpect(jsonPath("$.data.closedByName").value("재무담당"))
             .andExpect(jsonPath("$.data.canCheck").value(false)).andExpect(jsonPath("$.data.canClose").value(false)).andExpect(jsonPath("$.data.canReopen").value(true));
         verifyNoInteractions(calculation,checks);verify(mapper,never()).update(any());
     }
@@ -97,12 +101,19 @@ class MonthCloseReadContractTest {
         read("2025-12").andExpect(status().isOk()).andExpect(jsonPath("$.data.managementAllowed").value(true)).andExpect(jsonPath("$.data.canReopen").value(false)).andExpect(jsonPath("$.data.latestCloseMonth").value("2026-01"));
         read("2026-01").andExpect(jsonPath("$.data.canReopen").value(true));
     }
+    @Test void financeCannotReopenEvenTheLatestMonth() throws Exception {
+        closed("202601");
+        when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("finance","재무담당",List.of("FIN"),false));
+        read("2026-01").andExpect(status().isOk()).andExpect(jsonPath("$.data.canReopen").value(false));
+    }
     @Test void historySpansSelectedYearWithStableOrderingAndFullTotalOnSecondAndBeyondPages() throws Exception {
         List<Map<String,Object>> rows=new ArrayList<>();
         for(int i=1;i<=21;i++)rows.add(row("close_ym",i==21?"202602":"202601","hist_sn",i,"act_cd","CLOSE","reg_user_id","original","reg_dttm","2026-11-01T10:00:00","remain_chk_cn","당시 WARN"));
         rows.add(row("close_ym","202512","hist_sn",1,"act_cd","OPEN","reg_user_id","original","reg_dttm","2026-11-02T10:00:00"));data.put("TB_CL_CLOSE_HIST",rows);
         read("2026-11").andExpect(jsonPath("$.data.history.total").value(21)).andExpect(jsonPath("$.data.history.items.length()").value(20)).andExpect(jsonPath("$.data.history.hasMore").value(true))
-            .andExpect(jsonPath("$.data.history.items[0].historySequence").value(1));
+            .andExpect(jsonPath("$.data.history.items[0].historySequence").value(1))
+            .andExpect(jsonPath("$.data.history.items[0].actorId").value("original"))
+            .andExpect(jsonPath("$.data.history.items[0].actorName").value("재무담당"));
         mvc.perform(get("/api/month-closes").param("month","2026-11").param("page","2").param("size","20"))
             .andExpect(jsonPath("$.data.history.total").value(21)).andExpect(jsonPath("$.data.history.items.length()").value(1)).andExpect(jsonPath("$.data.history.items[0].month").value("2026-02")).andExpect(jsonPath("$.data.history.hasMore").value(false));
         mvc.perform(get("/api/month-closes").param("month","2026-11").param("page","2147483647").param("size","100"))

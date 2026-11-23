@@ -394,7 +394,7 @@ it("keeps history-only snapshot visible, readonly reasons and AUTO metadata", as
     "aria-selected",
     "true",
   );
-  expect(screen.getByText("마감자동")).toBeVisible();
+  expect(screen.getByText("마감 시 자동 확정")).toBeVisible();
   expect(screen.getByText("과거 연도는 조회 전용입니다.")).toBeVisible();
   expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 });

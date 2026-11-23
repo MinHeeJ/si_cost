@@ -43,6 +43,7 @@ class MonthCloseDatabaseTest {
     @Autowired JdbcTemplate sql;
     @SpyBean AccessLogWriter access;
     @SpyBean MonthCloseRepository repository;
+    @SpyBean com.sicost.profitability.MonthlyCostService costs;
     @org.springframework.boot.test.mock.mockito.MockBean com.sicost.authentication.AuthenticationMailService authenticationMail;
     String month,dbMonth,part;
     org.springframework.mock.web.MockHttpSession loginSession;
@@ -125,6 +126,67 @@ class MonthCloseDatabaseTest {
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_cl_close_hist WHERE close_ym=?",Integer.class,dbMonth)).isEqualTo(2);
         assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_accs_log WHERE scrn_id='UI-14'",Integer.class)).isEqualTo(2);
     }
+    @Test void futureStandardPartIsExcludedFromCountsPreviewAndAutoConfirmation()throws Exception {
+        String future="F"+UUID.randomUUID().toString().replace("-","").substring(0,12);
+        sql.update("INSERT INTO tb_bs_part(part_id,part_nm,hq_yn,use_yn,reg_user_id) VALUES (?,?,'N','Y','admin')",future,"기준 적용 전 파트");
+        sql.update("INSERT INTO tb_bs_part_std(part_id,aply_bgn_ym,part_ldr_user_id,prft_dstrb_rt,sales_exps_amt,reg_user_id) VALUES (?,?,'admin',40,10,'admin')",future,YearMonth.parse(month).plusMonths(1).toString().replace("-",""));
+        var preview=postCommand("preview",Map.of("expectedRevision",revision()),200);
+        assertThat(preview.path("canClose").asBoolean()).isTrue();
+        assertThat(preview.path("eligiblePartCount").asInt()).isEqualTo(1);
+        assertThat(preview.path("autoConfirmCount").asInt()).isEqualTo(1);
+        assertThat(preview.path("checks").get(4).path("description").asText()).isEqualTo("1개 파트 중 1개 미확정");
+        assertThat(preview.path("parts").toString()).doesNotContain(future);
+        postCommand("close",Map.of("expectedRevision",preview.path("revision").asText(),"operationId",UUID.randomUUID().toString(),"acceptWarnings",true),200);
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_co_part_setl WHERE part_id=? AND setl_ym=?",Integer.class,future,dbMonth)).isZero();
+        assertThat(sql.queryForObject("SELECT setl_stat_cd FROM tb_co_part_setl WHERE part_id=? AND setl_ym=?",String.class,part,dbMonth)).isEqualTo("AUTO");
+        assertThat(sql.queryForObject("SELECT cnfm_user_id=close_user_id FROM tb_co_part_setl s JOIN tb_cl_close c ON s.setl_ym=c.close_ym WHERE s.part_id=?",Boolean.class,part)).isTrue();
+    }
+    @Test void overlappingStandardsBlockPreviewAndCloseWithoutWrites()throws Exception {
+        sql.update("UPDATE tb_bs_part SET part_nm='기준 중복 파트' WHERE part_id=?",part);
+        sql.update("INSERT INTO tb_bs_part_std(part_id,aply_bgn_ym,part_ldr_user_id,prft_dstrb_rt,sales_exps_amt,reg_user_id) VALUES (?,?,'admin',40,10,'admin')",part,YearMonth.parse(month).minusMonths(1).toString().replace("-",""));
+        String revision=revision();Map<String,String> before=state();
+        var preview=postCommand("preview",Map.of("expectedRevision",revision),200);
+        assertThat(preview.path("canClose").asBoolean()).isFalse();
+        assertThat(preview.path("blockingIssues").get(0).path("message").asText())
+            .contains("기준 중복 파트의 "+month,"기준이 두 줄 이상 겹칩니다","거래처·영업 파트").doesNotContain("TB_","PART-");
+        postCommand("close",Map.of("expectedRevision",revision,"operationId",UUID.randomUUID().toString(),"acceptWarnings",true),409);
+        assertThat(state()).isEqualTo(before);
+    }
+    @Test void calculatedCostWithReviewFlagsIsFrozenAtItsCalculatedAmount()throws Exception {
+        String dev="D"+UUID.randomUUID().toString().replace("-","").substring(0,12);
+        sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','BE','DRCT',?,'WORK','admin')",dev,dev,"금액 계산 인력",part);
+        sql.update("INSERT INTO tb_hr_mon_pay(pay_ym,dev_id,pay_amt,alwnc_amt,insr_cmpny_amt,retire_rsv_amt,emp_type_cd,drct_cls_cd,reg_user_id) VALUES (?,?,1237,0,0,0,'FT','DRCT','admin')",dbMonth,dev);
+        // Keep the real engine's amounts. Only the review flags reproduce the reported condition.
+        org.mockito.Mockito.doAnswer(call->{
+            var all=(com.sicost.profitability.MonthlyCostDtos.MonthlyCostsData)call.callRealMethod();
+            var people=all.items().stream().map(p->!p.personId().equals(dev)?p:
+                new com.sicost.profitability.MonthlyCostDtos.MonthlyPersonCost(p.personId(),p.month(),p.rows(),p.laborSource(),
+                    new com.sicost.profitability.MonthlyCostDtos.MonthlyCostCompleteness(false,false,p.completeness().estimated(),
+                        p.completeness().allocationComplete(),p.completeness().issues()),p.knownLaborAllocated(),p.knownPersonalRevenue(),
+                    p.assignmentMm(),p.idleRowGenerated(),p.indirectRowGenerated())).toList();
+            return new com.sicost.profitability.MonthlyCostDtos.MonthlyCostsData(all.period(),people);
+        }).when(costs).calculate(any());
+        var preview=postCommand("preview",Map.of("expectedRevision",revision()),200);
+        assertThat(preview.path("canClose").asBoolean()).isTrue();
+        postCommand("close",Map.of("expectedRevision",preview.path("revision").asText(),"operationId",UUID.randomUUID().toString(),"acceptWarnings",true),200);
+        assertThat(sql.queryForObject("SELECT labor_alloc_amt FROM tb_co_mon_cost WHERE dev_id=? AND cost_ym=?",Integer.class,dev,dbMonth)).isEqualTo(1237);
+        assertThat(sql.queryForObject("SELECT fix_yn FROM tb_co_mon_cost WHERE dev_id=? AND cost_ym=?",String.class,dev,dbMonth)).isEqualTo("Y");
+        assertThat(sql.queryForObject("SELECT idle_cost_amt FROM tb_co_mon_pl WHERE pl_ym=?",Integer.class,dbMonth)).isEqualTo(1237);
+        var read=json.readTree(mvc.perform(get("/api/month-closes").session(loginSession).param("month",month)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()).path("data");
+        assertThat(read.path("closedByName").asText()).isEqualTo("월마감 시험");
+        assertThat(read.path("history").path("items").get(0).path("actorName").asText()).isEqualTo("월마감 시험");
+    }
+    @Test void missingCostAmountBlocksWithoutWritingZero()throws Exception {
+        String dev="D"+UUID.randomUUID().toString().replace("-","").substring(0,12);
+        sql.update("INSERT INTO tb_hr_dev(dev_id,mng_no,dev_nm,emp_type_cd,job_cd,drct_cls_cd,part_id,work_stat_cd,reg_user_id) VALUES (?,?,?,'FT','BE','DRCT',?,'WORK','admin')",dev,dev,"원가 확인 인력",part);
+        String revision=revision();Map<String,String> before=state();
+        var preview=postCommand("preview",Map.of("expectedRevision",revision),200);
+        assertThat(preview.path("canClose").asBoolean()).isFalse();
+        assertThat(preview.path("blockingIssues").toString()).contains("원가 확인 인력의 "+month+" 원가 금액이 없어 마감할 수 없습니다. 개인 원가·수익표에서 확인해 주세요.");
+        postCommand("close",Map.of("expectedRevision",revision,"operationId",UUID.randomUUID().toString(),"acceptWarnings",true),409);
+        assertThat(state()).isEqualTo(before);
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_co_mon_cost WHERE dev_id=?",Integer.class,dev)).isZero();
+    }
     @Test void requiredAccessFailureRollsBackCopiesAutoChecksAndHistory()throws Exception {
         String revision=revision();Map<String,String> before=state();
         AccessLogWriter target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(access);
@@ -146,7 +208,7 @@ class MonthCloseDatabaseTest {
     private JsonNode postCommand(String action,Map<String,Object> body,int expected)throws Exception {
         var response=mvc.perform(post("/api/month-closes/"+month+"/"+action).session(loginSession).header(csrfHeader,csrfToken).contentType("application/json").content(json.writeValueAsString(body)))
             .andExpect(status().is(expected)).andReturn().getResponse();
-        return json.readTree(response.getContentAsString()).path("data");
+        return json.readTree(response.getContentAsByteArray()).path("data");
     }
     private Map<String,String> state() {
         Map<String,String> result=new TreeMap<>();
