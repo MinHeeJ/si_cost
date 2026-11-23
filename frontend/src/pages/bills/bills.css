@@ -80,6 +80,10 @@
   margin: 12px 0;
   justify-content: space-between;
 }
+.bills-screen [role="tabpanel"] .sicost-table thead th {
+  /* DataTable applies column alignment inline to both headers and body cells. */
+  text-align: center !important;
+}
 .bill-desktop .sicost-table {
   min-width: 1440px;
 }
