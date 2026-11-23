@@ -70,10 +70,20 @@
 .business-plan-period-detail {
   gap: 6px 12px;
 }
+.business-plan-target-status {
+  border-inline-start: 1px solid var(--divider);
+  padding-inline-start: 12px;
+}
 .business-plan-target-status > .sicost-badge {
-  color: var(--text);
   background: color-mix(in srgb, var(--text-sub) 7%, var(--surface));
-  font-weight: 700;
+}
+.business-plan-target-status > .sicost-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 .business-plan-status-actions {
   display: flex;
