@@ -107,7 +107,6 @@ export function ProjectsScreen({
   const [distribution, setDistribution] = useState<{
     id: string;
     customerName: string | null;
-    step?: "EST" | "CTRT" | "PLAN";
   }>();
   const [upload, setUpload] =
     useState<Parameters<ProjectDistributionPanelProps["onUpload"]>[0]>();
@@ -228,7 +227,6 @@ export function ProjectsScreen({
     setDistribution({
       id: row.id,
       customerName: row.customerName,
-      step: row.distribution?.selectedStep ?? "EST",
     });
   }
   function back() {
@@ -439,7 +437,6 @@ export function ProjectsScreen({
             <ProjectDistributionPanel
               projectId={distribution.id}
               customerName={distribution.customerName}
-              initialStep={distribution.step}
               amountUnit={amountUnit}
               readOnly={readOnly}
               onBack={back}
@@ -666,7 +663,13 @@ export function ProjectsScreen({
               {!loading && !data?.items.length && (
                 <div className="sicost-empty">
                   <p>조건에 맞는 결과가 없습니다.</p>
-                  <button type="button" data-testid="project-card-empty-reset" onClick={() => apply(true)}>조건 초기화</button>
+                  <button
+                    type="button"
+                    data-testid="project-card-empty-reset"
+                    onClick={() => apply(true)}
+                  >
+                    조건 초기화
+                  </button>
                 </div>
               )}
               {data?.items.map((row) => (

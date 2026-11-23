@@ -7,7 +7,6 @@ import {
   getProjectDistributionUploads,
   getDistributionUploadResult,
   downloadDistributionTemplate,
-  downloadDistribution,
 } from "./distributionApi";
 import * as downloads from "../b7/b7Api";
 vi.mock("../b7/b7Api", () => ({
@@ -41,42 +40,29 @@ it("uses selected project identity, required viewed step and no extra year or au
   for (const call of fetcher.mock.calls)
     expect(call[1].headers.has("Authorization")).toBe(false);
 });
-it("template sends only projectId while export dispatch uses approved view and exact viewed step", async () => {
+it("template sends only projectId and saves the returned file without a master-data export", async () => {
   await downloadDistributionTemplate("P-selected");
-  await downloadDistribution("P-selected", "PLAN", "백만원");
   expect(downloads.downloadB7File).toHaveBeenNthCalledWith(
     1,
     "/api/excel/B6/template?projectId=P-selected",
   );
-  expect(downloads.downloadB7File).toHaveBeenNthCalledWith(
-    2,
-    "/api/exports/master-data",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        view: "PROJECT_DISTRIBUTION",
-        projectId: "P-selected",
-        step: "PLAN",
-        amountUnit: "백만원",
-      }),
-    },
-  );
-  expect(downloads.saveDownload).toHaveBeenCalledTimes(2);
+  expect(downloads.downloadB7File).toHaveBeenCalledTimes(1);
+  expect(downloads.saveDownload).toHaveBeenCalledTimes(1);
 });
 it("surfaces root ApiError with no automatic retries", async () => {
-  const fetcher = vi.fn().mockImplementation(async () =>
-    new Response(
-      JSON.stringify({
-        success: false,
-        meta: {},
-        code: "INVALID_INPUT",
-        field: "step",
-        message: "단계 오류",
-        requestId: "distribution-api",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    ),
+  const fetcher = vi.fn().mockImplementation(
+    async () =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          meta: {},
+          code: "INVALID_INPUT",
+          field: "step",
+          message: "단계 오류",
+          requestId: "distribution-api",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
   );
   stubBusinessFetch(fetcher);
   const error = await getProjectDistribution("P-selected", "EST").catch(

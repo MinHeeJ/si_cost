@@ -17,6 +17,7 @@ import {
 import { getProjectStatusBoard } from "../apiops/projectAnalysisApi";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./projectStatusApi";
+import { IssueDueDate } from "../issues/IssueDueDate";
 import "./projectStatus.css";
 
 export type StatusIssueDialogHost = (
@@ -191,10 +192,7 @@ export function ProjectStatusIssuesPanel({
       id: "dueDate",
       label: "기한",
       render: (row) => (
-        <>
-          <span>{row.dueDate}</span>
-          {row.overdue && <StatusBadge tone="bad">기한 지남</StatusBadge>}
-        </>
+        <IssueDueDate issue={row} baseDate={result.data?.baseDate} />
       ),
     },
     {
@@ -255,7 +253,8 @@ export function ProjectStatusIssuesPanel({
       >
         <label className="sicost-field">
           상태
-          <FieldHelp label="상태" /><select
+          <FieldHelp label="상태" />
+          <select
             data-testid="status-issue-state"
             value={draft.status}
             onChange={(e) =>
@@ -318,7 +317,14 @@ export function ProjectStatusIssuesPanel({
         rowKey={(row) => row.issueId}
         loading={result.loading}
         empty="조건에 맞는 이슈가 없습니다."
-        emptyAction={<button type="button" onClick={() => apply({status: "OPEN_ACTIVE", page: 1, size: 50})}>조건 초기화</button>}
+        emptyAction={
+          <button
+            type="button"
+            onClick={() => apply({ status: "OPEN_ACTIVE", page: 1, size: 50 })}
+          >
+            조건 초기화
+          </button>
+        }
         page={query.page}
         size={query.size}
         total={result.data?.total ?? 0}

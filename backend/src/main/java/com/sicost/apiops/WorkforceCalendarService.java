@@ -44,6 +44,7 @@ public class WorkforceCalendarService {
         var paging=StaffingQueryInput.paging(q,Set.of("lastWithdrawalDate","name","developerId"),"lastWithdrawalDate");
         Context context=new Context(repository.load(current),mapper.tentatives(),day);
         Map<String,Person> people=new HashMap<>();var rows=new ArrayList<CalendarPerson>();
+        Map<String,LocalDate> withdrawalSortDates=new HashMap<>();
         for(Person person:mapper.people()){
             if(!"DRCT".equals(person.directClass())||job!=null&&!job.equals(person.jobCode())||grade!=null&&!grade.equals(person.gradeCode())||employee!=null&&!employee.equals(person.employeeType()))continue;
             boolean history=context.sources().assignments().stream().anyMatch(a->a.source().developerId().equals(person.id())&&a.months().stream().anyMatch(m->YearMonth.parse(m.month()).getYear()==year));
@@ -52,11 +53,16 @@ public class WorkforceCalendarService {
             List<Cell> cells=new ArrayList<>();for(int m=1;m<=12;m++)cells.add(cell(person,YearMonth.of(year,m),context));
             if(remaining&&cells.stream().noneMatch(c->!YearMonth.parse(c.month()).isBefore(current)&&spare(person,c).signum()>0))continue;
             LocalDate last=context.sources().assignments().stream().filter(a->person.id().equals(a.source().developerId())).map(a->a.source().endDate()).max(Comparator.naturalOrder()).orElse(null);
+            context.sources().assignments().stream().map(SalesForecastSources.Assignment::source)
+                .filter(a->person.id().equals(a.developerId())&&!a.startDate().isAfter(day)&&!a.endDate().isBefore(day))
+                .map(a->a.endDate()).max(Comparator.naturalOrder())
+                .ifPresent(date->withdrawalSortDates.put(person.id(),date));
             people.put(person.id(),person);rows.add(new CalendarPerson(person.id(),person.name(),person.jobCode(),person.gradeCode(),person.employeeType(),last,List.copyOf(cells)));
         }
         Comparator<CalendarPerson> order=switch(paging.sort()){
             case "name"->Comparator.comparing(CalendarPerson::name,Comparator.nullsLast("DESC".equals(paging.direction())?Comparator.<String>reverseOrder():Comparator.<String>naturalOrder()));case "developerId"->Comparator.comparing(CalendarPerson::developerId);
-            default->Comparator.comparing(CalendarPerson::lastWithdrawalDate,"ASC".equals(paging.direction())?Comparator.nullsFirst(Comparator.naturalOrder()):Comparator.nullsLast(Comparator.reverseOrder()));
+            default->Comparator.comparing(p->withdrawalSortDates.get(p.developerId()),
+                Comparator.nullsLast("ASC".equals(paging.direction())?Comparator.<LocalDate>naturalOrder():Comparator.<LocalDate>reverseOrder()));
         };
         if(paging.sort().equals("developerId")&&paging.direction().equals("DESC"))order=order.reversed();
         rows.sort(paging.sort().equals("lastWithdrawalDate") ? order.thenComparing(CalendarPerson::name).thenComparing(CalendarPerson::developerId) : order.thenComparing(CalendarPerson::developerId));

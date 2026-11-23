@@ -10,6 +10,7 @@ import {
   type ProgressEditorMode,
 } from "./ProjectProgressEditor";
 import * as api from "./projectProgressApi";
+import { noWeeklyMemo, progressReasonText } from "./progressFormat";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./projectProgress.css";
 
@@ -183,7 +184,8 @@ export function ProjectProgressPanel({
               key={`${reason.kind}-${i}`}
               className={`sicost-banner sicost-tone-${tone(reason.light)}`}
             >
-              {reason.kind} {reason.value} · 기준 {reason.threshold}
+              {progressReasonText(reason.kind, reason.value)} · 기준{" "}
+              {reason.threshold}
             </p>
           ))}
           {calculation && (
@@ -257,8 +259,10 @@ export function ProjectProgressPanel({
             · PM {status.pm.map((p) => p.userName).join(", ") || "미지정"}
           </p>
           <p>
-            마지막 업데이트 {status.lastUpdatedDate ?? "– (메모 없음)"} ·{" "}
-            {status.elapsedDays}일 경과{" "}
+            마지막 업데이트{" "}
+            {status.lastUpdatedDate == null
+              ? noWeeklyMemo(status.elapsedDays)
+              : `${status.lastUpdatedDate} · ${status.elapsedDays}일 경과`}{" "}
             {status.updateWarning && (
               <StatusBadge tone="warn">미갱신 주의</StatusBadge>
             )}
@@ -309,7 +313,10 @@ export function ProjectProgressPanel({
                 <tr>
                   {["단계", "비중", "예정 기간", "완료일", "상태", "작업"].map(
                     (label) => (
-                      <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
+                      <th key={label}>
+                        {label}
+                        <FieldHelp label={label} kind="B" />
+                      </th>
                     ),
                   )}
                 </tr>
@@ -416,8 +423,7 @@ export function ProjectProgressPanel({
               </dl>
               <small>
                 {formatShortDate(m.registeredAt)} 작성
-                {m.modifiedAt &&
-                  `, ${formatShortDate(m.modifiedAt)} 고침`}
+                {m.modifiedAt && `, ${formatShortDate(m.modifiedAt)} 고침`}
               </small>
             </article>
           ))}

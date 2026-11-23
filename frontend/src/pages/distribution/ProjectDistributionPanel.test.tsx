@@ -11,6 +11,10 @@ import { ProjectDistributionPanel } from "./ProjectDistributionPanel";
 import { formatDistributionAmount } from "./MonthlyMatrixTable";
 import * as api from "./distributionApi";
 import * as issues from "../uploadsops/uploadIssuesApi";
+import * as projects from "../projects/projectsApi";
+import * as shared from "../shared/sharedApi";
+vi.mock("../shared/sharedApi");
+vi.mock("../projects/projectsApi");
 vi.mock("./distributionApi");
 vi.mock("../uploadsops/uploadIssuesApi");
 const project: api.DistributionProject = {
@@ -94,6 +98,13 @@ const upload: api.ProjectUploadRecord = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(shared.getSharedCodes).mockResolvedValue({
+    items: [
+      { code: "EST", name: "견적" },
+      { code: "CTRT", name: "최종 계약" },
+      { code: "PLAN", name: "실제 투입계획" },
+    ] as shared.SharedCodeLookup[],
+  });
   vi.mocked(api.getProjectDistribution).mockImplementation(
     async (_id, step) => ({ ...data, viewedStep: step }),
   );
@@ -142,18 +153,15 @@ function show(
   );
   return { onBack, onUpload };
 }
-it("renders real header matrix readonly cells and independent calculation stage", async () => {
+it("renders real header and only the server calculation stage matrix without tabs", async () => {
   show();
   expect(screen.getByRole("status")).toHaveTextContent("불러오는 중");
   await screen.findByText("검증 고객사", { exact: false });
   expect(screen.getByTestId("distribution-project-header")).toHaveTextContent(
     "2026-06-01 ~ 2026-07-31",
   );
-  expect(screen.getByRole("tab", { name: "EST 견적" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  expect(screen.getByText("PLAN", { exact: true })).toHaveClass(
+  expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  expect(await screen.findByText("실제 투입계획", { exact: true })).toHaveClass(
     "sicost-tone-info",
   );
   expect(screen.getByTestId("distribution-row-1")).toHaveTextContent(
@@ -171,19 +179,33 @@ it("renders real header matrix readonly cells and independent calculation stage"
     screen.getByRole("heading", { name: "배정·배분표 불일치 1건" }),
   ).toBeInTheDocument();
 });
-it("viewing another stage fetches only GET data and never switches calculation stage", async () => {
+it.each(["LOSE", "END"] as const)(
+  "%s distribution badge is gray",
+  async (status) => {
+    vi.mocked(api.getProjectDistribution).mockResolvedValue({
+      ...data,
+      project: { ...project, status },
+    });
+    show();
+    const header = await screen.findByTestId("distribution-project-header");
+    expect(
+      within(header).getByText(status === "LOSE" ? "실주" : "종료"),
+    ).toHaveClass("sicost-tone-lock");
+  },
+);
+it("fetches only the server calculation stage with no initial stage argument", async () => {
   show();
-  await screen.findByRole("tab", { name: "PLAN 실제 투입계획" });
-  fireEvent.click(screen.getByRole("tab", { name: "PLAN 실제 투입계획" }));
+  await screen.findByTestId("distribution-matrix");
   await waitFor(() =>
     expect(api.getProjectDistribution).toHaveBeenLastCalledWith(
       project.id,
       "PLAN",
     ),
   );
-  expect(await screen.findByRole("tabpanel")).toHaveAttribute(
+  expect(api.getProjectDistribution).toHaveBeenCalledTimes(1);
+  expect(await screen.findByTestId("distribution-stage-panel")).toHaveAttribute(
     "aria-label",
-    "PLAN 배분표",
+    "실제 투입계획 배분표",
   );
 });
 it("배분표는 단위 선택 없이 원 단위 콤마로 보인다(SFR-006-01, B.6 월 칸 원)", async () => {
@@ -215,6 +237,10 @@ it("배분표는 단위 선택 없이 원 단위 콤마로 보인다(SFR-006-01,
   expect(formatDistributionAmount(null, "원")).toBe("–");
 });
 it("empty table comparison and upload history have distinct empty states", async () => {
+  vi.mocked(projects.getProject).mockResolvedValue({
+    project,
+    revision: data.revision,
+  } as projects.ProjectDetail);
   vi.mocked(api.getProjectDistribution).mockResolvedValue({
     ...data,
     rows: [],
@@ -223,12 +249,13 @@ it("empty table comparison and upload history have distinct empty states", async
   });
   vi.mocked(api.getProjectDistributionComparison).mockResolvedValue({
     ...comparison,
+    selectedStep: null,
     items: [],
     mismatchCount: 0,
     warnings: [],
   });
   vi.mocked(api.getProjectDistributionUploads).mockResolvedValue({ items: [] });
-  show();
+  const { onUpload } = show();
   expect(
     await screen.findByText("이 단계에 등록된 배분표가 없습니다."),
   ).toBeInTheDocument();
@@ -237,6 +264,49 @@ it("empty table comparison and upload history have distinct empty states", async
     screen.getByText("배정·배분표 불일치가 없습니다."),
   ).toBeInTheDocument();
   expect(screen.getByText("미등록")).toHaveClass("sicost-tone-neutral");
+  expect(api.getProjectDistribution).not.toHaveBeenCalled();
+  expect(screen.queryByTestId("distribution-matrix")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("distribution-upload"));
+  expect(onUpload).toHaveBeenCalledWith(
+    expect.objectContaining({ step: undefined }),
+  );
+});
+it("marks only the latest applied upload in the server calculation stage", async () => {
+  vi.mocked(api.getProjectDistributionUploads).mockResolvedValue({
+    items: [
+      { ...upload, uploadId: 73, step: "PLAN", status: "CHECKED" },
+      {
+        ...upload,
+        uploadId: 72,
+        step: "PLAN",
+        status: "APPLIED",
+        appliedAt: "2026-06-17 12:00:00",
+      },
+      {
+        ...upload,
+        uploadId: 70,
+        step: "PLAN",
+        status: "APPLIED",
+        appliedAt: "2026-06-16 12:00:00",
+      },
+      {
+        ...upload,
+        uploadId: 69,
+        step: "EST",
+        status: "APPLIED",
+        appliedAt: "2026-06-18 12:00:00",
+      },
+    ],
+  });
+  show();
+  await screen.findByTestId("distribution-upload-row-72");
+  expect(
+    screen.getByRole("heading", { name: "올린 기록 (4)" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByText("계산에 사용")).toHaveLength(1);
+  expect(
+    screen.getByTestId("distribution-upload-row-72").closest("tr"),
+  ).toHaveTextContent("실제 투입계획 계산에 사용");
 });
 it("failed request retains request id with manual retry and no automatic retries", async () => {
   vi.mocked(api.getProjectDistribution).mockRejectedValueOnce(
@@ -256,20 +326,18 @@ it("failed request retains request id with manual retry and no automatic retries
   expect(api.getProjectDistribution).toHaveBeenCalledTimes(2);
 });
 it.each(["END", "LOSE"] as const)(
-  "%s project cannot upload but can view or download",
+  "%s project cannot upload but can view and download the template",
   async (status) => {
     vi.mocked(api.getProjectDistribution).mockResolvedValue({
       ...data,
       project: { ...project, status },
     });
     show();
-    await screen.findByText(
-      "조회 전용입니다. 배분표는 열람·다운로드할 수 있습니다.",
-    );
+    await screen.findByText("조회 전용입니다. 배분표를 열람할 수 있습니다.");
     expect(screen.getByRole("button", { name: "엑셀 업로드" })).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "배분표 다운로드" }),
-    ).toBeEnabled();
+      screen.queryByRole("button", { name: "배분표 다운로드" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "양식 받기" })).toBeEnabled();
   },
 );
@@ -281,7 +349,11 @@ it("past selected year disables upload without changing lifecycle", async () => 
     "진행",
   );
 });
-it("uploads delegate to the existing B6 workflow with viewed step and aggregate revision; apply refreshes all reads", async () => {
+it("uploads default to calculation stage and apply reselects the new server stage", async () => {
+  vi.mocked(api.getProjectDistributionComparison).mockResolvedValueOnce({
+    ...comparison,
+    selectedStep: "EST",
+  });
   const { onUpload } = show();
   await screen.findByTestId("distribution-matrix");
   fireEvent.click(screen.getByRole("button", { name: "엑셀 업로드" }));
@@ -297,6 +369,22 @@ it("uploads delegate to the existing B6 workflow with viewed step and aggregate 
     expect(api.getProjectDistributionUploads).toHaveBeenCalledTimes(2),
   );
   expect(api.getProjectDistributionComparison).toHaveBeenCalledTimes(2);
+  await waitFor(() =>
+    expect(api.getProjectDistribution).toHaveBeenLastCalledWith(
+      project.id,
+      "PLAN",
+    ),
+  );
+  expect(api.getProjectDistribution).toHaveBeenNthCalledWith(
+    1,
+    project.id,
+    "EST",
+  );
+  await screen.findByTestId("distribution-matrix");
+  fireEvent.click(screen.getByTestId("distribution-upload"));
+  expect(onUpload).toHaveBeenLastCalledWith(
+    expect.objectContaining({ step: "PLAN" }),
+  );
 });
 it("list button restores the parent list instead of navigating to a new URL", async () => {
   const { onBack } = show();
@@ -304,30 +392,33 @@ it("list button restores the parent list instead of navigating to a new URL", as
   fireEvent.click(screen.getByRole("button", { name: "목록" }));
   expect(onBack).toHaveBeenCalledOnce();
 });
-it("template excludes year and export uses viewed stage and won unit", async () => {
+it("template excludes year and distribution download is not offered", async () => {
   show();
   await screen.findByTestId("distribution-matrix");
   fireEvent.click(screen.getByRole("button", { name: "양식 받기" }));
   await waitFor(() =>
     expect(api.downloadDistributionTemplate).toHaveBeenCalledWith(project.id),
   );
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "배분표 다운로드" }),
-    ).toBeEnabled(),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "배분표 다운로드" }));
-  await waitFor(() =>
-    expect(api.downloadDistribution).toHaveBeenCalledWith(
-      project.id,
-      "EST",
-      "원",
-    ),
-  );
+  expect(screen.queryByTestId("distribution-export")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "배분표 다운로드" }),
+  ).not.toBeInTheDocument();
 });
 it("historical stage and both status tones are preserved and result is queried by actual upload id", async () => {
   show();
   await screen.findByTestId("distribution-result-71");
+  await waitFor(() =>
+    expect(screen.getByTestId("project-distribution-panel")).toHaveTextContent(
+      "저장된 표 전체 기준 실제 투입계획 > 최종 계약 > 견적",
+    ),
+  );
+  const historyRow = screen
+    .getByTestId("distribution-upload-row-71")
+    .closest("tr")!;
+  expect(await within(historyRow).findByText("견적")).toBeInTheDocument();
+  expect(
+    screen.getByTestId("project-distribution-panel").textContent,
+  ).not.toMatch(/EST|CTRT|PLAN/);
   expect(screen.getByText("검사 완료")).toHaveClass("sicost-tone-info");
   expect(screen.getByText("반영 완료")).toHaveClass("sicost-tone-ok");
   fireEvent.click(screen.getByTestId("distribution-result-71"));
@@ -391,7 +482,7 @@ it.each(["comparison", "uploads"] as const)(
     expect(
       screen.getByTestId("distribution-upload-row-71"),
     ).toBeInTheDocument();
-    expect(api.getProjectDistribution).toHaveBeenCalledTimes(2);
+    expect(api.getProjectDistribution).toHaveBeenCalledTimes(1);
     expect(api.getProjectDistributionComparison).toHaveBeenCalledTimes(2);
     expect(api.getProjectDistributionUploads).toHaveBeenCalledTimes(2);
   },

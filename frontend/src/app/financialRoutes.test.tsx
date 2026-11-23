@@ -120,6 +120,15 @@ function open(id: string, state?: object) {
     </MemoryRouter>,
   );
 }
+async function expectFinancialNotice(content: HTMLElement) {
+  // Warning details are portaled into a dialog, not rendered inline in the screen.
+  await userEvent.click(
+    await within(content).findByRole("button", { name: "확인 필요 1건" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(dialog).getByText(statement.notices[0])).toBeInTheDocument();
+  await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+}
 beforeEach(() => {
   vi.resetAllMocks();
   Object.defineProperty(window, "innerWidth", {
@@ -235,9 +244,7 @@ it.each(screens)(
   async (item) => {
     open(item.id);
     const content = await screen.findByTestId(item.testId);
-    expect(
-      await within(content).findByText(statement.notices[0]),
-    ).toBeInTheDocument();
+    await expectFinancialNotice(content);
     expect(
       screen.getByRole("heading", { name: item.name }),
     ).toBeInTheDocument();
@@ -269,7 +276,7 @@ it.each(screens)(
     await userEvent.click(
       within(content).getByRole("button", { name: "다시 조회" }),
     );
-    await within(content).findByText(statement.notices[0]);
+    await expectFinancialNotice(content);
     expect(item.read).toHaveBeenCalledTimes(2);
     expect(prefs.putPreference).not.toHaveBeenCalledWith(
       "PERIOD",
@@ -296,7 +303,9 @@ it.each(["UI-08", "UI-09"])(
 );
 it("keeps open financial tabs mounted and refreshes them after an import", async () => {
   open("UI-07");
-  await screen.findByText(statement.notices[0]);
+  await expectFinancialNotice(
+    await screen.findByTestId("profit-structure-screen"),
+  );
   await userEvent.click(screen.getByRole("link", { name: "영업이익표" }));
   await screen.findByTestId("operating-profit-screen");
   await waitFor(() =>
@@ -340,12 +349,12 @@ it.each(screens)("/$id uses and saves the shared amount unit", async (item) => {
   vi.mocked(prefs.getPreferences).mockResolvedValue({ items: [amount] });
   open(item.id);
   const content = await screen.findByTestId(item.testId);
-  await within(content).findByText(statement.notices[0]);
-  expect(within(content).getByLabelText("단위")).toHaveValue("백만원");
+  await expectFinancialNotice(content);
+  expect(screen.getByLabelText("단위")).toHaveValue("백만원");
   vi.mocked(prefs.getPreferences).mockResolvedValue({
     items: [{ ...amount, value: "원", revision: "saved" }],
   });
-  await userEvent.selectOptions(within(content).getByLabelText("단위"), "원");
+  await userEvent.selectOptions(screen.getByLabelText("단위"), "원");
   await waitFor(() =>
     expect(prefs.putPreference).toHaveBeenCalledWith(
       "AMT_UNIT",
@@ -354,7 +363,7 @@ it.each(screens)("/$id uses and saves the shared amount unit", async (item) => {
       "unit-v1",
     ),
   );
-  expect(within(content).getByLabelText("단위")).toHaveValue("원");
+  expect(screen.getByLabelText("단위")).toHaveValue("원");
 });
 it("keeps the amount unit and reports a failed preference save", async () => {
   vi.mocked(prefs.getPreferences).mockResolvedValue({
@@ -371,10 +380,10 @@ it("keeps the amount unit and reports a failed preference save", async () => {
   vi.mocked(prefs.putPreference).mockRejectedValue(new Error("단위 저장 실패"));
   open("UI-08");
   const content = await screen.findByTestId("operating-profit-screen");
-  await within(content).findByText(statement.notices[0]);
-  await userEvent.selectOptions(within(content).getByLabelText("단위"), "원");
+  await expectFinancialNotice(content);
+  await userEvent.selectOptions(screen.getByLabelText("단위"), "원");
   expect(await screen.findByText("단위 저장 실패")).toBeInTheDocument();
-  expect(within(content).getByLabelText("단위")).toHaveValue("천원");
+  expect(screen.getByLabelText("단위")).toHaveValue("천원");
 });
 
 it.each(screens)(
@@ -393,8 +402,8 @@ it.each(screens)(
     });
     open(item.id);
     const content = await screen.findByTestId(item.testId);
-    await within(content).findByText(statement.notices[0]);
-    expect(within(content).getByLabelText("단위")).toHaveValue("천원");
+    await expectFinancialNotice(content);
+    expect(screen.getByLabelText("단위")).toHaveValue("천원");
     expect(content).toHaveClass("financial-display-dense");
   },
 );
@@ -406,7 +415,7 @@ it.each(screens.filter((item) => item.id !== "UI-18"))(
     try {
       open(item.id);
       const content = await screen.findByTestId(item.testId);
-      await within(content).findByText(statement.notices[0]);
+      await expectFinancialNotice(content);
       const reset = within(content).getByRole("button", {
         name: "조건 초기화",
       });

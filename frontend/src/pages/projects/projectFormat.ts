@@ -9,7 +9,7 @@ export const projectStatusTone: Record<string, Tone> = {
   ING: "info",
   PRE: "warn",
   END: "lock",
-  LOSE: "bad",
+  LOSE: "lock",
 };
 export const projectColumns = [
   { id: "id", label: "프로젝트ID", required: true },

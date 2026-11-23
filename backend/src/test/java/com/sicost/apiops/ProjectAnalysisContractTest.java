@@ -93,15 +93,22 @@ class ProjectAnalysisContractTest {
             .andExpect(jsonPath("$.data.summary.researchCost").value("13")).andExpect(jsonPath("$.data.items[0].costPerMm").isEmpty());
     }
     @Test void scheduleAndCostDangerUseDisplayedValuesAndAllReasons() throws Exception {
-        // Period fallback uses elapsed days / (end - start), without inclusive-day counting.
-        add("danger","TK","ING",today.minusDays(20),today.plusDays(80),"100","25","100");memos.add(new Memo("danger",1,today,n("10")));issues.add(new Issue("danger","HIGH",today.minusDays(1),"OPEN"));
+        // Inclusive 100-day period keeps this test exactly on the 10-point danger boundary.
+        add("danger","TK","ING",today.minusDays(20),today.plusDays(79),"100","25","100");memos.add(new Memo("danger",1,today,n("10")));issues.add(new Issue("danger","HIGH",today.minusDays(1),"OPEN"));
         mvc.perform(get("/api/project-status-board")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].planProgress").value("20.0"))
             .andExpect(jsonPath("$.data.items[0].actualProgress").value("10.0")).andExpect(jsonPath("$.data.items[0].light").value("위험"))
             .andExpect(jsonPath("$.data.items[0].reasons.length()").value(4)).andExpect(jsonPath("$.data.summary.dangerCount").value(1));
     }
     @Test void scheduleExactlyFiveIsWarning() throws Exception {
-        add("warning","TK","ING",today.minusDays(15),today.plusDays(85),"100","10","100");memos.add(new Memo("warning",1,today,n("10")));
+        add("warning","TK","ING",today.minusDays(15),today.plusDays(84),"100","10","100");memos.add(new Memo("warning",1,today,n("10")));
         mvc.perform(get("/api/project-status-board")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].planProgress").value("15.0")).andExpect(jsonPath("$.data.items[0].light").value("주의"));
+    }
+    @Test void inclusivePeriodOfOneHundredAndOneDaysDoesNotRoundGapToDanger() throws Exception {
+        add("inclusive","TK","ING",today.minusDays(20),today.plusDays(80),"100","10","100");
+        memos.add(new Memo("inclusive",1,today,n("10")));
+        mvc.perform(get("/api/project-status-board")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].planProgress").value("19.8"))
+            .andExpect(jsonPath("$.data.items[0].light").value("주의"));
     }
     @Test void todayBoundaryPreIncludedExpiredEndLostExcludedAndFuturePlanZero() throws Exception {
         add("today","MO","ING",today,today,"100","10","100");add("pre","TK","PRE",today.plusDays(1),today.plusDays(50),"0",null,"0");

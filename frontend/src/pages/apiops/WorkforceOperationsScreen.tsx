@@ -3,7 +3,7 @@ import { Pagination } from "../../shared/Pagination";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -177,6 +177,30 @@ export function WorkforceCalendar({
   const [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<api.CalendarPage>();
+  const viewport = useRef<HTMLDivElement>(null);
+  const scrolledPeriod = useRef<string>();
+  useEffect(() => {
+    const period = `${year}/${context.currentMonth}`;
+    const container = viewport.current;
+    if (!data || !container || scrolledPeriod.current === period) return;
+    const header = container.querySelector<HTMLElement>(
+      ".calendar-current-month",
+    );
+    if (!header) return;
+    const fixedWidth = Array.from(
+      container.querySelectorAll<HTMLElement>("thead th"),
+    )
+      .slice(0, 2)
+      .reduce((sum, cell) => sum + cell.offsetWidth, 0);
+    if (
+      header.offsetLeft + header.offsetWidth >
+        container.scrollLeft + container.clientWidth ||
+      header.offsetLeft < container.scrollLeft + fixedWidth
+    ) {
+      container.scrollLeft = Math.max(0, header.offsetLeft - fixedWidth);
+    }
+    scrolledPeriod.current = period;
+  }, [data, year, context.currentMonth]);
   const [loading, setLoading] = useState(true),
     [reload, setReload] = useState(0);
   const [error, setError] = useState<unknown>(),
@@ -426,7 +450,11 @@ export function WorkforceCalendar({
       {loading && <p role="status">달력을 불러오는 중입니다.</p>}
       {data && (
         <>
-          <div className="sicost-table-viewport">
+          <div
+            className="sicost-table-viewport"
+            ref={viewport}
+            data-testid="calendar-viewport"
+          >
             <table className="sicost-table workforce-calendar-table">
               <thead>
                 <tr>
@@ -595,16 +623,102 @@ export function WorkforceCalendarCell({
 }) {
   const pre = cell.projects.some((p) => p.preContract);
   const overAssignedWarning = cell.overAssigned ? " · 1.0 초과" : "";
-  const label = cell.status === "ASSIGNED" ? `${pre?"⚠ 미계약 선투입 · ":""}${cell.leavingSoon?"철수 예정 · ":""}${decimal(cell.actualMm)} MM${overAssignedWarning}${cell.assignmentCount>=2?` · ${cell.assignmentCount}건`:""}` : cell.status === "TENTATIVE" ? formatRate(cell.tentativeProbability) : statuses[cell.status];
-  if(cell.status === "BEFORE_JOIN" || cell.status === "PAST_EMPTY") return <div data-testid={`calendar-cell-root-${Array.from(String(personId),c=>c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}`} className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}`} aria-label={cell.status === "BEFORE_JOIN" ? "입사 전" : "지난 빈 달"} />;
-  const filled=Math.max(0,Math.min(1,Number(cell.actualMm??0)))*100;
-  return <div data-testid={`calendar-cell-root-${Array.from(String(personId),c=>c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}`} className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}${cell.leavingSoon?" workforce-calendar-ending":""}${cell.overAssigned?" workforce-calendar-over":""}${cell.assignmentCount>=2?" workforce-calendar-concurrent":""}`} style={{"--assigned-fill":`${filled}%`} as React.CSSProperties}>
-   <HelpTooltip label={`${cell.month} ${label}`} testId={`calendar-cell-${personId.toLowerCase()}-${cell.month}`} trigger={<span className="calendar-cell-visual">{cell.status==="TENTATIVE" ? formatRate(cell.tentativeProbability) : cell.leavingSoon ? <span>철수 예정 <small>{[...new Set(cell.projects.map(p=>({H:"높음",HIGH:"높음",M:"보통",MEDIUM:"보통",L:"낮음",LOW:"낮음"} as Record<string,string>)[p.extensionPossibility??""]??"미정"))].join("·")}</small></span> : cell.status==="LEAVE" || cell.status==="RETIRED" ? statuses[cell.status] : pre ? "⚠" : <span className="sicost-sr-only">{label}</span>}</span>}>
-    <strong>{cell.month} · {statuses[cell.status]} · 합계 {decimal(cell.actualMm)} MM{overAssignedWarning}</strong>
-    {cell.projects.map((p,i)=><p key={`${p.projectId}:${i}`} data-testid={`calendar-cell-project-${Array.from(String(personId),c=>c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month,c=>c.codePointAt(0)!.toString(16)).join("-")}-${i}`}>{p.projectName ?? p.projectId} · {decimal(p.actualMm)} MM · 종료 {p.endDate} · 연장 가능성 {({HIGH:"높음",H:"높음",MEDIUM:"보통",M:"보통",LOW:"낮음",L:"낮음"} as Record<string,string>)[p.extensionPossibility??""]??"미정"}</p>)}
-    {cell.tentativeAssignments.map(t=><p data-testid={`calendar-tentative-assignment-${Array.from(String(personId),c=>c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}-${Array.from(String(t.id),c=>c.codePointAt(0)!.toString(16)).join("-")}`} key={t.id}>가배정 <BusinessName kind="opportunity" id={t.opportunityId} /> · {t.startMonth} · {formatRate(cell.tentativeProbability)}</p>)}
-   </HelpTooltip>
-  </div>;
+  const label =
+    cell.status === "ASSIGNED"
+      ? `${pre ? "⚠ 미계약 선투입 · " : ""}${cell.leavingSoon ? "철수 예정 · " : ""}${decimal(cell.actualMm)} MM${overAssignedWarning}${cell.assignmentCount >= 2 ? ` · ${cell.assignmentCount}건` : ""}`
+      : cell.status === "TENTATIVE"
+        ? formatRate(cell.tentativeProbability)
+        : statuses[cell.status];
+  if (cell.status === "BEFORE_JOIN" || cell.status === "PAST_EMPTY")
+    return (
+      <div
+        data-testid={`calendar-cell-root-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}`}
+        className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}`}
+        aria-label={cell.status === "BEFORE_JOIN" ? "입사 전" : "지난 빈 달"}
+      />
+    );
+  const filled = Math.max(0, Math.min(1, Number(cell.actualMm ?? 0))) * 100;
+  return (
+    <div
+      data-testid={`calendar-cell-root-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}`}
+      className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}${cell.leavingSoon ? " workforce-calendar-ending" : ""}${cell.overAssigned ? " workforce-calendar-over" : ""}${cell.assignmentCount >= 2 ? " workforce-calendar-concurrent" : ""}`}
+      style={{ "--assigned-fill": `${filled}%` } as React.CSSProperties}
+    >
+      <HelpTooltip
+        label={`${cell.month} ${label}`}
+        testId={`calendar-cell-${personId.toLowerCase()}-${cell.month}`}
+        trigger={
+          <span className="calendar-cell-visual">
+            {cell.status === "TENTATIVE" ? (
+              formatRate(cell.tentativeProbability)
+            ) : cell.leavingSoon ? (
+              <span>
+                철수 예정{" "}
+                <small>
+                  {[
+                    ...new Set(
+                      cell.projects.map(
+                        (p) =>
+                          (
+                            ({
+                              H: "높음",
+                              HIGH: "높음",
+                              M: "보통",
+                              MEDIUM: "보통",
+                              L: "낮음",
+                              LOW: "낮음",
+                            }) as Record<string, string>
+                          )[p.extensionPossibility ?? ""] ?? "미정",
+                      ),
+                    ),
+                  ].join("·")}
+                </small>
+              </span>
+            ) : cell.status === "LEAVE" || cell.status === "RETIRED" ? (
+              statuses[cell.status]
+            ) : pre ? (
+              "⚠"
+            ) : (
+              <span className="sicost-sr-only">{label}</span>
+            )}
+          </span>
+        }
+      >
+        <strong>
+          {cell.month} · {statuses[cell.status]} · 합계 {decimal(cell.actualMm)}{" "}
+          MM{overAssignedWarning}
+        </strong>
+        {cell.projects.map((p, i) => (
+          <p
+            key={`${p.projectId}:${i}`}
+            data-testid={`calendar-cell-project-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}-${i}`}
+          >
+            {p.projectName ?? p.projectId} · {decimal(p.actualMm)} MM · 종료{" "}
+            {p.endDate} · 연장 가능성{" "}
+            {(
+              {
+                HIGH: "높음",
+                H: "높음",
+                MEDIUM: "보통",
+                M: "보통",
+                LOW: "낮음",
+                L: "낮음",
+              } as Record<string, string>
+            )[p.extensionPossibility ?? ""] ?? "미정"}
+          </p>
+        ))}
+        {cell.tentativeAssignments.map((t) => (
+          <p
+            data-testid={`calendar-tentative-assignment-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}-${Array.from(String(t.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+            key={t.id}
+          >
+            가배정 <BusinessName kind="opportunity" id={t.opportunityId} /> ·{" "}
+            {t.startMonth} · {formatRate(cell.tentativeProbability)}
+          </p>
+        ))}
+      </HelpTooltip>
+    </div>
+  );
 }
 function CalendarError({ error, retry }: { error: unknown; retry(): void }) {
   return (

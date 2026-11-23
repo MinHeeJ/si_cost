@@ -111,6 +111,35 @@ describe("현황 대상 이슈 모아 보기", () => {
       screen.queryByRole("button", { name: /엑셀/ }),
     ).not.toBeInTheDocument();
   });
+  it.each([
+    ["OPEN", "2026-11-13", true, "2026-11-13 (3일 지남)"],
+    ["ACT", "2026-11-13", true, "2026-11-13 (3일 지남)"],
+    ["CLOSE", "2026-11-13", false, "2026-11-13"],
+    ["OPEN", "2026-11-16", false, "2026-11-16"],
+    ["OPEN", "2026-11-17", false, "2026-11-17"],
+  ] as const)(
+    "%s due %s follows server base date and closed exclusion",
+    async (status, dueDate, overdue, text) => {
+      vi.mocked(api.getProjectStatusIssues).mockResolvedValue({
+        items: [{ ...issue, status, dueDate, overdue }],
+        total: 1,
+        page: 1,
+        size: 50,
+        openCount: status === "CLOSE" ? 0 : 1,
+        baseDate: "2026-11-16",
+      });
+      mount(<ProjectStatusIssuesPanel />);
+      const due = await screen.findByText(text, {
+        exact: false,
+        selector: "span",
+      });
+      if (overdue) expect(due).toHaveClass("issue-overdue");
+      else {
+        expect(due).not.toHaveClass("issue-overdue");
+        expect(screen.queryByText(/일 지남/)).not.toBeInTheDocument();
+      }
+    },
+  );
   it("draft filters submit once, reset to defaults and never call summary", async () => {
     mount(<ProjectStatusIssuesPanel />);
     await screen.findByRole("button", { name: "일정 확인" });
