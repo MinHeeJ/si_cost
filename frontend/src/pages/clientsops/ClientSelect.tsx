@@ -13,6 +13,7 @@ export function ClientSelect({
   disabled = false,
   onRegister,
   required = false,
+  label: suppliedLabel,
 }: {
   purpose: api.ClientPurpose;
   value: string;
@@ -21,6 +22,7 @@ export function ClientSelect({
   disabled?: boolean;
   onRegister?(): void;
   required?: boolean;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false),
     [q, setQ] = useState(""),
@@ -30,7 +32,7 @@ export function ClientSelect({
   const [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>();
   const id = useId(),
-    label = purpose === "CUSTOMER" ? "고객사" : "협력사";
+    label = suppliedLabel ?? (purpose === "CUSTOMER" ? "고객사" : "협력사");
   useEffect(() => {
     const refresh = () => setVersion((v) => v + 1);
     window.addEventListener(api.clientsCommittedEvent, refresh);
@@ -129,7 +131,8 @@ export function ClientSelect({
             </div>
           ) : (
             <label>
-              {label}<FieldHelp label={label} />
+              {label}
+              <FieldHelp label={label} />
               <select
                 data-testid={`${purpose.toLowerCase()}-client-select`}
                 value={value}

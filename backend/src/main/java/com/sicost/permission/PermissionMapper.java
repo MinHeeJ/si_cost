@@ -1,6 +1,8 @@
 package com.sicost.permission;
 
 import java.util.List;
+import java.time.LocalDate;
+import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.annotations.*;
 
 @Mapper
@@ -31,8 +33,29 @@ public interface PermissionMapper {
     record Upload(String formType,String ownerId,String month,String projectId) {}
     @Select("SELECT form_type_cd AS form_type,reg_user_id AS owner_id,trgt_ym AS month,trgt_proj_id AS project_id FROM tb_sy_upld WHERE upld_id=CAST(#{id} AS NUMERIC)")
     Upload upload(String id);
-    record PersonOption(String id,String name,String managementNo,String jobCode,String gradeCode,String status) {}
-    @Select("SELECT dev_id AS id,dev_nm AS name,mng_no AS management_no,job_cd AS job_code,grade_cd AS grade_code,work_stat_cd AS status FROM tb_hr_dev WHERE use_yn='Y' AND drct_cls_cd='DRCT' AND work_stat_cd<>'RETIRE' AND (dev_nm ILIKE '%' || #{q} || '%' OR mng_no ILIKE '%' || #{q} || '%') ORDER BY dev_nm,dev_id LIMIT 50")
+    record PersonOption(String id, String name, String managementNo, String jobCode,
+                        String gradeCode, String status, LocalDate withdrawalDate) {}
+    @ConstructorArgs({
+        @Arg(column="id", javaType=String.class),
+        @Arg(column="name", javaType=String.class),
+        @Arg(column="managementNo", javaType=String.class),
+        @Arg(column="jobCode", javaType=String.class),
+        @Arg(column="gradeCode", javaType=String.class),
+        @Arg(column="status", javaType=String.class),
+        @Arg(column="withdrawalDate", javaType=LocalDate.class, jdbcType=JdbcType.DATE)
+    })
+    @Select("""
+        SELECT d.dev_id AS "id", d.dev_nm AS "name", d.mng_no AS "managementNo",
+               d.job_cd AS "jobCode", d.grade_cd AS "gradeCode", d.work_stat_cd AS "status",
+               (SELECT max(a.input_end_dt) FROM tb_pj_asgn a
+                WHERE a.dev_id=d.dev_id AND a.asgn_stat_cd='ACT'
+                  AND a.input_bgn_dt <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date
+                  AND a.input_end_dt >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date) AS "withdrawalDate"
+        FROM tb_hr_dev d
+        WHERE d.use_yn='Y' AND d.drct_cls_cd='DRCT' AND d.work_stat_cd<>'RETIRE'
+          AND (d.dev_nm ILIKE '%' || #{q} || '%' OR d.mng_no ILIKE '%' || #{q} || '%')
+        ORDER BY d.dev_nm, d.dev_id LIMIT 50
+        """)
     List<PersonOption> assignmentPeople(String q);
     @Select("SELECT count(*) FROM tb_hr_dev WHERE use_yn='Y' AND drct_cls_cd='DRCT' AND work_stat_cd<>'RETIRE' AND (dev_nm ILIKE '%' || #{q} || '%' OR mng_no ILIKE '%' || #{q} || '%')")
     long assignmentPeopleCount(String q);

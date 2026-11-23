@@ -26,7 +26,7 @@ import {
 } from "../../shared/ResumeAssist";
 
 export const developerBanner =
-  "보유 스킬·거주지는 이 화면에서 입력합니다. 동까지만 받으며 번지·연락처 입력은 없습니다.";
+  "보유 스킬·거주지는 이 화면에서만 입력합니다(「내 정보」에서는 고치지 않음). 거주지는 시·도, 시·군·구, 동까지 받습니다(번지는 받지 않음).";
 export const priceHelp =
   "단가·급여 변경은 저장월부터 적용되며 월별 급여 업로드와 별개입니다.";
 type Props = {
@@ -318,7 +318,15 @@ export function DeveloperForm({
               className="developer-form-fields"
             >
               {text("name", "이름", 50, true)}
-              {text("managementNo", "관리번호", 20)}
+              <div>
+                {text("managementNo", "관리번호", 20)}
+                {developer && (
+                  <p>
+                    관리번호는 바꿀 수 없습니다. 잘못 넣었으면 사용 중지 후 새로
+                    등록하세요.
+                  </p>
+                )}
+              </div>
               {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
               {select(
                 "companyId",

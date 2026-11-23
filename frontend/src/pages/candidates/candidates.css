@@ -57,6 +57,10 @@
   font-weight: 700;
   outline: 2px solid var(--primary-bg);
 }
+.candidates-screen tr:has(.candidate-new) > td,
+.candidate-cards article.candidate-new-row {
+  background: var(--primary-bg);
+}
 .candidate-sub {
   display: block;
   color: var(--text-sub);
