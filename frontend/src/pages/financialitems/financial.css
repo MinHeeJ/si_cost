@@ -158,6 +158,9 @@
 .financial-section > .financial-section-note {
   padding: 10px var(--financial-section-padding);
 }
+.financial-adjustment-note {
+  text-align: right;
+}
 .financial-section-heading {
   min-height: 60px;
   padding: 12px var(--financial-section-padding);
@@ -179,6 +182,7 @@
   text-align: center !important;
 }
 .financial-section .sicost-table thead th {
+  height: 44px;
   background: var(--head-bg);
 }
 .financial-section .sicost-table td {
@@ -210,14 +214,40 @@
 .financial-tax-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 28px;
+  gap: 12px;
   padding: 16px var(--financial-section-padding);
 }
 .financial-tax-field {
   display: grid;
   gap: 6px;
   align-content: start;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--head-bg);
   font-size: 13px;
+}
+.financial-tax-current {
+  background: var(--primary-bg);
+}
+.financial-tax-payment-date,
+.financial-card-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.financial-tax-payment-date {
+  flex-wrap: wrap;
+  font-family: inherit;
+  font-size: inherit;
+}
+.financial-tax-payment-date .sicost-badge {
+  margin: 0;
+}
+.financial-card-filter input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 .financial-tax-field label {
   display: grid;
@@ -337,6 +367,21 @@
 .financial-editor .corporate-tax-warn {
   color: var(--bad);
   border-color: var(--bad);
+}
+@media (max-width: 900px) {
+  .financial-section .financial-tax-payments .sicost-table :is(th, td) {
+    padding-inline: 8px;
+  }
+  .financial-editor .financial-tax-payments .sicost-table input[type="date"] {
+    width: 124px;
+  }
+  .financial-editor .financial-tax-payments .sicost-table td[data-column="amount"] input {
+    width: 104px;
+    min-width: 90px;
+  }
+  .financial-tax-payments .sicost-table td[data-column="confirm"] button {
+    padding-inline: 8px;
+  }
 }
 @media (max-width: 850px) {
   .financial-tax-overview {

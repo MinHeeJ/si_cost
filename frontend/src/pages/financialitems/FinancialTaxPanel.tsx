@@ -150,7 +150,10 @@ export function FinancialTaxPanel({
               </p>
             )}
         </div>
-        <div className="financial-tax-field" data-testid="financial-tax-current-panel">
+        <div
+          className="financial-tax-field financial-tax-current"
+          data-testid="financial-tax-current-panel"
+        >
           <span>선택월 법인세 ({unit})</span>
           <div className="financial-tax-value">
             <output className="financial-calculated" data-testid="financial-tax-current">
@@ -172,7 +175,10 @@ export function FinancialTaxPanel({
           )}
         </div>
       </div>
-      <section className="financial-subsection" aria-labelledby="financial-tax-payments-heading">
+      <section
+        className="financial-subsection financial-tax-payments"
+        aria-labelledby="financial-tax-payments-heading"
+      >
         <header className="financial-subsection-heading">
           <h3 id="financial-tax-payments-heading">법인세 납부 일정</h3>
           <HelpTooltip label="법인세 납부 일정" iconOnly>
@@ -191,21 +197,23 @@ export function FinancialTaxPanel({
           columns={[
             {
               id: "date",
-              label: "납부일",
+              label: "납부기한",
               render: (row) =>
                 row.payYn === "Y" ? (
-                  <>
-                    {row.dueDate}
-                    {row.paidDate !== row.dueDate && (
-                      <small>{row.paidDate} 납부</small>
+                  <div className="financial-tax-payment-date">
+                    <time dateTime={row.dueDate}>{row.dueDate}</time>
+                    {row.paidDate && row.paidDate !== row.dueDate && (
+                      <StatusBadge tone="neutral">
+                        실제 납부 <time dateTime={row.paidDate}>{row.paidDate}</time>
+                      </StatusBadge>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <input
                     type="date"
                     data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-date`}
                     aria-invalid={invalid(row, "date") || undefined}
-                    aria-label={`${row.year} ${row.payType} 예정일`}
+                    aria-label={`${row.year} ${row.payType} 납부기한`}
                     disabled={disabled}
                     value={schedule(row)?.dueDate ?? ""}
                     onChange={(event) =>

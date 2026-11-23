@@ -322,7 +322,7 @@ export function FinancialRowsPanel({
       </header>
       {notice}
       {collection === "adjustments" && !targets.length && (
-        <p className="financial-section-note">
+        <p className="financial-section-note financial-adjustment-note">
           최근 12개월 실제 마감월이 없습니다. 기존 해제 대상은 삭제만 할 수
           있습니다.
         </p>

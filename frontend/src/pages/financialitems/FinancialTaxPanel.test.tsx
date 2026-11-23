@@ -152,7 +152,7 @@ it("renders payment order, server automatic amount and restoration without a cli
     within(table)
       .getAllByRole("columnheader")
       .map((cell) => cell.textContent),
-  ).toEqual(["납부일", "구분", "금액", "상태", "납부 확인"]);
+  ).toEqual(["납부기한", "구분", "금액", "상태", "납부 확인"]);
   expect(screen.getByPlaceholderText("세무사 안내 금액")).toHaveValue("");
   expect(screen.queryByText("자동 계산값")).not.toBeInTheDocument();
   const amount = screen.getByTestId("financial-tax-2026-cnfm-amount");
@@ -186,6 +186,8 @@ it("keeps confirmed payment date and amount read-only and labels closed allocati
   expect(
     screen.queryByTestId("financial-tax-2026-cnfm-confirm"),
   ).not.toBeInTheDocument();
-  expect(screen.getByText("2027-03-30 납부")).toBeVisible();
+  expect(screen.getByText("실제 납부", { exact: false })).toHaveTextContent(
+    "실제 납부 2027-03-30",
+  );
   expect(taxExplanation(allocation, "2026-10")).toBe("마감 확정");
 });
