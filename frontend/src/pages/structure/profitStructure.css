@@ -197,6 +197,9 @@
   min-width: 580px;
   width: 100%;
 }
+.profit-structure-chart-scroll .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
+}
 .profit-structure svg text {
   fill: var(--text-sub);
   font-size: 11px;
