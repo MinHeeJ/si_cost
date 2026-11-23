@@ -702,11 +702,11 @@ export function ProfitStructureScreen({
                 영업이익표·순이익표에서 봅니다. 같은 계산이라 숫자가 같습니다.
               </p>
             </section>
-            <section
-              className="profit-structure-card"
+            <details
+              className="profit-structure-card profit-structure-methods"
               data-testid="structure-method-panel"
             >
-              <h2>계산 방법</h2>
+              <summary>계산 방법</summary>
               <div className="profit-structure-table-scroll">
                 <table
                   aria-label="계산 방법"
@@ -736,7 +736,7 @@ export function ProfitStructureScreen({
               <p className="profit-structure-muted">
                 금액은 모두 부가세 제외입니다.
               </p>
-            </section>
+            </details>
             <div className="profit-structure-toolbar">
               <button
                 data-testid="structure-operating-link"

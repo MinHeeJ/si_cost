@@ -287,13 +287,10 @@ it("switches aggregation and preserves it on period change", async () => {
     "true",
   );
 });
-it("always provides numeric tables and readable methods without toggle buttons or editors", async () => {
+it("keeps numeric tables visible and lets the reader expand and collapse the calculation methods", async () => {
   await draw();
   expect(
     screen.queryByRole("button", { name: "숫자로 보기" }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "계산 방법" }),
   ).not.toBeInTheDocument();
   expect(
     screen.getByRole("table", { name: "기간별 손익 숫자표" }),
@@ -304,6 +301,11 @@ it("always provides numeric tables and readable methods without toggle buttons o
   expect(
     screen.getByRole("table", { name: "고객사 구성 숫자표" }),
   ).toBeInTheDocument();
+  const methods = screen.getByTestId("structure-method-panel");
+  const summary = within(methods).getByText("계산 방법");
+  expect(methods).not.toHaveAttribute("open");
+  await userEvent.click(summary);
+  expect(methods).toHaveAttribute("open");
   expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
   expect(
     within(screen.getByTestId("structure-method-panel"))
@@ -314,6 +316,8 @@ it("always provides numeric tables and readable methods without toggle buttons o
     /TB_|salesAmt|VAT/,
   );
   expect(screen.getByText("금액은 모두 부가세 제외입니다.")).toBeVisible();
+  await userEvent.click(summary);
+  expect(methods).not.toHaveAttribute("open");
   expect(screen.getByText("월별 · 단위 천원")).toBeVisible();
   expect(screen.getByText(/엑셀 다운로드는 이 표와 같습니다/)).toBeVisible();
   const numeric = screen.getByRole("table", { name: "기간별 손익 숫자표" });
