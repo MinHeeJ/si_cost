@@ -473,7 +473,7 @@ export function FinancialItemsEditor({
                   itemName: (
                     <>
                       법인세(월할){" "}
-                      <StatusBadge tone="neutral">계산</StatusBadge>
+                      <StatusBadge tone="neutral">참고</StatusBadge>
                       <HelpTooltip label="법인세(월할) 안내" iconOnly>
                         {taxExplanation(allocation, editor.month)}
                       </HelpTooltip>

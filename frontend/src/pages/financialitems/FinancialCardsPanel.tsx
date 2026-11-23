@@ -192,10 +192,14 @@ export function FinancialCardsPanel({
     },
   };
   return (
-    <section className="financial-section" data-testid="financial-cards-panel">
-      <header className="financial-section-heading">
+    <section
+      className="financial-section"
+      aria-labelledby="financial-cards-heading"
+      data-testid="financial-cards-panel"
+    >
+      <header className="sicost-section-heading financial-section-heading">
         <div>
-          <h2>법인카드 대금</h2>
+          <h2 id="financial-cards-heading">법인카드 대금</h2>
           <HelpTooltip label="법인카드 대금" iconOnly>
             법인카드 대금은 자금수지표의 제경비에 반영됩니다.
           </HelpTooltip>

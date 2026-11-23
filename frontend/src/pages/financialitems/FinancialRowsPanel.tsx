@@ -291,10 +291,11 @@ export function FinancialRowsPanel({
       className={`financial-section financial-rows-${collection}`}
       data-testid={`financial-${collection}-panel`}
       id={`financial-${collection}-section`}
+      aria-labelledby={`financial-${collection}-heading`}
     >
-      <header className="financial-section-heading">
+      <header className="sicost-section-heading financial-section-heading">
         <div>
-          <h2>{title}</h2>
+          <h2 id={`financial-${collection}-heading`}>{title}</h2>
           <HelpTooltip label={title} iconOnly>{sectionHelp[collection]}</HelpTooltip>
           <small>{rows.length}건</small>
         </div>

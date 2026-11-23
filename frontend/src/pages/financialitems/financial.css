@@ -138,23 +138,22 @@
 }
 .financial-tab-panel {
   display: grid;
-  gap: 24px;
+  gap: 32px;
   min-width: 0;
 }
 .financial-section {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
-  scroll-margin-top: 100px;
+  scroll-margin-top: 132px;
   scroll-margin-bottom: 100px;
 }
 .financial-section > .sicost-banner {
   margin: 0;
 }
 .financial-section-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px 12px;
+  min-height: 44px;
+  padding-bottom: 8px;
 }
 .financial-section-heading > div,
 .financial-subsection-heading,
@@ -184,20 +183,29 @@
   min-width: 96px;
   width: 112px;
 }
+.financial-tax-content {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding-inline-start: 16px;
+  border-inline-start: 2px solid var(--divider);
+}
 .financial-tax-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--e1);
 }
 .financial-tax-field {
   display: grid;
   gap: 6px;
   align-content: start;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--e1);
+  padding: 12px 16px;
   font-size: 13px;
+}
+.financial-tax-field + .financial-tax-field {
+  border-inline-start: 1px solid var(--divider);
 }
 .financial-tax-field label {
   display: grid;
@@ -317,10 +325,16 @@
   color: var(--bad);
   border-color: var(--bad);
 }
-@media (max-width: 600px) {
+@media (max-width: 850px) {
   .financial-tax-overview {
     grid-template-columns: 1fr;
   }
+  .financial-tax-field + .financial-tax-field {
+    border-inline-start: 0;
+    border-top: 1px solid var(--divider);
+  }
+}
+@media (max-width: 600px) {
   .financial-footer {
     padding: 10px 12px;
   }
