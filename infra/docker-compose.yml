@@ -22,6 +22,7 @@ services:
     pull_policy: build
     environment:
       DB_URL: jdbc:postgresql://database:5432/${DB_NAME:-sicost}
+      SICOST_COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-}
       DB_USER: ${DB_USER:-sicost}
       DB_PASSWORD: ${DB_PASSWORD:-dev-only-password}
       TZ: Asia/Seoul
