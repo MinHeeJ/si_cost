@@ -1,3 +1,4 @@
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useSensitivePermission, usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useState, type ReactNode } from "react";
@@ -85,6 +86,14 @@ export function IndividualProfitabilityScreen({
     unitValue === "원" || unitValue === "백만원" ? unitValue : "천원";
   const state = useIndividualProfitability(initialSize, analysisEntry?.year);
   const { query, data, loading, mobile } = state;
+  const period = data?.context.period;
+  const { fromMonth, toMonth } = period ?? {};
+  const periodLabel =
+    fromMonth && toMonth
+      ? fromMonth === toMonth
+        ? `${Number(fromMonth.slice(-2))}월`
+        : `${Number(fromMonth.slice(-2))}월 ~ ${Number(toMonth.slice(-2))}월`
+      : "자료 없음";
   const details = useProfitabilityDetails(query, mobile);
   useEffect(() => {
     if (canPerson && analysisEntry?.developerId)
@@ -183,17 +192,16 @@ export function IndividualProfitabilityScreen({
     >
       {data && (
         <>
-          <p
-            className="profitability-context"
-            data-testid="profitability-context"
-          >
-            {data.context.period.year}년 {data.context.period.fromMonth ?? "–"}{" "}
-            ~ {data.context.period.toMonth ?? "–"}·{" "}
-            {data.context.view === "CUMULATIVE" ? "연 누계" : "월 평균"} · 턴키
-            단가 {data.context.includeTurnkey ? "포함" : "제외"} · 단가: 개인
-            배분 참고액 · 계산{" "}
-            {formatDateTime(data.context.period.calculatedAt)}
-          </p>
+          <PeriodStatus className="sicost-period-summary">
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">조회 기간</span>
+              <b>{periodLabel}</b>
+            </span>
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">계산 시각</span>
+              <b>{formatDateTime(period?.calculatedAt)}</b>
+            </span>
+          </PeriodStatus>
           {canSensitive && <ProfitabilitySummary summary={data.summary} unit={unit} />}
           {canSensitive && (data.unknownCount > 0 || data.estimatedCount > 0) && (
             <p role="note">

@@ -660,6 +660,8 @@ describe("개인 기간 조회 본문", () => {
     );
     const recent = response([person("recent")]);
     recent.context.period.year = 2025;
+    recent.context.period.fromMonth = "202503";
+    recent.context.period.toMonth = "202508";
     await act(async () => {
       requests
         .filter((r) => r.query.year === 2025)
@@ -674,9 +676,10 @@ describe("개인 기간 조회 본문", () => {
     expect(
       screen.queryByText("인력 stale (관리-stale)"),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("profitability-context")).toHaveTextContent(
-      "2025년",
-    );
+    const status = screen.getByRole("group", { name: "조회 기간 상태" });
+    expect(status).toHaveTextContent("3월 ~ 8월");
+    expect(status).toHaveTextContent("계산 시각");
+    expect(status).not.toHaveTextContent("2025년");
   });
 });
 
@@ -686,7 +689,7 @@ it.each([1900, 767])("%spx UI32 exception does not grant UI03 cost summaries, ca
   render(<PermissionContext.Provider value={{ screens: { "UI-03": ["INQ"], "UI-32": ["INQ"] }, sensitive: false, scope: { all: false, partIds: ["own-part"], projectIds: [] } }}>
     <ScreenPermissionContext.Provider value="UI-03"><PreferencesProvider api={preferenceApi()}><IndividualProfitabilityScreen renderCalculationGuide={data => <ProfitabilityCalculationGuide data={data} />} /></PreferencesProvider></ScreenPermissionContext.Provider>
   </PermissionContext.Provider>);
-  await screen.findByTestId("profitability-context");
+  await screen.findByRole("group", { name: "조회 기간 상태" });
   expect(screen.queryByTestId("profitability-summary")).not.toBeInTheDocument();
   expect(screen.queryByTestId("profitability-contribution")).not.toBeInTheDocument();
   expect(screen.queryByTestId("profitability-calculation-guide")).not.toBeInTheDocument();

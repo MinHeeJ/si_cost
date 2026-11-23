@@ -138,10 +138,12 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .calendar-person-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;line-height:18px}.workforce-calendar-table tbody th small{display:block;font-size:10.5px;line-height:14px;color:var(--text-sub);font-weight:400}.calendar-cell-visual small{font-size:10px}
 .sicost-motion-reset h1,.sicost-motion-reset progress,.sicost-motion-reset .sicost-kpi-label::before,.sicost-motion-reset .dashboard-metric>span:first-child::before{animation:none!important}
 
-/* Dashboard: one status surface beside the month picker, as in the design. */
-.sicost-screen-content:has(> .dashboard-content) { container: dashboard-period / inline-size; }
-.sicost-period-row:has(.dashboard-dates) { gap: 12px; }
-.sicost-period-status.dashboard-dates {
+/* Summary beside a period picker. */
+.sicost-screen-content:has(> .dashboard-content, > .sicost-period-row .sicost-period-summary) {
+  container: period-summary / inline-size;
+}
+.sicost-period-row:has(.sicost-period-summary) { gap: 12px; }
+.sicost-period-status.sicost-period-summary {
   min-height: 44px;
   padding: 4px 6px;
   gap: 0;
@@ -151,7 +153,7 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
   font-size: 12.5px;
   color: var(--text-sub);
 }
-.sicost-period-status.dashboard-dates > .dashboard-date-item {
+.sicost-period-status.sicost-period-summary > .sicost-period-summary-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -160,7 +162,7 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
   border: 0;
   line-height: 18px;
 }
-.dashboard-date-item + .dashboard-date-item::before {
+.sicost-period-summary-item + .sicost-period-summary-item::before {
   content: "";
   position: absolute;
   left: 0;
@@ -170,19 +172,19 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
   background: var(--divider);
 }
 .dashboard-date-item-content { display: inline-flex; align-items: center; gap: 8px; }
-.dashboard-date-key { font-size: 11.5px; font-weight: 600; }
-.dashboard-date-item b { color: var(--text); font-weight: 700; }
+.sicost-period-summary-label { font-size: 11.5px; font-weight: 600; }
+.sicost-period-summary-item b { color: var(--text); font-weight: 700; }
 .dashboard-date-state { color: var(--text); }
 .dashboard-date-state:has(.sicost-tone-warn) b { color: var(--warn, #b45309); }
 .dashboard-date-current-note svg { flex: none; color: var(--info); }
-@container dashboard-period (max-width: 1060px) {
-  .sicost-period-row:has(.dashboard-dates) { flex-wrap: wrap; }
-  .sicost-period-row:has(.dashboard-dates) .sicost-period-status-slot { flex-basis: 100%; }
+@container period-summary (max-width: 1060px) {
+  .sicost-period-row:has(.sicost-period-summary) { flex-wrap: wrap; }
+  .sicost-period-row:has(.sicost-period-summary) .sicost-period-status-slot { flex-basis: 100%; }
 }
 @media (max-width: 767px) {
-  .sicost-period-status.dashboard-dates { padding: 6px 4px; }
-  .sicost-period-status.dashboard-dates > .dashboard-date-item { padding: 4px 10px; }
-  .dashboard-date-item + .dashboard-date-item::before { display: none; }
+  .sicost-period-status.sicost-period-summary { padding: 6px 4px; }
+  .sicost-period-status.sicost-period-summary > .sicost-period-summary-item { padding: 4px 10px; }
+  .sicost-period-summary-item + .sicost-period-summary-item::before { display: none; }
 }
 
 /* Floating feedback lives outside the application grid and its scroll areas. */
