@@ -100,7 +100,6 @@ it("draft filters apply only on query and reset clears them", async () => {
   content();
   await screen.findByRole("link", { name: row.projectName });
   const count = vi.mocked(api.getStaffingComparison).mock.calls.length;
-  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.change(screen.getByLabelText("프로젝트"), {
     target: { value: row.projectId },
   });
@@ -108,7 +107,6 @@ it("draft filters apply only on query and reset clears them", async () => {
     target: { value: "SHORT" },
   });
   expect(api.getStaffingComparison).toHaveBeenCalledTimes(count);
-  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.click(screen.getByRole("button", { name: "조회" }));
   await waitFor(() =>
     expect(api.getStaffingComparison).toHaveBeenLastCalledWith(
@@ -120,7 +118,6 @@ it("draft filters apply only on query and reset clears them", async () => {
       expect.any(AbortSignal),
     ),
   );
-  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (2)]");
   fireEvent.click(screen.getByRole("button", { name: "초기화" }));
   await waitFor(() =>
     expect(api.getStaffingComparison).toHaveBeenLastCalledWith(
@@ -129,7 +126,6 @@ it("draft filters apply only on query and reset clears them", async () => {
     ),
   );
   expect(screen.getByLabelText("프로젝트")).toHaveValue("");
-  expect(screen.getByTestId("comparison-filters-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("export uses applied filter, not draft or pagination", async () => {
   content();

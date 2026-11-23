@@ -546,7 +546,6 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
   fireEvent.change(screen.getByTestId("withdrawal-extension-filter"), {
     target: { value: "UNSET" },
   });
-  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.click(screen.getByTestId("withdrawal-search"));
   await waitFor(() =>
     expect(api.getWithdrawals).toHaveBeenLastCalledWith(
@@ -557,7 +556,6 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
     "button",
     { name: "조건 초기화" },
   );
-  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (2)]");
   fireEvent.click(reset);
   await waitFor(() =>
     expect(api.getWithdrawals).toHaveBeenLastCalledWith(
@@ -566,7 +564,6 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
   );
   expect(screen.getByTestId("withdrawal-period")).toHaveValue("ALL");
   expect(screen.getByTestId("withdrawal-extension-filter")).toHaveValue("ALL");
-  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (0)]");
 });
 
 it("persists density and keeps the saved density if preference saving fails", async () => {

@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authenticatedFetch } from "../../shared/api";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -476,7 +476,6 @@ export function DeveloperPoolScreen({
         <FilterBar
           className="developer-filters"
           testId="developer-filter-form"
-          appliedCount={countAppliedFilters(filters, defaults)}
           resetTestId="developer-reset-button"
           searchTestId="developer-search-button"
           onSubmit={() => apply()}

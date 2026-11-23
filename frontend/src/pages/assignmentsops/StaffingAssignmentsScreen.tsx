@@ -9,7 +9,7 @@ import {
   type Key,
   type ReactNode,
 } from "react";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -468,7 +468,6 @@ export function AssignmentsContent({
       )}
       <FilterBar
         testId="assignments-filter-form"
-        appliedCount={countAppliedFilters(filters, { projectId: "", jobCode: "", warning: "", month: "", q: "", includeCancelled: false })}
         className="assignment-filters"
         resetTestId="assignments-reset"
         searchTestId="assignments-query"

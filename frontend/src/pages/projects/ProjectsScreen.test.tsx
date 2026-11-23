@@ -318,14 +318,12 @@ it("query Enter and reset share real filters while sort and size reset page1", a
     target: { value: "검색" },
   });
   fireEvent.change(screen.getByTestId("project-filter-status"), { target: { value: "ING" } });
-  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.submit(screen.getByTestId("project-filter-form"));
   await waitFor(() =>
     expect(api.getProjects).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "검색" }),
     ),
   );
-  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByRole("button", { name: "다음 페이지" }));
   await userEvent.click(screen.getByTestId("sort-name"));
   await waitFor(() =>
@@ -350,7 +348,6 @@ it("query Enter and reset share real filters while sort and size reset page1", a
       }),
     ),
   );
-  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("past year disables business creation and upload but keeps settings available", async () => {
   const settings = vi.fn();

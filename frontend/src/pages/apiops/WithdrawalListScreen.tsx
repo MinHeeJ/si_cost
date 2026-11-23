@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { StatusBadge } from "../../shared/Feedback";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { AssignmentDrawer } from "../assignmentsops/AssignmentDrawer";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
@@ -418,7 +418,6 @@ export function WithdrawalContent({ year }: { year: number }) {
       )}
       <FilterBar
         testId="withdrawal-filters"
-        appliedCount={countAppliedFilters(query, defaults())}
         searchTestId="withdrawal-search"
         resetTestId="withdrawal-reset"
         onSubmit={() => apply()}

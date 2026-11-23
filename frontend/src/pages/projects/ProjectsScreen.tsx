@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { authenticatedFetch } from "../../shared/api";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -509,7 +509,6 @@ export function ProjectsScreen({
           )}
           <FilterBar
             testId="project-filter-form"
-            appliedCount={countAppliedFilters(filters, defaults)}
             resetTestId="project-reset"
             searchTestId="project-query"
             onSubmit={() => apply()}
