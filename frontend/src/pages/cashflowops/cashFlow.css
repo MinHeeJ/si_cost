@@ -83,6 +83,9 @@
   cursor: pointer;
   font: inherit;
 }
+.cash-flow .operating-table-scroll th[scope="row"] > .sicost-help-anchor {
+  margin-inline-start: 4px;
+}
 .cash-flow th .sicost-badge {
   display: inline-block;
   width: max-content;

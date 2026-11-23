@@ -78,6 +78,7 @@ export function CashFlowStatementTable({
   rows: {
     key: string;
     label: string;
+    help?: string;
     values: (string | null)[];
     sourceItem?: string;
     section?: boolean;
@@ -140,7 +141,14 @@ export function CashFlowStatementTable({
               }
               data-testid={`cash-row-${row.key.toLowerCase().replaceAll("_", "-")}`}
             >
-              <th scope="row">{row.label}</th>
+              <th scope="row" aria-label={row.help ? row.label : undefined}>
+                {row.label}
+                {row.help && (
+                  <HelpTooltip label={row.label} iconOnly>
+                    {row.help}
+                  </HelpTooltip>
+                )}
+              </th>
               {row.values.map((value, i) => (
                 <td
                   key={columns[i].key}

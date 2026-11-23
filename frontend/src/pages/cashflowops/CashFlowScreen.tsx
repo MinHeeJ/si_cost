@@ -28,6 +28,20 @@ const events = [
 ];
 const unitCode = (unit: AmountUnit): api.CashUnit =>
   unit === "원" ? "WON" : unit === "천원" ? "THOUSAND_WON" : "MILLION_WON";
+const cashRowHelp: Record<api.CashItem, string> = {
+  CASH_SALES:
+    "등록된 입금은 입금일이 속한 달에 반영합니다. 마감 전에는 아직 받지 못한 청구 금액도 입금 예정일이 속한 달에 반영합니다.",
+  MISC: "재무 항목에 등록한 영업외수익을 입출금일이 속한 달에 금액과 부가세를 합해 반영합니다.",
+  LOAN: "재무 항목에 등록한 대여금입니다. 받은 금액은 더하고 갚은 금액은 뺍니다.",
+  REG_PAY: "급여 업로드 자료에서 정규직 실지급액을 가져옵니다.",
+  CON_FL_PAY:
+    "급여 업로드 자료에서 계약직·프리랜서 지급액을 가져옵니다. 프리랜서는 급여와 수당에서 원천세를 뺀 금액을 반영합니다.",
+  OS_PAY: "급여 업로드 자료에 등록된 외주 용역비 공급가액에 부가세 10%를 더해 반영합니다.",
+  UNPAID_LABOR: "재무 항목의 계좌이체 내역 중 ‘특별비’로 등록한 금액을 이체일이 속한 달에 반영합니다.",
+  EXPENSE:
+    "판관비·영업외비용, 법인카드 대금과 재무 항목의 ‘계좌이체’ 지출을 반영합니다. 전월 급여의 4대보험·원천세·근로소득세도 이 항목에 포함됩니다.",
+  CORP_TAX: "재무 항목에 등록한 법인세입니다. 납부한 금액은 실제 납부월에, 납부 예정 금액은 예정월에 반영합니다.",
+};
 const cashFlowGuide = (
   <dl data-testid="cash-flow-guide">
     <div>
@@ -36,24 +50,6 @@ const cashFlowGuide = (
         마감한 달은 실적, 마감 전 달은 예정(회색 글자)입니다. 금액은 부가세를
         포함합니다. 자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서
         관리자가 정합니다.
-      </dd>
-    </div>
-    <div>
-      <dt>수입과 인건비</dt>
-      <dd>
-        현금매출은 등록된 입금과 아직 받지 못한 청구 금액을 합한 값입니다.
-        미입금 청구는 입금 예정일이 속한 달에 넣습니다. 급여는 급여 업로드 자료를
-        사용하며, 4대보험·원천세·근로소득세는 다음 달 제경비에 반영합니다.
-        외주 용역비는 공급가액에 부가세 10%를 더합니다.
-      </dd>
-    </div>
-    <div>
-      <dt>재무 항목과 지급</dt>
-      <dd>
-        판관비·영업외비용, 법인카드 대금, 계좌이체 지출, 대여금과 법인세 납부는
-        재무 항목에서 가져옵니다. ‘계좌이체’는 제경비, ‘특별비’는 미지급 인건비에
-        넣습니다. 지급은 모두 완료된 것으로 보고, 실제와 차이가 있으면 재무 항목에
-        조정할 내역을 추가합니다.
       </dd>
     </div>
   </dl>
@@ -260,9 +256,10 @@ export function CashFlowScreen({
     label: string,
     field: "openingBalance" | "incomeTotal" | "expenseTotal" | "closingBalance",
   ) => ({ key, label, values: cells.map((c) => c[field]) });
-  const category = (key: string, label: string) => ({
+  const category = (key: string, label: string, help?: string) => ({
     key,
     label,
+    help,
     section: true,
     values: cells.map(() => null),
   });
@@ -273,16 +270,22 @@ export function CashFlowScreen({
         ...api.cashItems.slice(0, 3).map((item) => ({
           key: item,
           label: api.cashLabels[item],
+          help: cashRowHelp[item],
           sourceItem: item,
           values: cells.map(
             (c) => c.items.find((i) => i.item === item)?.amount ?? null,
           ),
         })),
         row("income", "수입 합계", "incomeTotal"),
-        category("expense-section", "지출"),
+        category(
+          "expense-section",
+          "지출",
+          "지급은 모두 완료된 것으로 보고 집계합니다. 실제와 차이가 있으면 재무 항목에 조정할 내역을 추가합니다.",
+        ),
         ...api.cashItems.slice(3).map((item) => ({
           key: item,
           label: api.cashLabels[item],
+          help: cashRowHelp[item],
           sourceItem: item,
           values: cells.map(
             (c) => c.items.find((i) => i.item === item)?.amount ?? null,

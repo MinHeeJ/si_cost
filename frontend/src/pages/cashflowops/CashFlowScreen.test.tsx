@@ -155,7 +155,7 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     within(screen.getByTestId("cash-row-opening")).queryByRole("button"),
   ).not.toBeInTheDocument();
   expect(
-    within(screen.getByTestId("cash-row-reg-pay")).getAllByRole("button"),
+    within(screen.getByTestId("cash-row-reg-pay")).getAllByRole("button", { name: /계산근거/ }),
   ).toHaveLength(12);
   expect(
     screen.queryByRole("button", { name: "저장" }),
@@ -175,8 +175,22 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     expect(
       within(table).queryByRole("rowheader", { name: label }),
     ).not.toBeInTheDocument();
+  const descriptions = [
+    ["현금매출", /입금 예정일/],
+    ["인건비(정규직)", /급여 업로드 자료에서 정규직 실지급액/],
+    ["용역비(외주)", /부가세 10%/],
+    ["제경비", /전월 급여의 4대보험/],
+    ["법인세 납부", /실제 납부월/],
+  ] as const;
+  for (const [label, description] of descriptions) {
+    const rowHeader = within(table).getByRole("rowheader", { name: label });
+    await userEvent.click(within(rowHeader).getByRole("button", { name: `${label} 도움말` }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent(description);
+    await userEvent.keyboard("{Escape}");
+  }
   await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
   expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent("예정(회색 글자)");
+  expect(screen.getByTestId("cash-flow-guide")).not.toHaveTextContent("입금 예정일");
 });
 it("opens a NULL leaf in the right detail drawer, shows reference and unknown evidence and closes without writes", async () => {
   ready();
