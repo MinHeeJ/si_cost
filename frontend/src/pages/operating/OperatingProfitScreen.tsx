@@ -195,9 +195,8 @@ export function OperatingProfitScreen({
       setPending(false);
     }
   }
-  const warnings = getFinancialWarnings(data?.notices ?? []).filter((notice) => {
-    const coverage = notice.match(/^(?:전년 )?자료\s+(\d+)\/(\d+)개월$/);
-    return !coverage || coverage[1] !== coverage[2];
+  const warnings = getFinancialWarnings(data?.notices ?? [], {
+    excludeCompleteCoverage: true,
   });
   const cutoffMonth = data ? Number(data.context.month.slice(5)) : 0;
   return (

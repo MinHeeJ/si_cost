@@ -2,9 +2,17 @@ import type { ReactNode } from "react";
 import { StatusBadge } from "./Feedback";
 import { HelpTooltip } from "./HelpTooltip";
 import { PeriodStatus } from "./PeriodStatus";
-export function getFinancialWarnings(notices: string[]) {
+export function getFinancialWarnings(
+  notices: string[],
+  { excludeCompleteCoverage = false } = {},
+) {
   return [...new Set(notices.map((notice) => notice.trim()).filter(Boolean))]
-    .filter((notice) => !/(^잠정[ :：]|미마감 월은|미마감 월이 포함|마감 전이라|^예정 포함)/.test(notice));
+    .filter((notice) => !/(^잠정[ :：]|미마감 월은|미마감 월이 포함|마감 전이라|^예정 포함)/.test(notice))
+    .filter((notice) => {
+      if (!excludeCompleteCoverage) return true;
+      const coverage = notice.match(/^(?:전년 )?자료\s+(\d+)\/(\d+)개월$/);
+      return !coverage || coverage[1] !== coverage[2];
+    });
 }
 /** Preserve every actionable notice, while showing period state exactly once in its shared slot. */
 export function FinancialOverview({context,months,provisional,notices=[],unitControl,caption,periodDetail,comparison="전년 같은 기간"}:{context:{year:number;month:string;nowMonth:string};months:{month:string;sourceKind:string;completeness?:{estimated:string[]}}[];provisional:boolean;notices?:string[];unitControl?:ReactNode;caption?:ReactNode;periodDetail?:ReactNode;comparison?:ReactNode}) {

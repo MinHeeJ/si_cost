@@ -20,6 +20,11 @@
   border-radius: 4px;
   background: var(--surface);
 }
+.operating-muted {
+  color: var(--text-sub);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .operating-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -70,6 +75,24 @@
 .operating-profit .neutral,
 .operating-profit .unknown {
   color: var(--text-sub);
+}
+.operating-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.operating-banner.info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.operating-banner button {
+  margin-left: auto;
 }
 .operating-empty {
   padding: 48px 16px;

@@ -1,16 +1,16 @@
-import { FinancialOverview } from "../../shared/FinancialOverview";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner } from "../../shared/Feedback";
 import {
   compareDecimal,
   formatAmount,
   formatRate,
-  formatDateTime,
   type AmountUnit,
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
@@ -44,6 +44,34 @@ const sourceEvents = [
   "sicost:project-expenses-committed",
   "sicost:distribution-committed",
 ];
+const noPositiveContributionNotice = "흑자인 유형이 없어 비율과 막대를 표시하지 않습니다.";
+const netGuide = (
+  <dl>
+    <div>
+      <dt>매출과 비교 기준</dt>
+      <dd>
+        턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출입니다.
+        화면의 금액은 부가세를 제외합니다. 1월부터 기준월까지의 누계를 전년 같은
+        기간과 비교합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>법인세와 전월 조정</dt>
+      <dd>
+        전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다. 순이익표의
+        법인세는 연간 예상액을 달마다 나눈 금액입니다. 실제 납부액은 자금수지표에
+        표시합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>비용과 자금수지</dt>
+      <dd>
+        내부(자체 개발) 비용은 판관비의 연구개발비로 처리합니다. 실제 법인세 납부와
+        카드 결제·계좌이체·대여금의 자금수지는 순이익 계산에 추가로 더하지 않습니다.
+      </dd>
+    </div>
+  </dl>
+);
 // SCR-UI-09
 export function NetProfitScreen({
   amountUnit,
@@ -151,11 +179,45 @@ export function NetProfitScreen({
       setPending(false);
     }
   }
+  const warnings = getFinancialWarnings(data?.notices ?? [], {
+    excludeCompleteCoverage: true,
+  }).filter((notice) => notice !== noPositiveContributionNotice);
+  const cutoffMonth = data ? Number(data.context.month.slice(5)) : 0;
   return (
     <SharedScreenFrame
       screenId="UI-09"
+      screenGuide={netGuide}
       periodBar={
-        <ScreenPeriodBar screenId="UI-09" initialMonth={initialMonth} />
+        <ScreenPeriodBar
+          screenId="UI-09"
+          initialMonth={initialMonth}
+          showMonthCloseStatus={false}
+          showCumulativeRange={false}
+        />
+      }
+      headerActions={
+        <div className="sicost-title-action-group operating-actions">
+          <label>
+            단위{" "}
+            <select
+              data-testid="net-unit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            data-testid="net-export"
+            disabled={!data || loading || pending || mobile}
+            onClick={() => void download()}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
       }
     >
       <div
@@ -163,18 +225,6 @@ export function NetProfitScreen({
         data-testid="net-profit-screen"
         data-screen-id="SCR-UI-09"
       >
-        <ScreenTitleActions>
-          <div className="operating-toolbar">
-            <button
-              type="button"
-              data-testid="net-export"
-              disabled={!data || loading || pending || mobile}
-              onClick={() => void download()}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-        </ScreenTitleActions>
         {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
         {loading && <p role="status">순이익표를 불러오는 중입니다.</p>}
         {error != null && (
@@ -192,24 +242,30 @@ export function NetProfitScreen({
               context={data.context}
               months={data.months}
               provisional={data.cumulativeProvisional}
-              notices={data.notices}
-              unitControl={
-                <label>
-                  단위{" "}
-                  <select
-                    data-testid="net-unit"
-                    value={unit}
-                    onChange={(event) =>
-                      setUnit(event.target.value as AmountUnit)
-                    }
-                  >
-                    <option>원</option>
-                    <option>천원</option>
-                    <option>백만원</option>
-                  </select>
-                </label>
+              caption={null}
+              periodDetail={
+                <span>집계 기간 <b>{cutoffMonth === 1 ? "1월" : `1~${cutoffMonth}월`}</b></span>
               }
             />
+            <div className="operating-toolbar">
+              <button
+                type="button"
+                data-testid="net-tax-link"
+                onClick={() =>
+                  navigate("/UI-10", { state: { section: "tax" } })
+                }
+              >
+                법인세 월할 확인
+              </button>
+              <button
+                type="button"
+                data-testid="net-cashflow-link"
+                onClick={() => navigate("/UI-21")}
+              >
+                자금수지표 안내
+              </button>
+              {warnings.length > 0 && <FinancialWarnings warnings={warnings} />}
+            </div>
             {data.completeness.availableMonthCount === 0 && (
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
@@ -265,12 +321,18 @@ export function NetProfitScreen({
               className="net-contributions"
               data-testid="net-contributions"
             >
-              <h2>계약 유형별 기여도</h2>
-              <p className="operating-muted">
-                {data.contributionMonth} 매출총이익 기준 · 유형별 매출총이익 =
-                매출 − 배분 원가 · 흑자 유형끼리 100%. 대기 원가·직접 경비는
-                나누지 않아 회사 매출총이익과 다릅니다.
-              </p>
+              <div className="net-contribution-heading">
+                <div className="net-contribution-title">
+                  <h2>계약 유형별 기여도</h2>
+                  <HelpTooltip label="계약 유형별 기여도" iconOnly>
+                    유형별 매출총이익은 매출에서 배분 원가를 뺀 금액입니다.
+                    대기 원가와 직접 경비를 배분하지 않으므로 회사 매출총이익과
+                    계산 기준이 다릅니다. 흑자 유형의 이익 합계를 100%로 보고
+                    각 유형의 비중을 계산합니다.
+                  </HelpTooltip>
+                </div>
+                <span className="operating-muted">기준월 <b>{data.contributionMonth}</b></span>
+              </div>
               {!data.contributions.visible ? (
                 <p className="operating-empty">{data.contributions.reason}</p>
               ) : (
@@ -328,45 +390,12 @@ export function NetProfitScreen({
                       compareDecimal(group.contributionAmt, "0") > 0,
                   ) && (
                     <p role="note">
-                      흑자인 유형이 없어 비율과 막대를 표시하지 않습니다.
+                      {noPositiveContributionNotice}
                     </p>
                   )}
                 </>
               )}
             </section>
-            <p className="operating-muted">
-              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의
-              매출입니다(부가세 제외). 법인세는 연간 예상액을 달마다 나눈
-              금액(월할)입니다. 실제로 낸 법인세는 자금수지표에만 잡힙니다.
-              내부(자체 개발) 비용은 판관비(연구개발비)로 처리합니다.
-            </p>
-            <div className="operating-banner info">
-              <span>
-                전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다.
-              </span>
-              <button
-                type="button"
-                data-testid="net-tax-link"
-                onClick={() =>
-                  navigate("/UI-10", { state: { section: "tax" } })
-                }
-              >
-                법인세 월할 확인
-              </button>
-            </div>
-            <div className="operating-banner info">
-              <span>
-                실제 납부와 카드 결제·계좌이체·대여금의 자금수지는 손익에 추가
-                가산하지 않습니다.
-              </span>
-              <button
-                type="button"
-                data-testid="net-cashflow-link"
-                onClick={() => navigate("/UI-21")}
-              >
-                자금수지표 안내
-              </button>
-            </div>
           </>
         )}
       </div>
