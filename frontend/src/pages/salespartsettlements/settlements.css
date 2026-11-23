@@ -188,6 +188,45 @@
   padding: 48px 16px;
   color: var(--text-sub);
 }
+.settlement-trend-warning-button {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: transparent;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.settlement-trend-warning-button:hover {
+  border-color: currentColor;
+}
+.settlement-trend-warnings > p {
+  margin: 0;
+  color: var(--text-sub);
+}
+.settlement-trend-warnings section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+.settlement-trend-warnings h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.settlement-trend-warnings ul {
+  margin: 0;
+  padding-inline-start: 18px;
+}
+.settlement-trend-warnings li + li {
+  margin-top: 6px;
+}
+.settlement-trend-warnings small {
+  margin-inline-start: 8px;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
 .settlement-trend-table thead th:first-child,
 .settlement-trend-table tbody th[rowspan] {
   position: sticky;

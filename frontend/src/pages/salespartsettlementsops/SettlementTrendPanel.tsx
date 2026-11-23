@@ -1,3 +1,5 @@
+import { Dialog } from "../../shared/Dialog";
+import { Icon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
@@ -31,9 +33,12 @@ export function SettlementTrendPanel({
     [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(shared.pageSize ?? 50),
     [retry, setRetry] = useState(0);
+  const [warningsOpen, setWarningsOpen] = useState(false);
+  const closeWarnings = () => setWarningsOpen(false);
   const displayUnit = amountUnit;
   useEffect(() => {
     setPage(1);
+    closeWarnings();
   }, [partId, month]);
   useEffect(() => {
     const controller = new AbortController();
@@ -52,6 +57,13 @@ export function SettlementTrendPanel({
       });
     return () => controller.abort();
   }, [partId, month, page, size, retry]);
+  const warningsByMonth = new Map<string, Map<string, number>>();
+  for (const issue of data?.issues ?? []) {
+    const key = issue.month ?? "기간 공통";
+    const messages = warningsByMonth.get(key) ?? new Map<string, number>();
+    messages.set(issue.message, (messages.get(issue.message) ?? 0) + 1);
+    warningsByMonth.set(key, messages);
+  }
   return (
     <div role="tabpanel" data-testid="settlement-trend-panel">
       {error != null ? (
@@ -67,6 +79,17 @@ export function SettlementTrendPanel({
             <span>
               {month} · {data.pagination.total}명
             </span>
+            {data.issues.length > 0 && (
+              <button
+                type="button"
+                className="settlement-trend-warning-button"
+                aria-haspopup="dialog"
+                onClick={() => setWarningsOpen(true)}
+              >
+                <Icon name="warning" size={15} />
+                경고 {data.issues.length}건
+              </button>
+            )}
           </div>
           <ChartHost
             option={seriesChartOptions({
@@ -221,11 +244,31 @@ export function SettlementTrendPanel({
               </tfoot>
             </table>
           </div>
-          {data.issues.map((issue, i) => (
-            <p role="alert" key={i}>
-              {issue.month} {issue.message}
-            </p>
-          ))}
+          <Dialog
+            open={warningsOpen && data.issues.length > 0}
+            title="기간 추이 경고"
+            onConfirm={closeWarnings}
+            onCancel={closeWarnings}
+            confirmLabel="닫기"
+            hideCancel
+          >
+            <div className="settlement-trend-warnings">
+              <p>조회 기간의 정산 자료에서 확인이 필요한 항목입니다.</p>
+              {[...warningsByMonth].map(([issueMonth, messages]) => (
+                <section key={issueMonth}>
+                  <h3>{issueMonth}</h3>
+                  <ul>
+                    {[...messages].map(([message, count]) => (
+                      <li key={message}>
+                        {message}
+                        {count > 1 && <small>{count}건</small>}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </Dialog>
           <div className="settlement-toolbar">
             <button
               type="button"
