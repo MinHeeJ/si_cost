@@ -25,14 +25,21 @@ public final class FinancialCalculation {
         if(annual==null)warnings.add("연간 예상 법인세가 없습니다.");
         BigDecimal remaining=annual==null||missing?null:annual.subtract(closed);
         if(remaining!=null&&remaining.signum()<0)warnings.add("연간 예상액보다 마감월 법인세 합계가 큽니다.");
-        BigDecimal quotient=remaining==null||open.isEmpty()?null:remaining.divide(BigDecimal.valueOf(open.size()),0,RoundingMode.DOWN);
+        BigDecimal[] share=monthlyAllocation(remaining,open.size());BigDecimal quotient=share==null?null:share[0];
         List<AllocationMonth> result=new ArrayList<>();
         for(TaxMonth m:months) {
             BigDecimal amount=m.closeStatus().equals("CLOSE")?m.amount():quotient;
-            if(quotient!=null&&m.equals(open.get(open.size()-1)))amount=remaining.subtract(quotient.multiply(BigDecimal.valueOf(open.size()-1)));
+            if(share!=null&&m.equals(open.get(open.size()-1)))amount=share[1];
             result.add(new AllocationMonth(m.month(),m.closeStatus(),money(amount),amount!=null,m.fixed(),m.migrated()));
         }
         return new Allocation(year,money(annual),money(closed),money(remaining),open.size(),List.copyOf(result),!missing&&annual!=null,List.copyOf(warnings));
+    }
+    /** 법인세 등 월할 분배의 공통 계산. 남은 금액(remaining)을 열린 달 수(open)로 내림(DOWN) 분배한 몫[0]과,
+     *  나머지를 흡수하는 마지막 열린 달 금액[1]을 돌려준다. remaining이 null이거나 open이 0 이하이면 null. */
+    public static BigDecimal[] monthlyAllocation(BigDecimal remaining,int open) {
+        if(remaining==null||open<=0)return null;
+        BigDecimal quotient=remaining.divide(BigDecimal.valueOf(open),0,RoundingMode.DOWN);
+        return new BigDecimal[]{quotient,remaining.subtract(quotient.multiply(BigDecimal.valueOf(open-1)))};
     }
     public static Map<String,Object> contributions(JsonNode snapshot,String month,Allocation allocation) {
         Set<String> closedMonths=new HashSet<>();
