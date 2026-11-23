@@ -32,12 +32,25 @@
   flex: none;
 }
 @media (prefers-reduced-motion: no-preference) {
+  .profit-structure-toolbar .profit-structure-notices {
+    animation: profit-structure-warning-ring 1.25s ease-out 180ms;
+  }
   .profit-structure-notices > svg {
-    animation: profit-structure-warning-emphasis 540ms ease-out;
+    animation: profit-structure-warning-emphasis 1.25s ease-out 180ms;
   }
 }
 @keyframes profit-structure-warning-emphasis {
-  45% { transform: scale(1.18); }
+  20% { transform: translateY(-2px) rotate(-8deg) scale(1.3); }
+  40% { transform: none; }
+  60% { transform: translateY(-2px) rotate(6deg) scale(1.24); }
+  82%, 100% { transform: none; }
+}
+@keyframes profit-structure-warning-ring {
+  0%, 40% { box-shadow: 0 0 0 0 transparent; }
+  20%, 60% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 27%, transparent);
+  }
+  82%, 100% { box-shadow: 0 0 0 7px transparent; }
 }
 .profit-structure-notice-groups {
   margin-block: 8px 2px;
