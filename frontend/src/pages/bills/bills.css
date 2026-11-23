@@ -90,6 +90,9 @@
 .bill-desktop .sicost-table td {
   height: 40px;
 }
+.bill-desktop .sicost-table > tbody > tr > td:first-child:has(> input[type="checkbox"]) {
+  text-align: center;
+}
 .bill-desktop .sicost-table th {
   background: var(--head-bg);
 }
