@@ -6,9 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
-import { Dialog } from "../../shared/Dialog";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { HelpTooltip } from "../../shared/HelpTooltip";
-import { Icon } from "../../shared/Icon";
 import {
   formatAmount,
   formatDateTime,
@@ -246,7 +245,6 @@ export function ProfitStructureScreen({
     [revision, setRevision] = useState(0),
     [download, setDownload] = useState(false);
   const [mobile, setMobile] = useState(() => window.innerWidth < 768);
-  const [noticesOpen, setNoticesOpen] = useState(false);
   const sequence = useRef(0),
     committed = useRef(false);
   useEffect(() => {
@@ -286,7 +284,6 @@ export function ProfitStructureScreen({
     setLoading(true);
     setError(undefined);
     setData(undefined);
-    setNoticesOpen(false);
     void api
       .getProfitLossStructure(
         period.year,
@@ -313,17 +310,6 @@ export function ProfitStructureScreen({
   const last = data?.buckets.at(-1),
     quarterly = aggregation === "QUARTER";
   const warnings = data ? getFinancialWarnings(data.notices) : [];
-  const warningsByMonth = new Map<string, string[]>();
-  for (const warning of warnings) {
-    const monthPrefix = warning.match(/^(\d{4}-(?:0[1-9]|1[0-2]))\s+/);
-    const month = monthPrefix?.[1] ?? "";
-    const message = monthPrefix ? warning.slice(monthPrefix[0].length) : warning;
-    const messages = warningsByMonth.get(month);
-    if (messages) messages.push(message);
-    else warningsByMonth.set(month, [message]);
-  }
-  const warningsLabel = `확인 필요 ${warnings.length}건`;
-  const closeNotices = () => setNoticesOpen(false);
   function go(path: string) {
     if (period)
       navigate(path, {
@@ -409,38 +395,8 @@ export function ProfitStructureScreen({
               </button>
             ))}
           </SegmentedTabList>
-          {warnings.length > 0 && (
-            <button
-              type="button"
-              className="profit-structure-notices"
-              aria-haspopup="dialog"
-              onClick={() => setNoticesOpen(true)}
-            >
-              <Icon name="warning" size={16} />
-              {warningsLabel}
-            </button>
-          )}
+          {warnings.length > 0 && <FinancialWarnings warnings={warnings} />}
         </div>
-        <Dialog
-          open={noticesOpen && warnings.length > 0}
-          title={warningsLabel}
-          onConfirm={closeNotices}
-          onCancel={closeNotices}
-          confirmLabel="닫기"
-          hideCancel
-          wide
-        >
-          <div className="profit-structure-notice-groups">
-            {[...warningsByMonth].map(([month, messages]) => (
-              <section className="profit-structure-notice-group" key={month}>
-                <h3>{month || "기타 확인 사항"}</h3>
-                <ul>
-                  {messages.map((message) => <li key={message}>{message}</li>)}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </Dialog>
         {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
           <ErrorBanner

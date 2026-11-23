@@ -9,19 +9,16 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.operating-toolbar label {
-  margin-left: auto;
+.operating-actions > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.operating-toolbar select {
+.operating-actions select {
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--surface);
-}
-.operating-muted {
-  color: var(--text-sub);
-  font-size: 12px;
-  overflow-wrap: anywhere;
 }
 .operating-summary {
   display: grid;
@@ -73,24 +70,6 @@
 .operating-profit .neutral,
 .operating-profit .unknown {
   color: var(--text-sub);
-}
-.operating-banner {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--warn);
-  background: var(--warn-bg);
-}
-.operating-banner.info {
-  color: var(--info);
-  background: var(--info-bg);
-}
-.operating-banner button {
-  margin-left: auto;
 }
 .operating-empty {
   padding: 48px 16px;

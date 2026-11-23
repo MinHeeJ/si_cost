@@ -1,0 +1,78 @@
+button.sicost-financial-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-inline-start: auto;
+  border-color: color-mix(in srgb, var(--warn) 24%, var(--divider));
+  background: var(--warn-bg);
+  color: var(--warn);
+  white-space: nowrap;
+}
+button.sicost-financial-warning:hover {
+  border-color: var(--warn);
+}
+.sicost-financial-warning > svg {
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  button.sicost-financial-warning {
+    animation: sicost-financial-warning-ring 1.25s ease-out 180ms;
+  }
+  .sicost-financial-warning > svg {
+    animation: sicost-financial-warning-emphasis 1.25s ease-out 180ms;
+  }
+}
+@keyframes sicost-financial-warning-emphasis {
+  20% { transform: translateY(-2px) rotate(-8deg) scale(1.3); }
+  40% { transform: none; }
+  60% { transform: translateY(-2px) rotate(6deg) scale(1.24); }
+  82%, 100% { transform: none; }
+}
+@keyframes sicost-financial-warning-ring {
+  0%, 40% { box-shadow: 0 0 0 0 transparent; }
+  20%, 60% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 27%, transparent);
+  }
+  82%, 100% { box-shadow: 0 0 0 7px transparent; }
+}
+.sicost-financial-warning-groups {
+  margin-block: 8px 2px;
+}
+.sicost-financial-warning-group {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 16px;
+  padding-block: 14px;
+}
+.sicost-financial-warning-group + .sicost-financial-warning-group {
+  border-top: 1px solid var(--divider);
+}
+.sicost-financial-warning-group h3 {
+  justify-self: start;
+  margin: 0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sicost-financial-warning-group ul {
+  margin: 0;
+  padding-block: 3px;
+  padding-inline-start: 18px;
+  color: var(--text-sub);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.sicost-financial-warning-group li + li {
+  margin-top: 7px;
+}
+@media (max-width: 480px) {
+  .sicost-financial-warning-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
