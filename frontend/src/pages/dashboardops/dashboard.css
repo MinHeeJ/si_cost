@@ -28,6 +28,10 @@
 .dashboard-print-date {
   display: none;
 }
+.dashboard-dates.sicost-period-summary:has(.dashboard-date-current-note)
+  > .sicost-period-summary-item {
+  padding-inline: 9px;
+}
 .dashboard-kpi-grid,
 .dashboard-metrics {
   display: grid;
@@ -663,6 +667,9 @@
   }
   .dashboard-print-date {
     display: inline;
+  }
+  .dashboard-date-current-note .sicost-help-value {
+    display: inline-flex !important;
   }
   body:has([data-testid="dashboard-screen"]) .sicost-help-tooltip {
     display: none !important;
