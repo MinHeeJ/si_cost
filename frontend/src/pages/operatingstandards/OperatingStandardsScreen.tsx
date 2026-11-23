@@ -2,7 +2,7 @@ import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -44,6 +44,7 @@ export function OperatingStandardsScreen({
   const [error, setError] = useState<unknown>(),
     [notice, setNotice] = useState(""),
     [pending, setPending] = useState(false);
+  const [saveToast, setSaveToast] = useState<{ message: string; sequence: number }>();
   const [editing, setEditing] = useState<OperatingStandard[]>(),
     [history, setHistory] = useState<OperatingStandard>();
   const [cashValues, setCashValues] = useState<Record<string, string>>({}),
@@ -132,16 +133,19 @@ export function OperatingStandardsScreen({
       setRows(result.items);
       setCashConfirm(false);
       onDirtyChange?.(false);
-      setNotice(
-        result.message ??
-          (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다."),
-      );
+      const message = result.message ??
+        (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다.");
       try {
         if (result.changed) {
           api.notifyOperatingStandardsCommitted(cash);
           await onCommitted?.(cash);
         }
         await load();
+        if (result.changed) {
+          setSaveToast((previous) => ({ message, sequence: (previous?.sequence ?? 0) + 1 }));
+        } else {
+          setNotice(message);
+        }
       } catch {
         setError(undefined);
         setNotice("저장됐지만 다시 불러오지 못했습니다.");
@@ -282,6 +286,7 @@ export function OperatingStandardsScreen({
             )}
           </p>
         )}
+        {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {(!error || rows.length > 0) && (
           <DataTable
             rows={rows}

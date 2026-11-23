@@ -6,7 +6,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { Icon } from "../../shared/Icon";
 import { normalizeDecimal } from "../../shared/format";
@@ -109,6 +109,7 @@ export function CommonCodesScreen({
   const [error, setError] = useState<unknown>(),
     [notice, setNotice] = useState(""),
     [fields, setFields] = useState<Record<string, string>>({});
+  const [saveToast, setSaveToast] = useState<{ message: string; sequence: number }>();
   const [modal, setModal] = useState<
     "group" | "code" | "blocked" | "move" | null
   >(null);
@@ -433,13 +434,16 @@ export function CommonCodesScreen({
         groupRevision: result.groupRevision,
       });
       if (result.changed) api.notifyCodeGroupsCommitted(group.groupId);
-      setNotice(
-        result.message ??
-          (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다."),
-      );
+      const message = result.message ??
+        (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다.");
       try {
         await loadCodes(group, targetPage, size, true);
         await loadGroups();
+        if (result.changed) {
+          setSaveToast((previous) => ({ message, sequence: (previous?.sequence ?? 0) + 1 }));
+        } else {
+          setNotice(message);
+        }
       } catch {
         setError(undefined);
         setNotice("저장됐지만 다시 불러오지 못했습니다. 다시 조회해 주세요.");
@@ -663,6 +667,7 @@ export function CommonCodesScreen({
             )}
           </p>
         )}
+        {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {tab === "codes" ? (
           <>
             <div className="codegroups-split">
