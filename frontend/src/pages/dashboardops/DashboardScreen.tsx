@@ -511,7 +511,7 @@ export function DashboardScreen({
                   <>
                     <StatusBadge tone="warn">잠정</StatusBadge>
                     {data.selectedMonth !== data.currentMonth ? (
-                      <span>마감 전 매출·이익 변동 가능</span>
+                      <span>마감 전 변동 가능</span>
                     ) : (
                       <span>
                         아래{" "}
@@ -542,7 +542,7 @@ export function DashboardScreen({
                     trigger={
                       <span className="dashboard-date-item-content">
                         <Icon name="info" size={14} />
-                        <span>손익은 선택월 · 미수금 등은 오늘 기준</span>
+                        <span>손익·청구 누락 의심은 선택월 · 미수금·인력 수급 등은 오늘 기준</span>
                       </span>
                     }
                   >

@@ -32,6 +32,13 @@
   > .sicost-period-summary-item {
   padding-inline: 9px;
 }
+.sicost-period-row:has(.dashboard-date-current-note) {
+  flex-wrap: wrap;
+}
+.sicost-period-row:has(.dashboard-date-current-note) .sicost-period-status-slot {
+  flex-basis: max-content;
+  max-width: 100%;
+}
 .dashboard-kpi-grid,
 .dashboard-metrics {
   display: grid;
