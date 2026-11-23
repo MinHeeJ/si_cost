@@ -71,3 +71,24 @@ it("키보드로 두 번째 스킬을 선택한다", async () => {
   await userEvent.keyboard("{ArrowDown}{Enter}");
   expect(input).toHaveValue("React, Java");
 });
+it("치고 있는 마지막 조각에는 미등록 안내를 보이지 않고, 쉼표나 칸 이동 뒤에 보인다", async () => {
+  render(<Form />);
+  const input = screen.getByLabelText("보유 스킬");
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith("/api/codes/SKILL", expect.anything()),
+  );
+  await userEvent.type(input, "React, Ja");
+  expect(screen.queryByText(/‘Ja’은\(는\) 등록된 스킬이 아니라/)).not.toBeInTheDocument();
+  await userEvent.type(input, "x사내");
+  expect(screen.queryByText(/등록된 스킬이 아니라/)).not.toBeInTheDocument();
+  await userEvent.type(input, ", ");
+  expect(
+    await screen.findByText("‘Jax사내’은(는) 등록된 스킬이 아니라 AI 추천 점수에 쓰이지 않습니다."),
+  ).toBeVisible();
+  await userEvent.type(input, "도구Y");
+  expect(screen.queryByText(/‘도구Y’은/)).not.toBeInTheDocument();
+  await userEvent.tab();
+  expect(
+    await screen.findByText("‘도구Y’은(는) 등록된 스킬이 아니라 AI 추천 점수에 쓰이지 않습니다."),
+  ).toBeVisible();
+});

@@ -70,6 +70,11 @@ export function SkillsInput({
     ),
   ];
   const current = normalize(text);
+  // 칸에 머무는 동안 아직 치고 있는 마지막 조각은 미등록 안내에서 뺀다(칸을 벗어나거나 쉼표를 치면 안내).
+  const typing = focused && text.slice(text.lastIndexOf(",") + 1).trim() !== "";
+  const settled = typing
+    ? normalize(text.slice(0, text.lastIndexOf(",") + 1))
+    : current;
   const fragment = text
     .slice(text.lastIndexOf(",") + 1)
     .trim()
@@ -174,7 +179,7 @@ export function SkillsInput({
         50자)
       </small>
       {loaded &&
-        current
+        settled
           .filter((s) => !suggestions.some((option) => option.name === s))
           .map((s) => (
             <small key={s} className="sicost-tone-warn">
