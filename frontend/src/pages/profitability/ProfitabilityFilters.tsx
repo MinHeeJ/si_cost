@@ -160,9 +160,12 @@ export function ProfitabilityFilters({
         상세조건
       </button>
       {expanded && (
-        <fieldset data-testid="profitability-detail-filters-panel">
+        <fieldset
+          className="profitability-detail-filters"
+          data-testid="profitability-detail-filters-panel"
+        >
           <legend>상세조건</legend>
-          <label className="sicost-field">
+          <label>
             대상
             <select
               data-testid="profitability-show-filter"
@@ -179,7 +182,8 @@ export function ProfitabilityFilters({
               <option value="CONCURRENT">동시투입</option>
             </select>
           </label>
-          <label className="sicost-field">
+          <label>
+            턴키 단가 포함
             <input
               type="checkbox"
               data-testid="profitability-turnkey-filter"
@@ -188,7 +192,6 @@ export function ProfitabilityFilters({
                 setDraft((d) => ({ ...d, includeTurnkey: e.target.checked }))
               }
             />
-            턴키 단가 포함
           </label>
         </fieldset>
       )}

@@ -566,6 +566,11 @@ describe("개인 기간 조회 본문", () => {
     expect(
       screen.getByTestId("profitability-contribution-panel"),
     ).toHaveTextContent("1명");
+    const table = screen.getByRole("table", {
+      name: "인당 평균 영업이익 / 인원",
+    });
+    const note = screen.getByText("인당 평균 영업이익 / 인원", { exact: true });
+    expect(table).not.toContainElement(note);
   });
   it("767px는20건 카드/더보기·다운로드미호출이며 PC복귀시 공통50건을 복원한다", async () => {
     window.innerWidth = 767;

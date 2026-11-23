@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import type { ProfitabilityContribution } from "./individualProfitabilityApi";
 
@@ -10,6 +10,7 @@ export function ProfitabilityContributionTable({
   unit: AmountUnit;
 }) {
   const [open, setOpen] = useState(false);
+  const labelId = useId();
   const jobs = [...new Map(cells.map((c) => [c.jobCode, c.jobName])).entries()];
   const grades = [
     ...new Map(cells.map((c) => [c.gradeCode, c.gradeName])).entries(),
@@ -19,21 +20,23 @@ export function ProfitabilityContributionTable({
       className="profitability-contribution"
       data-testid="profitability-contribution"
     >
-      <button
-        type="button"
-        data-testid="profitability-contribution-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? "▾" : "▸"} 직무·등급별 인당 공헌이익
-      </button>
+      <div className="profitability-contribution-heading">
+        <button
+          type="button"
+          data-testid="profitability-contribution-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? "▾" : "▸"} 직무·등급별 인당 공헌이익
+        </button>
+        {open && <p id={labelId}>인당 평균 영업이익 / 인원</p>}
+      </div>
       {open && (
         <div
           className="sicost-table-viewport"
           data-testid="profitability-contribution-panel"
         >
-          <table className="sicost-table">
-            <caption>인당 평균 영업이익 / 인원</caption>
+          <table className="sicost-table" aria-labelledby={labelId}>
             <thead>
               <tr>
                 <th>주직무</th>
