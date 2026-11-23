@@ -1,4 +1,6 @@
 .financial-editor {
+  --financial-section-padding: 18px;
+
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -142,8 +144,6 @@
   min-width: 0;
 }
 .financial-section {
-  --financial-section-padding: 18px;
-
   min-width: 0;
   overflow: clip;
   border-radius: 10px;
@@ -173,7 +173,19 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+.financial-editor :is(.financial-section, .financial-read-panel) .sicost-grid {
+  display: flow-root;
+}
 .financial-section .sicost-table-viewport {
+  margin: var(--financial-section-padding);
+}
+.financial-editor .financial-read-panel {
+  padding-inline: var(--financial-section-padding);
+}
+.financial-editor .financial-read-panel .sicost-table-viewport {
+  margin-block: var(--financial-section-padding);
+}
+.financial-editor :is(.financial-section, .financial-read-panel) .sicost-table-viewport {
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -187,12 +199,6 @@
 }
 .financial-section .sicost-table td {
   padding-block: 6px;
-}
-.financial-section .sicost-table :is(th, td):first-child {
-  padding-inline-start: var(--financial-section-padding);
-}
-.financial-section .sicost-table :is(th, td):last-child {
-  padding-inline-end: var(--financial-section-padding);
 }
 .financial-row-draft {
   display: block;
@@ -248,6 +254,18 @@
   width: 16px;
   height: 16px;
   margin: 0;
+}
+.financial-card-action {
+  width: 88px;
+  height: 36px;
+  padding-inline: 8px;
+}
+.financial-card-action.financial-card-delete:not(:disabled) {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+.financial-card-action.financial-card-delete:hover:not(:disabled) {
+  background: var(--bad-bg);
 }
 .financial-tax-field label {
   display: grid;
@@ -370,13 +388,13 @@
 }
 @media (max-width: 900px) {
   .financial-section .financial-tax-payments .sicost-table :is(th, td) {
-    padding-inline: 8px;
+    padding-inline: 6px;
   }
   .financial-editor .financial-tax-payments .sicost-table input[type="date"] {
     width: 124px;
   }
   .financial-editor .financial-tax-payments .sicost-table td[data-column="amount"] input {
-    width: 104px;
+    width: 96px;
     min-width: 90px;
   }
   .financial-tax-payments .sicost-table td[data-column="confirm"] button {

@@ -203,8 +203,8 @@ export function FinancialTaxPanel({
                   <div className="financial-tax-payment-date">
                     <time dateTime={row.dueDate}>{row.dueDate}</time>
                     {row.paidDate && row.paidDate !== row.dueDate && (
-                      <StatusBadge tone="neutral">
-                        실제 납부 <time dateTime={row.paidDate}>{row.paidDate}</time>
+                      <StatusBadge tone="ok">
+                        납부일 <time dateTime={row.paidDate}>{row.paidDate}</time>
                       </StatusBadge>
                     )}
                   </div>

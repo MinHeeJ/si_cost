@@ -143,6 +143,7 @@ export function FinancialCardsPanel({
       action: (
         <button
           type="button"
+          className="financial-card-action"
           data-testid="financial-card-add"
           disabled={disabled}
           onClick={add}
@@ -275,6 +276,11 @@ export function FinancialCardsPanel({
               !readOnly && (
                 <button
                   type="button"
+                  className={
+                    row.values.useYn === "Y"
+                      ? "financial-card-action financial-card-delete"
+                      : "financial-card-action"
+                  }
                   data-testid={`financial-card-${row.key}-state`}
                   disabled={disabled}
                   onClick={() => {
@@ -297,7 +303,7 @@ export function FinancialCardsPanel({
                       );
                   }}
                 >
-                  {row.values.useYn === "Y" ? "삭제" : "되살리기"}
+                  {row.values.useYn === "Y" ? "카드 삭제" : "되살리기"}
                 </button>
               ),
           },

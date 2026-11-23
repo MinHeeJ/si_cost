@@ -186,8 +186,8 @@ it("keeps confirmed payment date and amount read-only and labels closed allocati
   expect(
     screen.queryByTestId("financial-tax-2026-cnfm-confirm"),
   ).not.toBeInTheDocument();
-  expect(screen.getByText("실제 납부", { exact: false })).toHaveTextContent(
-    "실제 납부 2027-03-30",
+  expect(screen.getByText("납부일", { exact: false })).toHaveTextContent(
+    "납부일 2027-03-30",
   );
   expect(taxExplanation(allocation, "2026-10")).toBe("마감 확정");
 });
