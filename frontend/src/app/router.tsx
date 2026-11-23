@@ -36,7 +36,7 @@ import { ProjectProgressPanel } from "../pages/progress/ProjectProgressPanel";
 import { ProjectIssuesPanel } from "../pages/issues/ProjectIssuesPanel";
 import { ProjectStatusIssuesPanel } from "../pages/issues/ProjectStatusIssuesPanel";
 import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
-import { ClientsScreen, type ClientsWorkspaceTab } from "../pages/clients/ClientsScreen";
+import { ClientsScreen } from "../pages/clients/ClientsScreen";
 import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
 import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
 import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
@@ -300,7 +300,6 @@ function BusinessPartnersWorkspace({
 }) {
   const preferences = usePreferences(),
     location = useLocation();
-  const [tab, setTab] = useState<ClientsWorkspaceTab>("clients");
   const [columnsOpen, setColumnsOpen] = useState(false),
     [upload, setUpload] = useState(false);
   const [standardPart, setStandardPart] = useState<string>();
@@ -370,7 +369,7 @@ function BusinessPartnersWorkspace({
     }
   }
   return (
-    <BusinessPartnersScreen showSalesPartsGuide={tab === "parts"}>
+    <>
       {error != null && (
         <ErrorBanner
           message={
@@ -381,7 +380,6 @@ function BusinessPartnersWorkspace({
       {pending && <p role="status">파일을 준비하고 있습니다.</p>}
       <ClientsScreen
         active={location.pathname === "/UI-15"}
-        tabSelection={{ value: tab, onChange: setTab }}
         dense={dense}
         pageSize={pageSize}
         columnView={view}
@@ -447,7 +445,7 @@ function BusinessPartnersWorkspace({
           onDirtyChange={standardDirty}
         />
       )}
-    </BusinessPartnersScreen>
+    </>
   );
 }
 
@@ -1218,7 +1216,11 @@ function RegisteredApplication() {
         "UI-33": (
           <PeopleWorkspace screenId="UI-33" onDirtyChange={onCandidatesDirty} />
         ),
-        "UI-15": <BusinessPartnersWorkspace onDirtyChange={onPartnersDirty} />,
+        "UI-15": (
+          <BusinessPartnersScreen>
+            <BusinessPartnersWorkspace onDirtyChange={onPartnersDirty} />
+          </BusinessPartnersScreen>
+        ),
         "UI-23": (
           <UsersScreen>
             <RegisteredUsersWorkspace onDirtyChange={onUsersDirty} />

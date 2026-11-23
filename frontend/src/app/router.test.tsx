@@ -1902,9 +1902,24 @@ describe("공식 진입점 합성", () => {
       expect(shared.getPeriodContext).toHaveBeenCalledTimes(reads + 1),
     );
   });
-  it("거래처의 B7 업로드와 양식 다운로드를 기존 화면에 연결한다", async () => {
+  it("거래처와 영업 파트에서 같은 화면 안내를 열고 거래처에서 B7 업로드를 연다", async () => {
     open("/UI-15");
     await screen.findByText(clientFixture.name);
+    const guide = screen.getByRole("button", { name: "화면 안내" });
+    await userEvent.click(guide);
+    const dialog = screen.getByRole("dialog", { name: /화면 안내/ });
+    expect(dialog).toHaveTextContent("구분·상호·사업자등록번호");
+    expect(dialog).toHaveTextContent("세금계산서 이메일");
+    expect(dialog).toHaveTextContent("은행·계좌번호·예금주");
+    expect(dialog).toHaveTextContent("영업 파트 기준 적용");
+    const guideText = dialog.textContent;
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByTestId("parts-workspace-tab"));
+    expect(screen.getByRole("button", { name: "화면 안내" })).toBe(guide);
+    await userEvent.click(guide);
+    expect(screen.getByRole("dialog", { name: /화면 안내/ }).textContent).toBe(guideText);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByTestId("clients-workspace-tab"));
     await userEvent.click(screen.getByTestId("clients-template"));
     await waitFor(() => expect(b7.saveDownload).toHaveBeenCalled());
     await userEvent.click(screen.getByTestId("clients-upload"));

@@ -26,8 +26,6 @@ import type {
 } from "./clientsApi";
 import "./clients.css";
 
-export type ClientsWorkspaceTab = "clients" | "parts";
-
 export type ClientsScreenProps = {
   active?: boolean;
   panelDirty?: boolean;
@@ -41,10 +39,6 @@ export type ClientsScreenProps = {
   onUpload?(): void;
   onExport?(filters: ClientFilters): void;
   renderParts?: ReactNode;
-  tabSelection?: {
-    value: ClientsWorkspaceTab;
-    onChange(tab: ClientsWorkspaceTab): void;
-  };
 };
 export function ClientsScreen({
   active = true,
@@ -59,7 +53,6 @@ export function ClientsScreen({
   onUpload,
   onExport,
   renderParts,
-  tabSelection,
 }: ClientsScreenProps) {
   const [mobile, setMobile] = useState(
     () =>
@@ -86,14 +79,12 @@ export function ClientsScreen({
   const [notice, setNotice] = useState(""),
     [createdId, setCreatedId] = useState<string>(),
     [highlight, setHighlight] = useState<string>();
-  const [localTab, setLocalTab] = useState<ClientsWorkspaceTab>("clients"),
+  const [workspaceTab, setWorkspaceTab] = useState("clients"),
     [refresh, setRefresh] = useState(0);
-  const workspaceTab = tabSelection?.value ?? localTab;
-  const setWorkspaceTab = tabSelection?.onChange ?? setLocalTab;
   const generation = useRef(0),
     dataRef = useRef<ClientsPage>();
   const selection = useClientSelection(filters, filters.size);
-  const [nextTab, setNextTab] = useState<ClientsWorkspaceTab>(),
+  const [nextTab, setNextTab] = useState<string>(),
     [panelVersion, setPanelVersion] = useState(0);
   const clientDirty = useRef(false);
   const reportDirty = useCallback(
@@ -103,7 +94,7 @@ export function ClientsScreen({
     },
     [onDirtyChange],
   );
-  const changeTab = (tab: ClientsWorkspaceTab) => {
+  const changeTab = (tab: string) => {
     if (tab === workspaceTab) return;
     if (clientDirty.current || panelDirty) setNextTab(tab);
     else setWorkspaceTab(tab);
@@ -361,7 +352,7 @@ export function ClientsScreen({
           label="기준정보 탭"
           testId="clients-workspace-tabs"
           value={workspaceTab}
-          onChange={(key) => changeTab(key as ClientsWorkspaceTab)}
+          onChange={(key) => changeTab(key as "clients" | "parts")}
           tabs={[
             {
               key: "clients",
