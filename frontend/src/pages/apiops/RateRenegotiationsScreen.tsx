@@ -653,6 +653,7 @@ export function RateRenegotiationsScreen({
         dense={dense}
         empty="조건에 맞는 재협상 대상이 없습니다"
         loading={loading}
+        loadingMessage="조회 중입니다."
         page={data?.pagination.page ?? 1}
         size={data?.pagination.size ?? 50}
         total={data?.pagination.total ?? 0}

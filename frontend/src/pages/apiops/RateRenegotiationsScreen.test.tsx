@@ -218,7 +218,10 @@ describe("단가 재협상 대상", () => {
     const table = screen.getByTestId("renegotiation-table");
     expect(table).toHaveAttribute("aria-busy", "true");
     expect(within(table).getAllByRole("columnheader")).toHaveLength(11);
-    expect(within(table).getByRole("status")).toHaveTextContent("불러오는 중입니다.");
+    const status = within(table).getByRole("status");
+    expect(status).toBeVisible();
+    expect(status).toHaveTextContent("조회 중입니다.");
+    expect(table.querySelector(".sicost-skeleton-row")).toBeNull();
     expect(screen.queryByTestId("renegotiation-person-owned-0")).not.toBeInTheDocument();
     expect(screen.queryByTestId("renegotiation-table-totals")).not.toBeInTheDocument();
     failRequest(

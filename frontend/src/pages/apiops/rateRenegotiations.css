@@ -138,6 +138,15 @@
   overflow-x: auto;
   max-width: 100%;
 }
+.renegotiation-screen .sicost-table-viewport:has(.sicost-table-loading) {
+  container-type: inline-size;
+}
+.renegotiation-screen .sicost-table-loading {
+  position: sticky;
+  inset-inline-start: 0;
+  width: min(100%, calc(100cqw - 24px));
+  box-sizing: border-box;
+}
 .renegotiation-screen .sicost-badge {
   margin: 2px 4px;
 }
