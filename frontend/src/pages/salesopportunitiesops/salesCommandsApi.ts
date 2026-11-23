@@ -91,6 +91,8 @@ export type Opportunity = {
     status: string;
     needSn: number;
     startMonth: string;
+    sourceScreenId?: string;
+    processedAt?: string | null;
   }[];
   approvalHistory: {
     histSn: number;

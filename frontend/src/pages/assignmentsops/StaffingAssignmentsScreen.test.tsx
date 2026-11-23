@@ -1,12 +1,25 @@
 import {
   fireEvent,
-  render,
+  render as baseRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import type { ReactElement } from "react";
+const render = (ui: ReactElement) =>
+  baseRender(<MemoryRouter>{ui}</MemoryRouter>);
+function CurrentLocation() {
+  const location = useLocation();
+  return (
+    <output data-testid="current-location">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
 import {
   AssignmentsContent,
   StaffingAssignmentsScreen,
@@ -61,6 +74,59 @@ const selection: api.Selection = {
   total: 1,
   protectedMonths: [],
 };
+it("opens shared UI-30 project context only after confirming unsaved changes", async () => {
+  const close = vi.fn();
+  render(
+    <>
+      <AssignmentCreateForm
+        year={2026}
+        today="2026-07-01"
+        onClose={close}
+        onSaved={vi.fn()}
+      />
+      <CurrentLocation />
+    </>,
+  );
+  const button = screen.getByTestId("assignment-ai-recommend");
+  expect(button).toBeDisabled();
+  expect(screen.getByTestId("assignment-ai-reason")).toHaveTextContent(
+    "프로젝트와 직무",
+  );
+  await screen.findByRole("option", { name: /실제 프로젝트/ });
+  fireEvent.change(screen.getByTestId("assignment-project"), {
+    target: { value: row.projectId },
+  });
+  expect(button).toBeDisabled();
+  fireEvent.change(screen.getByTestId("assignment-job"), {
+    target: { value: "ETC" },
+  });
+  fireEvent.change(screen.getByTestId("assignment-create-start-date"), {
+    target: { value: "2026-09-15" },
+  });
+  fireEvent.click(button);
+  expect(close).not.toHaveBeenCalled();
+  const guard = await screen.findByRole("dialog", {
+    name: "작성 중인 내용을 나가시겠습니까?",
+  });
+  fireEvent.click(within(guard).getByRole("button", { name: "계속 작성" }));
+  expect(screen.getByTestId("assignment-create-start-date")).toHaveValue(
+    "2026-09-15",
+  );
+  expect(screen.getByTestId("current-location")).toHaveTextContent(/^\/$/);
+  fireEvent.click(button);
+  fireEvent.click(
+    within(
+      screen.getByRole("dialog", { name: "작성 중인 내용을 나가시겠습니까?" }),
+    ).getByRole("button", { name: "나가기" }),
+  );
+  await waitFor(() =>
+    expect(screen.getByTestId("current-location")).toHaveTextContent(
+      "/UI-30?targetType=PROJECT&targetId=P-101&jobCode=ETC&startMonth=2026-09",
+    ),
+  );
+  expect(close).toHaveBeenCalledOnce();
+  expect(api.createAssignment).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getAssignments).mockResolvedValue({

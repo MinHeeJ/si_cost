@@ -14,7 +14,11 @@ public class QuoteNotificationService {
     public void rejected(String id) {
         var rejection=mapper.quoteRejection(id);
         if(rejection==null)throw new IllegalStateException("실제 견적 반려 이력을 확인하지 못했습니다.");
-        publisher.publish(new Event(NotificationEventKeys.quoteRejected(id,rejection.historySn()),"QUOTE_REJ","기회 "+id+" · 견적 반려 · 상세 확인",new Link("UI-29",id),null),
+        String content="「"+rejection.opportunityName()+"」 견적이 반려됐습니다";
+        if(rejection.reason()!=null&&!rejection.reason().isBlank())content+=": "+rejection.reason();
+        // The full reason remains in approval history; notifications have a 300-character limit.
+        if(content.codePointCount(0,content.length())>300)content=content.substring(0,content.offsetByCodePoints(0,299))+"…";
+        publisher.publish(new Event(NotificationEventKeys.quoteRejected(id,rejection.historySn()),"QUOTE_REJ",content,new Link("UI-29",id),null),
             List.of(new NotificationRecipients.Recipient(rejection.userId(),rejection.userId(),null,List.of())));
     }
 }

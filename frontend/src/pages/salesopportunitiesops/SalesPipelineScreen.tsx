@@ -1,4 +1,5 @@
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { recommendationEntryUrl } from "../workforcerecommendationsops/recommendationBrowseApi";
 import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +21,7 @@ import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
 import { SalesQuotePanel, SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { SalesOpportunityForm } from "../salesopportunities/SalesOpportunityForm";
+import { TentativeAssignmentsPanel } from "../tentativeassignmentsops/TentativeAssignmentsPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { useCodeNames } from "../../shared/codeNames";
 import { BusinessName } from "../../shared/BusinessName";
@@ -403,6 +405,16 @@ export function SalesPipelinePanel({
                               {o.startMonth}
                             </p>
                             <strong>{formatAmount(o.amount, "원")} 원</strong>
+                            <p
+                              data-testid={`opportunity-tentative-count-${o.id.toLowerCase()}`}
+                            >
+                              가배정{" "}
+                              {
+                                o.tentativeAssignments.filter(
+                                  (t) => t.status === "ACT",
+                                ).length
+                              }
+                            </p>
                             <p>
                               확률 {formatRate(o.probability)} ·{" "}
                               {o.manualProbability ? "수동" : "기본"}
@@ -451,12 +463,13 @@ export function SalesPipelinePanel({
                             </label>
                             <Link
                               data-testid={`opportunity-recommend-${o.id.toLowerCase()}`}
-                              to="/UI-30"
-                              state={{
-                                opportunityId: o.id,
-                                jobCode: o.needs[0]?.jobCode,
+                              to={recommendationEntryUrl({
+                                targetType: "OPPORTUNITY",
+                                targetId: o.id,
+                                jobCode: o.needs[0]?.jobCode ?? "",
                                 startMonth: o.startMonth,
-                              }}
+                              })}
+                              onClick={(event) => event.stopPropagation()}
                             >
                               인력 추천
                             </Link>
@@ -467,123 +480,139 @@ export function SalesPipelinePanel({
                 </div>
               ) : (
                 <>
-                <div className="sales-command-toolbar"><strong>총 {data.total}건</strong></div>
-                <div className="sicost-table-viewport">
-                  <table className="sicost-table">
-                    <thead>
-                      <tr>
-                        <th>기회명</th>
-                        <th>고객</th>
-                        <th>결과</th>
-                        {(
-                          [
-                            ["amount", "예상액 (원)"],
-                            ["resultDate", "결과일"],
-                          ] as const
-                        ).map(([key, title]) => {
-                          const selected =
-                            ordering?.sort === key ||
-                            (!ordering && key === "resultDate");
-                          const direction = ordering?.direction ?? "DESC";
-                          return (
-                            <th
-                              key={key}
-                              aria-sort={
-                                selected
-                                  ? direction === "ASC"
-                                    ? "ascending"
-                                    : "descending"
-                                  : "none"
-                              }
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPage(1);
-                                  setOrdering({
-                                    sort: key,
-                                    direction:
-                                      selected && direction === "ASC"
-                                        ? "DESC"
-                                        : "ASC",
-                                  });
-                                }}
+                  <div className="sales-command-toolbar">
+                    <strong>총 {data.total}건</strong>
+                  </div>
+                  <div className="sicost-table-viewport">
+                    <table className="sicost-table">
+                      <thead>
+                        <tr>
+                          <th>기회명</th>
+                          <th>고객</th>
+                          <th>결과</th>
+                          {(
+                            [
+                              ["amount", "예상액 (원)"],
+                              ["resultDate", "결과일"],
+                            ] as const
+                          ).map(([key, title]) => {
+                            const selected =
+                              ordering?.sort === key ||
+                              (!ordering && key === "resultDate");
+                            const direction = ordering?.direction ?? "DESC";
+                            return (
+                              <th
+                                key={key}
+                                aria-sort={
+                                  selected
+                                    ? direction === "ASC"
+                                      ? "ascending"
+                                      : "descending"
+                                    : "none"
+                                }
                               >
-                                {title}{" "}
-                                {selected
-                                  ? direction === "ASC"
-                                    ? "↑"
-                                    : "↓"
-                                  : "↕"}
-                              </button>
-                            </th>
-                          );
-                        })}
-                        <th>프로젝트 / 실주 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.items.map((o) => (
-                        <tr
-                          key={o.id}
-                          data-testid={`closed-row-${o.id.toLowerCase()}`}
-                        >
-                          <td>
-                            <button
-                              data-testid={`closed-open-${o.id.toLowerCase()}`}
-                              onClick={() => setSelectedId(o.id)}
-                            >
-                              {o.name}
-                            </button>
-                          </td>
-                          <td>
-                            <BusinessName kind="client" id={o.customerId} />
-                          </td>
-                          <td>{name("OPP_STAT", o.status)}</td>
-                          <td>{formatAmount(o.amount, "원")}</td>
-                          <td>{o.resultDate ?? "–"}</td>
-                          <td>
-                            {o.projectId ? (
-                              <Link
-                                data-testid={`closed-project-${o.id.toLowerCase()}`}
-                                to="/UI-01"
-                                state={{ projectId: o.projectId }}
-                              >
-                                <BusinessName kind="project" id={o.projectId} />{" "}
-                                ({o.projectId})
-                              </Link>
-                            ) : (
-                              `${name("LOSE_RSN", o.lossReasonCode)} ${o.lossMemo ?? ""}`
-                            )}
-                          </td>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPage(1);
+                                    setOrdering({
+                                      sort: key,
+                                      direction:
+                                        selected && direction === "ASC"
+                                          ? "DESC"
+                                          : "ASC",
+                                    });
+                                  }}
+                                >
+                                  {title}{" "}
+                                  {selected
+                                    ? direction === "ASC"
+                                      ? "↑"
+                                      : "↓"
+                                    : "↕"}
+                                </button>
+                              </th>
+                            );
+                          })}
+                          <th>프로젝트 / 실주 사유</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {data.items.length === 0 && (
-                    <div className="sales-command-empty">
-                      <p>조건에 맞는 결과가 없습니다.</p>
-                      <button
-                        data-testid="pipeline-empty-reset"
-                        type="button"
-                        onClick={() => {
-                          setResult("WIN");
-                          setIncludeStopped(false);
-                          setPage(1);
-                          setGeneration((v) => v + 1);
-                        }}
-                      >
-                        조건 초기화
-                      </button>
-                    </div>
-                  )}
-                </div>
+                      </thead>
+                      <tbody>
+                        {data.items.map((o) => (
+                          <tr
+                            key={o.id}
+                            data-testid={`closed-row-${o.id.toLowerCase()}`}
+                          >
+                            <td>
+                              <button
+                                data-testid={`closed-open-${o.id.toLowerCase()}`}
+                                onClick={() => setSelectedId(o.id)}
+                              >
+                                {o.name}
+                              </button>
+                            </td>
+                            <td>
+                              <BusinessName kind="client" id={o.customerId} />
+                            </td>
+                            <td>{name("OPP_STAT", o.status)}</td>
+                            <td>{formatAmount(o.amount, "원")}</td>
+                            <td>{o.resultDate ?? "–"}</td>
+                            <td>
+                              {o.projectId ? (
+                                <Link
+                                  data-testid={`closed-project-${o.id.toLowerCase()}`}
+                                  to={`/UI-01?${new URLSearchParams({ projectId: o.projectId })}`}
+                                >
+                                  <BusinessName
+                                    kind="project"
+                                    id={o.projectId}
+                                  />{" "}
+                                  ({o.projectId})
+                                </Link>
+                              ) : (
+                                `${name("LOSE_RSN", o.lossReasonCode)} ${o.lossMemo ?? ""}`
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {data.items.length === 0 && (
+                      <div className="sales-command-empty">
+                        <p>조건에 맞는 결과가 없습니다.</p>
+                        <button
+                          data-testid="pipeline-empty-reset"
+                          type="button"
+                          onClick={() => {
+                            setResult("WIN");
+                            setIncludeStopped(false);
+                            setPage(1);
+                            setGeneration((v) => v + 1);
+                          }}
+                        >
+                          조건 초기화
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               <div className="sales-command-toolbar">
                 {tab === "CLOSED" && (
-                  <select aria-label="한 화면 건수" data-testid="pipeline-page-size" value={size} onChange={(e) => { setSize(Number(e.target.value) as 20 | 50 | 100); setPage(1); }}>
-                    {[20, 50, 100].map((value) => <option key={value} value={value}>{value}건씩</option>)}
+                  <select
+                    aria-label="한 화면 건수"
+                    data-testid="pipeline-page-size"
+                    value={size}
+                    onChange={(e) => {
+                      setSize(Number(e.target.value) as 20 | 50 | 100);
+                      setPage(1);
+                    }}
+                  >
+                    {[20, 50, 100].map((value) => (
+                      <option key={value} value={value}>
+                        {value}건씩
+                      </option>
+                    ))}
                   </select>
                 )}
                 <button
@@ -688,23 +717,68 @@ export function SalesPipelinePanel({
                     )}
                   </>
                 )}
-                {detailTab === "필요 인력" &&
-                  detail.needs.map((n, i) => (
-                    <article
-                      data-testid={`detail-need-${n.needSn ?? i}`}
-                      key={n.needSn ?? i}
-                    >
-                      <p>
-                        {name("JOB", n.jobCode)} /{" "}
-                        {n.gradeCode
-                          ? name("GRADE", n.gradeCode)
-                          : "등급 미지정"}{" "}
-                        · {n.count}명 · {n.startMonth}부터 {n.months}개월 · 월{" "}
-                        {n.monthlyMm} MM
-                      </p>
-                      <p>예상단가 {n.expectedRate ?? "직무 기본단가"}</p>
-                    </article>
-                  ))}
+                {detailTab === "필요 인력" && (
+                  <>
+                    <div className="sicost-table-viewport">
+                      <table
+                        className="sicost-table"
+                        data-testid="opportunity-needs-table"
+                      >
+                        <thead>
+                          <tr>
+                            {[
+                              "직무",
+                              "등급",
+                              "인원",
+                              "시작월",
+                              "개월",
+                              "월 MM",
+                              "예상 단가 (원)",
+                            ].map((label) => (
+                              <th key={label}>{label}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detail.needs.map((n, i) => (
+                            <tr
+                              data-testid={`detail-need-${n.needSn ?? i}`}
+                              key={n.needSn ?? i}
+                            >
+                              <td>{name("JOB", n.jobCode)}</td>
+                              <td>
+                                {n.gradeCode
+                                  ? name("GRADE", n.gradeCode)
+                                  : "등급 미지정"}
+                              </td>
+                              <td>{n.count}</td>
+                              <td>{n.startMonth}</td>
+                              <td>{n.months}</td>
+                              <td>{formatFixedDecimal(n.monthlyMm, 2)}</td>
+                              <td>
+                                {n.expectedRate == null
+                                  ? "직무 기본단가"
+                                  : formatAmount(n.expectedRate, "원")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {detail.needs.length === 0 && (
+                        <p>필요 인력이 없습니다.</p>
+                      )}
+                    </div>
+                    <TentativeAssignmentsPanel
+                      items={detail.tentativeAssignments.filter(
+                        (t) => t.status === "ACT",
+                      )}
+                      needs={detail.needs}
+                      revision={detail.revision}
+                      opportunityStatus={detail.status}
+                      onRefresh={refresh}
+                    />
+                  </>
+                )}
                 {detailTab === "견적 점검/승인 이력" && (
                   <>
                     <SalesQuotePanel

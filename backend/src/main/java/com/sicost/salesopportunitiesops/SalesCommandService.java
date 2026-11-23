@@ -56,7 +56,7 @@ public class SalesCommandService {
     }
     private boolean decimalEqual(BigDecimal a,BigDecimal b){return a==null?b==null:b!=null&&a.compareTo(b)==0;}
     public void requireOpen(Opportunity o){if(!o.status().equals("ING"))throw state("진행 기회만 처리할 수 있습니다.");}
-    public void requireApproved(Context c){requireOpen(c.before());if(c.quote().storedProfitRate()==null||Set.of("UNKNOWN","INCOMPLETE").contains(c.quote().judgement())||Set.of("WAIT","REJ").contains(c.before().approvalStatus()))throw state("견적 원가와 승인을 확인한 후 처리해 주세요.");}
+    public void requireApproved(Context c){requireOpen(c.before());if(c.quote().storedProfitRate()==null||Set.of("UNKNOWN","INCOMPLETE").contains(c.quote().judgement())||Set.of("WAIT","REJ").contains(c.before().approvalStatus()))throw state("견적 승인 전이라 협상 단계로 옮길 수 없습니다");}
     private ApiException state(String message){return new ApiException(409,"INVALID_STATE",message);}
     public static Transition unchanged(Opportunity o){return new Transition(o.stage(),o.probability(),o.manualProbability(),o.status(),o.profitRate(),o.approvalStatus(),o.approvedProfitRate(),o.resultDate(),o.lossReasonCode(),o.lossMemo(),o.projectId());}
     public static Opportunity with(Opportunity o,Transition t){return new Opportunity(o.id(),o.name(),o.customerId(),o.partId(),t.stage(),t.probability(),t.manual(),o.amount(),o.startMonth(),o.contractType(),o.months(),o.workplace(),o.memo(),t.status(),t.rate(),t.approval(),t.approved(),t.resultDate(),t.lossReason(),t.lossMemo(),t.projectId(),o.registeredBy());}

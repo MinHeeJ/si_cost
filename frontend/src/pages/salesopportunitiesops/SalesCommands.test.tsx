@@ -14,6 +14,8 @@ import { SalesPipelinePanel } from "./SalesPipelineScreen";
 import { ApiError } from "../../shared/api";
 import * as api from "./salesCommandsApi";
 import { getSharedCodes } from "../shared/sharedApi";
+import * as developers from "../developers/peopleClient";
+vi.mock("../developers/peopleClient");
 
 vi.mock("./salesCommandsApi");
 vi.mock("../shared/sharedApi", async (original) => ({
@@ -104,6 +106,151 @@ function opportunity(): api.Opportunity {
   };
 }
 const refresh = vi.fn();
+it("카드의 인력 추천은 첫 직무·기회 시작월 query를 전달하고 상세를 열지 않는다", async () => {
+  const o = opportunity();
+  vi.mocked(api.getSalesOpportunities).mockResolvedValue({
+    items: [o],
+    total: 1,
+    page: 1,
+    size: 50,
+    stageTotals: [],
+    summary: {
+      opportunityCount: 1,
+      staleCount: 0,
+      amount: o.amount,
+      weightedAmount: "0",
+      weightedPeople: "0",
+    },
+  });
+  render(
+    <MemoryRouter>
+      <SalesPipelinePanel />
+    </MemoryRouter>,
+  );
+  const link = await screen.findByTestId("opportunity-recommend-o-0101");
+  const url = new URL(link.getAttribute("href")!, "https://test.invalid");
+  expect(Object.fromEntries(url.searchParams)).toEqual({
+    targetType: "OPPORTUNITY",
+    targetId: "O-0101",
+    jobCode: "BE",
+    startMonth: "2026-08",
+  });
+  await userEvent.click(link);
+  expect(api.getSalesOpportunity).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+it("종료 탭의 수주 프로젝트 링크는 해당 프로젝트 query를 보존한다", async () => {
+  const o = { ...opportunity(), status: "WIN" as const, projectId: "P-900009" };
+  vi.mocked(api.getSalesOpportunities).mockResolvedValue({
+    items: [o],
+    total: 1,
+    page: 1,
+    size: 50,
+    stageTotals: [],
+    summary: {
+      opportunityCount: 1,
+      staleCount: 0,
+      amount: o.amount,
+      weightedAmount: "0",
+      weightedPeople: "0",
+    },
+  });
+  render(
+    <MemoryRouter>
+      <SalesPipelinePanel />
+    </MemoryRouter>,
+  );
+  await userEvent.click(screen.getByRole("tab", { name: "종료 · 수주·실주" }));
+  expect(await screen.findByTestId("closed-project-o-0101")).toHaveAttribute(
+    "href",
+    "/UI-01?projectId=P-900009",
+  );
+});
+it.each(["단가가 원가보다 낮음", null])(
+  "반려 띠는 가장 최근 반려 날짜와 선택 사유를 표시한다: %s",
+  (reason) => {
+    const o = opportunity();
+    o.approvalStatus = "REJ";
+    o.approvalHistory = [
+      {
+        histSn: 1,
+        action: "REJ",
+        profitRate: "10",
+        reason: "이전 사유",
+        registeredBy: "sales",
+        registeredAt: "2026-11-15T09:00:00",
+      },
+      {
+        histSn: 3,
+        action: "REJ",
+        profitRate: "10",
+        reason,
+        registeredBy: "sales",
+        registeredAt: "2026-11-16T09:00:00",
+      },
+    ];
+    mount(o);
+    expect(screen.getByTestId("quote-rejection-banner").textContent).toBe(
+      `견적 반려 (11-16)${reason ? ` · 사유: ${reason}` : ""}`,
+    );
+  },
+);
+it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤트 후 이전 기회에서 제거한다", async () => {
+  const o = opportunity();
+  o.needs[0] = { ...o.needs[0], needSn: 2, expectedRate: "8000000" };
+  o.tentativeAssignments = [
+    {
+      id: "7",
+      developerId: "D-3",
+      status: "ACT",
+      needSn: 2,
+      startMonth: "2026-08",
+      sourceScreenId: "UI-05",
+    },
+  ];
+  vi.mocked(developers.getDeveloper).mockResolvedValue({
+    name: "업로드03",
+    managementNo: "0003",
+  } as developers.DeveloperDetail);
+  vi.mocked(api.getSalesOpportunity).mockImplementation(async () => o);
+  vi.mocked(api.getSalesOpportunities).mockImplementation(async () => ({
+    items: [o],
+    total: 1,
+    page: 1,
+    size: 50,
+    stageTotals: [],
+    summary: {
+      opportunityCount: 1,
+      staleCount: 0,
+      amount: o.amount,
+      weightedAmount: "0",
+      weightedPeople: "0",
+    },
+  }));
+  render(
+    <MemoryRouter>
+      <SalesPipelinePanel />
+    </MemoryRouter>,
+  );
+  await screen.findByText("가배정 1");
+  await userEvent.click(screen.getByTestId("opportunity-open-o-0101"));
+  await userEvent.click(await screen.findByTestId("detail-tab-needs"));
+  expect(screen.getByTestId("opportunity-needs-table")).toHaveTextContent(
+    "8,000,000",
+  );
+  const table = screen.getByTestId("tentative-assignments-panel");
+  await within(table).findByText("업로드03");
+  expect(table).toHaveTextContent("0003");
+  expect(table).toHaveTextContent("2. 백엔드 개발");
+  expect(table).toHaveTextContent("UI-05");
+  o.tentativeAssignments = [{ ...o.tentativeAssignments[0], status: "REL" }];
+  act(() => {
+    window.dispatchEvent(new Event("sicost:staffing-committed"));
+  });
+  await screen.findByText("가배정 0");
+  await within(table).findByText("가배정한 사람이 없습니다");
+  expect(within(table).queryByText("업로드03")).not.toBeInTheDocument();
+});
 const saved = {
   changed: true,
   revision: "new-revision",
@@ -281,7 +428,7 @@ it("win uses source defaults and readonly identity; strict dates are field valid
   );
   expect(
     await screen.findByRole("link", { name: "프로젝트 P-live 보기" }),
-  ).toHaveAttribute("href", "/UI-01");
+  ).toHaveAttribute("href", "/UI-01?projectId=P-live");
 });
 it("lose loads existing reason codes; missing required reason blocks submit", async () => {
   mount();

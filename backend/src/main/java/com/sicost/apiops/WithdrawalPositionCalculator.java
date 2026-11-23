@@ -34,7 +34,7 @@ public final class WithdrawalPositionCalculator {
             List<String> grades=List.of("JR","MD","SR","EX");
             int developerGrade=source.gradeCode()==null?-1:grades.indexOf(source.gradeCode()),requestedGrade=grades.indexOf(p.gradeCode()==null||p.gradeCode().isBlank()?"MD":p.gradeCode());
             int grade=developerGrade<0||requestedGrade<0?0:Math.abs(developerGrade-requestedGrade)==0?20:Math.abs(developerGrade-requestedGrade)==1?10:0;
-            result.add(new Ranked(p,actual,gap,(int)Math.max(0,ChronoUnit.DAYS.between(source.withdrawalDate().plusDays(1),actual.atDay(1))),
+            result.add(new Ranked(p,actual,gap,(int)Math.max(0,ChronoUnit.DAYS.between(source.withdrawalDate().plusDays(1),start.atDay(1))),
                 source.developerJob().equals(p.jobCode())?40:20,grade,switch(gap){case 0->25;case 1->15;case 2->8;default->3;},
                 source.customerId()!=null&&source.customerId().equals(p.customerId())?10:0,
                 p.probability().compareTo(new BigDecimal("60"))>=0?5:0));

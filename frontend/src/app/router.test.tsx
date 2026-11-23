@@ -76,7 +76,18 @@ vi.mock("../pages/monthclosesops/monthCloseApi", async (original) => ({
   ...(await original<typeof import("../pages/monthclosesops/monthCloseApi")>()),
   getMonthCloses: vi.fn(),
 }));
-vi.mock("../pages/workforcerecommendationsops/recommendationBrowseApi");
+vi.mock(
+  "../pages/workforcerecommendationsops/recommendationBrowseApi",
+  async (original) => ({
+    ...(await original<
+      typeof import("../pages/workforcerecommendationsops/recommendationBrowseApi")
+    >()),
+    getWorkforceRecommendationTargets: vi.fn(),
+    requestTargetRecommendation: vi.fn(),
+    getRecommendationHistorySnapshot: vi.fn(),
+    getWorkforceRecommendationHistory: vi.fn(),
+  }),
+);
 vi.mock("../pages/candidates/recommendationActionsApi", async (original) => ({
   ...(await original<
     typeof import("../pages/candidates/recommendationActionsApi")
@@ -428,6 +439,8 @@ const open = (path = "/UI-27") =>
       <ApplicationRoutes />
     </MemoryRouter>,
   );
+// 통합 실행 부하에서 5초를 넘긴 셸 시나리오에만 적용한다. 개별 조회 대기와 단언은 유지한다.
+const shellInteractionTimeout = 10000;
 beforeEach(() => {
   vi.resetAllMocks();
   installBusinessSession();
@@ -863,6 +876,27 @@ beforeEach(() => {
   });
 });
 describe("공식 진입점 합성", () => {
+  it("UI-30 주소 문맥은 탭 복귀에도 보존하고 다른 대상에 추천하지 않는다", async () => {
+    open(
+      "/UI-30?targetType=OPPORTUNITY&targetId=O-0042&jobCode=BE&startMonth=2027-01",
+    );
+    await screen.findByTestId("recommendation-candidates");
+    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "OPPORTUNITY",
+        targetId: "O-0042",
+        jobCode: "BE",
+        startMonth: "2027-01",
+      }),
+      expect.any(AbortSignal),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+    await userEvent.click(screen.getByRole("button", { name: /DB UI-30$/ }));
+    expect(screen.getByTestId("recommendation-start-month")).toHaveValue(
+      "2027-01",
+    );
+    expect(recommendations.requestTargetRecommendation).toHaveBeenCalledOnce();
+  });
   // 앱 셸의 다단계 상호작용은 통합 실행 부하에서 5초를 넘을 수 있어 이 시나리오만 여유를 둔다.
   it("UI-30은 현재 자리와 원래 revision으로 행동하고 조회 실패 뒤 GET만 재시도한다", async () => {
     open("/UI-30");
@@ -1020,6 +1054,7 @@ describe("공식 진입점 합성", () => {
         ).not.toBeInTheDocument(),
       );
     },
+    shellInteractionTimeout,
   );
   it.each(["/UI-04", "/UI-31"])(
     "%s 열 설정 취소는 저장하지 않는다",
@@ -1038,6 +1073,7 @@ describe("공식 진입점 합성", () => {
           .mock.calls.filter(([type]) => type === "COLS"),
       ).toHaveLength(0);
     },
+    shellInteractionTimeout,
   );
   it("원가 열 설정 실패는 초안을 보존하고 자동 재시도하지 않는다", async () => {
     open("/UI-04");
@@ -1094,15 +1130,19 @@ describe("공식 진입점 합성", () => {
       "true",
     );
   });
-  it("다른 화면으로 이동하면 프로젝트 상세 패널을 숨기고 복귀 시 유지한다", async () => {
-    open("/UI-01?projectId=P-0042&tab=progress");
-    await screen.findByText("진행 조회 실패");
-    expect(screen.getByTestId("project-detail")).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    expect(screen.getByTestId("project-detail")).not.toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
-    expect(screen.getByTestId("project-detail")).toBeVisible();
-  });
+  it(
+    "다른 화면으로 이동하면 프로젝트 상세 패널을 숨기고 복귀 시 유지한다",
+    async () => {
+      open("/UI-01?projectId=P-0042&tab=progress");
+      await screen.findByText("진행 조회 실패");
+      expect(screen.getByTestId("project-detail")).toBeVisible();
+      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      expect(screen.getByTestId("project-detail")).not.toBeVisible();
+      await userEvent.click(screen.getByRole("button", { name: /DB UI-01$/ }));
+      expect(screen.getByTestId("project-detail")).toBeVisible();
+    },
+    shellInteractionTimeout,
+  );
   it("UI-01 이슈 직접 진입은 같은 프로젝트와 연도로 이슈 편집을 연결한다", async () => {
     open("/UI-01?projectId=P-0042&tab=issues");
     await screen.findByTestId("project-issues-panel");
@@ -1301,22 +1341,26 @@ describe("공식 진입점 합성", () => {
     ).not.toBeInTheDocument();
     expect(corporateTax.createCorporateTaxDefaults).not.toHaveBeenCalled();
   });
-  it("UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다", async () => {
-    open("/UI-13");
-    await screen.findAllByText(
-      "조회된 청구가 없습니다.",
-      {},
-      { timeout: 5000 },
-    );
-    expect(screen.getByTestId("bills-screen")).toHaveAttribute(
-      "data-screen-id",
-      "SCR-UI-13",
-    );
-    expect(bills.getBills).toHaveBeenCalledWith(
-      expect.objectContaining({ year: 2026, includeCarryover: true }),
-    );
-    expect(screen.getAllByTestId("bills-screen")).toHaveLength(1);
-  });
+  it(
+    "UI-13 직접 진입은 기존 청구 화면과 올해 조회 문맥을 유지한다",
+    async () => {
+      open("/UI-13");
+      await screen.findAllByText(
+        "조회된 청구가 없습니다.",
+        {},
+        { timeout: 5000 },
+      );
+      expect(screen.getByTestId("bills-screen")).toHaveAttribute(
+        "data-screen-id",
+        "SCR-UI-13",
+      );
+      expect(bills.getBills).toHaveBeenCalledWith(
+        expect.objectContaining({ year: 2026, includeCarryover: true }),
+      );
+      expect(screen.getAllByTestId("bills-screen")).toHaveLength(1);
+    },
+    shellInteractionTimeout,
+  );
   it("청구 편집 dirty를 셸에 전달하여 탭 닫기 취소 시 입력을 보존한다", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     open("/UI-13");
@@ -1345,28 +1389,32 @@ describe("공식 진입점 합성", () => {
     );
     expect(bills.getBills).toHaveBeenCalledTimes(2);
   });
-  it("배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    open("/UI-12");
-    await screen.findByText("조건에 맞는 결과가 없습니다.");
-    await userEvent.click(screen.getByTestId("assignment-new"));
-    fireEvent.change(await screen.findByTestId("assignment-project-search"), {
-      target: { value: "보존할 검색" },
-    });
-    await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
-    await userEvent.click(screen.getByRole("button", { name: /DB UI-12$/ }));
-    expect(screen.getByTestId("assignment-project-search")).toHaveValue(
-      "보존할 검색",
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "DB UI-12 탭 닫기" }),
-    );
-    expect(confirm).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("assignment-project-search")).toHaveValue(
-      "보존할 검색",
-    );
-    confirm.mockRestore();
-  });
+  it(
+    "배정의 편집과 탭 닫기 취소를 기존 셸에 연결한다",
+    async () => {
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      open("/UI-12");
+      await screen.findByText("조건에 맞는 결과가 없습니다.");
+      await userEvent.click(screen.getByTestId("assignment-new"));
+      fireEvent.change(await screen.findByTestId("assignment-project-search"), {
+        target: { value: "보존할 검색" },
+      });
+      await userEvent.click(screen.getByRole("button", { name: "DB UI-16" }));
+      await userEvent.click(screen.getByRole("button", { name: /DB UI-12$/ }));
+      expect(screen.getByTestId("assignment-project-search")).toHaveValue(
+        "보존할 검색",
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "DB UI-12 탭 닫기" }),
+      );
+      expect(confirm).toHaveBeenCalledOnce();
+      expect(screen.getByTestId("assignment-project-search")).toHaveValue(
+        "보존할 검색",
+      );
+      confirm.mockRestore();
+    },
+    shellInteractionTimeout,
+  );
   it("배정 조회 실패는 등록된 업무 화면에서 재조회한다", async () => {
     vi.mocked(assignments.getAssignments).mockRejectedValueOnce(
       new Error("배정 조회 실패"),
@@ -1917,7 +1965,9 @@ describe("공식 진입점 합성", () => {
     await userEvent.click(screen.getByTestId("parts-workspace-tab"));
     expect(screen.getByRole("button", { name: "화면 안내" })).toBe(guide);
     await userEvent.click(guide);
-    expect(screen.getByRole("dialog", { name: /화면 안내/ }).textContent).toBe(guideText);
+    expect(screen.getByRole("dialog", { name: /화면 안내/ }).textContent).toBe(
+      guideText,
+    );
     await userEvent.keyboard("{Escape}");
     await userEvent.click(screen.getByTestId("clients-workspace-tab"));
     await userEvent.click(screen.getByTestId("clients-template"));
@@ -2157,6 +2207,7 @@ describe("공식 진입점 합성", () => {
       expect(name).toHaveValue("보존 인력");
       confirm.mockRestore();
     },
+    shellInteractionTimeout,
   );
   it.each(["UI-02", "UI-33"] as const)(
     "%s 열·밀도·페이지 설정을 업무 화면에 연결한다",

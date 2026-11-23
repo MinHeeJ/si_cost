@@ -1,5 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getDeveloper } from "../developers/peopleClient";
+import { useCodeNames } from "../../shared/codeNames";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -15,19 +17,56 @@ export function TentativeAssignmentsPanel({
   revision,
   opportunityStatus,
   developerNames = {},
+  needs = [],
   loading = false,
   error,
   onRefresh,
 }: {
-  items: SalesTentative[];
+  items: (Pick<
+    SalesTentative,
+    "id" | "developerId" | "needSn" | "startMonth"
+  > & {
+    status: string;
+    sourceScreenId?: string;
+    processedAt?: string | null;
+  })[];
   revision: string;
   opportunityStatus: "ING" | "WIN" | "LOSE" | "STOP";
   developerNames?: Record<string, string>;
+  needs?: { needSn?: number; jobCode?: string }[];
   loading?: boolean;
   error?: unknown;
   onRefresh(): Promise<void>;
 }) {
-  const [selected, setSelected] = useState<SalesTentative>();
+  const [selected, setSelected] = useState<(typeof items)[number]>();
+  const name = useCodeNames("JOB");
+  const [people, setPeople] = useState<
+    Record<string, { name: string; managementNo: string }>
+  >({});
+  const [peopleError, setPeopleError] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setPeople({});
+    setPeopleError(false);
+    void Promise.all(
+      [...new Set(items.map((t) => t.developerId))].map(async (id) => {
+        const person = await getDeveloper(id);
+        return [
+          id,
+          { name: person.name, managementNo: person.managementNo },
+        ] as const;
+      }),
+    )
+      .then((entries) => {
+        if (live) setPeople(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        if (live) setPeopleError(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [items]);
   const [reason, setReason] = useState("");
   const [failure, setFailure] = useState<unknown>();
   const [stale, setStale] = useState(false);
@@ -57,7 +96,12 @@ export function TentativeAssignmentsPanel({
       data-screen-id="SCR-UI-29"
       aria-busy={loading}
     >
-      <h3>가배정</h3>
+      <h3>가배정 인력</h3>
+      {peopleError && (
+        <p role="alert">
+          가배정 인력 정보를 불러오지 못했습니다. 다시 조회해 주세요.
+        </p>
+      )}
       <AssignmentError
         error={error}
         retry={() => {
@@ -84,27 +128,40 @@ export function TentativeAssignmentsPanel({
                   <thead>
                     <tr>
                       {[
-                        "필요행",
-                        "개발자",
+                        "이름",
+                        "관리번호",
+                        "자리",
                         "시작월",
-                        "출처",
+                        "출처 화면",
                         "상태",
                         "처리시각",
                         "행동",
                       ].map((label) => (
-                        <th key={label}>{label}<FieldHelp label={label} kind="B" /></th>
+                        <th key={label}>
+                          {label}
+                          <FieldHelp label={label} kind="B" />
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((row) => (
                       <tr key={row.id} data-testid={`tentative-row-${row.id}`}>
-                        <td>{row.needSn}</td>
                         <td>
-                          {developerNames[row.developerId] ?? row.developerId}
+                          {people[row.developerId]?.name ??
+                            developerNames[row.developerId] ??
+                            "–"}
+                        </td>
+                        <td>{people[row.developerId]?.managementNo ?? "–"}</td>
+                        <td>
+                          {row.needSn}.{" "}
+                          {name(
+                            "JOB",
+                            needs.find((n) => n.needSn === row.needSn)?.jobCode,
+                          )}
                         </td>
                         <td>{row.startMonth}</td>
-                        <td>{row.sourceScreenId}</td>
+                        <td>{row.sourceScreenId ?? "–"}</td>
                         <td>
                           <span
                             className={`sicost-badge ${row.status === "ACT" ? "sicost-tone-info" : row.status === "DONE" ? "sicost-tone-ok" : "sicost-tone-lock"}`}

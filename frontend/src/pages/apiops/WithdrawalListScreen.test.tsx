@@ -134,6 +134,28 @@ function round(): api.NextPositionData {
     ],
   };
 }
+it.each([0, 17])(
+  "renders formula-81 wait days %i without changing actual start",
+  async (days) => {
+    const result = round();
+    result.candidates[0].nextPosition = {
+      ...result.candidates[0].nextPosition!,
+      originalStartMonth: days === 0 ? "2026-12" : "2027-01",
+      actualStartMonth: "2027-01",
+      waitDays: days,
+    };
+    vi.mocked(api.createNextPositionRecommendation).mockResolvedValue(result);
+    mount();
+    fireEvent.click(await screen.findByTestId("withdrawal-recommend-a-1"));
+    const panel = await screen.findByTestId("withdrawal-next-panel");
+    expect(
+      await within(panel).findByText(
+        days ? "대기 예상 17일" : "바로 이어서 투입",
+      ),
+    ).toBeVisible();
+    expect(panel).toHaveTextContent("실제 예정 2027-01");
+  },
+);
 const mount = (year = 2026) =>
   render(
     <MemoryRouter>
@@ -510,6 +532,19 @@ it("keeps committed-but-refresh-failed retries GET-only", async () => {
   );
   expect(api.selectWithdrawalPosition).toHaveBeenCalledTimes(1);
   expect(api.createNextPositionRecommendation).toHaveBeenCalledTimes(1);
+});
+it("shows the shared tentative assignment message returned by the server", async () => {
+  const message =
+    "철수 인력님을 「다음 기회」 2번 자리(백엔드 개발)에 가배정했습니다. (이전 가배정 「이전 기회」은 풀렸습니다)";
+  vi.mocked(api.selectWithdrawalPosition).mockResolvedValue({
+    changed: true,
+    message,
+  });
+  mount();
+  fireEvent.click(await screen.findByTestId("withdrawal-recommend-a-1"));
+  fireEvent.click(await screen.findByTestId("withdrawal-position-select-1"));
+  expect(await screen.findByText(message)).toBeVisible();
+  expect(api.selectWithdrawalPosition).toHaveBeenCalledOnce();
 });
 it("does not enable action for an already tentative card", async () => {
   const result = round();
