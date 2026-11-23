@@ -75,7 +75,9 @@
   padding-inline-start: 12px;
 }
 .business-plan-target-status > .sicost-badge {
-  background: color-mix(in srgb, var(--text-sub) 7%, var(--surface));
+  border: 0;
+  background: #f7ced9;
+  color: #99415a;
 }
 .business-plan-target-status > .sicost-badge::before {
   content: "";
