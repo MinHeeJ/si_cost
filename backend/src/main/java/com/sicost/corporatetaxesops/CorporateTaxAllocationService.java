@@ -13,11 +13,11 @@ public class CorporateTaxAllocationService {
         BigDecimal closed=BigDecimal.ZERO;int open=0;boolean copies=true;
         for(StoredMonth row:rows){if(row.closeStatus().equals("CLOSE")){if(row.amount()==null)copies=false;else closed=closed.add(row.amount());}else open++;}
         boolean verified=copies&&annual!=null;BigDecimal remaining=verified?annual.estimatedTax().subtract(closed):null;
-        BigDecimal quotient=remaining!=null&&open>0?remaining.divide(BigDecimal.valueOf(open),0,RoundingMode.DOWN):null;
+        BigDecimal[] share=com.sicost.common.financial.FinancialCalculation.monthlyAllocation(remaining,open);
         List<AllocationMonth> months=new ArrayList<>();int index=0;
         for(StoredMonth row:rows){
             boolean locked=row.closeStatus().equals("CLOSE");BigDecimal amount;
-            if(locked)amount=row.amount();else {index++;amount=quotient==null?null:index==open?remaining.subtract(quotient.multiply(BigDecimal.valueOf(open-1))):quotient;}
+            if(locked)amount=row.amount();else {index++;amount=share==null?null:index==open?share[1]:share[0];}
             months.add(new AllocationMonth(row.month(),row.closeStatus(),money(amount),locked?amount!=null:verified,row.fixed(),row.migrated()));
         }
         List<String> warnings=new ArrayList<>();if(!copies)warnings.add("마감 법인세 자료를 확인할 수 없습니다");if(annual==null)warnings.add("연간 예상 법인세 자료를 확인할 수 없습니다");

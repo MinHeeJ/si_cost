@@ -98,11 +98,13 @@ public class SalesPartSettlementService {
                     .filter(s->part.partId().equals(s.partId())&&s.month().compareTo(db)<=0
                         &&(s.endMonth()==null||s.endMonth().compareTo(db)>=0)).count();
                 if(!closing||matching>0) {
-                    String message=closing
-                        ? part.name()+"의 "+month+(matching>1?" 기준이 두 줄 이상 겹칩니다.":" 배분율 또는 공통관리비가 허용 범위를 벗어났습니다.")
-                            +" 거래처·영업 파트에서 기준을 확인해 주세요."
-                        : "파트 기준 미확인: 유효 기준 부재·중첩 또는 허용 범위를 확인해 주세요.";
-                    var problem=issue("PART_STANDARD_UNKNOWN",message,"standard",null,month,"TB_BS_PART_STD",true);
+                    String cause=matching>1?" 기준이 두 줄 이상 겹칩니다."
+                        :matching==1?" 배분율 또는 공통관리비가 허용 범위를 벗어났습니다."
+                        :" 적용되는 기준이 없습니다.";
+                    String fix=(!closing&&snapshot.sources().protectedMonth(db))
+                        ?" 마감된 달이라 다음 달 기준부터 고칠 수 있습니다."
+                        :" 거래처·영업 파트에서 기준을 확인해 주세요.";
+                    var problem=issue("PART_STANDARD_UNKNOWN",part.name()+"의 "+month+cause+fix,"standard",null,month,"TB_BS_PART_STD",true);
                     problems.add(problem);
                     issues.add(problem);
                 }
