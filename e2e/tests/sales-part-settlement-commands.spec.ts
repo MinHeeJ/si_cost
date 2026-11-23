@@ -47,9 +47,13 @@ test("상단 버튼과 계산 방법 표·비고 근거는 실제 정산 응답�
     ...(data.canConfirm ? ["정산 확정"] : []),
     ...(data.canCancel ? ["확정 취소"] : []),
   ]);
-  const toolbar = page.getByTestId("settlement-month-toolbar");
-  await expect(toolbar.getByRole("heading")).toHaveCount(0);
-  await expect(toolbar).toHaveText(/단위\s*원\s*천원\s*백만원/);
+  await expect(header.getByRole("combobox", { name: "단위" })).toBeVisible();
+  await expect(page.locator('.sicost-screen[data-screen-id="SCR-UI-19"]')
+    .getByText("작업중", { exact: true })).toHaveCount(0);
+  const actionTops = await header.getByRole("button").evaluateAll((buttons) =>
+    buttons.map((button) => button.getBoundingClientRect().top),
+  );
+  expect(new Set(actionTops).size).toBe(1);
   for (const row of data.items) {
     const id = row.developerId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
     const remark = page
@@ -64,7 +68,7 @@ test("상단 버튼과 계산 방법 표·비고 근거는 실제 정산 응답�
     if (row.basis.firstMonthMissingPay)
       await expect(remark).toContainText("⚠ 월 급여 없음(시작 달 급여 0)");
   }
-  await page.getByTestId("settlement-guide-toggle").click();
+  await page.getByRole("button", { name: "계산 방법 도움말", exact: true }).click();
   const guide = page.getByRole("table", { name: "계산 방법", exact: true });
   await expect(guide.getByRole("columnheader")).toHaveText([
     "항목",
@@ -135,14 +139,15 @@ test("실제 추이 API의 과거 인력·5행·전체 기간 합계를 표시�
   const trend = envelope.data as TrendResult;
   const panel = page.getByTestId("settlement-trend-panel");
   await expect(panel).toBeVisible();
-  await page.getByTestId("settlement-guide-toggle").click();
+  await page.getByRole("button", { name: "계산 방법 도움말", exact: true }).click();
   await expect(
     page
       .getByRole("table", { name: "계산 방법", exact: true })
       .locator("tbody tr"),
   ).toHaveCount(10);
-  await expect(page.locator(".settlement-toolbar[hidden]")).toBeHidden();
-  await panel.getByTestId("settlement-trend-unit").selectOption("원");
+  await page.getByRole("dialog", { name: "계산 방법", exact: true })
+    .getByRole("button", { name: "닫기", exact: true }).click();
+  await page.getByTestId("settlement-unit-select").selectOption("원");
   await expect(
     panel.locator("tfoot tr td").nth(trend.months.length),
   ).toHaveText(formatAmount(trend.periodPartProfitAmount, "원"));

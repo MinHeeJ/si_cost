@@ -55,6 +55,17 @@
   color: var(--text-sub);
   margin: 0;
 }
+.settlement-profit-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.settlement-summary .settlement-calculation-help {
+  margin: 0;
+  padding: 0;
+  height: 20px;
+  min-height: 20px;
+}
 .settlement-summary strong {
   display: block;
   font-size: 24px;
@@ -115,23 +126,6 @@
   align-items: center;
   gap: 16px;
 }
-.settlement-toolbar h2 {
-  color: var(--primary);
-  font-size: 14px;
-  border-bottom: 2px solid var(--primary);
-  padding: 10px;
-  margin: 0;
-}
-.settlement-toolbar label {
-  margin-left: auto;
-}
-.settlement-toolbar select {
-  height: 28px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 4px;
-  color: var(--text);
-}
 .settlement-screen .sicost-table-viewport {
   max-width: 100%;
   overflow-x: auto;
@@ -167,15 +161,12 @@
 .settlement-remark p {
   margin: 4px 0;
 }
-.settlement-guide summary {
-  cursor: pointer;
-}
 .settlement-guide-table {
   width: 100%;
   min-width: 640px;
   border-collapse: collapse;
   font-size: 13px;
-  margin-top: 16px;
+  margin-top: 0;
 }
 .settlement-guide-table th,
 .settlement-guide-table td {
@@ -239,9 +230,19 @@
   justify-content: flex-end;
 }
 .settlement-actions {
-  margin-top: 16px;
   justify-content: flex-end;
   gap: 8px;
+}
+.settlement-unit-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.settlement-unit-control select {
+  height: 38px;
+}
+.sicost-screen[data-screen-id="SCR-UI-19"] .sicost-period-row > .sicost-period-bar {
+  min-width: 0;
 }
 .settlement-danger-outline {
   color: var(--bad);
@@ -287,9 +288,6 @@
 }
 [data-testid="settlement-command-panel"] > .settlement-toolbar {
   margin-top: 16px;
-}
-.settlement-toolbar[hidden] {
-  display: none;
 }
 
 .settlement-summary > * {

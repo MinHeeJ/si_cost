@@ -18,9 +18,11 @@ export function ScreenPeriodBar({
   screenId,
   controlled,
   initialMonth,
+  showMonthCloseStatus = true,
 }: {
   screenId: string;
   initialMonth?: string;
+  showMonthCloseStatus?: boolean;
   controlled?: {
     month: string;
     currentMonth: string;
@@ -251,7 +253,8 @@ export function ScreenPeriodBar({
     );
   }, [context, value, type]);
   useEffect(() => {
-    if (controlled || !context || !value || type === "NONE") return;
+    if (!showMonthCloseStatus || controlled || !context || !value || type === "NONE")
+      return;
     const read = ++closeRead.current;
     if (value.type === "YEAR") {
       setStatus("");
@@ -271,7 +274,7 @@ export function ScreenPeriodBar({
     return () => {
       closeRead.current++;
     };
-  }, [context, value, type, closeRefresh]);
+  }, [context, value, type, closeRefresh, showMonthCloseStatus]);
   if (controlled?.minMonth)
     return (
       <section className="sicost-period-bar" aria-label="화면 기간">
@@ -450,7 +453,7 @@ export function ScreenPeriodBar({
                 : "올해"}
           </StatusBadge>
         ) : (
-          status && (
+          showMonthCloseStatus && status && (
             <StatusBadge tone={status === "작업중" ? "info" : "lock"}>
               {status}
             </StatusBadge>

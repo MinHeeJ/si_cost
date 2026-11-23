@@ -19,22 +19,19 @@ const labels = {
 export function SettlementTrendPanel({
   partId,
   month,
-  amountUnit,
-  onAmountUnitChange,
+  amountUnit = "천원",
 }: {
   partId: string;
   month: string;
   amountUnit?: AmountUnit;
-  onAmountUnitChange?(unit: AmountUnit): void;
 }) {
   const shared = useSharedScreen("UI-19");
   const [data, setData] = useState<TrendResult>(),
     [error, setError] = useState<unknown>(),
     [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(shared.pageSize ?? 50),
-    [retry, setRetry] = useState(0),
-    [unit, setUnit] = useState<AmountUnit>("천원");
-  const displayUnit = amountUnit ?? unit;
+    [retry, setRetry] = useState(0);
+  const displayUnit = amountUnit;
   useEffect(() => {
     setPage(1);
   }, [partId, month]);
@@ -70,22 +67,6 @@ export function SettlementTrendPanel({
             <span>
               {month} · {data.pagination.total}명
             </span>
-            <label>
-              추이 단위{" "}
-              <select
-                data-testid="settlement-trend-unit"
-                value={displayUnit}
-                onChange={(e) => {
-                  const next = e.target.value as AmountUnit;
-                  if (onAmountUnitChange) onAmountUnitChange(next);
-                  else setUnit(next);
-                }}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
           </div>
           <ChartHost
             option={seriesChartOptions({
@@ -99,7 +80,7 @@ export function SettlementTrendPanel({
               ],
               formatValue: (value) =>
                 `${formatAmount(value, displayUnit)} ${displayUnit}`,
-              axisUnit: "백만원",
+              axisUnit: displayUnit,
             })}
           >
             <p className="settlement-guide">

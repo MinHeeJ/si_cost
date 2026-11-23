@@ -68,7 +68,6 @@ export function SalesPartnerProfitScreen(
                 partId={data.partId}
                 month={data.month}
                 amountUnit={unit}
-                onAmountUnitChange={changeUnit}
               />
             )}
           </>

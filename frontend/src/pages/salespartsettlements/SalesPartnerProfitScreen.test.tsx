@@ -1,3 +1,4 @@
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -12,12 +13,19 @@ vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({
     children,
     headerActions,
+    screenGuide,
   }: {
     children: ReactNode;
     headerActions?: ReactNode;
+    screenGuide?: ReactNode;
   }) => (
     <section>
       <header data-testid="screen-header">{headerActions}</header>
+      {screenGuide && (
+        <ScreenGuide screenId="UI-19" screenName="영업 파트 이익금">
+          {screenGuide}
+        </ScreenGuide>
+      )}
       {children}
     </section>
   ),
@@ -161,7 +169,7 @@ it("renders server whole-population summary, exact columns, original project nam
     "최초 투입 2026-07-02 · 시작일수 30/31 · 기본급 –",
   );
   expect(remark.getAttribute("title")).toContain("TK project: PLAN");
-  await userEvent.click(screen.getByText("계산 방법"));
+  await userEvent.click(screen.getByRole("button", { name: "계산 방법 도움말" }));
   const guide = screen.getByRole("table", { name: "계산 방법" });
   expect(
     within(guide)
@@ -176,7 +184,7 @@ it("renders server whole-population summary, exact columns, original project nam
     screen.getByText(/인력은 그 사람의 소속 영업 파트로 모읍니다/),
   ).toBeVisible();
 });
-it("keeps the same guide below trend and updates it from the selected part-month standard", async () => {
+it("keeps the guide in trend view and updates it from the selected part-month standard", async () => {
   vi.mocked(api.getSalesPartSettlement).mockImplementation(async (id) => ({
     ...response(id),
     standard: {
@@ -190,17 +198,19 @@ it("keeps the same guide below trend and updates it from the selected part-month
     renderViews: () => <div data-testid="trend-view" />,
   });
   await screen.findByText("61명");
-  await userEvent.click(screen.getByText("계산 방법"));
+  await userEvent.click(screen.getByRole("button", { name: "계산 방법 도움말" }));
   expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
   expect(screen.getByTestId("settlement-month-panel")).not.toBeVisible();
+  expect(screen.getByTestId("settlement-unit-select")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "닫기" }));
   await userEvent.click(screen.getByRole("tab", { name: "two" }));
-  const formula = await screen.findByText("파트 기준값(1,234,567원)");
-  await userEvent.click(screen.getByText("계산 방법"));
-  expect(formula).toBeVisible();
+  await screen.findByText("61명");
+  await userEvent.click(screen.getByRole("button", { name: "계산 방법 도움말" }));
+  expect(screen.getByText("파트 기준값(1,234,567원)")).toBeVisible();
   expect(screen.getByText("이익 × 이익 배분율(35.0%)")).toBeVisible();
 });
 it.each(["WORK", "CNFM", "CLOSE"])(
-  "keeps actions in header order and only the unit above the month table (%s)",
+  "keeps the unit and actions in the header and hides the work banner (%s)",
   async (status) => {
     vi.mocked(api.getSalesPartSettlement).mockResolvedValue({
       ...response(),
@@ -238,9 +248,13 @@ it.each(["WORK", "CNFM", "CLOSE"])(
           ? ["확정 취소"]
           : []),
     ]);
-    const toolbar = screen.getByTestId("settlement-month-toolbar");
-    expect(toolbar).toHaveTextContent(/^단위 원천원백만원$/);
-    expect(within(toolbar).queryByRole("heading")).not.toBeInTheDocument();
+    expect(within(header).getByRole("combobox", { name: "단위" }))
+      .toBe(screen.getByTestId("settlement-unit-select"));
+    expect(screen.queryByTestId("settlement-month-toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("작업중", { exact: true })).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByTestId("settlement-unit-select"), "원");
+    expect(within(screen.getByTestId("settlement-summary")).getByText("−1,449"))
+      .toBeVisible();
     if (status === "WORK")
       expect(screen.getByTestId("settlement-confirm-open")).toHaveClass(
         "sicost-primary",

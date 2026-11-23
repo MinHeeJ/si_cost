@@ -139,14 +139,11 @@ export function SettlementRestrictedView({
       )}
       {data && (
         <>
-          <p>
-            {data.month} ·{" "}
-            {data.status === "WORK"
-              ? "작업중"
-              : data.status === "AUTO"
-                ? "마감 시 자동 확정"
-                : "확정"}
-          </p>
+          {data.status !== "WORK" && (
+            <p>
+              {data.month} · {data.status === "AUTO" ? "마감 시 자동 확정" : "확정"}
+            </p>
+          )}
           <KpiStrip
             className="settlement-summary"
             data-testid="settlement-summary"
