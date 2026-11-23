@@ -19,10 +19,12 @@ export function ScreenPeriodBar({
   controlled,
   initialMonth,
   showMonthCloseStatus = true,
+  showCumulativeRange = true,
 }: {
   screenId: string;
   initialMonth?: string;
   showMonthCloseStatus?: boolean;
+  showCumulativeRange?: boolean;
   controlled?: {
     month: string;
     currentMonth: string;
@@ -428,7 +430,7 @@ export function ScreenPeriodBar({
                 ))}
               </select>
             </label>
-            <span>1~{Number(value.month.slice(5))}월 누계</span>
+            {showCumulativeRange && <span>1~{Number(value.month.slice(5))}월 누계</span>}
           </>
         ) : (
           <PeriodSelector

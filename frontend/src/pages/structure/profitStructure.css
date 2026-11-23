@@ -14,15 +14,61 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.profit-structure-toolbar > label {
-  margin-left: auto;
+.profit-structure-toolbar .profit-structure-notices {
+  margin-inline-start: auto;
+  border-color: color-mix(in srgb, var(--warn) 24%, var(--divider));
+  background: var(--warn-bg);
+  color: var(--warn);
+  white-space: nowrap;
 }
-.profit-structure-toolbar .sicost-title-action-group > label {
+.profit-structure-toolbar .profit-structure-notices:hover {
+  border-color: var(--warn);
+}
+.profit-structure-notice-groups {
+  margin-block: 8px 2px;
+}
+.profit-structure-notice-group {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 16px;
+  padding-block: 14px;
+}
+.profit-structure-notice-group + .profit-structure-notice-group {
+  border-top: 1px solid var(--divider);
+}
+.profit-structure-notice-group h3 {
+  justify-self: start;
+  margin: 0;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.profit-structure-notice-group ul {
+  margin: 0;
+  padding: 3px 0 3px 18px;
+  color: var(--text-sub);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.profit-structure-notice-group li + li {
+  margin-top: 7px;
+}
+@media (max-width: 480px) {
+  .profit-structure-notice-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.profit-structure-actions > label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.profit-structure-toolbar select {
+.profit-structure-actions select {
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 4px;

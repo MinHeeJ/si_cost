@@ -1,12 +1,12 @@
-import { FinancialOverview } from "../../shared/FinancialOverview";
+import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner } from "../../shared/Feedback";
+import { Dialog } from "../../shared/Dialog";
 import {
   formatAmount,
   formatDateTime,
@@ -65,11 +65,25 @@ function monthRange(months: string[]) {
     ? `${first.slice(0, 4)}년 ${Number(first.slice(5))}~${Number(last.slice(5))}월`
     : `${label(first)}~${label(last)}`;
 }
-const comparisonLabels: Record<api.Aggregation, string> = {
-  MONTH: "전년 동월과 비교",
-  QUARTER: "전년 동분기의 같은 월 범위와 비교",
-  YTD: "전년 동기 누계와 비교",
-};
+const structureGuide = (
+  <dl>
+    <div>
+      <dt>집계와 비교 기준</dt>
+      <dd>
+        <ul>
+          <li>월은 선택한 기준월의 실적을 전년 같은 달과 비교합니다.</li>
+          <li>분기는 해당 분기 시작월부터 기준월까지의 실적을 전년의 같은 월 범위와 비교합니다.</li>
+          <li>연 누계는 1월부터 기준월까지의 실적을 전년의 같은 누계 기간과 비교합니다.</li>
+        </ul>
+        <p>전년 자료가 있는 경우 요약 카드에서 전년 대비 증감을 확인할 수 있습니다.</p>
+      </dd>
+    </div>
+    <div>
+      <dt>금액 기준</dt>
+      <dd>화면에 표시되는 금액은 부가세를 제외한 금액입니다.</dd>
+    </div>
+  </dl>
+);
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 function Change({
@@ -202,6 +216,7 @@ export function ProfitStructureScreen({
     [revision, setRevision] = useState(0),
     [download, setDownload] = useState(false);
   const [mobile, setMobile] = useState(() => window.innerWidth < 768);
+  const [noticesOpen, setNoticesOpen] = useState(false);
   const sequence = useRef(0),
     committed = useRef(false);
   useEffect(() => {
@@ -241,6 +256,7 @@ export function ProfitStructureScreen({
     setLoading(true);
     setError(undefined);
     setData(undefined);
+    setNoticesOpen(false);
     void api
       .getProfitLossStructure(
         period.year,
@@ -266,6 +282,18 @@ export function ProfitStructureScreen({
   }, [period, aggregation, revision]);
   const last = data?.buckets.at(-1),
     quarterly = aggregation === "QUARTER";
+  const warnings = data ? getFinancialWarnings(data.notices) : [];
+  const warningsByMonth = new Map<string, string[]>();
+  for (const warning of warnings) {
+    const monthPrefix = warning.match(/^(\d{4}-(?:0[1-9]|1[0-2]))\s+/);
+    const month = monthPrefix?.[1] ?? "";
+    const message = monthPrefix ? warning.slice(monthPrefix[0].length) : warning;
+    const messages = warningsByMonth.get(month);
+    if (messages) messages.push(message);
+    else warningsByMonth.set(month, [message]);
+  }
+  const warningsLabel = `확인 필요 ${warnings.length}건`;
+  const closeNotices = () => setNoticesOpen(false);
   function go(path: string) {
     if (period)
       navigate(path, {
@@ -302,7 +330,35 @@ export function ProfitStructureScreen({
     }
   }
   return (
-    <SharedScreenFrame screenId="UI-07">
+    <SharedScreenFrame
+      screenId="UI-07"
+      screenGuide={structureGuide}
+      periodBarOptions={{ showMonthCloseStatus: false, showCumulativeRange: false }}
+      headerActions={
+        <div className="sicost-title-action-group profit-structure-actions">
+          <label>
+            단위{" "}
+            <select
+              data-testid="structure-unit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+          <button
+            data-testid="structure-export"
+            type="button"
+            disabled={!data || loading || download || mobile}
+            onClick={() => void exportFile()}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
+      }
+    >
       <div
         className={`profit-structure${dense ? " financial-display-dense" : ""}`}
         data-testid="profit-structure-screen"
@@ -323,29 +379,37 @@ export function ProfitStructureScreen({
               </button>
             ))}
           </SegmentedTabList>
-          <ScreenTitleActions>
-            <label>
-              단위{" "}
-              <select
-                data-testid="structure-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
+          {warnings.length > 0 && (
             <button
-              data-testid="structure-export"
               type="button"
-              disabled={!data || loading || download || mobile}
-              onClick={() => void exportFile()}
+              className="profit-structure-notices"
+              aria-haspopup="dialog"
+              onClick={() => setNoticesOpen(true)}
             >
-              엑셀 다운로드
+              {warningsLabel}
             </button>
-          </ScreenTitleActions>
+          )}
         </div>
+        <Dialog
+          open={noticesOpen && warnings.length > 0}
+          title={warningsLabel}
+          onConfirm={closeNotices}
+          onCancel={closeNotices}
+          confirmLabel="닫기"
+          hideCancel
+          wide
+        >
+          <div className="profit-structure-notice-groups">
+            {[...warningsByMonth].map(([month, messages]) => (
+              <section className="profit-structure-notice-group" key={month}>
+                <h3>{month || "기타 확인 사항"}</h3>
+                <ul>
+                  {messages.map((message) => <li key={message}>{message}</li>)}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </Dialog>
         {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
           <ErrorBanner
@@ -369,11 +433,11 @@ export function ProfitStructureScreen({
               provisional={
                 last?.provisional ?? data.months.some((m) => m.provisional)
               }
-              notices={data.notices}
-              caption={
-                last
-                  ? `${monthRange(last.months)} · ${tabs.find(([mode]) => mode === data.context.aggregation)?.[1]} 실적 · ${comparisonLabels[data.context.aggregation]} · 부가세 제외`
-                  : `${data.context.year}년 · 조회 기간의 손익 자료가 없습니다 · 부가세 제외`
+              caption={null}
+              periodDetail={
+                last && data.context.aggregation !== "MONTH" && last.months.length > 0 && (
+                  <span>집계 기간 <b>{monthRange(last.months)}</b></span>
+                )
               }
             />
             {!data.months.some(

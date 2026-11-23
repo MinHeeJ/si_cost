@@ -12,8 +12,8 @@ vi.mock("./profitStructureApi", async (original) => ({
   downloadProfitLossStructure: vi.fn(),
 }));
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({ children, headerActions }: { children: ReactNode; headerActions?: ReactNode }) => (
+    <section>{headerActions}{children}</section>
   ),
 }));
 function response(): api.StructureData {
@@ -529,12 +529,12 @@ it.each([
 });
 
 it.each([
-  ["MONTH", "월", ["2026-08"], "2026년 8월 · 월 실적 · 전년 동월과 비교"],
+  ["MONTH", "월", ["2026-08"], null],
   [
     "QUARTER",
     "분기",
     ["2026-07", "2026-08"],
-    "2026년 7~8월 · 분기 실적 · 전년 동분기의 같은 월 범위와 비교",
+    "2026년 7~8월",
   ],
   [
     "YTD",
@@ -543,7 +543,7 @@ it.each([
       { length: 8 },
       (_, i) => `2026-${String(i + 1).padStart(2, "0")}`,
     ),
-    "2026년 1~8월 · 연 누계 실적 · 전년 동기 누계와 비교",
+    "2026년 1~8월",
   ],
 ] as const)(
   "describes the server's actual %s bucket period",
@@ -575,7 +575,13 @@ it.each([
     await draw("2026-08");
     if (mode !== "MONTH")
       await userEvent.click(screen.getByRole("tab", { name: tab }));
-    expect(await screen.findByText(`${expected} · 부가세 제외`)).toBeVisible();
+    await screen.findByTestId("structure-card-sales-amt");
+    const periodStatus = screen.getByRole("group", { name: "조회 기간 상태" });
+    if (expected) {
+      expect(within(periodStatus).getByText(expected)).toBeVisible();
+    } else {
+      expect(within(periodStatus).queryByText(/집계 기간/)).not.toBeInTheDocument();
+    }
     expect(api.getProfitLossStructure).toHaveBeenLastCalledWith(
       2026,
       "2026-08",
@@ -584,3 +590,27 @@ it.each([
     );
   },
 );
+
+it("opens the toolbar warning count as a modal with the current actionable notices", async () => {
+  const warning = "선투입 원가: 프로젝트 진행 상태를 확인해 주세요.";
+  const second = "유상 투입 없는 턴키 배분액: 월 투입과 배분표를 확인해 주세요.";
+  vi.mocked(api.getProfitLossStructure).mockResolvedValue({
+    ...response(),
+    notices: [
+      "잠정: 미마감 월은 작업중입니다.",
+      ...[warning, second, warning].map((message) => `2026-07 ${message}`),
+    ],
+  });
+  await draw();
+  const button = screen.getByRole("button", { name: "확인 필요 2건" });
+  expect(button.parentElement).toContainElement(screen.getByRole("tablist"));
+  expect(screen.queryByText(/선투입 원가:/)).not.toBeInTheDocument();
+  await userEvent.click(button);
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 2건" });
+  const month = within(dialog).getByRole("heading", { name: "2026-07" });
+  expect(within(month.parentElement!).getAllByRole("listitem").map((item) => item.textContent))
+    .toEqual([warning, second]);
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog", { name: "확인 필요 2건" })).not.toBeInTheDocument();
+  expect(button).toHaveFocus();
+});

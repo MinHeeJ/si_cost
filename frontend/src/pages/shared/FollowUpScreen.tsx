@@ -3,7 +3,7 @@ import { helpContent } from "../../shared/helpContent";
 import { useState } from "react";
 import { PeriodStatusTarget } from "../../shared/PeriodStatus";
 import { useScreenMotion } from "../../shared/useScreenMotion";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { ScreenGuide } from "../../shared/ScreenGuide";
 import { ScreenTitleActionTarget } from "../../shared/ScreenTitleActions";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ export function SharedScreenFrame({
   screenId,
   children,
   periodBar,
+  periodBarOptions,
   initialMonth,
   headerActions,
   screenGuide,
@@ -22,6 +23,7 @@ export function SharedScreenFrame({
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
+  periodBarOptions?: Pick<ComponentProps<typeof ScreenPeriodBar>, "showMonthCloseStatus" | "showCumulativeRange">;
   initialMonth?: string;
   headerActions?: ReactNode;
   screenGuide?: ReactNode;
@@ -123,6 +125,7 @@ export function SharedScreenFrame({
         >
           <div className="sicost-period-row">{periodBar === undefined ? (
             <ScreenPeriodBar
+              {...periodBarOptions}
               screenId={screenId}
               initialMonth={
                 analysisEntry?.month ?? initialMonth ?? dashboardMonth
