@@ -19,6 +19,7 @@
 .sicost-menu-label,.sicost-quick { animation:sicost-fade 300ms 100ms var(--ease) both; }
 @media (min-width:768px) {
  .sicost-app:has(.sicost-sidebar.folded) .sicost-header { padding-left:0; gap:8px; border-bottom:0; background:linear-gradient(90deg,#0F1E4A 84px,var(--surface) 84px); position:relative; }
+ .sicost-app:has(.sicost-sidebar.folded) .sicost-header > .sicost-brand-link { margin-inline:12px; }
  .sicost-app:has(.sicost-sidebar.folded) .sicost-header::after { content:""; position:absolute; bottom:0; left:84px; right:0; height:1px; background:var(--divider); }
  .sicost-app:has(.sicost-sidebar.folded) .sicost-header > .sicost-icon-button { width:84px; height:64px; flex:0 0 84px; margin:0; padding:0; border:0; border-radius:0; color:#C9D3EA; background:transparent; box-shadow:none; }
  .sicost-app:has(.sicost-sidebar.folded) .sicost-header > .sicost-icon-button:hover { color:white; background:rgba(255,255,255,.08); }
