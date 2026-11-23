@@ -500,7 +500,7 @@ input[type="radio"] {
     center/contain no-repeat;
 }
 .sicost-title-action-group
-  button:is([data-testid*="template"], [data-testid*="export"])::before {
+  button:is([data-testid*="template"], [data-testid*="export"], .sicost-download-button)::before {
   content: "";
   display: inline-block;
   flex: none;

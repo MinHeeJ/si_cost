@@ -77,7 +77,10 @@ it("uses full applied filters and displayed settings, disables duplicates and re
   );
   await act(async () => complete(file));
   expect(api.saveProjectAnalysisDownload).toHaveBeenCalledWith(file);
-  expect(screen.getByRole("status")).toHaveTextContent("전체 결과");
+  const toast = screen.getByRole("status");
+  expect(toast).toHaveTextContent("전체 결과 엑셀을 내려받았습니다.");
+  expect(toast).toHaveClass("sicost-toast");
+  expect(screen.getByTestId("project-download-projectcost")).not.toContainElement(toast);
   expect(preferences.putPreference).not.toHaveBeenCalled();
 });
 it("failure preserves filters and retries without saving error bytes", async () => {
