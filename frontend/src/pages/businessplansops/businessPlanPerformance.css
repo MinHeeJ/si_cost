@@ -192,6 +192,45 @@
   line-height: 1.6;
 }
 @media (max-width: 767px) {
+  .sicost-period-status:has(> .business-plan-period-detail) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 10px;
+    padding: 12px 14px;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > span {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
+  .sicost-period-status > .business-plan-period-detail {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding-block-end: 10px;
+    border-block-end: 1px solid var(--divider);
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-close {
+    grid-row: 2;
+    grid-column: 1;
+    color: var(--text-sub);
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-estimated {
+    grid-row: 2;
+    grid-column: 2;
+    justify-self: start;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-period-state {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text-sub);
+    line-height: 20px;
+    word-break: keep-all;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-period-state > .sicost-badge {
+    flex: none;
+  }
   .business-plan-summary {
     grid-template-columns: 1fr;
   }
