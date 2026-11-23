@@ -207,15 +207,94 @@
 .financial-row-draft .sicost-badge {
   margin: 0;
 }
-.financial-rows-items .sicost-table :is(td[data-column="remark"], td[data-column="itemName"]) {
+.financial-section .sicost-table {
+  table-layout: fixed;
+  min-width: var(--financial-table-min-width, 0px);
+}
+.financial-rows-items {
+  --financial-table-min-width: 880px;
+}
+.financial-rows-adjustments,
+.financial-rows-loans {
+  --financial-table-min-width: 640px;
+}
+.financial-rows-transfers {
+  --financial-table-min-width: 840px;
+}
+.financial-cards-section {
+  --financial-table-min-width: 610px;
+}
+.financial-tax-payments {
+  --financial-table-min-width: 510px;
+}
+.financial-section th[data-column="delete"] {
+  width: 68px;
+}
+.financial-rows-items th[data-column="finClass"],
+.financial-rows-loans th[data-column="direction"] {
+  width: 108px;
+}
+.financial-rows-items th[data-column="repeat"] {
+  width: 80px;
+}
+.financial-rows-items th:is([data-column="amount"], [data-column="vatAmount"]) {
+  width: 126px;
+}
+.financial-section th:is([data-column="ioDate"], [data-column="targetMonth"]),
+.financial-section:not(#financial-tax-section) th[data-column="date"],
+.financial-rows-adjustments th[data-column="itemCode"] {
+  width: 148px;
+}
+.financial-section:not(.financial-rows-items, .financial-cards-section) th[data-column="amount"] {
+  width: 154px;
+}
+.financial-rows-transfers th[data-column="classCode"] {
+  width: 180px;
+}
+#financial-tax-section th[data-column="status"] {
+  width: 102px;
+}
+.financial-cards-section th[data-column="last4"] {
+  width: 14%;
+}
+.financial-cards-section th[data-column="amount"] {
+  width: 19%;
+}
+.financial-cards-section th[data-column="state"] {
+  width: 14%;
+}
+.financial-cards-section th[data-column="action"] {
+  width: 18%;
+}
+.financial-tax-payments th[data-column="date"] {
+  width: 32%;
+}
+.financial-tax-payments th[data-column="type"] {
+  width: 22%;
+}
+#financial-tax-section .financial-tax-payments th[data-column="amount"] {
+  width: 18%;
+}
+#financial-tax-section .financial-tax-payments th[data-column="status"] {
+  width: 12%;
+}
+.financial-section .sicost-table td {
+  overflow-wrap: anywhere;
   white-space: normal;
 }
-.financial-editor .financial-rows-items .sicost-table td[data-column="itemName"] input {
-  width: 158px;
+.financial-editor .financial-section .sicost-table :is(input:not([type="checkbox"]), select) {
+  width: 100%;
+  min-width: 0;
 }
-.financial-editor .financial-rows-items .sicost-table :is(td[data-column="amount"], td[data-column="vatAmount"]) input {
-  min-width: 96px;
-  width: 112px;
+.financial-editor .financial-section td[data-column="last4"] input {
+  max-width: 84px;
+  text-align: center;
+}
+.financial-section td[data-column="name"] input {
+  max-width: 250px;
+}
+.financial-editor .financial-tax-payments .sicost-table input[type="date"] {
+  max-width: 144px;
 }
 .financial-tax-overview {
   display: grid;
@@ -242,6 +321,7 @@
   gap: 8px;
 }
 .financial-tax-payment-date {
+  justify-content: center;
   flex-wrap: wrap;
   font-family: inherit;
   font-size: inherit;
@@ -321,13 +401,6 @@
   color: var(--text);
   max-width: 100%;
 }
-.financial-editor .sicost-table input:not([type="checkbox"]) {
-  min-width: 110px;
-  width: 130px;
-}
-.financial-editor .sicost-table input[type="date"] {
-  width: 140px;
-}
 .financial-editor input[inputmode="numeric"],
 .financial-editor input[inputmode="text"] {
   text-align: right;
@@ -390,14 +463,19 @@
   .financial-section .financial-tax-payments .sicost-table :is(th, td) {
     padding-inline: 6px;
   }
-  .financial-editor .financial-tax-payments .sicost-table input[type="date"] {
-    width: 124px;
+  .financial-tax-payments th[data-column="type"] {
+    width: auto;
   }
-  .financial-editor .financial-tax-payments .sicost-table td[data-column="amount"] input {
-    width: 96px;
-    min-width: 90px;
+  #financial-tax-section .financial-tax-payments th[data-column="amount"] {
+    width: 100px;
   }
-  .financial-tax-payments .sicost-table td[data-column="confirm"] button {
+  #financial-tax-section .financial-tax-payments th[data-column="status"] {
+    width: 74px;
+  }
+  .financial-tax-payments th[data-column="confirm"] {
+    width: 88px;
+  }
+  .financial-tax-payments td[data-column="confirm"] button {
     padding-inline: 8px;
   }
 }

@@ -198,6 +198,7 @@ export function FinancialTaxPanel({
             {
               id: "date",
               label: "납부기한",
+              align: "center",
               render: (row) =>
                 row.payYn === "Y" ? (
                   <div className="financial-tax-payment-date">
@@ -225,6 +226,7 @@ export function FinancialTaxPanel({
             {
               id: "type",
               label: "구분",
+              align: "center",
               render: (row) =>
                 `${row.year}년 ${row.payType === "MID" ? "중간예납" : "확정 신고"}`,
             },
@@ -328,10 +330,16 @@ export function FinancialTaxPanel({
               rows={allocation.months}
               rowKey={(row) => row.month}
               columns={[
-                { id: "month", label: "월", render: (row) => row.month },
+                {
+                  id: "month",
+                  label: "월",
+                  align: "center",
+                  render: (row) => row.month,
+                },
                 {
                   id: "status",
                   label: "상태",
+                  align: "center",
                   render: (row) => (
                     <StatusBadge
                       tone={row.closeStatus === "CLOSE" ? "lock" : "info"}
@@ -349,6 +357,7 @@ export function FinancialTaxPanel({
                 {
                   id: "verified",
                   label: "확인상태",
+                  align: "center",
                   render: (row) =>
                     `${row.verified ? "확인" : "미확인"}${row.fixed === "Y" ? " · 고정" : ""}${row.migrated === "Y" ? " · 이관" : ""}`,
                 },

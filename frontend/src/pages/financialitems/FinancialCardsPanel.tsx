@@ -194,7 +194,7 @@ export function FinancialCardsPanel({
   };
   return (
     <section
-      className="financial-section"
+      className="financial-section financial-cards-section"
       aria-labelledby="financial-cards-heading"
       data-testid="financial-cards-panel"
     >
@@ -225,6 +225,7 @@ export function FinancialCardsPanel({
           {
             id: "name",
             label: "카드 이름 *",
+            align: "center" as const,
             render: (row: DraftRow) => (
               <>
                 {row.values.cardName}

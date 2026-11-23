@@ -293,6 +293,7 @@ export function DataTable<T>({
                 <th
                   scope="col"
                   key={column.id}
+                  data-column={column.id}
                   className={
                     stickyColumns?.some((c) => c.id === column.id)
                       ? "sicost-sticky-cell"
