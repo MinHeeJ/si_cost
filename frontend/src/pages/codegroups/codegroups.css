@@ -136,12 +136,6 @@
 .codegroups-editor .sicost-table tr:has(.codegroups-inactive) input {
   color: var(--text-dis);
 }
-.codegroups-help {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--text-sub);
-  margin-top: 4px;
-}
 .codegroups-footer {
   position: sticky;
   bottom: 0;

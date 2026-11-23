@@ -43,8 +43,3 @@
   flex-direction: column;
   gap: 12px;
 }
-.sicost-mapping-hint {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--text-sub);
-}
