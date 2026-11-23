@@ -248,55 +248,55 @@
 .financial-tax-payments {
   --financial-table-min-width: 510px;
 }
-.financial-section th[data-column="delete"] {
+.financial-section th[data-header-column="delete"] {
   width: 68px;
 }
-.financial-rows-items th[data-column="finClass"],
-.financial-rows-loans th[data-column="direction"] {
+.financial-rows-items th[data-header-column="finClass"],
+.financial-rows-loans th[data-header-column="direction"] {
   width: 108px;
 }
-.financial-rows-items th[data-column="repeat"] {
+.financial-rows-items th[data-header-column="repeat"] {
   width: 80px;
 }
-.financial-rows-items th:is([data-column="amount"], [data-column="vatAmount"]) {
+.financial-rows-items th:is([data-header-column="amount"], [data-header-column="vatAmount"]) {
   width: 126px;
 }
-.financial-section th:is([data-column="ioDate"], [data-column="targetMonth"]),
-.financial-section:not(#financial-tax-section) th[data-column="date"],
-.financial-rows-adjustments th[data-column="itemCode"] {
+.financial-section th:is([data-header-column="ioDate"], [data-header-column="targetMonth"]),
+.financial-section:not(#financial-tax-section) th[data-header-column="date"],
+.financial-rows-adjustments th[data-header-column="itemCode"] {
   width: 148px;
 }
-.financial-section:not(.financial-rows-items, .financial-cards-section) th[data-column="amount"] {
+.financial-section:not(.financial-rows-items, .financial-cards-section) th[data-header-column="amount"] {
   width: 154px;
 }
-.financial-rows-transfers th[data-column="classCode"] {
+.financial-rows-transfers th[data-header-column="classCode"] {
   width: 180px;
 }
-#financial-tax-section th[data-column="status"] {
+#financial-tax-section th[data-header-column="status"] {
   width: 102px;
 }
-.financial-cards-section th[data-column="last4"] {
+.financial-cards-section th[data-header-column="last4"] {
   width: 14%;
 }
-.financial-cards-section th[data-column="amount"] {
+.financial-cards-section th[data-header-column="amount"] {
   width: 19%;
 }
-.financial-cards-section th[data-column="state"] {
+.financial-cards-section th[data-header-column="state"] {
   width: 14%;
 }
-.financial-cards-section th[data-column="action"] {
+.financial-cards-section th[data-header-column="action"] {
   width: 18%;
 }
-.financial-tax-payments th[data-column="date"] {
+.financial-tax-payments th[data-header-column="date"] {
   width: 32%;
 }
-.financial-tax-payments th[data-column="type"] {
+.financial-tax-payments th[data-header-column="type"] {
   width: 22%;
 }
-#financial-tax-section .financial-tax-payments th[data-column="amount"] {
+#financial-tax-section .financial-tax-payments th[data-header-column="amount"] {
   width: 18%;
 }
-#financial-tax-section .financial-tax-payments th[data-column="status"] {
+#financial-tax-section .financial-tax-payments th[data-header-column="status"] {
   width: 12%;
 }
 .financial-section .sicost-table td {
@@ -484,16 +484,16 @@
   .financial-section .financial-tax-payments .sicost-table :is(th, td) {
     padding-inline: 6px;
   }
-  .financial-tax-payments th[data-column="type"] {
+  .financial-tax-payments th[data-header-column="type"] {
     width: auto;
   }
-  #financial-tax-section .financial-tax-payments th[data-column="amount"] {
+  #financial-tax-section .financial-tax-payments th[data-header-column="amount"] {
     width: 100px;
   }
-  #financial-tax-section .financial-tax-payments th[data-column="status"] {
+  #financial-tax-section .financial-tax-payments th[data-header-column="status"] {
     width: 74px;
   }
-  .financial-tax-payments th[data-column="confirm"] {
+  .financial-tax-payments th[data-header-column="confirm"] {
     width: 88px;
   }
   .financial-tax-payments td[data-column="confirm"] button {

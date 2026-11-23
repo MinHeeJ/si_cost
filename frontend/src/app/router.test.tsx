@@ -1143,7 +1143,9 @@ describe("공식 진입점 합성", () => {
     });
     open("/UI-10");
     await screen.findByTestId("financial-items-panel");
-    expect(screen.getByLabelText("선택월")).toHaveValue(context.currentMonth);
+    expect(
+      screen.getByTestId(`financial-month-${context.currentMonth}`),
+    ).toHaveAttribute("aria-pressed", "true");
     expect(financial.getFinancialItems).toHaveBeenCalledWith(
       undefined,
       expect.any(AbortSignal),
