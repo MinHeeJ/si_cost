@@ -560,11 +560,6 @@ export function RateRenegotiationsScreen({
           onRetry={() => setOptionsRevision((r) => r + 1)}
         />
       )}
-      {loading && (
-        <p role="status">
-          {data ? "재계산 중… 직전 결과입니다." : "불러오는 중…"}
-        </p>
-      )}
       {(data?.issues ?? []).map((i, index) => (
         <div
           data-testid={`renegotiation-banner-${index}`}
@@ -649,62 +644,70 @@ export function RateRenegotiationsScreen({
       {columnsPreference?.error && (
         <ErrorBanner message={columnsPreference.error.message} />
       )}
-      <DataTable
-        rows={data?.items ?? []}
-        columns={columns}
-        rowKey={(r) => r.assignmentId}
-        onRowAction={(r) => openPerson(r.developerId)}
-        testId="renegotiation-table"
-        dense={dense}
-        empty="조건에 맞는 재협상 대상이 없습니다"
-        loading={loading && !data}
-        page={data?.pagination.page ?? 1}
-        size={data?.pagination.size ?? 50}
-        total={data?.pagination.total ?? 0}
-        onPageChange={(page) =>
-          submit({ ...applied, page }, applied.increaseRate)
-        }
-        onSizeChange={(size) => {
-          void (shared.savePageSize?.(size) ?? Promise.resolve())
-            .then(() =>
-              submit({ ...applied, page: 1, size }, applied.increaseRate),
+      <div className="renegotiation-results" aria-busy={loading}>
+        {loading && data && (
+          <div className="renegotiation-results-progress" aria-hidden="true" />
+        )}
+        <DataTable
+          rows={data?.items ?? []}
+          columns={columns}
+          rowKey={(r) => r.assignmentId}
+          onRowAction={(r) => openPerson(r.developerId)}
+          testId="renegotiation-table"
+          dense={dense}
+          empty="조건에 맞는 재협상 대상이 없습니다"
+          loading={loading && !data}
+          page={data?.pagination.page ?? 1}
+          size={data?.pagination.size ?? 50}
+          total={data?.pagination.total ?? 0}
+          onPageChange={(page) =>
+            submit({ ...applied, page }, applied.increaseRate)
+          }
+          onSizeChange={(size) => {
+            void (shared.savePageSize?.(size) ?? Promise.resolve())
+              .then(() =>
+                submit({ ...applied, page: 1, size }, applied.increaseRate),
+              )
+              .catch(setError);
+          }}
+          sort={{ id: applied.sort, direction: applied.direction }}
+          onSortChange={(sort) =>
+            submit(
+              {
+                ...applied,
+                sort,
+                page: 1,
+                direction:
+                  applied.sort === sort && applied.direction === "ASC"
+                    ? "DESC"
+                    : "ASC",
+              },
+              applied.increaseRate,
             )
-            .catch(setError);
-        }}
-        sort={{ id: applied.sort, direction: applied.direction }}
-        onSortChange={(sort) =>
-          submit(
-            {
-              ...applied,
-              sort,
-              page: 1,
-              direction:
-                applied.sort === sort && applied.direction === "ASC"
-                  ? "DESC"
-                  : "ASC",
-            },
-            applied.increaseRate,
-          )
-        }
-        emptyAction={
-          <button
-            data-testid="renegotiation-empty-reset"
-            type="button"
-            onClick={reset}
-          >
-            조건 초기화
-          </button>
-        }
-        footer={{
-          label: "전체 합계",
-          render: (column) =>
-            column.id === "annualGain"
-              ? amount(data?.summary.annualGain)
-              : column.id === "name"
-                ? "전체 합계"
-                : null,
-        }}
-      />
+          }
+          emptyAction={
+            <button
+              data-testid="renegotiation-empty-reset"
+              type="button"
+              onClick={reset}
+            >
+              조건 초기화
+            </button>
+          }
+          footer={{
+            label: "전체 합계",
+            render: (column) =>
+              column.id === "annualGain"
+                ? amount(data?.summary.annualGain)
+                : column.id === "name"
+                  ? "전체 합계"
+                  : null,
+          }}
+        />
+      </div>
+      <span className="sicost-sr-only" role="status">
+        {loading && data ? "조회 중입니다." : ""}
+      </span>
       <details
         className="renegotiation-guide"
         data-testid="renegotiation-guide"
