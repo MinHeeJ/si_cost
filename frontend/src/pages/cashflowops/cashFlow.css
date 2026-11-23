@@ -32,7 +32,7 @@
 }
 .cash-statement-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px 12px;
 }
@@ -43,6 +43,9 @@
 .cash-statement-heading span {
   color: var(--text-sub);
   font-size: 12px;
+}
+.cash-statement-heading > label {
+  margin-inline-start: auto;
 }
 .cash-chart text {
   fill: currentColor;
@@ -86,10 +89,21 @@
 .cash-flow .operating-table-scroll th[scope="row"] > .sicost-help-anchor {
   margin-inline-start: 4px;
 }
-.cash-flow th .sicost-badge {
-  display: inline-block;
+.cash-flow .cash-statement-table thead th {
+  padding-block: 9px;
+  vertical-align: top;
+}
+.cash-flow .cash-statement-table thead th:not(:first-child) {
+  text-align: center;
+}
+.cash-statement-column-status {
+  position: relative;
+  display: flex;
   width: max-content;
-  margin: 4px 4px 0;
+  margin: 4px auto 0;
+}
+.cash-flow .cash-statement-column-status > .sicost-badge {
+  margin: 0;
 }
 .cash-source-panel {
   display: grid;
@@ -177,8 +191,10 @@
   border-color: color-mix(in srgb, var(--bad) 30%, var(--divider));
 }
 .cash-shortage-warning {
-  display: inline-block;
-  margin-top: 4px;
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(100% + 3px);
+  transform: translateY(-50%);
   color: var(--bad);
 }
 @media (max-width: 767px) {

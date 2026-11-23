@@ -310,26 +310,8 @@ export function CashFlowScreen({
       screenId="UI-21"
       screenGuide={cashFlowGuide}
       headerActions={
-        <div className="sicost-title-action-group operating-actions">
-          <label>
-            단위{" "}
-            <select
-              data-testid="cash-unit"
-              aria-label="단위"
-              value={unit}
-              disabled={pending || loading}
-              onChange={(e) => {
-                const next = e.target.value as AmountUnit;
-                if (onAmountUnitChange) onAmountUnitChange(next);
-                else setLocalUnit(next);
-              }}
-            >
-              {["원", "천원", "백만원"].map((value) => (
-                <option key={value}>{value}</option>
-              ))}
-            </select>
-          </label>
-          {!mobile && (
+        !mobile && (
+          <div className="sicost-title-action-group">
             <button
               type="button"
               data-testid="cash-export"
@@ -338,8 +320,8 @@ export function CashFlowScreen({
             >
               {pending ? "파일 생성 중…" : "엑셀 다운로드"}
             </button>
-          )}
-        </div>
+          </div>
+        )
       }
     >
       {incoming?.fromDashboard &&
@@ -487,9 +469,27 @@ export function CashFlowScreen({
               points={displayed.chartPoints}
               minimum={displayed.minimumCash}
             />
-            <div className="cash-statement-heading">
+            <div className="cash-statement-heading operating-actions">
               <h2>월별 자금수지</h2>
               <span>부가세 포함</span>
+              <label>
+                단위{" "}
+                <select
+                  data-testid="cash-unit"
+                  aria-label="단위"
+                  value={unit}
+                  disabled={pending || loading}
+                  onChange={(event) => {
+                    const next = event.target.value as AmountUnit;
+                    if (onAmountUnitChange) onAmountUnitChange(next);
+                    else setLocalUnit(next);
+                  }}
+                >
+                  {["원", "천원", "백만원"].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
             </div>
             <CashFlowStatementTable
               columns={[
