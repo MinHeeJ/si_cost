@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
@@ -34,6 +35,7 @@ export function OperatingStandardsScreen({
   onDirtyChange,
   onCommitted,
 }: OperatingStandardsScreenProps) {
+  const canUpdate = usePermission("UI-27", "UPD");
   const [rows, setRows] = useState<OperatingStandard[]>([]),
     [context, setContext] = useState<StandardsPeriodContext>();
   const [minimum, setMinimum] = useState(""),
@@ -208,7 +210,7 @@ export function OperatingStandardsScreen({
           data-testid={`operating-standard-actions-${row.key.toLowerCase().replace(/_/g, "-")}`}
           className="operatingstandards-actions"
         >
-          {!api.isCashStandard(row.key) && (
+          {canUpdate && !api.isCashStandard(row.key) && (
             <button
               data-testid={`operating-standard-edit-${row.key.toLowerCase().replace(/_/g, "-")}`}
               disabled={pending || loading || Boolean(error)}
@@ -308,7 +310,7 @@ export function OperatingStandardsScreen({
                       : "기초 잔액"
                   }
                   type={row.key === "CASH_BASE_YM" ? "month" : "text"}
-                  readOnly={cashLocked || pending || loading}
+                  readOnly={!canUpdate || cashLocked || pending || loading}
                   value={
                     row.key === "CASH_BASE_YM"
                       ? `${(cashValues[row.key] ?? "").slice(0, 4)}-${(cashValues[row.key] ?? "").slice(4)}`
@@ -326,17 +328,19 @@ export function OperatingStandardsScreen({
                   }
                 />
               ))}
-              <button
-                disabled={cashLocked || pending || loading || !cashDirty}
-                onClick={() => setCashConfirm(true)}
-              >
-                자금 기준 저장
-              </button>
+              {canUpdate && (
+                <button
+                  disabled={cashLocked || pending || loading || !cashDirty}
+                  onClick={() => setCashConfirm(true)}
+                >
+                  자금 기준 저장
+                </button>
+              )}
             </div>
           </section>
         )}
       </div>
-      {editing && context && (
+      {canUpdate && editing && context && (
         <StandardValueDialog
           rows={editing}
           minimumMonth={minimum}
@@ -358,7 +362,7 @@ export function OperatingStandardsScreen({
         />
       )}
       <Dialog
-        open={cashConfirm}
+        open={canUpdate && cashConfirm}
         title="자금 기준 변경 확인"
         pending={pending}
         confirmLabel="확인 후 저장"

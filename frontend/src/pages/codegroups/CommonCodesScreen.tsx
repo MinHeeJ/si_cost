@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -75,6 +76,9 @@ export function CommonCodesScreen({
   onDensityChange,
   onPageSizeChange,
 }: CommonCodesScreenProps) {
+  const canRegister = usePermission("UI-27", "REG");
+  const canUpdate = usePermission("UI-27", "UPD");
+  const canDelete = usePermission("UI-27", "DEL");
   const [groups, setGroups] = useState<CodeGroup[]>([]),
     [group, setGroup] = useState<CodeGroup>();
   const [tab, setTab] = useState<CommonCodeTab>("codes");
@@ -274,7 +278,7 @@ export function CommonCodesScreen({
     <Text
       label={`${row.code} ${label}`}
       value={row[key] ?? ""}
-      readOnly={readOnly || pending}
+      readOnly={readOnly || pending || !canUpdate}
       error={rowError(row.code, key)}
       inputMode={key === "codeVal" ? "decimal" : undefined}
       className={key === "codeVal" ? "sicost-decimal" : undefined}
@@ -340,7 +344,7 @@ export function CommonCodesScreen({
                   : undefined
               }
               checked={row.useYn === "Y"}
-              disabled={system || pending || drafts[row.code]?.isNew}
+              disabled={!canUpdate || system || pending || drafts[row.code]?.isNew}
               onChange={(event) =>
                 patch(row, "useYn", event.target.checked ? "Y" : "N")
               }
@@ -358,7 +362,7 @@ export function CommonCodesScreen({
         ),
       },
     );
-    if (!system)
+    if (canDelete && !system)
       columns.push({
         id: "delete",
         label: "삭제",
@@ -583,20 +587,22 @@ export function CommonCodesScreen({
               </h1>
             </div>
           )}
-          <button
-            data-testid="common-codes-add-group"
-            aria-label="그룹 추가"
-            disabled={pending}
-            onClick={() =>
-              protectedAction(() => {
-                setForm({});
-                setFields({});
-                setModal("group");
-              })
-            }
-          >
-            <Icon name="plus" size={16} /> 그룹 추가
-          </button>
+          {canRegister && (
+            <button
+              data-testid="common-codes-add-group"
+              aria-label="그룹 추가"
+              disabled={pending}
+              onClick={() =>
+                protectedAction(() => {
+                  setForm({});
+                  setFields({});
+                  setModal("group");
+                })
+              }
+            >
+              <Icon name="plus" size={16} /> 그룹 추가
+            </button>
+          )}
         </header>
         <SegmentedTabList
           as="nav"
@@ -705,7 +711,7 @@ export function CommonCodesScreen({
                         목록 밀도
                       </button>
                     )}
-                    {group && !system && (
+                    {canUpdate && group && !system && (
                       <button
                         data-testid="common-codes-add-code"
                         disabled={pending || loading}
@@ -763,30 +769,32 @@ export function CommonCodesScreen({
                 )}
               </div>
             </div>
-            <footer className="codegroups-footer">
-              <button
-                data-testid="common-codes-cancel"
-                disabled={pending || !dirty}
-                onClick={reset}
-              >
-                취소
-              </button>
-              <button
-                data-testid="common-codes-save"
-                className="sicost-primary"
-                disabled={pending || !dirty || loading}
-                onClick={() => void save()}
-              >
-                {pending ? "저장 중…" : "저장"}
-              </button>
-            </footer>
+            {canUpdate && (
+              <footer className="codegroups-footer">
+                <button
+                  data-testid="common-codes-cancel"
+                  disabled={pending || !dirty}
+                  onClick={reset}
+                >
+                  취소
+                </button>
+                <button
+                  data-testid="common-codes-save"
+                  className="sicost-primary"
+                  disabled={pending || !dirty || loading}
+                  onClick={() => void save()}
+                >
+                  {pending ? "저장 중…" : "저장"}
+                </button>
+              </footer>
+            )}
           </>
         ) : (
           panels?.[tab]
         )}
       </div>
       <Dialog
-        open={modal === "group"}
+        open={canRegister && modal === "group"}
         title="코드 그룹 추가"
         pending={pending}
         confirmLabel="추가"
@@ -798,7 +806,7 @@ export function CommonCodesScreen({
         {field("name", "그룹 이름", true)}
       </Dialog>
       <Dialog
-        open={modal === "code"}
+        open={canUpdate && modal === "code"}
         title={valueMode ? "수당코드 추가" : `코드 추가 · ${group?.name ?? ""}`}
         confirmLabel="추가"
         onCancel={() => setModal(null)}
@@ -857,7 +865,7 @@ export function CommonCodesScreen({
         <p>이동하면 저장하지 않은 내용을 버립니다.</p>
       </Dialog>
       <Dialog
-        open={Boolean(deleting)}
+        open={canDelete && Boolean(deleting)}
         title="코드 삭제 확인"
         pending={pending}
         confirmLabel="삭제 확인"

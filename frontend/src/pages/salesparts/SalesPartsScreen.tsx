@@ -1,3 +1,4 @@
+import { useFeaturePermission, usePermission } from "../../shared/permission/PermissionBoundary";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
@@ -36,6 +37,10 @@ export function SalesPartsScreen({
   onCommitted,
   onStandardChange,
 }: Props) {
+  const managePartners = useFeaturePermission("managePartners");
+  const registrationPermission = usePermission("UI-15", "REG");
+  const canDownload = usePermission("UI-15", "DNLD");
+  const canRegister = managePartners && registrationPermission;
   const [query, setQuery] = useState<api.SalesPartQuery>({
     ...initial,
     size: pageSize,
@@ -268,13 +273,15 @@ export function SalesPartsScreen({
     >
       <div className="sales-part-toolbar">
         <h2>영업 파트</h2>
-        <button
-          data-testid="sales-part-add-button"
-          className="sicost-primary"
-          onClick={() => setCreating(true)}
-        >
-          파트 추가
-        </button>
+        {canRegister && (
+          <button
+            data-testid="sales-part-add-button"
+            className="sicost-primary"
+            onClick={() => setCreating(true)}
+          >
+            파트 추가
+          </button>
+        )}
       </div>
       <FilterBar
         className="sales-part-filters"
@@ -283,7 +290,7 @@ export function SalesPartsScreen({
         onSubmit={() => apply()}
         onReset={() => apply(true)}
         extra={
-          !mobile && (
+          !mobile && canDownload && (
             <button
               data-testid="sales-part-export-button"
               type="button"
@@ -418,7 +425,7 @@ export function SalesPartsScreen({
           }
         />
       )}
-      {creating && (
+      {canRegister && creating && (
         <SalesPartCreateDialog
           onClose={() => setCreating(false)}
           onSaved={committed}
@@ -480,6 +487,9 @@ function SalesPartDetailDialog({
   onDirtyChange?(dirty: boolean): void;
   onStandardChange?(detail: api.SalesPartDetail): void;
 }) {
+  const managePartners = useFeaturePermission("managePartners");
+  const updatePermission = usePermission("UI-15", "UPD");
+  const canUpdate = managePartners && updatePermission;
   const [tab, setTab] = useState("현재 기준"),
     [name, setName] = useState(detail.part.name),
     [editing, setEditing] = useState(false);
@@ -586,7 +596,7 @@ function SalesPartDetailDialog({
         pending={pending}
         onClose={() => guard(onClose)}
         actions={
-          onStandardChange ? (
+          canUpdate && onStandardChange ? (
             <button
               className="sicost-primary"
               data-testid="sales-part-standard-change"
@@ -614,7 +624,7 @@ function SalesPartDetailDialog({
               onRetry={() => guard(onReload)}
             />
           )}
-          {editing ? (
+          {canUpdate && (editing ? (
             <div className="sales-part-toolbar">
               <Text
                 label="파트명 수정"
@@ -662,7 +672,7 @@ function SalesPartDetailDialog({
                 {detail.part.useYn === "Y" ? "중지" : "재개"}
               </button>
             </div>
-          )}
+          ))}
           <SegmentedTabList as="div" role="tablist" aria-label="파트 상세">
             <>
               {["현재 기준", "기준 이력", "변경 이력"].map((label) => (

@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState, type Key } from "react";
 import { ApiError } from "../../shared/api";
 import { CODE_GROUPS_COMMITTED } from "../codegroups/codeGroupsApi";
@@ -52,6 +53,8 @@ export function CodeMappingsScreen({
   onDenseChange,
   onCommitted,
 }: CodeMappingsScreenProps) {
+  const canRegister = usePermission("UI-27", "REG");
+  const canDelete = usePermission("UI-27", "DEL");
   const [query, setQuery] = useState<MappingQuery>({ page: 1, size: pageSize });
   const [sourceText, setSourceText] = useState(""),
     [groupId, setGroupId] = useState("");
@@ -207,23 +210,27 @@ export function CodeMappingsScreen({
         />
       )}
       <div className="sicost-mapping-toolbar">
-        <button
-          data-testid="code-mappings-add"
-          type="button"
-          className="sicost-primary"
-          disabled={pending || !groups.length || Boolean(groupError)}
-          onClick={() => setDialog("create")}
-        >
-          추가
-        </button>
-        <button
-          data-testid="code-mappings-delete-selected"
-          type="button"
-          disabled={pending || loading || !selected.length}
-          onClick={() => setDialog("delete")}
-        >
-          선택 삭제
-        </button>
+        {canRegister && (
+          <button
+            data-testid="code-mappings-add"
+            type="button"
+            className="sicost-primary"
+            disabled={pending || !groups.length || Boolean(groupError)}
+            onClick={() => setDialog("create")}
+          >
+            추가
+          </button>
+        )}
+        {canDelete && (
+          <button
+            data-testid="code-mappings-delete-selected"
+            type="button"
+            disabled={pending || loading || !selected.length}
+            onClick={() => setDialog("delete")}
+          >
+            선택 삭제
+          </button>
+        )}
         <span />
         {onColumnsChange && (
           <button
@@ -273,10 +280,10 @@ export function CodeMappingsScreen({
           void sizeChange(size);
         }}
         selectedKeys={selected.map((row) => row.mapId)}
-        onSelectionChange={select}
+        onSelectionChange={canDelete ? select : undefined}
         dense={dense}
       />
-      {dialog === "create" && (
+      {canRegister && dialog === "create" && (
         <MappingCreateDialog
           groups={groups}
           pending={pending}
@@ -289,7 +296,7 @@ export function CodeMappingsScreen({
           }
         />
       )}
-      {dialog === "delete" && (
+      {canDelete && dialog === "delete" && (
         <MappingDeleteDialog
           rows={selected}
           pending={pending}

@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -76,6 +77,8 @@ function BillingChecksContent({
   useEffect(() => {
     if (data) onCount?.(data.summary.tabCount);
   }, [data, onCount]);
+  const canRegister = usePermission("UI-13", "REG");
+  const canUpdate = usePermission("UI-13", "UPD");
   const money = (value: string) => formatDistributionAmount(value, amountUnit);
   const columns: Column<BillingCheckRow>[] = [
     {
@@ -159,7 +162,8 @@ function BillingChecksContent({
           data-testid={`billing-check-actions-${r.projectId.toLowerCase()}`}
           className="billing-review-actions"
         >
-          {(r.remedy.mode === "CREATE" || r.remedy.mode === "UPDATE") && (
+          {((r.remedy.mode === "CREATE" && canRegister) ||
+            (r.remedy.mode === "UPDATE" && canUpdate)) && (
             <button
               data-testid={`billing-check-remedy-${r.projectId.toLowerCase()}`}
               type="button"

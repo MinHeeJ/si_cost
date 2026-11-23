@@ -1,3 +1,4 @@
+import { useClientWriteScope } from "./clientPermissions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
@@ -6,7 +7,6 @@ import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
 import {
   useSensitivePermission,
-  useFeaturePermission,
   usePermission,
 } from "../../shared/permission/PermissionBoundary";
 import { ChangeHistoryTable } from "../apiops/ChangeHistoryTable";
@@ -61,13 +61,16 @@ function ClientDrawerContent({
   onBasisChanged,
   onDirtyChange,
 }: Props) {
-  const sensitive = useSensitivePermission(),
-    managePartners = useFeaturePermission("managePartners"),
-    canUpdate = usePermission("UI-15", "UPD");
+  const sensitive = useSensitivePermission();
+  const { managePartners, manageCustomers } = useClientWriteScope();
+  const updatePermission = usePermission("UI-15", "UPD");
   const canReveal = sensitive && managePartners;
   const [client, setClient] = useState<Client>(),
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
+  const canUpdate =
+    updatePermission &&
+    (managePartners || (manageCustomers && client?.type === "CUST"));
   const [tab, setTab] = useState<"basic" | "assignments" | "history">(
       initialTab,
     ),
@@ -152,7 +155,7 @@ function ClientDrawerContent({
     }
   }
   async function changeStatus() {
-    if (!client || busy.current) return;
+    if (!client || !canUpdate || busy.current) return;
     busy.current = true;
     setPending(true);
     setError(undefined);

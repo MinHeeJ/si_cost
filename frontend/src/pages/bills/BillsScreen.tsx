@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
@@ -177,6 +178,8 @@ function BillsContent({
 }) {
   const currentYear = Number(period.currentMonth.slice(0, 4)),
     readonly = year < currentYear;
+  const canRegister = usePermission("UI-13", "REG");
+  const canUpdate = usePermission("UI-13", "UPD");
   const [mobile, setMobile] = useState(
     () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
   );
@@ -366,7 +369,12 @@ function BillsContent({
     }
   }
   async function remedy(value: BillingCheckRemedy) {
-    if (pending || readonly || !value.proposedSupplyAmount) return;
+    if (
+      pending ||
+      readonly ||
+      (value.mode === "CREATE" ? !canRegister : !canUpdate) ||
+      !value.proposedSupplyAmount
+    ) return;
     setPending(true);
     setActionError(undefined);
     try {
@@ -487,7 +495,7 @@ function BillsContent({
       label: "빠른 청구",
       render: (b) => (
         <span title={b.quickActions.reason ?? undefined}>
-          {!readonly && b.quickActions.copyAllowed ? (
+          {canRegister && !readonly && b.quickActions.copyAllowed ? (
             <>
               <button
                 type="button"
@@ -558,15 +566,17 @@ function BillsContent({
             <option>천원</option>
             <option>백만원</option>
           </select>
-          <button
-            type="button"
-            className="sicost-primary"
-            data-testid="bill-create"
-            disabled={readonly || pending}
-            onClick={() => setForm({})}
-          >
-            청구 등록
-          </button>
+          {canRegister && (
+            <button
+              type="button"
+              className="sicost-primary"
+              data-testid="bill-create"
+              disabled={readonly || pending}
+              onClick={() => setForm({})}
+            >
+              청구 등록
+            </button>
+          )}
         </header>
       </ScreenTitleActions>
       {readonly && (
@@ -826,7 +836,7 @@ function BillsContent({
         <BillError error={actionError} />
         {message && <p role="status">{message}</p>}
         <div className="bill-list-actions">
-          {selected.length > 0 || allMatching ? (
+          {canRegister && (selected.length > 0 || allMatching) ? (
             <span
               className="bill-selection-bar"
               data-testid="bill-selection-bar"
@@ -941,7 +951,7 @@ function BillsContent({
             total={data?.total ?? 0}
             dense={dense}
             selectedKeys={selected}
-            onSelectionChange={setSelected}
+            onSelectionChange={canRegister ? setSelected : undefined}
             onPageChange={(page) => {
               setQuery((q) => ({ ...q, page }));
               setSelected([]);
@@ -1076,7 +1086,7 @@ function BillsContent({
           onChanged={refresh}
         />
       )}
-      {form && (
+      {form && (form.bill ? canUpdate : canRegister) && (
         <BillFormDialog
           year={year}
           period={period}

@@ -1,5 +1,7 @@
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
+import { businessCapabilities } from "../../shared/testSupport/businessFixtures";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { CommonCodesScreen } from "./CommonCodesScreen";
 import * as api from "./codeGroupsApi";
@@ -69,6 +71,20 @@ beforeEach(() => {
     items: [row],
   });
 });
+it("삭제 권한이 없으면 조회 및 수정 가능한 업무 코드에도 삭제 버튼을 표시하지 않는다", async () => {
+  render(
+    <PermissionContext.Provider value={{
+      ...businessCapabilities,
+      screens: { ...businessCapabilities.screens, "UI-27": ["INQ", "UPD"] },
+    }}>
+      <CommonCodesScreen />
+    </PermissionContext.Provider>,
+  );
+  expect(await screen.findByLabelText("A 이름")).not.toHaveAttribute("readonly");
+  expect(screen.queryByRole("button", { name: "A 삭제" })).not.toBeInTheDocument();
+  expect(screen.queryByTestId("common-codes-add-group")).not.toBeInTheDocument();
+});
+
 describe("공통코드 편집 계약", () => {
   it("현재 코드 탭을 다시 누르면 폐기 확인 없이 입력을 유지한다", async () => {
     render(<CommonCodesScreen />);

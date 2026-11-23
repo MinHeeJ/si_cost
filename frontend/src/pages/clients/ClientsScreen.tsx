@@ -1,3 +1,4 @@
+import { usePermission, useSensitivePermission } from "../../shared/permission/PermissionBoundary";
 import { FieldHelp } from "../../shared/FieldHelp";
 import {
   useCallback,
@@ -11,6 +12,7 @@ import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { useClientWriteScope } from "./clientPermissions";
 import { ClientForm } from "./ClientForm";
 import { ClientDrawer } from "./ClientDrawer";
 import { Dialog } from "../../shared/Dialog";
@@ -54,6 +56,13 @@ export function ClientsScreen({
   onExport,
   renderParts,
 }: ClientsScreenProps) {
+  const { managePartners, manageCustomers } = useClientWriteScope();
+  const registrationPermission = usePermission("UI-15", "REG");
+  const updatePermission = usePermission("UI-15", "UPD");
+  const uploadPermission = usePermission("UI-15", "UPLD");
+  const canDownload = usePermission("UI-15", "DNLD");
+  const sensitive = useSensitivePermission();
+  const canRegister = registrationPermission && manageCustomers;
   const [mobile, setMobile] = useState(
     () =>
       typeof window.matchMedia === "function" &&
@@ -66,6 +75,9 @@ export function ClientsScreen({
     sort: "name",
     direction: "ASC",
   });
+  const canBulkUpdate =
+    updatePermission &&
+    (managePartners || (manageCustomers && filters.type === "CUST"));
   const [draft, setDraft] = useState({ type: "", useYn: "Y", q: "" });
   const [data, setData] = useState<ClientsPage>(),
     [loading, setLoading] = useState(true),
@@ -327,9 +339,11 @@ export function ClientsScreen({
       ),
     },
   ];
-  const sortableColumns = columns.map((c) =>
-    c.id === "account" ? c : { ...c, sortable: true },
-  );
+  const sortableColumns = columns
+    .filter((column) => sensitive || column.id !== "account")
+    .map((column) =>
+      column.id === "account" ? column : { ...column, sortable: true },
+    );
   const visible = columnView
     ? sortableColumns
         .filter(
@@ -379,7 +393,7 @@ export function ClientsScreen({
             <div className="clients-toolbar">
               <h2 className="sicost-sr-only">거래처</h2>
               <div className="clients-actions">
-                {!mobile && onTemplate && (
+                {!mobile && canDownload && onTemplate && (
                   <button
                     type="button"
                     data-testid="clients-template"
@@ -388,7 +402,7 @@ export function ClientsScreen({
                     양식 내려받기
                   </button>
                 )}
-                {!mobile && onUpload && (
+                {!mobile && uploadPermission && managePartners && onUpload && (
                   <button
                     type="button"
                     data-testid="clients-upload"
@@ -397,14 +411,16 @@ export function ClientsScreen({
                     엑셀 업로드
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="sicost-primary"
-                  data-testid="clients-register"
-                  onClick={() => setCreating(true)}
-                >
-                  등록
-                </button>
+                {canRegister && (
+                  <button
+                    type="button"
+                    className="sicost-primary"
+                    data-testid="clients-register"
+                    onClick={() => setCreating(true)}
+                  >
+                    등록
+                  </button>
+                )}
               </div>
             </div>
           </ScreenTitleActions>
@@ -497,7 +513,7 @@ export function ClientsScreen({
             </p>
           )}
           <div className="clients-toolbar">
-            {!mobile && selection.count > 0 ? (
+            {!mobile && canBulkUpdate && selection.count > 0 ? (
               <ClientStatusToolbar
                 selection={selection}
                 rows={data?.items ?? []}
@@ -533,7 +549,7 @@ export function ClientsScreen({
                   목록 밀도
                 </button>
               )}
-              {!mobile && onExport && (
+              {!mobile && canDownload && onExport && (
                 <button
                   type="button"
                   data-testid="clients-export"
@@ -627,13 +643,13 @@ export function ClientsScreen({
                 </button>
               }
               selectedKeys={[...selection.items.keys()]}
-              onSelectionChange={(keys) => {
+              onSelectionChange={canBulkUpdate ? (keys) => {
                 const after = new Set(keys.map(String));
                 (data?.items ?? []).forEach((row) => {
                   if (after.has(row.id) !== selection.items.has(row.id))
                     selection.toggle(row, after.has(row.id));
                 });
-              }}
+              } : undefined}
               page={filters.page}
               size={filters.size}
               total={data?.total ?? 0}
@@ -657,7 +673,7 @@ export function ClientsScreen({
           </div>
         )}
       </div>
-      {creating && (
+      {canRegister && creating && (
         <ClientForm
           onClose={() => {
             setCreating(false);

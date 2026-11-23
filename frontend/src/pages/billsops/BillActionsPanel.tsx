@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { StatusBadge } from "../../shared/Feedback";
@@ -41,6 +42,10 @@ export function BillActionsPanel({
   const busy = useRef(false);
   const { pending, message, commit } = useCommitRefresh();
   const writable = year >= currentYear;
+  const registerPermission = usePermission("UI-13", "REG");
+  const updatePermission = usePermission("UI-13", "UPD");
+  const canRegister = writable && registerPermission;
+  const canUpdate = writable && updatePermission;
   const dirty = cancelOpen && Boolean(reason);
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -136,7 +141,7 @@ export function BillActionsPanel({
         </p>
       )}
       <div className="bill-actions-toolbar">
-        {writable && bill.quickActions.copyAllowed && (
+        {canRegister && bill.quickActions.copyAllowed && (
           <button
             type="button"
             data-testid="bill-copy-open"
@@ -159,7 +164,7 @@ export function BillActionsPanel({
             고쳐서 청구
           </button>
         )}
-        {writable &&
+        {canRegister &&
           bill.contractType !== "TK" &&
           bill.quickActions.nextMonthAllowed && (
             <button
@@ -178,7 +183,7 @@ export function BillActionsPanel({
               다음 달 청구
             </button>
           )}
-        {writable && !bill.cancelled && (
+        {canUpdate && !bill.cancelled && (
           <button
             type="button"
             data-testid="bill-cancel-open"
@@ -208,7 +213,7 @@ export function BillActionsPanel({
       {bill.dunning === null && !bill.cancelled && (
         <StatusBadge tone="neutral">알림 기준 설정 확인 필요</StatusBadge>
       )}
-      {draft && (
+      {canRegister && draft && (
         <BillCopyDialog
           key={draft.sourceBillId}
           draft={draft}
@@ -219,7 +224,7 @@ export function BillActionsPanel({
         />
       )}
       <Dialog
-        open={cancelOpen}
+        open={canUpdate && cancelOpen}
         title="청구 취소"
         confirmLabel="청구 취소"
         cancelLabel="닫기"

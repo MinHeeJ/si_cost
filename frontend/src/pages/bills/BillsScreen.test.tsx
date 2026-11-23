@@ -1,3 +1,5 @@
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
+import { businessCapabilities } from "../../shared/testSupport/businessFixtures";
 import { stubBusinessFetch } from "../../shared/testSupport/businessFixtures";
 import {
   act,
@@ -199,6 +201,36 @@ async function choose() {
     expect(screen.getByRole("button", { name: "등록" })).not.toBeDisabled(),
   );
 }
+it.each([
+  { actions: ["INQ", "DNLD"], register: false, update: false, download: true },
+  { actions: ["INQ", "REG"], register: true, update: false, download: false },
+  { actions: ["INQ", "UPD"], register: false, update: true, download: false },
+])("청구 업무는 등록·수정·다운로드 권한을 각각 사용한다 ($actions)", async ({
+  actions, register, update, download,
+}) => {
+  const eligible = { ...bill, quickActions: { copyAllowed: true, nextMonthAllowed: true, reason: null } };
+  vi.mocked(api.getBills).mockResolvedValue({ ...page, items: [eligible] });
+  vi.mocked(api.getBill).mockResolvedValue({ ...detail, bill: eligible });
+  render(
+    <PermissionContext.Provider value={{
+      ...businessCapabilities, screens: { ...businessCapabilities.screens, "UI-13": actions },
+    }}>
+      <BillsScreen />
+    </PermissionContext.Provider>,
+  );
+  const open = await screen.findByTestId(`bill-open-${bill.id.toLowerCase()}`);
+  const present = (id: string) => screen.queryByTestId(id) !== null;
+  expect(present("bill-create")).toBe(register);
+  expect(present(`bill-copy-${bill.id.toLowerCase()}`)).toBe(register);
+  expect(present("billing-review-download-bills")).toBe(download);
+  await userEvent.click(open);
+  await screen.findByTestId("bill-info-tab");
+  expect(present("bill-edit")).toBe(update);
+  expect(present("bill-cancel-open")).toBe(update);
+  expect(present("bill-next-month")).toBe(register);
+  expect(present("bill-receipt-create")).toBe(register);
+});
+
 it("연체 도움말은 요약의 이월 설정과 미수 알림의 범위를 안내한다", async () => {
   vi.mocked(api.getSummary).mockImplementation(async (_year, includeCarryover) => ({
     ...summary,

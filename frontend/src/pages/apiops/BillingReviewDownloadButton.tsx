@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -20,6 +21,7 @@ export function BillingReviewDownloadButton({
   const [pending, setPending] = useState(false),
     [error, setError] = useState<string>();
   const active = useRef(false);
+  const canDownload = usePermission("UI-13", "DNLD");
   async function download() {
     if (
       active.current ||
@@ -47,6 +49,7 @@ export function BillingReviewDownloadButton({
       setPending(false);
     }
   }
+  if (!canDownload) return null;
   return (
     <>
       <div className="billing-review-download">

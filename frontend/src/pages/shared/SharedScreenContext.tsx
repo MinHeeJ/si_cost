@@ -3,6 +3,7 @@ import type { AnalysisContext } from "./analysisClient";
 import type { MenuNode } from "./sharedApi";
 export type SharedScreenState = {
   menus: MenuNode[];
+  roleIds?: string[];
   favorites: string[];
   star(screenId: string): void;
   pending: boolean;
