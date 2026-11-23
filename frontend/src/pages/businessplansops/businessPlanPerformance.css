@@ -10,11 +10,6 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.business-plan-toolbar span,
-.business-plan-context {
-  color: var(--text-sub);
-  font-size: 13px;
-}
 .business-plan-toolbar label {
   display: flex;
   align-items: center;
@@ -65,6 +60,27 @@
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+.business-plan-period-detail,
+.business-plan-target-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.business-plan-period-detail {
+  gap: 6px 12px;
+}
+.business-plan-target-status > .sicost-badge {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text-sub) 7%, var(--surface));
+  font-weight: 700;
+}
+.business-plan-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
 .business-plan-chart {
   padding: 20px 24px;
   border: 0;
@@ -75,10 +91,13 @@
 .business-plan-chart h2 {
   margin-bottom: 12px;
 }
-.business-plan-chart svg {
+.business-plan-chart-fallback {
+  display: block;
   width: 100%;
   min-width: 780px;
-  min-height: 340px;
+}
+.business-plan-chart .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
 }
 .business-plan-chart text {
   fill: var(--text-sub);

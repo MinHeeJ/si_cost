@@ -7,7 +7,7 @@ export function getFinancialWarnings(
   { excludeCompleteCoverage = false } = {},
 ) {
   return [...new Set(notices.map((notice) => notice.trim()).filter(Boolean))]
-    .filter((notice) => !/(^잠정[ :：]|미마감 월은|미마감 월이 포함|마감 전이라|^예정 포함)/.test(notice))
+    .filter((notice) => !/(^잠정[ :：]|미마감 월은|미마감 월이 포함|^미마감 실적은 잠정|마감 전이라|^예정 포함)/.test(notice))
     .filter((notice) => {
       if (!excludeCompleteCoverage) return true;
       const coverage = notice.match(/^(?:전년 )?자료\s+(\d+)\/(\d+)개월$/);

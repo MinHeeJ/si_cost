@@ -46,6 +46,7 @@ export function BusinessPlanRevenueChart({
       ) : (
         <div className="business-plan-scroll">
           <ChartHost
+            height={340}
             option={seriesChartOptions({
               categories: months.map((month) => month.month),
               series: [
@@ -66,6 +67,7 @@ export function BusinessPlanRevenueChart({
             })}
           >
             <svg
+              className="business-plan-chart-fallback"
               viewBox="0 0 920 360"
               role="img"
               aria-label="1~12월 매출 실적 막대와 목표 기준선, 백만원"
