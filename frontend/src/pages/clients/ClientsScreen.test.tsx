@@ -6,9 +6,10 @@ import {
   waitFor,
   within,
 } from "../../shared/testSupport/businessFixtures";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ClientsScreen } from "./ClientsScreen";
+import { ClientsScreen, type ClientsWorkspaceTab } from "./ClientsScreen";
 import { clientFixture, pageFixture } from "./clientsFixtures";
 import * as api from "./clientsApi";
 vi.mock("./clientsApi");
@@ -240,7 +241,16 @@ it("선택 열설정을 반영하지만 필수상호는 숨기지 않는다", as
   ).not.toBeInTheDocument();
 });
 it("정렬변경은1페이지·같은 workspace내 파트탭은 목록상태를 보존한다", async () => {
-  render(<ClientsScreen renderParts={<p>파트관리</p>} />);
+  function Workspace() {
+    const [tab, setTab] = useState<ClientsWorkspaceTab>("clients");
+    return (
+      <ClientsScreen
+        renderParts={<p>파트관리</p>}
+        tabSelection={{ value: tab, onChange: setTab }}
+      />
+    );
+  }
+  render(<Workspace />);
   await screen.findByText(clientFixture.name);
   expect(screen.queryByTestId("clients-sort")).not.toBeInTheDocument();
   await userEvent.click(screen.getByTestId("sort-personCount"));
