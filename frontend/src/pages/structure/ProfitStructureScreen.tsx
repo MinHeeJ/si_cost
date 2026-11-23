@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
+import { Icon } from "../../shared/Icon";
 import {
   formatAmount,
   formatDateTime,
@@ -386,6 +387,7 @@ export function ProfitStructureScreen({
               aria-haspopup="dialog"
               onClick={() => setNoticesOpen(true)}
             >
+              <Icon name="warning" size={16} />
               {warningsLabel}
             </button>
           )}

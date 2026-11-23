@@ -15,6 +15,10 @@
   gap: 8px;
 }
 .profit-structure-toolbar .profit-structure-notices {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   margin-inline-start: auto;
   border-color: color-mix(in srgb, var(--warn) 24%, var(--divider));
   background: var(--warn-bg);
@@ -23,6 +27,17 @@
 }
 .profit-structure-toolbar .profit-structure-notices:hover {
   border-color: var(--warn);
+}
+.profit-structure-notices > svg {
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .profit-structure-notices > svg {
+    animation: profit-structure-warning-emphasis 540ms ease-out;
+  }
+}
+@keyframes profit-structure-warning-emphasis {
+  45% { transform: scale(1.18); }
 }
 .profit-structure-notice-groups {
   margin-block: 8px 2px;
