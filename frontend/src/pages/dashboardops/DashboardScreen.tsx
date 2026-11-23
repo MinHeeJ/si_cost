@@ -812,14 +812,6 @@ export function DashboardScreen({
                   }
                 >
                   <DashboardBasis basis={data.salesPartsBasis} hidePeriod />
-                  {data.salesParts.length === 0 &&
-                    ["AVAILABLE", "EMPTY"].includes(
-                      data.salesPartsBasis.status,
-                    ) && (
-                      <p className="dashboard-empty">
-                        영업 파트 자료가 없습니다.
-                      </p>
-                    )}
                   <div className="sicost-table-viewport">
                     <table
                       className="sicost-table dashboard-parts-table"
@@ -838,6 +830,18 @@ export function DashboardScreen({
                         </tr>
                       </thead>
                       <tbody>
+                        {data.salesParts.length === 0 &&
+                          ["AVAILABLE", "EMPTY"].includes(
+                            data.salesPartsBasis.status,
+                          ) && (
+                            <tr>
+                              <td colSpan={4}>
+                                <div className="dashboard-empty">
+                                  영업 파트 자료가 없습니다.
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                         {data.salesParts.map((row) => (
                           <tr
                             key={row.partId ?? "unassigned"}

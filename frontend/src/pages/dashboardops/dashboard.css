@@ -344,7 +344,7 @@
   font-size: 11px;
   font-weight: 400;
 }
-.dashboard-parts-table td:first-child {
+.dashboard-parts-table td:first-child:not([colspan]) {
   font-weight: 600;
 }
 .dashboard-pipeline-count {

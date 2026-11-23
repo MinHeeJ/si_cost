@@ -372,6 +372,21 @@ it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 
   expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent("자세히");
 });
 
+it.each(["AVAILABLE", "EMPTY"] as const)(
+  "영업파트별 현황이 비어 있으면 %s 상태에서 헤더 아래 안내 행을 표시한다",
+  async (status) => {
+    data.salesParts = [];
+    data.salesPartsBasis.status = status;
+    ready();
+
+    const table = await screen.findByRole("table", { name: "영업 파트별 실적" });
+    const [header, empty] = within(table).getAllByRole("row");
+    expect(within(header).getAllByRole("columnheader")).toHaveLength(4);
+    expect(
+      within(empty).getByRole("cell", { name: "영업 파트 자료가 없습니다." }),
+    ).toHaveAttribute("colspan", "4");
+  },
+);
 it("영업파트별 현황에서 선택월을 유지하며 UI-07로 이동한다", async () => {
   data.selectedMonth = "2026-06";
   ready();
