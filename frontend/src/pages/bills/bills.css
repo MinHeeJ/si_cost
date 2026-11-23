@@ -34,6 +34,11 @@
   border-radius: 10px;
   background: var(--surface);
 }
+.bill-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .bill-summary strong {
   font-size: 24px;
   font-variant-numeric: tabular-nums;
@@ -75,11 +80,18 @@
   margin: 12px 0;
   justify-content: space-between;
 }
+.bills-screen [role="tabpanel"] .sicost-table thead th {
+  /* DataTable applies column alignment inline to both headers and body cells. */
+  text-align: center !important;
+}
 .bill-desktop .sicost-table {
   min-width: 1440px;
 }
 .bill-desktop .sicost-table td {
   height: 40px;
+}
+.bill-desktop .sicost-table > tbody > tr > td:first-child:has(> input[type="checkbox"]) {
+  text-align: center;
 }
 .bill-desktop .sicost-table th {
   background: var(--head-bg);

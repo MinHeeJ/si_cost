@@ -512,6 +512,7 @@ function SharedApplicationContent({
     <SharedScreenContext.Provider
       value={{
         menus: menus.items,
+        roleIds: user.roleIds,
         favorites,
         star,
         pending: pending || !prefsReady || Boolean(preferences?.pending),

@@ -1,6 +1,7 @@
 import { DataTable, type Column } from "../../shared/DataTable";
 import type { ReactNode } from "react";
 import { StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { WonInput } from "./WonInput";
 import type { Collection, DraftRow } from "./financialApi";
 
@@ -74,6 +75,24 @@ const fields: Record<Collection, Field[]> = {
     { key: "remark", label: "메모", max: 200 },
   ],
 };
+const draftStatusField: Record<Collection, string> = {
+  items: "itemName",
+  adjustments: "reason",
+  transfers: "itemName",
+  loans: "counterparty",
+};
+
+const sectionHelp: Record<Collection, string> = {
+  items:
+    "판관비와 영업외손익은 손익에 반영됩니다. 판관비와 영업외비용은 자금수지표의 제경비에도 반영됩니다.",
+  adjustments:
+    "전월 조정은 조정을 입력한 달의 이익에 반영됩니다. 현금 흐름에는 반영되지 않습니다.",
+  transfers:
+    "계좌이체 지출은 자금수지표의 제경비에 반영됩니다. 특별비로 등록한 금액은 이체일이 속한 달의 미지급 인건비에 반영됩니다.",
+  loans:
+    "대여금 입출금은 자금수지에만 반영됩니다. 받은 금액은 더하고 갚은 금액은 뺍니다.",
+};
+
 export type FinancialRowsPanelProps = {
   collection: Collection;
   rows: DraftRow[];
@@ -83,6 +102,8 @@ export type FinancialRowsPanelProps = {
   month: string;
   targets: string[];
   codes?: { code: string; name: string }[];
+  notice?: ReactNode;
+  summary?: ReactNode;
   tableRows?: { key: string; cells: Record<string, ReactNode> }[];
   violations?: {
     collection: string;
@@ -103,6 +124,8 @@ export function FinancialRowsPanel({
   month,
   targets,
   codes = [],
+  notice,
+  summary,
   tableRows = [],
   violations = [],
   onChange,
@@ -118,6 +141,12 @@ export function FinancialRowsPanel({
   const columns: Column<DraftRow>[] = fields[collection].map((field) => ({
     id: field.key,
     label: field.label,
+    align:
+      field.kind === "repeat"
+        ? "center"
+        : field.kind === "amount" || field.kind === "signed" || field.kind === "positive"
+          ? "right"
+          : undefined,
     render: (row) => {
       const released =
         collection === "adjustments" &&
@@ -244,6 +273,7 @@ export function FinancialRowsPanel({
     columns.push({
       id: "delete",
       label: "삭제",
+      align: "center",
       render: (row) => (
         <button
           type="button"
@@ -258,16 +288,17 @@ export function FinancialRowsPanel({
     });
   return (
     <section
-      className="financial-section"
+      className={`financial-section financial-rows-${collection}`}
       data-testid={`financial-${collection}-panel`}
       id={`financial-${collection}-section`}
+      aria-labelledby={`financial-${collection}-heading`}
     >
-      <div className="sicost-list-toolbar">
-        <h2>{title}</h2>
-        <span>
-          {month} · {rows.length}건
-          {collection === "items" ? " + 법인세(월할) 계산 1줄" : ""}
-        </span>
+      <header className="sicost-section-heading financial-section-heading">
+        <div>
+          <h2 id={`financial-${collection}-heading`}>{title}</h2>
+          <HelpTooltip label={title} iconOnly>{sectionHelp[collection]}</HelpTooltip>
+          <small>{rows.length}건</small>
+        </div>
         {!readOnly && (
           <button
             type="button"
@@ -288,47 +319,48 @@ export function FinancialRowsPanel({
                   : "대여금 추가"}
           </button>
         )}
-      </div>
+      </header>
+      {notice}
       {collection === "adjustments" && !targets.length && (
-        <p>
+        <p className="financial-section-note financial-adjustment-note">
           최근 12개월 실제 마감월이 없습니다. 기존 해제 대상은 삭제만 할 수
           있습니다.
         </p>
       )}
       <DataTable
         testId={`financial-${collection}-table`}
+        tableLabel={title}
         dense
         rows={[
           ...rows,
           ...tableRows.map((row) => ({ key: row.key, values: {} })),
         ]}
-        columns={[
-          {
-            id: "draft",
-            label: "",
-            render: (row: DraftRow) =>
-              !row.id ||
-              JSON.stringify(
-                originals.find((old) => old.id === row.id)?.values,
-              ) !== JSON.stringify(row.values) ? (
-                <span data-testid={`financial-${collection}-${row.key}-draft`}>
-                  <StatusBadge tone="warn">저장 전</StatusBadge>
-                </span>
-              ) : null,
-          },
-          ...columns,
-        ].map((column) => ({
+        columns={columns.map((column) => ({
           ...column,
           render: (row: DraftRow) => {
             const calculated = tableRows.find((entry) => entry.key === row.key);
-            return calculated
-              ? calculated.cells[column.id]
-              : column.render(row);
+            if (calculated) return calculated.cells[column.id];
+            const content = column.render(row);
+            if (column.id !== draftStatusField[collection]) return content;
+            const original = originals.find((old) => old.id === row.id);
+            const changed =
+              !row.id || JSON.stringify(original?.values) !== JSON.stringify(row.values);
+            return (
+              <>
+                {content}
+                {changed && (
+                  <span className="financial-row-draft" data-testid={`financial-${collection}-${row.key}-draft`}>
+                    <StatusBadge tone="warn">저장 전</StatusBadge>
+                  </span>
+                )}
+              </>
+            );
           },
         }))}
         rowKey={(row) => row.key}
         empty="등록된 항목이 없습니다."
       />
+      {summary && <div className="financial-summary">{summary}</div>}
       {collection === "items" && (
         <datalist id="financial-sga-codes">
           {codes.map((code) => (

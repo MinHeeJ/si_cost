@@ -1,7 +1,8 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -34,6 +35,7 @@ export function OperatingStandardsScreen({
   onDirtyChange,
   onCommitted,
 }: OperatingStandardsScreenProps) {
+  const canUpdate = usePermission("UI-27", "UPD");
   const [rows, setRows] = useState<OperatingStandard[]>([]),
     [context, setContext] = useState<StandardsPeriodContext>();
   const [minimum, setMinimum] = useState(""),
@@ -42,6 +44,7 @@ export function OperatingStandardsScreen({
   const [error, setError] = useState<unknown>(),
     [notice, setNotice] = useState(""),
     [pending, setPending] = useState(false);
+  const [saveToast, setSaveToast] = useState<{ message: string; sequence: number }>();
   const [editing, setEditing] = useState<OperatingStandard[]>(),
     [history, setHistory] = useState<OperatingStandard>();
   const [cashValues, setCashValues] = useState<Record<string, string>>({}),
@@ -130,16 +133,19 @@ export function OperatingStandardsScreen({
       setRows(result.items);
       setCashConfirm(false);
       onDirtyChange?.(false);
-      setNotice(
-        result.message ??
-          (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다."),
-      );
+      const message = result.message ??
+        (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다.");
       try {
         if (result.changed) {
           api.notifyOperatingStandardsCommitted(cash);
           await onCommitted?.(cash);
         }
         await load();
+        if (result.changed) {
+          setSaveToast((previous) => ({ message, sequence: (previous?.sequence ?? 0) + 1 }));
+        } else {
+          setNotice(message);
+        }
       } catch {
         setError(undefined);
         setNotice("저장됐지만 다시 불러오지 못했습니다.");
@@ -208,7 +214,7 @@ export function OperatingStandardsScreen({
           data-testid={`operating-standard-actions-${row.key.toLowerCase().replace(/_/g, "-")}`}
           className="operatingstandards-actions"
         >
-          {!api.isCashStandard(row.key) && (
+          {canUpdate && !api.isCashStandard(row.key) && (
             <button
               data-testid={`operating-standard-edit-${row.key.toLowerCase().replace(/_/g, "-")}`}
               disabled={pending || loading || Boolean(error)}
@@ -280,6 +286,7 @@ export function OperatingStandardsScreen({
             )}
           </p>
         )}
+        {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {(!error || rows.length > 0) && (
           <DataTable
             rows={rows}
@@ -308,7 +315,7 @@ export function OperatingStandardsScreen({
                       : "기초 잔액"
                   }
                   type={row.key === "CASH_BASE_YM" ? "month" : "text"}
-                  readOnly={cashLocked || pending || loading}
+                  readOnly={!canUpdate || cashLocked || pending || loading}
                   value={
                     row.key === "CASH_BASE_YM"
                       ? `${(cashValues[row.key] ?? "").slice(0, 4)}-${(cashValues[row.key] ?? "").slice(4)}`
@@ -326,17 +333,19 @@ export function OperatingStandardsScreen({
                   }
                 />
               ))}
-              <button
-                disabled={cashLocked || pending || loading || !cashDirty}
-                onClick={() => setCashConfirm(true)}
-              >
-                자금 기준 저장
-              </button>
+              {canUpdate && (
+                <button
+                  disabled={cashLocked || pending || loading || !cashDirty}
+                  onClick={() => setCashConfirm(true)}
+                >
+                  자금 기준 저장
+                </button>
+              )}
             </div>
           </section>
         )}
       </div>
-      {editing && context && (
+      {canUpdate && editing && context && (
         <StandardValueDialog
           rows={editing}
           minimumMonth={minimum}
@@ -358,7 +367,7 @@ export function OperatingStandardsScreen({
         />
       )}
       <Dialog
-        open={cashConfirm}
+        open={canUpdate && cashConfirm}
         title="자금 기준 변경 확인"
         pending={pending}
         confirmLabel="확인 후 저장"

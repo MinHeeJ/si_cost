@@ -527,9 +527,9 @@ test("BASIC-156 실제 확인할 일·프로젝트·자금 행의 업무 이동 
       expect(state.filter).toBe(filters[action.actionCode]);
     if (action.actionCode === "CORPORATE_TAX_DUE") {
       await expect(page.getByTestId("financial-tax-panel")).toBeVisible();
-      await expect(page.getByTestId("financial-period-input")).toHaveValue(
-        action.basis.basisMonth,
-      );
+      await expect(
+        page.getByTestId(`financial-month-${action.basis.basisMonth}`),
+      ).toHaveAttribute("aria-pressed", "true");
     }
   }
   data = await dashboard(page);

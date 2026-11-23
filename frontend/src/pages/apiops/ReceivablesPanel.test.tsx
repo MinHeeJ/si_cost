@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -96,7 +96,7 @@ function draw(year = 2026) {
   );
   return { detail, count };
 }
-it("초기 연체도 숨기지 않고 실제 서버 기준일·정밀 금액·3카드를 표시한다", async () => {
+it("초기 연체도 숨기지 않고 정밀 금액·3카드를 표시하고 안내 줄을 생략한다", async () => {
   const { detail, count } = draw();
   await userEvent.click(
     await screen.findByRole("button", { name: "selected-bill" }),
@@ -105,7 +105,10 @@ it("초기 연체도 숨기지 않고 실제 서버 기준일·정밀 금액·3�
   expect(count).toHaveBeenCalledWith(1);
   expect(screen.getByText("알림 전")).toHaveClass("sicost-tone-neutral");
   expect(screen.getByText("999,999,999,999.999")).toBeInTheDocument();
-  expect(screen.getByText(/기준일 2026-01-01/)).toBeInTheDocument();
+  expect(
+    screen.queryByText(/기준일 2026-01-01|이월 포함 전체 연체|단위 천원/),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("입금 예정일이 지난 청구 1건")).toBeInTheDocument();
   expect(screen.getByTestId("receivable-step-card-1")).toHaveTextContent(
     "7.5일",
   );

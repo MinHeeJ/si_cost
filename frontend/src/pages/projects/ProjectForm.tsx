@@ -395,12 +395,6 @@ export function ProjectForm({
             disabled={!canSave || pending || Boolean(committed)}
           >
             <legend>기본 정보</legend>
-            {!canSave && (
-              <p role="note">
-                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
-                수정).
-              </p>
-            )}
             <div className="project-wide">
               {input("name", "프로젝트명", { required: true, maxLength: 100 })}
             </div>

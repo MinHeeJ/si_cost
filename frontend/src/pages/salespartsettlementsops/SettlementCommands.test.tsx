@@ -412,4 +412,72 @@ it("trend renders five rows, null dashes, all-month totals and errors with GET r
   expect(within(panel).getByRole("columnheader", { name: "02월" })).toHaveClass(
     "settlement-base-month",
   );
+  expect(within(panel).queryByRole("button", { name: /경고/ })).not.toBeInTheDocument();
+});
+
+it("기간 추이 경고를 펼치면 월과 메시지별로 묶어 보여 주고 닫으면 버튼에 초점을 돌려준다", async () => {
+  const warning = {
+    code: "MISSING_PAY",
+    message: "월 급여 자료를 확인해 주세요.",
+    field: null,
+    developerId: null,
+    assignmentId: null,
+    projectId: null,
+    month: "2026-02",
+    source: "PAYROLL",
+    blocking: true,
+  };
+  vi.mocked(api.getSalesPartSettlementTrend).mockResolvedValue({
+    partId: "part",
+    month: "2026-02",
+    months: ["2026-01", "2026-02"],
+    items: [],
+    pagination: { page: 1, size: 50, total: 0 },
+    monthlyTotals: [],
+    periodPartProfitAmount: null,
+    issues: [warning, warning, { ...warning, month: "2026-01" }],
+  });
+  render(<SettlementTrendPanel partId="part" month="2026-02" />);
+
+  const button = await screen.findByRole("button", { name: "경고 3건" });
+  expect(screen.queryByText(warning.message)).not.toBeInTheDocument();
+  await userEvent.click(button);
+  const dialog = screen.getByRole("dialog", { name: "기간 추이 경고" });
+  expect(within(dialog).getByRole("heading", { name: "2026-02" })).toBeVisible();
+  expect(within(dialog).getByRole("heading", { name: "2026-01" })).toBeVisible();
+  expect(within(dialog).getAllByText(warning.message)).toHaveLength(2);
+  expect(within(dialog).getByText("2건")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  expect(dialog).not.toBeInTheDocument();
+  expect(button).toHaveFocus();
+});
+
+it("기간 추이의 공통 페이지 이동 바는 서버의 인원 수와 페이지 크기를 사용한다", async () => {
+  vi.mocked(api.getSalesPartSettlementTrend).mockImplementation(async (_, query) => ({
+    partId: "part",
+    month: "2026-02",
+    months: ["2026-01", "2026-02"],
+    items: [],
+    pagination: { page: query.page ?? 1, size: query.size ?? 50, total: 121 },
+    monthlyTotals: [],
+    periodPartProfitAmount: null,
+    issues: [],
+  }));
+  render(<SettlementTrendPanel partId="part" month="2026-02" />);
+
+  let pagination = await screen.findByRole("navigation", { name: "페이지" });
+  expect(pagination).toHaveClass("sicost-pagination");
+  expect(pagination).toHaveTextContent("1-50 / 121명");
+  await userEvent.click(within(pagination).getByRole("button", { name: "다음 페이지" }));
+
+  await screen.findByText("51-100 / 121명");
+  expect(api.getSalesPartSettlementTrend).toHaveBeenLastCalledWith(
+    "part", { month: "2026-02", page: 2, size: 50 }, expect.any(AbortSignal),
+  );
+  pagination = screen.getByRole("navigation", { name: "페이지" });
+  await userEvent.selectOptions(within(pagination).getByRole("combobox", { name: "한 화면 건수" }), "20");
+  await screen.findByText("1-20 / 121명");
+  expect(api.getSalesPartSettlementTrend).toHaveBeenLastCalledWith(
+    "part", { month: "2026-02", page: 1, size: 20 }, expect.any(AbortSignal),
+  );
 });

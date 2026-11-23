@@ -4,10 +4,12 @@ export function FinancialAmount({
   value,
   unit = "천원",
   plus = false,
+  showUnit = false,
 }: {
   value: string | null | undefined;
   unit?: FinancialUnit;
   plus?: boolean;
+  showUnit?: boolean;
 }) {
   if (value == null) return <span>미확인</span>;
   const places = unit === "천원" ? 3 : unit === "백만원" ? 6 : 0;
@@ -18,6 +20,7 @@ export function FinancialAmount({
     <span className={negative ? "financial-negative" : undefined}>
       {plus && !negative && BigInt(value) > 0n ? "+" : ""}
       {formatDecimal(raw)}
+      {showUnit && unit}
     </span>
   );
 }

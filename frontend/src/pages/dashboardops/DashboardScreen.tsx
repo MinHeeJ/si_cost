@@ -464,20 +464,21 @@ export function DashboardScreen({
         {notice && <p role="status">{notice}</p>}
         {data && (
           <>
-            <PeriodStatus className="dashboard-dates">
-              <span className="dashboard-date-item">
+            <PeriodStatus className="dashboard-dates sicost-period-summary">
+              <span className="sicost-period-summary-item">
                 {data.scope === "ALL" ? "전체 회사" : "허용된 담당 범위"} ·
                 단위: {amountUnit}
               </span>
-              <span>조회월 {data.selectedMonth}</span>
-              <span className="dashboard-print-date">기준일 {data.today}</span>
-              <span className="dashboard-date-item">
+              <span className="dashboard-print-date">
+                조회월 {data.selectedMonth} · 기준일 {data.today}
+              </span>
+              <span className="sicost-period-summary-item">
                 <HelpTooltip
                   label="숫자 기준"
                   testId="dashboard-basis-help"
                   trigger={
                     <span className="dashboard-date-item-content">
-                      <span className="dashboard-date-key">기준일</span>
+                      <span className="sicost-period-summary-label">기준일</span>
                       <b>{data.today.replace(/-/g, ".")}</b>
                     </span>
                   }
@@ -497,23 +498,27 @@ export function DashboardScreen({
                   ))}
                 </HelpTooltip>
               </span>
-              <span className="dashboard-date-item">
-                <span className="dashboard-date-key">마감 완료</span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">마감 완료</span>
                 <b>
                   {data.lastClosedMonth
                     ? `${data.lastClosedMonth.slice(0, 4) !== data.selectedMonth.slice(0, 4) ? `${data.lastClosedMonth.slice(0, 4)}년 ` : ""}${Number(data.lastClosedMonth.slice(5))}월까지`
                     : "없음"}
                 </b>
               </span>
-              <span className="dashboard-date-item dashboard-date-state">
+              <span className="sicost-period-summary-item dashboard-date-state">
                 {data.provisional ? (
                   <>
                     <StatusBadge tone="warn">잠정</StatusBadge>
-                    <span>
-                      아래{" "}
-                      <b>{Number(data.selectedMonth.slice(5))}월 매출·이익</b>은
-                      마감 전이라 바뀔 수 있습니다
-                    </span>
+                    {data.selectedMonth !== data.currentMonth ? (
+                      <span>마감 전 변동 가능</span>
+                    ) : (
+                      <span>
+                        아래{" "}
+                        <b>{Number(data.selectedMonth.slice(5))}월 매출·이익</b>은
+                        마감 전이라 바뀔 수 있습니다
+                      </span>
+                    )}
                   </>
                 ) : data.selectedMonthCloseStatus === "CLOSE" ? (
                   <>
@@ -531,13 +536,20 @@ export function DashboardScreen({
                 )}
               </span>
               {data.selectedMonth !== data.currentMonth && (
-                <span className="dashboard-date-item dashboard-date-current-note">
-                  <Icon name="info" size={14} />
-                  <span>
-                    재무 지표는 {data.selectedMonth} 기준, 미수금·확인할
-                    일·경보·인력 수급·파이프라인·자금은 <b>오늘 기준</b>입니다
-                    (청구 누락 의심만 고른 달)
-                  </span>
+                <span className="sicost-period-summary-item dashboard-date-current-note">
+                  <HelpTooltip
+                    label="지표별 조회 기준"
+                    trigger={
+                      <span className="dashboard-date-item-content">
+                        <Icon name="info" size={14} />
+                        <span>손익·청구 누락 의심은 선택월 · 미수금·인력 수급 등은 오늘 기준</span>
+                      </span>
+                    }
+                  >
+                    재무 지표와 청구 누락 의심은 선택월 기준입니다.
+                    미수금·그 외 확인할 일·경보·인력 수급·파이프라인·자금은 오늘
+                    또는 현재월 기준입니다.
+                  </HelpTooltip>
                 </span>
               )}
               <span className="sicost-sr-only">
@@ -812,14 +824,6 @@ export function DashboardScreen({
                   }
                 >
                   <DashboardBasis basis={data.salesPartsBasis} hidePeriod />
-                  {data.salesParts.length === 0 &&
-                    ["AVAILABLE", "EMPTY"].includes(
-                      data.salesPartsBasis.status,
-                    ) && (
-                      <p className="dashboard-empty">
-                        영업 파트 자료가 없습니다.
-                      </p>
-                    )}
                   <div className="sicost-table-viewport">
                     <table
                       className="sicost-table dashboard-parts-table"
@@ -838,6 +842,18 @@ export function DashboardScreen({
                         </tr>
                       </thead>
                       <tbody>
+                        {data.salesParts.length === 0 &&
+                          ["AVAILABLE", "EMPTY"].includes(
+                            data.salesPartsBasis.status,
+                          ) && (
+                            <tr>
+                              <td colSpan={4}>
+                                <div className="dashboard-empty">
+                                  영업 파트 자료가 없습니다.
+                                </div>
+                              </td>
+                            </tr>
+                          )}
                         {data.salesParts.map((row) => (
                           <tr
                             key={row.partId ?? "unassigned"}

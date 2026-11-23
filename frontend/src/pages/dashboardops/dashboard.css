@@ -28,6 +28,17 @@
 .dashboard-print-date {
   display: none;
 }
+.dashboard-dates.sicost-period-summary:has(.dashboard-date-current-note)
+  > .sicost-period-summary-item {
+  padding-inline: 9px;
+}
+.sicost-period-row:has(.dashboard-date-current-note) {
+  flex-wrap: wrap;
+}
+.sicost-period-row:has(.dashboard-date-current-note) .sicost-period-status-slot {
+  flex-basis: max-content;
+  max-width: 100%;
+}
 .dashboard-kpi-grid,
 .dashboard-metrics {
   display: grid;
@@ -344,7 +355,7 @@
   font-size: 11px;
   font-weight: 400;
 }
-.dashboard-parts-table td:first-child {
+.dashboard-parts-table td:first-child:not([colspan]) {
   font-weight: 600;
 }
 .dashboard-pipeline-count {
@@ -663,6 +674,9 @@
   }
   .dashboard-print-date {
     display: inline;
+  }
+  .dashboard-date-current-note .sicost-help-value {
+    display: inline-flex !important;
   }
   body:has([data-testid="dashboard-screen"]) .sicost-help-tooltip {
     display: none !important;

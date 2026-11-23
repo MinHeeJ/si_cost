@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { usePreferences } from "../me/usePreferences";
 import type { ColumnView } from "../me/preferencesApi";
 import type { AnalysisQuery } from "../apiops/projectAnalysisApi";
@@ -39,7 +39,7 @@ export function ProjectAnalysisDownload({
 }) {
   const preferences = usePreferences();
   const [pending, setPending] = useState(false),
-    [success, setSuccess] = useState(false),
+    [successCount, setSuccessCount] = useState(0),
     [error, setError] = useState<unknown>();
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
@@ -51,7 +51,7 @@ export function ProjectAnalysisDownload({
     active.current = controller;
     setPending(true);
     setError(undefined);
-    setSuccess(false);
+    if (view === "statusBoard") setSuccessCount(0);
     const value = preferences.get("COLS", screenId)?.value;
     const stored =
       value && typeof value === "object" && !Array.isArray(value)
@@ -74,10 +74,13 @@ export function ProjectAnalysisDownload({
       );
       if (!controller.signal.aborted) {
         api.saveProjectAnalysisDownload(file);
-        setSuccess(true);
+        setSuccessCount((count) => count + 1);
       }
     } catch (e) {
-      if (!controller.signal.aborted) setError(e);
+      if (!controller.signal.aborted) {
+        setSuccessCount(0);
+        setError(e);
+      }
     } finally {
       if (active.current === controller) active.current = null;
       if (!controller.signal.aborted) setPending(false);
@@ -102,6 +105,7 @@ export function ProjectAnalysisDownload({
       <button
         type="button"
         data-testid="project-download-button"
+        className={view === "projectCost" ? "sicost-download-button" : undefined}
         disabled={
           !canDownload ||
           pending ||
@@ -122,7 +126,11 @@ export function ProjectAnalysisDownload({
           취소
         </button>
       )}
-      {success && <span role="status">전체 결과 엑셀을 내려받았습니다.</span>}
+      {successCount > 0 && (view === "projectCost" ? (
+        <FloatingToast key={successCount} message="전체 결과 엑셀을 내려받았습니다." />
+      ) : (
+        <span role="status">전체 결과 엑셀을 내려받았습니다.</span>
+      ))}
       {Boolean(failure) && (
         <ErrorBanner
           message={

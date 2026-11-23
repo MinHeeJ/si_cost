@@ -14,15 +14,12 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.profit-structure-toolbar > label {
-  margin-left: auto;
-}
-.profit-structure-toolbar .sicost-title-action-group > label {
+.profit-structure-actions > label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.profit-structure-toolbar select {
+.profit-structure-actions select {
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -123,6 +120,9 @@
   min-width: 580px;
   width: 100%;
 }
+.profit-structure-chart-scroll .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
+}
 .profit-structure svg text {
   fill: var(--text-sub);
   font-size: 11px;
@@ -140,6 +140,16 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+.profit-structure-composition-help {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin-bottom: -8px;
+}
+.profit-structure-chart-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .profit-structure-group {
   padding: 12px 0;
@@ -208,6 +218,11 @@
 }
 .profit-structure .profit-structure-child-row > th {
   padding-left: 28px;
+}
+.profit-structure-methods > summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
 }
 .profit-structure .profit-structure-method-table th,
 .profit-structure .profit-structure-method-table td {

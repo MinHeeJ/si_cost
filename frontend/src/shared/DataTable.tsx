@@ -28,7 +28,10 @@ export type DataTableProps<T> = {
   rows: readonly T[];
   columns: readonly Column<T>[];
   rowKey(row: T): Key;
+  tableLabel?: string;
   loading?: boolean;
+  /** Show a message in the table body while loading. Defaults to skeleton rows. */
+  loadingMessage?: string;
   empty?: string;
   error?: string;
   onRetry?: () => void;
@@ -66,7 +69,9 @@ export function DataTable<T>({
   rows,
   columns: suppliedColumns,
   rowKey,
+  tableLabel,
   loading,
+  loadingMessage,
   empty = "조회된 자료가 없습니다.",
   error,
   onRetry,
@@ -233,7 +238,10 @@ export function DataTable<T>({
         </button>
       )}
       <div className="sicost-table-viewport">
-        <table className={dense ? "sicost-table sicost-dense" : "sicost-table"}>
+        <table
+          aria-label={tableLabel}
+          className={dense ? "sicost-table sicost-dense" : "sicost-table"}
+        >
           <thead>
             <tr>
               {onSelectionChange && (
@@ -285,6 +293,7 @@ export function DataTable<T>({
                 <th
                   scope="col"
                   key={column.id}
+                  data-header-column={column.id}
                   className={
                     stickyColumns?.some((c) => c.id === column.id)
                       ? "sicost-sticky-cell"
@@ -323,7 +332,17 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {loading ? (
-              <>{Array.from({length:5},(_,index)=><tr key={index} className="sicost-skeleton-row" aria-hidden="true">{Array.from({length:span},(_,column)=><td key={column}><i /></td>)}</tr>)}<tr className="sicost-sr-only"><td colSpan={span}><span role="status">불러오는 중입니다.</span></td></tr></>
+              loadingMessage ? (
+                <tr>
+                  <td colSpan={span}>
+                    <div className="sicost-empty sicost-table-loading" role="status">
+                      {loadingMessage}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                <>{Array.from({length:5},(_,index)=><tr key={index} className="sicost-skeleton-row" aria-hidden="true">{Array.from({length:span},(_,column)=><td key={column}><i /></td>)}</tr>)}<tr className="sicost-sr-only"><td colSpan={span}><span role="status">불러오는 중입니다.</span></td></tr></>
+              )
             ) : !rows.length ? (
               <tr>
                 <td colSpan={span}>

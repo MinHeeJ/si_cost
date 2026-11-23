@@ -1,3 +1,4 @@
+import { useClientWriteScope } from "./clientPermissions";
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -39,8 +40,13 @@ type Form = {
   accountAction: "KEEP" | "REPLACE";
 };
 export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
-  const canSave = usePermission("UI-15", client ? "UPD" : "REG");
+  const hasWritePermission = usePermission("UI-15", client ? "UPD" : "REG");
+  const { managePartners, manageCustomers } = useClientWriteScope();
+  const canSave =
+    hasWritePermission &&
+    (managePartners || (manageCustomers && (!client || client.type === "CUST")));
   const sensitive = useSensitivePermission();
+  const canManageAccount = sensitive && managePartners;
   const [form, setForm] = useState<Form>(() => ({
     type: client?.type ?? "",
     name: client?.name ?? "",
@@ -70,15 +76,15 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
   async function loadCodes() {
     setCodeError(undefined);
     try {
-      const results = await Promise.all([
+      const [types, industries, banks] = await Promise.all([
         api.getClientCodes("CLNT_TYPE"),
         api.getClientCodes("INDUTY"),
-        api.getClientCodes("BANK"),
+        canManageAccount ? api.getClientCodes("BANK") : undefined,
       ]);
       setCodes({
-        type: results[0].items,
-        industryCode: results[1].items,
-        bankCode: results[2].items,
+        type: types.items,
+        industryCode: industries.items,
+        bankCode: banks?.items ?? [],
       });
     } catch (e) {
       setCodeError(e);
@@ -86,7 +92,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
   }
   useEffect(() => {
     void loadCodes();
-  }, []);
+  }, [canManageAccount]);
   useEffect(() => {
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
@@ -234,11 +240,6 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           </div>
         )}
       </header>
-      {!canSave && (
-        <p role="note">
-          수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
-        </p>
-      )}
       {codeError != null && (
         <ErrorBanner
           message="선택 항목을 불러오지 못했습니다."
@@ -267,7 +268,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           else void save();
         }}
       >
-        {!client && (
+        {!client && managePartners && (
           <p className="sicost-banner sicost-tone-info clients-form-guidance">
             <Icon name="info" size={18} />
             구분을 선택하면 고객사는 세금계산서 이메일, 협력사는 지급 계좌를
@@ -282,7 +283,9 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           <CodeSelect
             label="구분"
             value={form.type}
-            options={codes.type ?? []}
+            options={(codes.type ?? []).filter(
+              (item) => managePartners || item.code === "CUST",
+            )}
             required
             onChange={(value) => change("type", value)}
             error={fields.type}
@@ -315,7 +318,7 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
             {text("taxEmail", "세금계산서 이메일", 100, true)}
           </fieldset>
         )}
-        {vendor && sensitive && (
+        {vendor && canManageAccount && (
           <fieldset
             disabled={!canSave || pending}
             className="clients-form-fields"

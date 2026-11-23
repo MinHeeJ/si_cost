@@ -139,14 +139,11 @@ export function SettlementRestrictedView({
       )}
       {data && (
         <>
-          <p>
-            {data.month} ·{" "}
-            {data.status === "WORK"
-              ? "작업중"
-              : data.status === "AUTO"
-                ? "마감 시 자동 확정"
-                : "확정"}
-          </p>
+          {data.status !== "WORK" && (
+            <p>
+              {data.month} · {data.status === "AUTO" ? "마감 시 자동 확정" : "확정"}
+            </p>
+          )}
           <KpiStrip
             className="settlement-summary"
             data-testid="settlement-summary"
@@ -172,9 +169,6 @@ export function SettlementRestrictedView({
               <strong>{data.summary.deficitPersonCount}명</strong>
             </article>
           </KpiStrip>
-          <p>
-            수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
-          </p>
           <button type="button" onClick={() => setTrend(false)}>
             이번 달
           </button>
@@ -183,6 +177,7 @@ export function SettlementRestrictedView({
           </button>
           <button
             type="button"
+            className="sicost-download-button"
             disabled={!download || pending}
             onClick={async () => {
               if (!download || pending) return;

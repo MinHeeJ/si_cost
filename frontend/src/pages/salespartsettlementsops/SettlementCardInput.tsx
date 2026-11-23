@@ -204,7 +204,10 @@ export function SettlementCardInput({
             />
           </label>
         ) : (
-          <span>법인카드 사용액 {formatAmount(current.cardAmount, "원")}</span>
+          <span>
+            법인카드 사용액 {formatAmount(current.cardAmount, "원")}
+            <FieldHelp label="법인카드 사용액" />
+          </span>
         )}
         <span>원</span>
         {current.canSaveCard && (
@@ -222,10 +225,6 @@ export function SettlementCardInput({
             저장 전 · 예상 파트 이익금 {formatAmount(draftProfit, "원")} 원
           </p>
         )}
-        <p>
-          파트 이익금에서 뺍니다(엑셀 ‘원가표’의 ‘법카 사용 별도’). 회사 카드와
-          별도입니다.
-        </p>
         {(validation || fields.cardAmount) && (
           <p role="alert">{validation || fields.cardAmount}</p>
         )}

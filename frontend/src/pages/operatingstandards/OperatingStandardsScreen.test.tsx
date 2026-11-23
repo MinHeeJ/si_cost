@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "../../shared/api";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -169,7 +169,7 @@ it("기존 CASH 시작월 마감이면 두 입력과 저장은 읽기 전용이�
 it("자금 저장에는 적용월을 보내지 않고 날짜를 6자리로 보낸다", async () => {
   data();
   const committed = vi.fn();
-  render(<OperatingStandardsScreen onCommitted={committed} />);
+  const { container } = render(<OperatingStandardsScreen onCommitted={committed} />);
   const input = await screen.findByLabelText("자금수지 시작 월");
   expect(input).toHaveValue("2026-01");
   fireEvent.change(input, { target: { value: "2026-02" } });
@@ -193,6 +193,9 @@ it("자금 저장에는 적용월을 보내지 않고 날짜를 6자리로 보�
   await waitFor(() =>
     expect(api.getStandardsPeriodContext).toHaveBeenCalledTimes(2),
   );
+  const toast = await screen.findByText("저장했습니다.");
+  expect(toast).toHaveClass("sicost-toast");
+  expect(container).not.toContainElement(toast);
 });
 it("실패한 자금 입력은 보존하고 자동 재시도하지 않는다", async () => {
   data();

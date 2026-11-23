@@ -1,6 +1,7 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import type { DraftRow, FinancialEditor } from "./financialApi";
 import type { FinancialDraft } from "./useFinancialEditor";
 import { FinancialAmount, type FinancialUnit } from "./FinancialAmount";
@@ -139,9 +140,10 @@ export function FinancialCardsPanel({
           onChange={(event) => setLast4(event.target.value)}
         />
       ),
-      state: (
+      action: (
         <button
           type="button"
+          className="financial-card-action"
           data-testid="financial-card-add"
           disabled={disabled}
           onClick={add}
@@ -178,7 +180,7 @@ export function FinancialCardsPanel({
           }
         />
       ),
-      state: (
+      action: (
         <>
           {manual && cardMonth.difference !== "0" && (
             <small>
@@ -191,31 +193,39 @@ export function FinancialCardsPanel({
     },
   };
   return (
-    <section className="financial-section" data-testid="financial-cards-panel">
-      <div className="sicost-list-toolbar">
-        <h2>법인카드 대금</h2>
-        <span>
-          카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장
-          사용 중
-        </span>
-        <label>
+    <section
+      className="financial-section financial-cards-section"
+      aria-labelledby="financial-cards-heading"
+      data-testid="financial-cards-panel"
+    >
+      <header className="sicost-section-heading financial-section-heading">
+        <div>
+          <h2 id="financial-cards-heading">법인카드 대금</h2>
+          <HelpTooltip label="법인카드 대금" iconOnly>
+            법인카드 대금은 자금수지표의 제경비에 반영됩니다.
+          </HelpTooltip>
+          <small>사용 중인 카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장</small>
+        </div>
+        <label className="financial-card-filter">
           <input
             type="checkbox"
             data-testid="financial-show-stopped"
             checked={showStopped}
             onChange={(event) => setShowStopped(event.target.checked)}
-          />{" "}
-          삭제된 카드 보기
+          />
+          <span>삭제된 카드 보기</span>
         </label>
-      </div>
+      </header>
       <DataTable
         testId="financial-cards-table"
+        tableLabel="법인카드 대금"
         rows={rows}
         rowKey={(row) => row.key}
         columns={[
           {
             id: "name",
             label: "카드 이름 *",
+            align: "center" as const,
             render: (row: DraftRow) => (
               <>
                 {row.values.cardName}
@@ -231,11 +241,13 @@ export function FinancialCardsPanel({
           {
             id: "last4",
             label: "끝 4자리 *",
+            align: "center" as const,
             render: (row: DraftRow) => row.values.last4,
           },
           {
             id: "amount",
             label: `${Number(month.slice(5))}월 결제액`,
+            align: "right" as const,
             render: (row: DraftRow) => (
               <WonInput
                 data-testid={`financial-card-${row.key}-amount`}
@@ -250,41 +262,51 @@ export function FinancialCardsPanel({
           {
             id: "state",
             label: "상태",
+            align: "center" as const,
             render: (row: DraftRow) => (
-              <>
-                <StatusBadge tone={row.values.useYn === "Y" ? "ok" : "lock"}>
-                  {row.values.useYn === "Y" ? "사용" : "삭제됨"}
-                </StatusBadge>
-                {!readOnly && (
-                  <button
-                    type="button"
-                    data-testid={`financial-card-${row.key}-state`}
-                    disabled={disabled}
-                    onClick={() => {
-                      if (!row.id)
-                        setDraft((old) =>
-                          old
-                            ? {
-                                ...old,
-                                cards: old.cards.filter(
-                                  (card) => card.key !== row.key,
-                                ),
-                              }
-                            : old,
-                        );
-                      else
-                        update(
-                          row.key,
-                          "useYn",
-                          row.values.useYn === "Y" ? "N" : "Y",
-                        );
-                    }}
-                  >
-                    {row.values.useYn === "Y" ? "삭제" : "되살리기"}
-                  </button>
-                )}
-              </>
+              <StatusBadge tone={row.values.useYn === "Y" ? "ok" : "lock"}>
+                {row.values.useYn === "Y" ? "사용" : "삭제됨"}
+              </StatusBadge>
             ),
+          },
+          {
+            id: "action",
+            label: "관리",
+            align: "center" as const,
+            render: (row: DraftRow) =>
+              !readOnly && (
+                <button
+                  type="button"
+                  className={
+                    row.values.useYn === "Y"
+                      ? "financial-card-action financial-card-delete"
+                      : "financial-card-action"
+                  }
+                  data-testid={`financial-card-${row.key}-state`}
+                  disabled={disabled}
+                  onClick={() => {
+                    if (!row.id)
+                      setDraft((old) =>
+                        old
+                          ? {
+                              ...old,
+                              cards: old.cards.filter(
+                                (card) => card.key !== row.key,
+                              ),
+                            }
+                          : old,
+                      );
+                    else
+                      update(
+                        row.key,
+                        "useYn",
+                        row.values.useYn === "Y" ? "N" : "Y",
+                      );
+                  }}
+                >
+                  {row.values.useYn === "Y" ? "카드 삭제" : "되살리기"}
+                </button>
+              ),
           },
         ].map((column) => ({
           ...column,

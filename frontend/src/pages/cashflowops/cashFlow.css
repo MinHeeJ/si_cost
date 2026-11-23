@@ -1,5 +1,6 @@
 .cash-flow {
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
 }
 .cash-chart {
   padding: 20px 24px;
@@ -8,8 +9,7 @@
   box-shadow: var(--e1);
   border-radius: 10px;
 }
-.cash-chart h2,
-.cash-source-panel h2 {
+.cash-chart h2 {
   font-size: 16px;
   margin: 0;
 }
@@ -18,11 +18,33 @@
   color: var(--text-sub);
   font-size: 12px;
 }
-.cash-chart svg {
+.cash-chart > .sicost-chart-host {
+  margin-top: 12px;
+}
+.cash-chart .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
+}
+.cash-chart-fallback {
   display: block;
   width: 100%;
-  margin-top: 20px;
   color: var(--text-sub);
+}
+.cash-statement-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.cash-statement-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.cash-statement-heading span {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.cash-statement-heading > label {
+  margin-inline-start: auto;
 }
 .cash-chart text {
   fill: currentColor;
@@ -63,34 +85,72 @@
   cursor: pointer;
   font: inherit;
 }
-.cash-flow th .sicost-badge {
-  display: inline-block;
-  width: max-content;
-  margin: 4px 4px 0;
+.cash-flow .operating-table-scroll th[scope="row"] > .sicost-help-anchor {
+  margin-inline-start: 4px;
 }
-.cash-source-panel {
+.cash-flow .cash-statement-table thead th {
+  padding-block: 9px;
+  vertical-align: top;
+}
+.cash-flow .cash-statement-table thead th:not(:first-child) {
+  text-align: center;
+}
+.cash-statement-column-status {
+  position: relative;
+  display: flex;
+  width: max-content;
+  margin: 4px auto 0;
+}
+.cash-flow .cash-statement-column-status > .sicost-badge {
+  margin: 0;
+}
+.sicost-drawer:has(.cash-source-breakdown) {
+  width: min(960px, 100%);
+}
+.cash-source-breakdown {
   display: grid;
-  gap: 16px;
-  padding: 20px 24px;
-  background: var(--surface);
-  border: 0;
-  box-shadow: var(--e1);
-  border-radius: 10px;
+  gap: 12px;
   min-width: 0;
 }
-.cash-source-panel td {
-  text-align: left;
+.cash-source-breakdown .sicost-table {
+  min-width: 760px;
+}
+.cash-source-breakdown .sicost-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.cash-source-breakdown td[data-column="formula"] {
+  min-width: 170px;
   white-space: normal;
   overflow-wrap: anywhere;
-  max-width: 320px;
+}
+.cash-source-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-sub);
 }
 .cash-unknown {
+  margin: 3px 0 0;
   color: var(--warn);
 }
 @media (max-width: 767px) {
-  .cash-chart,
-  .cash-source-panel {
+  .cash-chart {
     padding: 16px;
+  }
+  .cash-source-breakdown .sicost-pagination {
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+  }
+  .cash-source-breakdown .sicost-pagination > div {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+  .cash-source-breakdown .sicost-pagination select {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
   }
 }
 
@@ -107,52 +167,78 @@
 }
 
 .cash-shortage-alert {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--bad);
+  border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--divider));
+  border-inline-start: 4px solid var(--bad);
   border-radius: 8px;
   background: var(--bad-bg, #fef2f2);
   color: var(--bad);
 }
+.cash-shortage-alert > svg {
+  margin-block-start: 1px;
+}
+.cash-shortage-content h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
 .cash-shortage-alert p {
-  flex: 1;
   margin: 0;
+  color: var(--text);
+  word-break: keep-all;
+}
+.cash-shortage-content ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.cash-shortage-content li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 .cash-shortage-alert button {
-  flex-shrink: 0;
+  align-self: center;
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 30%, var(--divider));
 }
 .cash-shortage-warning {
-  display: inline-block;
-  margin-top: 4px;
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(100% + 3px);
+  transform: translateY(-50%);
   color: var(--bad);
 }
-.cash-flow-guide {
-  line-height: 1.7;
-}
 @media (max-width: 767px) {
-  .cash-shortage-alert {
+  .sicost-period-status.cash-period-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: baseline;
+    padding: 8px 4px;
+  }
+  .cash-period-summary > .sicost-period-summary-item {
     flex-wrap: wrap;
   }
-  .cash-shortage-alert p {
-    flex-basis: calc(100% - 36px);
+  .cash-period-summary > .cash-period-as-of {
+    grid-column: 1 / -1;
+  }
+  .cash-shortage-alert {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
   }
   .cash-shortage-alert button {
-    margin-left: auto;
+    grid-column: 2;
+    justify-self: end;
   }
-}
-
-.cash-source-panel table {
-  min-width: 1100px;
-}
-.cash-source-panel th,
-.cash-source-panel td {
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-.cash-source-panel td:nth-child(6) {
-  white-space: normal;
-  min-width: 240px;
-  overflow-wrap: anywhere;
 }

@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
@@ -151,6 +152,7 @@ export function BillDetailDrawer({
     };
   }, [id, year, period, refreshKey, reload]);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const canUpdate = usePermission("UI-13", "UPD");
   const bill = detail?.bill;
   return (
     <DetailDrawer
@@ -162,20 +164,22 @@ export function BillDetailDrawer({
       actions={
         bill && (
           <>
-            <button
-              type="button"
-              data-testid="bill-edit"
-              disabled={
-                loading ||
-                childDirty ||
-                protectedBill ||
-                year < Number(period.currentMonth.slice(0, 4)) ||
-                bill.cancelled
-              }
-              onClick={() => onEdit(bill)}
-            >
-              수정
-            </button>
+            {canUpdate && (
+              <button
+                type="button"
+                data-testid="bill-edit"
+                disabled={
+                  loading ||
+                  childDirty ||
+                  protectedBill ||
+                  year < Number(period.currentMonth.slice(0, 4)) ||
+                  bill.cancelled
+                }
+                onClick={() => onEdit(bill)}
+              >
+                수정
+              </button>
+            )}
             {detail &&
               (renderActions ? (
                 renderActions(detail, refresh)
@@ -370,15 +374,18 @@ function BillingDetailActions({
   onDirtyChange?(dirty: boolean): void;
 }) {
   const [open, setOpen] = useState(false);
+  const canRegister = usePermission("UI-13", "REG");
+  const canUpdate = usePermission("UI-13", "UPD");
   const currentYear = Number(period.currentMonth.slice(0, 4));
   const allowed =
+    (receipt ? canUpdate : canRegister) &&
     year >= currentYear &&
     (receipt
       ? !receipt.cancelled
       : !detail.bill.cancelled && detail.bill.status !== "PAID");
   return (
     <>
-      {!receipt && (
+      {!receipt && (canRegister || canUpdate) && (
         <BillActionsPanel
           bill={detail.bill}
           year={year}
@@ -406,7 +413,7 @@ function BillingDetailActions({
           {receipt ? "입금 취소" : "입금 등록"}
         </button>
       )}
-      {open && (
+      {open && allowed && (
         <ReceiptEntryDialog
           bill={detail.bill}
           receipt={receipt}

@@ -1,10 +1,12 @@
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
+import { businessCapabilities } from "../../shared/testSupport/businessFixtures";
 import {
   fireEvent,
   render,
   screen,
   waitFor,
   within,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -96,6 +98,22 @@ beforeEach(() => {
     roleOptions: [],
   });
 });
+it("영업 파트장은 메뉴에 수정·등록 권한이 있어도 파트를 관리할 수 없다", async () => {
+  render(
+    <PermissionContext.Provider value={{
+      ...businessCapabilities,
+      features: { ...businessCapabilities.features, managePartners: false },
+    }}>
+      <SalesPartsScreen onStandardChange={vi.fn()} />
+    </PermissionContext.Provider>,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: part.name }));
+  await screen.findByTestId("sales-part-detail-dialog");
+  for (const id of ["add-button", "standard-change", "rename", "status-change"]) {
+    expect(screen.queryByTestId(`sales-part-${id}`)).not.toBeInTheDocument();
+  }
+});
+
 it("초기 Y 필터와 고정 9열, 정밀 금액과 사용 배지를 표시한다", async () => {
   show();
   await screen.findByRole("button", { name: "영업파트" });

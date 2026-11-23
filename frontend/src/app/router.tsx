@@ -1,3 +1,4 @@
+import { useSensitivePermission } from "../shared/permission/PermissionBoundary";
 import "../pages/shared/financialDisplay.css";
 import { AuthenticationBoundary } from "../pages/authentication/AuthenticationBoundary";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -300,6 +301,8 @@ function BusinessPartnersWorkspace({
 }) {
   const preferences = usePreferences(),
     location = useLocation();
+  const sensitive = useSensitivePermission();
+  const allowedColumns = clientExportColumns.filter((id) => sensitive || id !== "account");
   const [columnsOpen, setColumnsOpen] = useState(false),
     [upload, setUpload] = useState(false);
   const [standardPart, setStandardPart] = useState<string>();
@@ -355,7 +358,7 @@ function BusinessPartnersWorkspace({
             sort: filters.sort,
             direction: filters.direction,
             amountUnit,
-            columns: clientExportColumns
+            columns: allowedColumns
               .filter((id) => id === "name" || !view?.hidden.includes(id))
               .sort((a, b) =>
                 view ? view.order.indexOf(a) - view.order.indexOf(b) : 0,
@@ -409,7 +412,7 @@ function BusinessPartnersWorkspace({
           open
           screenId="UI-15"
           viewId="clients"
-          columns={clientExportColumns.map((id) => ({
+          columns={allowedColumns.map((id) => ({
             id,
             label: {
               type: "구분",

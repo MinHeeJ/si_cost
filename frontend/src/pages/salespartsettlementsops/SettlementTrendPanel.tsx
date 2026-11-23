@@ -1,3 +1,6 @@
+import { Dialog } from "../../shared/Dialog";
+import { Icon } from "../../shared/Icon";
+import { Pagination } from "../../shared/Pagination";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
@@ -19,24 +22,24 @@ const labels = {
 export function SettlementTrendPanel({
   partId,
   month,
-  amountUnit,
-  onAmountUnitChange,
+  amountUnit = "천원",
 }: {
   partId: string;
   month: string;
   amountUnit?: AmountUnit;
-  onAmountUnitChange?(unit: AmountUnit): void;
 }) {
   const shared = useSharedScreen("UI-19");
   const [data, setData] = useState<TrendResult>(),
     [error, setError] = useState<unknown>(),
     [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(shared.pageSize ?? 50),
-    [retry, setRetry] = useState(0),
-    [unit, setUnit] = useState<AmountUnit>("천원");
-  const displayUnit = amountUnit ?? unit;
+    [retry, setRetry] = useState(0);
+  const [warningsOpen, setWarningsOpen] = useState(false);
+  const closeWarnings = () => setWarningsOpen(false);
+  const displayUnit = amountUnit;
   useEffect(() => {
     setPage(1);
+    closeWarnings();
   }, [partId, month]);
   useEffect(() => {
     const controller = new AbortController();
@@ -55,6 +58,13 @@ export function SettlementTrendPanel({
       });
     return () => controller.abort();
   }, [partId, month, page, size, retry]);
+  const warningsByMonth = new Map<string, Map<string, number>>();
+  for (const issue of data?.issues ?? []) {
+    const key = issue.month ?? "기간 공통";
+    const messages = warningsByMonth.get(key) ?? new Map<string, number>();
+    messages.set(issue.message, (messages.get(issue.message) ?? 0) + 1);
+    warningsByMonth.set(key, messages);
+  }
   return (
     <div role="tabpanel" data-testid="settlement-trend-panel">
       {error != null ? (
@@ -70,22 +80,17 @@ export function SettlementTrendPanel({
             <span>
               {month} · {data.pagination.total}명
             </span>
-            <label>
-              추이 단위{" "}
-              <select
-                data-testid="settlement-trend-unit"
-                value={displayUnit}
-                onChange={(e) => {
-                  const next = e.target.value as AmountUnit;
-                  if (onAmountUnitChange) onAmountUnitChange(next);
-                  else setUnit(next);
-                }}
+            {data.issues.length > 0 && (
+              <button
+                type="button"
+                className="settlement-trend-warning-button"
+                aria-haspopup="dialog"
+                onClick={() => setWarningsOpen(true)}
               >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
+                <Icon name="warning" size={15} />
+                경고 {data.issues.length}건
+              </button>
+            )}
           </div>
           <ChartHost
             option={seriesChartOptions({
@@ -99,7 +104,7 @@ export function SettlementTrendPanel({
               ],
               formatValue: (value) =>
                 `${formatAmount(value, displayUnit)} ${displayUnit}`,
-              axisUnit: "백만원",
+              axisUnit: displayUnit,
             })}
           >
             <p className="settlement-guide">
@@ -112,8 +117,8 @@ export function SettlementTrendPanel({
             >
               <thead>
                 <tr>
-                  <th>이름</th>
-                  <th>구분<FieldHelp label="구분" kind="B" /></th>
+                  <th scope="col">이름</th>
+                  <th scope="col">구분<FieldHelp label="구분" kind="B" /></th>
                   {data.months.map((m) => (
                     <th
                       key={m}
@@ -136,12 +141,12 @@ export function SettlementTrendPanel({
                       data-testid={`settlement-trend-${person.developerId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${metric.metric.toLowerCase()}`}
                     >
                       {i === 0 && (
-                        <th rowSpan={5}>
+                        <th rowSpan={person.metrics.length}>
                           {person.name}
                           <small>{person.managementNo}</small>
                         </th>
                       )}
-                      <th>{labels[metric.metric]}</th>
+                      <th scope="row">{labels[metric.metric]}</th>
                       {metric.months.map((cell) => (
                         <td
                           key={cell.month}
@@ -205,7 +210,7 @@ export function SettlementTrendPanel({
               </tbody>
               <tfoot>
                 <tr>
-                  <th colSpan={2}>파트 이익금</th>
+                  <th scope="row" colSpan={2}>파트 이익금</th>
                   {data.monthlyTotals.map((total) => (
                     <td
                       key={total.month}
@@ -240,52 +245,47 @@ export function SettlementTrendPanel({
               </tfoot>
             </table>
           </div>
-          {data.issues.map((issue, i) => (
-            <p role="alert" key={i}>
-              {issue.month} {issue.message}
-            </p>
-          ))}
-          <div className="settlement-toolbar">
-            <button
-              type="button"
-              data-testid="settlement-trend-previous"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              이전 페이지
-            </button>
-            <span>
-              {page} / {Math.max(1, Math.ceil(data.pagination.total / size))}
-            </span>
-            <button
-              type="button"
-              data-testid="settlement-trend-next"
-              disabled={page * size >= data.pagination.total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              다음 페이지
-            </button>
-            <label>
-              추이 한 화면 건수{" "}
-              <select
-                data-testid="settlement-trend-size"
-                value={size}
-                onChange={(e) => {
-                  const next = Number(e.target.value) as 20 | 50 | 100;
-                  void (shared.savePageSize?.(next) ?? Promise.resolve())
-                    .then(() => {
-                      setSize(next);
-                      setPage(1);
-                    })
-                    .catch(setError);
-                }}
-              >
-                <option value={20}>20건씩</option>
-                <option value={50}>50건씩</option>
-                <option value={100}>100건씩</option>
-              </select>
-            </label>
-          </div>
+          <Dialog
+            open={warningsOpen && data.issues.length > 0}
+            title="기간 추이 경고"
+            onConfirm={closeWarnings}
+            onCancel={closeWarnings}
+            confirmLabel="닫기"
+            hideCancel
+          >
+            <div className="settlement-trend-warnings">
+              <p>조회 기간의 정산 자료에서 확인이 필요한 항목입니다.</p>
+              {[...warningsByMonth].map(([issueMonth, messages]) => (
+                <section key={issueMonth}>
+                  <h3>{issueMonth}</h3>
+                  <ul>
+                    {[...messages].map(([message, count]) => (
+                      <li key={message}>
+                        {message}
+                        {count > 1 && <small>{count}건</small>}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </Dialog>
+          <Pagination
+            page={data.pagination.page}
+            size={data.pagination.size}
+            total={data.pagination.total}
+            unit="명"
+            testId="settlement-trend"
+            onPageChange={setPage}
+            onSizeChange={(next) => {
+              void (shared.savePageSize?.(next) ?? Promise.resolve())
+                .then(() => {
+                  setSize(next);
+                  setPage(1);
+                })
+                .catch(setError);
+            }}
+          />
         </>
       )}
     </div>

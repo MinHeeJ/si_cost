@@ -1,3 +1,4 @@
+import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -17,6 +18,7 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import * as api from "./salesPartSettlementsApi";
+import { SettlementCalculationHelp, SettlementScreenGuide } from "./SettlementScreenGuide";
 import { SettlementRestrictedView } from "./SettlementRestrictedView";
 import "./settlements.css";
 
@@ -244,8 +246,13 @@ export function SalesPartnerProfitScreen({
       <SharedScreenFrame
         screenId="UI-19"
         periodBar={
-          <ScreenPeriodBar screenId="UI-19" initialMonth={entryMonth} />
+          <ScreenPeriodBar
+            screenId="UI-19"
+            initialMonth={entryMonth}
+            showMonthCloseStatus={false}
+          />
         }
+        screenGuide={<SettlementScreenGuide />}
       >
         <SettlementRestrictedView
           tabs={tabs}
@@ -379,13 +386,36 @@ export function SalesPartnerProfitScreen({
   return (
     <SharedScreenFrame
       screenId="UI-19"
-      periodBar={<ScreenPeriodBar screenId="UI-19" initialMonth={entryMonth} />}
+      periodBar={
+        <ScreenPeriodBar
+          screenId="UI-19"
+          initialMonth={entryMonth}
+          showMonthCloseStatus={false}
+        />
+      }
+      screenGuide={<SettlementScreenGuide showFinancial />}
       headerActions={
         data && (
           <div
             className="settlement-header-actions"
             data-testid="settlement-header-actions"
           >
+            <label className="settlement-unit-control">
+              단위{" "}
+              <select
+                data-testid="settlement-unit-select"
+                value={displayUnit}
+                onChange={(event) => {
+                  const next = event.target.value as AmountUnit;
+                  if (onAmountUnitChange) onAmountUnitChange(next);
+                  else setUnit(next);
+                }}
+              >
+                <option>원</option>
+                <option>천원</option>
+                <option>백만원</option>
+              </select>
+            </label>
             {renderActions?.(data, refresh, query)}
             <div
               className="settlement-command-actions"
@@ -491,7 +521,10 @@ export function SalesPartnerProfitScreen({
                 <p>단가 − (급여 + 공통관리비 + 퇴직금)</p>
               </article>
               <article>
-                <h2>파트 이익금</h2>
+                <h2 className="settlement-profit-heading">
+                  파트 이익금
+                  <SettlementCalculationHelp standard={data.standard} />
+                </h2>
                 <strong>{amount(data.summary.partProfitAmount)}</strong>
                 <p>
                   인력별 이익금 {amount(data.summary.personProfitShareAmount)} −
@@ -499,26 +532,24 @@ export function SalesPartnerProfitScreen({
                 </p>
               </article>
             </KpiStrip>
-            <div
-              className={`settlement-banner ${data.status === "WORK" ? "info" : "lock"}`}
-            >
-              <StatusBadge tone={data.status === "WORK" ? "info" : "lock"}>
-                {data.status === "WORK"
-                  ? "작업중"
-                  : data.status === "AUTO"
-                    ? "마감 시 자동 확정"
-                    : "수동 확정"}
-              </StatusBadge>
-              {data.status !== "WORK" && (
-                <span>
-                  {data.confirmedByName ?? data.confirmedBy ?? "–"} ·{" "}
-                  {formatDateTime(data.confirmedAt)}
-                </span>
-              )}
-              {data.readOnlyReasons.map((reason) => (
-                <span key={reason}>{reason}</span>
-              ))}
-            </div>
+            {(data.status !== "WORK" || data.readOnlyReasons.length > 0) && (
+              <div className="settlement-banner lock">
+                {data.status !== "WORK" && (
+                  <>
+                    <StatusBadge tone="lock">
+                      {data.status === "AUTO" ? "마감 시 자동 확정" : "수동 확정"}
+                    </StatusBadge>
+                    <span>
+                      {data.confirmedByName ?? data.confirmedBy ?? "–"} ·{" "}
+                      {formatDateTime(data.confirmedAt)}
+                    </span>
+                  </>
+                )}
+                {data.readOnlyReasons.map((reason) => (
+                  <span key={reason}>{reason}</span>
+                ))}
+              </div>
+            )}
             {renderCard ? (
               renderCard(
                 data,
@@ -529,11 +560,8 @@ export function SalesPartnerProfitScreen({
             ) : (
               <div className="settlement-card">
                 <span>법인카드 사용액</span>
+                <FieldHelp label="법인카드 사용액" />
                 <strong>{formatAmount(data.cardAmount, "원")} 원</strong>
-                <p>
-                  파트 이익금에서 뺍니다(엑셀 ‘원가표’의 ‘법카 사용 별도’). 회사
-                  카드와 별도입니다.
-                </p>
               </div>
             )}
 
@@ -548,28 +576,6 @@ export function SalesPartnerProfitScreen({
                   {issue.message}
                 </p>
               ))}
-            <div
-              className="settlement-toolbar"
-              data-testid="settlement-month-toolbar"
-              hidden={!showMonthTable}
-            >
-              <label>
-                단위{" "}
-                <select
-                  data-testid="settlement-unit-select"
-                  value={displayUnit}
-                  onChange={(event) => {
-                    const next = event.target.value as AmountUnit;
-                    if (onAmountUnitChange) onAmountUnitChange(next);
-                    else setUnit(next);
-                  }}
-                >
-                  <option>원</option>
-                  <option>천원</option>
-                  <option>백만원</option>
-                </select>
-              </label>
-            </div>
             <div
               data-testid="settlement-month-panel"
               role="tabpanel"
@@ -640,110 +646,6 @@ export function SalesPartnerProfitScreen({
               />
             </div>
             {renderViews?.(data, query)}
-            <details
-              className="settlement-guide"
-              data-testid="settlement-calculation-guide"
-            >
-              <summary data-testid="settlement-guide-toggle">계산 방법</summary>
-              <div className="sicost-table-viewport">
-                <table
-                  className="settlement-guide-table"
-                  aria-label="계산 방법"
-                >
-                  <thead>
-                    <tr>
-                      <th scope="col">항목</th>
-                      <th scope="col">계산식</th>
-                      <th scope="col">참고</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr data-testid="settlement-guide-mm">
-                      <th scope="row">MM</th>
-                      <td>프로젝트별 MM을 모두 더함</td>
-                      <td>
-                        투입을 시작·끝낸 달은 날짜만큼 (예: 15일 시작 → 17/31) ·
-                        내부 프로젝트 제외
-                      </td>
-                    </tr>
-                    <tr data-testid="settlement-guide-price">
-                      <th scope="row">단가</th>
-                      <td>프로젝트별 (월 단가 × MM)을 모두 더함</td>
-                      <td>
-                        턴키는 배분표의 그 사람 그 달 금액, 배분표가 없으면 그
-                        달 원가 × (계약금액 ÷ 예산) · 무상지원 0
-                      </td>
-                    </tr>
-                    <tr data-testid="settlement-guide-pay">
-                      <th scope="row">급여</th>
-                      <td>그 달 실제 지급액</td>
-                      <td>
-                        MM과 관계없이 그 달 받은 급여 전부. 투입을 시작한 달은
-                        날짜만큼: 월 급여 × (그 달 일수 − 시작일 + 1) ÷ 그 달
-                        일수 (엑셀 「원가표」 방식)
-                      </td>
-                    </tr>
-                    <tr data-testid="settlement-guide-expense">
-                      <th scope="row">공통관리비</th>
-                      <td>
-                        파트 기준값(
-                        {formatAmount(data.standard.salesExpenseAmount, "원")}
-                        원)
-                      </td>
-                      <td>
-                        외주(업체 인력)만 제외 — 정규·계약직·프리랜서에 붙음
-                      </td>
-                    </tr>
-                    <tr data-testid="settlement-guide-retirement">
-                      <th scope="row">퇴직금</th>
-                      <td>급여 ÷ 12</td>
-                      <td>정규직에만</td>
-                    </tr>
-                    <tr data-testid="settlement-guide-cost">
-                      <th scope="row">비용</th>
-                      <td>급여 + 공통관리비 + 퇴직금</td>
-                      <td />
-                    </tr>
-                    <tr data-testid="settlement-guide-profit">
-                      <th scope="row">이익</th>
-                      <td>단가 − 비용</td>
-                      <td>적자면 음수</td>
-                    </tr>
-                    <tr data-testid="settlement-guide-share">
-                      <th scope="row">이익금</th>
-                      <td>
-                        이익 × 이익 배분율(
-                        {formatRate(data.standard.distributionRate)})
-                      </td>
-                      <td>
-                        원 단위 버림 (음수는 0 쪽으로 자름: −933,333.2 →
-                        −933,333) · 배분율은 그 달에 적용되는 파트 기준 이력 값
-                      </td>
-                    </tr>
-                    <tr data-testid="settlement-guide-part-profit">
-                      <th scope="row">파트 이익금</th>
-                      <td>
-                        인력별 이익금을 모두 더함(적자 포함) − 법인카드 사용액
-                      </td>
-                      <td />
-                    </tr>
-                    <tr data-testid="settlement-guide-period">
-                      <th scope="row">기간 추이 합계</th>
-                      <td>투입한 달(MM &gt; 0)의 값만 더함</td>
-                      <td>
-                        투입 안 한 달은 – · 맨 아래 「파트 이익금」 줄은 달마다
-                        인력별 이익금 합 − 그 달 법인카드 사용액
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p>
-                인력은 그 사람의 소속 영업 파트로 모읍니다. 미확인은 –이며 0과
-                다릅니다. 확정 사본의 저장되지 않은 당시 근거는 현재 자료로
-                복원하지 않습니다.
-              </p>
-            </details>
           </>
         )}
         {person && (

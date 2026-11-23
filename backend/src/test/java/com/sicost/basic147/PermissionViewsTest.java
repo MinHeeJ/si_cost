@@ -44,6 +44,8 @@ class PermissionViewsTest {
         assertThat(view.path("items").path(0).path("profitStatus").asText()).isEqualTo("SURPLUS");
         assertThat(view.toString()).doesNotContain("payAmount","costAmount","cardAmount","profitAmount","profitShareAmount","salesExpenseAmount","retirementAmount","basis","developerId","managementNo","remark");
         assertThat(view.path("canConfirm").asBoolean()).isFalse();assertThat(view.path("readOnly").asBoolean()).isTrue();
+        assertThat(view.path("readOnlyReasons").isArray()).isTrue();
+        assertThat(view.path("readOnlyReasons").size()).isZero();
         assertFields(view);assertFields(view.path("standard"));assertFields(view.path("summary"));assertFields(view.path("items").path(0));
         assertThat(source.items().get(0).payAmount()).isEqualTo("50");
     }

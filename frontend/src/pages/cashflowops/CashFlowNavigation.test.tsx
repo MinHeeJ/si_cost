@@ -62,7 +62,10 @@ it("consumes the month-close application month and target month without saving o
     </MemoryRouter>,
   );
   await screen.findByTestId("financial-items-panel");
-  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-07");
+  expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await userEvent.click(screen.getByTestId("financial-adjustments-add"));
   expect(
     screen.getByTestId("financial-adjustments-new-1-target-month"),
@@ -84,7 +87,10 @@ it("uses one-time financial source month without saving destination PERIOD", asy
       ),
     ).toBe(true),
   );
-  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
+  expect(screen.getByTestId("financial-month-2026-02")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(
     fetcher.mock.calls.some(
       ([url, options]) =>
@@ -130,12 +136,21 @@ it("retains a cached financial tab when another screen receives month context, t
     </MemoryRouter>,
   );
   await screen.findByTestId("financial-items-panel");
-  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
+  expect(screen.getByTestId("financial-month-2026-02")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await userEvent.click(screen.getByRole("button", { name: "다른 화면" }));
-  expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-02");
+  expect(screen.getByTestId("financial-month-2026-02")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await userEvent.click(screen.getByRole("button", { name: "재무 다시" }));
   await waitFor(() =>
-    expect(screen.getByTestId("financial-period-input")).toHaveValue("2026-03"),
+    expect(screen.getByTestId("financial-month-2026-03")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    ),
   );
   expect(
     fetcher.mock.calls.some(([url]) => String(url).includes("preferences")),

@@ -1,3 +1,4 @@
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
@@ -8,6 +9,7 @@ import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
+import { validMonth } from "../../shared/format";
 import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
 import { getPeriodContext, type PeriodContext } from "../shared/sharedApi";
 import * as api from "./projectAnalysisApi";
@@ -244,6 +246,8 @@ export function ProjectCostAnalysis({
     };
   }, []);
   const month = String(query.month ?? result.data?.month ?? "");
+  const currentResult =
+    !result.error && result.data?.month === month ? result.data : undefined;
   useEffect(() => {
     if (!month) return;
     const controller = new AbortController();
@@ -433,24 +437,51 @@ export function ProjectCostAnalysis({
       data-slice-id="SLICE-001"
       className="project-analysis project-cost-analysis"
     >
-      {context && (
-        <ScreenPeriodBar
-          screenId="UI-04"
-          controlled={{
-            month: month || context.currentMonth,
-            currentMonth: context.currentMonth,
-            onChange: (value) =>
-              void settings.run(async () => {
-                await onMonthChange?.(value);
-                apply({
-                  ...query,
-                  month: value,
-                  projectId: undefined,
-                  page: 1,
-                });
-              }),
-          }}
-        />
+      {(context || currentResult) && (
+        <div className="sicost-period-row">
+          {context && (
+            <ScreenPeriodBar
+              screenId="UI-04"
+              controlled={{
+                month: month || context.currentMonth,
+                minMonth:
+                  validMonth(month) && month < context.cashBaseMonth
+                    ? month
+                    : context.cashBaseMonth,
+                currentMonth: context.currentMonth,
+                disabled: settings.pending,
+                onChange: (value) =>
+                  void settings.run(async () => {
+                    await onMonthChange?.(value);
+                    apply({
+                      ...query,
+                      month: value,
+                      projectId: undefined,
+                      page: 1,
+                    });
+                  }),
+              }}
+            />
+          )}
+          {currentResult && (
+            <div className="sicost-period-status-slot">
+              <PeriodStatus className="sicost-period-summary" inline>
+                <span className="sicost-period-summary-item">
+                  <span className="sicost-period-summary-label">집계 기간</span>
+                  <b>
+                    {currentResult.summary.completeness.rangeStartMonth} ~{" "}
+                    {currentResult.summary.completeness.rangeEndMonth}
+                  </b>
+                </span>
+                {currentResult.items.length > 0 && (
+                  <span className="sicost-period-summary-item">
+                    행을 누르면 월별 원가·시뮬레이션을 볼 수 있습니다.
+                  </span>
+                )}
+              </PeriodStatus>
+            </div>
+          )}
+        </div>
       )}
       <ScreenTitleActions>
         <div className="project-analysis-toolbar">
@@ -493,7 +524,10 @@ export function ProjectCostAnalysis({
             summary={result.data.summary}
             unit={unit}
           />
-          <AnalysisCompleteness value={result.data.summary.completeness} />
+          <AnalysisCompleteness
+            value={result.data.summary.completeness}
+            showRange={false}
+          />
         </>
       )}
       {renderColumns && (
@@ -581,9 +615,6 @@ export function ProjectCostAnalysis({
       </FilterBar>
       <AnalysisFailure error={settings.error} retry={settings.clear} />
       <AnalysisFailure error={result.error} retry={result.retry} />
-      <small data-testid="project-cost-row-hint">
-        행을 누르면 월별 원가·시뮬레이션
-      </small>
       <DataTable
         testId="project-cost-table"
         dense={dense}
@@ -661,17 +692,6 @@ export function ProjectCostAnalysis({
             </button>
           </section>
         ))}
-      <details>
-        <summary data-testid="project-cost-calculation-summary">
-          계산 방법
-        </summary>
-        <p>
-          누적 원가 = 배분 인건비 + 직접경비 + 프로젝트 추가경비(한 번). TK 매출
-          = DOWN(계약금액 × min(1, 누적 원가 / 예산)). 목표 차이 &lt; −경고폭일
-          때 저마진이며 정확 경계는 경보가 아닙니다. 미확인 값은 0으로 합산하지
-          않습니다.
-        </p>
-      </details>
     </div>
   );
 }

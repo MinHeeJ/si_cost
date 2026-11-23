@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { OperatingProfitScreen } from "./OperatingProfitScreen";
 import { OperatingProfitScreen as RegisteredScreen } from "../shared/OperatingProfitScreen";
 import * as api from "./operatingProfitApi";
@@ -17,11 +18,17 @@ vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({
     children,
     periodBar,
+    headerActions,
+    screenGuide,
   }: {
     children: ReactNode;
     periodBar?: ReactNode;
+    headerActions?: ReactNode;
+    screenGuide?: ReactNode;
   }) => (
     <section>
+      {headerActions}
+      {screenGuide && <ScreenGuide screenId="UI-08" screenName="영업이익표">{screenGuide}</ScreenGuide>}
       {periodBar}
       {children}
     </section>
@@ -263,10 +270,9 @@ it("shows distinct imported closed and working tones", async () => {
     screen.getByRole("columnheader", { name: /2월 확정/ }),
   ).toBeInTheDocument();
   expect(
-    screen
-      .getAllByText("작업중")
-      .every((element) => element.classList.contains("sicost-tone-info")),
-  ).toBe(true);
+    within(screen.getByRole("region", { name: "화면 기간" })).queryByText("작업중"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: /7월 작업중/ })).toBeInTheDocument();
 });
 it("uses adverse comparisons and provisional markers", async () => {
   await draw();
@@ -470,10 +476,11 @@ it("PC-only file controls are disabled on narrow screens", async () => {
   expect(screen.getByRole("button", { name: "엑셀 다운로드" })).toBeDisabled();
 });
 
-it("keeps only upload and export title actions and uses readable comparison and accounting guidance", async () => {
+it("keeps amount unit with file actions and puts accounting guidance in the screen guide", async () => {
   await draw();
   expect(screen.queryByTestId("operating-template")).not.toBeInTheDocument();
   const actions = screen.getByTestId("operating-upload").parentElement!;
+  expect(within(actions).getByRole("combobox", { name: "단위" })).toBeVisible();
   expect(
     within(actions)
       .getAllByRole("button")
@@ -489,20 +496,42 @@ it("keeps only upload and export title actions and uses readable comparison and 
   expect(
     screen.getByTestId("operating-card-current-month-operating-profit"),
   ).toHaveTextContent("전월 대비 -200.0%");
-  const note = screen.getByText(/턴키는 청구한 달의 공급가액/);
+  expect(screen.queryByText(/턴키는 청구한 달의 공급가액/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
+  const note = screen.getByRole("dialog", { name: "영업이익표 화면 안내" });
   expect(note).toHaveTextContent(
-    "월단위·파견은 일한 달의 매출입니다(부가세 제외).",
+    "월단위·파견은 일한 달의 매출입니다. 화면의 금액은 부가세를 제외합니다.",
   );
   expect(note).toHaveTextContent(
-    "전년 대비는 같은 기간 누계끼리 비교하며, 비용 항목은 늘면 빨강입니다.",
+    "1월부터 기준월까지의 누계를 전년 같은 기간과 비교합니다.",
   );
   expect(note).toHaveTextContent(
-    "전월 조정은 마감한 달의 숫자를 바꾸지 않고 이번 달 「전월 조정」 줄에 넣습니다.",
+    "조정액은 그 달의 ‘전월 조정’ 행에 반영됩니다.",
   );
   expect(note).not.toHaveTextContent(/TK|MO|DP/);
+  await userEvent.keyboard("{Escape}");
   expect(
     screen
       .getAllByTestId(/^operating-row-/)
       .filter((row) => row.classList.contains("operating-total")),
   ).toHaveLength(3);
+});
+
+it("counts only actionable notices in the shared warning dialog", async () => {
+  const data = response();
+  data.notices = [
+    "자료 7/7개월",
+    "전년 자료 7/7개월",
+    "잠정: 미마감 월은 작업중입니다.",
+    "2026-07 선투입 원가: 프로젝트 진행 상태를 확인해 주세요.",
+    "전년 자료 5/7개월 · 빠진 월: 2025-05, 2025-06",
+  ];
+  vi.mocked(api.getOperatingProfitLoss).mockResolvedValue(data);
+  await draw();
+  const action = screen.getByRole("button", { name: "확인 필요 2건" });
+  expect(action.parentElement).toContainElement(screen.getByTestId("operating-adjustment"));
+  await userEvent.click(action);
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 2건" });
+  expect(within(dialog).getByRole("heading", { name: "2026-07" })).toBeVisible();
+  expect(within(dialog).getByText(/전년 자료 5\/7개월/)).toBeVisible();
 });

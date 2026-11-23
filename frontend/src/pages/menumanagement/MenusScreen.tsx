@@ -183,11 +183,6 @@ export function MenusScreen({
         )}
       </header>
       <p className="sicost-banner sicost-tone-info">{modeMessage}</p>
-      {!canUpdate && (
-        <p role="note">
-          수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
-        </p>
-      )}
       {message && (
         <p role="status" className="sicost-banner sicost-tone-info">
           {message}

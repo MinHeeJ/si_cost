@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
-import { ScreenPeriodBar } from "../shared/ScreenPeriodBar";
+import { PeriodSelector } from "../shared/PeriodSelector";
 import { getSharedCodes } from "../shared/sharedApi";
 import { ErrorBanner, StatusBadge, Toast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -24,6 +24,25 @@ import { useFinancialEditor } from "./useFinancialEditor";
 import { useFinancialNavigationGuard } from "./useFinancialNavigationGuard";
 import * as api from "./financialApi";
 import "./financial.css";
+
+const financialItemsGuide = (
+  <>
+    <section>
+      <h3>조회월과 입력 현황</h3>
+      <p>
+        입력 현황에서 연도를 고른 뒤 월을 누르면 그 달의 항목이 열립니다.
+        입력 현황의 건수는 저장된 재무 항목을 기준으로 표시합니다.
+      </p>
+    </section>
+    <section>
+      <h3>금액 단위와 저장</h3>
+      <p>
+        입력 금액은 원 단위 정수로 입력합니다. 탭 옆 ‘단위’에서 조회 금액의
+        표시 단위를 바꿀 수 있습니다. [저장]은 두 탭의 변경사항을 함께 반영합니다.
+      </p>
+    </section>
+  </>
+);
 
 export type FinancialItemsScreenProps = {
   onDirtyChange?(dirty: boolean): void;
@@ -50,7 +69,7 @@ export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const section = incoming?.section;
   const openAdjustments = section === "adjustments";
   return (
-    <SharedScreenFrame screenId="UI-10" periodBar={null}>
+    <SharedScreenFrame screenId="UI-10" periodBar={null} screenGuide={financialItemsGuide}>
       <FinancialItemsEditor
         key={savedEntry.current?.key}
         {...props}
@@ -204,13 +223,17 @@ export function FinancialItemsEditor({
       live = false;
     };
   }, []);
+  const year = editor?.month.slice(0, 4);
+  const firstYear = editor?.cashBaseMonth.slice(0, 4);
+  const canLoadYear =
+    year !== undefined && firstYear !== undefined && year >= firstYear;
   useEffect(() => {
-    if (!editor) return;
-    const controller = new AbortController();
     setYearStatus(undefined);
     setStatusError(undefined);
+    if (!canLoadYear) return;
+    const controller = new AbortController();
     void api
-      .getFinancialYearStatus(editor.month.slice(0, 4), controller.signal)
+      .getFinancialYearStatus(year, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) setYearStatus(result);
       })
@@ -218,7 +241,7 @@ export function FinancialItemsEditor({
         if (!controller.signal.aborted) setStatusError(failure);
       });
     return () => controller.abort();
-  }, [editor?.month, editor?.revision, statusRetry]);
+  }, [year, canLoadYear, editor?.revision, statusRetry]);
   useEffect(() => {
     if (state.violations.length)
       setTab(
@@ -417,6 +440,29 @@ export function FinancialItemsEditor({
         })
       }
       onAdd={() => add(collection)}
+      notice={collection === "items" && automaticCount > 0 ? (
+        <p className="sicost-banner sicost-tone-info">
+          ‘매달 반복’ 항목 {automaticCount}개를 지난달({previousMonth})에서 채웠습니다.
+          금액을 확인한 뒤 저장해 주세요.
+        </p>
+      ) : undefined}
+      summary={
+        collection === "adjustments" ? (
+          <>
+            <span>
+              조정 합계 (적용월 이익){" "}
+              {amount(editor.contributions.adjustmentProfit, true, true)}
+            </span>
+            <small>현금 반영 없음</small>
+          </>
+        ) : collection === "loans" ? (
+          <>
+            <span>받음 합계 {amount(editor.contributions.cashLoanIn, false, true)}</span>
+            <span>갚음 합계 {amount(editor.contributions.cashLoanOut, false, true)}</span>
+            <span>순액 {amount(editor.contributions.cashLoanNet, false, true)}</span>
+          </>
+        ) : undefined
+      }
       tableRows={
         collection === "items"
           ? [
@@ -427,8 +473,7 @@ export function FinancialItemsEditor({
                   itemName: (
                     <>
                       법인세(월할){" "}
-                      <StatusBadge tone="neutral">계산</StatusBadge>
-                      <HelpTooltip label="법인세(월할) 안내">
+                      <HelpTooltip label="법인세(월할) 안내" iconOnly>
                         {taxExplanation(allocation, editor.month)}
                       </HelpTooltip>
                     </>
@@ -438,6 +483,7 @@ export function FinancialItemsEditor({
                       type="button"
                       className="financial-calculated"
                       data-testid="financial-tax-jump"
+                      aria-label="법인세(월할) 금액과 납부 일정 보기"
                       onClick={() => {
                         document
                           .getElementById("financial-tax-section")
@@ -455,7 +501,7 @@ export function FinancialItemsEditor({
                     </button>
                   ),
                   vatAmount: "–",
-                  ioDate: "납부는 3월·8월 (자금수지)",
+                  ioDate: "–",
                   repeat: "–",
                   remark: "연간 예상액에서 자동 계산",
                 },
@@ -543,9 +589,19 @@ export function FinancialItemsEditor({
       }
     />
   );
-  const amount = (value: string | null | undefined, plus = false) => (
-    <FinancialAmount value={value} unit={unit} plus={plus} />
+  const amount = (value: string | null | undefined, plus = false, showUnit = false) => (
+    <FinancialAmount value={value} unit={unit} plus={plus} showUnit={showUnit} />
   );
+  const automaticCount = draft.items.filter((row) => row.automatic).length;
+  const selectedYear = editor.month.slice(0, 4);
+  const currentMonth = editor.today.slice(0, 7);
+  const currentYear = currentMonth.slice(0, 4);
+  const earliestListedYear = String(
+    Math.max(
+      1,
+      Math.min(Number(editor.cashBaseMonth.slice(0, 4)), Number(currentYear)) - 1,
+    ),
+  ).padStart(4, "0");
   const contributions = state.calculated?.contributions ?? editor.contributions;
   const allocation = state.calculated?.allocation ?? editor.allocation;
   const currentTax = allocation.months.find(
@@ -583,15 +639,6 @@ export function FinancialItemsEditor({
       className="financial-editor"
       data-testid="financial-editor"
     >
-      <ScreenPeriodBar
-        screenId="UI-10"
-        controlled={{
-          month: editor.month,
-          currentMonth: editor.today.slice(0, 7),
-          onChange: selectMonth,
-          disabled: state.pending,
-        }}
-      />
       <ScreenTitleActions>
         <div className="financial-actions">
           {editor.editable && (
@@ -634,51 +681,31 @@ export function FinancialItemsEditor({
         </div>
       </ScreenTitleActions>
       <section
-        className="financial-months"
+        className="financial-months sicost-section-card"
+        aria-labelledby="financial-month-status-title"
         data-testid="financial-month-status"
       >
-        <div className="sicost-list-toolbar">
-          <button
-            type="button"
-            data-testid="financial-previous-year"
-            disabled={state.pending || editor.month.slice(0, 4) <= "0001"}
-            onClick={() =>
-              selectMonth(
-                `${String(Number(editor.month.slice(0, 4)) - 1).padStart(4, "0")}-12`,
-              )
-            }
-          >
-            ‹ 이전 해
-          </button>
-          <h2>{editor.month.slice(0, 4)}년</h2>
-          <button
-            type="button"
-            data-testid="financial-next-year"
-            disabled={
-              state.pending ||
-              editor.month.slice(0, 4) >= editor.today.slice(0, 4)
-            }
-            onClick={() => {
-              const year = String(
-                Number(editor.month.slice(0, 4)) + 1,
-              ).padStart(4, "0");
-              selectMonth(
-                year === editor.today.slice(0, 4)
-                  ? editor.today.slice(0, 7)
-                  : `${year}-12`,
-              );
-            }}
-          >
-            다음 해 ›
-          </button>
-          <strong>입력 현황</strong>
-          <HelpTooltip label="안내">
-            달을 누르면 그 달 항목으로 바뀝니다. 헤더의 기준 연월도 함께
-            바뀝니다. 아래 [저장]은 두 탭을 함께 저장합니다.
-          </HelpTooltip>
-          <span>저장된 재무 항목만 집계합니다</span>
+        <div className="financial-year-controls">
+          <div className="sicost-period-controls">
+            <PeriodSelector
+              type="YEAR"
+              label="입력 현황 연도"
+              value={selectedYear}
+              min="0001"
+              max={currentYear}
+              optionMin={earliestListedYear}
+              disabled={state.pending}
+              onChange={(year) =>
+                selectMonth(year === currentYear ? currentMonth : `${year}-12`)
+              }
+            />
+          </div>
         </div>
-        <div className="financial-month-strip">
+        <header className="financial-month-heading">
+          <h2 id="financial-month-status-title">입력 현황</h2>
+          <span>저장된 재무 항목만 집계합니다</span>
+        </header>
+        <div className="financial-month-grid" role="group" aria-label="12개월 입력 현황">
           {Array.from(
             { length: 12 },
             (_, index) =>
@@ -705,7 +732,7 @@ export function FinancialItemsEditor({
                     ? "–"
                     : status
                       ? `${status.closeStatus === "CLOSE" ? "마감" : "작업중"} · ${status.itemCount ?? "–"}건`
-                      : "조회 중"}
+                      : statusError || !canLoadYear ? "–" : "조회 중"}
                 </small>
               </button>
             );
@@ -758,33 +785,32 @@ export function FinancialItemsEditor({
           )}
         </div>
       )}
-      <SegmentedTabList
-        as="nav"
-        className="financial-tabs"
-        aria-label="재무 항목 탭"
-      >
-        <button
-          type="button"
-          data-testid="financial-tab-financial"
-          aria-pressed={tab === "financial"}
-          onClick={() => setTab("financial")}
-        >
-          판관비·법인세·조정{" "}
-          {financialDirty && <StatusBadge tone="warn">저장 전</StatusBadge>}
-        </button>
-        <button
-          type="button"
-          data-testid="financial-tab-cash"
-          aria-pressed={tab === "cash"}
-          onClick={() => setTab("cash")}
-        >
-          카드·이체·대여금{" "}
-          {cashDirty && <StatusBadge tone="warn">저장 전</StatusBadge>}
-        </button>
-        <label>
+      <div className="financial-view-toolbar">
+        <SegmentedTabList as="nav" aria-label="재무 항목 탭">
+          <button
+            type="button"
+            data-testid="financial-tab-financial"
+            aria-pressed={tab === "financial"}
+            onClick={() => setTab("financial")}
+          >
+            판관비·법인세·조정{" "}
+            {financialDirty && <StatusBadge tone="warn">저장 전</StatusBadge>}
+          </button>
+          <button
+            type="button"
+            data-testid="financial-tab-cash"
+            aria-pressed={tab === "cash"}
+            onClick={() => setTab("cash")}
+          >
+            카드·이체·대여금{" "}
+            {cashDirty && <StatusBadge tone="warn">저장 전</StatusBadge>}
+          </button>
+        </SegmentedTabList>
+        <label className="financial-unit-control">
           단위{" "}
           <select
             data-testid="financial-display-unit"
+            aria-label="표시 단위"
             value={unit}
             onChange={(event) => setUnit(event.target.value as FinancialUnit)}
           >
@@ -793,7 +819,7 @@ export function FinancialItemsEditor({
             <option>백만원</option>
           </select>
         </label>
-      </SegmentedTabList>
+      </div>
       {state.error != null && (
         <ErrorBanner
           message={
@@ -850,20 +876,10 @@ export function FinancialItemsEditor({
       <div
         hidden={tab !== "financial"}
         data-testid="financial-financial-panel"
+        className="financial-tab-panel"
         role="region"
         aria-label="판관비·법인세·조정"
       >
-        <p className="financial-help">
-          손익·영업이익표·순이익표에 들어갑니다. 판관비·영업외비용은 자금수지표
-          제경비에도 들어갑니다. 아래 [저장]은 두 탭을 함께 저장합니다.
-        </p>
-        {draft.items.some((row) => row.automatic) && (
-          <p className="sicost-banner sicost-tone-info">
-            ‘매달 반복’ 항목 {draft.items.filter((row) => row.automatic).length}
-            개를 지난달({previousMonth})에서 자동으로 채웠습니다. 금액이 다르면
-            고친 뒤 저장해 주세요.
-          </p>
-        )}
         {panel("items")}
         <FinancialTaxPanel
           editor={editor}
@@ -877,20 +893,14 @@ export function FinancialItemsEditor({
           onPayment={(row) => void openPayment(row)}
         />
         {panel("adjustments")}
-        <p>
-          조정 합계 (적용월 이익){" "}
-          {amount(editor.contributions.adjustmentProfit, true)} · 현금 반영 없음
-        </p>
       </div>
       <div
         hidden={tab !== "cash"}
         data-testid="financial-cash-panel"
+        className="financial-tab-panel"
         role="region"
         aria-label="카드·이체·대여금"
       >
-        <p className="financial-help">
-          자금수지에만 반영됩니다. 손익에는 넣지 않습니다.
-        </p>
         <FinancialCardsPanel
           month={editor.month}
           draft={draft}
@@ -904,11 +914,6 @@ export function FinancialItemsEditor({
         />
         {panel("transfers")}
         {panel("loans")}
-        <p>
-          받음 합계 {amount(editor.contributions.cashLoanIn)} / 갚음 합계{" "}
-          {amount(editor.contributions.cashLoanOut)} / 순액{" "}
-          {amount(editor.contributions.cashLoanNet)}
-        </p>
       </div>
       {history && (
         <FinancialHistoryPanel

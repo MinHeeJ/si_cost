@@ -9,10 +9,12 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.operating-toolbar label {
-  margin-left: auto;
+.operating-actions > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.operating-toolbar select {
+.operating-actions select {
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 4px;

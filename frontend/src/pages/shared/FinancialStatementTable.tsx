@@ -78,6 +78,7 @@ export function CashFlowStatementTable({
   rows: {
     key: string;
     label: string;
+    help?: string;
     values: (string | null)[];
     sourceItem?: string;
     section?: boolean;
@@ -87,44 +88,45 @@ export function CashFlowStatementTable({
 }) {
   return (
     <div className="operating-table-scroll">
-      <table aria-label="자금수지표">
+      <table aria-label="자금수지표" className="cash-statement-table">
         <thead>
           <tr>
-            <th scope="col">항목</th>
+            <th scope="col"><span>항목</span></th>
             {columns.map((c) => (
               <th
                 scope="col"
                 key={c.key}
                 className={c.status === "PLANNED" ? "cash-planned" : undefined}
               >
-                {c.label}
-                {c.status && <br />}
+                <span>{c.label}</span>
                 {c.status && (
-                  <StatusBadge
-                    tone={
-                      c.status === "ACTUAL"
-                        ? "lock"
+                  <span className="cash-statement-column-status">
+                    <StatusBadge
+                      tone={
+                        c.status === "ACTUAL"
+                          ? "lock"
+                          : c.status === "BEFORE_BASE"
+                            ? "neutral"
+                            : "info"
+                      }
+                    >
+                      {c.status === "ACTUAL"
+                        ? "실적"
                         : c.status === "BEFORE_BASE"
-                          ? "neutral"
-                          : "info"
-                    }
-                  >
-                    {c.status === "ACTUAL"
-                      ? "실적"
-                      : c.status === "BEFORE_BASE"
-                        ? "운영 시작 전"
-                        : "예정"}
-                  </StatusBadge>
-                )}
-                {c.status === "PLANNED" && c.shortage && (
-                  <span
-                    data-testid={`cash-shortage-warning-${c.key}`}
-                    className="cash-shortage-warning"
-                    role="img"
-                    aria-label={`${c.label} 자금 부족 예상`}
-                    title="월말 잔액이 최소 운영자금보다 적을 것으로 예상"
-                  >
-                    ⚠
+                          ? "운영 시작 전"
+                          : "예정"}
+                    </StatusBadge>
+                    {c.status === "PLANNED" && c.shortage && (
+                      <span
+                        data-testid={`cash-shortage-warning-${c.key}`}
+                        className="cash-shortage-warning"
+                        role="img"
+                        aria-label={`${c.label} 자금 부족 예상`}
+                        title="월말 잔액이 최소 운영자금보다 적을 것으로 예상"
+                      >
+                        ⚠
+                      </span>
+                    )}
                   </span>
                 )}
               </th>
@@ -140,7 +142,14 @@ export function CashFlowStatementTable({
               }
               data-testid={`cash-row-${row.key.toLowerCase().replaceAll("_", "-")}`}
             >
-              <th scope="row">{row.label}</th>
+              <th scope="row" aria-label={row.help ? row.label : undefined}>
+                {row.label}
+                {row.help && (
+                  <HelpTooltip label={row.label} iconOnly>
+                    {row.help}
+                  </HelpTooltip>
+                )}
+              </th>
               {row.values.map((value, i) => (
                 <td
                   key={columns[i].key}

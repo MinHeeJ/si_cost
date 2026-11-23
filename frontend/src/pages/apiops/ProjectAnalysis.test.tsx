@@ -23,9 +23,6 @@ vi.mock("./projectAnalysisApi", async (original) => ({
 }));
 vi.mock("../shared/sharedApi");
 vi.mock("../salespartsops/partStandardsApi");
-vi.mock("../shared/ScreenPeriodBar", () => ({
-  ScreenPeriodBar: () => <div>월 선택</div>,
-}));
 const completeness: api.Completeness = {
   costComplete: true,
   revenueComplete: true,
@@ -352,6 +349,35 @@ describe("프로젝트 원가 목록", () => {
     fireEvent.click(columns);
     expect(openColumns).toHaveBeenCalledOnce();
   });
+  it("공통 월 선택에서 이전 달을 고르면 저장하고 집계 기간을 갱신한다", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(api.getProjectCosts).mockImplementation(async (query) => {
+      const data = costs();
+      if (query.month === "2026-05") {
+        data.month = "2026-05";
+        data.summary.completeness.rangeEndMonth = "2026-05";
+      }
+      return data;
+    });
+    mount(
+      <ProjectCostAnalysis onMonthChange={save} />,
+      "/UI-04?month=2026-06&projectId=owned&page=2",
+    );
+    const selector = await screen.findByRole("combobox", { name: "기간" });
+    const status = await screen.findByRole("group", { name: "조회 기간 상태" });
+    expect(selector).toHaveValue("2026-06");
+    expect(screen.queryByText("작업중")).not.toBeInTheDocument();
+    expect(status).toHaveTextContent("2025-01 ~ 2026-06");
+    fireEvent.click(screen.getByRole("button", { name: "이전 기간" }));
+    await waitFor(() => expect(selector).toHaveValue("2026-05"));
+    expect(save).toHaveBeenCalledWith("2026-05");
+    expect(await screen.findByRole("group", { name: "조회 기간 상태" }))
+      .toHaveTextContent("2025-01 ~ 2026-05");
+    expect(api.getProjectCosts).toHaveBeenCalledWith(
+      { month: "2026-05", page: 1 },
+      expect.any(AbortSignal),
+    );
+  });
   it("URL 상세 변경과 월 이동을 같은 화면 인스턴스에 반영한다", async () => {
     mount(
       <>
@@ -556,7 +582,8 @@ describe("프로젝트 원가 목록", () => {
     const row = name.closest("tr")!;
     expect(row).toHaveAttribute("tabindex", "0");
     expect(
-      screen.getByText("행을 누르면 월별 원가·시뮬레이션"),
+      within(screen.getByRole("group", { name: "조회 기간 상태" }))
+        .getByText("행을 누르면 월별 원가·시뮬레이션을 볼 수 있습니다."),
     ).toBeInTheDocument();
     fireEvent.keyDown(row, { key: "Enter" });
     expect(screen.getByTestId("row-detail")).toHaveTextContent("owned");

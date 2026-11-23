@@ -12,8 +12,8 @@ vi.mock("./profitStructureApi", async (original) => ({
   downloadProfitLossStructure: vi.fn(),
 }));
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({ children, headerActions }: { children: ReactNode; headerActions?: ReactNode }) => (
+    <section>{headerActions}{children}</section>
   ),
 }));
 function response(): api.StructureData {
@@ -168,6 +168,7 @@ function response(): api.StructureData {
       ["corpTaxAmt", "법인세(월할)"],
       ["netPrftAmt", "당기순이익"],
       ["idleCostShare", "대기 원가 비중"],
+      ["referenceRevenue", "배분 기준 매출(참고)"],
     ].map(([metric, label]) => ({
       metric,
       label,
@@ -286,13 +287,10 @@ it("switches aggregation and preserves it on period change", async () => {
     "true",
   );
 });
-it("always provides numeric tables and readable methods without toggle buttons or editors", async () => {
+it("keeps numeric tables visible and lets the reader expand and collapse the calculation methods", async () => {
   await draw();
   expect(
     screen.queryByRole("button", { name: "숫자로 보기" }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole("button", { name: "계산 방법" }),
   ).not.toBeInTheDocument();
   expect(
     screen.getByRole("table", { name: "기간별 손익 숫자표" }),
@@ -303,6 +301,11 @@ it("always provides numeric tables and readable methods without toggle buttons o
   expect(
     screen.getByRole("table", { name: "고객사 구성 숫자표" }),
   ).toBeInTheDocument();
+  const methods = screen.getByTestId("structure-method-panel");
+  const summary = within(methods).getByText("계산 방법");
+  expect(methods).not.toHaveAttribute("open");
+  await userEvent.click(summary);
+  expect(methods).toHaveAttribute("open");
   expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
   expect(
     within(screen.getByTestId("structure-method-panel"))
@@ -313,6 +316,8 @@ it("always provides numeric tables and readable methods without toggle buttons o
     /TB_|salesAmt|VAT/,
   );
   expect(screen.getByText("금액은 모두 부가세 제외입니다.")).toBeVisible();
+  await userEvent.click(summary);
+  expect(methods).not.toHaveAttribute("open");
   expect(screen.getByText("월별 · 단위 천원")).toBeVisible();
   expect(screen.getByText(/엑셀 다운로드는 이 표와 같습니다/)).toBeVisible();
   const numeric = screen.getByRole("table", { name: "기간별 손익 숫자표" });
@@ -420,9 +425,16 @@ it("keeps sales part guidance inside its card and uses the server's composition 
   expect(
     screen.getByTestId("structure-numeric-net-prft-amt"),
   ).toHaveTextContent("당기순이익");
-  expect(screen.getByText(/턴키는 청구한 달의 공급가액/)).not.toHaveTextContent(
-    /TK|MO\/DP|09/,
-  );
+  const compositionHelp = screen.getByRole("button", { name: "매출 구성 기준 도움말" });
+  await userEvent.click(compositionHelp);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/기여이익은.*인건비를 뺀 금액/);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/숫자로 보기.*매출 구성 표에도 같은 기준/);
+  await userEvent.keyboard("{Escape}");
+  const referenceHelps = screen.getAllByRole("button", { name: "배분 기준 매출 도움말" });
+  expect(referenceHelps).toHaveLength(2);
+  expect(screen.getByTestId("structure-numeric-reference-revenue")).toContainElement(referenceHelps[1]);
+  await userEvent.click(referenceHelps[0]);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/점선.*회사 매출이나 이익 합계에는 포함하지 않습니다/);
 });
 it("passes selected month through router state to operating and net screens", async () => {
   await draw();
@@ -529,12 +541,12 @@ it.each([
 });
 
 it.each([
-  ["MONTH", "월", ["2026-08"], "2026년 8월 · 월 실적 · 전년 동월과 비교"],
+  ["MONTH", "월", ["2026-08"], null],
   [
     "QUARTER",
     "분기",
     ["2026-07", "2026-08"],
-    "2026년 7~8월 · 분기 실적 · 전년 동분기의 같은 월 범위와 비교",
+    "2026년 7~8월",
   ],
   [
     "YTD",
@@ -543,7 +555,7 @@ it.each([
       { length: 8 },
       (_, i) => `2026-${String(i + 1).padStart(2, "0")}`,
     ),
-    "2026년 1~8월 · 연 누계 실적 · 전년 동기 누계와 비교",
+    "2026년 1~8월",
   ],
 ] as const)(
   "describes the server's actual %s bucket period",
@@ -575,7 +587,13 @@ it.each([
     await draw("2026-08");
     if (mode !== "MONTH")
       await userEvent.click(screen.getByRole("tab", { name: tab }));
-    expect(await screen.findByText(`${expected} · 부가세 제외`)).toBeVisible();
+    await screen.findByTestId("structure-card-sales-amt");
+    const periodStatus = screen.getByRole("group", { name: "조회 기간 상태" });
+    if (expected) {
+      expect(within(periodStatus).getByText(expected)).toBeVisible();
+    } else {
+      expect(within(periodStatus).queryByText(/집계 기간/)).not.toBeInTheDocument();
+    }
     expect(api.getProfitLossStructure).toHaveBeenLastCalledWith(
       2026,
       "2026-08",
@@ -584,3 +602,27 @@ it.each([
     );
   },
 );
+
+it("opens the toolbar warning count as a modal with the current actionable notices", async () => {
+  const warning = "선투입 원가: 프로젝트 진행 상태를 확인해 주세요.";
+  const second = "유상 투입 없는 턴키 배분액: 월 투입과 배분표를 확인해 주세요.";
+  vi.mocked(api.getProfitLossStructure).mockResolvedValue({
+    ...response(),
+    notices: [
+      "잠정: 미마감 월은 작업중입니다.",
+      ...[warning, second, warning].map((message) => `2026-07 ${message}`),
+    ],
+  });
+  await draw();
+  const button = screen.getByRole("button", { name: "확인 필요 2건" });
+  expect(button.parentElement).toContainElement(screen.getByRole("tablist"));
+  expect(screen.queryByText(/선투입 원가:/)).not.toBeInTheDocument();
+  await userEvent.click(button);
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 2건" });
+  const month = within(dialog).getByRole("heading", { name: "2026-07" });
+  expect(within(month.parentElement!).getAllByRole("listitem").map((item) => item.textContent))
+    .toEqual([warning, second]);
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog", { name: "확인 필요 2건" })).not.toBeInTheDocument();
+  expect(button).toHaveFocus();
+});

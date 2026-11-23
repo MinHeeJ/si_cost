@@ -1,3 +1,6 @@
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
+import { businessCapabilities } from "../../shared/testSupport/businessFixtures";
+import { SharedScreenContext } from "../shared/SharedScreenContext";
 import {
   act,
   fireEvent,
@@ -34,6 +37,53 @@ beforeEach(() => {
     basisDate: clientFixture.basisDate,
   });
 });
+it.each([
+  { role: "EXEC", actions: ["INQ", "DNLD"], sensitive: true },
+  { role: "SALES_LDR", actions: ["INQ", "UPD", "REG", "DNLD"], sensitive: false },
+  { role: "PM", actions: ["INQ", "UPD", "REG"], sensitive: false },
+])("거래처 도구는 권한과 역할을 적용한다 ($role)", async ({ role, actions, sensitive }) => {
+  const customer = { ...clientFixture, id: "C-902", type: "CUST" as const };
+  vi.mocked(api.getClients).mockResolvedValue({
+    ...pageFixture, items: [clientFixture, customer], total: 2,
+  });
+  vi.mocked(api.getClient).mockImplementation(async (id) =>
+    id === customer.id ? customer : clientFixture,
+  );
+  render(
+    <PermissionContext.Provider value={{
+      ...businessCapabilities, sensitive,
+      features: { ...businessCapabilities.features, managePartners: false },
+      screens: { ...businessCapabilities.screens, "UI-15": actions },
+    }}>
+      <SharedScreenContext.Provider value={{ menus: [], favorites: [], pending: false, roleIds: [role], star: vi.fn() }}>
+        <ClientsScreen onUpload={vi.fn()} onTemplate={vi.fn()} onExport={vi.fn()} />
+      </SharedScreenContext.Provider>
+    </PermissionContext.Provider>,
+  );
+  const open = await screen.findByTestId(`client-${clientFixture.id}-open`);
+  expect(screen.queryByRole("columnheader", { name: "지급 계좌" }) !== null).toBe(sensitive);
+  expect(screen.queryByTestId("clients-upload")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("clients-export") !== null).toBe(actions.includes("DNLD"));
+  await userEvent.click(open);
+  await screen.findByTestId("client-panel-basic");
+  expect(screen.queryByTestId("client-edit")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("client-account-show")).not.toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("client-drawer-close"));
+  await userEvent.click(screen.getByTestId(`client-${customer.id}-open`));
+  await screen.findByTestId("client-panel-basic");
+  expect(screen.queryByTestId("client-edit") !== null).toBe(role === "SALES_LDR");
+  await userEvent.click(screen.getByTestId("client-drawer-close"));
+  const register = screen.queryByTestId("clients-register");
+  expect(register !== null).toBe(role === "SALES_LDR");
+  if (register) {
+    await userEvent.click(register);
+    const form = screen.getByTestId("client-form");
+    expect(await within(form).findByRole("option", { name: "고객사" })).toBeInTheDocument();
+    expect(within(form).queryByRole("option", { name: "협력사" })).not.toBeInTheDocument();
+    expect(within(form).queryByRole("option", { name: "고객·협력" })).not.toBeInTheDocument();
+  }
+});
+
 it("기본 사용Y와 전체 생략·구분검색·페이지 유지 계약을 호출한다", async () => {
   render(<ClientsScreen />);
   await screen.findByText(clientFixture.name);

@@ -1,3 +1,4 @@
+import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
@@ -5,7 +6,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { Icon } from "../../shared/Icon";
 import { normalizeDecimal } from "../../shared/format";
@@ -83,6 +84,9 @@ export function CommonCodesScreen({
   onDensityChange,
   onPageSizeChange,
 }: CommonCodesScreenProps) {
+  const canRegister = usePermission("UI-27", "REG");
+  const canUpdate = usePermission("UI-27", "UPD");
+  const canDelete = usePermission("UI-27", "DEL");
   const location = useLocation();
   const initialTab =
     (location.state as { section?: string } | null)?.section === "standards"
@@ -105,6 +109,7 @@ export function CommonCodesScreen({
   const [error, setError] = useState<unknown>(),
     [notice, setNotice] = useState(""),
     [fields, setFields] = useState<Record<string, string>>({});
+  const [saveToast, setSaveToast] = useState<{ message: string; sequence: number }>();
   const [modal, setModal] = useState<
     "group" | "code" | "blocked" | "move" | null
   >(null);
@@ -290,7 +295,7 @@ export function CommonCodesScreen({
     <Text
       label={`${row.code} ${label}`}
       value={row[key] ?? ""}
-      readOnly={readOnly || pending}
+      readOnly={readOnly || pending || !canUpdate}
       error={rowError(row.code, key)}
       inputMode={key === "codeVal" ? "decimal" : undefined}
       className={key === "codeVal" ? "sicost-decimal" : undefined}
@@ -356,7 +361,7 @@ export function CommonCodesScreen({
                   : undefined
               }
               checked={row.useYn === "Y"}
-              disabled={system || pending || drafts[row.code]?.isNew}
+              disabled={!canUpdate || system || pending || drafts[row.code]?.isNew}
               onChange={(event) =>
                 patch(row, "useYn", event.target.checked ? "Y" : "N")
               }
@@ -374,7 +379,7 @@ export function CommonCodesScreen({
         ),
       },
     );
-    if (!system)
+    if (canDelete && !system)
       columns.push({
         id: "delete",
         label: "삭제",
@@ -429,13 +434,16 @@ export function CommonCodesScreen({
         groupRevision: result.groupRevision,
       });
       if (result.changed) api.notifyCodeGroupsCommitted(group.groupId);
-      setNotice(
-        result.message ??
-          (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다."),
-      );
+      const message = result.message ??
+        (result.changed ? "저장했습니다." : "바뀐 내용이 없습니다.");
       try {
         await loadCodes(group, targetPage, size, true);
         await loadGroups();
+        if (result.changed) {
+          setSaveToast((previous) => ({ message, sequence: (previous?.sequence ?? 0) + 1 }));
+        } else {
+          setNotice(message);
+        }
       } catch {
         setError(undefined);
         setNotice("저장됐지만 다시 불러오지 못했습니다. 다시 조회해 주세요.");
@@ -599,20 +607,22 @@ export function CommonCodesScreen({
               </h1>
             </div>
           )}
-          <button
-            data-testid="common-codes-add-group"
-            aria-label="그룹 추가"
-            disabled={pending}
-            onClick={() =>
-              protectedAction(() => {
-                setForm({});
-                setFields({});
-                setModal("group");
-              })
-            }
-          >
-            <Icon name="plus" size={16} /> 그룹 추가
-          </button>
+          {canRegister && (
+            <button
+              data-testid="common-codes-add-group"
+              aria-label="그룹 추가"
+              disabled={pending}
+              onClick={() =>
+                protectedAction(() => {
+                  setForm({});
+                  setFields({});
+                  setModal("group");
+                })
+              }
+            >
+              <Icon name="plus" size={16} /> 그룹 추가
+            </button>
+          )}
         </header>
         <SegmentedTabList
           as="nav"
@@ -657,6 +667,7 @@ export function CommonCodesScreen({
             )}
           </p>
         )}
+        {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {tab === "codes" ? (
           <>
             <div className="codegroups-split">
@@ -724,7 +735,7 @@ export function CommonCodesScreen({
                         목록 밀도
                       </button>
                     )}
-                    {group && !system && (
+                    {canUpdate && group && !system && (
                       <button
                         data-testid="common-codes-add-code"
                         disabled={pending || loading}
@@ -782,30 +793,32 @@ export function CommonCodesScreen({
                 )}
               </div>
             </div>
-            <footer className="codegroups-footer">
-              <button
-                data-testid="common-codes-cancel"
-                disabled={pending || !dirty}
-                onClick={reset}
-              >
-                취소
-              </button>
-              <button
-                data-testid="common-codes-save"
-                className="sicost-primary"
-                disabled={pending || !dirty || loading}
-                onClick={() => void save()}
-              >
-                {pending ? "저장 중…" : "저장"}
-              </button>
-            </footer>
+            {canUpdate && (
+              <footer className="codegroups-footer">
+                <button
+                  data-testid="common-codes-cancel"
+                  disabled={pending || !dirty}
+                  onClick={reset}
+                >
+                  취소
+                </button>
+                <button
+                  data-testid="common-codes-save"
+                  className="sicost-primary"
+                  disabled={pending || !dirty || loading}
+                  onClick={() => void save()}
+                >
+                  {pending ? "저장 중…" : "저장"}
+                </button>
+              </footer>
+            )}
           </>
         ) : (
           panels?.[tab]
         )}
       </div>
       <Dialog
-        open={modal === "group"}
+        open={canRegister && modal === "group"}
         title="코드 그룹 추가"
         pending={pending}
         confirmLabel="추가"
@@ -817,7 +830,7 @@ export function CommonCodesScreen({
         {field("name", "그룹 이름", true)}
       </Dialog>
       <Dialog
-        open={modal === "code"}
+        open={canUpdate && modal === "code"}
         title={valueMode ? "수당코드 추가" : `코드 추가 · ${group?.name ?? ""}`}
         confirmLabel="추가"
         onCancel={() => setModal(null)}
@@ -876,7 +889,7 @@ export function CommonCodesScreen({
         <p>이동하면 저장하지 않은 내용을 버립니다.</p>
       </Dialog>
       <Dialog
-        open={Boolean(deleting)}
+        open={canDelete && Boolean(deleting)}
         title="코드 삭제 확인"
         pending={pending}
         confirmLabel="삭제 확인"

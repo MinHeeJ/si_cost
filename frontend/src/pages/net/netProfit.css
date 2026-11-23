@@ -11,7 +11,20 @@
 }
 .net-contributions h2 {
   font-size: 16px;
+  margin: 0;
+}
+.net-contribution-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   margin-bottom: 8px;
+}
+.net-contribution-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .net-contribution-row {
   display: grid;

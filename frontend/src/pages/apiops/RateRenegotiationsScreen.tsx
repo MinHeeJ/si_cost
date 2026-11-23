@@ -1,5 +1,6 @@
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
@@ -53,7 +54,7 @@ const help: Record<string, string> = {
   targetUnitPrice: "C ÷ 월MM m ÷ (1 − 목표율 T/100), 만 원 단위 올림",
   requiredIncreaseRate: "max(0, (올림된 목표 단가 V − 현재 단가 U) ÷ U × 100)",
   annualGain:
-    "DOWN(U × 가정율 r/100 × 계약MM k × 12). 같은 계약MM으로 1년 지속 투입 가정",
+    "인상으로 늘어나는 단가에 월 계약 투입량(MM)과 12개월을 곱한 값입니다. 원 미만은 버립니다.",
 };
 const emptyView = (): ColumnView => ({
   order: renegotiationColumns.map((c) => c.id),
@@ -329,50 +330,56 @@ export function RateRenegotiationsScreen({
       data-screen-id="SCR-UI-32"
       data-testid="renegotiation-screen"
     >
-      <div className="renegotiation-toolbar">
-        <span>
-          기준월 {data?.baseMonth ?? "–"} · 계산시각{" "}
-          {formatDateTime(data?.calculatedAt)}
-        </span>
-        {canDownload && (
-          <ScreenTitleActions>
-            <button
-              className="sicost-button renegotiation-download"
-              data-testid="renegotiation-download"
-              type="button"
-              disabled={!canDownload || !data || loading || exporting}
-              onClick={async () => {
-                if (exporting) return;
-                setExporting(true);
-                setExportError("");
-                try {
-                  await api.downloadRenegotiations(
-                    applied,
-                    view.order.filter(
-                      (id) =>
-                        !view.hidden.includes(id) &&
-                        (canCost ||
-                          id !== "monthlyLaborCost"),
-                    ),
-                    unit,
+      {data && (
+        <PeriodStatus className="sicost-period-summary">
+          <span className="sicost-period-summary-item">
+            <span className="sicost-period-summary-label">기준월</span>
+            <b>{data.baseMonth}</b>
+          </span>
+          <span className="sicost-period-summary-item">
+            <span className="sicost-period-summary-label">계산 시각</span>
+            <b>{formatDateTime(data.calculatedAt)}</b>
+          </span>
+        </PeriodStatus>
+      )}
+      {canDownload && (
+        <ScreenTitleActions>
+          <button
+            className="sicost-button sicost-download-button renegotiation-download"
+            data-testid="renegotiation-download"
+            type="button"
+            disabled={!canDownload || !data || loading || exporting}
+            onClick={async () => {
+              if (exporting) return;
+              setExporting(true);
+              setExportError("");
+              try {
+                await api.downloadRenegotiations(
+                  applied,
+                  view.order.filter(
+                    (id) =>
+                      !view.hidden.includes(id) &&
+                      (canCost ||
+                        id !== "monthlyLaborCost"),
+                  ),
+                  unit,
+                );
+              } catch (e) {
+                if (alive.current)
+                  setExportError(
+                    e instanceof Error
+                      ? e.message
+                      : "다운로드에 실패했습니다.",
                   );
-                } catch (e) {
-                  if (alive.current)
-                    setExportError(
-                      e instanceof Error
-                        ? e.message
-                        : "다운로드에 실패했습니다.",
-                    );
-                } finally {
-                  if (alive.current) setExporting(false);
-                }
-              }}
-            >
-              {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
-            </button>
-          </ScreenTitleActions>
-        )}
-      </div>
+              } finally {
+                if (alive.current) setExporting(false);
+              }
+            }}
+          >
+            {exporting ? "엑셀 생성 중…" : "엑셀 다운로드"}
+          </button>
+        </ScreenTitleActions>
+      )}
       <KpiStrip className="renegotiation-summary">
         <article>
           <h2>대상 인원</h2>
@@ -390,10 +397,10 @@ export function RateRenegotiationsScreen({
           <small>전체 대상 매출 가중 평균</small>
         </article>
         <article>
-          <h2>가정 연 증가</h2>
+          <h2>예상 연간 이익 증가액</h2>
           <strong>{amount(data?.summary.annualGain)}</strong>
           <small>
-            가정 {data?.appliedIncreaseRate ?? "–"}% 적용 · {unit}
+            인상률 {data?.appliedIncreaseRate ?? "–"}% · {unit}
           </small>
         </article>
         <article>
@@ -407,26 +414,35 @@ export function RateRenegotiationsScreen({
       <form
         data-testid="renegotiation-assumption-form"
         className="renegotiation-assumption"
+        aria-labelledby="renegotiation-assumption-title"
         onSubmit={(e) => {
           e.preventDefault();
           submit({ ...applied, page: 1 });
         }}
       >
-        <span>인상률 가정 · 같은 계약MM으로 1년 지속 투입 시 효과</span>
+        <div className="renegotiation-assumption-heading">
+          <HelpTooltip label="단가 인상 시뮬레이션" iconOnly>
+            단순 조회용이며, DB에는 변경값이 반영되지않습니다.
+          </HelpTooltip>
+          <h2 id="renegotiation-assumption-title">단가 인상 시뮬레이션</h2>
+        </div>
         <label>
-          인상률 %{" "}
-          <input
-            data-testid="renegotiation-rate"
-            inputMode="decimal"
-            value={rate}
-            disabled={loading}
-            aria-invalid={!!errorMessage}
-            onChange={(e) => setRate(e.target.value)}
-            onBlur={() => {
-              if (rate !== applied.increaseRate)
-                submit({ ...applied, page: 1 });
-            }}
-          />
+          인상률{" "}
+          <span className="renegotiation-rate-input">
+            <input
+              data-testid="renegotiation-rate"
+              inputMode="decimal"
+              value={rate}
+              disabled={loading}
+              aria-invalid={!!errorMessage}
+              onChange={(e) => setRate(e.target.value)}
+              onBlur={() => {
+                if (rate !== applied.increaseRate)
+                  submit({ ...applied, page: 1 });
+              }}
+            />
+            <span>%</span>
+          </span>
         </label>
         <button
           data-testid="renegotiation-recalculate"
@@ -435,9 +451,6 @@ export function RateRenegotiationsScreen({
         >
           재계산
         </button>
-        <small>
-          적용값 {data?.appliedIncreaseRate ?? "–"}% · DB에 저장하지 않습니다.
-        </small>
         {errorMessage && (
           <small role="alert">
             {errorMessage}
@@ -456,6 +469,7 @@ export function RateRenegotiationsScreen({
       )}
       {exportError && <ErrorBanner message={exportError} />}
       <FilterBar
+        className="renegotiation-filters"
         disabled={loading}
         testId="renegotiation-filters"
         onSubmit={() => submit({ ...draft, page: 1 })}
@@ -551,11 +565,6 @@ export function RateRenegotiationsScreen({
           onRetry={() => setOptionsRevision((r) => r + 1)}
         />
       )}
-      {loading && (
-        <p role="status">
-          {data ? "재계산 중… 직전 결과입니다." : "불러오는 중…"}
-        </p>
-      )}
       {(data?.issues ?? []).map((i, index) => (
         <div
           data-testid={`renegotiation-banner-${index}`}
@@ -648,7 +657,8 @@ export function RateRenegotiationsScreen({
         testId="renegotiation-table"
         dense={dense}
         empty="조건에 맞는 재협상 대상이 없습니다"
-        loading={loading && !data}
+        loading={loading}
+        loadingMessage="조회 중입니다."
         page={data?.pagination.page ?? 1}
         size={data?.pagination.size ?? 50}
         total={data?.pagination.total ?? 0}

@@ -401,12 +401,6 @@ export function PermissionsScreen({
             </StatusBadge>
           </div>
           <div className="roles-settings">
-            {!canUpdate && (
-              <p role="note">
-                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
-                수정).
-              </p>
-            )}
             <label className="sicost-field">
               데이터범위
               <FieldHelp label="데이터범위" /><ScopeSelect

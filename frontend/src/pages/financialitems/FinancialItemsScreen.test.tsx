@@ -117,7 +117,10 @@ it("loads server current month without preferences and renders empty states, sha
   expect(
     fetcher.mock.calls.some(([url]) => String(url).includes("preferences")),
   ).toBe(false);
-  expect(screen.getByLabelText("선택월")).toHaveValue("2026-07");
+  expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(screen.getByTestId("financial-month-2026-08")).toBeDisabled();
   expect(screen.getAllByText("등록된 항목이 없습니다.").length).toBeGreaterThan(
     0,
@@ -313,7 +316,10 @@ it("period movement offers stay, discard and save, with failed save leaving peri
     "저장 안 한 내용이 있습니다",
   );
   await userEvent.click(screen.getByRole("button", { name: "계속 편집" }));
-  expect(screen.getByLabelText("선택월")).toHaveValue("2026-07");
+  expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const implementation = fetcher.getMockImplementation()!;
   fetcher.mockImplementation(async (url, options) =>
     options?.method === "PUT"
@@ -327,10 +333,16 @@ it("period movement offers stay, discard and save, with failed save leaving peri
     }),
   );
   await within(screen.getByRole("dialog")).findByText("저장 실패");
-  expect(screen.getByLabelText("선택월")).toHaveValue("2026-07");
+  expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await userEvent.click(screen.getByTestId("financial-navigation-discard"));
   await waitFor(() =>
-    expect(screen.getByLabelText("선택월")).toHaveValue("2026-06"),
+    expect(screen.getByTestId("financial-month-2026-06")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    ),
   );
 });
 it("shell navigation and tab-close events are deferred until a successful resolution", async () => {
@@ -656,7 +668,10 @@ it("carries a closed month into a new adjustment in the first editable month", a
   expect(
     await screen.findByTestId("financial-adjustments-new-1-target-month"),
   ).toHaveValue("2026-06");
-  expect(screen.getByLabelText("선택월")).toHaveValue("2026-07");
+  expect(screen.getByTestId("financial-month-2026-07")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(screen.getByTestId("financial-tab-financial")).toHaveAttribute(
     "aria-pressed",
     "true",

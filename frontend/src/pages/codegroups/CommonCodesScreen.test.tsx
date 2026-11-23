@@ -1,10 +1,12 @@
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
+import { businessCapabilities } from "../../shared/testSupport/businessFixtures";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   fireEvent,
   render as renderUi,
   screen,
   waitFor,
-} from "@testing-library/react";
+} from "../../shared/testSupport/businessFixtures";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
@@ -79,6 +81,20 @@ beforeEach(() => {
     items: [row],
   });
 });
+it("삭제 권한이 없으면 조회 및 수정 가능한 업무 코드에도 삭제 버튼을 표시하지 않는다", async () => {
+  render(
+    <PermissionContext.Provider value={{
+      ...businessCapabilities,
+      screens: { ...businessCapabilities.screens, "UI-27": ["INQ", "UPD"] },
+    }}>
+      <CommonCodesScreen />
+    </PermissionContext.Provider>,
+  );
+  expect(await screen.findByLabelText("A 이름")).not.toHaveAttribute("readonly");
+  expect(screen.queryByRole("button", { name: "A 삭제" })).not.toBeInTheDocument();
+  expect(screen.queryByTestId("common-codes-add-group")).not.toBeInTheDocument();
+});
+
 describe("공통코드 편집 계약", () => {
   it("운영 기준값 진입과 캐시된 화면의 메뉴 재진입은 최초 탭만 바꾼다", async () => {
     function Entries() {
@@ -208,7 +224,7 @@ describe("공통코드 편집 계약", () => {
     expect(api.getGroupCodes).toHaveBeenCalledWith("CONTRACT", 1, 50);
   });
   it("값 모드는 네 열과 기존 값만 편집하고 정밀 문자열을 보낸다", async () => {
-    render(<CommonCodesScreen />);
+    const { container } = render(<CommonCodesScreen />);
     await userEvent.click(
       await screen.findByRole("button", { name: /수당코드.*1/ }),
     );
@@ -225,6 +241,9 @@ describe("공통코드 편집 계약", () => {
         changes: [{ code: "A", isNew: false, codeVal: "9.1234" }],
       }),
     );
+    const toast = await screen.findByText("저장했습니다.");
+    expect(toast).toHaveClass("sicost-toast");
+    expect(container).not.toContainElement(toast);
   });
   it("신규 창 추가는 로컬행이며 하단 취소가 복원한다", async () => {
     render(<CommonCodesScreen />);

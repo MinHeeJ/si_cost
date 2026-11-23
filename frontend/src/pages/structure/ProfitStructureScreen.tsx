@@ -1,12 +1,13 @@
-import { FinancialOverview } from "../../shared/FinancialOverview";
+import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner } from "../../shared/Feedback";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import {
   formatAmount,
   formatDateTime,
@@ -65,11 +66,53 @@ function monthRange(months: string[]) {
     ? `${first.slice(0, 4)}년 ${Number(first.slice(5))}~${Number(last.slice(5))}월`
     : `${label(first)}~${label(last)}`;
 }
-const comparisonLabels: Record<api.Aggregation, string> = {
-  MONTH: "전년 동월과 비교",
-  QUARTER: "전년 동분기의 같은 월 범위와 비교",
-  YTD: "전년 동기 누계와 비교",
-};
+const structureGuide = (
+  <dl>
+    <div>
+      <dt>집계와 비교 기준</dt>
+      <dd>
+        <ul>
+          <li>월은 선택한 기준월의 실적을 전년 같은 달과 비교합니다.</li>
+          <li>분기는 해당 분기 시작월부터 기준월까지의 실적을 전년의 같은 월 범위와 비교합니다.</li>
+          <li>연 누계는 1월부터 기준월까지의 실적을 전년의 같은 누계 기간과 비교합니다.</li>
+        </ul>
+        <p>전년 자료가 있는 경우 요약 카드에서 전년 대비 증감을 확인할 수 있습니다.</p>
+      </dd>
+    </div>
+    <div>
+      <dt>금액 기준</dt>
+      <dd>화면에 표시되는 금액은 부가세를 제외한 금액입니다.</dd>
+    </div>
+    <div>
+      <dt>매출 집계 기준</dt>
+      <dd>
+        턴키는 청구한 달의 공급가액을, 월단위·파견은 실제로 일한 달의 매출을
+        집계합니다. 같은 기간으로 비교하면 순이익표의 매출액에도 같은 기준이
+        적용됩니다.
+      </dd>
+    </div>
+  </dl>
+);
+function ReferenceRevenueHelp({ chartType }: { chartType?: "line" | "bar" }) {
+  return (
+    <HelpTooltip label="배분 기준 매출" iconOnly>
+      {chartType === "line" && "차트에서 ‘배분 기준 매출(참고)’ 점선으로 표시합니다. "}
+      {chartType === "bar" && "차트에서 ‘배분 기준 매출(참고)’ 막대로 표시합니다. "}
+      월단위·파견 매출에 작업한 달로 나눈 턴키 매출을 합산한 참고값입니다.
+      턴키는 배분표의 월별 금액을 쓰고, 배분표가 없으면 해당 월 원가에 계약금액을
+      곱한 뒤 예산으로 나눕니다. 회사 매출이나 이익 합계에는 포함하지 않습니다.
+    </HelpTooltip>
+  );
+}
+const compositionHelp = (
+  <HelpTooltip label="매출 구성 기준">
+    기여이익은 해당 계약 유형·고객사·영업 파트의 매출에서 프로젝트에 배분된
+    인건비를 뺀 금액입니다. 직접 경비·대기 원가·판관비를 차감하기 전이므로
+    회사 전체의 매출총이익·영업이익과 계산 기준이 다릅니다.
+    기여이익률은 매출에서 기여이익이 차지하는 비율이며, 아래 ‘숫자로 보기’의
+    매출 구성 표에도 같은 기준을 적용합니다.
+  </HelpTooltip>
+);
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 function Change({
@@ -266,6 +309,7 @@ export function ProfitStructureScreen({
   }, [period, aggregation, revision]);
   const last = data?.buckets.at(-1),
     quarterly = aggregation === "QUARTER";
+  const warnings = data ? getFinancialWarnings(data.notices) : [];
   function go(path: string) {
     if (period)
       navigate(path, {
@@ -302,7 +346,35 @@ export function ProfitStructureScreen({
     }
   }
   return (
-    <SharedScreenFrame screenId="UI-07">
+    <SharedScreenFrame
+      screenId="UI-07"
+      screenGuide={structureGuide}
+      periodBarOptions={{ showMonthCloseStatus: false, showCumulativeRange: false }}
+      headerActions={
+        <div className="sicost-title-action-group profit-structure-actions">
+          <label>
+            단위{" "}
+            <select
+              data-testid="structure-unit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+          <button
+            data-testid="structure-export"
+            type="button"
+            disabled={!data || loading || download || mobile}
+            onClick={() => void exportFile()}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
+      }
+    >
       <div
         className={`profit-structure${dense ? " financial-display-dense" : ""}`}
         data-testid="profit-structure-screen"
@@ -323,28 +395,7 @@ export function ProfitStructureScreen({
               </button>
             ))}
           </SegmentedTabList>
-          <ScreenTitleActions>
-            <label>
-              단위{" "}
-              <select
-                data-testid="structure-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
-            <button
-              data-testid="structure-export"
-              type="button"
-              disabled={!data || loading || download || mobile}
-              onClick={() => void exportFile()}
-            >
-              엑셀 다운로드
-            </button>
-          </ScreenTitleActions>
+          {warnings.length > 0 && <FinancialWarnings warnings={warnings} />}
         </div>
         {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
@@ -369,11 +420,11 @@ export function ProfitStructureScreen({
               provisional={
                 last?.provisional ?? data.months.some((m) => m.provisional)
               }
-              notices={data.notices}
-              caption={
-                last
-                  ? `${monthRange(last.months)} · ${tabs.find(([mode]) => mode === data.context.aggregation)?.[1]} 실적 · ${comparisonLabels[data.context.aggregation]} · 부가세 제외`
-                  : `${data.context.year}년 · 조회 기간의 손익 자료가 없습니다 · 부가세 제외`
+              caption={null}
+              periodDetail={
+                last && data.context.aggregation !== "MONTH" && last.months.length > 0 && (
+                  <span>집계 기간 <b>{monthRange(last.months)}</b></span>
+                )
               }
             />
             {!data.months.some(
@@ -440,6 +491,7 @@ export function ProfitStructureScreen({
               <StructureWaterfall steps={data.waterfall} unit={unit} />
               <StructureTrend
                 title="매출·매출원가 추이"
+                titleHelp={<ReferenceRevenueHelp chartType={quarterly ? "bar" : "line"} />}
                 buckets={data.buckets}
                 metrics={["salesAmt", "salesCostAmt", "referenceRevenue"]}
                 labels={["매출", "매출원가", "배분 기준 매출(참고)"]}
@@ -466,6 +518,7 @@ export function ProfitStructureScreen({
             </div>
             {last?.composition.visible ? (
               <div className="profit-structure-compositions">
+                <div className="profit-structure-composition-help">{compositionHelp}</div>
                 <RevenueComposition
                   title="계약 유형별 매출 구성"
                   id="type"
@@ -498,10 +551,6 @@ export function ProfitStructureScreen({
                 {formatAmount(last.composition.revenueDifference, unit)} {unit}
               </p>
             )}
-            <p role="note">
-              기여이익은 매출−배분 노동비로 회사 매출총이익·영업이익과 다른
-              지표입니다.
-            </p>
             <section
               className="profit-structure-card"
               data-testid="structure-numeric-panel"
@@ -517,6 +566,9 @@ export function ProfitStructureScreen({
                   {" · 단위 "}
                   {unit}
                 </small>
+                {!last?.composition.visible &&
+                  data.buckets.some((bucket) => bucket.composition.visible) &&
+                  compositionHelp}
               </div>
               <div className="profit-structure-table-scroll">
                 <table aria-label="기간별 손익 숫자표">
@@ -569,6 +621,9 @@ export function ProfitStructureScreen({
                             ? "└ "
                             : ""}
                           {row.label}
+                          {row.metric === "referenceRevenue" && (
+                            <ReferenceRevenueHelp />
+                          )}
                         </th>
                         {row.bucketValues.map((value, i) => (
                           <td
@@ -603,11 +658,11 @@ export function ProfitStructureScreen({
                 영업이익표·순이익표에서 봅니다. 같은 계산이라 숫자가 같습니다.
               </p>
             </section>
-            <section
-              className="profit-structure-card"
+            <details
+              className="profit-structure-card profit-structure-methods"
               data-testid="structure-method-panel"
             >
-              <h2>계산 방법</h2>
+              <summary>계산 방법</summary>
               <div className="profit-structure-table-scroll">
                 <table
                   aria-label="계산 방법"
@@ -637,12 +692,7 @@ export function ProfitStructureScreen({
               <p className="profit-structure-muted">
                 금액은 모두 부가세 제외입니다.
               </p>
-            </section>
-            <p className="profit-structure-muted">
-              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출입니다.
-              점선(배분 기준 매출)은 참고선이며 회사 매출·이익에 더하지
-              않습니다. 순이익표의 진행률 매출과 다를 수 있습니다.
-            </p>
+            </details>
             <div className="profit-structure-toolbar">
               <button
                 data-testid="structure-operating-link"

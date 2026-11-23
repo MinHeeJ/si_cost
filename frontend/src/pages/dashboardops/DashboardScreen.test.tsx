@@ -372,6 +372,21 @@ it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 
   expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent("자세히");
 });
 
+it.each(["AVAILABLE", "EMPTY"] as const)(
+  "영업파트별 현황이 비어 있으면 %s 상태에서 헤더 아래 안내 행을 표시한다",
+  async (status) => {
+    data.salesParts = [];
+    data.salesPartsBasis.status = status;
+    ready();
+
+    const table = await screen.findByRole("table", { name: "영업 파트별 실적" });
+    const [header, empty] = within(table).getAllByRole("row");
+    expect(within(header).getAllByRole("columnheader")).toHaveLength(4);
+    expect(
+      within(empty).getByRole("cell", { name: "영업 파트 자료가 없습니다." }),
+    ).toHaveAttribute("colspan", "4");
+  },
+);
 it("영업파트별 현황에서 선택월을 유지하며 UI-07로 이동한다", async () => {
   data.selectedMonth = "2026-06";
   ready();
@@ -886,7 +901,7 @@ it("shows the design's provisional month notice once and keeps detailed number s
   expect(within(bar).getAllByText("잠정")).toHaveLength(1);
   expect(within(bar).queryByText("작업중")).not.toBeInTheDocument();
   expect(bar).toHaveTextContent("마감 전이라 바뀔 수 있습니다");
-  expect(within(bar).queryByText("오늘 기준")).not.toBeInTheDocument();
+  expect(within(bar).queryByRole("button", { name: "지표별 조회 기준 도움말" })).not.toBeInTheDocument();
   await userEvent.click(within(bar).getByTestId("dashboard-basis-help"));
   expect(screen.getByRole("tooltip")).toHaveTextContent(
     "이번 달 매출 · 2026-07",
@@ -905,8 +920,10 @@ it("distinguishes a closed historical month from panels based on today", async (
   const bar = screen.getByRole("group", { name: "조회 기간 상태" });
   expect(within(bar).getByText("확정")).toBeInTheDocument();
   expect(within(bar).queryByText("잠정")).not.toBeInTheDocument();
-  expect(bar).toHaveTextContent("오늘 기준");
-  expect(bar).toHaveTextContent("청구 누락 의심만 고른 달");
+  expect(within(bar).getByText("손익·청구 누락 의심은 선택월 · 미수금·인력 수급 등은 오늘 기준")).toBeVisible();
+  expect(within(bar).getByText(/조회월 2026-06/)).toHaveClass("dashboard-print-date");
+  await userEvent.click(within(bar).getByRole("button", { name: "지표별 조회 기준 도움말" }));
+  expect(screen.getByRole("tooltip")).toHaveTextContent("청구 누락 의심은 선택월 기준");
 });
 
 it("does not invent a closed month and includes the year for a previous year's close", async () => {

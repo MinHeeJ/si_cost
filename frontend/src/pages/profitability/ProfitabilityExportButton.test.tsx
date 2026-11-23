@@ -84,9 +84,10 @@ describe("임시 관리자 개인 원가 다운로드 동작", () => {
     expect(api.getProfitabilityExport).toHaveBeenCalledTimes(1);
     await act(async () => complete(file));
     expect(api.saveProfitabilityDownload).toHaveBeenCalledWith(file);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "전체 결과 엑셀을 내려받았습니다.",
-    );
+    const toast = screen.getByRole("status");
+    expect(toast).toHaveTextContent("전체 결과 엑셀을 내려받았습니다.");
+    expect(toast).toHaveClass("sicost-toast");
+    expect(screen.getByTestId("profitability-export")).not.toContainElement(toast);
     expect(preferences.putPreference).not.toHaveBeenCalled();
   });
   it("다운로드 실패를 표시하고 다시 누를 수 있으며 실패 응답은 저장하지 않는다", async () => {

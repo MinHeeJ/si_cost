@@ -10,11 +10,6 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.business-plan-toolbar span,
-.business-plan-context {
-  color: var(--text-sub);
-  font-size: 13px;
-}
 .business-plan-toolbar label {
   display: flex;
   align-items: center;
@@ -65,6 +60,39 @@
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+.business-plan-period-detail,
+.business-plan-target-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.business-plan-period-detail {
+  gap: 6px 12px;
+}
+.business-plan-target-status {
+  border-inline-start: 1px solid var(--divider);
+  padding-inline-start: 12px;
+}
+.business-plan-target-status > .sicost-badge {
+  border: 0;
+  background: #ffebf1;
+  color: #cb3d65;
+}
+.business-plan-target-status > .sicost-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.business-plan-status-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
 .business-plan-chart {
   padding: 20px 24px;
   border: 0;
@@ -75,10 +103,13 @@
 .business-plan-chart h2 {
   margin-bottom: 12px;
 }
-.business-plan-chart svg {
+.business-plan-chart-fallback {
+  display: block;
   width: 100%;
   min-width: 780px;
-  min-height: 340px;
+}
+.business-plan-chart .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
 }
 .business-plan-chart text {
   fill: var(--text-sub);
@@ -161,6 +192,45 @@
   line-height: 1.6;
 }
 @media (max-width: 767px) {
+  .sicost-period-status:has(> .business-plan-period-detail) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 10px;
+    padding: 12px 14px;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > span {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
+  .sicost-period-status > .business-plan-period-detail {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding-block-end: 10px;
+    border-block-end: 1px solid var(--divider);
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-close {
+    grid-row: 2;
+    grid-column: 1;
+    color: var(--text-sub);
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-estimated {
+    grid-row: 2;
+    grid-column: 2;
+    justify-self: start;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-period-state {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text-sub);
+    line-height: 20px;
+    word-break: keep-all;
+  }
+  .sicost-period-status:has(> .business-plan-period-detail) > .sicost-financial-period-state > .sicost-badge {
+    flex: none;
+  }
   .business-plan-summary {
     grid-template-columns: 1fr;
   }

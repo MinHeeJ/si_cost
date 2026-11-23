@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { NetProfitScreen } from "./NetProfitScreen";
 import { NetProfitScreen as RegisteredScreen } from "../shared/NetProfitScreen";
 import * as api from "./netProfitApi";
@@ -13,11 +14,17 @@ vi.mock("../shared/FollowUpScreen", () => ({
   SharedScreenFrame: ({
     children,
     periodBar,
+    headerActions,
+    screenGuide,
   }: {
     children: ReactNode;
     periodBar?: ReactNode;
+    headerActions?: ReactNode;
+    screenGuide?: ReactNode;
   }) => (
     <section>
+      {headerActions}
+      {screenGuide && <ScreenGuide screenId="UI-09" screenName="순이익표">{screenGuide}</ScreenGuide>}
       {periodBar}
       {children}
     </section>
@@ -320,10 +327,9 @@ it("distinguishes migrated closed and working states", async () => {
     screen.getByRole("columnheader", { name: /2월 확정/ }),
   ).toBeInTheDocument();
   expect(
-    screen
-      .getAllByText("작업중")
-      .every((element) => element.classList.contains("sicost-tone-info")),
-  ).toBe(true);
+    within(screen.getByRole("region", { name: "화면 기간" })).queryByText("작업중"),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: /7월 작업중/ })).toBeInTheDocument();
 });
 it("hides absent prior-year columns", async () => {
   const data = response();
@@ -339,9 +345,13 @@ it("hides absent prior-year columns", async () => {
 });
 it("renders basis-month positive-only contribution with loss and zero having no bars", async () => {
   await draw();
-  expect(screen.getByTestId("net-contributions")).toHaveTextContent(
-    "2026-07 매출총이익 기준 · 유형별 매출총이익 = 매출 − 배분 원가 · 흑자 유형끼리 100%. 대기 원가·직접 경비는 나누지 않아 회사 매출총이익과 다릅니다.",
-  );
+  const contributions = within(screen.getByTestId("net-contributions"));
+  expect(contributions.getByText("2026-07")).toBeVisible();
+  await userEvent.click(contributions.getByRole("button", { name: "계약 유형별 기여도 도움말" }));
+  const help = screen.getByRole("tooltip");
+  expect(help).toHaveTextContent("유형별 매출총이익은 매출에서 배분 원가를 뺀 금액입니다.");
+  expect(help).toHaveTextContent("흑자 유형의 이익 합계를 100%");
+  await userEvent.keyboard("{Escape}");
   const loss = screen.getByTestId("net-contribution-1");
   expect(within(loss).getByText(/적자/)).toHaveClass("adverse");
   expect(within(loss).queryByLabelText(/기여도/)).not.toBeInTheDocument();
@@ -404,7 +414,7 @@ it("all loss or zero contributions explain the missing positive denominator", as
   expect(
     screen.getByText("흑자인 유형이 없어 비율과 막대를 표시하지 않습니다."),
   ).toBeInTheDocument();
-  expect(screen.queryByLabelText(/기여도/)).not.toBeInTheDocument();
+  expect(screen.queryByLabelText(/기여도 \d/)).not.toBeInTheDocument();
 });
 it("shows the mixed-profit example as server shares and a loss amount only", async () => {
   const data = response();
@@ -509,23 +519,33 @@ it("has no write close upload or actual cashflow results", async () => {
   expect(
     screen.queryByRole("button", { name: /삭제|마감|저장|업로드/ }),
   ).not.toBeInTheDocument();
-  const note = screen.getByText(/턴키는 청구한 달의 공급가액/);
+  expect(screen.queryByText(/턴키는 청구한 달의 공급가액/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
+  const note = screen.getByRole("dialog", { name: "순이익표 화면 안내" });
   expect(note).toHaveTextContent(
-    "월단위·파견은 일한 달의 매출입니다(부가세 제외).",
+    "월단위·파견은 일한 달의 매출입니다. 화면의 금액은 부가세를 제외합니다.",
   );
-  expect(note).toHaveTextContent("실제로 낸 법인세는 자금수지표에만 잡힙니다.");
+  expect(note).toHaveTextContent("실제 납부액은 자금수지표에 표시합니다.");
   expect(note).toHaveTextContent(
-    "내부(자체 개발) 비용은 판관비(연구개발비)로 처리합니다.",
+    "내부(자체 개발) 비용은 판관비의 연구개발비로 처리합니다.",
   );
   expect(note).not.toHaveTextContent(/TK|MO|DP|IN/);
-  expect(
-    screen.getByText(
-      "전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다.",
-    ),
-  ).toBeInTheDocument();
+  expect(note).toHaveTextContent("전월 조정과 연간 예상 법인세는 재무 항목에서 입력합니다.");
+});
+it("groups actionable notices and keeps complete coverage out of the count", async () => {
+  const data = response();
+  data.notices = ["자료 7/7개월", "2026-07 선투입 원가: 프로젝트 진행 상태를 확인해 주세요."];
+  vi.mocked(api.getNetProfitLoss).mockResolvedValue(data);
+  await draw();
+  await userEvent.click(screen.getByRole("button", { name: "확인 필요 1건" }));
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(dialog).getByRole("heading", { name: "2026-07" })).toBeVisible();
+  expect(within(dialog).getByRole("listitem")).toHaveTextContent("선투입 원가");
 });
 it("downloads selected period and unit", async () => {
   await draw();
+  const actions = screen.getByTestId("net-export").parentElement!;
+  expect(within(actions).getByLabelText("단위")).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText("단위"), "백만원");
   await userEvent.click(screen.getByRole("button", { name: "엑셀 다운로드" }));
   expect(api.downloadNetProfitLoss).toHaveBeenCalledWith(

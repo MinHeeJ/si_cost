@@ -476,7 +476,8 @@ input[type="radio"] {
 .sicost-title-action-group[hidden] {
   display: none;
 }
-.sicost-title-action-group button {
+.sicost-title-action-group button,
+button.sicost-download-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -500,7 +501,8 @@ input[type="radio"] {
     center/contain no-repeat;
 }
 .sicost-title-action-group
-  button:is([data-testid*="template"], [data-testid*="export"])::before {
+  button:is([data-testid*="template"], [data-testid*="export"])::before,
+button.sicost-download-button::before {
   content: "";
   display: inline-block;
   flex: none;

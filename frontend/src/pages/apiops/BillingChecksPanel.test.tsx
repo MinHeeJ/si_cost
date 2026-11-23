@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -88,6 +88,18 @@ it("API 카드를 같은 집계로 표시하고 고정 보완 문맥을 그대�
   expect(
     screen.getByText("예정 포함", { selector: ".sicost-badge" }),
   ).toHaveClass("sicost-tone-info");
+});
+it("투입 MM 헤더 도움말에 표시 자릿수를 안내한다", async () => {
+  draw();
+  await screen.findByRole("button", { name: "보완" });
+  expect(screen.queryByText(/점검월.*MM 소수/)).not.toBeInTheDocument();
+  const header = screen.getByRole("columnheader", { name: /투입 MM/ });
+  const help = within(header).getByRole("button", { name: "투입 MM 도움말" });
+  await userEvent.click(help);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("소수점 둘째 자리");
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  expect(help).toHaveFocus();
 });
 it.each(["적게 청구", "많이 청구", "맞음"] as const)(
   "%s 판정의 배지와 보완 상태를 지킨다",

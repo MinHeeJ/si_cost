@@ -18,12 +18,17 @@ export function ScreenPeriodBar({
   screenId,
   controlled,
   initialMonth,
+  showMonthCloseStatus = true,
+  showCumulativeRange = true,
 }: {
   screenId: string;
   initialMonth?: string;
+  showMonthCloseStatus?: boolean;
+  showCumulativeRange?: boolean;
   controlled?: {
     month: string;
     currentMonth: string;
+    minMonth?: string;
     onChange(month: string): void;
     disabled?: boolean;
   };
@@ -250,7 +255,8 @@ export function ScreenPeriodBar({
     );
   }, [context, value, type]);
   useEffect(() => {
-    if (controlled || !context || !value || type === "NONE") return;
+    if (!showMonthCloseStatus || controlled || !context || !value || type === "NONE")
+      return;
     const read = ++closeRead.current;
     if (value.type === "YEAR") {
       setStatus("");
@@ -270,7 +276,22 @@ export function ScreenPeriodBar({
     return () => {
       closeRead.current++;
     };
-  }, [context, value, type, closeRefresh]);
+  }, [context, value, type, closeRefresh, showMonthCloseStatus]);
+  if (controlled?.minMonth)
+    return (
+      <section className="sicost-period-bar" aria-label="화면 기간">
+        <div className="sicost-period-controls">
+          <PeriodSelector
+            type="YEAR_MONTH"
+            value={controlled.month}
+            min={controlled.minMonth}
+            max={controlled.currentMonth}
+            disabled={controlled.disabled}
+            onChange={controlled.onChange}
+          />
+        </div>
+      </section>
+    );
   if (controlled)
     return (
       <section
@@ -409,7 +430,7 @@ export function ScreenPeriodBar({
                 ))}
               </select>
             </label>
-            <span>1~{Number(value.month.slice(5))}월 누계</span>
+            {showCumulativeRange && <span>1~{Number(value.month.slice(5))}월 누계</span>}
           </>
         ) : (
           <PeriodSelector
@@ -434,7 +455,7 @@ export function ScreenPeriodBar({
                 : "올해"}
           </StatusBadge>
         ) : (
-          status && (
+          showMonthCloseStatus && status && (
             <StatusBadge tone={status === "작업중" ? "info" : "lock"}>
               {status}
             </StatusBadge>

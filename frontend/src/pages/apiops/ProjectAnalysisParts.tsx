@@ -52,15 +52,29 @@ export function AnalysisSummary({
     </KpiStrip>
   );
 }
-export function AnalysisCompleteness({ value }: { value: Completeness }) {
+export function AnalysisCompleteness({
+  value,
+  showRange = true,
+}: {
+  value: Completeness;
+  showRange?: boolean;
+}) {
+  const key = useRef(Math.random().toString(36).slice(2)).current;
+  if (
+    !showRange &&
+    !value.estimated &&
+    !value.missingBeforeMonth &&
+    value.unknownProjectCount === 0 &&
+    value.issues.length === 0
+  ) return null;
   return (
     <div
       className="project-analysis-basis"
-      data-testid={`analysis-basis-${useRef(Math.random().toString(36).slice(2)).current}`}
+      data-testid={`analysis-basis-${key}`}
     >
-      <span>
-        집계 {value.rangeStartMonth} ~ {value.rangeEndMonth}
-      </span>
+      {showRange && (
+        <span>집계 {value.rangeStartMonth} ~ {value.rangeEndMonth}</span>
+      )}
       {value.estimated && <StatusBadge tone="info">예정 원가 포함</StatusBadge>}
       {value.missingBeforeMonth && (
         <span>운영 전 원가 누락 · {value.missingBeforeMonth}부터 조회</span>

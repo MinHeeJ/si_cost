@@ -12,6 +12,7 @@ import { BusinessPlanPerformanceScreen } from "./BusinessPlanPerformanceScreen";
 import { BusinessPlanPerformanceScreen as RegisteredScreen } from "../shared/BusinessPlanPerformanceScreen";
 import * as api from "./businessPlanPerformanceApi";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
 vi.mock("./businessPlanPerformanceApi", async (original) => ({
   ...(await original<typeof import("./businessPlanPerformanceApi")>()),
@@ -19,9 +20,17 @@ vi.mock("./businessPlanPerformanceApi", async (original) => ({
   downloadBusinessPlanTemplate: vi.fn(),
 }));
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
+  SharedScreenFrame: ({ children, headerActions, screenGuide }: {
+    children: ReactNode;
+    headerActions?: ReactNode;
+    screenGuide?: ReactNode;
+  }) => (
     <ScreenPermissionContext.Provider value="UI-18">
-      <section>{children}</section>
+      <section>
+        {headerActions}
+        {screenGuide && <ScreenGuide screenId="UI-18" screenName="사업계획 대비 실적">{screenGuide}</ScreenGuide>}
+        {children}
+      </section>
     </ScreenPermissionContext.Provider>
   ),
 }));
@@ -156,7 +165,7 @@ it("keeps unregistered actuals and upload guidance", async () => {
   );
   await draw();
   expect(
-    screen.getByText(/2026년 사업계획 목표가 아직 없습니다/),
+    screen.getByText("2026년 목표 미등록"),
   ).toBeInTheDocument();
   expect(
     screen.getByTestId("business-plan-row-sales-actual-amt"),
@@ -165,7 +174,10 @@ it("keeps unregistered actuals and upload guidance", async () => {
     screen.getByTestId("business-plan-summary-cumulative-sales"),
   ).toHaveTextContent("–");
   const banner = screen.getByTestId("business-plan-unregistered");
-  expect(banner).toHaveClass("business-plan-warning");
+  expect(banner).toHaveClass("business-plan-target-status");
+  expect(within(banner).getByText("2026년 목표 미등록")).toHaveClass("sicost-tone-neutral");
+  expect(screen.getByRole("group", { name: "조회 기간 상태" })).toContainElement(banner);
+  expect(banner).toHaveTextContent("목표 업로드로 등록해 주세요.");
   expect(
     banner.compareDocumentPosition(
       screen.getByTestId("business-plan-summary-cumulative-sales"),
@@ -173,7 +185,7 @@ it("keeps unregistered actuals and upload guidance", async () => {
   ).toBeTruthy();
   expect(screen.queryByText(/확인 필요/)).not.toBeInTheDocument();
   expect(
-    screen.getAllByText(/2026년 사업계획 목표가 아직 없습니다/),
+    screen.getAllByText("2026년 목표 미등록"),
   ).toHaveLength(1);
   for (const metric of [
     "cumulative-sales",
@@ -206,16 +218,18 @@ it("shows registered zero and partial target notices distinctly", async () => {
     result("INCOMPLETE"),
   );
   await draw();
-  expect(
-    screen.getByText(
-      "일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.",
-    ),
-  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "확인 필요 1건" }));
+  expect(screen.getByRole("dialog", { name: "확인 필요 1건" })).toHaveTextContent(
+    "일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.",
+  );
   vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(
     result("ZERO_TARGETS"),
   );
   act(() => window.dispatchEvent(new Event(api.BUSINESS_PLAN_COMMITTED)));
-  await screen.findByText(
+  const warnings = await screen.findByRole("button", { name: "확인 필요 1건" });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await userEvent.click(warnings);
+  expect(screen.getByRole("dialog", { name: "확인 필요 1건" })).toHaveTextContent(
     "12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.",
   );
 });
@@ -349,22 +363,27 @@ it("emphasizes both rate rows and only explains missing rate cells without abbre
     if (cell.textContent !== "–") expect(cell).not.toHaveAttribute("title");
     expect(cell.getAttribute("title") ?? "").not.toMatch(/TK|MO|DP/);
   }
-  expect(screen.getByTestId("business-plan-basis")).toHaveTextContent(
-    "실적은 영업이익표의 같은 달 매출액·영업이익입니다(턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출, 부가세 제외).",
-  );
-  expect(screen.getByTestId("business-plan-basis")).not.toHaveTextContent(
-    /TK|MO|DP/,
-  );
+  expect(screen.queryByText(/실적은 영업이익표의 같은 달/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
+  const guide = screen.getByRole("dialog", { name: "사업계획 대비 실적 화면 안내" });
+  expect(guide).toHaveTextContent(/영업이익표의 같은 달.*턴키는 청구한 달/);
+  expect(guide).toHaveTextContent(/달성률은 실적을 목표로 나눈 뒤 100/);
+  expect(guide).toHaveTextContent(/올해 12개월 매출·영업이익 목표를 PC에서 등록/);
+  expect(guide).not.toHaveTextContent(/TK|MO|DP/);
 });
 it("keeps unrelated server notices when moving the unregistered notice to its banner", async () => {
   const data = result("UNREGISTERED");
-  data.notices.push("실적 자료를 확인해 주세요.");
+  data.notices.push(
+    "2026-07 실적 자료를 확인해 주세요.",
+    "미마감 실적은 잠정입니다. 작업중 월의 원천 변경 시 달라질 수 있습니다.",
+  );
   vi.mocked(api.getBusinessPlanPerformance).mockResolvedValue(data);
   await draw();
-  const details = screen.getByText(/확인 필요/).closest("details")!;
-  expect(details).toHaveTextContent("1건");
-  expect(details).toHaveTextContent("실적 자료를 확인해 주세요.");
-  expect(details).not.toHaveTextContent("사업계획 목표가 아직 없습니다");
+  await userEvent.click(screen.getByRole("button", { name: "확인 필요 1건" }));
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(dialog).getByRole("heading", { name: "2026-07" })).toBeVisible();
+  expect(dialog).toHaveTextContent("실적 자료를 확인해 주세요.");
+  expect(dialog).not.toHaveTextContent("사업계획 목표가 아직 없습니다");
 });
 it("renders server negative summary rates and exact actual/target amounts unchanged", async () => {
   const data = result();
@@ -411,6 +430,8 @@ it("removes the title template action and keeps past-year uploads read-only", as
 });
 it("opens the current-year upload from the current-year view", async () => {
   await draw();
+  const actions = screen.getByTestId("business-plan-upload").parentElement!;
+  expect(within(actions).getByRole("combobox", { name: "단위" })).toBeVisible();
   await userEvent.click(screen.getByTestId("business-plan-upload"));
   expect(
     await screen.findByTestId("business-plan-import-year"),
@@ -455,7 +476,7 @@ it("ignores a stale response after period changes", async () => {
   period("2026", "2026-06");
   await screen.findByRole("table");
   await act(async () => resolve(result()));
-  expect(screen.getByText(/2026년 · 2026-06까지 실적/)).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "조회 기간 상태" })).toHaveTextContent("집계 기간 1~6월");
 });
 it("disables PC-only actions on narrow screens without hiding actuals", async () => {
   Object.defineProperty(window, "innerWidth", { value: 600 });

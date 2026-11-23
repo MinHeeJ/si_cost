@@ -1,15 +1,14 @@
-import { FinancialOverview } from "../../shared/FinancialOverview";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { KpiStrip } from "../../shared/Surface";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner } from "../../shared/Feedback";
 import {
   formatAmount,
   formatRate,
-  formatDateTime,
   type AmountUnit,
 } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
@@ -49,6 +48,22 @@ const labels: Record<string, string> = {
   oprtPrftAmt: "누계 영업이익",
   currentMonthOperatingProfit: "기준월 영업이익",
 };
+const operatingGuide = (
+  <dl>
+    <div>
+      <dt>매출 집계 기준</dt>
+      <dd>턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출입니다. 화면의 금액은 부가세를 제외합니다.</dd>
+    </div>
+    <div>
+      <dt>누계와 전년 비교</dt>
+      <dd>1월부터 기준월까지의 누계를 전년 같은 기간과 비교합니다. 비용이 늘어난 경우 증감 수치를 빨간색으로 표시합니다.</dd>
+    </div>
+    <div>
+      <dt>전월 조정</dt>
+      <dd>마감한 달의 숫자는 그대로 두고, 재무 항목에서 현재 편집할 수 있는 월에 조정액을 입력합니다. 조정액은 그 달의 ‘전월 조정’ 행에 반영됩니다.</dd>
+    </div>
+  </dl>
+);
 
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -180,11 +195,54 @@ export function OperatingProfitScreen({
       setPending(false);
     }
   }
+  const warnings = getFinancialWarnings(data?.notices ?? [], {
+    excludeCompleteCoverage: true,
+  });
+  const cutoffMonth = data ? Number(data.context.month.slice(5)) : 0;
   return (
     <SharedScreenFrame
       screenId="UI-08"
+      screenGuide={operatingGuide}
       periodBar={
-        <ScreenPeriodBar screenId="UI-08" initialMonth={initialMonth} />
+        <ScreenPeriodBar
+          screenId="UI-08"
+          initialMonth={initialMonth}
+          showMonthCloseStatus={false}
+          showCumulativeRange={false}
+        />
+      }
+      headerActions={
+        <div className="sicost-title-action-group operating-actions">
+          <label>
+            단위{" "}
+            <select
+              data-testid="operating-unit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            data-testid="operating-upload"
+            disabled={mobile}
+            onClick={() => setUpload(true)}
+          >
+            전년 손익 업로드
+          </button>
+
+          <button
+            type="button"
+            data-testid="operating-export"
+            disabled={!data || loading || pending || mobile}
+            onClick={() => void download()}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
       }
     >
       <div
@@ -192,27 +250,6 @@ export function OperatingProfitScreen({
         data-testid="operating-profit-screen"
         data-screen-id="SCR-UI-08"
       >
-        <ScreenTitleActions>
-          <div className="operating-toolbar">
-            <button
-              type="button"
-              data-testid="operating-upload"
-              disabled={mobile}
-              onClick={() => setUpload(true)}
-            >
-              전년 손익 업로드
-            </button>
-
-            <button
-              type="button"
-              data-testid="operating-export"
-              disabled={!data || loading || pending || mobile}
-              onClick={() => void download()}
-            >
-              엑셀 다운로드
-            </button>
-          </div>
-        </ScreenTitleActions>
         {mobile && (
           <p role="note">엑셀 업로드·다운로드는 PC에서 이용해 주세요.</p>
         )}
@@ -232,24 +269,23 @@ export function OperatingProfitScreen({
               context={data.context}
               months={data.months}
               provisional={data.cumulativeProvisional}
-              notices={data.notices}
-              unitControl={
-                <label>
-                  단위{" "}
-                  <select
-                    data-testid="operating-unit"
-                    value={unit}
-                    onChange={(event) =>
-                      setUnit(event.target.value as AmountUnit)
-                    }
-                  >
-                    <option>원</option>
-                    <option>천원</option>
-                    <option>백만원</option>
-                  </select>
-                </label>
+              caption={null}
+              periodDetail={
+                <span>집계 기간 <b>{cutoffMonth === 1 ? "1월" : `1~${cutoffMonth}월`}</b></span>
               }
             />
+            <div className="operating-toolbar">
+              <button
+                type="button"
+                data-testid="operating-adjustment"
+                onClick={() =>
+                  navigate("/UI-10", { state: { section: "adjustments" } })
+                }
+              >
+                전월 조정 입력
+              </button>
+              {warnings.length > 0 && <FinancialWarnings warnings={warnings} />}
+            </div>
             {data.completeness.availableMonthCount === 0 && (
               <div className="operating-empty">
                 조회 기간의 손익 자료가 없습니다. 미확인 금액은 0으로 보정하지
@@ -292,26 +328,6 @@ export function OperatingProfitScreen({
               name="영업이익표"
               testPrefix="operating"
             />
-            <p className="operating-muted">
-              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의
-              매출입니다(부가세 제외). 전년 대비는 같은 기간 누계끼리 비교하며,
-              비용 항목은 늘면 빨강입니다. 전월 조정은 마감한 달의 숫자를 바꾸지
-              않고 이번 달 「전월 조정」 줄에 넣습니다.
-            </p>
-            <div className="operating-banner info">
-              <span>
-                전월 조정은 재무 항목의 현재 편집 가능한 월에서 입력합니다.
-              </span>
-              <button
-                type="button"
-                data-testid="operating-adjustment"
-                onClick={() =>
-                  navigate("/UI-10", { state: { section: "adjustments" } })
-                }
-              >
-                전월 조정 입력
-              </button>
-            </div>
             <FinancialHistoryPanel
               month={data.context.month}
               initialScope="HISTORICAL_PROFIT_LOSS"

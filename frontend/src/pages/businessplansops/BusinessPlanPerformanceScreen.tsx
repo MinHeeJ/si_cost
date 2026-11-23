@@ -1,6 +1,6 @@
 import { FieldHelp } from "../../shared/FieldHelp";
-import { FinancialOverview } from "../../shared/FinancialOverview";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
@@ -45,6 +45,35 @@ const labels: Record<api.PlanSummary["metric"], string> = {
   CUMULATIVE_OPERATING_PROFIT: "누계 영업이익 달성률",
   CURRENT_MONTH_SALES: "기준월 매출 달성률",
 };
+const planGuide = (
+  <dl>
+    <div>
+      <dt>실적과 목표의 기준</dt>
+      <dd>
+        실적은 영업이익표의 같은 달 매출액과 영업이익입니다. 턴키는 청구한 달의
+        공급가액, 월단위·파견은 일한 달의 매출을 집계하며 금액은 부가세를 제외합니다.
+        누계는 1월부터 선택한 기준월까지의 실적과 목표를 비교합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>달성률과 이익률 차이</dt>
+      <dd>
+        달성률은 실적을 목표로 나눈 뒤 100을 곱한 값입니다. 반올림 전 달성률이
+        100% 미만이면 빨간색으로 표시합니다. 이익률 차이는 실적 영업이익률에서
+        목표 영업이익률을 뺀 값(%p)입니다. 목표가 없거나 0 이하인 달은 달성률을
+        ‘–’로 표시합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>목표 업로드</dt>
+      <dd>
+        회사 전체의 올해 12개월 매출·영업이익 목표를 PC에서 등록합니다.
+        목표 업로드 창에서 양식을 내려받고 파일을 검증한 뒤 반영할 수 있습니다.
+        지난 해 목표는 조회할 수 있습니다.
+      </dd>
+    </div>
+  </dl>
+);
 
 const rows: {
   key: keyof api.PlanMonth;
@@ -184,46 +213,52 @@ export function BusinessPlanPerformanceScreen({
     data?.targetStatus === "UNREGISTERED"
       ? `${data.context.year}년 사업계획 목표가 아직 없습니다. [목표 업로드]로 올려 주세요.`
       : undefined;
+  const currentYear = Number(data?.context.nowMonth.slice(0, 4));
+  const currentPlan = data?.context.year === currentYear;
+  const cutoffMonth = data ? Number(data.context.month.slice(5)) : 0;
+  const warnings = getFinancialWarnings(data?.notices ?? [], {
+    excludeCompleteCoverage: true,
+  }).filter((notice) => notice !== unregisteredNotice);
   return (
-    <SharedScreenFrame screenId="UI-18">
+    <SharedScreenFrame
+      screenId="UI-18"
+      screenGuide={planGuide}
+      periodBarOptions={{ showMonthCloseStatus: false, showCumulativeRange: false }}
+      headerActions={
+        <div className="sicost-title-action-group business-plan-toolbar">
+          <label>
+            단위{" "}
+            <select
+              data-testid="business-plan-unit"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value as AmountUnit)}
+            >
+              <option>원</option>
+              <option>천원</option>
+              <option>백만원</option>
+            </select>
+          </label>
+
+          <button
+            data-testid="business-plan-upload"
+            className="sicost-primary"
+            type="button"
+            disabled={!currentPlan || mobile}
+            onClick={() => {
+              setUploadYear(currentYear);
+              setUpload(true);
+            }}
+          >
+            목표 업로드
+          </button>
+        </div>
+      }
+    >
       <div
         className={`business-plan-performance${dense ? " financial-display-dense" : ""}`}
         data-testid="business-plan-performance"
         data-screen-id="SCR-UI-18"
       >
-        <ScreenTitleActions>
-          <div className="business-plan-toolbar">
-            <label>
-              단위{" "}
-              <select
-                data-testid="business-plan-unit"
-                value={unit}
-                onChange={(event) => setUnit(event.target.value as AmountUnit)}
-              >
-                <option>원</option>
-                <option>천원</option>
-                <option>백만원</option>
-              </select>
-            </label>
-
-            <button
-              data-testid="business-plan-upload"
-              className="sicost-primary"
-              type="button"
-              disabled={
-                !data ||
-                mobile ||
-                data.context.year !== Number(data.context.nowMonth.slice(0, 4))
-              }
-              onClick={() => {
-                setUploadYear(Number(data!.context.nowMonth.slice(0, 4)));
-                setUpload(true);
-              }}
-            >
-              목표 업로드
-            </button>
-          </div>
-        </ScreenTitleActions>
         {mobile && <p role="note">목표 업로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
           <ErrorBanner
@@ -244,22 +279,30 @@ export function BusinessPlanPerformanceScreen({
         {data && (
           <>
             <FinancialOverview
-              comparison="사업계획 목표·실적"
               context={data.context}
               months={data.months.map((m) => m.actual)}
               provisional={data.months.some((m) => m.actual.provisional)}
-              notices={data.notices.filter(
-                (notice) => notice.trim() !== unregisteredNotice,
-              )}
+              caption={null}
+              periodDetail={
+                <span className="business-plan-period-detail">
+                  <span>집계 기간 <b>{cutoffMonth === 1 ? "1월" : `1~${cutoffMonth}월`}</b></span>
+                  {unregisteredNotice && (
+                    <span
+                      className="business-plan-target-status"
+                      role="status"
+                      data-testid="business-plan-unregistered"
+                    >
+                      <StatusBadge tone="neutral">{data.context.year}년 목표 미등록</StatusBadge>
+                      {currentPlan && !mobile && <span>목표 업로드로 등록해 주세요.</span>}
+                    </span>
+                  )}
+                </span>
+              }
             />
-            {unregisteredNotice && (
-              <p
-                className="business-plan-warning"
-                role="status"
-                data-testid="business-plan-unregistered"
-              >
-                {unregisteredNotice}
-              </p>
+            {warnings.length > 0 && (
+              <div className="business-plan-status-actions">
+                <FinancialWarnings warnings={warnings} />
+              </div>
             )}
             <KpiStrip className="business-plan-summary">
               {data.summary.map((summary) => (
@@ -373,13 +416,6 @@ export function BusinessPlanPerformanceScreen({
                 </tbody>
               </table>
             </div>
-            <p role="note" data-testid="business-plan-basis">
-              실적은 영업이익표의 같은 달 매출액·영업이익입니다(턴키는 청구한
-              달의 공급가액, 월단위·파견은 일한 달의 매출, 부가세 제외). 목표는
-              [목표 업로드]로 올린 회사 전체 목표입니다. 달성률 = 실적 ÷ 목표 ×
-              100, 100% 미만은 빨강입니다. 차이(이익률) = 실적 영업이익률 − 목표
-              영업이익률(%p)입니다. 목표가 0인 달은 「–」(목표 없음)입니다.
-            </p>
             <FinancialHistoryPanel
               month={data.context.month}
               initialScope="BUSINESS_PLAN"

@@ -10,12 +10,21 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { CashFlowScreen } from "./CashFlowScreen";
 import { cashItems, type CashFlowResult, type CashSource } from "./cashFlowApi";
 import { SharedScreenContext } from "../shared/SharedScreenContext";
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({ children, headerActions, screenGuide }: {
+    children: ReactNode;
+    headerActions?: ReactNode;
+    screenGuide?: ReactNode;
+  }) => (
+    <section>
+      {headerActions}
+      {screenGuide && <ScreenGuide screenId="UI-21" screenName="자금수지표">{screenGuide}</ScreenGuide>}
+      {children}
+    </section>
   ),
 }));
 const fetcher = vi.fn<typeof fetch>();
@@ -94,30 +103,23 @@ beforeEach(() => {
     issues: [],
   };
   sources = [source("UNKNOWN")];
-  fetcher.mockImplementation(async (url) =>
-    String(url).startsWith("/api/cash-flow/sources")
-      ? response({
-          month: "2026-11",
-          employeeTypeLabels: {
-            FT: "정규직",
-            CT: "계약직",
-            FL: "프리랜서",
-            OS: "외주",
-          },
-          item: "REG_PAY",
-          items: sources,
-          total: 21,
-          page:
-            new URL(String(url), "https://test.invalid").searchParams.get(
-              "page",
-            ) === "2"
-              ? 2
-              : 1,
-          size: 50,
-          hasMore: true,
-        })
-      : response(data),
-  );
+  fetcher.mockImplementation(async (url) => {
+    if (!String(url).startsWith("/api/cash-flow/sources")) return response(data);
+    const params = new URL(String(url), "https://test.invalid").searchParams;
+    const page = Number(params.get("page") ?? "1");
+    const size = Number(params.get("size") ?? "50");
+    const start = (page - 1) * size;
+    return response({
+      month: "2026-11",
+      employeeTypeLabels: { FT: "정규직", CT: "계약직", FL: "프리랜서", OS: "외주" },
+      item: "REG_PAY",
+      items: sources.slice(start, start + size),
+      total: sources.length,
+      page,
+      size,
+      hasMore: start + size < sources.length,
+    });
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 function Destination() {
@@ -146,7 +148,7 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     within(screen.getByTestId("cash-row-opening")).queryByRole("button"),
   ).not.toBeInTheDocument();
   expect(
-    within(screen.getByTestId("cash-row-reg-pay")).getAllByRole("button"),
+    within(screen.getByTestId("cash-row-reg-pay")).getAllByRole("button", { name: /계산근거/ }),
   ).toHaveLength(12);
   expect(
     screen.queryByRole("button", { name: "저장" }),
@@ -166,9 +168,22 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     expect(
       within(table).queryByRole("rowheader", { name: label }),
     ).not.toBeInTheDocument();
-  expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent(
-    "예정(회색 글자)",
-  );
+  const descriptions = [
+    ["현금매출", /입금 예정일/],
+    ["인건비(정규직)", /급여 업로드 자료에서 정규직 실지급액/],
+    ["용역비(외주)", /부가세 10%/],
+    ["제경비", /전월 급여의 4대보험/],
+    ["법인세 납부", /실제 납부월/],
+  ] as const;
+  for (const [label, description] of descriptions) {
+    const rowHeader = within(table).getByRole("rowheader", { name: label });
+    await userEvent.click(within(rowHeader).getByRole("button", { name: `${label} 도움말` }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent(description);
+    await userEvent.keyboard("{Escape}");
+  }
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
+  expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent("예정(회색 글자)");
+  expect(screen.getByTestId("cash-flow-guide")).not.toHaveTextContent("입금 예정일");
 });
 it("opens a NULL leaf in the right detail drawer, shows reference and unknown evidence and closes without writes", async () => {
   ready();
@@ -182,7 +197,7 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   expect(within(panel).getByRole("heading")).toHaveTextContent(
     "2026-11 인건비(정규직) 계산근거",
   );
-  const evidence = await within(panel).findByTestId("cash-source-row-0");
+  const evidence = await within(panel).findByTestId(/^cash-source-row-/);
   expect(evidence).toHaveTextContent("급여");
   expect(evidence).toHaveTextContent("정규직");
   expect(evidence).toHaveTextContent("부가세");
@@ -192,10 +207,10 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   expect(screen.getByRole("table", { name: "자금수지표" })).toBeInTheDocument();
   await within(panel).findByText("필수 급여 미확인", { exact: false });
   expect(
-    within(panel).getByText("202610:001", { exact: false }),
+    within(panel).getByText("202610:001"),
   ).toBeInTheDocument();
   expect(within(panel).getByText("미확인")).toHaveClass("sicost-tone-warn");
-  expect(within(panel).getByTestId("cash-source-row-0")).toHaveTextContent(
+  expect(within(panel).getByTestId(/^cash-source-row-/)).toHaveTextContent(
     "2026-10",
   );
   await userEvent.click(screen.getByTestId("cash-source-close"));
@@ -208,19 +223,25 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   ).toBe(true);
 });
 it("paginates full sources using server count and resets page on size change", async () => {
+  sources = Array.from({ length: 51 }, (_, index) => ({
+    ...source(),
+    sourceId: `급여-${index + 1}`,
+  }));
   ready();
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByText("전체 21건", { exact: false });
-  await userEvent.click(screen.getByTestId("cash-source-next"));
+  const pager = await screen.findByRole("navigation", { name: "페이지" });
+  expect(within(pager).getByText("1-50 / 51건")).toBeInTheDocument();
+  await userEvent.click(within(pager).getByRole("button", { name: "다음 페이지" }));
   await waitFor(() =>
     expect(
       fetcher.mock.calls.some(([url]) => String(url).includes("page=2")),
     ).toBe(true),
   );
-  await screen.findByText("2페이지", { exact: false });
-  await userEvent.selectOptions(screen.getByTestId("cash-source-size"), "20");
+  await screen.findByText("51-51 / 51건");
+  await userEvent.selectOptions(screen.getByTestId("cash-source-page-size"), "20");
+  await screen.findByText("1-20 / 51건");
   await waitFor(() =>
     expect(
       fetcher.mock.calls.some(([url]) =>
@@ -275,8 +296,7 @@ it("sends source month and tax section as one-time navigation context without sa
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 법인세 납부 계산근거" }),
   );
-  await screen.findByTestId("cash-source-link-0");
-  await userEvent.click(screen.getByTestId("cash-source-link-0"));
+  await userEvent.click(await screen.findByRole("button", { name: "원천 보기" }));
   expect(await screen.findByTestId("destination")).toHaveTextContent(
     '"month":"2026-11"',
   );
@@ -293,8 +313,7 @@ it("refuses future destination navigation but allows future evidence", async () 
   await userEvent.click(
     await screen.findByRole("button", { name: "12월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByTestId("cash-source-link-0");
-  await userEvent.click(screen.getByTestId("cash-source-link-0"));
+  await userEvent.click(await screen.findByRole("button", { name: "원천 보기" }));
   expect(screen.getByTestId("cash-flow-screen")).toBeInTheDocument();
   expect(
     screen.getByText("목적 화면의 조회 기간 범위를 벗어나", { exact: false }),
@@ -305,7 +324,7 @@ it("refreshes annual table and selected evidence after an actual commit event", 
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByTestId("cash-source-row-0");
+  await screen.findByTestId(/^cash-source-row-/);
   const before = fetcher.mock.calls.length;
   act(() =>
     window.dispatchEvent(new Event("sicost:financial-items-committed")),
@@ -473,15 +492,30 @@ it("uses server shortages for a red alert, won balances, header warnings and rec
   ];
   data.months[9].shortage = true;
   data.months[11].shortage = true;
+  data.issues = [{
+    code: "SOURCE_UNKNOWN",
+    message: "필수 급여 미확인",
+    month: "2026-11",
+    sourceId: "202610:001",
+  }];
   ready();
   const banner = await screen.findByTestId("cash-shortage-alert");
   expect(banner).toHaveRole("alert");
   expect(banner).toHaveTextContent(
     "10월, 12월 월말 잔액이 최소 운영자금(1,000,000,000원)보다 적을 것으로 예상됩니다.",
   );
-  expect(banner).toHaveTextContent(
-    "예상 잔액: 10월 950,000,000원 · 12월 980,000,000원",
-  );
+  expect(within(banner).getByRole("heading", { name: "월말 자금 부족 예상" })).toBeVisible();
+  const balances = within(banner).getByRole("list", { name: "월별 예상 잔액" });
+  expect(within(balances).getAllByRole("listitem").map((item) => item.textContent))
+    .toEqual(["10월950,000,000원", "12월980,000,000원"]);
+  expect(screen.queryByText(/필수 급여 미확인/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "확인 필요 1건" }));
+  const details = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(details).getByRole("heading", { name: "2026-11" })).toBeVisible();
+  expect(details).toHaveTextContent("필수 급여 미확인");
+  expect(details).not.toHaveTextContent("월말 자금 부족 예상");
+  await userEvent.keyboard("{Escape}");
+  expect(banner).toBeVisible();
   expect(screen.getAllByTestId(/cash-shortage-warning-/)).toHaveLength(2);
   expect(screen.getByTestId("cash-shortage-warning-2026-10")).toHaveAttribute(
     "title",
@@ -537,11 +571,11 @@ it("only exposes standards through the user's menu and sends the standards tab",
   const button = await screen.findByRole("button", {
     name: "기초 잔액·최소 운영자금 설정",
   });
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
   expect(
-    screen.getByText(
-      "자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서 관리자가 정합니다.",
-    ),
-  ).toBeInTheDocument();
+    screen.getByTestId("cash-flow-guide"),
+  ).toHaveTextContent("자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서 관리자가 정합니다.");
+  await userEvent.keyboard("{Escape}");
   await userEvent.click(button);
   expect(await screen.findByTestId("destination")).toHaveTextContent(
     '"section":"standards"',
