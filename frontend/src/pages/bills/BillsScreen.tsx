@@ -1,4 +1,5 @@
 import { FieldHelp } from "../../shared/FieldHelp";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
@@ -612,7 +613,17 @@ function BillsContent({
               </article>
             ))}
             <article>
-              <span>연체</span>
+              <span className="bill-summary-label">
+                연체
+                <HelpTooltip label="연체" iconOnly>
+                  입금 예정일이 지났고 미수금이 남은 청구 건수입니다.{" "}
+                  {summary.includeCarryover
+                    ? "이전 연도에서 이월된 연체도 포함합니다."
+                    : "선택 연도에 속한 청구만 집계합니다."}
+                  {year === currentYear &&
+                    " 미수 알림 탭은 ‘이월 미수 포함’ 설정과 관계없이 이월분까지 포함한 전체 연체를 보여 줍니다."}
+                </HelpTooltip>
+              </span>
               <strong>{summary.lateCount}건</strong>
               <small>{summary.lateScope}</small>
             </article>

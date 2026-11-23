@@ -225,9 +225,6 @@ function ReceivablesContent({
       )}
       {!loading && !error && data && (
         <>
-          <p className="billing-review-caption">
-            기준일 {data.asOfDate} · 이월 포함 전체 연체 · 단위 {amountUnit}
-          </p>
           <KpiStrip className="billing-review-cards">
             {data.cards.map((card) => (
               <article

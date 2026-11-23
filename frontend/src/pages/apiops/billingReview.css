@@ -63,10 +63,6 @@
 .billing-review-difference {
   color: var(--bad);
 }
-.billing-review-caption {
-  color: var(--text-sub);
-  font-size: 13px;
-}
 .billing-review-explanation {
   display: block;
   min-width: 220px;

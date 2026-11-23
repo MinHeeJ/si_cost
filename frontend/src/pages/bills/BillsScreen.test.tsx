@@ -199,6 +199,30 @@ async function choose() {
     expect(screen.getByRole("button", { name: "등록" })).not.toBeDisabled(),
   );
 }
+it("연체 도움말은 요약의 이월 설정과 미수 알림의 범위를 안내한다", async () => {
+  vi.mocked(api.getSummary).mockImplementation(async (_year, includeCarryover) => ({
+    ...summary,
+    includeCarryover,
+    lateCount: includeCarryover ? 2 : 1,
+  }));
+  render(<BillsScreen />);
+  const help = await screen.findByRole("button", { name: "연체 도움말" });
+  await userEvent.click(help);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "이전 연도에서 이월된 연체도 포함합니다.",
+  );
+  await userEvent.keyboard("{Escape}");
+  const carryover = screen.getByRole("checkbox", { name: "이월 미수 포함" });
+  await userEvent.click(carryover);
+  await waitFor(() => expect(api.getSummary).toHaveBeenLastCalledWith(2026, false));
+  await userEvent.click(help);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "선택 연도에 속한 청구만 집계합니다.",
+  );
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "미수 알림 탭은 ‘이월 미수 포함’ 설정과 관계없이 이월분까지 포함한 전체 연체를 보여 줍니다.",
+  );
+});
 it("알림이 선택한 실제 청구번호로 기존 상세를 연다", async () => {
   render(<BillsScreen initialBillId={bill.id} />);
   await waitFor(() => expect(api.getBill).toHaveBeenCalledWith(bill.id, 2026));
