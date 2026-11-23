@@ -76,11 +76,9 @@ it("종료 목록의 빈 상태에서 적용 조건을 초기화한다", async (
   await userEvent.selectOptions(screen.getByTestId("pipeline-result-select"), "LOSE");
   await userEvent.click(screen.getByTestId("pipeline-include-stopped-input"));
   await screen.findByText("조건에 맞는 결과가 없습니다.");
-  expect(screen.getByTestId("pipeline-filters-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByTestId("pipeline-empty-reset"));
   expect(screen.getByTestId("pipeline-result-select")).toHaveValue("WIN");
   expect(screen.getByTestId("pipeline-include-stopped-input")).not.toBeChecked();
-  expect(screen.getByTestId("pipeline-filters-toggle")).toHaveTextContent("[조건 (0)]");
   await waitFor(() => expect(api.getSalesOpportunities).toHaveBeenLastCalledWith("WIN", false, 1, undefined, 50));
 });
 

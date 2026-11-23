@@ -20,8 +20,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const item of [
-  { route: "/UI-02", root: "developers-screen", input: "developer-search-input", filter: "developer-filter-jobcode", submit: "developer-search-button", toggle: "developer-filter-form-toggle", reset: "developer-empty-reset" },
-  { route: "/UI-01", root: "projects-screen", input: "project-search", filter: "project-filter-status", submit: "project-query", toggle: "project-filter-form-toggle", reset: "project-empty-reset" },
+  { route: "/UI-02", root: "developers-screen", input: "developer-search-input", filter: "developer-filter-jobcode", submit: "developer-search-button", reset: "developer-empty-reset" },
+  { route: "/UI-01", root: "projects-screen", input: "project-search", filter: "project-filter-status", submit: "project-query", reset: "project-empty-reset" },
 ]) {
   test(`${item.route}: applied conditions, empty result and reset`, async ({ page }) => {
     await page.goto(item.route);
@@ -31,10 +31,8 @@ for (const item of [
     await expect(filter.locator("option").nth(1)).toBeAttached();
     await filter.selectOption({ index: 1 });
     await page.getByTestId(item.submit).click();
-    await expect(page.getByTestId(item.toggle)).toHaveText("[조건 (2)]");
     await expect(screen.getByText("조건에 맞는 결과가 없습니다.", { exact: true }).filter({ visible: true })).toBeVisible();
     await page.getByTestId(item.reset).click();
-    await expect(page.getByTestId(item.toggle)).toHaveText("[조건 (0)]");
     await expect(page.getByTestId(item.input)).toHaveValue("");
     await expect(filter).toHaveValue("");
   });
@@ -56,10 +54,8 @@ for (const item of [
       await select.selectOption({ index: 1 });
     }
     await page.getByTestId(item.submit).click();
-    await expect(screen.getByText("[조건 (2)]", { exact: true })).toBeVisible();
     await expect(screen.getByText("조건에 맞는 결과가 없습니다.", { exact: true }).filter({ visible: true })).toBeVisible();
     await page.getByTestId(item.reset).click();
-    await expect(screen.getByText("[조건 (0)]", { exact: true })).toBeVisible();
   });
 }
 
@@ -69,10 +65,8 @@ test("UI-31: applied filters and empty-result reset", async ({ page }) => {
   await page.getByTestId("status-type").selectOption("IN");
   await page.getByTestId("status-search").click();
   const screen = page.getByTestId("project-status-board");
-  await expect(screen.getByText("[조건 (2)]", { exact: true })).toBeVisible();
   await expect(screen.getByText("조건에 맞는 결과가 없습니다.", { exact: true })).toBeVisible();
   await page.getByTestId("status-empty-reset").click();
-  await expect(screen.getByText("[조건 (0)]", { exact: true })).toBeVisible();
 });
 
 test("UI-29: closed list conditions and empty-result reset", async ({ page }) => {
@@ -81,10 +75,8 @@ test("UI-29: closed list conditions and empty-result reset", async ({ page }) =>
   await page.getByTestId("pipeline-result-select").selectOption("LOSE");
   await page.getByTestId("pipeline-include-stopped-input").check();
   const screen = page.getByTestId("sales-pipeline-screen");
-  await expect(screen.getByText("[조건 (2)]", { exact: true })).toBeVisible();
   await expect(screen.getByText("조건에 맞는 결과가 없습니다.", { exact: true })).toBeVisible();
   await page.getByTestId("pipeline-empty-reset").click();
-  await expect(screen.getByText("[조건 (0)]", { exact: true })).toBeVisible();
   await expect(page.getByTestId("pipeline-result-select")).toHaveValue("WIN");
   await expect(page.getByTestId("pipeline-include-stopped-input")).not.toBeChecked();
 });

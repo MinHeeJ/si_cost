@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { formatDecimal } from "../../shared/format";
 import {
   getPeriodContext,
@@ -231,7 +231,6 @@ export function StaffingComparisonContent({
       </p>
       <FilterBar
         testId="comparison-filters"
-        appliedCount={countAppliedFilters(filter, { projectId: "", difference: "ALL" })}
         resetTestId="comparison-reset"
         searchTestId="comparison-search"
         onSubmit={() => {

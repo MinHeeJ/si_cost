@@ -341,14 +341,12 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
   fireEvent.change(screen.getByTestId("developer-filter-jobcode"), {
     target: { value: "DEV" },
   });
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.submit(screen.getByTestId("developer-filter-form"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "이름", page: 1, includeStopped: false }),
     ),
   );
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByTestId("developer-reset-button"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
@@ -358,7 +356,6 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
   expect(
     screen.queryByRole("option", { name: "재직" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("목록 상태 색·MM경고·관리번호와 소속 표시", async () => {
   render(<DeveloperPoolScreen />);

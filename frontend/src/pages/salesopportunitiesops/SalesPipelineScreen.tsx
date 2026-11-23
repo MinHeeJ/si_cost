@@ -287,7 +287,6 @@ export function SalesPipelinePanel({
         <>
           <FilterBar
             testId="pipeline-filters"
-            appliedCount={tab === "CLOSED" ? Number(result !== "WIN") + Number(includeStopped) : undefined}
             onSubmit={() => setGeneration((v) => v + 1)}
             onReset={() => {
               setResult("WIN");

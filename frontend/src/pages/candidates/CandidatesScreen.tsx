@@ -1,7 +1,7 @@
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -495,7 +495,6 @@ export function CandidatesScreen({
       <FilterBar
         className="candidate-filters"
         testId="candidate-filters"
-        appliedCount={countAppliedFilters(filters, initialFilters)}
         resetTestId="candidate-reset"
         searchTestId="candidate-query"
         onSubmit={() => apply()}

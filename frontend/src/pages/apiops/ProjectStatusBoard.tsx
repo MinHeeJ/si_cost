@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import {
   getSalesPartOptions,
@@ -398,7 +398,6 @@ export function ProjectStatusBoard({
       </SegmentedTabList>
       <FilterBar
         testId="status-filters"
-        appliedCount={countAppliedFilters(query, { light: "", contractType: "", partId: "" })}
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
