@@ -1,5 +1,6 @@
 import { Dialog } from "../../shared/Dialog";
 import { Icon } from "../../shared/Icon";
+import { Pagination } from "../../shared/Pagination";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useSharedScreen } from "../shared/SharedScreenContext";
 import { useEffect, useState } from "react";
@@ -116,8 +117,8 @@ export function SettlementTrendPanel({
             >
               <thead>
                 <tr>
-                  <th>이름</th>
-                  <th>구분<FieldHelp label="구분" kind="B" /></th>
+                  <th scope="col">이름</th>
+                  <th scope="col">구분<FieldHelp label="구분" kind="B" /></th>
                   {data.months.map((m) => (
                     <th
                       key={m}
@@ -140,12 +141,12 @@ export function SettlementTrendPanel({
                       data-testid={`settlement-trend-${person.developerId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${metric.metric.toLowerCase()}`}
                     >
                       {i === 0 && (
-                        <th rowSpan={5}>
+                        <th rowSpan={person.metrics.length}>
                           {person.name}
                           <small>{person.managementNo}</small>
                         </th>
                       )}
-                      <th>{labels[metric.metric]}</th>
+                      <th scope="row">{labels[metric.metric]}</th>
                       {metric.months.map((cell) => (
                         <td
                           key={cell.month}
@@ -269,47 +270,22 @@ export function SettlementTrendPanel({
               ))}
             </div>
           </Dialog>
-          <div className="settlement-toolbar">
-            <button
-              type="button"
-              data-testid="settlement-trend-previous"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              이전 페이지
-            </button>
-            <span>
-              {page} / {Math.max(1, Math.ceil(data.pagination.total / size))}
-            </span>
-            <button
-              type="button"
-              data-testid="settlement-trend-next"
-              disabled={page * size >= data.pagination.total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              다음 페이지
-            </button>
-            <label>
-              추이 한 화면 건수{" "}
-              <select
-                data-testid="settlement-trend-size"
-                value={size}
-                onChange={(e) => {
-                  const next = Number(e.target.value) as 20 | 50 | 100;
-                  void (shared.savePageSize?.(next) ?? Promise.resolve())
-                    .then(() => {
-                      setSize(next);
-                      setPage(1);
-                    })
-                    .catch(setError);
-                }}
-              >
-                <option value={20}>20건씩</option>
-                <option value={50}>50건씩</option>
-                <option value={100}>100건씩</option>
-              </select>
-            </label>
-          </div>
+          <Pagination
+            page={data.pagination.page}
+            size={data.pagination.size}
+            total={data.pagination.total}
+            unit="명"
+            testId="settlement-trend"
+            onPageChange={setPage}
+            onSizeChange={(next) => {
+              void (shared.savePageSize?.(next) ?? Promise.resolve())
+                .then(() => {
+                  setSize(next);
+                  setPage(1);
+                })
+                .catch(setError);
+            }}
+          />
         </>
       )}
     </div>

@@ -227,12 +227,26 @@
   color: var(--text-sub);
   white-space: nowrap;
 }
-.settlement-trend-table thead th:first-child,
+.settlement-trend-table thead th {
+  z-index: 3;
+}
+.settlement-trend-table thead th:first-child {
+  left: 0;
+  z-index: 4;
+}
+.settlement-trend-table tbody th {
+  position: static;
+}
 .settlement-trend-table tbody th[rowspan] {
   position: sticky;
+  top: auto;
   left: 0;
   z-index: 1;
   background: var(--surface);
+}
+.settlement-trend-table tfoot th {
+  top: auto;
+  bottom: 0;
 }
 .settlement-trend-table tbody th[rowspan] small {
   display: block;
