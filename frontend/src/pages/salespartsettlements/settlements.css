@@ -244,9 +244,20 @@
   z-index: 1;
   background: var(--surface);
 }
-.settlement-trend-table tfoot th {
+.settlement-trend-table tfoot tr > :is(th, td) {
+  position: sticky;
   top: auto;
   bottom: 0;
+  z-index: 2;
+  vertical-align: middle;
+  background: var(--head-bg);
+  border: 0;
+  box-shadow: inset 0 2px 0 #cdd4de;
+  font-size: 13px;
+  font-weight: 750;
+}
+.settlement-trend-table tfoot th {
+  color: var(--text);
 }
 .settlement-trend-table tbody th[rowspan] small {
   display: block;
@@ -335,7 +346,7 @@
   border-color: var(--bad);
 }
 @media (max-width: 767px) {
-  .settlement-download {
+  .settlement-actions .settlement-download {
     display: none;
   }
 }

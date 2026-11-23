@@ -210,7 +210,7 @@ export function SettlementTrendPanel({
               </tbody>
               <tfoot>
                 <tr>
-                  <th colSpan={2}>파트 이익금</th>
+                  <th scope="row" colSpan={2}>파트 이익금</th>
                   {data.monthlyTotals.map((total) => (
                     <td
                       key={total.month}

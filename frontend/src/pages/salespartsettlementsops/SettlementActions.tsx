@@ -18,7 +18,7 @@ export function SettlementActions({data, query, trend, unit}: {
   return <>
     <div className="settlement-toolbar settlement-actions">
       <button type="button" data-testid="settlement-history" onClick={() => setHistory(true)}>변경 이력</button>
-      <button type="button" className="settlement-download" data-testid="settlement-download" disabled={pending} onClick={async () => {
+      <button type="button" className="settlement-download sicost-download-button" data-testid="settlement-download" disabled={pending} onClick={async () => {
         if (pending) return;
         setPending(true); setError("");
         try { await downloadSettlement(data.partId, {...query, month: data.month}, trend ? "TREND" : "MONTH", unit); }

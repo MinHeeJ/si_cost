@@ -177,6 +177,7 @@ export function SettlementRestrictedView({
           </button>
           <button
             type="button"
+            className="sicost-download-button"
             disabled={!download || pending}
             onClick={async () => {
               if (!download || pending) return;
