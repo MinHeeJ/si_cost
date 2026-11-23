@@ -95,5 +95,35 @@ class BusinessPlanPerformanceContractTest {
     @Test void migratedOptionalNullIsNotDerived()throws Exception {when(mapper.baseMonth()).thenReturn("202607");when(mapper.snapshots(any())).thenReturn(List.of(copy("202601","Y","Y")));get("2026-07").andExpect(jsonPath("$.data.months[0].actual.sourceKind").value("MIGRATED")).andExpect(jsonPath("$.data.months[0].actual.amounts.grossPrftAmt").value(nullValue())).andExpect(jsonPath("$.data.months[1].salesActualAmt").value(nullValue())).andExpect(jsonPath("$.data.summary[0].actualAmt").value("599"));}
     @Test void unFixedPlIsIgnoredAndRepeatedReadOnlyCallsUseSelects()throws Exception {when(mapper.snapshots(any())).thenReturn(List.of(copy("202607","N","N")));get("2026-07").andExpect(jsonPath("$.data.months[6].salesActualAmt").value("99"));get("2026-07");verify(mapper,times(2)).baseMonth();verify(mapper,times(2)).targets(any());verify(mapper,times(2)).snapshots(any());verify(mapper,times(2)).closes(any());verify(mapper,times(2)).financialSources(any());verify(mapper,times(2)).annualTax(any());verifyNoMoreInteractions(mapper);}
     @Test void internalFailuresAreNotLeaked()throws Exception {when(mapper.targets(any())).thenThrow(new IllegalStateException("private SQL"));get("2026-07").andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_ERROR")).andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private SQL"))));}
+    @Test void cumulativeLossIncludesZeroTargetMonthAndKeepsZeroTotalUndefined() throws Exception {
+        var annual = targets("100", "0");
+        annual.set(0, new Target("202601", n("100"), n("30000000")));
+        annual.set(1, new Target("202602", n("100"), n("30000000")));
+        when(mapper.targets(any())).thenReturn(annual);
+        when(mapper.financialSources(any())).thenReturn(List.of(
+            new Source("2026-01", "TB_FI_ITEM", "jan", "sgaInputAmt", "10000000", false, null),
+            new Source("2026-02", "TB_FI_ITEM", "feb", "sgaInputAmt", "10000000", false, null),
+            new Source("2026-03", "TB_FI_ITEM", "mar", "sgaInputAmt", "10000000", false, null)));
+        get("2026-03").andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.summary[1].actualAmt").value("-30000000"))
+            .andExpect(jsonPath("$.data.summary[1].targetAmt").value("60000000"))
+            .andExpect(jsonPath("$.data.summary[1].achievementRate").value("-50.0"))
+            .andExpect(jsonPath("$.data.summary[1].underTarget").value(true))
+            .andExpect(jsonPath("$.data.months[2].operatingProfitTargetAmt").value("0"));
+        when(mapper.targets(any())).thenReturn(targets("0", "0"));
+        get("2026-03").andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.summary[1].actualAmt").value("-30000000"))
+            .andExpect(jsonPath("$.data.summary[1].targetAmt").value("0"))
+            .andExpect(jsonPath("$.data.summary[1].achievementRate").value(nullValue()))
+            .andExpect(jsonPath("$.data.summary[1].underTarget").value(nullValue()));
+    }
+    @Test void targetStatusNoticesUsePlainLanguage() throws Exception {
+        when(mapper.targets(any())).thenReturn(targets("0", "0"));
+        get("2026-07").andExpect(status().isOk()).andExpect(jsonPath("$.data.notices",
+            org.hamcrest.Matchers.hasItem("12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.")));
+        when(mapper.targets(any())).thenReturn(List.of(new Target("202607", n("100"), n("20"))));
+        get("2026-07").andExpect(status().isOk()).andExpect(jsonPath("$.data.notices",
+            org.hamcrest.Matchers.hasItem("일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.")));
+    }
     static Snapshot copy(String month,String fixed,String migrated) {return new Snapshot(month,fixed,migrated,n("500"),null,null,null,n("200"),null,null,null,null,n("100"),null,n("-5"),null,null,n("1"),null);}
 }

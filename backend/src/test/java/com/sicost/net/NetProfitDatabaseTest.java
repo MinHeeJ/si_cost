@@ -54,6 +54,8 @@ class NetProfitDatabaseTest {
         context.registerBean(MonthlyCostMapper.class,()->session.getMapper(MonthlyCostMapper.class));context.registerBean(DeveloperMapper.class,()->session.getMapper(DeveloperMapper.class));context.registerBean(DeveloperRevisionMapper.class,()->session.getMapper(DeveloperRevisionMapper.class));
         context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));
         context.registerBean(BusinessPlanPerformanceMapper.class,()->session.getMapper(BusinessPlanPerformanceMapper.class));context.registerBean(ProfitStructureMapper.class,()->session.getMapper(ProfitStructureMapper.class));context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
+        context.registerBean(com.sicost.codegroups.CodeGroupMapper.class,
+            ()->session.getMapper(com.sicost.codegroups.CodeGroupMapper.class));
         context.register(Transactions.class,RevisionService.class,DeveloperAggregateRevision.class,CurrentUserProvider.class,DeveloperRepository.class,SharedQueriesService.class,MenuService.class,MonthlyCostRepository.class,MonthlyCostService.class,MonthlyCostCalculation.class,EstimatedPayrollAdapter.class,TurnkeyRevenueCalculation.class,BusinessPlanActuals.class,ProfitStructureRepository.class,RevenueCompositionCalculation.class,NetProfitService.class,NetProfitExportService.class,ExcelExportService.class,AccessLogWriter.class);
         context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(NetProfitService.class);exports=context.getBean(NetProfitExportService.class);manager=context.getBean(PlatformTransactionManager.class);
         project="NET"+UUID.randomUUID().toString().replace("-","").substring(0,12);
@@ -71,6 +73,8 @@ class NetProfitDatabaseTest {
         bill("2080-07-01","N",100);bill("2080-07-02","Y",999);bill("2081-01-01","N",999);
         var before=state();var data=service.getNetProfitLoss(query);assertThat(data.months().get(6).amounts().get("salesAmt")).isEqualTo("100");assertThat(data.summary().get(1).amount()).isEqualTo(new java.math.BigDecimal("100").subtract(new java.math.BigDecimal("10")).toPlainString());assertThat(service.getNetProfitLoss(query)).isEqualTo(data);
         assertThat(data.contributions().contractTypes().get(0).contributionAmt()).isEqualTo("100");
+        assertThat(data.contributions().contractTypes().get(0).groupName()).isEqualTo(
+            sql.queryForObject("SELECT code_nm FROM tb_sy_code WHERE code_grp_id='CTRT_TYPE' AND code='TK'",String.class));
         try(var file=exports.create(query,new MockHttpServletRequest())) {
             var bytes=new java.io.ByteArrayOutputStream();file.transferTo(bytes);
             try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(bytes.toByteArray()))) {

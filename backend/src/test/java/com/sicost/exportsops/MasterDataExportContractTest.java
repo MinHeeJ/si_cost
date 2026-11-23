@@ -37,13 +37,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(MasterDataExportController.class)
 @ContextConfiguration(classes=MasterDataExportController.class)
 @Import({MasterDataExportService.class, MasterDataExportRepository.class, ExcelExportService.class,
-    AccessLogWriter.class, ApiExceptionHandler.class, RequestIdFilter.class, JsonConfiguration.class})
+    AccessLogWriter.class, ApiExceptionHandler.class, RequestIdFilter.class, JsonConfiguration.class, ProjectExportService.class})
 class MasterDataExportContractTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @MockBean MasterDataExportMapper mapper;
     @MockBean PeopleExportService people;
     @MockBean AssignmentExportService assignments;
+    @MockBean com.sicost.projects.ProjectQueryService projects;
+    @MockBean com.sicost.shared.SharedQueriesMapper codes;
     @MockBean AccessLogMapper logs;
     @MockBean CurrentUserProvider users;
     @MockBean AccountCipher accounts;
@@ -58,6 +60,7 @@ class MasterDataExportContractTest {
         return cursor;
     }
     @BeforeEach void setup() {
+        when(codes.menus()).thenReturn(com.sicost.common.excel.ExportTestLookups.menus());
         var fixed = Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"), ZoneId.of("Asia/Seoul"));
         when(clock.instant()).thenReturn(fixed.instant()); when(clock.getZone()).thenReturn(fixed.getZone());
         when(clock.withZone(any())).thenReturn(fixed);
@@ -192,5 +195,32 @@ class MasterDataExportContractTest {
         mvc.perform(post("/api/exports/master-data").contentType("application/json")
             .content("{\"view\":\"ASSIGNMENTS\",\"filters\":{\"year\":2026},\"columns\":[\"projectName\"]}")).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("filters"));
         verify(assignments).create(any(), any());verify(people, never()).create(any(), any());
+    }
+
+    @ParameterizedTest @ValueSource(strings={"", "ING"})
+    void projectsDownloadAllMatchingRowsInWonWithMetadataAndAudit(String status) throws Exception {
+        when(codes.codes(anyString(), eq(true))).thenReturn(List.of());
+        var row = new com.sicost.projects.ProjectDtos.ProjectListItem("0001", "프로젝트", "MO",
+            LocalDate.of(2026,1,1), LocalDate.of(2026,12,31), "123456789", "ING", "고객사", 2, null, null);
+        var rows = java.util.Collections.nCopies(100, row);
+        when(projects.getProjects(any())).thenAnswer(call -> {
+            var filter = call.getArgument(0, com.sicost.projects.ProjectDtos.Filter.class);
+            return new com.sicost.projects.ProjectDtos.ProjectsPage(
+                filter.page() == 1 ? rows : List.of(row), 101, 0, filter.page(), 100, 2026);
+        });
+        var filters = new LinkedHashMap<String,Object>(); filters.put("year", 2026);
+        if (!status.isEmpty()) filters.put("status", status);
+        try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(download(Map.of(
+                "view", "PROJECTS", "filters", filters, "columns", List.of("id", "name", "contractAmount"), "amountUnit", "원"))))) {
+            assertThat(workbook.getSheetAt(0).getLastRowNum()).isEqualTo(101);
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(0).getCellType()).isEqualTo(CellType.STRING);
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(2).getNumericCellValue()).isEqualTo(123456789d);
+            assertThat(workbook.getSheet("다운로드정보").getRow(4).getCell(1).getStringCellValue()).isEqualTo("원");
+            assertThat(workbook.getSheet("다운로드정보").getRow(5).getCell(1).getNumericCellValue()).isEqualTo(101);
+        }
+        verify(projects, times(2)).getProjects(argThat(f -> f.year() == 2026 && f.size() == 100
+            && Objects.equals(f.status(), status.isEmpty() ? null : status)));
+        verify(logs).insert(argThat(e -> e.screenId().equals("UI-01") && e.action().equals("DNLD")
+            && e.description().strip().equals("프로젝트 101")));
     }
 }

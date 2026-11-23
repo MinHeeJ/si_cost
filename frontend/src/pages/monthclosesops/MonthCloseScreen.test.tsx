@@ -218,13 +218,15 @@ it("preserves the closed-month notice instead of the pre-close banner", async ()
   expect(
     screen.queryByTestId("month-close-check-banner"),
   ).not.toBeInTheDocument();
-  expect(screen.getByText(/원월 금액\/현금은 읽기 전용입니다/)).toBeVisible();
+  expect(screen.getByText(/2026-01는 마감되었습니다/)).toHaveTextContent(
+    "고칠 내용은 다음 달 전월 조정으로 입력하세요.",
+  );
 });
 it("preview cancel never sends a write or acceptance", async () => {
   await mount();
   await userEvent.click(screen.getByRole("button", { name: "마감하기" }));
   expect(await screen.findByRole("dialog")).toHaveTextContent(
-    "예정급여 사용: 예",
+    "마감하면 이 달 자료는 고칠 수 없습니다.",
   );
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
   expect(api.saveMonthClose).not.toHaveBeenCalled();
@@ -234,9 +236,9 @@ it("requires explicit WARN consent and sends only the immutable preview revision
   await mount();
   await userEvent.click(screen.getByRole("button", { name: "마감하기" }));
   await screen.findByRole("dialog");
-  expect(screen.getByRole("button", { name: "확인 후 마감" })).toBeDisabled();
+  expect(screen.getByTestId("month-close-submit-button")).toBeDisabled();
   await userEvent.click(screen.getByRole("checkbox"));
-  await userEvent.click(screen.getByRole("button", { name: "확인 후 마감" }));
+  await userEvent.click(screen.getByTestId("month-close-submit-button"));
   await waitFor(() => expect(api.saveMonthClose).toHaveBeenCalledOnce());
   expect(api.saveMonthClose).toHaveBeenCalledWith("2026-01", {
     expectedRevision: "preview",
@@ -266,8 +268,11 @@ it("blocking source problem stays outside the six checks and disables close", as
   );
   expect(screen.getByRole("alert")).toHaveTextContent("필수 단가 미확인");
   await userEvent.click(screen.getByRole("checkbox"));
-  expect(screen.getByRole("button", { name: "확인 후 마감" })).toBeDisabled();
-  expect(screen.getAllByTestId(/^month-close-preview-check-/)).toHaveLength(6);
+  expect(screen.getByTestId("month-close-submit-button")).toBeDisabled();
+  expect(screen.queryAllByTestId(/^month-close-preview-check-/)).toHaveLength(
+    0,
+  );
+  expect(screen.getByRole("alert")).toHaveClass("sicost-field-error");
 });
 it("reopen requires a full reason and explicit acknowledgement of late adjustments", async () => {
   const confirm = vi.fn().mockResolvedValue(undefined);
@@ -283,10 +288,10 @@ it("reopen requires a full reason and explicit acknowledgement of late adjustmen
   const reason = screen.getByRole("textbox");
   await userEvent.type(reason, " ");
   await userEvent.click(screen.getByRole("checkbox"));
-  expect(screen.getByRole("button", { name: "확인 후 해제" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "마감 해제" })).toBeDisabled();
   await userEvent.clear(reason);
   await userEvent.type(reason, " 정정 ");
-  await userEvent.click(screen.getByRole("button", { name: "확인 후 해제" }));
+  await userEvent.click(screen.getByRole("button", { name: "마감 해제" }));
   expect(confirm).toHaveBeenCalledWith("정정", true);
 });
 it("does not truncate a 501-character reason into a valid request", async () => {
@@ -301,7 +306,7 @@ it("does not truncate a 501-character reason into a valid request", async () => 
   const user = userEvent.setup();
   await user.click(screen.getByRole("textbox"));
   await user.paste("가".repeat(501));
-  expect(screen.getByRole("button", { name: "확인 후 해제" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "마감 해제" })).toBeDisabled();
   expect(screen.getByRole("textbox")).toHaveValue("가".repeat(501));
 });
 it("CLOSE hides recheck and close and only allows latest reopen", async () => {
@@ -325,7 +330,12 @@ it("CLOSE hides recheck and close and only allows latest reopen", async () => {
   expect(
     screen.queryByRole("button", { name: "마감 해제" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByText(/마감 당시 6점검/)).toBeInTheDocument();
+  expect(
+    screen.getByText("마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다."),
+  ).toBeVisible();
+  expect(screen.queryByText("전월 조정 입력")).not.toBeInTheDocument();
+  expect(screen.getAllByText("확인 완료")).toHaveLength(6);
+  expect(screen.queryAllByText("확인하기")).toHaveLength(0);
 });
 it("management-denied state prevents every command even in an otherwise open month", async () => {
   vi.mocked(api.getMonthCloses).mockResolvedValue({
@@ -392,6 +402,254 @@ it("rollback failure keeps prior values and never publishes success", async () =
   expect(api.publishMonthCloseCommit).not.toHaveBeenCalled();
   expect(screen.queryByText("저장했습니다.")).not.toBeInTheDocument();
 });
+it("uses plain close sentences, conditional acceptance and named automatic settlements", async () => {
+  render(
+    <ClosePreviewDialog
+      preview={{
+        ...preview(),
+        parts: [
+          {
+            partId: "PART-private",
+            partName: "디지털사업파트",
+            status: "WORK",
+            willAutoConfirm: true,
+            issues: [],
+          },
+        ],
+      }}
+      pending={false}
+      onConfirm={vi.fn()}
+      onCancel={vi.fn()}
+    />,
+  );
+  const dialog = screen.getByTestId("month-close-preview-dialog");
+  expect(dialog).toHaveTextContent("2026-01를 마감할까요?");
+  expect(dialog).toHaveTextContent("마감하면 이 달 자료는 고칠 수 없습니다.");
+  expect(dialog).toHaveTextContent(
+    "확인할 항목 1개(영업 파트 정산)가 남아 있습니다. 남은 항목은 마감 이력에 함께 남습니다.",
+  );
+  expect(dialog).toHaveTextContent(
+    "확정하지 않은 영업 파트 정산 1개(디지털사업파트)는 마감과 함께 자동 확정됩니다(마감 뒤 틀린 금액은 다음 달에 반영).",
+  );
+  expect(dialog.textContent).not.toMatch(/TB_|WARN|AUTO|CNFM|WORK|PART-|UI-\d/);
+});
+it("does not request warning acceptance when all checks are normal", async () => {
+  const confirm = vi.fn().mockResolvedValue(undefined);
+  render(
+    <ClosePreviewDialog
+      preview={{
+        ...preview(),
+        warningCount: 0,
+        remainingCheckNames: [],
+        parts: [],
+      }}
+      pending={false}
+      onConfirm={confirm}
+      onCancel={vi.fn()}
+    />,
+  );
+  expect(screen.getByText("점검 항목이 모두 정상입니다.")).toBeVisible();
+  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  expect(screen.queryByText(/자동 확정됩니다/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByTestId("month-close-submit-button"));
+  expect(confirm).toHaveBeenCalledWith(false);
+});
+it("places a plain blocking reason before the close explanation", () => {
+  const message =
+    "디지털사업파트의 2026-01 기준이 두 줄 겹칩니다. 거래처·영업 파트에서 기준을 확인해 주세요.";
+  render(
+    <ClosePreviewDialog
+      preview={{
+        ...preview(),
+        canClose: false,
+        blockingIssues: [
+          {
+            code: "PART_STANDARD_UNKNOWN",
+            message,
+            month: "2026-01",
+            sourceType: "TB_BS_PART_STD",
+            sourceId: "PART-private",
+          },
+        ],
+      }}
+      pending={false}
+      onConfirm={vi.fn()}
+      onCancel={vi.fn()}
+    />,
+  );
+  const panel = screen.getByTestId("month-close-preview-panel");
+  expect(panel.firstElementChild).toHaveTextContent(message);
+  expect(panel.firstElementChild).toHaveClass("sicost-field-error");
+  expect(screen.getByTestId("month-close-submit-button")).toBeDisabled();
+  expect(panel.textContent).not.toMatch(/TB_|WARN|AUTO|CNFM|WORK|PART-|UI-\d/);
+});
+it("formats reopen adjustments without IDs or implementation language", () => {
+  const value = reopen();
+  value.adjustments[0] = {
+    ...value.adjustments[0],
+    adjustmentId: "PART-private",
+    amount: "3000000",
+  };
+  value.adjustmentAmount = "3000000";
+  render(
+    <ReopenDialog
+      preview={value}
+      pending={false}
+      onConfirm={vi.fn()}
+      onCancel={vi.fn()}
+    />,
+  );
+  const dialog = screen.getByTestId("month-close-reopen-dialog");
+  expect(dialog).toHaveTextContent("2026-01 마감을 해제할까요?");
+  expect(dialog).toHaveTextContent("1건(3,000,000원, 2026-06 반영)");
+  expect(
+    within(dialog)
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent),
+  ).toEqual(["반영 월", "금액", "사유"]);
+  expect(within(dialog).getByRole("cell", { name: "3,000,000" })).toBeVisible();
+  expect(dialog.textContent).not.toMatch(/TB_|WARN|AUTO|CNFM|WORK|PART-|UI-\d/);
+});
+it.each([
+  {
+    canReopen: false,
+    latestCloseMonth: "2026-01",
+    hint: "마감 해제는 시스템 관리자만 할 수 있습니다",
+  },
+  {
+    canReopen: true,
+    latestCloseMonth: "2026-02",
+    hint: "가장 최근에 마감한 달만 해제할 수 있습니다",
+  },
+])(
+  "hides reopening for finance or a non-latest month: $latestCloseMonth / $canReopen",
+  async (value) => {
+    vi.mocked(api.getMonthCloses).mockResolvedValue({
+      ...data(),
+      status: "CLOSE",
+      ...value,
+    });
+    await mount();
+    expect(
+      screen.queryByTestId("month-close-reopen-button"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("month-close-closed-notice")).toHaveTextContent(
+      value.hint,
+    );
+    expect(
+      screen.queryByRole("button", { name: "전월 조정 입력" }),
+    ).not.toBeInTheDocument();
+  },
+);
+it.each(["close", "reopen"] as const)(
+  "closes the %s dialog at commit and updates state, notice, buttons and history after the immediate GET",
+  async (kind) => {
+    const closed: api.MonthCloses = {
+      ...data(),
+      status: "CLOSE",
+      latestCloseMonth: "2026-01",
+      canReopen: true,
+      canCheck: false,
+      canClose: false,
+      closedByName: "재무담당",
+      closedAt: "2026-02-01 10:00:00",
+    };
+    vi.mocked(api.getMonthCloses).mockResolvedValue(
+      kind === "close" ? data() : closed,
+    );
+    await mount();
+    await userEvent.click(
+      screen.getByTestId(
+        kind === "close"
+          ? "month-close-close-button"
+          : "month-close-reopen-button",
+      ),
+    );
+    const dialog = await screen.findByTestId(
+      kind === "close"
+        ? "month-close-preview-dialog"
+        : "month-close-reopen-dialog",
+    );
+    if (kind === "reopen")
+      await userEvent.type(
+        within(dialog).getByRole("textbox"),
+        "청구 누락 반영",
+      );
+    await userEvent.click(within(dialog).getByRole("checkbox"));
+    let resolve!: (result: api.MonthCloses) => void;
+    vi.mocked(api.getMonthCloses).mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    await userEvent.click(
+      screen.getByTestId(
+        kind === "close"
+          ? "month-close-submit-button"
+          : "month-close-reopen-submit-button",
+      ),
+    );
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(screen.getByTestId("month-close-loading")).toHaveTextContent(
+      "불러오는 중",
+    );
+    // The shared period bar republishes the selected month after commit invalidation.
+    // It must not clear data or invalidate this in-flight GET for the same month.
+    act(() =>
+      window.dispatchEvent(
+        new CustomEvent("sicost:screen-period-changed", {
+          detail: {
+            screenId: "UI-14",
+            value: { type: "YEAR_MONTH", value: "2026-01" },
+            context: { currentMonth: "2026-07", cashBaseMonth: "2026-01" },
+          },
+        }),
+      ),
+    );
+    const result = kind === "close" ? closed : data();
+    const action = kind === "close" ? "CLOSE" : "OPEN";
+    await act(async () =>
+      resolve({
+        ...result,
+        history: {
+          ...result.history,
+          total: 1,
+          items: [
+            {
+              ...committed.history,
+              action,
+              actorName: "재무담당",
+              reason: kind === "reopen" ? "청구 누락 반영" : null,
+            },
+          ],
+        },
+      }),
+    );
+    expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
+    expect(api.publishMonthCloseCommit).toHaveBeenCalledWith("2026-01");
+    expect(
+      screen.getByTestId("month-close-history-2026-01-1"),
+    ).toHaveTextContent("재무담당");
+    if (kind === "close") {
+      expect(screen.getByTestId("month-close-closed-notice")).toHaveTextContent(
+        "재무담당",
+      );
+      expect(screen.getByTestId("month-close-reopen-button")).toBeEnabled();
+      expect(
+        screen.queryByTestId("month-close-close-button"),
+      ).not.toBeInTheDocument();
+    } else {
+      expect(
+        screen.queryByTestId("month-close-closed-notice"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("month-close-close-button")).toBeEnabled();
+      expect(
+        screen.getByTestId("month-close-history-2026-01-1"),
+      ).toHaveTextContent("청구 누락 반영");
+    }
+  },
+);
 it("pending dialog blocks cancellation and edits", async () => {
   const cancel = vi.fn();
   render(
@@ -415,6 +673,7 @@ it("binds latest reopen preview and confirmation to the selected month and immut
     canCheck: false,
     canClose: false,
     canReopen: true,
+    latestCloseMonth: "2026-01",
   });
   await mount();
   expect(screen.getByTestId("month-close-screen")).toHaveAttribute(
@@ -439,7 +698,7 @@ it("binds latest reopen preview and confirmation to the selected month and immut
   });
   expect(api.publishMonthCloseCommit).toHaveBeenCalledWith("2026-01");
 });
-it("keeps underlying checks and preview cards independently addressable and restores trigger focus on cancel", async () => {
+it("keeps six checks on the screen only and restores trigger focus on cancel", async () => {
   await mount();
   const button = screen.getByTestId("month-close-close-button");
   await userEvent.click(button);
@@ -450,8 +709,8 @@ it("keeps underlying checks and preview cards independently addressable and rest
     ),
   ).toHaveLength(6);
   expect(
-    within(dialog).getAllByTestId(/^month-close-preview-check-/),
-  ).toHaveLength(6);
+    within(dialog).queryAllByTestId(/^month-close-preview-check-/),
+  ).toHaveLength(0);
   expect(screen.getByTestId("month-close-submit-button")).toHaveAttribute(
     "data-action-id",
     "B143-14-CLOSE-SUBMIT",

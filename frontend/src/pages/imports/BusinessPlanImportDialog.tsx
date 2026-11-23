@@ -103,7 +103,7 @@ function BusinessPlanImportSession({
   )
     return (
       <section data-testid="business-plan-import-pc">
-        <p>엑셀 업로드는 PC에서 이용해 주세요.</p>
+        <p>목표 업로드는 PC에서 이용해 주세요.</p>
         <button data-testid="business-plan-import-pc-close" onClick={onClose}>
           닫기
         </button>
@@ -128,7 +128,7 @@ function BusinessPlanImportSession({
         applyLabel="반영"
         readOnly={year !== currentYear}
         readOnlyMessage="지난 해는 읽기 전용입니다. 올해 연간 목표만 업로드할 수 있습니다."
-        description="연월 / 매출 목표 / 영업이익 목표 · 올해 1~12월 각 1행 · XLSX 10MiB 이하 · 빈 목표는 0/경고 · 올해 미래월도 허용합니다."
+        description="연월 · 매출 목표 · 영업이익 목표, 올해 1~12월 12줄 · 금액은 원 단위 (예: 50,000,000) · 빈칸은 0(목표 없음)으로 올립니다 · 엑셀 10MB 이하"
         emptyRegistrationMessage="사업계획 목표는 변경되지 않았습니다."
         requireRecheckOnConflict
         confirmAllowed={!uncertain}

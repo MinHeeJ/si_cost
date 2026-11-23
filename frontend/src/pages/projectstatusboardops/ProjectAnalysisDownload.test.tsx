@@ -49,7 +49,7 @@ const preferences: PreferenceApi = {
 };
 const file = {
   blob: new Blob(["xlsx"]),
-  filename: "프로젝트현황_20260701_000000.xlsx",
+  filename: "프로젝트 현황판_20260701_20260701_000000.xlsx",
 };
 beforeEach(() => vi.resetAllMocks());
 describe.each(["statusBoard", "projectCost"] as const)(

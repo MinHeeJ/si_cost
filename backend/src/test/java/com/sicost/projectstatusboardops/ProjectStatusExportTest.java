@@ -39,6 +39,7 @@ class ProjectStatusExportTest {
         when(preferences.getPreferences()).thenReturn(new PreferenceDtos.PreferencesData(List.of()));
         when(board.getProjectStatusBoard(any())).thenAnswer(c->{var q=(ProjectAnalysisInput.Query)c.getArgument(0);assertThat(q.size()).isEqualTo(Integer.MAX_VALUE);return page(57);});
         var excel=new ExcelExportService(users,new AccessLogWriter(logs,users,clock),clock,transactions);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
         var exports=new ProjectStatusExportService(excel,board,preferences);
         mvc=MockMvcBuilders.standaloneSetup(new ProjectStatusController(mock(ProjectStatusReadService.class),exports)).setControllerAdvice(new ApiExceptionHandler()).build();
     }
@@ -63,6 +64,15 @@ class ProjectStatusExportTest {
         download("");var order=inOrder(transactions,board,logs);
         order.verify(transactions).getTransaction(argThat(d->d.isReadOnly()&&d.getIsolationLevel()==TransactionDefinition.ISOLATION_REPEATABLE_READ));order.verify(board).getProjectStatusBoard(any());order.verify(transactions).commit(any());
         order.verify(transactions).getTransaction(argThat(d->!d.isReadOnly()&&d.getPropagationBehavior()==TransactionDefinition.PROPAGATION_REQUIRES_NEW));order.verify(logs).insert(argThat(e->e.userId().equals("admin")&&e.action().equals("DNLD")&&e.screenId().equals("UI-31")&&e.description().trim().equals("프로젝트현황 57")));order.verify(transactions).commit(any());
+    }
+    @Test void exportsStageStatusAndReadableConditions() throws Exception {
+        var data=page(1);
+        data.items().get(0).put("currentStep",Map.of("stepName","개발","status","지연"));
+        doReturn(data).when(board).getProjectStatusBoard(any());
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?light=위험")))) {
+            assertThat(book.getSheetAt(0).getRow(1).getCell(3).getStringCellValue()).isEqualTo("개발 · 지연");
+            assertThat(info(book,"조건").getStringCellValue()).isEqualTo("신호등=위험");
+        }
     }
     @Test void emptyStillHasTitlesAndInformation()throws Exception {doReturn(page(0)).when(board).getProjectStatusBoard(any());try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("")))){assertThat(book.getSheetAt(0).getPhysicalNumberOfRows()).isEqualTo(1);assertThat(info(book,"총건수").getNumericCellValue()).isZero();}}
     @ParameterizedTest @ValueSource(strings={"?page=1","?size=20","?userId=other","?actor=other","?baseDate=2026-07-01","?unit=USD","?order=projectName","?order=light,light,pm,currentStep,planProgress,actualProgress,costUsage,costProgressGap,openIssueCount,overdueIssueCount,lastUpdatedDate,elapsedDays","?hidden=projectName","?hidden=pm,pm","?light=위험&light=위험","?sort=id","?direction=desc"})

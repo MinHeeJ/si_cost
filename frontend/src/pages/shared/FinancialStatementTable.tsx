@@ -92,8 +92,13 @@ export function CashFlowStatementTable({
           <tr>
             <th scope="col">항목</th>
             {columns.map((c) => (
-              <th scope="col" key={c.key} className={c.status === "PLANNED" ? "cash-planned" : undefined}>
+              <th
+                scope="col"
+                key={c.key}
+                className={c.status === "PLANNED" ? "cash-planned" : undefined}
+              >
                 {c.label}
+                {c.status && <br />}
                 {c.status && (
                   <StatusBadge
                     tone={
@@ -110,6 +115,17 @@ export function CashFlowStatementTable({
                         ? "운영 시작 전"
                         : "예정"}
                   </StatusBadge>
+                )}
+                {c.status === "PLANNED" && c.shortage && (
+                  <span
+                    data-testid={`cash-shortage-warning-${c.key}`}
+                    className="cash-shortage-warning"
+                    role="img"
+                    aria-label={`${c.label} 자금 부족 예상`}
+                    title="월말 잔액이 최소 운영자금보다 적을 것으로 예상"
+                  >
+                    ⚠
+                  </span>
                 )}
               </th>
             ))}
@@ -128,7 +144,16 @@ export function CashFlowStatementTable({
               {row.values.map((value, i) => (
                 <td
                   key={columns[i].key}
-                  className={[columns[i].status === "PLANNED" ? "cash-planned" : "", row.key === "balance" && columns[i].shortage ? "cash-shortage" : ""].filter(Boolean).join(" ") || undefined}
+                  className={
+                    [
+                      columns[i].status === "PLANNED" ? "cash-planned" : "",
+                      row.key === "balance" && columns[i].shortage
+                        ? "cash-shortage"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
                   data-financial-negative={value?.startsWith("-")}
                 >
                   {row.section ? (
@@ -194,10 +219,21 @@ export function FinancialStatementTable({
                 scope="col"
                 aria-label={`${Number(item.month.slice(5))}월 ${status(item.sourceKind) ?? ""}`}
                 key={item.month}
-                className={item.month === currentMonth ? "operating-current" : ""}
+                className={
+                  item.month === currentMonth ? "operating-current" : ""
+                }
               >
                 {Number(item.month.slice(5))}월{" "}
-                {item.completeness.issues.length>0 && <HelpTooltip label={`${Number(item.month.slice(5))}월 확인 사항`} trigger={<span aria-hidden="true">⚠</span>}>{item.completeness.issues.map((issue,i)=><p key={i}>{issue.reason}</p>)}</HelpTooltip>}
+                {item.completeness.issues.length > 0 && (
+                  <HelpTooltip
+                    label={`${Number(item.month.slice(5))}월 확인 사항`}
+                    trigger={<span aria-hidden="true">⚠</span>}
+                  >
+                    {item.completeness.issues.map((issue, i) => (
+                      <p key={i}>{issue.reason}</p>
+                    ))}
+                  </HelpTooltip>
+                )}
                 {item.month === currentMonth && status(item.sourceKind) && (
                   <StatusBadge
                     tone={
@@ -228,12 +264,24 @@ export function FinancialStatementTable({
           {rows.map((row) => (
             <tr
               key={row.metric}
-              className={row.depth ? "operating-detail" : "operating-total"}
+              className={
+                row.depth
+                  ? "operating-detail"
+                  : [
+                        "salesAmt",
+                        "grossPrftAmt",
+                        "oprtPrftAmt",
+                        "netPrftAmt",
+                      ].includes(row.metric)
+                    ? "operating-total"
+                    : "operating-standard"
+              }
               data-testid={`${testPrefix}-row-${kebab(row.metric)}`}
             >
               <th scope="row">
                 {row.depth > 0 && "└"}
-                {row.label}<FieldHelp label={row.label} kind="B" />
+                {row.label}
+                <FieldHelp label={row.label} kind="B" />
               </th>
               {row.monthlyValues.map((value, index) => (
                 <td
@@ -250,14 +298,21 @@ export function FinancialStatementTable({
                   {row.isRate ? formatRate(value) : formatAmount(value, unit)}
                 </td>
               ))}
-              <td className="operating-cumulative" data-financial-negative={row.cumulativeValue?.startsWith("-")}>
+              <td
+                className="operating-cumulative"
+                data-financial-negative={row.cumulativeValue?.startsWith("-")}
+              >
                 {row.isRate
                   ? formatRate(row.cumulativeValue)
                   : formatAmount(row.cumulativeValue, unit)}
               </td>
               {showPreviousYear && (
                 <>
-                  <td data-financial-negative={row.previousYearCumulativeValue?.startsWith("-")}>
+                  <td
+                    data-financial-negative={row.previousYearCumulativeValue?.startsWith(
+                      "-",
+                    )}
+                  >
                     {row.isRate
                       ? formatRate(row.previousYearCumulativeValue)
                       : formatAmount(row.previousYearCumulativeValue, unit)}

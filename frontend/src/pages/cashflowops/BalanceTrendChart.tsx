@@ -38,31 +38,40 @@ export function BalanceTrendChart({
         <small>단위: 백만 원 · 부가세 포함</small>
       </div>
       <ChartHost
-        option={seriesChartOptions({
-          categories: points.map((point) => point.month),
-          series: [
-            {
-              name: "월말 잔액(실적)",
-              values: points.map((point) =>
-                point.status !== "PLANNED" ? point.balance : null,
-              ),
-            },
-            {
-              name: "월말 잔액(예정)",
-              values: points.map((point, index) =>
-                point.status === "PLANNED" ||
-                points[index + 1]?.status === "PLANNED"
-                  ? point.balance
-                  : null,
-              ),
-              dashed: true,
-              color: "#1D4ED8",
-            },
-          ],
-          guide: { name: "최소 운영자금", value: minimum },
-          formatValue: (value) => `${formatAmount(value, "백만원")} 백만원`,
-          axisUnit: "백만원",
-        })}
+        option={{
+          ...seriesChartOptions({
+            categories: points.map((point) => point.month),
+            series: [
+              {
+                name: "월말 잔액(실적)",
+                values: points.map((point) =>
+                  point.status !== "PLANNED" ? point.balance : null,
+                ),
+              },
+              {
+                name: "월말 잔액(예정)",
+                values: points.map((point, index) =>
+                  point.status === "PLANNED" ||
+                  points[index + 1]?.status === "PLANNED"
+                    ? point.balance
+                    : null,
+                ),
+                dashed: true,
+                color: "#1D4ED8",
+              },
+            ],
+            guide: { name: "최소 운영자금", value: minimum },
+            formatValue: (value) => `${formatAmount(value, "백만원")} 백만원`,
+            axisUnit: "백만원",
+          }),
+          grid: {
+            left: 60,
+            right: 130,
+            top: 40,
+            bottom: 30,
+            containLabel: true,
+          },
+        }}
       >
         <svg
           viewBox="0 0 940 310"

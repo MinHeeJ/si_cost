@@ -148,6 +148,10 @@
 .operating-profit .operating-total th {
   font-weight: 600;
 }
+.operating-profit .operating-standard td,
+.operating-profit .operating-standard th {
+  font-weight: 400;
+}
 .operating-profit .operating-current {
   background: var(--primary-bg);
   color: var(--primary);

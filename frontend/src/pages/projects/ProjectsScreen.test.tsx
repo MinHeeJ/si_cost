@@ -317,12 +317,15 @@ it("query Enter and reset share real filters while sort and size reset page1", a
   fireEvent.change(screen.getByPlaceholderText("프로젝트명 또는 고객사"), {
     target: { value: "검색" },
   });
+  fireEvent.change(screen.getByTestId("project-filter-status"), { target: { value: "ING" } });
+  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.submit(screen.getByTestId("project-filter-form"));
   await waitFor(() =>
     expect(api.getProjects).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "검색" }),
     ),
   );
+  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByRole("button", { name: "다음 페이지" }));
   await userEvent.click(screen.getByTestId("sort-name"));
   await waitFor(() =>
@@ -347,6 +350,7 @@ it("query Enter and reset share real filters while sort and size reset page1", a
       }),
     ),
   );
+  expect(screen.getByTestId("project-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("past year disables business creation and upload but keeps settings available", async () => {
   const settings = vi.fn();
@@ -387,7 +391,7 @@ it("empty and failed states are distinct and retry only reads", async () => {
   await screen.findByText(/조회 오류/);
   expect(screen.getByText(/req-list/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-  await screen.findByText("조회된 자료가 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   expect(api.createProject).not.toHaveBeenCalled();
 });
 it("TK distribution replaces list region and back restores filters without route", async () => {

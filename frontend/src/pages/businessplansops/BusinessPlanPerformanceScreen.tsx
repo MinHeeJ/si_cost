@@ -7,7 +7,7 @@ import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import {
   formatAmount,
-  formatDateTime,
+  compareDecimal,
   formatRate,
   type AmountUnit,
 } from "../../shared/format";
@@ -45,8 +45,7 @@ const labels: Record<api.PlanSummary["metric"], string> = {
   CUMULATIVE_OPERATING_PROFIT: "누계 영업이익 달성률",
   CURRENT_MONTH_SALES: "기준월 매출 달성률",
 };
-const basis =
-  "실적 = 영업이익표의 같은 월 값. TK는 청구일 기준 유효 청구 공급가액, MO·DP는 투입 귀속월 매출입니다. 입금액 아님 · 부가세 제외. 목표 = 업로드한 회사 전체 목표.";
+
 const rows: {
   key: keyof api.PlanMonth;
   label: string;
@@ -71,6 +70,34 @@ const rows: {
   },
 ];
 
+function missingRateReason(month: api.PlanMonth, key: keyof api.PlanMonth) {
+  if (
+    (key !== "salesAchievementRate" && key !== "operatingMarginDifference") ||
+    month[key] != null ||
+    month.actual.sourceKind === "FUTURE"
+  )
+    return undefined;
+  if (
+    month.salesTargetAmt == null ||
+    compareDecimal(month.salesTargetAmt, "0") === 0 ||
+    (key === "operatingMarginDifference" &&
+      month.operatingProfitTargetAmt == null)
+  )
+    return "목표 없음";
+  if (
+    month.salesActualAmt == null ||
+    (key === "operatingMarginDifference" &&
+      month.operatingProfitActualAmt == null)
+  )
+    return "실적 자료 미확인";
+  if (
+    key === "operatingMarginDifference" &&
+    compareDecimal(month.salesActualAmt, "0") === 0
+  )
+    return "매출 실적이 0이라 이익률을 비교하지 않습니다";
+  return undefined;
+}
+
 // SCR-UI-18 — the existing router and shared frame retain menu, favorites, tabs and YEAR_CUM.
 export function BusinessPlanPerformanceScreen({
   amountUnit,
@@ -92,8 +119,7 @@ export function BusinessPlanPerformanceScreen({
     [revision, setRevision] = useState(0);
   const [localUnit, setLocalUnit] = useState<AmountUnit>("천원");
   const unit = amountUnit ?? localUnit;
-  const [upload, setUpload] = useState(false),
-    [downloading, setDownloading] = useState(false);
+  const [upload, setUpload] = useState(false);
   const [uploadYear, setUploadYear] = useState<number>();
   const [mobile, setMobile] = useState(() => window.innerWidth < 768);
   const sequence = useRef(0);
@@ -154,18 +180,10 @@ export function BusinessPlanPerformanceScreen({
     void load(controller.signal).catch(() => {});
     return () => controller.abort();
   }, [load, revision]);
-  async function template() {
-    if (!period || downloading) return;
-    setDownloading(true);
-    setError(undefined);
-    try {
-      await api.downloadBusinessPlanTemplate(period.year);
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      setDownloading(false);
-    }
-  }
+  const unregisteredNotice =
+    data?.targetStatus === "UNREGISTERED"
+      ? `${data.context.year}년 사업계획 목표가 아직 없습니다. [목표 업로드]로 올려 주세요.`
+      : undefined;
   return (
     <SharedScreenFrame screenId="UI-18">
       <div
@@ -187,14 +205,7 @@ export function BusinessPlanPerformanceScreen({
                 <option>백만원</option>
               </select>
             </label>
-            <button
-              data-testid="business-plan-template"
-              type="button"
-              disabled={!period || downloading || mobile}
-              onClick={() => void template()}
-            >
-              양식 내려받기
-            </button>
+
             <button
               data-testid="business-plan-upload"
               className="sicost-primary"
@@ -211,17 +222,9 @@ export function BusinessPlanPerformanceScreen({
             >
               목표 업로드
             </button>
-            {data && (
-              <span>
-                양식: {data.context.year}년 · 업로드:{" "}
-                {data.context.nowMonth.slice(0, 4)}년 목표
-              </span>
-            )}
           </div>
         </ScreenTitleActions>
-        {mobile && (
-          <p role="note">목표 업로드와 양식 내려받기는 PC에서 이용해 주세요.</p>
-        )}
+        {mobile && <p role="note">목표 업로드는 PC에서 이용해 주세요.</p>}
         {error != null && (
           <ErrorBanner
             message={
@@ -240,7 +243,24 @@ export function BusinessPlanPerformanceScreen({
         )}
         {data && (
           <>
-            <FinancialOverview comparison="사업계획 목표·실적" context={data.context} months={data.months.map(m=>m.actual)} provisional={data.months.some(m=>m.actual.provisional)} notices={data.notices} />
+            <FinancialOverview
+              comparison="사업계획 목표·실적"
+              context={data.context}
+              months={data.months.map((m) => m.actual)}
+              provisional={data.months.some((m) => m.actual.provisional)}
+              notices={data.notices.filter(
+                (notice) => notice.trim() !== unregisteredNotice,
+              )}
+            />
+            {unregisteredNotice && (
+              <p
+                className="business-plan-warning"
+                role="status"
+                data-testid="business-plan-unregistered"
+              >
+                {unregisteredNotice}
+              </p>
+            )}
             <KpiStrip className="business-plan-summary">
               {data.summary.map((summary) => (
                 <article
@@ -278,7 +298,10 @@ export function BusinessPlanPerformanceScreen({
                   <tr>
                     <th>항목</th>
                     {data.months.map((month, index) => (
-                      <th key={month.month} data-testid={`business-plan-month-header-${month.month}`}>
+                      <th
+                        key={month.month}
+                        data-testid={`business-plan-month-header-${month.month}`}
+                      >
                         {index + 1}월<br />
                         <StatusBadge
                           tone={
@@ -310,19 +333,14 @@ export function BusinessPlanPerformanceScreen({
                   {rows.map((row) => (
                     <tr
                       key={row.key}
+                      className={
+                        !row.amount ? "business-plan-emphasis" : undefined
+                      }
                       data-testid={`business-plan-row-${row.key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`}
                     >
                       <th scope="row">
-                        {row.label}<FieldHelp label={row.label} kind="B" />{" "}
-                        {row.amount && (
-                          <span
-                            tabIndex={0}
-                            title={basis}
-                            aria-label={`${row.label} 원천 설명`}
-                          >
-                            ⓘ
-                          </span>
-                        )}
+                        {row.label}
+                        <FieldHelp label={row.label} kind="B" />
                       </th>
                       {data.months.map((month) => {
                         const value = month[row.key] as string | null;
@@ -338,7 +356,7 @@ export function BusinessPlanPerformanceScreen({
                                 ? "business-plan-adverse"
                                 : ""
                             }
-                            title={`${basis}\n실적매출 ${formatAmount(month.salesActualAmt, "원")}원 / 목표매출 ${formatAmount(month.salesTargetAmt, "원")}원 · 실적영업이익 ${formatAmount(month.operatingProfitActualAmt, "원")}원 / 목표영업이익 ${formatAmount(month.operatingProfitTargetAmt, "원")}원\n${month.actual.completeness.issues.map((issue) => issue.reason).join("; ")}`}
+                            title={missingRateReason(month, row.key)}
                           >
                             {row.amount
                               ? formatAmount(value, unit)
@@ -355,10 +373,12 @@ export function BusinessPlanPerformanceScreen({
                 </tbody>
               </table>
             </div>
-            <p role="note">
-              {basis} 미래 실적은 결측이며 미래 목표는 12월까지 표시합니다. 목표
-              0·음수는 달성률을 계산하지 않습니다. 경계 색상은 반올림 전
-              실제율을 따릅니다.
+            <p role="note" data-testid="business-plan-basis">
+              실적은 영업이익표의 같은 달 매출액·영업이익입니다(턴키는 청구한
+              달의 공급가액, 월단위·파견은 일한 달의 매출, 부가세 제외). 목표는
+              [목표 업로드]로 올린 회사 전체 목표입니다. 달성률 = 실적 ÷ 목표 ×
+              100, 100% 미만은 빨강입니다. 차이(이익률) = 실적 영업이익률 − 목표
+              영업이익률(%p)입니다. 목표가 0인 달은 「–」(목표 없음)입니다.
             </p>
             <FinancialHistoryPanel
               month={data.context.month}

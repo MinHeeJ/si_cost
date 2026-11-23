@@ -167,7 +167,7 @@ it("renders loading then real empty state without out-of-scope controls", async 
   expect(screen.getByText("불러오는 중입니다.")).toBeInTheDocument();
   await act(async () => resolve(empty));
   expect(
-    await screen.findByText("조회된 후보가 없습니다."),
+    await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", {
@@ -189,7 +189,7 @@ it("request failure shows requestId and retries reads only", async () => {
   expect(await screen.findByText("목록 실패")).toBeInTheDocument();
   expect(screen.getByText(/read-request/)).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-  await screen.findByText("조회된 후보가 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   expect(api.createCandidate).not.toHaveBeenCalled();
 });
 it("starts with FL MD SITE server today plus thirty and never auto-checks consent", async () => {

@@ -158,6 +158,136 @@ class OperatingProfitContractTest {
         when(costs.calculate(any())).thenReturn(new MonthlyCostsData(originals.period(),List.of(person)));
         read("2026-07").andExpect(jsonPath("$.data.months[6].amounts.salesAmt").value("1000")).andExpect(jsonPath("$.data.months[6].amounts.allocCostAmt").value(nullValue())).andExpect(jsonPath("$.data.months[6].amounts.oprtPrftAmt").value(nullValue()));
     }
+    @ParameterizedTest
+    @ValueSource(strings={"WON","THOUSAND_WON","MILLION_WON"})
+    void summaryWorkbookUsesKoreanLabelsAndExactServerComparisons(String unit) throws Exception {
+        List<Snapshot> snapshots = new ArrayList<>();
+        for (int month = 1; month <= 7; month++) {
+            snapshots.add(summarySnapshot("2025%02d".formatted(month), "Y", "2000", "-400"));
+        }
+        snapshots.add(summarySnapshot("202606", "N", "1000", "-200"));
+        when(financial.snapshots(any())).thenReturn(snapshots);
+        when(financial.closes(any())).thenReturn(List.of(new Close("202606", "CLOSE")));
+        assertSummaryMatchesResponse("2026-07", unit);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={"2026-07","2025-03"})
+    void summaryWorkbookLeavesUnavailableComparisonsAndImportedAmountsBlank(String month) throws Exception {
+        if (month.startsWith("2025")) {
+            when(financial.snapshots(any())).thenReturn(List.of(copy("202501", "Y", "Y")));
+        }
+        assertSummaryMatchesResponse(month, "THOUSAND_WON");
+    }
+
+    @Test void januarySummaryWorkbookKeepsThePriorDecemberComparison() throws Exception {
+        when(financial.snapshots(any())).thenReturn(List.of(summarySnapshot("202512", "Y", "2000", "-400")));
+        assertSummaryMatchesResponse("2026-01", "THOUSAND_WON");
+    }
+
+    void assertSummaryMatchesResponse(String month, String unit) throws Exception {
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+            read(month).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray()
+        ).path("data");
+        var response = mvc.perform(request(EXPORT, month).param("amountUnit", unit))
+            .andExpect(status().isOk()).andReturn().getResponse();
+        int scale = unit.equals("WON") ? 0 : unit.equals("THOUSAND_WON") ? 3 : 6;
+        try (var workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
+            var summary = workbook.getSheet("요약");
+            assertThat(summary.getLastRowNum()).isEqualTo(4);
+            assertThat(summary.getRow(0).getLastCellNum()).isEqualTo((short) 6);
+            String[] headers = {"항목", "금액", "이익률(%)", "비교 기준", "비교 금액", "증감률(%)"};
+            String[] labels = {"누계 매출", "누계 매출총이익", "누계 영업이익", "기준월 영업이익"};
+            for (int column = 0; column < headers.length; column++) {
+                assertThat(summary.getRow(0).getCell(column).getStringCellValue()).isEqualTo(headers[column]);
+            }
+            for (int index = 0; index < labels.length; index++) {
+                var row = summary.getRow(index + 1);
+                var card = json.path("summary").get(index);
+                var comparison = card.path(index == 3 ? "previous" : "previousYear");
+                assertThat(row.getLastCellNum()).isEqualTo((short) 6);
+                assertThat(row.getCell(0).getStringCellValue()).isEqualTo(labels[index]);
+                assertNumericOrBlank(row.getCell(1), card.path("amount"), scale);
+                if (index < 2) {
+                    assertThat(row.getCell(2).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);
+                } else {
+                    assertNumericOrBlank(row.getCell(2), card.path("rate"), 0);
+                }
+                assertThat(row.getCell(3).getStringCellValue()).isEqualTo(index == 3 ? "전월" : "전년 같은 기간");
+                assertNumericOrBlank(row.getCell(4), comparison.path("comparisonValue"), scale);
+                assertNumericOrBlank(row.getCell(5), comparison.path("changeRate"), 0);
+            }
+            var info = workbook.getSheet("다운로드정보");
+            assertThat(info.getRow(7).getCell(1).getStringCellValue()).isEqualTo("연 누계");
+            for (var row : info) {
+                for (var cell : row) {
+                    if (cell.getCellType() == org.apache.poi.ss.usermodel.CellType.STRING) {
+                        assertThat(cell.getStringCellValue()).doesNotContain("TB_");
+                        for (String metric : BusinessPlanActuals.AMOUNTS) {
+                            assertThat(cell.getStringCellValue()).doesNotContain(metric);
+                        }
+                    }
+                }
+            }
+            int expectedInfoRows = 10 + json.path("notices").size();
+            for (var item : json.path("months")) {
+                if (item.path("month").asText().compareTo(month) <= 0) {
+                    expectedInfoRows += 1 + item.path("completeness").path("estimated").size()
+                        + item.path("completeness").path("issues").size();
+                }
+            }
+            assertThat(info.getPhysicalNumberOfRows()).isEqualTo(expectedInfoRows);
+            if (month.startsWith("2025")) {
+                List<String> warnings = new ArrayList<>();
+                for (var row : info) {
+                    if (row.getCell(0).getStringCellValue().equals("미확인 원천")) {
+                        warnings.add(row.getCell(1).getStringCellValue());
+                    }
+                }
+                for (String label : List.of("배분 원가", "대기 원가", "직접 경비", "매출총이익",
+                    "입력 항목", "간접 인건비", "연구개발비(내부)", "전월 조정")) {
+                    assertThat(warnings).contains("2025-01 " + label + " 해당 지표 원천 미확인; 0으로 보정하지 않습니다.");
+                }
+            }
+        }
+    }
+
+    static void assertNumericOrBlank(org.apache.poi.ss.usermodel.Cell cell,
+        com.fasterxml.jackson.databind.JsonNode value, int scale) {
+        if (value.isNull() || value.isMissingNode()) {
+            assertThat(cell.getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.BLANK);
+        } else {
+            assertThat(cell.getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.NUMERIC);
+            assertThat(cell.getNumericCellValue()).isEqualTo(new BigDecimal(value.asText()).movePointLeft(scale).doubleValue());
+        }
+    }
+
+    static Snapshot summarySnapshot(String month, String migrated, String sales, String profit) {
+        return new Snapshot(month, "Y", migrated, n(sales), n("100"), n("20"), n("30"),
+            n("150"), n("1850"), n("40"), n("50"), n("60"), n("150"), n("-10"),
+            n(profit), n("0"), n("0"), n("10"), n("-410"));
+    }
+
+    @Test void downloadInformationNamesTheTurnkeySourceWithoutChangingItsWarning() throws Exception {
+        var original = costs.loadYear(2026);
+        var issue = new MonthlyCostIssue("person", "202607",
+            "유상 투입 없는 턴키 배분액: 월 투입과 배분표를 확인해 주세요.", "TB_PJ_TK_DSTRB", "UI-01", "10");
+        var person = new MonthlyPersonCost("person", "202607", List.of(), null,
+            new MonthlyCostCompleteness(true, true, false, true, List.of(issue)), "0", "0", "0.00", false, false);
+        when(costs.calculate(any())).thenReturn(new MonthlyCostsData(original.period(), List.of(person)));
+        var response = mvc.perform(request(EXPORT, "2026-07")).andExpect(status().isOk()).andReturn().getResponse();
+        try (var workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))) {
+            List<String> warnings = new ArrayList<>();
+            for (var row : workbook.getSheet("다운로드정보")) {
+                if (row.getCell(0).getStringCellValue().equals("미확인 원천")) {
+                    warnings.add(row.getCell(1).getStringCellValue());
+                }
+            }
+            assertThat(warnings).contains("2026-07 턴키 배분표 " + issue.message());
+            assertThat(warnings).noneMatch(value -> value.contains("TB_"));
+        }
+    }
+
     static MonthlyCostRow cost(String project,String type,String cls,String sales,String labor,String expense,String input) {
         return new StoredCost("202607",project,project,project,n("1.00"),n("0.00"),n(sales),n(labor),n("999"),n("999"),n(expense),cls,type,null,"N","admin",null,null,null,project,"DEV",input).toRow();
     }

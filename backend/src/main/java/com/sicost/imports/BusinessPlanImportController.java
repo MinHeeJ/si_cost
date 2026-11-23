@@ -25,8 +25,8 @@ public class BusinessPlanImportController {
         int year = BusinessPlanImportService.year(request.getParameter("year"));
         if (request.getInputStream().read() != -1) throw ProjectInputPolicy.invalid("body");
         var columns = List.of(new ExcelExportService.Column("month", "연월*", ExcelExportService.CellType.TEXT),
-            new ExcelExportService.Column("salesTarget", "매출 목표*", ExcelExportService.CellType.NUMBER),
-            new ExcelExportService.Column("profitTarget", "영업이익 목표*", ExcelExportService.CellType.NUMBER));
+            new ExcelExportService.Column("salesTarget", "매출 목표(원)*", ExcelExportService.CellType.NUMBER),
+            new ExcelExportService.Column("profitTarget", "영업이익 목표(원)*", ExcelExportService.CellType.NUMBER));
         var specification = new ExcelExportService.Specification("사업계획_등록양식", null, columns, "B10 · 대상연도 " + year, "원", "UI-18");
         try (var download = exports.generate(specification, sink -> {
             for (int month = 1; month <= 12; month++) sink.accept(Arrays.asList(YearMonth.of(year, month).toString(), null, null));

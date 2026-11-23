@@ -2,10 +2,10 @@ import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
-import { FilterBar } from "../../shared/FilterBar";
+import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import {
   getSalesPartOptions,
@@ -51,6 +51,7 @@ export function ProjectStatusBoard({
   onPageSizeChange,
 }: ProjectStatusBoardProps = {}) {
   const canProjects = usePermission("UI-01", "INQ");
+  const navigate = useNavigate();
   const canCosts = usePermission("UI-04", "INQ");
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -194,6 +195,7 @@ export function ProjectStatusBoard({
           {canProjects ? (
             <Link
               data-testid={`status-project-${row.projectId.toLowerCase()}`}
+              onClick={(event) => event.stopPropagation()}
               to={projectLink(row)}
             >
               {row.projectName}
@@ -215,6 +217,7 @@ export function ProjectStatusBoard({
           ) : canCosts ? (
             <Link
               data-testid={`status-cost-${row.projectId.toLowerCase()}`}
+              onClick={(event) => event.stopPropagation()}
               to={`/UI-04?${new URLSearchParams({ month: result.data?.currentMonth ?? "", projectId: row.projectId, detailProjectId: row.projectId, returnTo: `/UI-31?${params}` })}`}
             >
               원가 분석
@@ -248,6 +251,7 @@ export function ProjectStatusBoard({
           ) : canProjects ? (
             <Link
               data-testid={`status-stage-${row.projectId.toLowerCase()}`}
+              onClick={(event) => event.stopPropagation()}
               to={projectLink(row)}
             >
               기본 단계 미생성
@@ -394,6 +398,7 @@ export function ProjectStatusBoard({
       </SegmentedTabList>
       <FilterBar
         testId="status-filters"
+        appliedCount={countAppliedFilters(query, { light: "", contractType: "", partId: "" })}
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
@@ -464,6 +469,7 @@ export function ProjectStatusBoard({
       <AnalysisFailure error={result.error} retry={result.retry} />
       {tab === "board" && (
         <div className="project-analysis-toolbar">
+          <strong>총 {result.data?.total ?? 0}건</strong>
           {renderColumns?.()}
           {renderExport?.(query)}
         </div>
@@ -475,6 +481,8 @@ export function ProjectStatusBoard({
       >
         <DataTable
           testId="status-board-table"
+          onRowAction={canProjects ? (row) => navigate(projectLink(row)) : undefined}
+          mobileRowAction={canProjects}
           dense={dense}
           rows={result.error ? [] : (result.data?.items ?? [])}
           columns={visibleColumns}
@@ -509,7 +517,7 @@ export function ProjectStatusBoard({
               page: 1,
             })
           }
-          empty="조건에 맞는 진행 프로젝트가 없습니다."
+          empty="조건에 맞는 결과가 없습니다."
           emptyAction={
             <button
               data-testid="status-empty-reset"

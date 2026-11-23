@@ -14,7 +14,7 @@ public class SettlementClosingService {
         this.reads=reads;this.commands=commands;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
-    public TabsResult listEligibleParts(String month) { return reads.listEligibleParts(month); }
+    public TabsResult listEligibleParts(String month) { return reads.listPartsForClose(month); }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Result previewSettlement(String partId,String month) { return reads.previewForClose(partId,month); }
     @Transactional(propagation=Propagation.MANDATORY)

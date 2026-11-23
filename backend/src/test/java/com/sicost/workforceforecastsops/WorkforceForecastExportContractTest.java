@@ -45,7 +45,10 @@ class WorkforceForecastExportContractTest {
     @MockBean AccessLogMapper audit;
     @MockBean PlatformTransactionManager manager;
     @MockBean Clock clock;
+    @MockBean com.sicost.common.excel.ExportLabels exportLabels;
     @BeforeEach void setup() {
+        com.sicost.common.excel.ExportTestLookups.configure(exportLabels);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
         when(clock.instant()).thenReturn(Instant.parse("2026-07-15T00:00:00Z"));
         when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul")); when(clock.withZone(any())).thenReturn(clock);
         when(manager.getTransaction(any())).thenAnswer(c -> new SimpleTransactionStatus());
@@ -74,8 +77,10 @@ class WorkforceForecastExportContractTest {
             assertThat(table.getRow(3).getCell(1).getNumericCellValue()).isZero();
             var basis = book.getSheet("직무별 계산근거");
             assertThat(basis.getLastRowNum()).isEqualTo(6);
-            assertThat(basis.getRow(1).getCell(0).getStringCellValue()).isEqualTo("0001");
-            assertThat(basis.getRow(1).getCell(7).getCellType()).isEqualTo(CellType.NUMERIC);
+            assertThat(basis.getRow(1).getCell(0).getStringCellValue()).isEqualTo("시험 직무");
+            assertThat(basis.getRow(1).getCell(7).getStringCellValue()).isEqualTo("보통");
+            assertThat(basis.getRow(0).getLastCellNum()).isEqualTo((short)9);
+            for(var c:basis.getRow(0)) assertThat(c.toString()).doesNotContain("반올림 전");
             assertThat(book.getSheet("다운로드정보").getRow(4).getCell(1).getStringCellValue()).isEqualTo("천원");
         }
         var order = inOrder(audit, manager);
@@ -136,10 +141,11 @@ class WorkforceForecastExportContractTest {
         var response = mvc.perform(download()).andExpect(status().isOk()).andReturn().getResponse();
         try (var book = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
             assertThat(book.getSheet("미확인").getLastRowNum()).isEqualTo(3);
-            assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(10).getStringCellValue()).isEqualTo("UNKNOWN");
+            assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(7).getStringCellValue()).isEqualTo("미확인");
         }
     }
     @Test void formulaLikeJobCodesRemainLiteralText() throws Exception {
+        when(exportLabels.labels("JOB")).thenReturn(Map.of("=1+1","=1+1","0001","시험 직무"));
         when(mapper.people()).thenReturn(List.of(new SalesForecastSources.Person("D", "=1+1", "Y", "DRCT", null, null)));
         var response = mvc.perform(download()).andExpect(status().isOk()).andReturn().getResponse();
         try (var book = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
@@ -154,6 +160,7 @@ class WorkforceForecastExportContractTest {
             .andExpect(jsonPath("$.code").value("INTERNAL_ERROR")); verify(manager, atLeastOnce()).rollback(any());
     }
     @Test void nullRemainsBlankAndZeroRemainsNumericInFullValuesWorkbook() throws Exception {
+        when(exportLabels.labels("JOB")).thenReturn(Map.of("@0001","@0001"));
         var month = new SalesForecastDtos.WorkforceMonth("2026-07", null, "0", "0", "0", null, null, "0", "0", "UNKNOWN");
         var data = new SalesForecastDtos.Workforce("2026-07", 1, true, "2026-07-15", "2026-07", List.of(month),
             List.of(new SalesForecastDtos.JobMonth("@0001", month, "=literal basis")), List.of(), List.of(), null, "0", null, null);
@@ -166,7 +173,7 @@ class WorkforceForecastExportContractTest {
                 assertThat(book.getSheetAt(0).getRow(1).getCell(1).getNumericCellValue()).isZero();
                 assertThat(book.getSheetAt(0).getRow(2).getCell(1).getCellType()).isEqualTo(CellType.BLANK);
                 assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(0).getStringCellValue()).isEqualTo("@0001");
-                assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(11).getCellType()).isEqualTo(CellType.STRING);
+                assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(8).getCellType()).isEqualTo(CellType.STRING);
             }
         }
     }

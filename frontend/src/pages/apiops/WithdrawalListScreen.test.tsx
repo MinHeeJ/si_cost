@@ -187,7 +187,7 @@ it("keeps ASGN rows, full totals and guidance instead of merging the same develo
   mount();
   await screen.findAllByText("00012");
   expect(screen.getAllByText("00012")).toHaveLength(2);
-  expect(screen.getByText("필터 전체 55건")).toBeInTheDocument();
+  expect(screen.getByText("총 55건")).toBeInTheDocument();
   expect(screen.getByTestId("withdrawal-guidance")).toHaveTextContent(
     "없는 1명",
   );
@@ -414,7 +414,7 @@ it("provides loading, empty, and retryable failure states", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("조회 실패");
   fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
   expect(
-    await screen.findByText("조건에 맞는 철수 배정이 없습니다."),
+    await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
 });
 it("guidance recommendation is GET-only and does not pick an arbitrary person", async () => {
@@ -539,13 +539,14 @@ it("exports the applied filters and not an unsubmitted draft", async () => {
 it("resets applied withdrawal filters from inside an empty table", async () => {
   vi.mocked(api.getWithdrawals).mockResolvedValue(data([]));
   mount();
-  await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   fireEvent.change(screen.getByTestId("withdrawal-period"), {
     target: { value: "PAST" },
   });
   fireEvent.change(screen.getByTestId("withdrawal-extension-filter"), {
     target: { value: "UNSET" },
   });
+  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.click(screen.getByTestId("withdrawal-search"));
   await waitFor(() =>
     expect(api.getWithdrawals).toHaveBeenLastCalledWith(
@@ -556,6 +557,7 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
     "button",
     { name: "조건 초기화" },
   );
+  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (2)]");
   fireEvent.click(reset);
   await waitFor(() =>
     expect(api.getWithdrawals).toHaveBeenLastCalledWith(
@@ -564,6 +566,7 @@ it("resets applied withdrawal filters from inside an empty table", async () => {
   );
   expect(screen.getByTestId("withdrawal-period")).toHaveValue("ALL");
   expect(screen.getByTestId("withdrawal-extension-filter")).toHaveValue("ALL");
+  expect(screen.getByTestId("withdrawal-filters-toggle")).toHaveTextContent("[조건 (0)]");
 });
 
 it("persists density and keeps the saved density if preference saving fails", async () => {

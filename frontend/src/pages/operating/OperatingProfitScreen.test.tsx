@@ -256,8 +256,12 @@ it("uses exact decimal display and leaves future values blank rather than zero",
 });
 it("shows distinct imported closed and working tones", async () => {
   await draw();
-  expect(screen.getByRole("columnheader", {name:/1월 이관/})).toBeInTheDocument();
-  expect(screen.getByRole("columnheader", {name:/2월 확정/})).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: /1월 이관/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: /2월 확정/ }),
+  ).toBeInTheDocument();
   expect(
     screen
       .getAllByText("작업중")
@@ -268,7 +272,7 @@ it("uses adverse comparisons and provisional markers", async () => {
   await draw();
   expect(
     within(screen.getByTestId("operating-card-oprt-prft-amt")).getByText(
-      /전년 동기/,
+      /전년 같은 기간 대비/,
     ),
   ).toHaveClass("adverse");
   expect(screen.getAllByText("잠정").length).toBeGreaterThan(0);
@@ -348,7 +352,18 @@ it("imports use existing workflow and cancel does not apply", async () => {
     screen.getByRole("button", { name: "전년 손익 업로드" }),
   );
   expect(screen.getByRole("dialog")).toBeInTheDocument();
-  expect(screen.getByText("이관 손익 업로드")).toBeInTheDocument();
+  const dialog = screen.getByRole("dialog", { name: "전년 손익 업로드" });
+  expect(dialog).not.toHaveTextContent(/BASE|NULL/);
+  expect(
+    within(dialog).getByRole("button", { name: "양식 내려받기" }),
+  ).toBeEnabled();
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "양식 내려받기" }),
+  );
+  expect(
+    migration.getHistoricalProfitLossImportTemplate,
+  ).toHaveBeenCalledOnce();
+  expect(migration.saveDownload).toHaveBeenCalledOnce();
   await userEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", { name: "취소" }),
   );
@@ -449,6 +464,45 @@ it("PC-only file controls are disabled on narrow screens", async () => {
   expect(
     screen.getByRole("button", { name: "전년 손익 업로드" }),
   ).toBeDisabled();
-  expect(screen.getByRole("button", { name: "전년 손익 양식" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "전년 손익 양식" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "엑셀 다운로드" })).toBeDisabled();
+});
+
+it("keeps only upload and export title actions and uses readable comparison and accounting guidance", async () => {
+  await draw();
+  expect(screen.queryByTestId("operating-template")).not.toBeInTheDocument();
+  const actions = screen.getByTestId("operating-upload").parentElement!;
+  expect(
+    within(actions)
+      .getAllByRole("button")
+      .map((button) => button.textContent),
+  ).toEqual(["전년 손익 업로드", "엑셀 다운로드"]);
+  for (const metric of ["sales-amt", "gross-prft-amt", "oprt-prft-amt"]) {
+    const card = screen.getByTestId(`operating-card-${metric}`);
+    expect(card).toHaveTextContent("전년 같은 기간 대비 -200.0%");
+    expect(within(card).getByText(/전년 같은 기간 대비/)).toHaveClass(
+      "adverse",
+    );
+  }
+  expect(
+    screen.getByTestId("operating-card-current-month-operating-profit"),
+  ).toHaveTextContent("전월 대비 -200.0%");
+  const note = screen.getByText(/턴키는 청구한 달의 공급가액/);
+  expect(note).toHaveTextContent(
+    "월단위·파견은 일한 달의 매출입니다(부가세 제외).",
+  );
+  expect(note).toHaveTextContent(
+    "전년 대비는 같은 기간 누계끼리 비교하며, 비용 항목은 늘면 빨강입니다.",
+  );
+  expect(note).toHaveTextContent(
+    "전월 조정은 마감한 달의 숫자를 바꾸지 않고 이번 달 「전월 조정」 줄에 넣습니다.",
+  );
+  expect(note).not.toHaveTextContent(/TK|MO|DP/);
+  expect(
+    screen
+      .getAllByTestId(/^operating-row-/)
+      .filter((row) => row.classList.contains("operating-total")),
+  ).toHaveLength(3);
 });

@@ -76,13 +76,13 @@ public class AssignmentExportService {
         String conditions = "year=" + year + query.entrySet().stream().filter(e -> !e.getKey().equals("year")).sorted(Map.Entry.comparingByKey())
             .map(e -> "; " + e.getKey() + "=" + e.getValue()).collect(Collectors.joining());
         Specification specification = new Specification("투입배정", null, specColumns, conditions, unit, "UI-12");
-        return excel.generate(specification, sink -> {
+        return excel.generateForPeriod(specification, sink -> {
             for (Assignment row : rows) {
                 List<Object> cells = new ArrayList<>();
                 for (String id : columns) cells.add(cell(id, row, amountUnit, inputTypes, possibilities));
                 sink.accept(cells);
             }
-        }, request);
+        }, request, year);
     }
 
     private Map<String, String> labels(String group) {

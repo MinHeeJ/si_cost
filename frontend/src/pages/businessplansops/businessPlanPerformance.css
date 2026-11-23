@@ -152,6 +152,10 @@
 .business-plan-adverse {
   color: var(--bad);
 }
+.business-plan-table .business-plan-emphasis th,
+.business-plan-table .business-plan-emphasis td {
+  font-weight: 700;
+}
 .business-plan-performance > p[role="note"] {
   font-size: 13px;
   line-height: 1.6;

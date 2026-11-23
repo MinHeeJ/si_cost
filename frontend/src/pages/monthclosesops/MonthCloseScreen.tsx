@@ -6,7 +6,8 @@ import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
-import { getPeriodContext, type PeriodContext } from "../shared/sharedApi";
+import type { PeriodContext } from "../shared/sharedApi";
+import { formatDecimal, formatDateTime } from "../../shared/format";
 import * as api from "./monthCloseApi";
 import "./monthClose.css";
 
@@ -22,35 +23,26 @@ function Issues({ items }: { items: api.CloseIssue[] }) {
   return (
     <>
       {items.map((item, index) => (
-        <p role="alert" key={`${item.code}-${index}`}>
-          {item.message} {item.sourceType} {item.sourceId} {item.field}
+        <p
+          role="alert"
+          className="sicost-field-error"
+          key={`${item.code}-${index}`}
+        >
+          {item.message}
         </p>
       ))}
     </>
   );
 }
-function Snapshots({ items }: { items: api.CloseSnapshot[] }) {
-  return (
-    <ul>
-      {items.map((item) => (
-        <li
-          key={item.table}
-          data-testid={`month-close-snapshot-${item.table.toLowerCase().replaceAll("_", "-")}`}
-        >
-          {item.table} {item.rowCount}행 · 독립고정 보존{" "}
-          {item.preservedIndependentFixedCount}행
-        </li>
-      ))}
-    </ul>
-  );
-}
 export function CloseCheckCards({
   items,
   onLink,
+  closed = false,
   testIdPrefix = "month-close-check",
 }: {
   items: api.CloseCheck[];
   onLink?: (check: api.CloseCheck) => void;
+  closed?: boolean;
   testIdPrefix?: string;
 }) {
   return (
@@ -58,26 +50,40 @@ export function CloseCheckCards({
       {items.map((check) => (
         <article
           key={check.code}
-          className={`month-close-check ${check.status.toLowerCase()}`}
+          className={`month-close-check ${closed ? "ok" : check.status.toLowerCase()}`}
           data-testid={`${testIdPrefix}-${check.code.toLowerCase().replaceAll("_", "-")}`}
         >
           <div className="month-close-heading">
             <h3>{check.name}</h3>
-            <StatusBadge tone={check.status === "WARN" ? "warn" : "ok"}>
-              {check.status === "WARN" ? "확인 필요" : "정상"}
+            <StatusBadge
+              tone={!closed && check.status === "WARN" ? "warn" : "ok"}
+            >
+              {closed
+                ? "확인 완료"
+                : check.status === "WARN"
+                  ? "확인 필요"
+                  : "정상"}
             </StatusBadge>
           </div>
-          <strong>
-            {check.count ?? "–"}
-            {check.code === "PAY" || check.code === "MM_OVER"
-              ? "명"
-              : check.code === "SETL" || check.code === "BILL_MISS"
-                ? "개"
-                : "건"}
-          </strong>
-          <p>{check.description ?? "–"}</p>
+          {!closed && (
+            <strong>
+              {check.count ?? "–"}
+              {check.code === "PAY" || check.code === "MM_OVER"
+                ? "명"
+                : check.code === "SETL" || check.code === "BILL_MISS"
+                  ? "개"
+                  : "건"}
+            </strong>
+          )}
+          {(!closed || check.code === "PAY") && (
+            <p>
+              {closed
+                ? `${check.count ?? "–"}명 업로드 완료`
+                : (check.description ?? "–")}
+            </p>
+          )}
           {check.checkedAt && <small>마지막 저장 검사 {check.checkedAt}</small>}
-          {check.linkScreenId && onLink && (
+          {!closed && check.linkScreenId && onLink && (
             <button
               type="button"
               data-action-id={`B143-14-LINK-${({ MM_OVER: "MM", BILL: "BILL", FI: "FI", SETL: "SETL", BILL_MISS: "BILLMISS" } as Record<string, string>)[check.code]}`}
@@ -104,11 +110,11 @@ export function ClosePreviewDialog({
   onCancel(): void;
 }) {
   const [accepted, setAccepted] = useState(false);
-  const cash = preview.cashImpact;
+  const automatic = preview.parts.filter((part) => part.willAutoConfirm);
   return (
     <Dialog
       open
-      title={`${preview.month} 월 마감 확인`}
+      title={`${preview.month}를 마감할까요?`}
       wide
       testId="month-close-preview-dialog"
       confirmTestId="month-close-submit-button"
@@ -118,7 +124,7 @@ export function ClosePreviewDialog({
       pending={pending}
       onCancel={onCancel}
       onConfirm={() => onConfirm(accepted)}
-      confirmLabel="확인 후 마감"
+      confirmLabel="마감하기"
       confirmDisabled={
         !preview.canClose ||
         preview.blockingIssues.length > 0 ||
@@ -129,59 +135,20 @@ export function ClosePreviewDialog({
         data-screen-id="SCR-UI-14-M1"
         data-testid="month-close-preview-panel"
       >
-        <CloseCheckCards
-          items={preview.checks}
-          testIdPrefix="month-close-preview-check"
-        />
-        <p>
-          남은 {preview.warningCount}개:{" "}
-          {preview.remainingCheckNames.join(", ") || "없음"}
-        </p>
-        <p>
-          대상파트 {preview.eligiblePartCount} · 자동확정예정{" "}
-          {preview.autoConfirmCount}
-        </p>
-        <ul>
-          {preview.parts.map((part) => (
-            <li
-              key={part.partId}
-              data-testid={`month-close-part-${part.partId}`}
-            >
-              {part.partId} {part.partName} {part.status} ·{" "}
-              {part.willAutoConfirm ? "AUTO 예정" : "기존 정산 유지"}
-              <Issues items={part.issues} />
-            </li>
-          ))}
-        </ul>
-        <Snapshots items={preview.snapshots} />
-        <p>예정급여 사용: {preview.usesEstimatedPayroll ? "예" : "아니오"}</p>
         <Issues items={preview.blockingIssues} />
-        <div className="month-close-impact">
-          <h3>현금 실적전환 영향 (원)</h3>
-          <p>
-            제외 미수 {cash.excludedUnpaidBills ?? "미확인"} · 제외 미확인세금{" "}
-            {cash.excludedUnconfirmedTaxes ?? "미확인"}
-          </p>
-          <p>
-            수입 {cash.incomeBefore ?? "미확인"} →{" "}
-            {cash.incomeAfter ?? "미확인"}
-          </p>
-          <p>
-            납부 {cash.taxPaymentBefore ?? "미확인"} →{" "}
-            {cash.taxPaymentAfter ?? "미확인"}
-          </p>
-          <p>
-            월말잔액 {cash.closingBalanceBefore ?? "미확인"} →{" "}
-            {cash.closingBalanceAfter ?? "미확인"}
-          </p>
-        </div>
+        <p>마감하면 이 달 자료는 고칠 수 없습니다.</p>
         <p>
-          실제 입금·납부 실행이나 미래월 이동이 아닙니다. 기존 정산은
-          재확정하거나 덮어쓰지 않습니다.
+          {preview.warningCount > 0
+            ? `확인할 항목 ${preview.warningCount}개(${preview.remainingCheckNames.join(", ")})가 남아 있습니다. 남은 항목은 마감 이력에 함께 남습니다.`
+            : "점검 항목이 모두 정상입니다."}
         </p>
-        <p>
-          이전 전월조정은 UI-10에서 별도 정리하고 중복 보정 여부를 확인하세요.
-        </p>
+        {automatic.length > 0 && (
+          <p>
+            확정하지 않은 영업 파트 정산 {automatic.length}개(
+            {automatic.map((part) => part.partName).join(", ")})는 마감과 함께
+            자동 확정됩니다(마감 뒤 틀린 금액은 다음 달에 반영).
+          </p>
+        )}
         {preview.warningCount > 0 && (
           <label>
             <input
@@ -192,7 +159,7 @@ export function ClosePreviewDialog({
               disabled={pending}
               onChange={(e) => setAccepted(e.target.checked)}
             />
-            남은 WARN을 확인하고 마감합니다
+            남은 항목을 확인했고 마감합니다
           </label>
         )}
       </section>
@@ -216,7 +183,7 @@ export function ReopenDialog({
   return (
     <Dialog
       open
-      title={`${preview.month} 마감 해제`}
+      title={`${preview.month} 마감을 해제할까요?`}
       wide
       testId="month-close-reopen-dialog"
       confirmTestId="month-close-reopen-submit-button"
@@ -226,7 +193,7 @@ export function ReopenDialog({
       pending={pending}
       onCancel={onCancel}
       onConfirm={() => onConfirm(reason.trim(), accepted)}
-      confirmLabel="확인 후 해제"
+      confirmLabel="마감 해제"
       confirmDisabled={
         !preview.canReopen ||
         preview.blockingIssues.length > 0 ||
@@ -238,49 +205,52 @@ export function ReopenDialog({
         data-screen-id="SCR-UI-14-M2"
         data-testid="month-close-reopen-panel"
       >
+        <Issues items={preview.blockingIssues} />
         <p>
-          기존 마감자 {preview.closedBy} · 일시 {preview.closedAt}
+          해제하면 이 달 자료를 다시 고칠 수 있습니다. 다시 마감할 때 이 달
+          숫자를 새로 고정하고, 법인세 월할은 이 달부터 마감 안 된 달끼리 다시
+          나눕니다. 영업 파트 정산 확정은 그대로입니다. 사유는 기록에 남습니다.
         </p>
-        <Snapshots items={preview.snapshots} />
-        <p>정산확정 유지: CNFM/AUTO 및 상세는 자동 취소되지 않습니다.</p>
-        <p>
-          모든 후속조정 {preview.adjustmentCount}건 · {preview.adjustmentAmount}
-          원 · 적용월 {preview.adjustmentMonths.join(", ") || "없음"}
-        </p>
-        <div className="month-close-adjustments">
-          <table aria-label="후속조정">
-            <thead>
-              <tr>
-                {["ID", "대상월", "적용월", "금액", "사유"].map((h) => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {preview.adjustments.map((a) => (
-                <tr
-                  key={a.adjustmentId}
-                  data-testid={`month-close-adjustment-${a.adjustmentId}`}
-                >
-                  <td>{a.adjustmentId}</td>
-                  <td>{a.targetMonth}</td>
-                  <td>{a.applyMonth}</td>
-                  <td>{a.amount}</td>
-                  <td>{a.reason}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p>
-          기존 조정은 자동 삭제·상계하지 않습니다. UI-10에서 중복 보정 여부를
-          확인하세요.
-        </p>
+        {preview.adjustmentCount > 0 && (
+          <>
+            <p>
+              이 달을 고친 전월 조정이 {preview.adjustmentCount}건(
+              {formatDecimal(preview.adjustmentAmount)}원,{" "}
+              {preview.adjustmentMonths.join(", ")} 반영) 있습니다. 이 달을 직접
+              고치면 같은 정정이 두 번 들어가지 않게 그 줄은 재무 항목에서 지워
+              주세요.
+            </p>
+            <div className="month-close-adjustments">
+              <table aria-label="후속조정">
+                <thead>
+                  <tr>
+                    {["반영 월", "금액", "사유"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.adjustments.map((a) => (
+                    <tr
+                      key={a.adjustmentId}
+                      data-testid={`month-close-adjustment-${a.adjustmentId}`}
+                    >
+                      <td>{a.applyMonth}</td>
+                      <td>{formatDecimal(a.amount)}</td>
+                      <td>{a.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
         <label className="sicost-field">
           해제 사유*
           <textarea
             data-testid="month-close-reason"
             data-action-id="B143-14-REASON"
+            placeholder="예: 9월 청구 누락 2건 반영"
             value={reason}
             disabled={pending}
             aria-invalid={reason !== "" && !valid}
@@ -302,10 +272,9 @@ export function ReopenDialog({
               disabled={pending}
               onChange={(e) => setAccepted(e.target.checked)}
             />
-            후속조정 영향과 정산 유지를 확인했습니다
+            전월 조정을 확인했습니다
           </label>
         )}
-        <Issues items={preview.blockingIssues} />
       </section>
     </Dialog>
   );
@@ -339,8 +308,11 @@ export function MonthCloseScreen() {
         }>
       ).detail;
       if (detail?.screenId !== "UI-14") return;
-      setMonth(detail.value.value);
       setContext(detail.context);
+      if (detail.value.value === currentMonth.current) return;
+      generation.current++;
+      currentMonth.current = detail.value.value;
+      setMonth(detail.value.value);
       setPage(1);
       setPreview(null);
       setReopen(null);
@@ -465,32 +437,7 @@ export function MonthCloseScreen() {
       },
     });
   };
-  const adjust = async () => {
-    if (!data) return;
-    try {
-      const ctx = await getPeriodContext();
-      const first = [
-        data.nextCloseMonth,
-        `${ctx.currentMonth.slice(0, 4)}-01`,
-        ctx.cashBaseMonth,
-      ]
-        .sort()
-        .at(-1)!;
-      if (first > ctx.currentMonth) {
-        setError("현재 입력 가능한 미마감월이 없습니다.");
-        return;
-      }
-      navigate("/UI-10", {
-        state: {
-          section: "adjustments",
-          month: first,
-          targetMonth: data.month,
-        },
-      });
-    } catch (e) {
-      setError(errorText(e));
-    }
-  };
+
   return (
     <SharedScreenFrame screenId="UI-14">
       <div
@@ -508,7 +455,11 @@ export function MonthCloseScreen() {
         )}
         {message && <p role="status">{message}</p>}
         {opening && <p role="status">최신 영향을 확인하는 중입니다.</p>}
-        {loading && <p role="status">월 마감을 불러오는 중입니다.</p>}
+        {loading && (
+          <p role="status" data-testid="month-close-loading">
+            불러오는 중
+          </p>
+        )}
         {!month && <p role="status">관리 기간을 불러오는 중입니다.</p>}
         {data && data.month === month && (
           <>
@@ -521,10 +472,7 @@ export function MonthCloseScreen() {
                 {data.status === "CLOSE" ? "마감" : "미마감"}
               </StatusBadge>
             </div>
-            <p>
-              관리{" "}
-              {data.managementAllowed ? "가능 · 과거 운영연도 포함" : "불가"}
-            </p>
+
             {data.status === "WORK" && (
               <div
                 className={`month-close-check-banner ${data.warningCount > 0 ? "warn" : "info"}`}
@@ -536,9 +484,20 @@ export function MonthCloseScreen() {
               </div>
             )}
             {data.status === "CLOSE" && (
-              <div className="month-close-lock">
-                마감자 {data.closedBy} · 마감일시 {data.closedAt} · 원월
-                금액/현금은 읽기 전용입니다.
+              <div
+                className="month-close-lock"
+                data-testid="month-close-closed-notice"
+              >
+                <p>
+                  {data.month}는 마감되었습니다({formatDateTime(data.closedAt)}{" "}
+                  · {data.closedByName ?? "–"}). 고칠 내용은 다음 달 전월
+                  조정으로 입력하세요.
+                </p>
+                <small>
+                  {data.month === data.latestCloseMonth
+                    ? "마감 해제는 시스템 관리자만 할 수 있습니다"
+                    : "가장 최근에 마감한 달만 해제할 수 있습니다"}
+                </small>
               </div>
             )}
             <section className="month-close-card">
@@ -583,38 +542,34 @@ export function MonthCloseScreen() {
                     )}
                     {data.status === "CLOSE" && (
                       <>
-                        {data.canReopen && (
-                          <button
-                            data-testid="month-close-reopen-button"
-                            data-action-id="B143-14-REOPEN-OPEN"
-                            disabled={
-                              blocked || loading || !data.managementAllowed
-                            }
-                            onClick={() => void open("reopen")}
-                          >
-                            마감 해제
-                          </button>
-                        )}
-                        <button
-                          data-testid="month-close-adjust-button"
-                          data-action-id="B143-14-ADJUST"
-                          disabled={blocked}
-                          onClick={() => void adjust()}
-                        >
-                          전월 조정 입력
-                        </button>
+                        {data.canReopen &&
+                          data.month === data.latestCloseMonth && (
+                            <button
+                              data-testid="month-close-reopen-button"
+                              data-action-id="B143-14-REOPEN-OPEN"
+                              disabled={
+                                blocked || loading || !data.managementAllowed
+                              }
+                              onClick={() => void open("reopen")}
+                            >
+                              마감 해제
+                            </button>
+                          )}
                       </>
                     )}
                   </div>
                 </ScreenTitleActions>
               </div>
               <p>
-                점검 6개 중 {data.warningCount}개 확인 필요 ·{" "}
-                {data.checkMode === "CLOSE_SNAPSHOT"
-                  ? "마감 당시 6점검"
-                  : "현재 계산 · 마지막 저장 검사 시각은 항목별 표시"}
+                {data.status === "CLOSE"
+                  ? "마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다."
+                  : `점검 6개 중 ${data.warningCount}개 확인 필요 · 현재 계산 · 마지막 저장 검사 시각은 항목별 표시`}
               </p>
-              <CloseCheckCards items={data.checks} onLink={link} />
+              <CloseCheckCards
+                items={data.checks}
+                onLink={link}
+                closed={data.status === "CLOSE"}
+              />
               <Issues items={data.issues} />
             </section>
             <section className="month-close-card">
@@ -624,6 +579,7 @@ export function MonthCloseScreen() {
                   <p>선택연도 마감 이력이 없습니다.</p>
                   <button
                     type="button"
+                    data-testid="month-close-reset-button"
                     onClick={() =>
                       window.dispatchEvent(
                         new Event("sicost:month-close-reset-period"),
@@ -664,7 +620,7 @@ export function MonthCloseScreen() {
                               {h.action === "CLOSE" ? "마감" : "해제"}
                             </StatusBadge>
                           </td>
-                          <td>{h.actorId}</td>
+                          <td>{h.actorName ?? "–"}</td>
                           <td>{h.occurredAt}</td>
                           <td>{h.reason ?? "–"}</td>
                           <td>{h.remainingChecks ?? "–"}</td>

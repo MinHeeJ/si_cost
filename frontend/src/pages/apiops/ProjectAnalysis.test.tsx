@@ -580,6 +580,16 @@ describe("프로젝트 원가 목록", () => {
   });
 });
 describe("프로젝트 현황판", () => {
+  it("현재 단계 셀은 진행 현황으로 이동하고 원가 링크는 자기 경로를 유지한다", async () => {
+    mount(<><ProjectStatusBoard /><RetainedLocation /></>, "/UI-31?light=위험");
+    const row = await screen.findByTestId("status-board-table-row-owned");
+    expect(screen.getByText("총 57건")).toBeInTheDocument();
+    fireEvent.click(row.querySelector('[data-column="currentStep"]')!);
+    expect(screen.getByTestId("retained-location")).toHaveTextContent("/UI-01?projectId=owned&tab=progress");
+    fireEvent.click(screen.getByTestId("status-cost-owned"));
+    expect(screen.getByTestId("retained-location")).toHaveTextContent("/UI-04?");
+    expect(screen.getByTestId("retained-location")).not.toHaveTextContent("tab=progress");
+  });
   it("renders all signal reasons with distinct severities, all PMs, unknown and off-page stale banner", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");
     await screen.findByTestId("status-board-table-row-owned");
@@ -670,7 +680,7 @@ describe("프로젝트 현황판", () => {
       total: 0,
     });
     fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-    await screen.findByText("조건에 맞는 진행 프로젝트가 없습니다.");
+    await screen.findByText("조건에 맞는 결과가 없습니다.");
     expect(
       screen.getByRole("button", { name: "조건 초기화" }).closest("td"),
     ).not.toBeNull();

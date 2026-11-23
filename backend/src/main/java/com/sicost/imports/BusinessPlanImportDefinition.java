@@ -26,7 +26,8 @@ public class BusinessPlanImportDefinition {
     public Parsed parse(MultipartFile file) {
         try {
             return imports.parse(file, new ImportDefinition(HEADERS, Set.copyOf(HEADERS), Set.of(),
-                Set.of(), Map.of(), Set.of("매출 목표", "영업이익 목표"), Set.of("연월")));
+                Set.of(), Map.of("매출목표(원)", "매출 목표", "영업이익목표(원)", "영업이익 목표"),
+                Set.of("매출 목표", "영업이익 목표"), Set.of("연월")));
         } catch (ApiException e) {
             throw translated(e);
         }

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { StatusBadge } from "../../shared/Feedback";
-import { FilterBar } from "../../shared/FilterBar";
+import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { AssignmentDrawer } from "../assignmentsops/AssignmentDrawer";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
@@ -418,6 +418,7 @@ export function WithdrawalContent({ year }: { year: number }) {
       )}
       <FilterBar
         testId="withdrawal-filters"
+        appliedCount={countAppliedFilters(query, defaults())}
         searchTestId="withdrawal-search"
         resetTestId="withdrawal-reset"
         onSubmit={() => apply()}
@@ -496,7 +497,7 @@ export function WithdrawalContent({ year }: { year: number }) {
         </p>
       )}
       <div className="withdrawal-toolbar">
-        <span>필터 전체 {data?.totalCount ?? "–"}건</span>
+        <strong>총 {data?.totalCount ?? 0}건</strong>
         <button
           data-testid="withdrawal-density"
           aria-pressed={dense}
@@ -521,7 +522,7 @@ export function WithdrawalContent({ year }: { year: number }) {
         rowKey={(row) => row.assignmentId}
         loading={loading}
         dense={dense}
-        empty="조건에 맞는 철수 배정이 없습니다."
+        empty="조건에 맞는 결과가 없습니다."
         emptyAction={
           <button
             data-testid="withdrawal-empty-reset"

@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     ApiExceptionHandler.class, RequestIdFilter.class, JsonConfiguration.class})
 class WorkforceOperationsExportContractTest {
     @Autowired MockMvc mvc;
+    @Autowired ExcelExportService excel;
     @MockBean StaffingReadMapper calendar;
     @MockBean SalesForecastMapper forecasts;
     @MockBean AssignmentMonthlyService monthly;
@@ -50,8 +51,11 @@ class WorkforceOperationsExportContractTest {
     @MockBean AccessLogMapper audit;
     @MockBean PlatformTransactionManager transactions;
     @MockBean Clock clock;
+    @MockBean com.sicost.common.excel.ExportLabels exportLabels;
 
     @BeforeEach void setup() {
+        com.sicost.common.excel.ExportTestLookups.configure(exportLabels);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
         when(clock.instant()).thenReturn(Instant.parse("2026-10-12T00:00:00Z"));
         when(clock.getZone()).thenReturn(ZoneId.of("Asia/Seoul")); when(clock.withZone(any())).thenReturn(clock);
         when(transactions.getTransaction(any())).thenAnswer(c -> new SimpleTransactionStatus());
@@ -86,7 +90,9 @@ class WorkforceOperationsExportContractTest {
             assertThat(sheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("0001");
             assertThat(sheet.getRow(1).getCell(1).getCellType()).isEqualTo(CellType.STRING);
             assertThat(sheet.getRow(1).getCell(1).getStringCellValue()).isEqualTo("=1+1");
-            assertThat(sheet.getRow(1).getCell(3).getCellType()).isEqualTo(CellType.BLANK);
+            assertThat(sheet.getRow(1).getCell(2).getStringCellValue()).isEqualTo("개발");
+            assertThat(sheet.getRow(1).getCell(3).getStringCellValue()).isEqualTo("–");
+            assertThat(sheet.getRow(1).getCell(4).getStringCellValue()).isEqualTo("정규직");
             assertThat(sheet.getRow(1).getCell(7).getCellType()).isEqualTo(CellType.NUMERIC);
             assertThat(sheet.getRow(1).getCell(7).getNumericCellValue()).isZero();
             assertThat(book.getSheet("월별 합계").getRow(1).getCell(1).getCellType()).isEqualTo(CellType.BLANK);
@@ -170,7 +176,7 @@ class WorkforceOperationsExportContractTest {
             assertThat(sheet.getRow(0).getCell(1).getStringCellValue()).isEqualTo("2026-11");
             assertThat(sheet.getRow(0).getCell(6).getStringCellValue()).isEqualTo("2027-04");
             assertThat(sheet.getRow(2).getCell(1).getNumericCellValue()).isEqualTo(1);
-            assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(0).getStringCellValue()).isEqualTo("DEV");
+            assertThat(book.getSheet("직무별 계산근거").getRow(1).getCell(0).getStringCellValue()).isEqualTo("개발");
         }
         verifyNoInteractions(calendar);
         verify(forecasts).standards("202610");

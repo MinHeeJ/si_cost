@@ -34,5 +34,9 @@ public class CashFlowRepository {
             shared.monthCloses(base.toString().replace("-",""),end),shared.codes("ALWNC",false));
     }
     public JsonNode financial(String month){return financial.snapshot(month);}
+    public java.util.Map<String,String> employeeTypeLabels() {
+        return shared.codes("EMP_TYPE",true).stream().collect(
+            java.util.stream.Collectors.toMap(CodeLookup::code,CodeLookup::name));
+    }
     public JsonNode receipts(String month){try{return json.readTree(mapper.receipts(month));}catch(Exception e){throw new IllegalStateException("입금 원천을 조회하지 못했습니다.",e);}}
 }

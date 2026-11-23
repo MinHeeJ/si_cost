@@ -506,7 +506,7 @@ export function SalesPartnerProfitScreen({
                 {data.status === "WORK"
                   ? "작업중"
                   : data.status === "AUTO"
-                    ? "마감자동"
+                    ? "마감 시 자동 확정"
                     : "수동 확정"}
               </StatusBadge>
               {data.status !== "WORK" && (

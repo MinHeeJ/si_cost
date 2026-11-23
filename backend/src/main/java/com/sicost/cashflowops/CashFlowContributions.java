@@ -15,10 +15,10 @@ public final class CashFlowContributions {
     private CashFlowContributions() {}
     public static List<Source> calculate(Snapshot snapshot,YearMonth month,YearMonth current,JsonNode financial,JsonNode receipts) {
         String m=month.toString();boolean closed=closed(snapshot,month);List<Source> out=new ArrayList<>();
-        for(JsonNode r:receipts.path("receipts"))add(out,new Evidence("TB_BL_RCPT",text(r,"rcpt_id"),Item.CASH_SALES,date(r,"rcpt_dt"),m,m),nullableNumber(r,"rcpt_amt"),BigDecimal.ZERO,"ACTUAL","미취소 실제 입금", "/UI-13");
+        for(JsonNode r:receipts.path("receipts"))add(out,new Evidence("TB_BL_RCPT",text(r,"rcpt_id"),Item.CASH_SALES,date(r,"rcpt_dt"),m,m),nullableNumber(r,"rcpt_amt"),BigDecimal.ZERO,"ACTUAL","입금 등록한 금액", "/UI-13");
         if(!closed)for(JsonNode r:receipts.path("bills")) {
             BigDecimal amount=nullableNumber(r,"unpaid");if(amount!=null&&amount.signum()==0)continue;
-            add(out,new Evidence("TB_BL_BILL",text(r,"bill_id"),Item.CASH_SALES,date(r,"pay_due_dt"),apiMonth(text(r,"bill_ym")),m),amount,BigDecimal.ZERO,"PLANNED","청구 총액 − 미취소 입금 전체합", "/UI-13");
+            add(out,new Evidence("TB_BL_BILL",text(r,"bill_id"),Item.CASH_SALES,date(r,"pay_due_dt"),apiMonth(text(r,"bill_ym")),m),amount,BigDecimal.ZERO,"PLANNED","청구 금액 − 이미 받은 금액(입금 예정일 달)", "/UI-13");
         }
         for(JsonNode r:financial.path("items")) {
             LocalDate date=date(r,"io_dt");String sourceMonth=apiMonth(text(r,"fin_ym"));
@@ -26,14 +26,14 @@ public final class CashFlowContributions {
             boolean income="NOPR_IN".equals(text(r,"fin_cls_cd"));
             if(income && date==null)continue;
             add(out,new Evidence("TB_FI_ITEM",text(r,"fin_ym")+":"+text(r,"item_sn"),income?Item.MISC:Item.EXPENSE,date,sourceMonth,m),
-                sum(nullableNumber(r,"amt"),nullableNumber(r,"vat_amt")),nullableNumber(r,"vat_amt"),closed?"ACTUAL":"PLANNED",income?"AMT + VAT_AMT · IO_DT월":"AMT + VAT_AMT · IO_DT 없으면 FIN_YM", "/UI-10");
+                sum(nullableNumber(r,"amt"),nullableNumber(r,"vat_amt")),nullableNumber(r,"vat_amt"),closed?"ACTUAL":"PLANNED",income?"금액 + 부가세(입출금일 달)":"금액 + 부가세(입출금일 달, 없으면 그 달)", "/UI-10");
         }
         for(JsonNode r:financial.path("loans"))add(out,new Evidence("TB_FI_LOAN",text(r,"loan_sn"),Item.LOAN,date(r,"loan_dt"),m,m),
-            nullableNumber(r,"amt")==null?null:nullableNumber(r,"amt").multiply("OUT".equals(text(r,"io_cd"))?BigDecimal.ONE.negate():BigDecimal.ONE),BigDecimal.ZERO,closed?"ACTUAL":"PLANNED","IN +AMT / OUT −AMT", "/UI-10");
-        for(JsonNode r:financial.path("transfers"))add(out,new Evidence("TB_FI_XFER",text(r,"xfer_sn"),"SPCL".equals(text(r,"xfer_cls_cd"))?Item.UNPAID_LABOR:Item.EXPENSE,date(r,"xfer_dt"),m,m),nullableNumber(r,"amt"),BigDecimal.ZERO,closed?"ACTUAL":"PLANNED","이체일 AMT 1회", "/UI-10");
-        for(JsonNode r:financial.path("cardMonths"))add(out,new Evidence("TB_FI_CARD_MON",text(r,"pay_ym"),Item.EXPENSE,null,m,m),nullableNumber(r,"cash_amt"),null,closed?"ACTUAL":"PLANNED","CASH_AMT만 반영 (직접 0 유효)", "/UI-10");
+            nullableNumber(r,"amt")==null?null:nullableNumber(r,"amt").multiply("OUT".equals(text(r,"io_cd"))?BigDecimal.ONE.negate():BigDecimal.ONE),BigDecimal.ZERO,closed?"ACTUAL":"PLANNED","받음 +, 갚음 −", "/UI-10");
+        for(JsonNode r:financial.path("transfers"))add(out,new Evidence("TB_FI_XFER",text(r,"xfer_sn"),"SPCL".equals(text(r,"xfer_cls_cd"))?Item.UNPAID_LABOR:Item.EXPENSE,date(r,"xfer_dt"),m,m),nullableNumber(r,"amt"),BigDecimal.ZERO,closed?"ACTUAL":"PLANNED","이체일 달 금액", "/UI-10");
+        for(JsonNode r:financial.path("cardMonths"))add(out,new Evidence("TB_FI_CARD_MON",text(r,"pay_ym"),Item.EXPENSE,null,m,m),nullableNumber(r,"cash_amt"),null,closed?"ACTUAL":"PLANNED","자금수지 반영 합계", "/UI-10");
         if(financial.path("cardMonths").isEmpty()&&!financial.path("cardPayments").isEmpty())for(JsonNode r:financial.path("cardPayments"))
-            add(out,new Evidence("TB_FI_CARD_PAY",text(r,"pay_ym")+":"+text(r,"card_id"),Item.EXPENSE,null,m,m),null,null,"UNKNOWN","카드 명세는 있으나 월 현금 합계가 없습니다.", "/UI-10");
+            add(out,new Evidence("TB_FI_CARD_PAY",text(r,"pay_ym")+":"+text(r,"card_id"),Item.EXPENSE,null,m,m),null,null,"UNKNOWN","카드 명세는 있으나 그 달 반영 합계가 없습니다.", "/UI-10");
         for(JsonNode r:financial.path("taxPayments")) {
             boolean paid="Y".equals(text(r,"pay_yn"));LocalDate day=date(r,paid?"pay_dt":"pay_due_dt");
             if(day==null||!YearMonth.from(day).equals(month)||(!paid&&closed))continue;
@@ -47,7 +47,7 @@ public final class CashFlowContributions {
                     amount=annual==null?null:annual.subtract(mid).max(BigDecimal.ZERO);
                 }
             }
-            add(out,new Evidence("TB_FI_TAX_PAY",text(r,"tax_yr")+":"+text(r,"pay_type_cd"),Item.CORP_TAX,day,m,m),amount,BigDecimal.ZERO,paid?"ACTUAL":"PLANNED",paid?"확인 납부일 PAY_AMT":"납부예정 · 직접액 또는 max(0, 예상세액 − 중간예납)","/UI-10");
+            add(out,new Evidence("TB_FI_TAX_PAY",text(r,"tax_yr")+":"+text(r,"pay_type_cd"),Item.CORP_TAX,day,m,m),amount,BigDecimal.ZERO,paid?"ACTUAL":"PLANNED",paid?"납부 확인한 금액(실제 납부일 달)":"납부 예정 금액(직접 넣은 값, 없으면 연간 예상 − 중간예납)","/UI-10");
         }
         for(PayEvidence pay:payroll(snapshot,month,current))pay(out,pay,month,snapshot,false);
         for(PayEvidence pay:payroll(snapshot,month.minusMonths(1),current))pay(out,pay,month,snapshot,true);
@@ -82,7 +82,7 @@ public final class CashFlowContributions {
                         new PayrollCalculation.Amounts(base,null,reference.selfInsurance(),reference.incomeTax(),base),rates,standard(s,"WTHLD_RT",m));
                     row=new Payroll(db(m),person.personId(),values.pay(),values.allowance(),values.companyInsurance(),values.selfInsurance(),values.retirement(),
                         values.incomeTax(),values.withholding(),values.realPay(),values.vendorSupply(),values.employeeType(),values.directClass(),null,null,null,null,null);
-                } catch(IllegalArgumentException e){row=null;problem=e.getMessage();}
+                } catch(IllegalArgumentException e){row=null;problem=payrollProblem(e.getMessage());}
             }
             result.add(new PayEvidence(row,person.personId(),person.employeeType(),reference==null?null:apiMonth(reference.month()),true,problem));
         }
@@ -99,14 +99,23 @@ public final class CashFlowContributions {
             else amount=p.netPay();
         }
         String m=month.toString(),sourceMonth=deductions?month.minusMonths(1).toString():m;
-        String formula=deductions?"전월 회사·본인보험 + 원천세 + 소득세 1회":"OS".equals(type)?"공급가 + 사람별 DOWN(공급가 × 유효 VAT_RT / 100)":"FL".equals(type)?"급여 + 수당 − 저장 원천세":"저장 REAL_PAY_AMT";
-        if(evidence.planned())formula+=" · 현재구분 "+type+" 예정 · 참조급여 "+evidence.reference();
+        String formula=deductions?"전달 급여의 4대보험(회사 + 본인)·원천세·근로소득세"
+            :"OS".equals(type)?"공급가액 + 부가세(10%)"
+            :"FL".equals(type)?"급여 + 수당 − 원천세":"실지급액";
+        if(evidence.planned() && evidence.reference()!=null)
+            formula+=" · 최근 급여("+evidence.reference()+") 기준 예정";
         if(evidence.problem()!=null)formula+=" · "+evidence.problem();
         var key=new Evidence("TB_HR_MON_PAY",sourceMonth.replace("-","")+":"+evidence.personId(),item,null,sourceMonth,m);
-        Source source=source(key,amount,vat,evidence.planned()?"PLANNED":"ACTUAL",formula,"/UI-02",evidence.reference(),type);
+        Source source=source(key,amount,vat,closed(s,month)?"ACTUAL":"PLANNED",formula,"/UI-02",evidence.reference(),type);
         out.add(source);
     }
     private record Evidence(String type,String id,Item item,LocalDate date,String sourceMonth,String month) {}
+    private static String payrollProblem(String message) {
+        if(message.contains("FT/CT/FL/OS"))return "직원구분은 정규직·계약직·프리랜서·외주여야 합니다.";
+        if(message.contains("ALWNC"))return "현재 활성 수당 기준값을 확인해 주세요.";
+        if(message.contains("NUMERIC"))return "급여 계산 결과가 저장 가능한 금액 범위를 초과합니다.";
+        return message;
+    }
     private static void add(List<Source> out,Evidence e,BigDecimal amount,BigDecimal vat,String status,String formula,String link){out.add(source(e,amount,vat,status,formula,link,null,null));}
     private static Source source(Evidence e,BigDecimal amount,BigDecimal vat,String status,String formula,String link,String reference,String employeeType) {
         boolean known=amount!=null;

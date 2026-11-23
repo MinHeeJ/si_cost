@@ -124,7 +124,7 @@ beforeEach(() => {
   vi.mocked(api.getSalesOpportunityForecast).mockResolvedValue(response());
   vi.mocked(api.getSalesOpportunityForecastExport).mockResolvedValue({
     blob: new Blob(["xlsx"]),
-    filename: "영업예측_2026_20260715_090000.xlsx",
+    filename: "영업 파이프라인_2026_20260715_090000.xlsx",
   });
 });
 it("renders the forecast screen, four authoritative cards, six month tables and charts without period or write controls", async () => {
@@ -169,7 +169,7 @@ it("changes only exact string formatting and passes the selected unit to the dow
     expect(api.getSalesOpportunityForecastExport).toHaveBeenCalledWith("WON"),
   );
   expect(api.saveSalesForecastDownload).toHaveBeenCalledWith(
-    expect.objectContaining({ filename: "영업예측_2026_20260715_090000.xlsx" }),
+    expect.objectContaining({ filename: "영업 파이프라인_2026_20260715_090000.xlsx" }),
   );
 });
 it("candidate action navigates with the exact row's primary JOB filter", async () => {
@@ -326,7 +326,7 @@ it("does not transmit twice while file generation is pending", async () => {
   await act(async () => {
     resolve({
       blob: new Blob(["xlsx"]),
-      filename: "영업예측_2026_20260715_090000.xlsx",
+      filename: "영업 파이프라인_2026_20260715_090000.xlsx",
     });
   });
   expect(screen.getByRole("status")).toHaveTextContent("다운로드했습니다.");

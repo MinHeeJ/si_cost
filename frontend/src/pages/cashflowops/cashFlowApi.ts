@@ -14,15 +14,15 @@ export const cashItems = [
 ] as const;
 export type CashItem = (typeof cashItems)[number];
 export const cashLabels: Record<CashItem, string> = {
-  CASH_SALES: "현금 매출",
+  CASH_SALES: "현금매출",
   MISC: "잡수익",
   LOAN: "대여금",
-  REG_PAY: "정규직 급여",
-  CON_FL_PAY: "계약직·프리랜서 급여",
-  OS_PAY: "외주비",
+  REG_PAY: "인건비(정규직)",
+  CON_FL_PAY: "인건비(계약직·프리랜서)",
+  OS_PAY: "용역비(외주)",
   UNPAID_LABOR: "미지급 인건비",
   EXPENSE: "제경비",
-  CORP_TAX: "법인세",
+  CORP_TAX: "법인세 납부",
 };
 export type CashIssue = {
   code: string;
@@ -34,6 +34,7 @@ export type CashIssue = {
 };
 export type CashSource = {
   sourceType: string;
+  sourceTypeLabel: string;
   sourceId: string;
   item: CashItem;
   attributionDate: string | null;
@@ -51,6 +52,7 @@ export type CashSource = {
   issues: CashIssue[];
 };
 export type CashSourcesPage = {
+  employeeTypeLabels: Record<string, string>;
   month: string;
   item: CashItem;
   items: CashSource[];

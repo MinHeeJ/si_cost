@@ -29,6 +29,7 @@ export type CloseHistory = {
   historySequence: number;
   action: "CLOSE" | "OPEN";
   actorId: string;
+  actorName?: string | null;
   occurredAt: string;
   reason: string | null;
   remainingChecks: string | null;
@@ -37,6 +38,7 @@ export type MonthCloses = {
   month: string;
   status: "WORK" | "CLOSE";
   closedBy: string | null;
+  closedByName?: string | null;
   closedAt: string | null;
   nextCloseMonth: string;
   latestCloseMonth: string | null;

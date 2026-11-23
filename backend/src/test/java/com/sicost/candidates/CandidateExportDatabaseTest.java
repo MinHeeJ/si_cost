@@ -38,6 +38,7 @@ class CandidateExportDatabaseTest {
         var clock = fixture.context.getBean(java.time.Clock.class);
         var excel = new ExcelExportService(users, new AccessLogWriter(session.getMapper(AccessLogMapper.class), users, clock), clock,
             fixture.context.getBean(org.springframework.transaction.PlatformTransactionManager.class));
+        excel.setMenuQueries(session.getMapper(SharedQueriesMapper.class));
         exports = new PeopleExportService(mock(DeveloperQueryService.class), fixture.queries, session.getMapper(SharedQueriesMapper.class), excel);
         job = fixture.body().get("jobCode").toString();
     }
