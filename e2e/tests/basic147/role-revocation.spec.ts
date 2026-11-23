@@ -394,7 +394,7 @@ test("조회 전용 화면의 버튼·단축키가 쓰기를 실행하지 않는
   expect(capability.status()).toBe(200);
   expect((await capability.json()).data.screens["UI-02"]).toEqual(["INQ"]);
   await page.goto("/UI-02");
-  await expect(page.getByText(/수정 권한이 없어 보기만/)).toBeVisible();
+  await expect(page.getByText(/수정 권한이 없어 보기만/)).toHaveCount(0);
   await expect(page.getByTestId("developer-edit-button")).toHaveCount(0);
   let writes = 0;
   page.on("request", (request) => {

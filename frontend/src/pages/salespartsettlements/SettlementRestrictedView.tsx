@@ -172,9 +172,6 @@ export function SettlementRestrictedView({
               <strong>{data.summary.deficitPersonCount}명</strong>
             </article>
           </KpiStrip>
-          <p>
-            수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
-          </p>
           <button type="button" onClick={() => setTrend(false)}>
             이번 달
           </button>

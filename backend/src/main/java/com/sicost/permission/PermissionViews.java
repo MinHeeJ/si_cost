@@ -45,7 +45,7 @@ public final class PermissionViews {
                 available(row);
             }
             value.put("readOnly",true);for(String flag:List.of("canSaveCard","canConfirm","canCancel"))value.put(flag,false);
-            value.putArray("readOnlyReasons").add("수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).");
+            value.putArray("readOnlyReasons");
             fields(value,"partId","month","status","standard","readOnly","readOnlyReasons","canSaveCard","canConfirm","canCancel","summary","totals","items","pagination");
         } else if(original instanceof SettlementTrendService.Trend source) {
             var months=value.putArray("monthlyTotals");

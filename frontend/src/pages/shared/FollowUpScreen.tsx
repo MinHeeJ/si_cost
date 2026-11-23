@@ -11,7 +11,6 @@ import { ScreenPeriodBar } from "./ScreenPeriodBar";
 import { useSharedScreen } from "./SharedScreenContext";
 import { Icon } from "../../shared/Icon";
 import type { AnalysisScope } from "./analysisClient";
-import { usePermission } from "../../shared/permission/PermissionBoundary";
 export function SharedScreenFrame({
   screenId,
   children,
@@ -30,7 +29,6 @@ export function SharedScreenFrame({
   const motionRoot = useScreenMotion(screenId);
   const [statusTarget,setStatusTarget]=useState<HTMLDivElement|null>(null);
   const location = useLocation();
-  const canUpdate = usePermission(screenId, "UPD");
   const incoming = location.state as {
     fromDashboard?: boolean;
     fromAnalysis?: boolean;
@@ -151,28 +149,6 @@ export function SharedScreenFrame({
               원장과 위 분석 범위를 대조해 주세요.
             </p>
           )}
-          {!canUpdate &&
-            [
-              "UI-01",
-              "UI-02",
-              "UI-10",
-              "UI-12",
-              "UI-13",
-              "UI-15",
-              "UI-18",
-              "UI-23",
-              "UI-24",
-              "UI-25",
-              "UI-27",
-              "UI-29",
-              "UI-31",
-              "UI-33",
-            ].includes(screenId) && (
-              <p role="note">
-                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
-                수정).
-              </p>
-            )}
           {children}
         </div>
       </section>

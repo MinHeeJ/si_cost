@@ -240,11 +240,6 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           </div>
         )}
       </header>
-      {!canSave && (
-        <p role="note">
-          수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의 수정).
-        </p>
-      )}
       {codeError != null && (
         <ErrorBanner
           message="선택 항목을 불러오지 못했습니다."

@@ -195,18 +195,12 @@ export function Dialog({
         </header>
         <div className="sicost-dialog-body">
           {readOnly ? (
-            <>
-              <p role="note">
-                수정 권한이 없어 보기만 할 수 있습니다(권한 › 메뉴×동작 표의
-                수정).
-              </p>
-              <fieldset
-                disabled
-                style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
-              >
-                {children}
-              </fieldset>
-            </>
+            <fieldset
+              disabled
+              style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}
+            >
+              {children}
+            </fieldset>
           ) : (
             children
           )}
