@@ -75,6 +75,13 @@ const fields: Record<Collection, Field[]> = {
     { key: "remark", label: "메모", max: 200 },
   ],
 };
+const draftStatusField: Record<Collection, string> = {
+  items: "itemName",
+  adjustments: "reason",
+  transfers: "itemName",
+  loans: "counterparty",
+};
+
 const sectionHelp: Record<Collection, string> = {
   items:
     "판관비와 영업외손익은 손익에 반영됩니다. 판관비와 영업외비용은 자금수지표의 제경비에도 반영됩니다.",
@@ -281,11 +288,11 @@ export function FinancialRowsPanel({
     });
   return (
     <section
-      className={`financial-section financial-rows-section financial-rows-${collection} sicost-section-card`}
+      className={`financial-section financial-rows-${collection}`}
       data-testid={`financial-${collection}-panel`}
       id={`financial-${collection}-section`}
     >
-      <header className="financial-section-heading sicost-section-heading">
+      <header className="financial-section-heading">
         <div>
           <h2>{title}</h2>
           <HelpTooltip label={title} iconOnly>{sectionHelp[collection]}</HelpTooltip>
@@ -321,33 +328,32 @@ export function FinancialRowsPanel({
       )}
       <DataTable
         testId={`financial-${collection}-table`}
+        tableLabel={title}
         dense
         rows={[
           ...rows,
           ...tableRows.map((row) => ({ key: row.key, values: {} })),
         ]}
-        columns={[
-          {
-            id: "draft",
-            label: "",
-            render: (row: DraftRow) =>
-              !row.id ||
-              JSON.stringify(
-                originals.find((old) => old.id === row.id)?.values,
-              ) !== JSON.stringify(row.values) ? (
-                <span data-testid={`financial-${collection}-${row.key}-draft`}>
-                  <StatusBadge tone="warn">저장 전</StatusBadge>
-                </span>
-              ) : null,
-          },
-          ...columns,
-        ].map((column) => ({
+        columns={columns.map((column) => ({
           ...column,
           render: (row: DraftRow) => {
             const calculated = tableRows.find((entry) => entry.key === row.key);
-            return calculated
-              ? calculated.cells[column.id]
-              : column.render(row);
+            if (calculated) return calculated.cells[column.id];
+            const content = column.render(row);
+            if (column.id !== draftStatusField[collection]) return content;
+            const original = originals.find((old) => old.id === row.id);
+            const changed =
+              !row.id || JSON.stringify(original?.values) !== JSON.stringify(row.values);
+            return (
+              <>
+                {content}
+                {changed && (
+                  <span className="financial-row-draft" data-testid={`financial-${collection}-${row.key}-draft`}>
+                    <StatusBadge tone="warn">저장 전</StatusBadge>
+                  </span>
+                )}
+              </>
+            );
           },
         }))}
         rowKey={(row) => row.key}

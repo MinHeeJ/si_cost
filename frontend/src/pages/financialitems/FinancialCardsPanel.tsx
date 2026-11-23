@@ -192,8 +192,8 @@ export function FinancialCardsPanel({
     },
   };
   return (
-    <section className="financial-section sicost-section-card" data-testid="financial-cards-panel">
-      <header className="financial-section-heading sicost-section-heading">
+    <section className="financial-section" data-testid="financial-cards-panel">
+      <header className="financial-section-heading">
         <div>
           <h2>법인카드 대금</h2>
           <HelpTooltip label="법인카드 대금" iconOnly>
@@ -213,6 +213,7 @@ export function FinancialCardsPanel({
       </header>
       <DataTable
         testId="financial-cards-table"
+        tableLabel="법인카드 대금"
         rows={rows}
         rowKey={(row) => row.key}
         columns={[
@@ -234,11 +235,13 @@ export function FinancialCardsPanel({
           {
             id: "last4",
             label: "끝 4자리 *",
+            align: "center" as const,
             render: (row: DraftRow) => row.values.last4,
           },
           {
             id: "amount",
             label: `${Number(month.slice(5))}월 결제액`,
+            align: "right" as const,
             render: (row: DraftRow) => (
               <WonInput
                 data-testid={`financial-card-${row.key}-amount`}
@@ -252,7 +255,8 @@ export function FinancialCardsPanel({
           },
           {
             id: "state",
-            label: "상태",
+            label: readOnly ? "상태" : "상태 및 관리",
+            align: "center" as const,
             render: (row: DraftRow) => (
               <>
                 <StatusBadge tone={row.values.useYn === "Y" ? "ok" : "lock"}>

@@ -105,11 +105,11 @@ export function FinancialTaxPanel({
       : row.automaticAmount;
   return (
     <section
-      className="financial-section sicost-section-card"
+      className="financial-section"
       id="financial-tax-section"
       data-testid="financial-tax-panel"
     >
-      <header className="financial-section-heading sicost-section-heading">
+      <header className="financial-section-heading">
         <div>
           <h2>법인세</h2>
           <HelpTooltip label="법인세 월별 배분" iconOnly>

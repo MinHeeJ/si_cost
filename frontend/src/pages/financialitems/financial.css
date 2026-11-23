@@ -138,15 +138,23 @@
 }
 .financial-tab-panel {
   display: grid;
-  gap: 16px;
+  gap: 24px;
   min-width: 0;
 }
 .financial-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
   scroll-margin-top: 100px;
   scroll-margin-bottom: 100px;
 }
 .financial-section > .sicost-banner {
   margin: 0;
+}
+.financial-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
 }
 .financial-section-heading > div,
 .financial-subsection-heading,
@@ -156,14 +164,14 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.financial-section .sicost-table :is(th, td) {
-  height: 40px;
-  padding: 6px 12px;
+.financial-section .sicost-table td {
+  padding-block: 6px;
 }
-.financial-rows-section .sicost-table :is(th:first-child, td[data-column="draft"]) {
-  padding-inline: 4px;
+.financial-row-draft {
+  display: block;
+  margin-top: 4px;
 }
-.financial-rows-section .sicost-table td[data-column="draft"] .sicost-badge {
+.financial-row-draft .sicost-badge {
   margin: 0;
 }
 .financial-rows-items .sicost-table :is(td[data-column="remark"], td[data-column="itemName"]) {
@@ -187,7 +195,8 @@
   align-content: start;
   padding: 12px 14px;
   border-radius: 8px;
-  background: var(--head-bg);
+  background: var(--surface);
+  box-shadow: var(--e1);
   font-size: 13px;
 }
 .financial-tax-field label {
