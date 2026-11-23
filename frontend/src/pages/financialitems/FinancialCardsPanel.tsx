@@ -191,13 +191,12 @@ export function FinancialCardsPanel({
     },
   };
   return (
-    <section className="financial-section" data-testid="financial-cards-panel">
-      <div className="sicost-list-toolbar">
-        <h2>법인카드 대금</h2>
-        <span>
-          카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장
-          사용 중
-        </span>
+    <section className="financial-section sicost-section-card" data-testid="financial-cards-panel">
+      <header className="financial-section-heading sicost-section-heading">
+        <div>
+          <h2>법인카드 대금</h2>
+          <small>사용 중인 카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장</small>
+        </div>
         <label>
           <input
             type="checkbox"
@@ -207,7 +206,7 @@ export function FinancialCardsPanel({
           />{" "}
           삭제된 카드 보기
         </label>
-      </div>
+      </header>
       <DataTable
         testId="financial-cards-table"
         rows={rows}

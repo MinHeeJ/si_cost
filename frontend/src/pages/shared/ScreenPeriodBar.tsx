@@ -29,6 +29,8 @@ export function ScreenPeriodBar({
     month: string;
     currentMonth: string;
     minMonth?: string;
+    label?: string;
+    testId?: string;
     onChange(month: string): void;
     disabled?: boolean;
   };
@@ -285,6 +287,8 @@ export function ScreenPeriodBar({
             type="YEAR_MONTH"
             value={controlled.month}
             min={controlled.minMonth}
+            label={controlled.label}
+            testId={controlled.testId}
             max={controlled.currentMonth}
             disabled={controlled.disabled}
             onChange={controlled.onChange}

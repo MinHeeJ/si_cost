@@ -118,7 +118,7 @@ it("displays server-returned negative monthly tax without blocking annual editin
     screen.queryByTestId("financial-tax-allocation-table"),
   ).not.toBeInTheDocument();
   await userEvent.click(
-    screen.getByRole("button", { name: "월별 월할 펼치기" }),
+    screen.getByRole("button", { name: "월별 배분 펼치기" }),
   );
   expect(
     screen.getByTestId("financial-tax-allocation-table"),

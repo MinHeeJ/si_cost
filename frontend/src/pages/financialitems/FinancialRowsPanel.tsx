@@ -83,6 +83,8 @@ export type FinancialRowsPanelProps = {
   month: string;
   targets: string[];
   codes?: { code: string; name: string }[];
+  notice?: ReactNode;
+  summary?: ReactNode;
   tableRows?: { key: string; cells: Record<string, ReactNode> }[];
   violations?: {
     collection: string;
@@ -103,6 +105,8 @@ export function FinancialRowsPanel({
   month,
   targets,
   codes = [],
+  notice,
+  summary,
   tableRows = [],
   violations = [],
   onChange,
@@ -118,6 +122,12 @@ export function FinancialRowsPanel({
   const columns: Column<DraftRow>[] = fields[collection].map((field) => ({
     id: field.key,
     label: field.label,
+    align:
+      field.kind === "repeat"
+        ? "center"
+        : field.kind === "amount" || field.kind === "signed" || field.kind === "positive"
+          ? "right"
+          : undefined,
     render: (row) => {
       const released =
         collection === "adjustments" &&
@@ -244,6 +254,7 @@ export function FinancialRowsPanel({
     columns.push({
       id: "delete",
       label: "삭제",
+      align: "center",
       render: (row) => (
         <button
           type="button"
@@ -258,16 +269,15 @@ export function FinancialRowsPanel({
     });
   return (
     <section
-      className="financial-section"
+      className={`financial-section financial-rows-section financial-rows-${collection} sicost-section-card`}
       data-testid={`financial-${collection}-panel`}
       id={`financial-${collection}-section`}
     >
-      <div className="sicost-list-toolbar">
-        <h2>{title}</h2>
-        <span>
-          {month} · {rows.length}건
-          {collection === "items" ? " + 법인세(월할) 계산 1줄" : ""}
-        </span>
+      <header className="financial-section-heading sicost-section-heading">
+        <div>
+          <h2>{title}</h2>
+          <small>{rows.length}건</small>
+        </div>
         {!readOnly && (
           <button
             type="button"
@@ -288,9 +298,10 @@ export function FinancialRowsPanel({
                   : "대여금 추가"}
           </button>
         )}
-      </div>
+      </header>
+      {notice}
       {collection === "adjustments" && !targets.length && (
-        <p>
+        <p className="financial-section-note">
           최근 12개월 실제 마감월이 없습니다. 기존 해제 대상은 삭제만 할 수
           있습니다.
         </p>
@@ -329,6 +340,7 @@ export function FinancialRowsPanel({
         rowKey={(row) => row.key}
         empty="등록된 항목이 없습니다."
       />
+      {summary && <div className="financial-summary">{summary}</div>}
       {collection === "items" && (
         <datalist id="financial-sga-codes">
           {codes.map((code) => (

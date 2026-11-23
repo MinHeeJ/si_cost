@@ -104,230 +104,237 @@ export function FinancialTaxPanel({
       : row.automaticAmount;
   return (
     <section
-      className="financial-section"
+      className="financial-section sicost-section-card"
       id="financial-tax-section"
       data-testid="financial-tax-panel"
     >
-      <h2>
-        법인세 {editor.month.slice(0, 4)}년 · 1년 예상액을 달마다 나눠
-        순이익표에 반영
-      </h2>
-      <p>예상액 관리이며 세무 신고가 아닙니다.</p>
-      <label>
-        연간 예상 법인세(원)
-        <WonInput
-          data-testid="financial-estimated-tax"
-          aria-label="연간 예상 법인세(원)"
-          aria-invalid={
-            violations.some((v) => v.collection === "corporateTax") || undefined
-          }
-          value={draft.estimatedTax ?? ""}
-          disabled={
-            disabled ||
-            draft.estimatedTax === null ||
-            missing ||
-            allocation.openMonthCount === 0
-          }
-          onValueChange={(value) =>
-            setDraft((old) => (old ? { ...old, estimatedTax: value } : old))
-          }
-        />
-      </label>
-      <p>바꾸면 마감된 달은 그대로 두고, 남은 달에 차이를 나눠 반영합니다.</p>
-      {missing && <p data-testid="financial-tax-lock-reason">{explanation}</p>}
-      {draft.estimatedTax !== editor.corporateTax?.estimatedTax &&
-        draft.estimatedTax !== null && (
-          <p data-testid="financial-tax-unsaved">
-            저장 전입니다. [저장]을 눌러야 반영됩니다.
-          </p>
-        )}
-      <div data-testid="financial-tax-current-panel">
-        <label>
-          이번 달 법인세{" "}
-          <output
-            className="financial-calculated"
-            data-testid="financial-tax-current"
-          >
-            {current?.verified && current.amount !== null
-              ? amount(current.amount)
-              : "–"}
-          </output>
-        </label>
-        {current?.closeStatus === "CLOSE" && (
-          <StatusBadge tone="lock">마감 확정</StatusBadge>
-        )}
-        <p data-testid="financial-tax-explanation">{explanation}</p>
-        {allocation.remainingAmount?.startsWith("-") && (
-          <p
-            className="financial-negative"
-            data-testid="financial-tax-negative-warning"
-          >
-            연간 예상액이 마감된 달에 이미 반영한 금액보다 작아서, 남은 달
-            법인세가 음수(되돌림)로 잡힙니다. 금액이 맞는지 확인하세요.
-          </p>
-        )}
+      <header className="financial-section-heading sicost-section-heading">
+        <div>
+          <h2>법인세</h2>
+          <small>{editor.month.slice(0, 4)}년</small>
+        </div>
+      </header>
+      <div className="financial-tax-overview">
+        <div className="financial-tax-field">
+          <label>
+            연간 예상 법인세 (원)
+            <WonInput
+              data-testid="financial-estimated-tax"
+              aria-label="연간 예상 법인세(원)"
+              aria-invalid={
+                violations.some((v) => v.collection === "corporateTax") || undefined
+              }
+              value={draft.estimatedTax ?? ""}
+              disabled={
+                disabled ||
+                draft.estimatedTax === null ||
+                missing ||
+                allocation.openMonthCount === 0
+              }
+              onValueChange={(value) =>
+                setDraft((old) => (old ? { ...old, estimatedTax: value } : old))
+              }
+            />
+          </label>
+          {missing && <p className="financial-section-note" data-testid="financial-tax-lock-reason">{explanation}</p>}
+          {draft.estimatedTax !== editor.corporateTax?.estimatedTax &&
+            draft.estimatedTax !== null && (
+              <p className="financial-section-note" data-testid="financial-tax-unsaved">
+                저장 전입니다. [저장]을 눌러야 반영됩니다.
+              </p>
+            )}
+        </div>
+        <div className="financial-tax-field" data-testid="financial-tax-current-panel">
+          <span>선택월 법인세 ({unit})</span>
+          <div className="financial-tax-value">
+            <output className="financial-calculated" data-testid="financial-tax-current">
+              {current?.verified && current.amount !== null ? amount(current.amount) : "–"}
+            </output>
+            {current?.closeStatus === "CLOSE" && <StatusBadge tone="lock">마감 확정</StatusBadge>}
+          </div>
+          {!missing && current?.closeStatus !== "CLOSE" && (
+            <p className="financial-section-note" data-testid="financial-tax-explanation">{explanation}</p>
+          )}
+          {allocation.remainingAmount?.startsWith("-") && (
+            <p
+              className="financial-negative"
+              data-testid="financial-tax-negative-warning"
+            >
+              연간 예상액이 마감된 달에 이미 반영한 금액보다 작아서, 남은 달
+              법인세가 음수(되돌림)로 잡힙니다. 금액이 맞는지 확인하세요.
+            </p>
+          )}
+        </div>
       </div>
-      <DataTable
-        testId="financial-tax-payments-table"
-        rows={editor.taxPayments}
-        rowKey={(row) => `${row.year}-${row.payType.toLowerCase()}`}
-        empty="등록된 납부 일정이 없습니다."
-        columns={[
-          {
-            id: "date",
-            label: "납부일",
-            render: (row) =>
-              row.payYn === "Y" ? (
-                <>
-                  {row.dueDate}
-                  {row.paidDate !== row.dueDate && (
-                    <small>{row.paidDate} 납부</small>
-                  )}
-                </>
-              ) : (
-                <input
-                  type="date"
-                  data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-date`}
-                  aria-invalid={invalid(row, "date") || undefined}
-                  aria-label={`${row.year} ${row.payType} 예정일`}
-                  disabled={disabled}
-                  value={schedule(row)?.dueDate ?? ""}
-                  onChange={(event) =>
-                    update(row, { dueDate: event.target.value })
-                  }
-                />
-              ),
-          },
-          {
-            id: "type",
-            label: "구분",
-            render: (row) =>
-              `${row.year}년 ${row.payType === "MID" ? "중간예납" : "확정 신고"}`,
-          },
-          {
-            id: "amount",
-            label: "금액",
-            render: (row) => {
-              if (row.payYn === "Y") return amount(row.displayAmount);
-              const manual = schedule(row)?.payAmount != null;
-              return (
-                <>
-                  <WonInput
-                    data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-amount`}
-                    aria-invalid={invalid(row, "amount") || undefined}
-                    aria-label={`${row.year} ${row.payType} 예정액`}
+      <div className="financial-subsection">
+        <h3>법인세 납부 일정</h3>
+        <DataTable
+          tableLabel="법인세 납부 일정"
+          testId="financial-tax-payments-table"
+          rows={editor.taxPayments}
+          rowKey={(row) => `${row.year}-${row.payType.toLowerCase()}`}
+          empty="등록된 납부 일정이 없습니다."
+          columns={[
+            {
+              id: "date",
+              label: "납부일",
+              render: (row) =>
+                row.payYn === "Y" ? (
+                  <>
+                    {row.dueDate}
+                    {row.paidDate !== row.dueDate && (
+                      <small>{row.paidDate} 납부</small>
+                    )}
+                  </>
+                ) : (
+                  <input
+                    type="date"
+                    data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-date`}
+                    aria-invalid={invalid(row, "date") || undefined}
+                    aria-label={`${row.year} ${row.payType} 예정일`}
                     disabled={disabled}
-                    value={
-                      schedule(row)?.payAmount ??
-                      (row.payType === "CNFM" ? (automatic(row) ?? "") : "")
-                    }
-                    placeholder={
-                      row.payType === "MID" ? "세무사 안내 금액" : "미확인"
-                    }
-                    onValueChange={(value) =>
-                      update(row, { payAmount: value || null })
+                    value={schedule(row)?.dueDate ?? ""}
+                    onChange={(event) =>
+                      update(row, { dueDate: event.target.value })
                     }
                   />
-                  {row.payType === "CNFM" && (
-                    <>
-                      <small>
-                        {manual ? (
-                          <>고침 · 자동 {amount(automatic(row))}원</>
-                        ) : (
-                          "자동 계산"
-                        )}
-                      </small>
-                      {manual && (
-                        <button
-                          type="button"
-                          data-testid={`financial-tax-${row.year}-auto`}
-                          disabled={disabled}
-                          onClick={() => update(row, { payAmount: null })}
-                        >
-                          자동 계산으로
-                        </button>
-                      )}
-                    </>
-                  )}
-                </>
-              );
-            },
-          },
-          {
-            id: "status",
-            label: "상태",
-            render: (row) => <FinancialPaymentStatus status={row.status} />,
-          },
-          {
-            id: "confirm",
-            label: "납부 확인",
-            render: (row) =>
-              row.payYn === "N" ? (
-                <button
-                  type="button"
-                  data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-confirm`}
-                  className={
-                    row.status === "확인 필요" ? "sicost-primary" : undefined
-                  }
-                  disabled={disabled}
-                  onClick={() => onPayment(row)}
-                >
-                  납부 확인
-                </button>
-              ) : (
-                "–"
-              ),
-          },
-        ]}
-      />
-      <p className="financial-help">
-        순이익표에는 매달 나눈 금액이, 자금수지표에는 실제로 내는 달에만
-        잡힙니다. 중간예납은 세무사 안내 금액을 입력하고, 확정 신고는 연간
-        예상액에서 중간예납을 뺀 금액을 자동 계산합니다. 날짜가 지나도 확인하지
-        않으면 「확인 필요」로 남습니다.
-      </p>
-      <button
-        type="button"
-        data-testid="financial-tax-allocation-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        {expanded ? "접기" : "월별 월할 펼치기"}
-      </button>
-      {expanded && (
-        <div data-testid="financial-tax-allocation-panel">
-          <DataTable
-            testId="financial-tax-allocation-table"
-            rows={allocation.months}
-            rowKey={(row) => row.month}
-            columns={[
-              { id: "month", label: "월", render: (row) => row.month },
-              {
-                id: "status",
-                label: "상태",
-                render: (row) => (
-                  <StatusBadge
-                    tone={row.closeStatus === "CLOSE" ? "lock" : "info"}
-                  >
-                    {row.closeStatus === "CLOSE" ? "마감" : "작업중"}
-                  </StatusBadge>
                 ),
+            },
+            {
+              id: "type",
+              label: "구분",
+              render: (row) =>
+                `${row.year}년 ${row.payType === "MID" ? "중간예납" : "확정 신고"}`,
+            },
+            {
+              id: "amount",
+              label: "금액",
+              align: "right",
+              render: (row) => {
+                if (row.payYn === "Y") return <FinancialAmount value={row.displayAmount} unit={unit} showUnit />;
+                const manual = schedule(row)?.payAmount != null;
+                return (
+                  <>
+                    <WonInput
+                      data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-amount`}
+                      aria-invalid={invalid(row, "amount") || undefined}
+                      aria-label={`${row.year} ${row.payType} 예정액`}
+                      disabled={disabled}
+                      value={
+                        schedule(row)?.payAmount ??
+                        (row.payType === "CNFM" ? (automatic(row) ?? "") : "")
+                      }
+                      placeholder={
+                        row.payType === "MID" ? "세무사 안내 금액" : "미확인"
+                      }
+                      onValueChange={(value) =>
+                        update(row, { payAmount: value || null })
+                      }
+                    />
+                    {row.payType === "CNFM" && (
+                      <>
+                        <small>
+                          {manual ? (
+                            <>고침 · 자동 <FinancialAmount value={automatic(row)} unit={unit} showUnit /></>
+                          ) : (
+                            "자동 계산"
+                          )}
+                        </small>
+                        {manual && (
+                          <button
+                            type="button"
+                            data-testid={`financial-tax-${row.year}-auto`}
+                            disabled={disabled}
+                            onClick={() => update(row, { payAmount: null })}
+                          >
+                            자동 계산으로
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </>
+                );
               },
-              {
-                id: "amount",
-                label: "월할액",
-                render: (row) => amount(row.amount),
-              },
-              {
-                id: "verified",
-                label: "확인상태",
-                render: (row) =>
-                  `${row.verified ? "확인" : "미확인"}${row.fixed === "Y" ? " · 고정" : ""}${row.migrated === "Y" ? " · 이관" : ""}`,
-              },
-            ]}
-          />
+            },
+            {
+              id: "status",
+              label: "상태",
+              align: "center",
+              render: (row) => <FinancialPaymentStatus status={row.status} />,
+            },
+            {
+              id: "confirm",
+              label: "납부 확인",
+              align: "center",
+              render: (row) =>
+                row.payYn === "N" ? (
+                  <button
+                    type="button"
+                    data-testid={`financial-tax-${row.year}-${row.payType.toLowerCase()}-confirm`}
+                    className={
+                      row.status === "확인 필요" ? "sicost-primary" : undefined
+                    }
+                    disabled={disabled}
+                    onClick={() => onPayment(row)}
+                  >
+                    납부 확인
+                  </button>
+                ) : (
+                  "–"
+                ),
+            },
+          ]}
+        />
+      </div>
+      <div className="financial-subsection">
+        <div className="financial-tax-allocation-heading">
+          <h3>월별 배분 내역</h3>
+          <button
+            type="button"
+            data-testid="financial-tax-allocation-toggle"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? "접기" : "월별 배분 펼치기"}
+          </button>
         </div>
-      )}
+        {expanded && (
+          <div data-testid="financial-tax-allocation-panel">
+            <DataTable
+              tableLabel="월별 법인세 배분 내역"
+              testId="financial-tax-allocation-table"
+              rows={allocation.months}
+              rowKey={(row) => row.month}
+              columns={[
+                { id: "month", label: "월", render: (row) => row.month },
+                {
+                  id: "status",
+                  label: "상태",
+                  render: (row) => (
+                    <StatusBadge
+                      tone={row.closeStatus === "CLOSE" ? "lock" : "info"}
+                    >
+                      {row.closeStatus === "CLOSE" ? "마감" : "작업중"}
+                    </StatusBadge>
+                  ),
+                },
+                {
+                  id: "amount",
+                  label: `월할액 (${unit})`,
+                  align: "right",
+                  render: (row) => amount(row.amount),
+                },
+                {
+                  id: "verified",
+                  label: "확인상태",
+                  render: (row) =>
+                    `${row.verified ? "확인" : "미확인"}${row.fixed === "Y" ? " · 고정" : ""}${row.migrated === "Y" ? " · 이관" : ""}`,
+                },
+              ]}
+            />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

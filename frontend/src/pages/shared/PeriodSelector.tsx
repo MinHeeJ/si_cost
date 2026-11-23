@@ -6,6 +6,7 @@ export type PeriodSelectorProps = {
   max: string;
   disabled?: boolean;
   label?: string;
+  testId?: string;
   onChange(value: string): void;
 };
 export function PeriodSelector({
@@ -15,6 +16,7 @@ export function PeriodSelector({
   max,
   disabled,
   label = "기간",
+  testId,
   onChange,
 }: PeriodSelectorProps) {
   const options = periodOptions(type, min, max),
@@ -34,6 +36,7 @@ export function PeriodSelector({
       </button>
       <select
         aria-label={label}
+        data-testid={testId}
         disabled={disabled || !options.length}
         value={value}
         onChange={(event) => select(event.target.value)}
