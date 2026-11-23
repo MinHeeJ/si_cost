@@ -5,6 +5,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { Dialog } from "../../shared/Dialog";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { formatDecimal } from "../../shared/format";
@@ -267,7 +268,17 @@ export function SalesPartsScreen({
       data-testid="sales-parts-screen"
     >
       <div className="sales-part-toolbar">
-        <h2>영업 파트</h2>
+        <div className="sicost-title-row">
+          <h2>영업 파트</h2>
+          <ScreenGuide screenId="UI-15" screenName="영업 파트">
+            <dl>
+              <div>
+                <dt>영업 파트 기준 적용</dt>
+                <dd>기준은 적용 시작월부터 사용하며 지난 정산은 유지됩니다.</dd>
+              </div>
+            </dl>
+          </ScreenGuide>
+        </div>
         <button
           data-testid="sales-part-add-button"
           className="sicost-primary"
@@ -276,9 +287,6 @@ export function SalesPartsScreen({
           파트 추가
         </button>
       </div>
-      <p className="sicost-banner sicost-tone-info">
-        기준은 적용 시작월부터 사용하며 지난 정산은 유지됩니다.
-      </p>
       <FilterBar
         className="sales-part-filters"
         resetTestId="sales-part-reset-button"

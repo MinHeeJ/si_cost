@@ -109,6 +109,19 @@ it("초기 Y 필터와 고정 9열, 정밀 금액과 사용 배지를 표시한�
     "sicost-tone-ok",
   );
 });
+it("영업 파트 기준 안내는 탭 본문에서 모달로 옮기고 닫으면 초점을 돌려준다", async () => {
+  show();
+  await screen.findByRole("button", { name: "영업파트" });
+  const notice = "기준은 적용 시작월부터 사용하며 지난 정산은 유지됩니다.";
+  const trigger = screen.getByRole("button", { name: "화면 안내" });
+  expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  await userEvent.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "영업 파트 화면 안내" });
+  expect(within(dialog).getByText(notice)).toBeVisible();
+  await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
+  expect(dialog).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+});
 it("전체는 useYn을 생략하고 Enter로 검색하며 정렬 변경은 첫 페이지다", async () => {
   show();
   await screen.findByRole("button", { name: "영업파트" });
