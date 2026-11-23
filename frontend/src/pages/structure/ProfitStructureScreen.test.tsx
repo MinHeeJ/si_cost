@@ -168,6 +168,7 @@ function response(): api.StructureData {
       ["corpTaxAmt", "법인세(월할)"],
       ["netPrftAmt", "당기순이익"],
       ["idleCostShare", "대기 원가 비중"],
+      ["referenceRevenue", "배분 기준 매출(참고)"],
     ].map(([metric, label]) => ({
       metric,
       label,
@@ -420,9 +421,16 @@ it("keeps sales part guidance inside its card and uses the server's composition 
   expect(
     screen.getByTestId("structure-numeric-net-prft-amt"),
   ).toHaveTextContent("당기순이익");
-  expect(screen.getByText(/턴키는 청구한 달의 공급가액/)).not.toHaveTextContent(
-    /TK|MO\/DP|09/,
-  );
+  const compositionHelp = screen.getByRole("button", { name: "매출 구성 기준 도움말" });
+  await userEvent.click(compositionHelp);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/기여이익은.*인건비를 뺀 금액/);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/숫자로 보기.*매출 구성 표에도 같은 기준/);
+  await userEvent.keyboard("{Escape}");
+  const referenceHelps = screen.getAllByRole("button", { name: "배분 기준 매출 도움말" });
+  expect(referenceHelps).toHaveLength(2);
+  expect(screen.getByTestId("structure-numeric-reference-revenue")).toContainElement(referenceHelps[1]);
+  await userEvent.click(referenceHelps[0]);
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/점선.*회사 매출이나 이익 합계에는 포함하지 않습니다/);
 });
 it("passes selected month through router state to operating and net screens", async () => {
   await draw();

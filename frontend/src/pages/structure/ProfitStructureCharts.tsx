@@ -1,4 +1,5 @@
 import { formatAmount, type AmountUnit } from "../../shared/format";
+import type { ReactNode } from "react";
 import type { StructureBucket, WaterfallStep } from "./profitStructureApi";
 import { ChartHost } from "../../shared/charts/ChartHost";
 import {
@@ -14,6 +15,7 @@ export function bucketLabel(bucket: StructureBucket, quarterly: boolean) {
 // Number is limited to SVG coordinates. Every tooltip uses the original decimal string.
 export function StructureTrend({
   title,
+  titleHelp,
   buckets,
   metrics,
   labels,
@@ -22,6 +24,7 @@ export function StructureTrend({
   unit,
 }: {
   title: string;
+  titleHelp?: ReactNode;
   buckets: StructureBucket[];
   metrics: string[];
   labels: string[];
@@ -46,7 +49,10 @@ export function StructureTrend({
   const x = (index: number) => 70 + index * (650 / Math.max(1, buckets.length));
   return (
     <section className="profit-structure-card">
-      <h2>{title}</h2>
+      <div className="profit-structure-chart-title">
+        <h2>{title}</h2>
+        {titleHelp}
+      </div>
       <p className="profit-structure-muted">축: 백만원 · 툴팁: {unit}</p>
       <div className="profit-structure-chart-scroll">
         <ChartHost

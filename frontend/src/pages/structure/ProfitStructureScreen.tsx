@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { Dialog } from "../../shared/Dialog";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { Icon } from "../../shared/Icon";
 import {
   formatAmount,
@@ -83,7 +84,35 @@ const structureGuide = (
       <dt>금액 기준</dt>
       <dd>화면에 표시되는 금액은 부가세를 제외한 금액입니다.</dd>
     </div>
+    <div>
+      <dt>매출 집계 기준</dt>
+      <dd>
+        턴키는 청구한 달의 공급가액을, 월단위·파견은 실제로 일한 달의 매출을
+        집계합니다. 같은 기간으로 비교하면 순이익표의 매출액에도 같은 기준이
+        적용됩니다.
+      </dd>
+    </div>
   </dl>
+);
+function ReferenceRevenueHelp({ chartType }: { chartType?: "line" | "bar" }) {
+  return (
+    <HelpTooltip label="배분 기준 매출" iconOnly>
+      {chartType === "line" && "차트에서 ‘배분 기준 매출(참고)’ 점선으로 표시합니다. "}
+      {chartType === "bar" && "차트에서 ‘배분 기준 매출(참고)’ 막대로 표시합니다. "}
+      월단위·파견 매출에 작업한 달로 나눈 턴키 매출을 합산한 참고값입니다.
+      턴키는 배분표의 월별 금액을 쓰고, 배분표가 없으면 해당 월 원가에 계약금액을
+      곱한 뒤 예산으로 나눕니다. 회사 매출이나 이익 합계에는 포함하지 않습니다.
+    </HelpTooltip>
+  );
+}
+const compositionHelp = (
+  <HelpTooltip label="매출 구성 기준">
+    기여이익은 해당 계약 유형·고객사·영업 파트의 매출에서 프로젝트에 배분된
+    인건비를 뺀 금액입니다. 직접 경비·대기 원가·판관비를 차감하기 전이므로
+    회사 전체의 매출총이익·영업이익과 계산 기준이 다릅니다.
+    기여이익률은 매출에서 기여이익이 차지하는 비율이며, 아래 ‘숫자로 보기’의
+    매출 구성 표에도 같은 기준을 적용합니다.
+  </HelpTooltip>
 );
 const kebab = (value: string) =>
   value.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -506,6 +535,7 @@ export function ProfitStructureScreen({
               <StructureWaterfall steps={data.waterfall} unit={unit} />
               <StructureTrend
                 title="매출·매출원가 추이"
+                titleHelp={<ReferenceRevenueHelp chartType={quarterly ? "bar" : "line"} />}
                 buckets={data.buckets}
                 metrics={["salesAmt", "salesCostAmt", "referenceRevenue"]}
                 labels={["매출", "매출원가", "배분 기준 매출(참고)"]}
@@ -532,6 +562,7 @@ export function ProfitStructureScreen({
             </div>
             {last?.composition.visible ? (
               <div className="profit-structure-compositions">
+                <div className="profit-structure-composition-help">{compositionHelp}</div>
                 <RevenueComposition
                   title="계약 유형별 매출 구성"
                   id="type"
@@ -564,10 +595,6 @@ export function ProfitStructureScreen({
                 {formatAmount(last.composition.revenueDifference, unit)} {unit}
               </p>
             )}
-            <p role="note">
-              기여이익은 매출−배분 노동비로 회사 매출총이익·영업이익과 다른
-              지표입니다.
-            </p>
             <section
               className="profit-structure-card"
               data-testid="structure-numeric-panel"
@@ -583,6 +610,9 @@ export function ProfitStructureScreen({
                   {" · 단위 "}
                   {unit}
                 </small>
+                {!last?.composition.visible &&
+                  data.buckets.some((bucket) => bucket.composition.visible) &&
+                  compositionHelp}
               </div>
               <div className="profit-structure-table-scroll">
                 <table aria-label="기간별 손익 숫자표">
@@ -635,6 +665,9 @@ export function ProfitStructureScreen({
                             ? "└ "
                             : ""}
                           {row.label}
+                          {row.metric === "referenceRevenue" && (
+                            <ReferenceRevenueHelp />
+                          )}
                         </th>
                         {row.bucketValues.map((value, i) => (
                           <td
@@ -704,11 +737,6 @@ export function ProfitStructureScreen({
                 금액은 모두 부가세 제외입니다.
               </p>
             </section>
-            <p className="profit-structure-muted">
-              턴키는 청구한 달의 공급가액, 월단위·파견은 일한 달의 매출입니다.
-              점선(배분 기준 매출)은 참고선이며 회사 매출·이익에 더하지
-              않습니다. 순이익표의 진행률 매출과 다를 수 있습니다.
-            </p>
             <div className="profit-structure-toolbar">
               <button
                 data-testid="structure-operating-link"
