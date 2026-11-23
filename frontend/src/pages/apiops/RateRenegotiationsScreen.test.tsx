@@ -138,7 +138,9 @@ beforeEach(() => {
 describe("단가 재협상 대상", () => {
   it("shows server month four whole-population summaries eleven columns distinct assignments and two MM values", async () => {
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    const period = await screen.findByRole("group", { name: "조회 기간 상태" });
+    expect(period).toHaveTextContent("기준월2080-07");
+    expect(period).toHaveTextContent("계산 시각2080-07-15 09:00");
     expect(api.getRateRenegotiations).toHaveBeenCalledWith(
       api.defaultRenegotiationQuery(),
       expect.any(AbortSignal),
@@ -168,7 +170,7 @@ describe("단가 재협상 대상", () => {
   });
   it("retains last valid results when invalid assumption is committed without sending a request", async () => {
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     fireEvent.change(screen.getByLabelText("인상률 %"), {
       target: { value: "1.234" },
     });
@@ -185,7 +187,7 @@ describe("단가 재협상 대상", () => {
       appliedIncreaseRate: q.increaseRate,
     }));
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     fireEvent.change(screen.getByLabelText("인상률 %"), {
       target: { value: "51" },
     });
@@ -207,7 +209,7 @@ describe("단가 재협상 대상", () => {
   });
   it("failed request preserves data and retries GET without saving", async () => {
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     vi.mocked(api.getRateRenegotiations).mockRejectedValueOnce(
       new ApiError(500, {
         success: false,
@@ -242,7 +244,7 @@ describe("단가 재협상 대상", () => {
   });
   it("uses actual developer and project identities and selected assignment history link", async () => {
     const { onPerson } = mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     fireEvent.click(screen.getByTestId("renegotiation-person-owned-0"));
     expect(onPerson).toHaveBeenCalledWith("actual-dev");
     expect(screen.getByTestId("renegotiation-project-owned-0")).toHaveAttribute(
@@ -255,7 +257,7 @@ describe("단가 재협상 대상", () => {
   });
   it("exports last successful applied parameters instead of unsubmitted filter or assumption drafts", async () => {
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     fireEvent.change(screen.getByTestId("renegotiation-window"), {
       target: { value: "ALL" },
     });
@@ -273,7 +275,7 @@ describe("단가 재협상 대상", () => {
   });
   it("column draft cancellation preserves view and save only mutates explicit personal preference", async () => {
     mount();
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     fireEvent.click(screen.getByTestId("renegotiation-columns"));
     expect(screen.getByTestId("renegotiation-column-visible-0")).toBeDisabled();
     expect(screen.getByTestId("renegotiation-column-visible-2")).toBeDisabled();
@@ -326,7 +328,7 @@ describe("단가 재협상 대상", () => {
 
 it("row opens the actual developer once while project links do not open a developer", async () => {
   const { onPerson } = mount();
-  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  await screen.findByRole("group", { name: "조회 기간 상태" });
   fireEvent.click(screen.getByTestId("renegotiation-person-owned-0"));
   expect(onPerson).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByTestId("renegotiation-project-owned-0"));
@@ -341,7 +343,7 @@ it.each([
   [50, "50"],
 ])("assumption boundary %s applies %s", async (input, expected) => {
   mount();
-  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  await screen.findByRole("group", { name: "조회 기간 상태" });
   fireEvent.change(screen.getByLabelText("인상률 %"), {
     target: { value: String(input) },
   });
@@ -363,7 +365,7 @@ it("closes a portal detail when the mounted screen changes route", async () => {
       </PreferencesProvider>
     </MemoryRouter>,
   );
-  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  await screen.findByRole("group", { name: "조회 기간 상태" });
   fireEvent.click(screen.getByTestId("renegotiation-person-owned-0"));
   expect(screen.getByRole("dialog")).toBeVisible();
   fireEvent.click(screen.getByRole("link", { name: "정산 이동" }));
@@ -418,7 +420,7 @@ it.each([false, true])(
         </ScreenPermissionContext.Provider>
       </PermissionContext.Provider>,
     );
-    await screen.findByText(/^기준월 2080-07 · 계산시각/);
+    await screen.findByRole("group", { name: "조회 기간 상태" });
     expect(
       screen.queryByRole("columnheader", { name: /월 원가/ }),
     ).not.toBeInTheDocument();
@@ -480,7 +482,7 @@ it("PART export and column settings retain employee type but exclude monthly cos
       </MemoryRouter>
     </PermissionContext.Provider>,
   );
-  await screen.findByText(/^기준월 2080-07 · 계산시각/);
+  await screen.findByRole("group", { name: "조회 기간 상태" });
   fireEvent.change(screen.getByTestId("renegotiation-employee"), {
     target: { value: "FT" },
   });
