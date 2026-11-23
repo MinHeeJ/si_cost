@@ -464,6 +464,7 @@ export function RateRenegotiationsScreen({
       )}
       {exportError && <ErrorBanner message={exportError} />}
       <FilterBar
+        className="renegotiation-filters"
         disabled={loading}
         testId="renegotiation-filters"
         onSubmit={() => submit({ ...draft, page: 1 })}

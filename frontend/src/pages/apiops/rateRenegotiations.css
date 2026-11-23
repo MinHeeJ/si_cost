@@ -15,6 +15,9 @@
 .renegotiation-toolbar > button:first-of-type {
   margin-left: auto;
 }
+.sicost-filterbar.renegotiation-filters {
+  column-gap: 24px;
+}
 .renegotiation-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
