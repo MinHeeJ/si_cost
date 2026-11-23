@@ -1,4 +1,6 @@
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
+import { Icon } from "../../shared/Icon";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -26,6 +28,36 @@ const events = [
 ];
 const unitCode = (unit: AmountUnit): api.CashUnit =>
   unit === "원" ? "WON" : unit === "천원" ? "THOUSAND_WON" : "MILLION_WON";
+const cashFlowGuide = (
+  <dl data-testid="cash-flow-guide">
+    <div>
+      <dt>조회 기준</dt>
+      <dd>
+        마감한 달은 실적, 마감 전 달은 예정(회색 글자)입니다. 금액은 부가세를
+        포함합니다. 자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서
+        관리자가 정합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>수입과 인건비</dt>
+      <dd>
+        현금매출은 등록된 입금과 아직 받지 못한 청구 금액을 합한 값입니다.
+        미입금 청구는 입금 예정일이 속한 달에 넣습니다. 급여는 급여 업로드 자료를
+        사용하며, 4대보험·원천세·근로소득세는 다음 달 제경비에 반영합니다.
+        외주 용역비는 공급가액에 부가세 10%를 더합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>재무 항목과 지급</dt>
+      <dd>
+        판관비·영업외비용, 법인카드 대금, 계좌이체 지출, 대여금과 법인세 납부는
+        재무 항목에서 가져옵니다. ‘계좌이체’는 제경비, ‘특별비’는 미지급 인건비에
+        넣습니다. 지급은 모두 완료된 것으로 보고, 실제와 차이가 있으면 재무 항목에
+        조정할 내역을 추가합니다.
+      </dd>
+    </div>
+  </dl>
+);
 // SCR-UI-21
 export function CashFlowScreen({
   amountUnit,
@@ -215,6 +247,11 @@ export function CashFlowScreen({
   }
   const displayed =
     data && (year === undefined || data.year === year) ? data : undefined;
+  const issues = (displayed?.issues ?? []).map((issue) =>
+    [issue.month, issue.message, issue.sourceId && `(원천 ${issue.sourceId})`]
+      .filter(Boolean)
+      .join(" "),
+  );
   const cells = displayed
     ? [...displayed.months, ...displayed.periodTotals]
     : [];
@@ -266,7 +303,42 @@ export function CashFlowScreen({
     });
   }
   return (
-    <SharedScreenFrame screenId="UI-21">
+    <SharedScreenFrame
+      screenId="UI-21"
+      screenGuide={cashFlowGuide}
+      headerActions={
+        <div className="sicost-title-action-group operating-actions">
+          <label>
+            단위{" "}
+            <select
+              data-testid="cash-unit"
+              aria-label="단위"
+              value={unit}
+              disabled={pending || loading}
+              onChange={(e) => {
+                const next = e.target.value as AmountUnit;
+                if (onAmountUnitChange) onAmountUnitChange(next);
+                else setLocalUnit(next);
+              }}
+            >
+              {["원", "천원", "백만원"].map((value) => (
+                <option key={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          {!mobile && (
+            <button
+              type="button"
+              data-testid="cash-export"
+              disabled={pending || loading || !displayed || error != null}
+              onClick={() => void download()}
+            >
+              {pending ? "파일 생성 중…" : "엑셀 다운로드"}
+            </button>
+          )}
+        </div>
+      }
+    >
       {incoming?.fromDashboard &&
         incoming.month &&
         /^\d{4}-(0[1-9]|1[0-2])$/.test(incoming.month) && (
@@ -281,37 +353,6 @@ export function CashFlowScreen({
         className="operating-profit cash-flow"
         data-testid="cash-flow-screen"
       >
-        <ScreenTitleActions>
-          <div className="operating-toolbar">
-            {!mobile && (
-              <button
-                data-testid="cash-export"
-                disabled={pending || loading || !displayed || error != null}
-                onClick={() => void download()}
-              >
-                {pending ? "파일 생성 중…" : "엑셀 다운로드"}
-              </button>
-            )}
-            <label>
-              단위{" "}
-              <select
-                data-testid="cash-unit"
-                aria-label="단위"
-                value={unit}
-                disabled={pending || loading}
-                onChange={(e) => {
-                  const next = e.target.value as AmountUnit;
-                  if (onAmountUnitChange) onAmountUnitChange(next);
-                  else setLocalUnit(next);
-                }}
-              >
-                {["원", "천원", "백만원"].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </ScreenTitleActions>
         {loading && !data && (
           <p role="status">자금수지표를 불러오는 중입니다.</p>
         )}
@@ -354,34 +395,49 @@ export function CashFlowScreen({
         )}
         {displayed && (!error || retainResult) && (
           <>
-            <p className="operating-muted">
-              기준일 {displayed.asOfDate} · 시작월 {displayed.baseMonth} ·
-              기초잔액 {formatAmount(displayed.baseAmount, "원")}원 · 최소
-              운영자금 {formatAmount(displayed.minimumCash, "원")}원 (기준월{" "}
-              {displayed.minimumCashMonth})
-            </p>
+            <PeriodStatus className="sicost-period-summary cash-period-summary">
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">기준일</span>
+                <b>{displayed.asOfDate}</b>
+              </span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">시작월</span>
+                <b>{displayed.baseMonth}</b>
+              </span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">기초 잔액</span>
+                <b>{formatAmount(displayed.baseAmount, "원")}원</b>
+              </span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">최소 운영자금</span>
+                <b>{formatAmount(displayed.minimumCash, "원")}원</b>
+                <small>적용월 {displayed.minimumCashMonth}</small>
+              </span>
+            </PeriodStatus>
             {displayed.shortages.length > 0 && (
               <div
                 className="cash-shortage-alert"
                 role="alert"
                 data-testid="cash-shortage-alert"
               >
-                <span aria-hidden="true">⚠</span>
-                <p>
-                  {displayed.shortages
-                    .map((p) => `${Number(p.month.slice(5))}월`)
-                    .join(", ")}{" "}
-                  월말 잔액이 최소 운영자금(
-                  {formatAmount(displayed.minimumCash, "원")}원)보다 적을 것으로
-                  예상됩니다. 예상 잔액:{" "}
-                  {displayed.shortages
-                    .map(
-                      (p) =>
-                        `${Number(p.month.slice(5))}월 ${formatAmount(p.balance, "원")}원`,
-                    )
-                    .join(" · ")}
-                </p>
+                <Icon name="warning" size={21} />
+                <div className="cash-shortage-content">
+                  <h2>월말 자금 부족 예상</h2>
+                  <p>
+                    {displayed.shortages.map((point) => `${Number(point.month.slice(5))}월`).join(", ")}{" "}
+                    월말 잔액이 최소 운영자금({formatAmount(displayed.minimumCash, "원")}원)보다 적을 것으로 예상됩니다.
+                  </p>
+                  <ul aria-label="월별 예상 잔액">
+                    {displayed.shortages.map((point) => (
+                      <li key={point.month}>
+                        <span>{Number(point.month.slice(5))}월</span>
+                        <strong>{formatAmount(point.balance, "원")}원</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <button
+                  type="button"
                   data-testid="cash-shortage-receivables"
                   onClick={openReceivables}
                 >
@@ -389,21 +445,46 @@ export function CashFlowScreen({
                 </button>
               </div>
             )}
-            {displayed.issues.length > 0 && (
-              <div className="operating-banner">
-                미확인 원천이 있습니다. 금액셀의 계산근거를 확인해 주세요.
-                {displayed.issues.map((i, n) => (
-                  <span key={n}>
-                    {i.month} {i.sourceId} {i.message}
-                  </span>
-                ))}
+            {(displayed.shortages.length === 0 || canOpenStandards || issues.length > 0) && (
+              <div className="operating-toolbar">
+                {displayed.shortages.length === 0 && (
+                  <button type="button" data-testid="cash-receivables" onClick={openReceivables}>
+                    미수금 보기
+                  </button>
+                )}
+                {canOpenStandards && (
+                  <button
+                    type="button"
+                    data-testid="cash-standards"
+                    onClick={() =>
+                      navigate("/UI-27", {
+                        state: {
+                          section: "standards",
+                          key: "MIN_CASH",
+                          month: displayed.minimumCashMonth,
+                        },
+                      })
+                    }
+                  >
+                    기초 잔액·최소 운영자금 설정
+                  </button>
+                )}
+                {issues.length > 0 && (
+                  <FinancialWarnings
+                    warnings={issues}
+                    description="표에서 해당 월의 금액을 눌러 계산 근거를 확인할 수 있습니다."
+                  />
+                )}
               </div>
             )}
             <BalanceTrendChart
               points={displayed.chartPoints}
               minimum={displayed.minimumCash}
             />
-            <p>{displayed.year}년 자금수지 (부가세 포함)</p>
+            <div className="cash-statement-heading">
+              <h2>월별 자금수지</h2>
+              <span>부가세 포함</span>
+            </div>
             <CashFlowStatementTable
               columns={[
                 ...displayed.months.map((m) => ({
@@ -435,44 +516,6 @@ export function CashFlowScreen({
                 });
               }}
             />
-            <p
-              className="operating-muted cash-flow-guide"
-              data-testid="cash-flow-guide"
-            >
-              마감한 달은 실적, 마감 전 달은 예정(회색 글자)입니다. 금액은 모두
-              부가세 포함입니다. 현금매출은 입금 등록한 금액과 아직 받지 못한
-              청구 금액(입금 예정일 달)입니다. 급여는 급여 업로드에서 오고,
-              4대보험·원천세·근로소득세는 다음 달 제경비로 잡힙니다. 외주는
-              공급가액에 부가세 10%를 더합니다. 판관비·영업외비용, 법인카드
-              대금, 계좌이체 지출(「계좌이체」는 제경비, 「특별비」는 미지급
-              인건비), 대여금, 법인세 납부는 재무 항목에서 옵니다. 지급은 모두
-              냈다고 보고, 실제와 안 맞는 금액은 재무 항목에 줄을 더해 맞춥니다.
-            </p>
-            <div className="operating-toolbar">
-              <button data-testid="cash-receivables" onClick={openReceivables}>
-                미수금 보기
-              </button>
-              {canOpenStandards && (
-                <button
-                  data-testid="cash-standards"
-                  onClick={() =>
-                    navigate("/UI-27", {
-                      state: {
-                        section: "standards",
-                        key: "MIN_CASH",
-                        month: displayed.minimumCashMonth,
-                      },
-                    })
-                  }
-                >
-                  기초 잔액·최소 운영자금 설정
-                </button>
-              )}
-              <small className="operating-muted">
-                자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서
-                관리자가 정합니다.
-              </small>
-            </div>
             {selection && (
               <SourceBreakdown
                 selection={selection}

@@ -3,7 +3,13 @@ import { Dialog } from "./Dialog";
 import { Icon } from "./Icon";
 import "./financialWarnings.css";
 
-export function FinancialWarnings({ warnings }: { warnings: string[] }) {
+export function FinancialWarnings({
+  warnings,
+  description,
+}: {
+  warnings: string[];
+  description?: string;
+}) {
   const [open, setOpen] = useState(false);
   const label = `확인 필요 ${warnings.length}건`;
   const groups = new Map<string, string[]>();
@@ -37,6 +43,7 @@ export function FinancialWarnings({ warnings }: { warnings: string[] }) {
         hideCancel
         wide
       >
+        {description && <p className="sicost-financial-warning-description">{description}</p>}
         <div className="sicost-financial-warning-groups">
           {[...groups].map(([month, messages]) => (
             <section className="sicost-financial-warning-group" key={month}>

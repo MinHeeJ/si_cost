@@ -36,6 +36,10 @@ button.sicost-financial-warning:hover {
   }
   82%, 100% { box-shadow: 0 0 0 7px transparent; }
 }
+.sicost-financial-warning-description {
+  margin: 8px 0 0;
+  color: var(--text-sub);
+}
 .sicost-financial-warning-groups {
   margin-block: 8px 2px;
 }

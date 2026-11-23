@@ -74,6 +74,7 @@ export function BalanceTrendChart({
         }}
       >
         <svg
+          className="cash-chart-fallback"
           viewBox="0 0 940 310"
           role="img"
           aria-label="실적 실선, 예정 점선, 미확인 잔액은 선을 연결하지 않습니다."

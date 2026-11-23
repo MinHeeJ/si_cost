@@ -1,5 +1,6 @@
 .cash-flow {
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
 }
 .cash-chart {
   padding: 20px 24px;
@@ -18,11 +19,30 @@
   color: var(--text-sub);
   font-size: 12px;
 }
-.cash-chart svg {
+.cash-chart > .sicost-chart-host {
+  margin-top: 12px;
+}
+.cash-chart .sicost-chart-host > .sicost-sr-only {
+  inset-block-start: 0;
+}
+.cash-chart-fallback {
   display: block;
   width: 100%;
-  margin-top: 20px;
   color: var(--text-sub);
+}
+.cash-statement-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.cash-statement-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.cash-statement-heading span {
+  color: var(--text-sub);
+  font-size: 12px;
 }
 .cash-chart text {
   fill: currentColor;
@@ -107,39 +127,74 @@
 }
 
 .cash-shortage-alert {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--bad);
+  border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--divider));
+  border-inline-start: 4px solid var(--bad);
   border-radius: 8px;
   background: var(--bad-bg, #fef2f2);
   color: var(--bad);
 }
+.cash-shortage-alert > svg {
+  margin-block-start: 1px;
+}
+.cash-shortage-content h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
 .cash-shortage-alert p {
-  flex: 1;
   margin: 0;
+  color: var(--text);
+  word-break: keep-all;
+}
+.cash-shortage-content ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.cash-shortage-content li {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 .cash-shortage-alert button {
-  flex-shrink: 0;
+  align-self: center;
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 30%, var(--divider));
 }
 .cash-shortage-warning {
   display: inline-block;
   margin-top: 4px;
   color: var(--bad);
 }
-.cash-flow-guide {
-  line-height: 1.7;
-}
 @media (max-width: 767px) {
-  .cash-shortage-alert {
+  .sicost-period-status.cash-period-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: baseline;
+    padding: 8px 4px;
+  }
+  .cash-period-summary > .sicost-period-summary-item {
     flex-wrap: wrap;
   }
-  .cash-shortage-alert p {
-    flex-basis: calc(100% - 36px);
+  .cash-shortage-alert {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
   }
   .cash-shortage-alert button {
-    margin-left: auto;
+    grid-column: 2;
+    justify-self: end;
   }
 }
 

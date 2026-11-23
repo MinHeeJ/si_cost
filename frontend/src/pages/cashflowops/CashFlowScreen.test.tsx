@@ -10,12 +10,21 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { CashFlowScreen } from "./CashFlowScreen";
 import { cashItems, type CashFlowResult, type CashSource } from "./cashFlowApi";
 import { SharedScreenContext } from "../shared/SharedScreenContext";
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({ children, headerActions, screenGuide }: {
+    children: ReactNode;
+    headerActions?: ReactNode;
+    screenGuide?: ReactNode;
+  }) => (
+    <section>
+      {headerActions}
+      {screenGuide && <ScreenGuide screenId="UI-21" screenName="자금수지표">{screenGuide}</ScreenGuide>}
+      {children}
+    </section>
   ),
 }));
 const fetcher = vi.fn<typeof fetch>();
@@ -166,9 +175,8 @@ it("renders all twelve months, period totals, real statuses and read-only non-le
     expect(
       within(table).queryByRole("rowheader", { name: label }),
     ).not.toBeInTheDocument();
-  expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent(
-    "예정(회색 글자)",
-  );
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
+  expect(screen.getByTestId("cash-flow-guide")).toHaveTextContent("예정(회색 글자)");
 });
 it("opens a NULL leaf in the right detail drawer, shows reference and unknown evidence and closes without writes", async () => {
   ready();
@@ -473,15 +481,30 @@ it("uses server shortages for a red alert, won balances, header warnings and rec
   ];
   data.months[9].shortage = true;
   data.months[11].shortage = true;
+  data.issues = [{
+    code: "SOURCE_UNKNOWN",
+    message: "필수 급여 미확인",
+    month: "2026-11",
+    sourceId: "202610:001",
+  }];
   ready();
   const banner = await screen.findByTestId("cash-shortage-alert");
   expect(banner).toHaveRole("alert");
   expect(banner).toHaveTextContent(
     "10월, 12월 월말 잔액이 최소 운영자금(1,000,000,000원)보다 적을 것으로 예상됩니다.",
   );
-  expect(banner).toHaveTextContent(
-    "예상 잔액: 10월 950,000,000원 · 12월 980,000,000원",
-  );
+  expect(within(banner).getByRole("heading", { name: "월말 자금 부족 예상" })).toBeVisible();
+  const balances = within(banner).getByRole("list", { name: "월별 예상 잔액" });
+  expect(within(balances).getAllByRole("listitem").map((item) => item.textContent))
+    .toEqual(["10월950,000,000원", "12월980,000,000원"]);
+  expect(screen.queryByText(/필수 급여 미확인/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "확인 필요 1건" }));
+  const details = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(details).getByRole("heading", { name: "2026-11" })).toBeVisible();
+  expect(details).toHaveTextContent("필수 급여 미확인");
+  expect(details).not.toHaveTextContent("월말 자금 부족 예상");
+  await userEvent.keyboard("{Escape}");
+  expect(banner).toBeVisible();
   expect(screen.getAllByTestId(/cash-shortage-warning-/)).toHaveLength(2);
   expect(screen.getByTestId("cash-shortage-warning-2026-10")).toHaveAttribute(
     "title",
@@ -537,11 +560,11 @@ it("only exposes standards through the user's menu and sends the standards tab",
   const button = await screen.findByRole("button", {
     name: "기초 잔액·최소 운영자금 설정",
   });
+  await userEvent.click(screen.getByRole("button", { name: "화면 안내" }));
   expect(
-    screen.getByText(
-      "자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서 관리자가 정합니다.",
-    ),
-  ).toBeInTheDocument();
+    screen.getByTestId("cash-flow-guide"),
+  ).toHaveTextContent("자금수지 시작 월·기초 잔액·최소 운영자금은 운영 기준값에서 관리자가 정합니다.");
+  await userEvent.keyboard("{Escape}");
   await userEvent.click(button);
   expect(await screen.findByTestId("destination")).toHaveTextContent(
     '"section":"standards"',
