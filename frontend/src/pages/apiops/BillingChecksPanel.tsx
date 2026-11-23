@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { StatusBadge, ErrorBanner } from "../../shared/Feedback";
-import { formatDecimal } from "../../shared/format";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { formatDistributionAmount } from "../distribution/MonthlyMatrixTable";
 import {
   getBillingChecks,
@@ -108,7 +108,18 @@ function BillingChecksContent({
       align: "right",
       render: (r) => r.personCount,
     },
-    { id: "mm", label: "투입 MM", align: "right", render: (r) => r.mm },
+    {
+      id: "mm",
+      label: "투입 MM",
+      align: "right",
+      help: (
+        <HelpTooltip label="투입 MM" iconOnly>
+          1.00 MM은 한 사람이 한 달 동안 투입된 양입니다. 표에는 투입량을
+          소수점 둘째 자리까지 표시합니다.
+        </HelpTooltip>
+      ),
+      render: (r) => r.mm,
+    },
     {
       id: "estimatedAmount",
       label: `투입 기준 금액 (${amountUnit})`,
@@ -253,13 +264,6 @@ function BillingChecksContent({
               </article>
             ))}
           </div>
-          <p className="billing-review-caption">
-            점검월 {data.month} · 단위 {amountUnit} · MM 소수 2자리 · 허용오차
-            원 단위{" "}
-            {data.items.length === 1
-              ? formatDecimal(data.items[0].tolerance)
-              : "행별 계산근거 참조"}
-          </p>
         </>
       )}
       <DataTable
