@@ -17,6 +17,10 @@ import * as shared from "../shared/sharedApi";
 import * as clients from "../clientsops/clientActionsApi";
 import * as clientDetail from "../clients/clientsApi";
 import * as parts from "../salespartsops/partStandardsApi";
+import * as progressApi from "../progress/projectProgressApi";
+import * as distributionApi from "../distribution/distributionApi";
+vi.mock("../distribution/distributionApi");
+vi.mock("../progress/projectProgressApi");
 vi.mock("./projectsApi");
 vi.mock("../shared/sharedApi");
 vi.mock("../clientsops/clientActionsApi");
@@ -27,20 +31,7 @@ vi.mock("../b9/B9UploadDialog", () => ({
     <button disabled={readOnly}>엑셀 업로드</button>
   ),
 }));
-vi.mock("../distribution/ProjectDistributionPanel", () => ({
-  ProjectDistributionPanel: ({
-    projectId,
-    onBack,
-  }: {
-    projectId: string;
-    onBack(): void;
-  }) => (
-    <section data-testid="distribution-region">
-      배분표 {projectId}
-      <button onClick={onBack}>목록</button>
-    </section>
-  ),
-}));
+
 vi.mock("../expenses/ProjectExpensesPanel", () => ({
   ProjectExpensesPanel: () => <div>추가 직접 경비</div>,
 }));
@@ -181,7 +172,11 @@ beforeEach(() => {
             { code: "LOSE", name: "실주" },
           ]
         : group === "DSTRB_STEP"
-          ? [{ code: "PLAN", name: "실제 투입계획" }]
+          ? [
+              { code: "PLAN", name: "실제 투입계획" },
+              { code: "CTRT", name: "최종 계약" },
+              { code: "EST", name: "견적" },
+            ]
           : []) as shared.SharedCodeLookup[],
   }));
   vi.mocked(clients.getClientOptions).mockResolvedValue({
@@ -200,6 +195,35 @@ beforeEach(() => {
     size: filters.size,
   }));
   vi.mocked(api.getProject).mockResolvedValue(detail);
+  vi.mocked(distributionApi.getProjectDistributionComparison).mockResolvedValue(
+    {
+      selectedStep: "PLAN",
+      contractAmount: "100",
+      totalAmount: "100",
+      differenceAmount: "0",
+      mismatchCount: 0,
+      items: [],
+      warnings: [],
+    },
+  );
+  vi.mocked(distributionApi.getProjectDistributionUploads).mockResolvedValue({
+    items: [],
+  });
+  vi.mocked(distributionApi.getProjectDistribution).mockImplementation(
+    async (_id, step) => ({
+      project,
+      viewedStep: step,
+      selectedStep: "PLAN",
+      months: [],
+      rows: [],
+      monthlyTotals: [],
+      totalAmount: "100",
+      revision: "distribution-revision",
+    }),
+  );
+  vi.mocked(progressApi.getProjectProgress).mockResolvedValue({
+    status: { light: "주의", reasons: [{ kind: "일정 늦음", value: "5.0" }] },
+  } as progressApi.ProjectProgress);
   vi.mocked(api.createProject).mockResolvedValue(result);
   vi.mocked(api.putProject).mockResolvedValue(result);
 });
@@ -282,6 +306,23 @@ it("list renders all ten columns and server banner total with distinct badge ton
     ).toHaveTextContent("실제 투입계획 합계 경고 불일치 3"),
   );
 });
+it.each(["LOSE", "END"] as const)("%s list badge is gray", async (status) => {
+  vi.mocked(api.getProjects).mockResolvedValue({
+    items: [{ ...item, status }],
+    total: 1,
+    unassignedCount: 0,
+    year: 2026,
+    page: 1,
+    size: 50,
+  });
+  render(<ProjectsScreen {...props} />);
+  await screen.findByText(project.name);
+  expect(
+    screen
+      .getAllByText(labels("PROJ_STAT", status))
+      .find((node) => node.tagName === "SPAN"),
+  ).toHaveClass("sicost-tone-lock");
+});
 it("unassigned CTA only changes part filter and resets page preserving year search status and type", async () => {
   render(<ProjectsScreen {...props} />);
   await screen.findByText(project.name);
@@ -317,7 +358,9 @@ it("query Enter and reset share real filters while sort and size reset page1", a
   fireEvent.change(screen.getByPlaceholderText("프로젝트명 또는 고객사"), {
     target: { value: "검색" },
   });
-  fireEvent.change(screen.getByTestId("project-filter-status"), { target: { value: "ING" } });
+  fireEvent.change(screen.getByTestId("project-filter-status"), {
+    target: { value: "ING" },
+  });
   fireEvent.submit(screen.getByTestId("project-filter-form"));
   await waitFor(() =>
     expect(api.getProjects).toHaveBeenLastCalledWith(
@@ -398,11 +441,27 @@ it("TK distribution replaces list region and back restores filters without route
     screen.getByTestId(`project-distribution-${project.id.toLowerCase()}`),
   );
   expect(screen.queryByTestId("project-filter-form")).not.toBeInTheDocument();
-  expect(screen.getByTestId("distribution-region")).toHaveTextContent(
-    project.id,
-  );
+  expect(
+    await screen.findByTestId("distribution-project-header"),
+  ).toHaveTextContent(project.id);
   await userEvent.click(screen.getByText("목록"));
   expect(screen.getByTestId("project-filter-form")).toBeInTheDocument();
+});
+it("detail distribution button opens the same server PLAN table as the list entry", async () => {
+  render(<ProjectsScreen {...props} />);
+  await userEvent.click(
+    await screen.findByTestId(`project-open-${project.id.toLowerCase()}`),
+  );
+  await userEvent.click(
+    await screen.findByTestId("project-detail-distribution"),
+  );
+  await screen.findByTestId("distribution-matrix");
+  expect(distributionApi.getProjectDistribution).toHaveBeenCalledTimes(1);
+  expect(distributionApi.getProjectDistribution).toHaveBeenCalledWith(
+    project.id,
+    "PLAN",
+  );
+  expect(screen.queryByRole("tab", { name: /배분표/ })).not.toBeInTheDocument();
 });
 it("mobile uses twenty-card more and hides desktop-only actions", async () => {
   vi.mocked(window.matchMedia).mockReturnValue({
@@ -664,6 +723,71 @@ it("detail excludes estimate and fake progress, displays four areas, all PMs and
   expect(screen.getByText("(예정)")).toHaveClass("sicost-tone-info");
   expect(screen.getByText(/진행현황·이슈는 후속 기능/)).toBeInTheDocument();
 });
+it.each(["정상", "주의", "위험"] as const)(
+  "basic signal uses server %s and opens registered progress tab without reasons",
+  async (light) => {
+    vi.mocked(progressApi.getProjectProgress).mockResolvedValue({
+      status: { light, reasons: [{ kind: "일정 늦음", value: "5.0" }] },
+    } as progressApi.ProjectProgress);
+    const onTabChange = vi.fn();
+    panel({
+      registration: { progress: () => <div>서버 진행 현황</div>, onTabChange },
+    });
+    const signal = await screen.findByTestId("project-basic-signal");
+    await waitFor(() => expect(signal).toHaveTextContent(light));
+    expect(within(signal).getByText(light)).toHaveClass(
+      `sicost-tone-${light === "위험" ? "bad" : light === "주의" ? "warn" : "ok"}`,
+    );
+    const terms = Array.from(
+      screen.getByTestId("project-panel-basic").querySelectorAll("dt"),
+    ).map((node) => node.textContent);
+    expect(terms.slice(terms.indexOf("PM"), terms.indexOf("상태") + 1)).toEqual(
+      ["PM", "신호등", "상태"],
+    );
+    expect(screen.queryByText(/일정 늦음/)).not.toBeInTheDocument();
+    expect(progressApi.getProjectProgress).toHaveBeenCalledWith(
+      project.id,
+      props.year,
+    );
+    await userEvent.click(screen.getByTestId("project-basic-progress-link"));
+    expect(onTabChange).toHaveBeenCalledWith("progress");
+    expect(screen.getByRole("tab", { name: "진행 현황" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByTestId("project-panel-progress")).toHaveTextContent(
+      "서버 진행 현황",
+    );
+  },
+);
+it("basic signal omits link without registered progress and retries read errors", async () => {
+  vi.mocked(progressApi.getProjectProgress).mockRejectedValueOnce(
+    new Error("read failed"),
+  );
+  panel();
+  const signal = await screen.findByTestId("project-basic-signal");
+  await within(signal).findByText("신호등을 조회하지 못했습니다.");
+  expect(
+    screen.queryByTestId("project-basic-progress-link"),
+  ).not.toBeInTheDocument();
+  await userEvent.click(
+    within(signal).getByRole("button", { name: "다시 조회" }),
+  );
+  await within(signal).findByText("주의");
+});
+it.each(["END", "LOSE"] as const)(
+  "%s basic info has no signal row or progress fetch",
+  async (effectiveStatus) => {
+    vi.mocked(api.getProject).mockResolvedValue({ ...detail, effectiveStatus });
+    panel({ registration: { progress: () => <div>진행 현황</div> } });
+    await screen.findByText(project.name);
+    expect(screen.queryByText("신호등")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("project-basic-signal"),
+    ).not.toBeInTheDocument();
+    expect(progressApi.getProjectProgress).not.toHaveBeenCalled();
+  },
+);
 it("cancelled assignment toggle sends only includeCancelled and no year", async () => {
   panel();
   await screen.findByText(project.name);
@@ -691,6 +815,9 @@ it("LOSE detail and past-year details disable edit and budget but keep reads", a
   expect(screen.getByTestId("project-detail-edit")).toBeDisabled();
   expect(screen.getByTestId("project-budget-open")).toBeDisabled();
   expect(screen.getByText(/실주 메모/)).toBeInTheDocument();
+  expect(screen.getByText("실주", { exact: true })).toHaveClass(
+    "sicost-tone-lock",
+  );
 });
 it("past-year plan gets readOnly state and header cannot edit", async () => {
   panel({ year: 2025 });

@@ -100,6 +100,10 @@ it("loads server year remaining months and displays three authoritative table ro
   mount();
   await screen.findByTestId("workforce-supply-card");
   expect(api.getWorkforceForecasts).toHaveBeenCalledWith(query);
+  expect(screen.getByText("예측", { exact: true })).toBeInTheDocument();
+  expect(
+    screen.getByText("인력 운영 보드의 ‘수요·공급’과 같은 계산입니다."),
+  ).toBeInTheDocument();
   expect(screen.getByLabelText("예측 연도")).toHaveTextContent("2026년2027년");
   expect(screen.getByTestId("workforce-demand-card")).toHaveTextContent(
     "2.6명",

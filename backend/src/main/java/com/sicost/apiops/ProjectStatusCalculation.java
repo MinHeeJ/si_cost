@@ -38,7 +38,7 @@ public class ProjectStatusCalculation {
         if(gap!=null)signal(reasons,"진척대비원가",gap,new BigDecimal("15.0"),new BigDecimal("5.0"),"TK 원가 사용률 − 실적 진척률 (표시 1자리)");
         if(high>0)reasons.add(reason("기한지난HIGH","위험",Long.toString(high),"1","상태 ≠ CLOSE · 중요도 HIGH · 기한 < 기준일"));
         if(!overdue.isEmpty())reasons.add(reason("기한지난이슈","주의",Integer.toString(overdue.size()),"1","상태 ≠ CLOSE · 기한 < 기준일"));
-        if(days>14)reasons.add(reason("메모경과","주의",Integer.toString(days),">14","기준일 − 마지막 작성일 (메모 없음: max(등록일, 계약시작일))"));
+        if(days>14)reasons.add(reason(updated==null?"주간 메모 없음":"메모경과","주의",Integer.toString(days),">14","기준일 − 마지막 작성일 (메모 없음: max(등록일, 계약시작일))"));
         String light=reasons.stream().anyMatch(r->"위험".equals(r.get("light")))?"위험":reasons.isEmpty()?"정상":"주의";
         var part=snapshot.sources().projectParts().stream().filter(s->id.equals(s.projectId())&&s.fromMonth().compareTo(month.replace("-",""))<=0)
             .max(Comparator.comparing(com.sicost.profitability.MonthlyCostDtos.ProjectPart::fromMonth));
@@ -78,7 +78,8 @@ public class ProjectStatusCalculation {
     private static Fraction portion(LocalDate start,LocalDate end,LocalDate today,BigDecimal weight) {
         if(today.isBefore(start))return new Fraction(BigDecimal.ZERO,BigDecimal.ONE);
         if(!today.isBefore(end))return new Fraction(weight,BigDecimal.ONE);
-        return new Fraction(weight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(start,today))),BigDecimal.valueOf(ChronoUnit.DAYS.between(start,end)));
+        return new Fraction(weight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(start,today))),
+            BigDecimal.valueOf(com.sicost.progress.ProjectProgressCalculation.days(start,end)));
     }
     private static void signal(List<Map<String,Object>> reasons,String kind,BigDecimal value,BigDecimal danger,BigDecimal warning,String formula) {
         if(value.compareTo(warning)>=0)reasons.add(reason(kind,value.compareTo(danger)>=0?"위험":"주의",value.setScale(1).toPlainString(),value.compareTo(danger)>=0?danger.toPlainString():warning.toPlainString(),formula));

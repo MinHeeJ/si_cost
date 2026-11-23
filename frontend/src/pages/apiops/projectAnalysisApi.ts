@@ -83,6 +83,7 @@ export type BoardPage = {
     projectId: string;
     projectName: string;
     elapsedDays: number;
+    lastUpdatedDate: string | null;
   }[];
   calculationNotice: string;
 };

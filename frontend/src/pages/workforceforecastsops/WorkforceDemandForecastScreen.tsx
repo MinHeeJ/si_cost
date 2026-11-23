@@ -152,6 +152,7 @@ export function WorkforceDemandForecastScreen() {
                 onChange={(v) => void changeYear(v)}
               />
               <span className="workforce-forecast-info">예측</span>
+              <span>인력 운영 보드의 ‘수요·공급’과 같은 계산입니다.</span>
               <span>기준일 {context.currentDate}</span>
             </div>
             <WorkforceForecastPanel query={query} disabled={pending} />
@@ -343,7 +344,10 @@ export function WorkforceForecastPanel({
                   <table className="sicost-table">
                     <thead>
                       <tr>
-                        <th>구분<FieldHelp label="구분" kind="B" /></th>
+                        <th>
+                          구분
+                          <FieldHelp label="구분" kind="B" />
+                        </th>
                         {data.totals.map((m) => (
                           <th key={m.month}>{m.month}</th>
                         ))}
@@ -358,7 +362,10 @@ export function WorkforceForecastPanel({
                         ] as const
                       ).map(([label, key]) => (
                         <tr data-testid={`workforce-row-${key}`} key={key}>
-                          <th scope="row">{label}<FieldHelp label={label} kind="B" /></th>
+                          <th scope="row">
+                            {label}
+                            <FieldHelp label={label} kind="B" />
+                          </th>
                           {data.totals.map((m) => (
                             <td
                               key={m.month}

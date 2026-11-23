@@ -163,6 +163,27 @@ async function openMemo() {
   );
   return screen.getByRole("dialog", { name: "이번 주 상태 적기" });
 }
+it("주간 메모 없음 이유와 마지막 업데이트에 같은 계약 시작 표현을 쓴다", async () => {
+  draw({
+    ...original,
+    memos: [],
+    status: {
+      ...original.status,
+      lastUpdatedDate: null,
+      elapsedDays: 79,
+      reasons: [
+        { ...original.status.reasons[0], kind: "주간 메모 없음", value: "79" },
+      ],
+    },
+  });
+  expect(await screen.findByTestId("progress-reason-0")).toHaveTextContent(
+    "주간 메모 없음(계약 시작 79일)",
+  );
+  expect(screen.getByText(/마지막 업데이트/)).toHaveTextContent(
+    "주간 메모 없음(계약 시작 79일)",
+  );
+  expect(screen.queryByText(/메모경과/)).not.toBeInTheDocument();
+});
 it("주간 메모 작성일을 유지하고 수정일을 짧게 따로 표시한다", async () => {
   draw({
     ...original,
@@ -210,6 +231,9 @@ it("서버 계획/실적/단계/PM/메모/업데이트와 위험 종류별 공�
   expect(screen.getByText("지연")).toHaveClass("sicost-tone-bad");
   expect(screen.getByText("진행중")).toHaveClass("sicost-tone-info");
   expect(screen.getByText(/마지막 업데이트/)).toHaveTextContent("2026-06-01");
+  expect(screen.getByTestId("progress-reason-0")).toHaveTextContent(
+    "메모경과 30",
+  );
   expect(screen.getByText(/현재 단계/)).toHaveTextContent("관리자");
   expect(screen.getByText("원가 자료 확인 필요")).toBeInTheDocument();
   expect(api.createProjectProgressSteps).not.toHaveBeenCalled();

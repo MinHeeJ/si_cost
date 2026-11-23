@@ -1,4 +1,3 @@
-import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -10,28 +9,25 @@ import {
 } from "./MonthlyMatrixTable";
 import { DistributionUploadResultDialog } from "./DistributionUploadResultDialog";
 import * as api from "./distributionApi";
+import { getProject } from "../projects/projectsApi";
+import { CodeName, useCodeNames } from "../../shared/codeNames";
 import "./distribution.css";
 
 export type ProjectDistributionPanelProps = {
   projectId: string;
   customerName: string | null;
-  initialStep?: api.DistributionStep;
   amountUnit?: api.AmountUnit;
   readOnly?: boolean;
   refreshKey?: number;
   onBack(): void;
   onUpload(context: {
     projectId: string;
-    step: api.DistributionStep;
+    step?: api.DistributionStep;
     expectedRevision: string;
     onApplied(): void;
   }): void;
 };
-const steps: { code: api.DistributionStep; label: string }[] = [
-  { code: "EST", label: "EST 견적" },
-  { code: "CTRT", label: "CTRT 최종 계약" },
-  { code: "PLAN", label: "PLAN 실제 투입계획" },
-];
+
 const statuses: Record<
   api.DistributionProject["status"],
   { label: string; tone: Tone }
@@ -39,21 +35,22 @@ const statuses: Record<
   ING: { label: "진행", tone: "info" },
   PRE: { label: "수주예정", tone: "warn" },
   END: { label: "종료", tone: "lock" },
-  LOSE: { label: "실주", tone: "bad" },
+  LOSE: { label: "실주", tone: "lock" },
 };
 // SCR-UI-01: replaces the list region in the retained /UI-01 tab, never another route.
 export function ProjectDistributionPanel({
   projectId,
   customerName,
-  initialStep = "EST",
   amountUnit = "원",
   readOnly = false,
   refreshKey = 0,
   onBack,
   onUpload,
 }: ProjectDistributionPanelProps) {
-  const [step, setStep] = useState(initialStep);
+  const [header, setHeader] =
+    useState<Pick<api.ProjectDistributionData, "project" | "revision">>();
   const unit = amountUnit;
+  const codeName = useCodeNames("DSTRB_STEP");
   const [data, setData] = useState<api.ProjectDistributionData>(),
     [comparison, setComparison] = useState<api.ProjectDistributionComparison>();
   const [uploads, setUploads] = useState<api.ProjectUploadRecord[]>([]);
@@ -64,24 +61,33 @@ export function ProjectDistributionPanel({
     [pending, setPending] = useState(false),
     [resultId, setResultId] = useState<number>();
   const busy = useRef(false);
-  useEffect(() => {
-    setStep(initialStep);
-  }, [projectId, initialStep]);
+  const step = comparison?.selectedStep ?? undefined;
+  const calculationUpload = uploads
+    .filter((row) => row.step === step && row.status === "APPLIED")
+    .reduce<
+      api.ProjectUploadRecord | undefined
+    >((latest, row) => (!latest || (row.appliedAt ?? row.registeredAt) > (latest.appliedAt ?? latest.registeredAt) ? row : latest), undefined);
   useEffect(() => {
     let current = true;
     setLoading(true);
     setError(undefined);
     setData(undefined);
+    setHeader(undefined);
     setComparison(undefined);
     setUploads([]);
     Promise.all([
-      api.getProjectDistribution(projectId, step),
       api.getProjectDistributionComparison(projectId),
       api.getProjectDistributionUploads(projectId),
     ])
-      .then(([table, compared, history]) => {
+      .then(async ([compared, history]) => {
+        if (!current) return;
+        const table = compared.selectedStep
+          ? await api.getProjectDistribution(projectId, compared.selectedStep)
+          : undefined;
+        const projectHeader = table ?? (await getProject(projectId));
         if (current) {
           setData(table);
+          setHeader(projectHeader);
           setComparison(compared);
           setUploads(history.items);
         }
@@ -95,7 +101,7 @@ export function ProjectDistributionPanel({
     return () => {
       current = false;
     };
-  }, [projectId, step, reload, refreshKey]);
+  }, [projectId, reload, refreshKey]);
   async function download(action: () => Promise<void>) {
     if (busy.current) return;
     busy.current = true;
@@ -120,8 +126,8 @@ export function ProjectDistributionPanel({
   );
   const locked =
     readOnly ||
-    data?.project.status === "END" ||
-    data?.project.status === "LOSE";
+    header?.project.status === "END" ||
+    header?.project.status === "LOSE";
   return (
     <section
       className="distribution-panel"
@@ -144,7 +150,7 @@ export function ProjectDistributionPanel({
           <button
             type="button"
             data-testid="distribution-template"
-            disabled={pending || loading || !data}
+            disabled={pending || loading || !header}
             onClick={() =>
               void download(() => api.downloadDistributionTemplate(projectId))
             }
@@ -155,88 +161,59 @@ export function ProjectDistributionPanel({
             type="button"
             data-testid="distribution-upload"
             className="sicost-primary"
-            disabled={pending || loading || !data || locked}
+            disabled={pending || loading || !header || locked}
             onClick={() =>
-              data &&
+              header &&
               onUpload({
                 projectId,
                 step,
-                expectedRevision: data.revision,
+                expectedRevision: header.revision,
                 onApplied: () => setReload((value) => value + 1),
               })
             }
           >
             엑셀 업로드
           </button>
-          <button
-            type="button"
-            data-testid="distribution-export"
-            disabled={pending || loading || !data}
-            onClick={() =>
-              void download(() =>
-                api.downloadDistribution(projectId, step, unit),
-              )
-            }
-          >
-            배분표 다운로드
-          </button>
         </div>
       </header>
       {loading && <p role="status">불러오는 중입니다.</p>}
       {Boolean(error) && banner(error, () => setReload((value) => value + 1))}
       {Boolean(actionError) && banner(actionError)}
-      {data && (
+      {header && (
         <>
           <div
             className="distribution-project"
             data-testid="distribution-project-header"
           >
             <strong>
-              {data.project.id} · {data.project.name}
+              {header.project.id} · {header.project.name}
             </strong>
             <span>고객사 {customerName ?? "–"}</span>
             <span>
-              계약금액 {money(data.project.contractAmount)} {unit}
+              계약금액 {money(header.project.contractAmount)} {unit}
             </span>
             <span>
-              {data.project.startDate} ~ {data.project.endDate}
+              {header.project.startDate} ~ {header.project.endDate}
             </span>
-            <StatusBadge tone={statuses[data.project.status].tone}>
-              {statuses[data.project.status].label}
+            <StatusBadge tone={statuses[header.project.status].tone}>
+              {statuses[header.project.status].label}
             </StatusBadge>
           </div>
           {locked && (
             <p className="sicost-banner sicost-tone-lock">
-              조회 전용입니다. 배분표는 열람·다운로드할 수 있습니다.
+              조회 전용입니다. 배분표를 열람할 수 있습니다.
             </p>
           )}
-          <SegmentedTabList
-            as="nav"
-            className="distribution-tabs"
-            aria-label="배분표 조회 단계"
-            role="tablist"
-          >
-            {steps.map((item) => (
-              <button
-                type="button"
-                role="tab"
-                data-testid={`distribution-tab-${item.code.toLowerCase()}`}
-                key={item.code}
-                aria-selected={step === item.code}
-                aria-controls="distribution-stage-panel"
-                onClick={() => setStep(item.code)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </SegmentedTabList>
           <div className="distribution-toolbar">
             <p>
               계산에 쓰는 단계{" "}
-              <StatusBadge tone={data.selectedStep ? "info" : "neutral"}>
-                {data.selectedStep ?? "미등록"}
+              <StatusBadge tone={step ? "info" : "neutral"}>
+                {step ? <CodeName group="DSTRB_STEP" value={step} /> : "미등록"}
               </StatusBadge>{" "}
-              · 저장된 표 전체 기준 PLAN &gt; CTRT &gt; EST
+              · 저장된 표 전체 기준{" "}
+              {["PLAN", "CTRT", "EST"]
+                .map((value) => codeName("DSTRB_STEP", value))
+                .join(" > ")}
             </p>
           </div>
           {comparison && (
@@ -259,15 +236,18 @@ export function ProjectDistributionPanel({
           )}
           <div
             id="distribution-stage-panel"
-            role="tabpanel"
+            role="region"
             data-testid="distribution-stage-panel"
-            aria-label={`${step} 배분표`}
+            aria-label={`${codeName("DSTRB_STEP", step)} 배분표`}
           >
-            <MonthlyMatrixTable data={data} amountUnit={unit} />
+            {data ? (
+              <MonthlyMatrixTable data={data} amountUnit={unit} />
+            ) : (
+              <p>이 단계에 등록된 배분표가 없습니다.</p>
+            )}
           </div>
           <p className="distribution-help">
-            조회 단계는 계산 단계를 변경하지 않습니다. 직접 셀 수정·행 추가·삭제
-            없이 재업로드로만 변경합니다.
+            직접 셀 수정·행 추가·삭제 없이 재업로드로만 변경합니다.
           </p>
           <h2>배정·배분표 불일치 {comparison?.mismatchCount ?? 0}건</h2>
           <DataTable
@@ -310,7 +290,7 @@ export function ProjectDistributionPanel({
               },
             ]}
           />
-          <h2>업로드 기록</h2>
+          <h2>올린 기록 ({uploads.length})</h2>
           <DataTable
             rows={uploads}
             rowKey={(row) => row.uploadId}
@@ -328,9 +308,14 @@ export function ProjectDistributionPanel({
               {
                 id: "step",
                 label: "당시 단계",
-                render: (row) =>
-                  steps.find((item) => item.code === row.step)?.label ??
-                  row.step,
+                render: (row) => (
+                  <>
+                    <CodeName group="DSTRB_STEP" value={row.step} />{" "}
+                    {row.uploadId === calculationUpload?.uploadId && (
+                      <StatusBadge tone="info">계산에 사용</StatusBadge>
+                    )}
+                  </>
+                ),
               },
               { id: "file", label: "파일", render: (row) => row.fileName },
               { id: "actor", label: "처리자", render: (row) => row.actor },

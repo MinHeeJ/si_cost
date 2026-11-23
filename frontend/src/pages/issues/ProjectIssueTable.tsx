@@ -5,6 +5,7 @@ import "../apiops/projectAnalysis.css";
 import { StatusBadge } from "../../shared/Feedback";
 import { formatDate } from "../../shared/format";
 import type { ProjectIssue, ProjectIssuesPage } from "./projectIssuesApi";
+import { IssueDueDate } from "./IssueDueDate";
 
 export const issueColumnIds = [
   "importance",
@@ -120,12 +121,7 @@ export function ProjectIssueTable({
     {
       id: "dueDate",
       label: "기한",
-      render: (r) => (
-        <span className={r.overdue ? "issue-overdue" : undefined}>
-          {r.dueDate}
-          {r.overdue && <StatusBadge tone="bad">기한 지남</StatusBadge>}
-        </span>
-      ),
+      render: (r) => <IssueDueDate issue={r} baseDate={data?.baseDate} />,
     },
     {
       id: "status",
@@ -144,13 +140,21 @@ export function ProjectIssueTable({
         </StatusBadge>
       ),
     },
-    { id: "registeredAt", label: "등록일", render: (r) => formatDate(r.registeredAt) },
+    {
+      id: "registeredAt",
+      label: "등록일",
+      render: (r) => formatDate(r.registeredAt),
+    },
     {
       id: "modifiedBy",
       label: "수정자",
       render: (r) => r.modifiedBy?.userName ?? "–",
     },
-    { id: "modifiedAt", label: "수정일", render: (r) => formatDate(r.modifiedAt) },
+    {
+      id: "modifiedAt",
+      label: "수정일",
+      render: (r) => formatDate(r.modifiedAt),
+    },
   ];
   const visible = view
     ? view.order
@@ -166,7 +170,13 @@ export function ProjectIssueTable({
       dense={dense}
       loading={loading}
       empty="등록된 이슈가 없습니다."
-      emptyAction={onReset && <button type="button" onClick={onReset}>조건 초기화</button>}
+      emptyAction={
+        onReset && (
+          <button type="button" onClick={onReset}>
+            조건 초기화
+          </button>
+        )
+      }
       page={data?.page ?? 1}
       size={data?.size ?? 50}
       total={data?.total ?? 0}

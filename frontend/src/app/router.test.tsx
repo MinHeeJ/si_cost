@@ -1512,67 +1512,82 @@ describe("공식 진입점 합성", () => {
       await screen.findByTestId("project-progress-dialog"),
     ).toHaveTextContent(project.id);
   });
-  it("B6는 기존 주소의 배분표에서 선택한 단계와 계약기간으로 연다", async () => {
-    vi.mocked(projects.getProjects).mockResolvedValue({
-      items: [
-        {
-          ...project,
-          customerName: null,
-          partName: null,
-          personCount: 0,
-          distribution: null,
-        },
-      ],
-      total: 1,
-      unassignedCount: 1,
-      page: 1,
-      size: 50,
-      year: 2026,
-    });
-    vi.mocked(distribution.getProjectDistribution).mockResolvedValue({
-      project,
-      viewedStep: "EST",
-      selectedStep: null,
-      months: [],
-      rows: [],
-      monthlyTotals: [],
-      totalAmount: "0",
-      revision: "distribution-revision",
-    });
-    vi.mocked(distribution.getProjectDistributionComparison).mockResolvedValue({
-      selectedStep: null,
-      contractAmount: "100",
-      totalAmount: "0",
-      differenceAmount: "-100",
-      mismatchCount: 0,
-      items: [],
-      warnings: [],
-    });
-    vi.mocked(distribution.getProjectDistributionUploads).mockResolvedValue({
-      items: [],
-    });
-    open("/UI-01");
-    await userEvent.click(
-      await screen.findByTestId("project-distribution-p-0042"),
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId("distribution-upload")).toBeEnabled(),
-    );
-    await userEvent.click(screen.getByTestId("distribution-upload"));
-    expect(await screen.findByTestId("b6-upload-context")).toHaveTextContent(
-      project.startDate,
-    );
-    expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
-      project.endDate,
-    );
-    expect(screen.getByTestId("b6-step-select")).toHaveValue("EST");
-    expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
-      "선택연도 2026",
-    );
-    expect(applicationRoutes.some((route) => route.path?.includes("B6"))).toBe(
-      false,
-    );
-  });
+  it.each(["PLAN", null] as const)(
+    "B6는 계산 단계 %s를 기본값으로 쓰고 기존 주소와 계약기간을 유지한다",
+    async (selectedStep) => {
+      vi.mocked(projects.getProjects).mockResolvedValue({
+        items: [
+          {
+            ...project,
+            customerName: null,
+            partName: null,
+            personCount: 0,
+            distribution: null,
+          },
+        ],
+        total: 1,
+        unassignedCount: 1,
+        page: 1,
+        size: 50,
+        year: 2026,
+      });
+      vi.mocked(distribution.getProjectDistribution).mockResolvedValue({
+        project,
+        viewedStep: "PLAN",
+        selectedStep,
+        months: [],
+        rows: [],
+        monthlyTotals: [],
+        totalAmount: "0",
+        revision: "distribution-revision",
+      });
+      vi.mocked(
+        distribution.getProjectDistributionComparison,
+      ).mockResolvedValue({
+        selectedStep,
+        contractAmount: "100",
+        totalAmount: "0",
+        differenceAmount: "-100",
+        mismatchCount: 0,
+        items: [],
+        warnings: [],
+      });
+      vi.mocked(distribution.getProjectDistributionUploads).mockResolvedValue({
+        items: [],
+      });
+      open("/UI-01");
+      await userEvent.click(
+        await screen.findByTestId("project-distribution-p-0042"),
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("distribution-upload")).toBeEnabled(),
+      );
+      await userEvent.click(screen.getByTestId("distribution-upload"));
+      expect(await screen.findByTestId("b6-upload-context")).toHaveTextContent(
+        project.startDate,
+      );
+      expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
+        project.endDate,
+      );
+      expect(screen.getByTestId("b6-step-select")).toHaveValue(
+        selectedStep ?? "",
+      );
+      if (selectedStep) {
+        expect(distribution.getProjectDistribution).toHaveBeenCalledWith(
+          project.id,
+          selectedStep,
+        );
+      } else {
+        expect(distribution.getProjectDistribution).not.toHaveBeenCalled();
+      }
+      expect(screen.getByTestId("b6-upload-context")).toHaveTextContent(
+        "선택연도 2026",
+      );
+      expect(
+        applicationRoutes.some((route) => route.path?.includes("B6")),
+      ).toBe(false);
+    },
+  );
   it.each(Object.keys(screenRegistry))(
     "%s는 등록된 실제 화면으로 진입한다",
     async (id) => {

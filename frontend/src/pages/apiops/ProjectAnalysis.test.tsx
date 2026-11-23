@@ -135,6 +135,7 @@ function board(): api.BoardPage {
         projectId: "off-page",
         projectName: "다른 페이지 미갱신",
         elapsedDays: 30,
+        lastUpdatedDate: "2026-05-31",
       },
     ],
     calculationNotice: "일정·원가 신호는 1차 경보입니다.",
@@ -371,8 +372,9 @@ describe("프로젝트 원가 목록", () => {
     fireEvent.click(screen.getByRole("button", { name: "이전 기간" }));
     await waitFor(() => expect(selector).toHaveValue("2026-05"));
     expect(save).toHaveBeenCalledWith("2026-05");
-    expect(await screen.findByRole("group", { name: "조회 기간 상태" }))
-      .toHaveTextContent("2025-01 ~ 2026-05");
+    expect(
+      await screen.findByRole("group", { name: "조회 기간 상태" }),
+    ).toHaveTextContent("2025-01 ~ 2026-05");
     expect(api.getProjectCosts).toHaveBeenCalledWith(
       { month: "2026-05", page: 1 },
       expect.any(AbortSignal),
@@ -582,8 +584,9 @@ describe("프로젝트 원가 목록", () => {
     const row = name.closest("tr")!;
     expect(row).toHaveAttribute("tabindex", "0");
     expect(
-      within(screen.getByRole("group", { name: "조회 기간 상태" }))
-        .getByText("행을 누르면 월별 원가·시뮬레이션을 볼 수 있습니다."),
+      within(screen.getByRole("group", { name: "조회 기간 상태" })).getByText(
+        "행을 누르면 월별 원가·시뮬레이션을 볼 수 있습니다.",
+      ),
     ).toBeInTheDocument();
     fireEvent.keyDown(row, { key: "Enter" });
     expect(screen.getByTestId("row-detail")).toHaveTextContent("owned");
@@ -608,14 +611,61 @@ describe("프로젝트 원가 목록", () => {
 });
 describe("프로젝트 현황판", () => {
   it("현재 단계 셀은 진행 현황으로 이동하고 원가 링크는 자기 경로를 유지한다", async () => {
-    mount(<><ProjectStatusBoard /><RetainedLocation /></>, "/UI-31?light=위험");
+    mount(
+      <>
+        <ProjectStatusBoard />
+        <RetainedLocation />
+      </>,
+      "/UI-31?light=위험",
+    );
     const row = await screen.findByTestId("status-board-table-row-owned");
     expect(screen.getByText("총 57건")).toBeInTheDocument();
     fireEvent.click(row.querySelector('[data-column="currentStep"]')!);
-    expect(screen.getByTestId("retained-location")).toHaveTextContent("/UI-01?projectId=owned&tab=progress");
+    expect(screen.getByTestId("retained-location")).toHaveTextContent(
+      "/UI-01?projectId=owned&tab=progress",
+    );
     fireEvent.click(screen.getByTestId("status-cost-owned"));
-    expect(screen.getByTestId("retained-location")).toHaveTextContent("/UI-04?");
-    expect(screen.getByTestId("retained-location")).not.toHaveTextContent("tab=progress");
+    expect(screen.getByTestId("retained-location")).toHaveTextContent(
+      "/UI-04?",
+    );
+    expect(screen.getByTestId("retained-location")).not.toHaveTextContent(
+      "tab=progress",
+    );
+  });
+  it("메모 없는 이유 배지·띠·마지막 업데이트를 같은 표현으로 표시한다", async () => {
+    const data = board();
+    data.items[0] = {
+      ...data.items[0],
+      lastUpdatedDate: null,
+      elapsedDays: 79,
+      reasons: [
+        {
+          kind: "주간 메모 없음",
+          light: "주의",
+          value: "79",
+          threshold: ">14",
+          formula: "계약 시작 기준",
+        },
+      ],
+    };
+    data.staleProjects = [
+      {
+        projectId: "owned",
+        projectName: "진행 프로젝트",
+        elapsedDays: 79,
+        lastUpdatedDate: null,
+      },
+    ];
+    vi.mocked(api.getProjectStatusBoard).mockResolvedValue(data);
+    mount(<ProjectStatusBoard />, "/UI-31");
+    const row = await screen.findByTestId("status-board-table-row-owned");
+    expect(
+      within(row).getAllByText("주간 메모 없음(계약 시작 79일)"),
+    ).toHaveLength(2);
+    expect(screen.getByTestId("status-stale-banner")).toHaveTextContent(
+      "주간 메모 없음(계약 시작 79일)",
+    );
+    expect(screen.queryByText(/메모경과/)).not.toBeInTheDocument();
   });
   it("renders all signal reasons with distinct severities, all PMs, unknown and off-page stale banner", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");
@@ -629,7 +679,7 @@ describe("프로젝트 현황판", () => {
 
     expect(screen.getByText("원가 미확인")).toBeInTheDocument();
     expect(screen.getByTestId("status-stale-banner")).toHaveTextContent(
-      "다른 페이지 미갱신 (30일)",
+      "다른 페이지 미갱신 (메모경과 30)",
     );
     expect(screen.queryByText("월 선택")).not.toBeInTheDocument();
   });

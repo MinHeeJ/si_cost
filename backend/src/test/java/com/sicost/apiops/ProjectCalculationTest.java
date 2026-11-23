@@ -8,6 +8,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 import static com.sicost.apiops.ProjectAnalysisDtos.*;
+import static org.mockito.Mockito.*;
 
 class ProjectCalculationTest {
     final ProjectCostCalculation costs=new ProjectCostCalculation(new TurnkeyRevenueCalculation());
@@ -68,8 +69,40 @@ class ProjectCalculationTest {
         var snapshot=snapshot(project,List.of(person("202601","actual","199","0")),List.of(),List.of(),
             List.of(new Memo("project",1,LocalDate.of(2026,1,30),n("10")),new Memo("project",2,LocalDate.of(2026,1,31),null)),List.of());
         var row=board.row(snapshot,project,costs.row(snapshot,project,selected),LocalDate.of(2026,1,31));
-        assertThat(row.get("planProgress")).isEqualTo("19.2");assertThat(row.get("actualProgress")).isEqualTo("10.0");assertThat(row.get("light")).isEqualTo("주의");
+        assertThat(row.get("planProgress")).isEqualTo("19.0");assertThat(row.get("actualProgress")).isEqualTo("10.0");assertThat(row.get("light")).isEqualTo("주의");
         assertThat(row.get("lastUpdatedDate")).isEqualTo(LocalDate.of(2026,1,31));assertThat(row.get("elapsedDays")).isEqualTo(0);
+    }
+    @Test void boardAndDetailDistinguishAbsentMemoWithoutChangingFourteenDayBoundary() {
+        var p=project("MO");
+        var repository=mock(com.sicost.progress.ProjectProgressRepository.class);
+        var costSource=mock(com.sicost.progress.ProjectProgressCostSource.class);
+        var revision=mock(com.sicost.common.concurrent.ProjectProgressAggregateRevision.class);
+        when(repository.required(anyString(),any())).thenReturn(progressProject(p));
+        when(costSource.load(any(),any())).thenReturn(new com.sicost.progress.ProjectProgressDtos.Cost(
+            BigDecimal.ZERO,new com.sicost.progress.ProjectProgressDtos.Completeness(true,true,false,List.of(),0,"2025-12","2026-01",null)));
+        for(boolean absent:List.of(true,false)) {
+            for(int elapsed:List.of(0,14,15,30)) {
+                LocalDate day=p.fromDate().plusDays(elapsed);
+                var memos=absent?List.<Memo>of():List.of(new Memo(p.projectId(),1,p.fromDate(),null));
+                when(repository.memos(p.projectId())).thenReturn(absent?List.of():List.of(
+                    new com.sicost.progress.ProjectProgressDtos.MemoRow(p.projectId(),1,p.fromDate(),null,null,null,null,
+                        "admin","관리자",p.fromDate().atStartOfDay(),null,null,null)));
+                var service=new com.sicost.progress.ProjectProgressQueryService(repository,revision,costSource,
+                    mock(com.sicost.common.context.CurrentUserProvider.class),
+                    Clock.fixed(day.atStartOfDay(ZoneId.of("Asia/Seoul")).toInstant(),ZoneId.of("Asia/Seoul")));
+                var detail=service.getProjectProgress(p.projectId(),2025).status();
+                var snapshot=snapshot(p,List.of(),List.of(),List.of(),memos,List.of());
+                var row=board.row(snapshot,p,costs.row(snapshot,p,selected),day);
+                String kind=absent?"주간 메모 없음":"메모경과";
+                assertThat(row.get("elapsedDays")).isEqualTo(detail.elapsedDays()).isEqualTo(elapsed);
+                assertThat(row.get("light")).isEqualTo(detail.light()).isEqualTo(elapsed>14?"주의":"정상");
+                assertThat(detail.reasons()).filteredOn(r->r.kind().equals(kind)).hasSize(elapsed>14?1:0);
+                @SuppressWarnings("unchecked")
+                var reasons=(List<Map<String,Object>>)row.get("reasons");
+                assertThat(reasons).filteredOn(r->kind.equals(r.get("kind"))).hasSize(elapsed>14?1:0);
+                if(elapsed>14)assertThat(reasons.get(0).get("value")).isEqualTo(detail.reasons().get(0).value());
+            }
+        }
     }
     @Test void endedTurnkeyRevenueUsesContractRatherThanBudgetProgressAndKeepsMissingCostUnknown() {
         var project=new Project("project","프로젝트","TK","ING",null,LocalDate.of(2025,12,1),LocalDate.of(2026,1,15),n("1000"),n("800"),n("0"),n("0"));
@@ -97,6 +130,45 @@ class ProjectCalculationTest {
             List.of(new Issue("project","HIGH",LocalDate.of(2026,1,31),"CUSTOM"),new Issue("project","HIGH",LocalDate.of(2026,1,1),"CLOSE")));
         var row=board.row(snapshot,project,costs.row(snapshot,project,selected),LocalDate.of(2026,1,31));
         assertThat(row.get("openIssueCount")).isEqualTo(1);assertThat(row.get("overdueIssueCount")).isEqualTo(0);assertThat(row.get("updateWarning")).isEqualTo(false);assertThat(row.get("light")).isEqualTo("정상");
+    }
+    @Test void inclusiveStageDaysAgreeForFixedNovemberSixteenthAndStageEdges() {
+        LocalDate today=LocalDate.of(2026,11,16);
+        // Isolated schedules: 5 completed + analysis weight 15 * elapsed / inclusive days.
+        for(var example:List.of(
+            new String[]{"턴키01","TK","2026-11-10","2026-12-06","8.3"},
+            new String[]{"내부01","IN","2026-11-06","2026-11-25","12.5"},
+            new String[]{"B9턴키ID","TK","2026-11-06","2026-11-18","16.5"})) {
+            LocalDate analysisStart=LocalDate.parse(example[2]),analysisEnd=LocalDate.parse(example[3]);
+            var p=new Project("project",example[0],example[1],"ING",null,LocalDate.of(2026,11,1),
+                analysisEnd.plusDays(5),n("1000"),n("800"),n("0"),n("0"));
+            var codes=com.sicost.progress.ProjectProgressCalculation.codes(p.contractType());
+            var weights=List.of("5","15","20","35","15","5","5");
+            var rows=new ArrayList<com.sicost.progress.ProjectProgressDtos.StepRow>();
+            LocalDate start=p.fromDate();
+            for(int i=0;i<7;i++) {
+                LocalDate end=i==0?analysisStart.minusDays(1):i==1?analysisEnd:start;
+                rows.add(new com.sicost.progress.ProjectProgressDtos.StepRow(p.projectId(),i+1,codes.get(i),codes.get(i),
+                    n(weights.get(i)),start,end,null,"admin","관리자",start.atStartOfDay(),null,null,null));
+                start=end.plusDays(1);
+            }
+            assertThat(com.sicost.progress.ProjectProgressCalculation.valid(progressProject(p),rows)).isTrue();
+            var stages=rows.stream().map(r->new Stage(r.projectId(),r.stepSn(),r.stepCode(),r.stepName(),r.weight(),
+                r.startDate(),r.endDate(),null,r.registeredBy(),r.registeredName(),r.registeredAt(),null,null,null)).toList();
+            var snapshot=snapshot(p,List.of(),List.of(),stages,List.of(new Memo(p.projectId(),1,today,n("0"))),List.of());
+            for(var day:List.of(analysisStart,today,analysisEnd)) {
+                String expected=day.equals(analysisStart)?"5.0":day.equals(analysisEnd)?"20.0":example[4];
+                assertThat(com.sicost.progress.ProjectProgressCalculation.plan(progressProject(p),rows,day))
+                    .as(example[0]+" "+day).isEqualTo(expected);
+                assertThat(board.row(snapshot,p,costs.row(snapshot,p,selected),day).get("planProgress"))
+                    .as("board "+example[0]+" "+day).isEqualTo(expected);
+            }
+            for(var gap:List.of("4.9","5.0","9.9","10.0")) {
+                var withActual=snapshot(p,List.of(),List.of(),stages,
+                    List.of(new Memo(p.projectId(),1,analysisEnd,n("20.0").subtract(n(gap)))),List.of());
+                var result=board.row(withActual,p,Map.of("cumulativeCost","0"),analysisEnd);
+                assertThat(result.get("light")).isEqualTo(n(gap).compareTo(n("10"))>=0?"위험":n(gap).compareTo(n("5"))>=0?"주의":"정상");
+            }
+        }
     }
     @Test void validStagesWeightedPlanAndRawCompletedDatesRetainedWhileInvalidUsesPeriodFallback() {
         var project=project("TK");var stages=stages(project);

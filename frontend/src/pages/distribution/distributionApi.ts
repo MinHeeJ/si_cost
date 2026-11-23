@@ -111,20 +111,3 @@ export const downloadDistributionTemplate = async (projectId: string) =>
       `/api/excel/B6/template?${new URLSearchParams({ projectId })}`,
     ),
   );
-export const downloadDistribution = async (
-  projectId: string,
-  step: DistributionStep,
-  amountUnit: AmountUnit,
-) =>
-  saveDownload(
-    await downloadB7File("/api/exports/master-data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        view: "PROJECT_DISTRIBUTION",
-        projectId,
-        step,
-        amountUnit,
-      }),
-    }),
-  );
