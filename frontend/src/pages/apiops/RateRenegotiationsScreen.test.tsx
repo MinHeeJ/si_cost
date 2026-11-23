@@ -210,7 +210,18 @@ describe("단가 재협상 대상", () => {
   it("failed request preserves data and retries GET without saving", async () => {
     mount();
     await screen.findByRole("group", { name: "조회 기간 상태" });
-    vi.mocked(api.getRateRenegotiations).mockRejectedValueOnce(
+    let failRequest!: (error: ApiError) => void;
+    vi.mocked(api.getRateRenegotiations).mockReturnValueOnce(
+      new Promise((_, reject) => { failRequest = reject; }),
+    );
+    fireEvent.click(screen.getByTestId("renegotiation-recalculate"));
+    const table = screen.getByTestId("renegotiation-table");
+    expect(table).toHaveAttribute("aria-busy", "true");
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(11);
+    expect(within(table).getByRole("status")).toHaveTextContent("불러오는 중입니다.");
+    expect(screen.queryByTestId("renegotiation-person-owned-0")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("renegotiation-table-totals")).not.toBeInTheDocument();
+    failRequest(
       new ApiError(500, {
         success: false,
         meta: {},
@@ -219,7 +230,6 @@ describe("단가 재협상 대상", () => {
         requestId: "owned-request",
       }),
     );
-    fireEvent.click(screen.getByTestId("renegotiation-search"));
     await screen.findByText(/조회 실패/);
     expect(screen.getByTestId("renegotiation-person-owned-0")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
