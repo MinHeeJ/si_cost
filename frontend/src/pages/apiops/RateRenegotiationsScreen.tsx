@@ -420,7 +420,12 @@ export function RateRenegotiationsScreen({
           submit({ ...applied, page: 1 });
         }}
       >
-        <h2 id="renegotiation-assumption-title">단가 인상 시뮬레이션</h2>
+        <div className="renegotiation-assumption-heading">
+          <HelpTooltip label="단가 인상 시뮬레이션" iconOnly>
+            단순 조회용이며, DB에는 변경값이 반영되지않습니다.
+          </HelpTooltip>
+          <h2 id="renegotiation-assumption-title">단가 인상 시뮬레이션</h2>
+        </div>
         <label>
           인상률{" "}
           <span className="renegotiation-rate-input">
