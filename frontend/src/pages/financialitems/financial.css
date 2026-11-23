@@ -138,22 +138,29 @@
 }
 .financial-tab-panel {
   display: grid;
-  gap: 32px;
+  gap: 20px;
   min-width: 0;
 }
 .financial-section {
-  display: grid;
-  gap: 12px;
+  --financial-section-padding: 18px;
+
   min-width: 0;
+  overflow: clip;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--e1);
   scroll-margin-top: 132px;
   scroll-margin-bottom: 100px;
 }
 .financial-section > .sicost-banner {
-  margin: 0;
+  margin: 12px var(--financial-section-padding);
+}
+.financial-section > .financial-section-note {
+  padding: 10px var(--financial-section-padding);
 }
 .financial-section-heading {
-  min-height: 44px;
-  padding-bottom: 8px;
+  min-height: 60px;
+  padding: 12px var(--financial-section-padding);
 }
 .financial-section-heading > div,
 .financial-subsection-heading,
@@ -163,8 +170,25 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+.financial-section .sicost-table-viewport {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.financial-editor .sicost-table thead th {
+  text-align: center !important;
+}
+.financial-section .sicost-table thead th {
+  background: var(--head-bg);
+}
 .financial-section .sicost-table td {
   padding-block: 6px;
+}
+.financial-section .sicost-table :is(th, td):first-child {
+  padding-inline-start: var(--financial-section-padding);
+}
+.financial-section .sicost-table :is(th, td):last-child {
+  padding-inline-end: var(--financial-section-padding);
 }
 .financial-row-draft {
   display: block;
@@ -183,29 +207,17 @@
   min-width: 96px;
   width: 112px;
 }
-.financial-tax-content {
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-  padding-inline-start: 16px;
-  border-inline-start: 2px solid var(--divider);
-}
 .financial-tax-overview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--e1);
+  gap: 16px 28px;
+  padding: 16px var(--financial-section-padding);
 }
 .financial-tax-field {
   display: grid;
   gap: 6px;
   align-content: start;
-  padding: 12px 16px;
   font-size: 13px;
-}
-.financial-tax-field + .financial-tax-field {
-  border-inline-start: 1px solid var(--divider);
 }
 .financial-tax-field label {
   display: grid;
@@ -223,13 +235,12 @@
   margin: 0;
 }
 .financial-subsection {
-  display: grid;
-  gap: 10px;
   min-width: 0;
-}
-.financial-subsection + .financial-subsection {
   border-top: 1px solid var(--divider);
-  padding-top: 12px;
+}
+.financial-subsection > header {
+  min-height: 52px;
+  padding: 10px var(--financial-section-padding);
 }
 .financial-subsection h3 {
   margin: 0;
@@ -244,6 +255,8 @@
 .financial-summary {
   flex-wrap: wrap;
   justify-content: flex-end;
+  padding: 12px var(--financial-section-padding);
+  border-top: 1px solid var(--divider);
   font-size: 13px;
 }
 .financial-summary span > span {
@@ -328,10 +341,6 @@
 @media (max-width: 850px) {
   .financial-tax-overview {
     grid-template-columns: 1fr;
-  }
-  .financial-tax-field + .financial-tax-field {
-    border-inline-start: 0;
-    border-top: 1px solid var(--divider);
   }
 }
 @media (max-width: 600px) {
