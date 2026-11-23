@@ -162,7 +162,8 @@ export function ReasonFields({
       </label>
       <label className="sicost-field">
         메모
-        <FieldHelp label="메모" /><textarea
+        <FieldHelp label="메모" />
+        <textarea
           data-testid="assignment-memo"
           disabled={disabled}
           value={memo}
@@ -341,15 +342,22 @@ export function AssignmentChangeDialog({
                 setValue("");
               }}
             >
-              {Object.entries(changeLabels).map(([key, label]) => (
-                <option
-                  data-testid={`assignment-change-type-option-${key.toLowerCase()}`}
-                  key={key}
-                  value={key}
-                >
-                  {name("ASGN_CHG_TYPE", key)}
-                </option>
-              ))}
+              {Object.entries(changeLabels)
+                .filter(
+                  ([key]) =>
+                    key !== "UPRC" ||
+                    (assignment.billingUnitPrice !== null &&
+                      assignment.inputType !== "FREE"),
+                )
+                .map(([key, label]) => (
+                  <option
+                    data-testid={`assignment-change-type-option-${key.toLowerCase()}`}
+                    key={key}
+                    value={key}
+                  >
+                    {name("ASGN_CHG_TYPE", key)}
+                  </option>
+                ))}
             </select>
           </label>
           {type === "EXT" && <p>연장 시작일은 기존 종료일 다음 날입니다.</p>}

@@ -25,6 +25,7 @@ import {
 } from "../contacts/CandidateContactsPanel";
 import { ChangeHistoryTable } from "../apiops/ChangeHistoryTable";
 import { getPeopleHistory } from "../apiops/peopleClient";
+import { getCandidateContacts } from "../contacts/peopleClient";
 import { CandidateForm } from "./CandidateForm";
 import * as api from "./peopleClient";
 import "./candidates.css";
@@ -118,8 +119,33 @@ export function CandidatesScreen({
   const [notice, setNotice] = useState(""),
     [committed, setCommitted] = useState<string>(),
     [highlight, setHighlight] = useState<string>();
+  const [pinnedRow, setPinnedRow] = useState<api.CandidateDetail>();
   const [actionError, setActionError] = useState<unknown>(),
     [downloading, setDownloading] = useState(false);
+  const [detailCounts, setDetailCounts] = useState<{
+    contacts: number;
+    history: number;
+  }>();
+  const [countsError, setCountsError] = useState(false);
+  const [countsRetry, setCountsRetry] = useState(0);
+  useEffect(() => {
+    setDetailCounts(undefined);
+    setCountsError(false);
+    if (!detail) return;
+    const controller = new AbortController();
+    void Promise.all([
+      getCandidateContacts(detail.id, 1, 20, controller.signal),
+      getPeopleHistory("CANDIDATE", detail.id, 1, 20, controller.signal),
+    ])
+      .then(([contacts, history]) => {
+        if (!controller.signal.aborted)
+          setDetailCounts({ contacts: contacts.total, history: history.total });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCountsError(true);
+      });
+    return () => controller.abort();
+  }, [detail?.id, detail?.revision, version, countsRetry]);
   useEffect(() => {
     const refresh = () => setVersion((v) => v + 1);
     const events = [
@@ -178,6 +204,7 @@ export function CandidatesScreen({
   const load = useCallback(
     async (signal?: AbortSignal) => {
       const token = ++sequence.current;
+      setPinnedRow(undefined);
       setLoading(true);
       setError(undefined);
       try {
@@ -214,7 +241,7 @@ export function CandidatesScreen({
   }, [load, active, version]);
   useEffect(() => {
     if (!highlight) return;
-    const timer = window.setTimeout(() => setHighlight(undefined), 2000);
+    const timer = window.setTimeout(() => setHighlight(undefined), 6000);
     return () => window.clearTimeout(timer);
   }, [highlight]);
   function label(group: string, value: string) {
@@ -270,8 +297,9 @@ export function CandidatesScreen({
           items: [row, ...page.items.filter((r) => r.id !== id)],
         });
         setHighlight(id);
+        setPinnedRow(row);
       } else await load();
-      setVersion((v) => v + 1);
+      if (!created) setVersion((v) => v + 1);
       setCommitted(undefined);
     } catch {
       setNotice(
@@ -419,16 +447,12 @@ export function CandidatesScreen({
         : c,
     )
     .filter((c): c is Column<api.CandidateItem> => Boolean(c));
-  const highlightedRow =
-    highlight && detail?.id === highlight ? detail : undefined;
   const sortedRows =
-    highlight && data
-      ? [
-          ...(highlightedRow
-            ? [highlightedRow]
-            : data.items.filter((r) => r.id === highlight)),
-          ...data.items.filter((r) => r.id !== highlight),
-        ].slice(0, filters.size)
+    pinnedRow && data
+      ? [pinnedRow, ...data.items.filter((r) => r.id !== pinnedRow.id)].slice(
+          0,
+          filters.size,
+        )
       : (data?.items ?? []);
   return (
     <section
@@ -639,12 +663,19 @@ export function CandidatesScreen({
           {!loading && !sortedRows.length && (
             <div className="sicost-empty">
               <p>조건에 맞는 결과가 없습니다.</p>
-              <button type="button" data-testid="candidate-card-empty-reset" onClick={() => apply(true)}>조건 초기화</button>
+              <button
+                type="button"
+                data-testid="candidate-card-empty-reset"
+                onClick={() => apply(true)}
+              >
+                조건 초기화
+              </button>
             </div>
           )}
           {sortedRows.map((r) => (
             <article
               data-testid={`candidate-card-${r.id.toLowerCase()}`}
+              className={highlight === r.id ? "candidate-new-row" : undefined}
               key={r.id}
             >
               {columns
@@ -773,10 +804,18 @@ export function CandidatesScreen({
                       aria-pressed={t === tab}
                       onClick={() => setTab(t)}
                     >
-                      {t}
+                      {t === "기본 정보"
+                        ? t
+                        : `${t} (${(t === "연락 기록" ? detailCounts?.contacts : detailCounts?.history) ?? "…"})`}
                     </button>
                   ))}
                 </SegmentedTabList>
+                {countsError && (
+                  <ErrorBanner
+                    message="상세 탭 건수를 불러오지 못했습니다."
+                    onRetry={() => setCountsRetry((n) => n + 1)}
+                  />
+                )}
                 <section
                   hidden={tab !== "기본 정보"}
                   role="tabpanel"

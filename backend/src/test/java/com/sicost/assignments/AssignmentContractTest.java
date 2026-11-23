@@ -42,6 +42,7 @@ class AssignmentContractTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @MockBean AssignmentActionsMapper mapper;
+    @MockBean com.sicost.projects.ProjectMapper projectReferences;
     @MockBean AssignmentMapper references;
     @MockBean AssignmentMonthlyMapper months;
     @MockBean CurrentUserProvider users;

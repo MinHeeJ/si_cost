@@ -21,6 +21,7 @@ import * as api from "./assignmentActionsApi";
 import * as shared from "../shared/sharedApi";
 import * as people from "../developers/peopleClient";
 import { ApiError } from "../../shared/api";
+import { PermissionContext } from "../../shared/permission/PermissionBoundary";
 vi.mock("./assignmentActionsApi");
 vi.mock("../shared/sharedApi");
 vi.mock("../developers/peopleClient");
@@ -152,7 +153,244 @@ const ready = async () => {
     expect(screen.getByTestId("assignment-new")).not.toBeDisabled(),
   );
 };
-it("11열·십진 원금 비파괴 단위와 API 값을 표시한다", async () => {
+it("경고 종류를 구분하고 MM 합계와 미계약 선투입 필터를 제공한다", async () => {
+  vi.mocked(api.getAssignments).mockResolvedValue({
+    items: [
+      {
+        ...row,
+        warnings: [
+          {
+            code: "UNCONTRACTED",
+            message: "미계약 수주예정 프로젝트입니다.",
+            months: [],
+            assignmentIds: [row.id],
+          },
+          {
+            code: "PART_DIFFERENCE",
+            message: "영업 파트가 다릅니다.",
+            months: [],
+            assignmentIds: [row.id],
+          },
+          {
+            code: "MM_OVER",
+            message: "2026-07 전프로젝트 월MM 1.50 > 1.0",
+            months: ["2026-07"],
+            assignmentIds: [row.id],
+          },
+        ],
+      },
+    ],
+    total: 1,
+    page: 1,
+    size: 50,
+  });
+  draw();
+  await ready();
+  expect(screen.getByTestId("assignment-warning-a-101-0")).toHaveTextContent(
+    "미계약 선투입",
+  );
+  expect(screen.getByTestId("assignment-warning-a-101-1")).toHaveTextContent(
+    "영업 파트 다름",
+  );
+  expect(
+    screen.getByTitle("2026-07 전프로젝트 월MM 1.50 > 1.0"),
+  ).toHaveTextContent("⚠");
+  await userEvent.click(screen.getByTestId("assignment-warning-a-101-2"));
+  expect(await screen.findByRole("tooltip")).toHaveTextContent("월MM 1.50");
+  await userEvent.selectOptions(screen.getByLabelText("경고"), "UNCONTRACTED");
+  await userEvent.click(screen.getByTestId("assignments-query"));
+  await waitFor(() =>
+    expect(api.getAssignments).toHaveBeenLastCalledWith(
+      expect.objectContaining({ warning: "UNCONTRACTED" }),
+    ),
+  );
+  expect(
+    screen.getByRole("option", { name: "미계약 선투입" }),
+  ).toBeInTheDocument();
+});
+it("신규 배정의 인력 목록은 휴직 우선·현재 마지막 철수일·대기를 표시한다", async () => {
+  vi.mocked(api.developerOptions).mockResolvedValue({
+    items: [
+      {
+        id: "D-1",
+        name: "투입자",
+        managementNo: "M-1",
+        status: "WTHDR",
+        withdrawalDate: "2027-02-28",
+      },
+      {
+        id: "D-2",
+        name: "대기자",
+        managementNo: "M-2",
+        status: "WORK",
+        withdrawalDate: null,
+      },
+      {
+        id: "D-3",
+        name: "휴직자",
+        managementNo: "M-3",
+        status: "LEAVE",
+        withdrawalDate: "2027-03-01",
+      },
+    ],
+    total: 3,
+    page: 1,
+    size: 50,
+  });
+  render(
+    <AssignmentCreateForm
+      year={2026}
+      today={context.currentDate}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+    />,
+  );
+  expect(
+    await screen.findByRole("option", {
+      name: "투입자 (M-1) · 투입 중 ~2027-02-28",
+    }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("option", { name: "대기자 (M-2) · 대기" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("option", { name: "휴직자 (M-3) · 휴직" }),
+  ).toBeInTheDocument();
+});
+it("시작월 월 단가가 없을 때만 청구 단가 칸 아래 안내한다", async () => {
+  vi.mocked(people.getDeveloper)
+    .mockResolvedValueOnce({
+      priceHistory: [],
+      jobCode: "DEV",
+    } as unknown as people.DeveloperDetail)
+    .mockResolvedValueOnce({
+      priceHistory: [
+        { effectiveMonth: "2026-08", endMonth: null, monthlyRate: "100" },
+      ],
+      jobCode: "DEV",
+    } as unknown as people.DeveloperDetail);
+  render(
+    <PermissionContext.Provider
+      value={{
+        screens: { "UI-02": ["INQ"] },
+        fields: { "UI-12": ["billingUnitPrice"] },
+        sensitive: true,
+        features: {},
+        scope: { all: true, partIds: [], projectIds: [] },
+      }}
+    >
+      <AssignmentCreateForm
+        year={2026}
+        today={context.currentDate}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    </PermissionContext.Provider>,
+  );
+  await screen.findByRole("option", { name: `${row.projectName} · MO · ING` });
+  fireEvent.change(screen.getByTestId("assignment-project"), {
+    target: { value: row.projectId },
+  });
+  fireEvent.change(screen.getByTestId("assignment-developer"), {
+    target: { value: row.developerId },
+  });
+  expect(
+    await screen.findByTestId("assignment-missing-monthly-rate"),
+  ).toHaveTextContent("⚠ 개발자 풀에 월 단가가 없는 사람");
+  fireEvent.change(screen.getByTestId("assignment-create-start-date"), {
+    target: { value: "2026-08-01" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByTestId("assignment-create-billing-unit-price"),
+    ).toHaveValue("100"),
+  );
+  expect(
+    screen.queryByTestId("assignment-missing-monthly-rate"),
+  ).not.toBeInTheDocument();
+});
+it.each([
+  ["턴키", null, "NEW", false],
+  ["내부", null, "NEW", false],
+  ["무상지원", "0", "FREE", false],
+  ["월단위", "100", "NEW", true],
+  ["파견", "100", "NEW", true],
+] as const)(
+  "%s 배정의 단가 변경 노출은 청구 단가 유무를 따른다",
+  async (_, billingUnitPrice, inputType, visible) => {
+    render(
+      <AssignmentChangeDialog
+        assignment={{ ...row, billingUnitPrice, inputType }}
+        year={2026}
+        today={context.currentDate}
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    const option = screen.queryByTestId("assignment-change-type-option-uprc");
+    if (visible) expect(option).toBeInTheDocument();
+    else expect(option).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("assignment-change-type-option-rate"),
+    ).toBeInTheDocument();
+  },
+);
+it("변경 기록의 같은 연장 가능성 거부는 창을 유지하고 미정으로 다시 저장할 수 있다", async () => {
+  const onClose = vi.fn(),
+    onChanged = vi.fn().mockResolvedValue(undefined);
+  vi.mocked(api.changeAssignment)
+    .mockRejectedValueOnce(
+      new ApiError(400, {
+        success: false,
+        meta: {},
+        code: "SAME_VALUE",
+        message: "지금 연장 가능성과 같습니다. 다른 값을 골라 주세요.",
+        field: "extensionPossibility",
+        requestId: "same-value",
+      }),
+    )
+    .mockResolvedValueOnce({
+      assignment: { ...row, extensionPossibility: null },
+      changed: true,
+      warnings: [],
+      protectedMonths: [],
+    });
+  render(
+    <AssignmentChangeDialog
+      assignment={row}
+      year={2026}
+      today={context.currentDate}
+      onClose={onClose}
+      onChanged={onChanged}
+    />,
+  );
+  fireEvent.change(screen.getByTestId("assignment-change-type"), {
+    target: { value: "EXTP" },
+  });
+  fireEvent.change(screen.getByTestId("assignment-change-value"), {
+    target: { value: "H" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(
+    (
+      await screen.findAllByText(
+        "지금 연장 가능성과 같습니다. 다른 값을 골라 주세요.",
+      )
+    ).length,
+  ).toBeGreaterThan(0);
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByTestId("assignment-change-value"), {
+    target: { value: "" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  expect(api.changeAssignment).toHaveBeenLastCalledWith(
+    row.id,
+    expect.objectContaining({ extensionPossibility: null }),
+  );
+  expect(api.preview).not.toHaveBeenCalled();
+});
+it("11열·십진 원금 비파괴 단위와 API 값을表示한다", async () => {
   draw();
   await ready();
   expect(screen.queryByTestId("assignments-unit")).not.toBeInTheDocument();
@@ -183,7 +421,13 @@ it("조회 실패는 재조회만 제공한다", async () => {
   );
   draw();
   await screen.findByText(/assignment-read/);
-  await userEvent.click(within(screen.getByText(/assignment-read/).closest("[role=alert]") as HTMLElement).getByRole("button", { name: "다시 조회" }));
+  await userEvent.click(
+    within(
+      screen
+        .getByText(/assignment-read/)
+        .closest("[role=alert]") as HTMLElement,
+    ).getByRole("button", { name: "다시 조회" }),
+  );
   await ready();
   expect(api.createAssignment).not.toHaveBeenCalled();
 });
@@ -492,7 +736,9 @@ it.each([
     if (field === "year")
       expect(screen.getByText(/create-year/)).toBeInTheDocument();
     else
-      expect(screen.queryByText(new RegExp(`create-${field}`))).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(new RegExp(`create-${field}`)),
+      ).not.toBeInTheDocument();
   },
 );
 it("신규폼 빈 저장의 여러 칸 거절은 칸마다 한 번씩만 보이고 위쪽 띠·문의 번호가 없다", async () => {
@@ -670,7 +916,7 @@ it("마감 선택월을 조회·전체선택에 유지하고 초기화하면 연
       initialWarning="MM_OVER"
     />,
   );
-  await screen.findByText(row.projectName);
+  await screen.findByRole("cell", { name: row.projectName });
   expect(screen.getByTestId("assignments-month-filter")).toHaveValue("2026-05");
   fireEvent.change(screen.getByTestId("assignments-search"), {
     target: { value: "담당" },

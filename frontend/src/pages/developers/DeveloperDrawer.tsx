@@ -4,6 +4,7 @@ import { SegmentedTabs } from "../../shared/SegmentedTabs";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { PeopleChangeHistoryTable } from "../apiops/PeopleChangeHistoryTable";
+import { getPeopleHistory } from "../apiops/peopleClient";
 import { ApiError } from "../../shared/api";
 import {
   useFieldPermission,
@@ -60,6 +61,22 @@ export function DeveloperDrawer({
   const [tab, setTab] = useState("기본 정보"),
     [prices, setPrices] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [historyTotal, setHistoryTotal] = useState<number>();
+  const [historyError, setHistoryError] = useState(false);
+  const [historyRetry, setHistoryRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setHistoryTotal(undefined);
+    setHistoryError(false);
+    void getPeopleHistory("DEVELOPER", id, 1, 20, controller.signal)
+      .then((page) => {
+        if (!controller.signal.aborted) setHistoryTotal(page.total);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setHistoryError(true);
+      });
+    return () => controller.abort();
+  }, [id, refreshKey, historyRetry, data?.revision]);
   const [parts, setParts] = useState<PartOption[]>([]);
   const label = useCodeNames("EMP_TYPE", "DRCT_CLS", "WORK_STAT", "JBPS");
   const [positions, setPositions] = useState<{ code: string; name: string }[]>(
@@ -161,6 +178,12 @@ export function DeveloperDrawer({
       )}
       {data && (
         <>
+          {historyError && (
+            <ErrorBanner
+              message="변경 이력 건수를 불러오지 못했습니다."
+              onRetry={() => setHistoryRetry((n) => n + 1)}
+            />
+          )}
           <SegmentedTabs
             label="개발자 상세 탭"
             testId="developer-detail-tabs"
@@ -169,7 +192,10 @@ export function DeveloperDrawer({
             tabs={["기본 정보", "투입 이력", "근무 상태 이력", "변경 이력"].map(
               (name, i) => ({
                 key: name,
-                label: name,
+                label:
+                  name === "변경 이력"
+                    ? `${name} (${historyTotal ?? "…"})`
+                    : name,
                 testId: `developer-tab-${i}`,
               }),
             )}

@@ -43,6 +43,7 @@ class AssignmentActionsContractTest {
     @Autowired AssignmentActionsService service;
     @Autowired AssignmentMonthlyService monthly;
     @MockBean AssignmentActionsMapper mapper;
+    @MockBean com.sicost.projects.ProjectMapper projectReferences;
     @MockBean AssignmentMonthlyMapper months;
     @MockBean CurrentUserProvider users;
     @MockBean ChangeHistoryMapper audit;
@@ -130,11 +131,24 @@ class AssignmentActionsContractTest {
         mvc.perform(get("/api/assignments/substitution-candidates").param("developerId","D-102")).andExpect(status().isBadRequest());noWrites();
     }
     @Test void previewHasNoWritesAndIncludesEveryProjectsMmAndPartWarning() throws Exception {
+        when(projectReferences.part("PART-1")).thenReturn(new com.sicost.projects.ProjectDtos.Reference("PART-1","개발파트",true));
+        when(projectReferences.part("PART-OTHER")).thenReturn(new com.sicost.projects.ProjectDtos.Reference("PART-OTHER","영업파트",true));
         when(mapper.totalMm(any())).thenReturn(new BigDecimal("0.01"));when(mapper.projectPart(any())).thenReturn("PART-OTHER");
         mvc.perform(post("/api/assignments/preview").contentType("application/json").content(create().toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.months[0].monthlyMm").value("1.00")).andExpect(jsonPath("$.data.warnings[?(@.code == 'PART_DIFFERENCE')]").isNotEmpty()).andExpect(jsonPath("$.data.warnings[?(@.code == 'MM_OVER')]").isNotEmpty());noWrites();
     }
     @Test void previewRejectsMmPrecisionAndContractOutsideWithoutWrites() throws Exception {
         postBody("/api/assignments/preview",create().put("contractMm","0.123"),400);postBody("/api/assignments/preview",create().put("endDate","2029-01-01"),400);noWrites();
+    }
+    @Test void partWarningUsesNamesAndStillAllowsSaving() throws Exception {
+        when(mapper.projectPart(any())).thenReturn("PART-OTHER");
+        when(projectReferences.part("PART-OTHER")).thenReturn(new com.sicost.projects.ProjectDtos.Reference("PART-OTHER","영업파트",true));
+        when(mapper.developer(anyString())).thenAnswer(c->new Developer(c.getArgument(0),"최외주","M-101","OS","DRCT",null,"Y",day.minusYears(1),null));
+        String message="영업 파트가 다릅니다: 최외주님은 본사 소속, 프로젝트는 영업파트입니다. 매출은 프로젝트 파트로, 이 사람 이익금은 소속 파트(본사면 파트 정산 제외)로 잡힙니다. 파트를 잘못 골랐다면 개발자 풀에서 고쳐 주세요.";
+        mvc.perform(post("/api/assignments/preview").contentType("application/json").content(create().toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.warnings[?(@.code == 'PART_DIFFERENCE')].message").value(org.hamcrest.Matchers.hasItem(message)));
+        noWrites();
+        postBody("/api/assignments/A-101/changes",change("RATE").put("applyMonth","2026-07").put("newContractMm","0.50"),200);
+        assertThat(events).hasSize(1);
     }
     @Test void rateCurrentMonthUsesFirstDayAndServerFlagsOnlyTypedMm() throws Exception {
         postBody("/api/assignments/A-101/changes",change("RATE").put("applyMonth","2026-07").put("newContractMm","0.50"),200);
@@ -160,10 +174,14 @@ class AssignmentActionsContractTest {
         postBody("/api/assignments/A-101/changes",change("EARLY").put("withdrawalDate","2026-08-31").put("reasonCode","ETC"),200);
         clearInvocations(mapper,months,audit,invalidation);postBody("/api/assignments/A-101/changes",change("EARLY").put("withdrawalDate","2026-08-31").put("reasonCode","ETC"),200);noWrites();
     }
-    @Test void possibilityCanReturnToNullImmediatelyWithoutDateAndRepeatIsNoOp() throws Exception {
+    @Test void possibilityCanReturnToNullImmediatelyButChangeDialogRejectsSameValue() throws Exception {
+        mvc.perform(post("/api/assignments/A-101/changes").contentType("application/json").content(change("EXTP").put("extensionPossibility","H").toString()))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SAME_VALUE"))
+            .andExpect(jsonPath("$.message").value("지금 연장 가능성과 같습니다. 다른 값을 골라 주세요."));
+        noWrites();
         postBody("/api/assignments/A-101/changes",change("EXTP").putNull("extensionPossibility"),200);assertThat(rows.get("A-101").extensionPossibility()).isNull();
         int count=events.size();
-        mvc.perform(post("/api/assignments/A-101/changes").contentType("application/json").content(change("EXTP").putNull("extensionPossibility").toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false));
+        mvc.perform(post("/api/assignments/A-101/changes").contentType("application/json").content(change("EXTP").putNull("extensionPossibility").toString())).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("SAME_VALUE"));
         assertThat(events).hasSize(count);
         postBody("/api/assignments/A-101/changes",change("EXTP").put("applyDate","2026-08-01").putNull("extensionPossibility"),400);
     }
@@ -203,6 +221,11 @@ class AssignmentActionsContractTest {
     @Test void bulkPartitionsStaleAndSuccessAndKeepsSuccessTransaction() throws Exception {
         rows.put("A-102",source("A-102","ACT"));ObjectNode n=bulk("EXTP").putNull("extensionPossibility");n.withArray("items").addObject().put("id","A-102").put("expectedRevision","stale");
         mvc.perform(post("/api/assignments/bulk").contentType("application/json").content(n.toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.requested").value(2)).andExpect(jsonPath("$.data.applied").value(1)).andExpect(jsonPath("$.data.rejected").value(1));assertThat(rows.get("A-101").extensionPossibility()).isNull();assertThat(rows.get("A-102").extensionPossibility()).isEqualTo("H");verify(manager,atLeastOnce()).commit(any());verify(manager,atLeastOnce()).rollback(any());
+    }
+    @Test void bulkSamePossibilityIsStillCountedAsNoChange() throws Exception {
+        mvc.perform(post("/api/assignments/bulk").contentType("application/json").content(bulk("EXTP").put("extensionPossibility","H").toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.noChange").value(1)).andExpect(jsonPath("$.data.applied").value(0));
+        noWrites();
     }
     @Test void cancellationBeforeStartAndReplayIsNoChange() throws Exception {
         postBody("/api/assignments/bulk",bulk("CNCL"),200);assertThat(rows.get("A-101").status()).isEqualTo("CNCL");int count=events.size();postBody("/api/assignments/bulk",bulk("CNCL"),200);assertThat(events).hasSize(count);

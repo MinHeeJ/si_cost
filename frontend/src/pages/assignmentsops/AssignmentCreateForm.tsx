@@ -1,6 +1,9 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
-import { errorOutsideFields, useFieldErrorFocus } from "../../shared/FieldErrors";
+import {
+  errorOutsideFields,
+  useFieldErrorFocus,
+} from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -82,6 +85,7 @@ export function AssignmentCreateForm({
     submitAssignment ? "저장됐지만 다시 불러오지 못했습니다" : undefined,
   );
   const generation = useRef(0);
+  const [missingMonthlyRate, setMissingMonthlyRate] = useState(false);
   const formRoot = useRef<HTMLDivElement>(null);
   useFieldErrorFocus(formRoot, fields);
   const project = projects.find((p) => p.id === form.projectId);
@@ -134,14 +138,8 @@ export function AssignmentCreateForm({
   }, [form.projectId, form.developerId, form.inputType]);
   useEffect(() => {
     const version = ++generation.current;
-    if (
-      !canRate ||
-      !canReadDeveloper ||
-      !paid ||
-      form.inputType === "SUB" ||
-      !form.developerId
-    )
-      return;
+    setMissingMonthlyRate(false);
+    if (!canRate || !canReadDeveloper || !paid || !form.developerId) return;
     void getDeveloper(form.developerId)
       .then((d) => {
         if (version !== generation.current) return;
@@ -150,6 +148,8 @@ export function AssignmentCreateForm({
             p.effectiveMonth <= form.startDate.slice(0, 7) &&
             (!p.endMonth || p.endMonth >= form.startDate.slice(0, 7)),
         );
+        setMissingMonthlyRate(!price?.monthlyRate);
+        if (form.inputType === "SUB") return;
         setForm((old) => ({
           ...old,
           billingUnitPrice: price?.monthlyRate ?? "",
@@ -278,7 +278,8 @@ export function AssignmentCreateForm({
     type = "text",
   ) => (
     <label className="sicost-field">
-      {label}<FieldHelp label={label} />
+      {label}
+      <FieldHelp label={label} />
       <input
         data-testid={`assignment-create-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
         type={type}
@@ -297,6 +298,11 @@ export function AssignmentCreateForm({
         aria-invalid={Boolean(fields[key])}
       />
       {fields[key] && <span role="alert">{fields[key]}</span>}
+      {key === "billingUnitPrice" && missingMonthlyRate && (
+        <span data-testid="assignment-missing-monthly-rate">
+          ⚠ 개발자 풀에 월 단가가 없는 사람
+        </span>
+      )}
     </label>
   );
   return (
@@ -442,7 +448,12 @@ export function AssignmentCreateForm({
                   key={d.id}
                   value={d.id}
                 >
-                  {d.name} ({d.managementNo})
+                  {d.name} ({d.managementNo}) ·{" "}
+                  {d.status === "LEAVE"
+                    ? "휴직"
+                    : d.withdrawalDate
+                      ? `투입 중 ~${d.withdrawalDate}`
+                      : "대기"}
                 </option>
               ))}
             </select>
