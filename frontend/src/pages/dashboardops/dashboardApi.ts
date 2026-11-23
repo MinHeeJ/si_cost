@@ -136,11 +136,34 @@ export type DashboardData = {
   cashBasis: DashboardBasis;
   cashForecast?: DashboardCash[];
 };
-export const getDashboard = (month?: string, signal?: AbortSignal) =>
-  request<DashboardData>(
+export const getDashboard = async (month?: string, signal?: AbortSignal) => {
+  const data = await request<DashboardData>(
     `/api/dashboard${month ? `?${new URLSearchParams({ month })}` : ""}`,
     { signal },
   );
+  // The established API returns one calendar year. In January/February read
+  // the preceding year through that same authorized API, never invent months.
+  const [year, selectedMonth] = data.selectedMonth.split("-").map(Number);
+  const previousDecember = `${year - 1}-12`;
+  if (
+    data.salesCostTrend &&
+    selectedMonth <= 2 &&
+    previousDecember >= data.cashBaseMonth &&
+    !data.salesCostTrend.some((row) => row.month < `${year}-01`)
+  ) {
+    const previous = await request<DashboardData>(
+      `/api/dashboard?${new URLSearchParams({ month: previousDecember })}`,
+      { signal },
+    );
+    const fromMonth = `${year - 1}-${selectedMonth === 1 ? "11" : "12"}`;
+    const history =
+      previous.salesCostTrend?.filter(
+        (row) => row.month >= fromMonth && row.month <= previousDecember,
+      ) ?? [];
+    return { ...data, salesCostTrend: [...history, ...data.salesCostTrend] };
+  }
+  return data;
+};
 export async function getDashboardExport(month: string) {
   saveDownload(
     await downloadB7File(

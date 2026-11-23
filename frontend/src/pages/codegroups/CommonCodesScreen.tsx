@@ -780,13 +780,6 @@ export function CommonCodesScreen({
                     }}
                   />
                 )}
-                <p className="codegroups-help">
-                  이름을 바꾸면 저장 즉시 선택 목록에 반영되고, 지난 자료에도 새
-                  이름으로 보입니다(코드별 적용 시작일은 두지 않음). 한 번도
-                  쓰지 않은 코드만 삭제할 수 있습니다. 목록에서 사라지고 변경
-                  이력에 남습니다. 쓴 코드는 지울 수 없고 사용만 끕니다. 그룹
-                  자체의 이름 바꾸기·사용 끄기는 없습니다.
-                </p>
               </div>
             </div>
             <footer className="codegroups-footer">

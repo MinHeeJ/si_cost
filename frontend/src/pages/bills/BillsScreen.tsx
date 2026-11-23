@@ -619,9 +619,6 @@ function BillsContent({
           </>
         )}
       </KpiStrip>
-      <p className="bill-hint">
-        카드는 선택연도·이월 설정 기준이며 목록 필터와 독립입니다.
-      </p>
       {year === currentYear &&
         (renderTabs ? (
           renderTabs(actionContext)

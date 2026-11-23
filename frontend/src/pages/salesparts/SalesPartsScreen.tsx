@@ -276,9 +276,6 @@ export function SalesPartsScreen({
           파트 추가
         </button>
       </div>
-      <p className="sicost-banner sicost-tone-info">
-        기준은 적용 시작월부터 사용하며 지난 정산은 유지됩니다.
-      </p>
       <FilterBar
         className="sales-part-filters"
         resetTestId="sales-part-reset-button"

@@ -256,10 +256,6 @@ export function OperatingStandardsScreen({
             )}
           </div>
         </div>
-        <p className="sicost-banner sicost-tone-info">
-          이름·키·단위·설명은 읽기 전용입니다. 값 변경은 적용 시작월부터
-          반영되며 다른 적용월은 보존됩니다.
-        </p>
         {error != null && (
           <ErrorBanner
             message={
@@ -337,10 +333,6 @@ export function OperatingStandardsScreen({
                 자금 기준 저장
               </button>
             </div>
-            <p>
-              적용 시작월은 바꾸지 않습니다. 자금수지 계산과 마감 자료는
-              변경하지 않습니다.
-            </p>
           </section>
         )}
       </div>

@@ -244,11 +244,6 @@ function ReceivablesContent({
               </article>
             ))}
           </KpiStrip>
-          <p className="sicost-banner sicost-tone-info">
-            다시알림은 실제 수신자와 잔액을 확인한 뒤 요청합니다. 현재
-            수신대상과 과거 실제 수신자는 다릅니다. 기준일 이전의 모든 연체를
-            포함하며 알림 전 단계도 숨기지 않습니다.
-          </p>
           <h2>입금 예정일이 지난 청구 {data.total}건</h2>
         </>
       )}

@@ -59,6 +59,7 @@ function ready() {
       <SharedScreenContext.Provider
         value={{
           menus: [
+            "UI-07",
             "UI-08",
             "UI-13",
             "UI-14",
@@ -90,6 +91,7 @@ function ready() {
         <Routes>
           <Route path="/UI-16" element={<DashboardScreen />} />
           {[
+            "UI-07",
             "UI-08",
             "UI-13",
             "UI-14",
@@ -142,6 +144,13 @@ it("renders the five summaries and all twelve, six and three rows without comput
   expect(screen.getByTestId("dashboard-metric-sales")).toHaveTextContent(
     "전월 대비 –",
   );
+  await userEvent.click(screen.getByTestId("dashboard-trend-details"));
+  expect(
+    within(
+      screen.getByRole("table", { name: "매출·원가 추이 숫자표" }),
+    ).getAllByRole("row"),
+  ).toHaveLength(4);
+  await userEvent.click(screen.getByTestId("dashboard-trend-all"));
   expect(
     within(
       screen.getByRole("table", { name: "매출·원가 추이 숫자표" }),
@@ -157,7 +166,7 @@ it("renders the five summaries and all twelve, six and three rows without comput
     "월말 잔액 –",
   );
   expect(screen.getByTestId("dashboard-actions")).toHaveTextContent(
-    "1유형 · 급함 1유형",
+    "전체 1급함 1",
   );
   expect(screen.getByRole("img")).toHaveAccessibleName(
     "매출·매출원가 실선과 회사 전체 매출목표 점선",
@@ -223,7 +232,7 @@ it("preserves partial failures and nulls instead of presenting an empty success 
   ready();
   expect(await screen.findByText("청구 원천 조회 실패")).toBeInTheDocument();
   expect(screen.queryByText("확인할 일이 없습니다")).not.toBeInTheDocument();
-  expect(screen.getByTestId("dashboard-actions")).toHaveTextContent("–유형");
+  expect(screen.getByTestId("dashboard-actions")).toHaveTextContent("전체 –");
   expect(screen.getByTestId("dashboard-cash")).toHaveTextContent(
     "자금 기준 미확인",
   );
@@ -351,7 +360,7 @@ it.each([null, 0])("마감점검 미확인과 실제0을 구별한다: %s", asyn
   expect(panel).toHaveTextContent(
     value === null ? "MM 초과 –건" : "MM 초과 0건",
   );
-  expect(panel).toHaveTextContent("5/6");
+  expect(panel).toHaveTextContent("점검 항목 6개 중 5개 통과");
   expect(panel).toHaveTextContent(value === null ? "원천 미확인" : "실제 0건");
 });
 it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 이동한다", async () => {
@@ -363,6 +372,20 @@ it("과거 선택월 카드 제목을 유지하며 빈 파이프라인에서도 
   expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent("자세히");
 });
 
+it("영업파트별 현황에서 선택월을 유지하며 UI-07로 이동한다", async () => {
+  data.selectedMonth = "2026-06";
+  ready();
+  const parts = await screen.findByTestId("dashboard-parts");
+  expect(within(parts).getByRole("heading")).toHaveTextContent("6월 영업파트별 현황");
+  await userEvent.click(within(parts).getByRole("button", { name: "자세히" }));
+  expect(screen.getByTestId("destination")).toHaveTextContent("/UI-07");
+  expect(JSON.parse(screen.getByTestId("destination-state").textContent!)).toMatchObject({
+    fromDashboard: true,
+    month: "2026-06",
+    year: "2026",
+  });
+});
+
 const cardTargets = [
   ["sales", "UI-08"],
   ["operating-profit", "UI-08"],
@@ -370,6 +393,142 @@ const cardTargets = [
   ["utilization", "UI-28"],
   ["receivable", "UI-13"],
 ] as const;
+const actionCodes = [
+  "OVERDUE_RECEIVABLE",
+  "CORPORATE_TAX_DUE",
+  "CASH_SHORTAGE",
+  "STAFF_SHORTAGE",
+  "MM_OVER",
+  "PRECONTRACT_ASSIGNMENT",
+  "WITHDRAWAL_DUE",
+  "SALES_PART_MISSING",
+  "PROJECT_RISK",
+  "ISSUE_OVERDUE",
+  "WEEK_MEMO_STALE",
+  "BILLING_MISSING",
+];
+it.each([0, 5, 6, 12])(
+  "확인할 일 %s유형의 요약·전체목록·닫기 초점을 보존한다",
+  async (size) => {
+    data.actions = actionCodes.slice(0, size).map((actionCode, index) => ({
+      ...data.actions[0],
+      actionCode,
+      urgent: index >= size - Math.min(size, 4),
+    }));
+    data.actionTypeCount = size;
+    data.urgentActionTypeCount = Math.min(size, 4);
+    ready();
+    const panel = await screen.findByTestId("dashboard-actions");
+    expect(panel).toHaveTextContent(`전체 ${size}`);
+    expect(panel).toHaveTextContent(`급함 ${Math.min(size, 4)}`);
+    expect(within(panel).queryAllByTestId(/^dashboard-action-/)).toHaveLength(
+      Math.min(size, 5),
+    );
+    const expected = [...data.actions].sort(
+      (a, b) => Number(b.urgent) - Number(a.urgent),
+    );
+    expect(
+      within(panel)
+        .queryAllByTestId(/^dashboard-action-/)
+        .map((node) => node.dataset.testid),
+    ).toEqual(
+      expected
+        .slice(0, 5)
+        .map(
+          (action) =>
+            `dashboard-action-${action.actionCode.toLowerCase().replaceAll("_", "-")}`,
+        ),
+    );
+    if (size <= 5) {
+      expect(
+        screen.queryByTestId("dashboard-actions-all"),
+      ).not.toBeInTheDocument();
+      if (size === 0) expect(panel).toHaveTextContent("확인할 일이 없습니다");
+      return;
+    }
+    const open = screen.getByTestId("dashboard-actions-all");
+    await userEvent.click(open);
+    expect(
+      within(screen.getByRole("dialog")).getAllByTestId(
+        /^dashboard-modal-action-/,
+      ),
+    ).toHaveLength(size);
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(open).toHaveFocus();
+    await userEvent.click(open);
+    await userEvent.click(screen.getByTestId("dashboard-actions-close"));
+    expect(open).toHaveFocus();
+  },
+);
+it("전체 목록의 선택월 청구 누락은 카드와 같은 탭·월로 이동한다", async () => {
+  const template = data.actions[0];
+  data.actions = actionCodes.map((actionCode) => ({
+    ...template,
+    actionCode,
+    urgent: false,
+    link: { screenId: "UI-13", linkKey: "checks" },
+    basis: { ...template.basis, basisMonth: "2026-06" },
+  }));
+  ready();
+  await userEvent.click(await screen.findByTestId("dashboard-actions-all"));
+  await userEvent.click(
+    screen.getByTestId("dashboard-modal-action-billing-missing"),
+  );
+  expect(screen.getByTestId("destination")).toHaveTextContent("/UI-13");
+  expect(
+    JSON.parse(screen.getByTestId("destination-state").textContent!),
+  ).toMatchObject({ month: "2026-06", section: "checks", linkKey: "checks" });
+});
+it("실제 점검 수만큼 구간을 만들고 통과한 구간만 채운다", async () => {
+  ready();
+  const progress = await screen.findByRole("progressbar", {
+    name: "마감 점검 진행",
+  });
+  expect(progress).toHaveAttribute(
+    "aria-valuemax",
+    String(data.closeProgress.totalCheckCount),
+  );
+  expect(progress.children).toHaveLength(data.closeProgress.totalCheckCount);
+  expect(progress.querySelectorAll(".passed")).toHaveLength(
+    data.closeProgress.passedCheckCount!,
+  );
+});
+it("로딩 스켈레톤은 장식이며 초점 가능한 요소를 만들지 않는다", () => {
+  vi.mocked(api.getDashboard).mockReturnValue(new Promise(() => {}));
+  ready();
+  const skeleton = screen.getByTestId("dashboard-skeleton");
+  expect(skeleton).toHaveAttribute("aria-hidden", "true");
+  expect(
+    skeleton.querySelector("button,input,a,select,textarea,[tabindex]"),
+  ).toBeNull();
+});
+it("연도를 넘는 최근 3개월과 전체 기간은 원본 값·화면 단위를 보존한다", async () => {
+  data.selectedMonth = "2027-01";
+  data.salesCostTrend = ["2026-10", "2026-11", "2026-12", "2027-01"].map(
+    (month, index) => ({
+      ...data.salesCostTrend![0],
+      month,
+      salesAmount: index === 2 ? null : data.salesCostTrend![0].salesAmount,
+    }),
+  );
+  ready();
+  await userEvent.click(await screen.findByTestId("dashboard-trend-details"));
+  const table = screen.getByRole("table", { name: "매출·원가 추이 숫자표" });
+  expect(within(table).getAllByRole("row")).toHaveLength(4);
+  expect(table).not.toHaveTextContent("2026-10");
+  expect(table).toHaveTextContent("2026-11");
+  expect(table).toHaveTextContent("2027-01");
+  expect(screen.getByTestId("dashboard-trend-2026-12")).toHaveTextContent("–");
+  expect(screen.getByTestId("dashboard-trend")).toHaveTextContent("단위: 천원");
+  expect(screen.getByTestId("dashboard-trend")).not.toHaveTextContent("백만원");
+  await userEvent.click(screen.getByTestId("dashboard-trend-all"));
+  expect(within(table).getAllByRole("row")).toHaveLength(5);
+  expect(screen.getByTestId("dashboard-metric-sales")).toHaveTextContent(
+    "01월 매출",
+  );
+  expect(api.getDashboard).toHaveBeenCalledTimes(1);
+});
 it("인쇄 이벤트와 복귀 포커스는 현재 표시 결과를 추가 조회하지 않는다", async () => {
   let clock = 100_000;
   const now = vi.spyOn(Date, "now").mockImplementation(() => clock);
@@ -454,14 +613,18 @@ it("모든 위젯·배지·툴팁에서 내부 원천을 제거하고 실제 기
   ];
   ready();
   const root = await screen.findByTestId("dashboard-screen");
+  await screen.findByTestId("dashboard-trend");
   expect(screen.getByTestId("dashboard-trend")).toHaveTextContent(
     "조회 기준월 2026-06",
   );
-  expect(screen.getByTestId("dashboard-supply")).toHaveTextContent(
-    "예측 기준월 2026-07",
+  expect(screen.getByTestId("dashboard-supply")).not.toHaveTextContent(
+    "예측 기준월",
   );
-  expect(screen.getByTestId("dashboard-pipeline")).toHaveTextContent(
-    "집계 기준월 2026-08",
+  expect(screen.getByTestId("dashboard-alerts")).not.toHaveTextContent(
+    "기준월",
+  );
+  expect(screen.getByTestId("dashboard-pipeline")).not.toHaveTextContent(
+    "집계 기준월",
   );
   expect(root).toHaveTextContent("세금계산서 번호 미입력 1건");
   expect(root).toHaveTextContent("영업 파트 정산 2건");

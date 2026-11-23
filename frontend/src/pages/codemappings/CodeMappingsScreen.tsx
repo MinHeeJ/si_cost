@@ -276,10 +276,6 @@ export function CodeMappingsScreen({
         onSelectionChange={select}
         dense={dense}
       />
-      <p className="sicost-mapping-hint">
-        표기를 바꾸려면 삭제 후 다시 등록해 주세요. 기존 업무 자료는 변경되지
-        않습니다.
-      </p>
       {dialog === "create" && (
         <MappingCreateDialog
           groups={groups}

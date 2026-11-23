@@ -1,0 +1,7 @@
+# Optional only: the operator must reserve a distinct subnet for each deployment.
+# docker compose -f infra/docker-compose.yml -f infra/docker-compose.subnet.yml up -d --wait
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${COMPOSE_SUBNET:?Reserve a non-overlapping private subnet before using this override}

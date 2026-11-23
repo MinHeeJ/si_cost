@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PeriodStatusTarget } from "../../shared/PeriodStatus";
 import { useScreenMotion } from "../../shared/useScreenMotion";
 import type { ReactNode } from "react";
+import { ScreenGuide } from "../../shared/ScreenGuide";
 import { ScreenTitleActionTarget } from "../../shared/ScreenTitleActions";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ScreenPeriodBar } from "./ScreenPeriodBar";
@@ -17,12 +18,14 @@ export function SharedScreenFrame({
   periodBar,
   initialMonth,
   headerActions,
+  screenGuide,
 }: {
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
   initialMonth?: string;
   headerActions?: ReactNode;
+  screenGuide?: ReactNode;
 }) {
   const motionRoot = useScreenMotion(screenId);
   const [statusTarget,setStatusTarget]=useState<HTMLDivElement|null>(null);
@@ -91,7 +94,13 @@ export function SharedScreenFrame({
                   fill={favorites.includes(screenId) ? "currentColor" : "none"}
                 />
               </button>
-              <small>{screenId}</small>
+              {screenGuide ? (
+                <ScreenGuide screenId={screenId} screenName={menu.name}>
+                  {screenGuide}
+                </ScreenGuide>
+              ) : (
+                <small>{screenId}</small>
+              )}
             </div>
           </div>
           {headerActions}
