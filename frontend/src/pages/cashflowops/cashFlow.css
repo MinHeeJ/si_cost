@@ -188,6 +188,9 @@
   .cash-period-summary > .sicost-period-summary-item {
     flex-wrap: wrap;
   }
+  .cash-period-summary > .cash-period-as-of {
+    grid-column: 1 / -1;
+  }
   .cash-shortage-alert {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 10px;

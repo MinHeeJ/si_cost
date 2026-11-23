@@ -396,7 +396,7 @@ export function CashFlowScreen({
         {displayed && (!error || retainResult) && (
           <>
             <PeriodStatus className="sicost-period-summary cash-period-summary">
-              <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-item cash-period-as-of">
                 <span className="sicost-period-summary-label">기준일</span>
                 <b>{displayed.asOfDate}</b>
               </span>
@@ -405,13 +405,16 @@ export function CashFlowScreen({
                 <b>{displayed.baseMonth}</b>
               </span>
               <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">적용월</span>
+                <b>{displayed.minimumCashMonth}</b>
+              </span>
+              <span className="sicost-period-summary-item">
                 <span className="sicost-period-summary-label">기초 잔액</span>
                 <b>{formatAmount(displayed.baseAmount, "원")}원</b>
               </span>
               <span className="sicost-period-summary-item">
                 <span className="sicost-period-summary-label">최소 운영자금</span>
                 <b>{formatAmount(displayed.minimumCash, "원")}원</b>
-                <small>적용월 {displayed.minimumCashMonth}</small>
               </span>
             </PeriodStatus>
             {displayed.shortages.length > 0 && (
