@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { authenticatedFetch } from "../../shared/api";
-import { FilterBar } from "../../shared/FilterBar";
+import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -509,6 +509,7 @@ export function ProjectsScreen({
           )}
           <FilterBar
             testId="project-filter-form"
+            appliedCount={countAppliedFilters(filters, defaults)}
             resetTestId="project-reset"
             searchTestId="project-query"
             onSubmit={() => apply()}
@@ -618,6 +619,7 @@ export function ProjectsScreen({
           {error != null && feedback(error, () => void load().catch(() => {}))}
           {!mobile ? (
             <DataTable
+              empty="조건에 맞는 결과가 없습니다."
               rows={data?.items ?? []}
               columns={visible}
               rowKey={(r) => r.id}
@@ -663,7 +665,10 @@ export function ProjectsScreen({
             <div className="project-cards">
               {loading && <p role="status">불러오는 중입니다.</p>}
               {!loading && !data?.items.length && (
-                <p className="sicost-empty">조회된 자료가 없습니다.</p>
+                <div className="sicost-empty">
+                  <p>조건에 맞는 결과가 없습니다.</p>
+                  <button type="button" data-testid="project-card-empty-reset" onClick={() => apply(true)}>조건 초기화</button>
+                </div>
               )}
               {data?.items.map((row) => (
                 <article

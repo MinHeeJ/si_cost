@@ -62,6 +62,9 @@ class ProjectDatabaseTest {
         context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));
         context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));
         context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
+        context.registerBean(AccessLogMapper.class,()->session.getMapper(AccessLogMapper.class));
+        context.registerBean(com.sicost.shared.SharedQueriesMapper.class,()->session.getMapper(com.sicost.shared.SharedQueriesMapper.class));
+        context.register(AccessLogWriter.class,com.sicost.common.excel.ExcelExportService.class,com.sicost.exportsops.ProjectExportService.class);
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,
             ProjectBudgetRepository.class,ProjectRegistrationService.class,ProjectPlanRepository.class,ProjectPlanService.class,
             ProjectDistributionRepository.class,ProjectDistributionService.class,ProjectRepository.class,ProjectService.class,ProjectQueryService.class);
@@ -130,6 +133,28 @@ class ProjectDatabaseTest {
         var body=edit(result).put("startDate","2080-02-01");var before=queries.getProject(id,false);
         mvc.perform(put("/api/projects/"+id).contentType("application/json").content(body.toString())).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PROJECT_PERIOD_IN_USE"));
         assertThat(queries.getProject(id,false)).isEqualTo(before);assertThat(count("tb_pj_tk_dstrb")).isEqualTo(1);
+    }
+    @Test void projectsExportReadsEveryMatchingProjectWithWonNumbersAndCommittedAudit() throws Exception {
+        for(int i=0;i<3;i++) create();
+        var exporter=context.getBean(com.sicost.exportsops.ProjectExportService.class);
+        for(String status:List.of("","ING")) {
+            var query=new HashMap<>(Map.of("year","2080")); if(!status.isEmpty())query.put("status",status);
+            var expected=queries.getProjects(ProjectInput.filter(query));
+            com.fasterxml.jackson.databind.JsonNode body=json.valueToTree(Map.of("view","PROJECTS","filters",query,"columns",com.sicost.exportsops.ProjectExportService.COLUMNS,"amountUnit","원"));
+            long before=count("tb_sy_accs_log");
+            try(var file=exporter.create(body,new org.springframework.mock.web.MockHttpServletRequest())) {
+                var bytes=new java.io.ByteArrayOutputStream();file.transferTo(bytes);
+                try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(bytes.toByteArray()))) {
+                    assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo((int)expected.total());
+                    assertThat(book.getSheetAt(0).getRow(1).getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);
+                    assertThat(book.getSheetAt(0).getRow(1).getCell(5).getNumericCellValue()).isEqualTo(100);
+                    assertThat(book.getSheet("다운로드정보").getRow(5).getCell(1).getNumericCellValue()).isEqualTo(expected.total());
+                    assertThat(file.filename()).matches("프로젝트_2080_[0-9]{8}_[0-9]{6}\\.xlsx");
+                }
+            }
+            assertThat(count("tb_sy_accs_log")).isEqualTo(before+1);
+            assertThat(sql.queryForObject("SELECT count(*) FROM tb_sy_accs_log WHERE scrn_id='UI-01' AND act_type_cd='DNLD'",Long.class)).isGreaterThan(0);
+        }
     }
     @Test void closedMonthDayChangeRollsBackWithoutAutomaticTruncation() throws Exception {
         var result=create();String id=result.project().id();sql.update("INSERT INTO tb_cl_close(close_ym,close_stat_cd,reg_user_id) VALUES ('208001','CLOSE','admin')");

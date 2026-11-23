@@ -339,7 +339,7 @@ it("모바일은 월내역만 조회하고 업로드·다운로드를 숨긴다"
 });
 it("기존 개발자/B8 버튼 보존·급여 닫기 후 필터와 호출 포커스 유지", async () => {
   render(<DeveloperPoolScreen />, { wrapper: MemoryRouter });
-  await screen.findByText("조회된 자료가 없습니다.");
+  await screen.findByText("조건에 맞는 결과가 없습니다.");
   expect(screen.getByTestId("b8-upload-button")).toBeInTheDocument();
   expect(screen.getByTestId("b8-template-button")).toBeInTheDocument();
   fireEvent.change(screen.getByTestId("developer-search-input"), {

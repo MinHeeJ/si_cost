@@ -10,7 +10,7 @@ public final class PeopleExportInput {
     private PeopleExportInput() {}
     public static final Set<String> VIEWS = Set.of("DEVELOPERS", "CANDIDATES");
     public static final List<String> DEVELOPER_COLUMNS = List.of("name", "companyName", "employeeType", "grade", "job", "status", "currentProjects", "withdrawalDate", "monthlyRate");
-    public static final List<String> CANDIDATE_COLUMNS = List.of("name", "employeeType", "job", "grade", "skills", "homeAddress", "desiredRate", "availableDate", "contactStatus", "lastContactDate", "source");
+    public static final List<String> CANDIDATE_COLUMNS = List.of("name", "companyName", "employeeType", "job", "grade", "skills", "homeAddress", "desiredRate", "availableDate", "contactStatus", "lastContactDate", "source");
     private static final Set<String> DEVELOPER_FILTERS = Set.of("employeeType", "jobCode", "directClass", "workStatus", "q", "includeStopped");
     private static final Set<String> CANDIDATE_FILTERS = Set.of("jobCode", "gradeCode", "employeeType", "contactStatus", "availability", "availableUntil", "activeOnly");
 

@@ -13,7 +13,7 @@ describe.each(["statusBoard", "projectCost"] as const)(
     it("sends filter-wide query only, preserves explicit empty hidden, and validates filename", async () => {
       const filename =
         view === "statusBoard"
-          ? "프로젝트현황_20260701_000000.xlsx"
+          ? "프로젝트 현황판_20260701_20260701_000000.xlsx"
           : "프로젝트 원가_202607_20260701_000000.xlsx";
       const fetcher = vi.fn().mockResolvedValue(
         new Response(new Blob(["xlsx"]), {

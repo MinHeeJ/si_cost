@@ -27,6 +27,9 @@ public class WorkforceOperationsExportService {
     private final WorkforceForecastExportService forecastWorkbooks;
     private final ExcelExportService excel;
     private final Clock clock;
+    private com.sicost.common.excel.ExportLabels labels;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setLabels(com.sicost.common.excel.ExportLabels labels) { this.labels = labels; }
 
     public WorkforceOperationsExportService(WorkforceCalendarService calendar, SalesForecastRepository repository,
             SalesWorkforceProjectionService projections, WorkforceForecastExportService forecastWorkbooks,
@@ -39,7 +42,7 @@ public class WorkforceOperationsExportService {
         boolean supply = query.tab().equals("SUPPLY_DEMAND");
         String kind = supply ? "인력운영수요공급" : "인력운영달력";
         String conditions = supply ? "수요·공급 · 서버 현재월 M+1~M+6 · 전체 인력 · 달력 연도/필터 미적용"
-            : query.year() + "년 달력 · " + query.calendarFilters();
+            : calendarConditions(query);
         var spec = new Specification(kind, null, List.of(text("metric", "항목")), conditions, unit(query.amountUnit()), "UI-28");
         // The source and every sheet are consumed inside ExcelExportService's single repeatable-read snapshot.
         return excel.generateWorkbook(spec, () -> {
@@ -54,6 +57,9 @@ public class WorkforceOperationsExportService {
     }
 
     private WorkbookData calendarWorkbook(CalendarPage data, WorkforceOperationsExportInput.Query query, LocalDate day) {
+        var jobs = labels.labels("JOB"); var grades = labels.labels("GRADE");
+        var employeeTypes = labels.labels("EMP_TYPE"); var extensions = labels.labels("EXT_PSBL");
+        var tentativeStatuses = labels.labels("TENT_STAT");
         var columns = new ArrayList<Column>();
         columns.add(text("developerId", "개발자ID")); columns.add(text("name", "이름"));
         columns.add(text("jobCode", "직무")); columns.add(text("gradeCode", "등급"));
@@ -64,8 +70,8 @@ public class WorkforceOperationsExportService {
         }
         var sheets = new ArrayList<Sheet>();
         sheets.add(new Sheet("인력 운영 달력", columns, sink -> data.items().forEach(person -> {
-            var row = new ArrayList<Object>(Arrays.asList(person.developerId(), person.name(), person.jobCode(), person.gradeCode(),
-                person.employeeType(), person.lastWithdrawalDate()));
+            var row = new ArrayList<Object>(Arrays.asList(person.developerId(), person.name(), com.sicost.common.excel.ExportLabels.name(jobs,person.jobCode()), com.sicost.common.excel.ExportLabels.name(grades,person.gradeCode()),
+                com.sicost.common.excel.ExportLabels.name(employeeTypes,person.employeeType()), person.lastWithdrawalDate()));
             person.cells().forEach(cell -> { row.add(status(cell.status())); row.add(decimal(cell.actualMm())); });
             sink.accept(row);
         })));
@@ -85,21 +91,34 @@ public class WorkforceOperationsExportService {
         sheets.add(new Sheet("프로젝트 근거", List.of(text("developerId", "개발자ID"), text("month", "월"), text("projectId", "프로젝트ID"),
             number("mm", "실제 MM"), text("end", "종료일"), text("extension", "연장 가능성"), text("pre", "미계약")),
             sink -> data.items().forEach(p -> p.cells().forEach(c -> c.projects().forEach(a -> sink.accept(Arrays.asList(p.developerId(), c.month(),
-                a.projectId(), decimal(a.actualMm()), a.endDate(), a.extensionPossibility(), a.preContract() ? "예" : "아니오")))))));
+                a.projectId(), decimal(a.actualMm()), a.endDate(), com.sicost.common.excel.ExportLabels.name(extensions,a.extensionPossibility()), a.preContract() ? "예" : "아니오")))))));
         sheets.add(new Sheet("가배정 근거", List.of(text("developerId", "개발자ID"), text("month", "월"), text("tentativeId", "가배정ID"),
             text("opportunityId", "기회ID"), number("needSn", "필요순번"), text("start", "시작월"), text("status", "상태"),
             text("source", "원천 화면"), text("processed", "처리시각")),
             sink -> data.items().forEach(p -> p.cells().forEach(c -> c.tentativeAssignments().forEach(t -> sink.accept(Arrays.asList(
-                p.developerId(), c.month(), t.id(), t.opportunityId(), t.needSn(), t.startMonth(), t.status(), t.sourceScreenId(), t.processedAt())))))));
+                p.developerId(), c.month(), t.id(), t.opportunityId(), t.needSn(), t.startMonth(), com.sicost.common.excel.ExportLabels.name(tentativeStatuses,t.status()), t.sourceScreenId(), t.processedAt())))))));
         var information = List.of(new Information("기간", data.year() + "-01 ~ " + data.year() + "-12"),
             new Information("기준일", day.toString()), new Information("기준월", YearMonth.from(day).toString()),
             new Information("단위", unit(query.amountUnit())), new Information("인력 단위", "명 / MM, 숫자셀은 화면 전체값"),
-            new Information("필터", query.calendarFilters().toString()), new Information("출력 범위", "달력 탭 · 필터 전체 / 모든 페이지"),
-            new Information("원천", "TB_HR_DEV / TB_HR_DEV_STAT / 05 배정 preview / TB_SL_TENT_ASGN / TB_SL_OPP / TB_SL_OPP_NEED"),
-            new Information("미확인", "과거월 비는인원/남는 MM 및 원천 NULL은 빈셀입니다. 숫자 0과 구분합니다."));
+            new Information("필터", calendarConditions(query)), new Information("출력 범위", "달력 탭 · 필터 전체 / 모든 페이지"),
+            new Information("원천", "개발자 · 근무 이력 · 투입 배정 · 가배정 · 영업 기회 · 필요 인력"),
+            new Information("미확인", "과거월 비는인원/남는 MM 및 미확인 값은 빈셀입니다. 숫자 0과 구분합니다."));
         return new WorkbookData(sheets, information, data.total(), Integer.toString(data.year()));
     }
 
+    private String calendarConditions(WorkforceOperationsExportInput.Query query) {
+        var parts = new ArrayList<String>(); parts.add(query.year()+"년 달력");
+        for (String field : List.of("jobCode", "gradeCode", "employeeType")) {
+            String value = query.calendarFilters().getFirst(field);
+            if (value != null) {
+                String group = field.equals("jobCode") ? "JOB" : field.equals("gradeCode") ? "GRADE" : "EMP_TYPE";
+                String title = field.equals("jobCode") ? "직무" : field.equals("gradeCode") ? "등급" : "직원구분";
+                parts.add(title+"="+com.sicost.common.excel.ExportLabels.name(labels.labels(group),value));
+            }
+        }
+        if ("true".equals(query.calendarFilters().getFirst("remainingOnly"))) parts.add("남는 인력만=예");
+        return String.join(" · ",parts);
+    }
     private static Column text(String id, String title) { return new Column(id, title, CellType.TEXT); }
     private static Column number(String id, String title) { return new Column(id, title, CellType.NUMBER); }
     private static BigDecimal decimal(String value) { return value == null ? null : new BigDecimal(value); }

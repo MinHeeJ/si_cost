@@ -50,7 +50,10 @@ class StaffingComparisonExportTest {
         var monthly=new AssignmentMonthlyService(months,users,changes,clock);
         var repository=new StaffingComparisonRepository(mapper,monthly);
         var excel=new ExcelExportService(users,new AccessLogWriter(logs,users,clock),clock,transactions);
-        mvc=MockMvcBuilders.standaloneSetup(new StaffingComparisonExportController(new StaffingComparisonExportService(repository,excel,clock)))
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
+        var exporter = new StaffingComparisonExportService(repository,excel,clock);
+        exporter.setLabels(com.sicost.common.excel.ExportTestLookups.labels());
+        mvc=MockMvcBuilders.standaloneSetup(new StaffingComparisonExportController(exporter))
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
     }
     byte[] download(String query) throws Exception {
@@ -62,13 +65,13 @@ class StaffingComparisonExportTest {
     @Test void publicAdminDownloadUsesAnnualPlanAndAllTwelveMonthsWithNumericTotalsAndSafeText() throws Exception {
         try (var book=new XSSFWorkbook(new ByteArrayInputStream(download("?year=2026&projectId=0001&amountUnit=MILLION")))) {
             var sheet=book.getSheetAt(0);assertThat(sheet.getLastRowNum()).isEqualTo(3);
-            var row=sheet.getRow(1);assertThat(row.getCell(0).getStringCellValue()).isEqualTo("0001");assertThat(row.getCell(1).getStringCellValue()).isEqualTo("=SUM(A1)");
-            assertThat(row.getCell(3).getNumericCellValue()).isEqualTo(6);assertThat(row.getCell(4).getNumericCellValue()).isEqualTo(7);assertThat(row.getCell(5).getNumericCellValue()).isEqualTo(1);
-            assertThat(sheet.getRow(2).getCell(2).getStringCellValue()).isEqualTo("QA");assertThat(sheet.getRow(2).getCell(3).getNumericCellValue()).isZero();
-            assertThat(sheet.getRow(3).getCell(3).getNumericCellValue()).isEqualTo(6);assertThat(sheet.getRow(3).getCell(4).getNumericCellValue()).isEqualTo(8);assertThat(sheet.getRow(3).getCell(5).getNumericCellValue()).isEqualTo(2);
-            assertThat(sheet.getRow(1).getCell(3).getCellType()).isEqualTo(CellType.NUMERIC);
+            var row=sheet.getRow(1);assertThat(row.getCell(0).getStringCellValue()).isEqualTo("=SUM(A1)");assertThat(row.getCell(1).getStringCellValue()).isEqualTo("개발");
+            assertThat(row.getCell(2).getNumericCellValue()).isEqualTo(6);assertThat(row.getCell(3).getNumericCellValue()).isEqualTo(7);assertThat(row.getCell(4).getNumericCellValue()).isEqualTo(1);
+            assertThat(sheet.getRow(2).getCell(1).getStringCellValue()).isEqualTo("품질관리");assertThat(sheet.getRow(2).getCell(2).getNumericCellValue()).isZero();
+            assertThat(sheet.getRow(3).getCell(2).getNumericCellValue()).isEqualTo(6);assertThat(sheet.getRow(3).getCell(3).getNumericCellValue()).isEqualTo(8);assertThat(sheet.getRow(3).getCell(4).getNumericCellValue()).isEqualTo(2);
+            assertThat(sheet.getRow(1).getCell(2).getCellType()).isEqualTo(CellType.NUMERIC);
             for(var s:book) for(var r:s) for(var cell:r) assertThat(cell.getCellType()).isNotEqualTo(CellType.FORMULA);
-            assertThat(info(book,"기간")).isEqualTo("2026-01 ~ 2026-12");assertThat(info(book,"단위")).isEqualTo("백만원");assertThat(info(book,"원천")).contains("preview");
+            assertThat(info(book,"기간")).isEqualTo("2026-01 ~ 2026-12");assertThat(info(book,"단위")).isEqualTo("백만원");assertThat(info(book,"원천")).contains("월별 투입 배정").doesNotContain("preview");
         }
         verify(logs).insert(argThat(e -> e.action().equals("DNLD") && e.screenId().equals("UI-11") && e.userId().equals("admin") && e.description().contains("계획대비투입 2")));
         verifyNoInteractions(changes);verify(months,never()).saveMonth(any());verify(months,never()).project(any());
@@ -77,7 +80,7 @@ class StaffingComparisonExportTest {
     @Test void wholePopulationNotPageAndOneSnapshotBeforeIndependentAuditCommit() throws Exception {
         List<Plan> plans=new ArrayList<>();for(int i=0;i<57;i++)plans.add(new Plan("0001","J"+i,new BigDecimal("2.00")));
         when(mapper.plans("0001")).thenReturn(plans);
-        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?difference=SHORT")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(58);assertThat(book.getSheetAt(0).getRow(58).getCell(3).getNumericCellValue()).isEqualTo(57);}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?difference=SHORT")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(58);assertThat(book.getSheetAt(0).getRow(58).getCell(2).getNumericCellValue()).isEqualTo(57);assertThat(info(book,"조건")).contains("차이=부족");}
         var order=inOrder(transactions,mapper,logs);
         order.verify(transactions).getTransaction(argThat(t -> t.isReadOnly() && t.getIsolationLevel()==TransactionDefinition.ISOLATION_REPEATABLE_READ));
         order.verify(mapper).projects(any());order.verify(mapper).plans("0001");order.verify(mapper).assignmentIds("0001");order.verify(transactions).commit(any());
@@ -85,10 +88,10 @@ class StaffingComparisonExportTest {
     }
     @Test void exactZeroMatchAndBothZeroRowsOmitted() throws Exception {
         when(mapper.plans("0001")).thenReturn(List.of(new Plan("0001","DEV",new BigDecimal("14.00")),new Plan("0001","ZERO",BigDecimal.ZERO)));
-        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?difference=MATCH")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(2);assertThat(book.getSheetAt(0).getRow(1).getCell(5).getNumericCellValue()).isZero();}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?difference=MATCH")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(2);assertThat(book.getSheetAt(0).getRow(1).getCell(4).getNumericCellValue()).isZero();}
     }
     @Test void emptyIsNotSourceFailure() throws Exception {
-        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?projectId=absent")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(1);assertThat(book.getSheetAt(0).getRow(1).getCell(3).getNumericCellValue()).isZero();}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("?projectId=absent")))) {assertThat(book.getSheetAt(0).getLastRowNum()).isEqualTo(1);assertThat(book.getSheetAt(0).getRow(1).getCell(2).getNumericCellValue()).isZero();}
     }
     @ParameterizedTest @ValueSource(strings={"?actor=x","?page=1","?size=50","?from=2026-01","?months=13","?year=0","?year=10000","?year=-1","?year=1.0","?year=2026&year=2027","?difference=short","?amountUnit=USD","?projectId=","?projectId=abcdefghijklmnopqrstu"})
     void invalidQueryHasFieldRequestIdAndNoBusinessOrAuditAccess(String query) throws Exception {
@@ -101,7 +104,7 @@ class StaffingComparisonExportTest {
     @Test void requestBodyRejected() throws Exception {mvc.perform(get("/api/staffing-plan-comparison/export").contentType("application/json").content("{}" )).andExpect(status().isBadRequest());verifyNoInteractions(mapper,logs);}
     @Test void protectedMonthsRemainAuthoritativeWithoutSynchronization() throws Exception {
         when(months.months("A-1")).thenReturn(List.of(new StoredMonth("202601",31,new BigDecimal("0.50"),null,BigDecimal.ZERO,"Y")));
-        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("")))) {assertThat(book.getSheetAt(0).getRow(1).getCell(4).getNumericCellValue()).isEqualTo(6.5);}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("")))) {assertThat(book.getSheetAt(0).getRow(1).getCell(3).getNumericCellValue()).isEqualTo(6.5);}
         verifyNoInteractions(changes);verify(months,never()).saveMonth(any());
     }
     @Test void auditFailurePreventsBinaryAndSanitizesError() throws Exception {

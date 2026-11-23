@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
-import { FilterBar } from "../../shared/FilterBar";
+import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
 import { formatDecimal } from "../../shared/format";
 import {
   getPeriodContext,
@@ -231,6 +231,7 @@ export function StaffingComparisonContent({
       </p>
       <FilterBar
         testId="comparison-filters"
+        appliedCount={countAppliedFilters(filter, { projectId: "", difference: "ALL" })}
         resetTestId="comparison-reset"
         searchTestId="comparison-search"
         onSubmit={() => {
@@ -287,6 +288,7 @@ export function StaffingComparisonContent({
         <ComparisonError error={error} retry={() => setReload((n) => n + 1)} />
       )}
       <div className="staffing-comparison-toolbar">
+        <strong>총 {data?.total ?? 0}건</strong>
         <button
           data-testid="comparison-density"
           type="button"
@@ -308,8 +310,8 @@ export function StaffingComparisonContent({
           columns={columns}
           rowKey={(r) => `${r.projectId}-${r.jobCode}`}
           loading={loading}
-          empty="조회된 자료가 없습니다."
-          emptyAction={<button type="button" onClick={reset}>조건 초기화</button>}
+          empty="조건에 맞는 결과가 없습니다."
+          emptyAction={<button type="button" data-testid="comparison-empty-reset" onClick={reset}>조건 초기화</button>}
           dense={dense}
           page={page}
           size={size}

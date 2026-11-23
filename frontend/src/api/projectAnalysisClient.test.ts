@@ -201,7 +201,7 @@ describe("프로젝트 분석 API 등록", () => {
       const filename =
         view === "projectCost"
           ? "프로젝트 원가_202611_20261113_120000.xlsx"
-          : "프로젝트현황_20261113_120000.xlsx";
+          : "프로젝트 현황판_20261113_20261113_120000.xlsx";
       const fetcher = vi.fn().mockResolvedValue(
         new Response("workbook", {
           headers: {

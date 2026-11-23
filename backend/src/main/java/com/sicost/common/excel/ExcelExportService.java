@@ -40,6 +40,24 @@ public class ExcelExportService {
         this.users = users; this.logs = logs; this.clock = clock; this.transactions = transactions;
     }
     public enum CellType { TEXT, NUMBER, MASKED_ACCOUNT, DATE }
+    private com.sicost.shared.SharedQueriesMapper menuQueries;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setMenuQueries(com.sicost.shared.SharedQueriesMapper queries) { this.menuQueries = queries; }
+
+    // 파일 종류는 감사 기록의 안정된 식별자이며, 표시 파일명과는 별개다. 업로드 양식·B 파일은 제외한다.
+    private String displayPrefix(Specification specification, String legacy) {
+        boolean list = switch (specification.kind()) {
+            case "개발자", "외부인력후보", "프로젝트", "투입배정", "계획대비투입", "프로젝트현황",
+                 "인력운영달력", "인력운영수요공급", "영업예측", "철수리스트", "인력수요예측" -> true;
+            default -> false;
+        };
+        if (!list) return legacy;
+        if (menuQueries == null) throw new IllegalStateException("다운로드 화면명 조회가 필요합니다.");
+        String name = menuQueries.menus().stream().filter(menu -> specification.screenId().equals(menu.screenId()))
+            .map(com.sicost.shared.SharedQueryDtos.MenuRow::name).findFirst()
+            .orElseThrow(() -> new IllegalStateException("다운로드 화면명을 찾지 못했습니다."));
+        return name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_");
+    }
     public record Column(String id, String title, CellType type) {}
     public record Specification(String kind, String uploadId, List<Column> columns, String conditions, String amountUnit, String screenId) {
         public Specification(String kind, String uploadId, List<Column> columns, String conditions, String amountUnit) {
@@ -58,7 +76,7 @@ public class ExcelExportService {
 
     /** The callback, including all source/preference reads, runs once in the export snapshot. */
     public Download generateWorkbook(Specification specification, WorkbookSource source, HttpServletRequest request) {
-        if (!Set.of("UI-26", "UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05", "UI-21", "UI-16").contains(specification.screenId())) throw InputValidator.invalid("screenId");
+        if (!Set.of("UI-01", "UI-26", "UI-03", "UI-04", "UI-31", "UI-07", "UI-08", "UI-09", "UI-19", "UI-32", "UI-29", "UI-11", "UI-17", "UI-28", "UI-05", "UI-21", "UI-16").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         return generateFile(specification, request, workbook -> {
             WorkbookData data = source.read();
             String qualifierPattern = switch (specification.screenId()) {
@@ -81,14 +99,18 @@ public class ExcelExportService {
                 SheetRows writer = new SheetRows(workbook, plan==null?sheet.columns():plan.columns(), sheet.name(), !Set.of("UI-21", "UI-26").contains(specification.screenId()));
                 sheet.rows().read(values->writer.append(plan==null?values:plan.values(values)));
             }
-            return new Generated(data.people(), "UI-31".equals(specification.screenId()) ? "" : "_" + data.year(), projection==null?data.information():data.information().stream().filter(info->!projection.privateMetadata(specification.screenId(),info.label()) && !projection.privateMetadata(specification.screenId(),Objects.toString(info.value(),""))).toList(), data.filename());
+            return new Generated(data.people(), "_" + data.year(), projection==null?data.information():data.information().stream().filter(info->!projection.privateMetadata(specification.screenId(),info.label()) && !projection.privateMetadata(specification.screenId(),Objects.toString(info.value(),""))).toList(), data.filename());
         });
     }
     private record Generated(long count, String qualifier, List<Information> information, String filename) {}
     @FunctionalInterface private interface Writer { Generated write(SXSSFWorkbook workbook); }
 
     public Download generate(Specification specification, Rows rows, HttpServletRequest request) {
-        return generate(specification, rows, request, workbook -> {});
+        return generate(specification, rows, request, workbook -> {}, null);
+    }
+    public Download generateForPeriod(Specification specification, Rows rows, HttpServletRequest request, String year) {
+        if (year == null || !year.matches("[0-9]{4}")) throw InputValidator.invalid("year");
+        return generate(specification, rows, request, workbook -> {}, year);
     }
     public Download generateTemplate(List<Column> columns, List<String> instructions, HttpServletRequest request) {
         return generateTemplate(new Specification("거래처_등록양식", null, columns, "B7", "원"), instructions, request);
@@ -106,9 +128,9 @@ public class ExcelExportService {
             var guide = workbook.createSheet("입력안내");
             int line=0;for(String instruction:instructions)if(projection==null || !projection.privateText(instruction))guide.createRow(line++).createCell(0).setCellValue(instruction);
             customize.accept(workbook);
-        });
+        }, null);
     }
-    private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize) {
+    private Download generate(Specification specification, Rows rows, HttpServletRequest request, Consumer<SXSSFWorkbook> customize, String period) {
         if (Set.of("UI-19", "UI-32").contains(specification.screenId())) throw InputValidator.invalid("screenId");
         validate(specification);
         Runnable release=projection==null?()->{}:projection.guard(specification,request);
@@ -144,6 +166,7 @@ public class ExcelExportService {
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             release.run();
+            String displayName = displayPrefix(specification, specification.kind());
             audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), total), request));
             String prefix = switch (specification.kind()) {
                 case "개발자" -> "개발자목록";
@@ -153,7 +176,8 @@ public class ExcelExportService {
                 case "재무_업로드검사" -> "B2_검사";
                 default -> specification.kind();
             };
-            String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId());
+            String kind = (displayName.equals(specification.kind()) ? prefix : displayName) + (specification.uploadId() == null ? "" : "_" + specification.uploadId())
+                + (period == null ? "" : "_" + period);
             return new Download(file, kind + "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".xlsx",release);
         } catch (Exception e) {
             if (file != null) try { Files.deleteIfExists(file); } catch (IOException cleanup) { e.addSuppressed(cleanup); }
@@ -201,6 +225,7 @@ public class ExcelExportService {
             TransactionTemplate audit = new TransactionTemplate(transactions);
             audit.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             release.run();
+            String displayName = displayPrefix(specification, specification.kind());
             audit.executeWithoutResult(status -> logs.append(new AccessLogWriter.Event("DNLD", specification.screenId(), specification.uploadId(), specification.kind(), generated.count(), generated.filename()), request));
             String prefix = switch (specification.kind()) {
                 case "개발자" -> "개발자목록";
@@ -210,7 +235,7 @@ public class ExcelExportService {
                 case "재무_업로드검사" -> "B2_검사";
                 default -> specification.kind();
             };
-            String kind = prefix + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
+            String kind = (displayName.equals(specification.kind()) ? prefix : displayName) + (specification.uploadId() == null ? "" : "_" + specification.uploadId()) + generated.qualifier();
             String filename = generated.filename() == null ? kind + (Set.of("UI-07", "UI-08", "UI-09").contains(specification.screenId()) ? "" : "_" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))) + ".xlsx" : generated.filename();
             return new Download(file, filename,release);
         } catch (Exception e) {

@@ -963,7 +963,7 @@ describe("공식 진입점 합성", () => {
   });
   it("UI-05 기간 변경은 기존 철수 목록을 선택 연도로 GET하고 추천을 기록하지 않는다", async () => {
     open("/UI-05");
-    await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
+    await screen.findByText("조건에 맞는 결과가 없습니다.");
     await userEvent.selectOptions(
       within(screen.getByRole("region", { name: "화면 기간" })).getByLabelText(
         "기간",
@@ -1411,7 +1411,7 @@ describe("공식 진입점 합성", () => {
         name: "다시 조회",
       }),
     );
-    await screen.findByText("조회된 자료가 없습니다.");
+    await screen.findByText("조건에 맞는 결과가 없습니다.");
     expect(projects.getProjects).toHaveBeenCalledTimes(2);
   });
   it("프로젝트 파트 변경과 PRE 전환을 병합된 상세 동작에 연결한다", async () => {
@@ -1599,7 +1599,7 @@ describe("공식 진입점 합성", () => {
         await screen.findByText(
           id === "UI-04"
             ? "조건에 맞는 프로젝트가 없습니다."
-            : "조건에 맞는 진행 프로젝트가 없습니다.",
+            : "조건에 맞는 결과가 없습니다.",
         );
       } else if (id === "UI-19") {
         expect(
@@ -1634,7 +1634,7 @@ describe("공식 진입점 합성", () => {
         expect(
           await screen.findByTestId("withdrawal-list-screen"),
         ).toBeVisible();
-        await screen.findByText("조건에 맞는 철수 배정이 없습니다.");
+        await screen.findByText("조건에 맞는 결과가 없습니다.");
         expect(withdrawals.getWithdrawals).toHaveBeenCalledWith(
           expect.objectContaining({ year: 2026 }),
         );

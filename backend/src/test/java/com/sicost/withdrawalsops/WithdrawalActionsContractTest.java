@@ -64,6 +64,8 @@ class WithdrawalActionsContractTest {
     @MockBean WorkforceRecommendationMapper recommendations;
     @MockBean RecommendationActionRepository actions;
     @MockBean WorkforceForecastService forecasts;
+    @Autowired ExcelExportService excelService;
+    @MockBean com.sicost.common.excel.ExportLabels exportLabels;
     AssignmentMonthlyService.Source assignment;
     WithdrawalDtos.Source person;
     List<AssignmentActionsDtos.Event> events;
@@ -71,6 +73,8 @@ class WithdrawalActionsContractTest {
     List<WorkforceRecommendationDtos.Row> written;
     LocalDate day=LocalDate.of(2026,11,15);
     @BeforeEach void setup(){
+        com.sicost.common.excel.ExportTestLookups.configure(exportLabels);
+        com.sicost.common.excel.ExportTestLookups.configure(excelService);
         events=new ArrayList<>();sources=new ArrayList<>();written=new ArrayList<>();
         assignment=new AssignmentMonthlyService.Source("A-001","P-001","D-001","BE",day.minusMonths(2),LocalDate.of(2026,11,20),BigDecimal.ONE,new BigDecimal("100"),"NEW",null,"H",2,"N","ACT");
         person=source(assignment.id(),assignment.endDate(),"M");
@@ -164,7 +168,7 @@ class WithdrawalActionsContractTest {
         String[] names={"001","=SUM(1,1)","+1","-1","@x"};
         for(int i=0;i<55;i++){var s=source("A-"+i,day.minusDays(1),"M");sources.add(new WithdrawalDtos.Source(s.assignmentId(),s.developerId(),names[i%names.length],names[i%names.length],s.developerJob(),s.subJobCode(),s.gradeCode(),s.employeeTypeCode(),s.projectId(),s.projectName(),s.jobCode(),s.withdrawalDate(),s.extensionCount(),s.earlyWithdrawal(),s.extensionPossibility(),s.projectStatus(),s.developerUse(),s.directClass(),s.workStatus(),s.joinDate(),s.retireDate(),s.customerId()));}
         byte[] bytes=mvc.perform(get("/api/withdrawals/export").param("year","2026").param("extension","M")).andExpect(status().isOk()).andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).andExpect(header().string("Content-Disposition",org.hamcrest.Matchers.containsString(".xlsx"))).andReturn().getResponse().getContentAsByteArray();
-        try(var book=new XSSFWorkbook(new ByteArrayInputStream(bytes))){var sheet=book.getSheetAt(0);assertThat(sheet.getLastRowNum()).isEqualTo(55);for(int i=1;i<=55;i++){var r=sheet.getRow(i);assertThat(r.getCell(1).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);assertThat(r.getCell(2).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);assertThat(DateUtil.isCellDateFormatted(r.getCell(6))).isTrue();assertThat(r.getCell(7).getNumericCellValue()).isEqualTo(-1);assertThat(r.getCell(8).getNumericCellValue()).isEqualTo(2);assertThat(DateUtil.isCellDateFormatted(r.getCell(12))).isTrue();}assertThat(book.getSheet("다운로드정보").getRow(6).getCell(0).getStringCellValue()).isEqualTo("기준일");}
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(bytes))){var sheet=book.getSheetAt(0);assertThat(sheet.getLastRowNum()).isEqualTo(55);assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short)10);for(int i=1;i<=55;i++){var r=sheet.getRow(i);assertThat(r.getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);assertThat(r.getCell(1).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);assertThat(r.getCell(3).getStringCellValue()).isEqualTo("백엔드");assertThat(DateUtil.isCellDateFormatted(r.getCell(4))).isTrue();assertThat(new org.apache.poi.ss.usermodel.DataFormatter().formatCellValue(r.getCell(4))).isEqualTo("2026-11-14");assertThat(r.getCell(5).getNumericCellValue()).isEqualTo(-1);assertThat(r.getCell(6).getNumericCellValue()).isEqualTo(2);assertThat(r.getCell(8).getStringCellValue()).isEqualTo("보통");}assertThat(book.getSheet("다운로드정보").getRow(6).getCell(0).getStringCellValue()).isEqualTo("기준일");}
         verify(access).insert(argThat(e->e.action().equals("DNLD")&&e.screenId().equals("UI-05")&&e.userId().equals("admin")&&e.description().equals(" 철수리스트 55")));verify(next,never()).insert(any(),anyString());noExtensionWrites();
     }
     @ParameterizedTest @CsvSource({"year,2024","year,2028","period,90D","page,1","size,50","actor,x"}) void exportRejectsInvalidFilters(String field,String value) throws Exception {mvc.perform(get("/api/withdrawals/export").param(field,value)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value(field));verifyNoInteractions(access);}
@@ -194,8 +198,11 @@ class WithdrawalActionsContractTest {
         when(read.listAll(any())).thenReturn(new WithdrawalDtos.Data(List.of(),2026,1,50,0,
             new WithdrawalDtos.Guidance(true,0,0,0,""),day,"2025-01"));
         var excel=new ExcelExportService(users,new AccessLogWriter(access,users,clock),clock,manager);
+        com.sicost.common.excel.ExportTestLookups.configure(excel);
+        var exporter=new WithdrawalExportService(read,excel);
+        exporter.setLabels(com.sicost.common.excel.ExportTestLookups.labels());
         var controller=new WithdrawalActionsController(mock(AssignmentActionsService.class),
-            mock(NextPositionRecommendationService.class),new WithdrawalExportService(read,excel));
+            mock(NextPositionRecommendationService.class),exporter);
         var exportMvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         exportMvc.perform(get("/api/withdrawals/export")).andExpect(status().isOk());
@@ -213,12 +220,15 @@ class WithdrawalActionsContractTest {
     @ParameterizedTest @ValueSource(strings={"extension-possibility","next-positions"}) void postRejectsQueryInjection(String action) throws Exception {mvc.perform(post("/api/withdrawals/A-001/"+action).param("actor","x").contentType("application/json").content(extension().toString())).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("actor"));noExtensionWrites();verify(next,never()).nextId();}
     @ParameterizedTest @ValueSource(strings={"name","project","job","date","days","history","extension","next"})
     void exportAcceptsEverySortAndReadsAllRowsWithPkTies(String sort) throws Exception {
-        for(int i=25;i>=1;i--)sources.add(source(String.format("A-%02d",i),day,"H"));
+        for(int i=25;i>=1;i--){
+            String id=String.format("A-%02d",i);
+            sources.add(new WithdrawalDtos.Source(id,"D-001","개발자",id,"BE","FE","MD","FT","P-001","원프로젝트","BE",day,2,true,"H","END","Y","DRCT","IDLE",day.minusYears(1),null,"C-001"));
+        }
         for(String direction:List.of("ASC","DESC")){
             byte[] bytes=mvc.perform(get("/api/withdrawals/export").param("sort",sort).param("direction",direction)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
             try(var book=new XSSFWorkbook(new ByteArrayInputStream(bytes))){
                 var sheet=book.getSheetAt(0);assertThat(sheet.getLastRowNum()).isEqualTo(25);
-                for(int i=1;i<=25;i++)assertThat(sheet.getRow(i).getCell(0).getStringCellValue()).isEqualTo(String.format("A-%02d",i));
+                for(int i=1;i<=25;i++)assertThat(sheet.getRow(i).getCell(1).getStringCellValue()).isEqualTo(String.format("A-%02d",i));
             }
         }
         noExtensionWrites();verify(next,never()).insert(any(),anyString());

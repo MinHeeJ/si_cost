@@ -42,7 +42,10 @@ public class PeopleExportService {
     public Download create(JsonNode body, HttpServletRequest request) {
         PeopleExportInput.Export input = PeopleExportInput.parse(body);
         boolean dev = input.view().equals("DEVELOPERS");
-        final List<String> allowedColumns=!dev && projection!=null?projection.candidateColumns(input.columns()):input.columns();
+        List<String> selected = new ArrayList<>(input.columns());
+        if (!dev && selected.contains("employeeType") && !selected.contains("companyName"))
+            selected.add(selected.indexOf("employeeType") + 1, "companyName");
+        final List<String> allowedColumns=!dev && projection!=null?projection.candidateColumns(selected):selected;
         Map<String, String> query = new HashMap<>(input.filters());
         if (input.sort() != null) query.put("sort", input.sort());
         query.put("direction", input.direction());
@@ -53,8 +56,9 @@ public class PeopleExportService {
         String unit = input.amountUnit();
         List<Column> columns = allowedColumns.stream().map(id -> new Column(id, title(id, dev, unit), numeric(id) ? CellType.NUMBER : CellType.TEXT)).toList();
         String conditions = input.filters().entrySet().stream().sorted(Map.Entry.comparingByKey())
-            .map(e -> e.getKey() + "=" + e.getValue()).collect(Collectors.joining("; "))
-            + "; sort=" + Objects.toString(input.sort(), "기본") + " " + input.direction();
+            .map(e -> condition(e.getKey(), e.getValue())).collect(Collectors.joining("; "))
+            + "; 정렬=" + (input.sort() == null ? "기본" : title(input.sort(), dev, unit))
+            + " " + ("DESC".equals(input.direction()) ? "내림차순" : "오름차순");
         Specification specification = new Specification(dev ? "개발자" : "외부인력후보", null, columns, conditions, unit, dev ? "UI-02" : "UI-33");
         return excel.generate(specification, sink -> {
             for (int page = 1; ; page++) {
@@ -64,7 +68,8 @@ public class PeopleExportService {
                 JsonNode items = result.get("items");
                 for (JsonNode item : items) {
                     List<Object> values = new ArrayList<>();
-                    for (String id : allowedColumns) values.add(cell(id, item, unit, employeeTypes, workStatuses, contactStatuses));
+                    for (String id : allowedColumns) values.add(id.equals("companyName") && dev
+                        ? Objects.toString(text(item.get(id)), "자사") : cell(id, item, unit, employeeTypes, workStatuses, contactStatuses));
                     sink.accept(values);
                 }
                 if (items.size() < CHUNK || (long) page * CHUNK >= result.get("total").asLong()) break;
@@ -72,6 +77,29 @@ public class PeopleExportService {
         }, request);
     }
 
+    private String condition(String key, String value) {
+        String group = switch (key) {
+            case "employeeType" -> "EMP_TYPE";
+            case "jobCode" -> "JOB";
+            case "gradeCode" -> "GRADE";
+            case "directClass" -> "DRCT_CLS";
+            case "workStatus" -> "WORK_STAT";
+            case "contactStatus" -> "CNTC_STAT";
+            default -> null;
+        };
+        String name = switch (key) {
+            case "employeeType" -> "구분"; case "jobCode" -> "직무"; case "gradeCode" -> "등급";
+            case "directClass" -> "직접/간접"; case "workStatus" -> "근무 상태"; case "contactStatus" -> "연락 상태";
+            case "q" -> "검색어"; case "includeStopped" -> "중지 포함"; case "activeOnly" -> "사용 인력만";
+            case "availability" -> "투입 가능"; case "availableUntil" -> "투입 가능일";
+            default -> "조건";
+        };
+        String display = group != null ? labels(group).getOrDefault(value, "–") : switch (value) {
+            case "NEXT_MONTH" -> "다음 달까지"; case "THREE_MONTHS" -> "3개월 안";
+            case "true" -> "예"; case "false" -> "아니요"; default -> value;
+        };
+        return name + "=" + display;
+    }
     private Map<String, String> labels(String group) {
         Map<String, String> result = new HashMap<>();
         codes.codes(group, true).forEach(code -> result.put(code.code(), code.name()));

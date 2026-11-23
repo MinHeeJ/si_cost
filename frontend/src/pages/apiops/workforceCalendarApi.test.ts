@@ -9,7 +9,7 @@ vi.mock("../exportsops/masterDataExportApi", () => ({
 }));
 const mime =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-const filename = "인력운영달력_2026_20261012_090000.xlsx";
+const filename = "인력 운영 보드_2026_20261012_090000.xlsx";
 function response() {
   return new Response("xlsx", {
     headers: {

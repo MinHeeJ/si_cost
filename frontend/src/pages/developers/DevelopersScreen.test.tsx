@@ -320,14 +320,14 @@ it("loading, empty, error 재조회 구분", async () => {
   });
   render(<DeveloperPoolScreen />);
   expect(
-    await screen.findByText("조회된 자료가 없습니다."),
+    await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
   vi.mocked(api.getDevelopers).mockRejectedValueOnce(new Error("목록 실패"));
   await userEvent.click(screen.getByTestId("developer-search-button"));
   expect(await screen.findByText("목록 실패")).toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
   expect(
-    await screen.findByText("조회된 자료가 없습니다."),
+    await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
 });
 it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
@@ -338,12 +338,17 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
     " 이름 ",
   );
   expect(api.getDevelopers).toHaveBeenCalledOnce();
+  fireEvent.change(screen.getByTestId("developer-filter-jobcode"), {
+    target: { value: "DEV" },
+  });
+  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.submit(screen.getByTestId("developer-filter-form"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "이름", page: 1, includeStopped: false }),
     ),
   );
+  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByTestId("developer-reset-button"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
@@ -353,6 +358,7 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
   expect(
     screen.queryByRole("option", { name: "재직" }),
   ).not.toBeInTheDocument();
+  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("목록 상태 색·MM경고·관리번호와 소속 표시", async () => {
   render(<DeveloperPoolScreen />);

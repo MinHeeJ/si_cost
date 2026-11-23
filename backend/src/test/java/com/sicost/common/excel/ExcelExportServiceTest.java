@@ -83,6 +83,7 @@ class ExcelExportServiceTest {
     final ExcelExportService service=new ExcelExportService(users,logs,Clock.fixed(Instant.parse("2026-01-01T23:59:00Z"),ZoneId.of("Asia/Seoul")),transactions);
     final MockHttpServletRequest request=new MockHttpServletRequest();
     @BeforeEach void setup() {
+        ExportTestLookups.configure(service);
         when(users.currentUser()).thenReturn(new CurrentUserProvider.CurrentUser("admin","관리자",List.of("ADMIN"),true));
         when(transactions.getTransaction(any())).thenAnswer(call->new SimpleTransactionStatus());
     }
@@ -111,13 +112,50 @@ class ExcelExportServiceTest {
             var spec = new Specification(kind,null,List.of(new Column("name","이름",CellType.TEXT)),"전체","원",screen);
             var download = service.generate(spec,sink -> sink.accept(List.of("=untrusted")),request);
             verify(logs).append(argThat(event -> event.screenId().equals(screen) && event.fileType().equals(kind) && event.action().equals("DNLD") && event.count()==1),same(request));
-            assertThat(download.filename()).isEqualTo((screen.equals("UI-02")?"개발자목록":kind)+"_20260102_085900.xlsx");
+            assertThat(download.filename()).isEqualTo((screen.equals("UI-02")?"개발자 풀":"외부 인력 후보")+"_20260102_085900.xlsx");
             var output = new ByteArrayOutputStream();download.transferTo(output);
             try (var book = new XSSFWorkbook(new ByteArrayInputStream(output.toByteArray()))) {
                 assertThat(book.getSheetAt(0).getRow(1).getCell(0).getCellType()).isEqualTo(org.apache.poi.ss.usermodel.CellType.STRING);
                 assertThat(book.getSheet("다운로드정보").getRow(4).getCell(1).getStringCellValue()).isEqualTo("원");
             }
         }
+    }
+    @Test void allAListNamesComeFromMenusAndKeepStableAuditKindsAndPeriods() throws Exception {
+        var kinds = java.util.Map.of("UI-02", "개발자", "UI-33", "외부인력후보", "UI-01", "프로젝트",
+            "UI-12", "투입배정", "UI-11", "계획대비투입", "UI-31", "프로젝트현황",
+            "UI-28", "인력운영달력", "UI-29", "영업예측", "UI-05", "철수리스트", "UI-17", "인력수요예측");
+        var columns = List.of(new Column("name", "이름", CellType.TEXT));
+        for (var menu : ExportTestLookups.menus()) {
+            String screen = menu.screenId(), kind = kinds.get(screen);
+            var spec = new Specification(kind, null, columns, "전체", "원", screen);
+            String period = screen.equals("UI-31") ? "20260101" : "2026";
+            boolean people = java.util.Set.of("UI-02", "UI-33").contains(screen);
+            try (var download = people ? service.generate(spec, sink -> {}, request)
+                    : screen.equals("UI-12") ? service.generateForPeriod(spec, sink -> {}, request, period)
+                    : service.generateWorkbook(spec, () -> new WorkbookData(
+                        List.of(new Sheet("목록", columns, sink -> {})), List.of(), 0, period), request)) {
+                assertThat(download.filename()).isEqualTo(menu.name() + (people ? "" : "_" + period) + "_20260102_085900.xlsx");
+            }
+            verify(logs).append(argThat(e -> screen.equals(e.screenId()) && kind.equals(e.fileType())
+                && e.action().equals("DNLD") && e.filename() == null), same(request));
+        }
+    }
+    @Test void menuFilenameSanitizationDoesNotChangeTemplatesOrBNames() throws Exception {
+        var queries = mock(com.sicost.shared.SharedQueriesMapper.class);
+        when(queries.menus()).thenReturn(List.of(new com.sicost.shared.SharedQueryDtos.MenuRow(
+            "M", null, "개발자/풀:*?", "UI-02", 2, 1, "Y", null, false)));
+        service.setMenuQueries(queries);
+        var columns = List.of(new Column("name", "이름", CellType.TEXT));
+        try (var file = service.generate(new Specification("개발자", null, columns, "전체", "원", "UI-02"), sink -> {}, request)) {
+            assertThat(file.filename()).isEqualTo("개발자_풀____20260102_085900.xlsx");
+        }
+        try (var file = service.generate(new Specification("거래처", null, columns, "전체", "원", "UI-15"), sink -> {}, request)) {
+            assertThat(file.filename()).isEqualTo("거래처_20260102_085900.xlsx");
+        }
+        try (var file = service.generateTemplate(new Specification("개발자_등록양식", null, columns, "B8", "원", "UI-02"), List.of(), request)) {
+            assertThat(file.filename()).isEqualTo("B8_개발자양식_20260102_085900.xlsx");
+        }
+        verify(queries).menus();
     }
     @Test void b8TemplateUsesExplicitSpecificationAndLeavesLegacyTemplateOnUi15() throws Exception {
         var columns = List.of(new Column("name","이름",CellType.TEXT));
