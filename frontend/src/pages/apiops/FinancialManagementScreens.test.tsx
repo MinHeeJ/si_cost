@@ -250,23 +250,56 @@ it("shared close route renders current fixed six checks and empty annual history
     "/api/month-closes?month=2026-11&page=1&size=50",
   );
 });
-it("CLOSE displays its warning snapshot and original actor instead of current command controls", async () => {
+it("CLOSE displays completed checks and actor name while preserving remaining checks in history", async () => {
   close = {
     ...close,
     status: "CLOSE",
     checkMode: "CLOSE_SNAPSHOT",
     closedBy: "original",
+    closedByName: "재무담당",
     closedAt: "2026-11-15 09:00:00",
+    latestCloseMonth: "2026-11",
+    history: {
+      items: [
+        {
+          month: "2026-11",
+          historySequence: 1,
+          action: "CLOSE",
+          actorId: "original",
+          actorName: "재무담당",
+          occurredAt: "2026-11-15 09:00:00",
+          reason: null,
+          remainingChecks: "세금계산서 번호 미입력",
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 50,
+      hasMore: false,
+    },
     canCheck: false,
     canClose: false,
     canReopen: true,
   };
   await mountClose();
-  expect(screen.getByText(/마감 당시 6점검/)).toBeInTheDocument();
-  expect(screen.getByText(/마감자 original/)).toBeInTheDocument();
   expect(
-    within(screen.getByTestId("month-close-check-bill")).getByText("확인 필요"),
-  ).toHaveClass("sicost-tone-warn");
+    screen.getByText("마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다."),
+  ).toBeInTheDocument();
+  expect(screen.getByTestId("month-close-closed-notice")).toHaveTextContent(
+    "2026-11는 마감되었습니다(2026-11-15 09:00 · 재무담당). 고칠 내용은 다음 달 전월 조정으로 입력하세요.",
+  );
+  expect(
+    within(screen.getByTestId("month-close-check-bill")).getByText("확인 완료"),
+  ).toHaveClass("sicost-tone-ok");
+  expect(screen.getAllByText("확인 완료")).toHaveLength(6);
+  expect(screen.queryAllByText("확인하기")).toHaveLength(0);
+  expect(screen.getByTestId("month-close-history-2026-11-1")).toHaveTextContent(
+    "세금계산서 번호 미입력",
+  );
+  expect(screen.getByTestId("month-close-history-2026-11-1")).toHaveTextContent(
+    "재무담당",
+  );
+  expect(screen.queryByText(/original/)).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "다시 점검" }),
   ).not.toBeInTheDocument();

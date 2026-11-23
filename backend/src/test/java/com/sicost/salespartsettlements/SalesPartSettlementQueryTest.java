@@ -112,6 +112,32 @@ class SalesPartSettlementQueryTest {
         snapshot=new SalesPartSettlementRepository.Snapshot(s.sources(),s.parts(),List.of(s.standards().get(0),s.standards().get(0)),s.history(),List.of(),s.details(),s.firstInputs(),s.revisionSources());
         assertThat(service.listEligibleParts(null).eligibleCount()).isZero();
     }
+    @Test void closeExcludesMissingMonthStandardWithoutChangingPublicTabsGuidance() {
+        var s=snapshot;var later=s.standards().get(0);
+        var future=new StandardRow(later.partId(),"202609",null,later.leaderId(),later.leaderName(),
+            later.rate(),later.expense(),later.regUserId(),later.regDttm(),null,null);
+        snapshot=new SalesPartSettlementRepository.Snapshot(s.sources(),s.parts(),List.of(future),s.history(),s.parents(),s.details(),s.firstInputs(),s.revisionSources());
+        var close=service.listPartsForClose("2026-07");
+        assertThat(close.eligibleCount()).isZero();
+        assertThat(close.unconfirmedCount()).isZero();
+        assertThat(close.parts()).isEmpty();
+        assertThat(close.issues()).isEmpty();
+        assertThat(service.listEligibleParts("2026-07").issues()).anyMatch(Issue::blocking);
+    }
+    @Test void closeStillBlocksOverlapsAndInvalidRangesWithPartNameAndRepairScreen() {
+        var s=snapshot;var valid=s.standards().get(0);
+        for(var standards:List.of(List.of(valid,valid),
+            List.of(new StandardRow("part","202601",null,"leader","파트장",n("101"),n("10"),"actor",valid.regDttm(),null,null)),
+            List.of(new StandardRow("part","202601",null,"leader","파트장",n("40"),n("-1"),"actor",valid.regDttm(),null,null)))) {
+            snapshot=new SalesPartSettlementRepository.Snapshot(s.sources(),s.parts(),standards,s.history(),s.parents(),s.details(),s.firstInputs(),s.revisionSources());
+            assertThat(service.listPartsForClose("2026-07").issues()).singleElement().satisfies(i->{
+                assertThat(i.blocking()).isTrue();
+                assertThat(i.message()).contains("파트의 2026-07","거래처·영업 파트에서 기준을 확인해 주세요.")
+                    .doesNotContain("TB_","PART-","WORK","WARN");
+                assertThat(i.message()).contains(standards.size()>1?"기준이 두 줄 이상 겹칩니다":"허용 범위를 벗어났습니다");
+            });
+        }
+    }
     @Test void confirmedSnapshotNeverRecalculatesAmountsProjectsOrTypeAndRevisionIgnoresPayChanges() {
         var s=snapshot;var parent=new Parent("part","202607",n("5"),n("999"),"AUTO","actor","확정자",LocalDateTime.of(2026,7,31,0,0),null,"actor",null,null,null);
         var detail=new Detail("part","202607","dev-0","현재 이름","현재 번호","OS","[\"저장, 프로젝트\"]",n("0.75"),n("100"),n("10"),n("0"),n("0"),n("10"),n("90"),n("36"),"급여 예정",null,null,null,null);

@@ -38,12 +38,34 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
       `month-close-check-${check.code.toLowerCase().replaceAll("_", "-")}`,
     );
     await expect(card).toContainText(check.name);
-    await expect(card).toContainText(check.description ?? "–");
+    await expect(card).toContainText(
+      data.status === "CLOSE"
+        ? check.code === "PAY"
+          ? `${check.count}명 업로드 완료`
+          : "확인 완료"
+        : (check.description ?? "–"),
+    );
+    if (data.status === "CLOSE")
+      await expect(card.getByRole("button")).toHaveCount(0);
   }
   await expect(
     page.getByTestId("month-close-check-pay").getByRole("button"),
   ).toHaveCount(0);
   if (data.status === "CLOSE") {
+    const notice = page.getByTestId("month-close-closed-notice");
+    await expect(notice).toContainText(`${data.month}는 마감되었습니다(`);
+    await expect(notice).toContainText(data.closedByName ?? "–");
+    await expect(notice).toContainText(
+      "고칠 내용은 다음 달 전월 조정으로 입력하세요.",
+    );
+    await expect(notice).toContainText(
+      data.month === data.latestCloseMonth
+        ? "마감 해제는 시스템 관리자만 할 수 있습니다"
+        : "가장 최근에 마감한 달만 해제할 수 있습니다",
+    );
+    await expect(
+      page.getByRole("button", { name: "전월 조정 입력", exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("month-close-check-banner")).toHaveCount(0);
     await expect(page.getByTestId("month-close-check-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-close-button")).toHaveCount(0);
@@ -70,7 +92,7 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
       page.getByTestId(
         `month-close-history-${entry.month}-${entry.historySequence}`,
       ),
-    ).toContainText(entry.actorId);
+    ).toContainText(entry.actorName ?? "–");
 });
 
 test("5개 POST 핸들러가 누락 revision과 서버 주체 주입을 거부하고 상태를 유지한다", async ({
@@ -144,6 +166,12 @@ test("최신 미리보기 모달 취소는 명령을 보내지 않고 초점을 
   );
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText(data.month);
+  await expect(dialog).not.toContainText(/TB_|WARN|AUTO|CNFM|WORK|PART-|UI-\d/);
+  await expect(dialog.getByRole("heading")).toHaveText(
+    canClose
+      ? `${data.month}를 마감할까요?`
+      : `${data.month} 마감을 해제할까요?`,
+  );
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(button).toBeFocused();

@@ -124,7 +124,7 @@ public class MonthCloseService {
             int owned=(int)fixed.stream().filter(r->owned(table,r,owner,data)).count();
             String recorded=receiptValue(owner,table+".rowCount",data),independent=receiptValue(owner,table+".preservedIndependentFixedCount",data);
             if(owner==null||recorded==null||independent==null||owned!=Integer.parseInt(recorded)||fixed.size()!=owned+Integer.parseInt(independent))
-                issues.add(new Issue("SNAPSHOT_OWNERSHIP_UNKNOWN","해제할 사본의 소유 근거를 확인할 수 없습니다.",month,table,db,"FIX_YN"));
+                issues.add(new Issue("SNAPSHOT_OWNERSHIP_UNKNOWN",month+" 마감 당시 고정한 자료를 확인할 수 없어 해제할 수 없습니다. 마감 이력을 확인해 주세요.",month,table,db,"FIX_YN"));
             counts.add(new SnapshotCount(table,owned,fixed.size()-owned));
         }
         List<Adjustment> adjustments=data.get("TB_CO_PREV_ADJ").stream().filter(r->db.equals(s(r,"trgt_ym"))&&s(r,"aply_ym").compareTo(db)>0)

@@ -3,6 +3,7 @@ package com.sicost.apiops;
 import com.sicost.common.TimeConfiguration;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.context.CurrentUserProvider;
+import com.sicost.common.context.CurrentUserMapper;
 import com.sicost.monthclosesops.*;
 import com.sicost.monthclosesops.MonthCloseDtos.Check;
 import com.sicost.monthclosesops.MonthCloseDtos.History;
@@ -23,12 +24,14 @@ public class MonthCloseReadService {
     private final CloseCheckService checks;
     private final CurrentUserProvider users;
     private final Clock clock;
-    public MonthCloseReadService(MonthCloseRepository repository,MonthCloseCalculation calculation,CloseCheckService checks,CurrentUserProvider users,Clock clock) {
-        this.repository=repository;this.calculation=calculation;this.checks=checks;this.users=users;this.clock=clock;
+    private final CurrentUserMapper names;
+    public MonthCloseReadService(MonthCloseRepository repository,MonthCloseCalculation calculation,CloseCheckService checks,
+        CurrentUserProvider users,Clock clock,CurrentUserMapper names) {
+        this.repository=repository;this.calculation=calculation;this.checks=checks;this.users=users;this.clock=clock;this.names=names;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Result getMonthCloses(Query query) {
-        users.currentUser();YearMonth current=YearMonth.from(clock.instant().atZone(TimeConfiguration.SEOUL));
+        var user=users.currentUser();YearMonth current=YearMonth.from(clock.instant().atZone(TimeConfiguration.SEOUL));
         String month=query.month()==null?current.toString():query.month();YearMonth selected=MonthCloseInput.month(month);
         var data=repository.load(false);
         String raw=MonthCloseCalculation.standard(data,"CASH_BASE_YM");
@@ -49,20 +52,24 @@ public class MonthCloseReadService {
         }
         if(result.size()!=6||!result.stream().map(Check::code).toList().equals(CloseCheckService.CODES))throw new IllegalStateException("저장된 6개 마감 점검을 확인하지 못했습니다.");
         return new Result(month,closed?"CLOSE":"WORK",closed?s(parent,"close_user_id"):null,closed?time(s(parent,"close_dttm")):null,
-            next,latest,true,!closed,!closed&&month.equals(next),closed&&month.equals(latest),repository.revision(month,data),result,
-            closed?"CLOSE_SNAPSHOT":"CURRENT",(int)result.stream().filter(c->"WARN".equals(c.status())).count(),history(query,month,data),List.of());
+            next,latest,true,!closed,!closed&&month.equals(next),closed&&month.equals(latest)&&user.roleIds().contains("ADMIN"),repository.revision(month,data),result,
+            closed?"CLOSE_SNAPSHOT":"CURRENT",(int)result.stream().filter(c->"WARN".equals(c.status())).count(),history(query,month,data),List.of(),
+            closed?names.findName(s(parent,"close_user_id")):null);
     }
     private static String description(Check c){return c.code().equals("PAY")?c.count()+"명 업로드 완료":c.code().equals("FI")?c.count()+"건 입력":c.description();}
     private static String savedAt(String month,String code,Map<String,List<Map<String,Object>>> data) {
         return data.get("TB_CL_CLOSE_CHK").stream().filter(r->month.replace("-","").equals(s(r,"close_ym"))&&code.equals(s(r,"chk_item_cd"))).map(r->time(s(r,"chk_dttm"))).filter(Objects::nonNull).findFirst().orElse(null);
     }
     private static String filter(String code){return switch(code){case "MM_OVER"->"MM_OVER";case "BILL"->"BILL_NUMBER_MISSING";case "BILL_MISS"->"BILL_MISS";default->"";};}
-    private static HistoryPage history(Query query,String month,Map<String,List<Map<String,Object>>> data) {
+    private HistoryPage history(Query query,String month,Map<String,List<Map<String,Object>>> data) {
         List<History> all=data.get("TB_CL_CLOSE_HIST").stream().filter(r->s(r,"close_ym").startsWith(month.substring(0,4)))
             .map(r->new History(MonthCloseCalculation.api(s(r,"close_ym")),new BigDecimal(s(r,"hist_sn")).intValueExact(),s(r,"act_cd"),s(r,"reg_user_id"),time(s(r,"reg_dttm")),s(r,"act_rsn"),s(r,"remain_chk_cn")))
             .sorted(Comparator.comparing(History::occurredAt).reversed().thenComparing(History::month).thenComparingInt(History::historySequence)).toList();
         long offset=((long)query.page()-1)*query.size();
-        List<History> page=offset>=all.size()?List.of():all.subList((int)offset,(int)Math.min(offset+query.size(),all.size()));
+        List<History> selected=offset>=all.size()?List.of():all.subList((int)offset,(int)Math.min(offset+query.size(),all.size()));
+        Map<String,String> actorNames=new HashMap<>();
+        List<HistoryEntry> page=selected.stream().map(h->new HistoryEntry(h.month(),h.historySequence(),h.action(),
+            h.actorId(),h.occurredAt(),h.reason(),h.remainingChecks(),actorNames.computeIfAbsent(h.actorId(),names::findName))).toList();
         return new HistoryPage(page,all.size(),query.page(),query.size(),offset+page.size()<all.size());
     }
     private static String time(String text){return text==null?null:TIME.format(LocalDateTime.parse(text.replace(' ','T')));}

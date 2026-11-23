@@ -27,6 +27,10 @@ public class SalesPartSettlementService {
     }
     public TabsResult getSalesPartSettlements(SalesPartSettlementInput.Query query) {return tabs(repository.load(query.month(),false));}
     public TabsResult listEligibleParts(String month) {return getSalesPartSettlements(new SalesPartSettlementInput.Query(month,1,50,"name","ASC"));}
+    /** Close-only target diagnostics; the settlement screen's tabs and guidance are unchanged. */
+    public TabsResult listPartsForClose(String month) {
+        return tabs(repository.load(month,false),true);
+    }
     public Result previewSettlement(String partId,String month) {return read(partId,new SalesPartSettlementInput.Query(month,1,100,"name","ASC"),false);}
     public Result previewForClose(String partId,String month) {return read(partId,new SalesPartSettlementInput.Query(month,1,100,"name","ASC"),false,true);}
     public Result exportSettlement(String partId,SalesPartSettlementInput.Query query) { return read(partId,query,false); }
@@ -39,7 +43,7 @@ public class SalesPartSettlementService {
     private Result read(String partId,SalesPartSettlementInput.Query query,boolean paginate,boolean management) {
         ProjectInputPolicy.text(partId,20,"partId");
         Snapshot snapshot=repository.load(query.month(),true);
-        TabsResult tabs=tabs(snapshot);String month=tabs.month();String db=DatabaseMonthCodec.toDatabase(month);
+        TabsResult tabs=tabs(snapshot,management);String month=tabs.month();String db=DatabaseMonthCodec.toDatabase(month);
         PartRow part=snapshot.parts().stream().filter(p->p.partId().equals(partId)&&!"Y".equals(p.headquarters())).findFirst().orElseThrow(SalesPartSettlementService::notFound);
         Tab tab=tabs.parts().stream().filter(t->t.partId().equals(partId)).findFirst().orElse(null);
         if(tab==null) {
@@ -79,6 +83,9 @@ public class SalesPartSettlementService {
             totals,totals,List.copyOf(page),new Page(query.page(),query.size(),all.size()),List.copyOf(issues));
     }
     public TabsResult tabs(Snapshot snapshot) {
+        return tabs(snapshot,false);
+    }
+    private TabsResult tabs(Snapshot snapshot,boolean closing) {
         String db=snapshot.sources().period().toMonth(),month=DatabaseMonthCodec.toApi(db);
         List<Tab> tabs=new ArrayList<>();List<Issue> issues=new ArrayList<>();int count=0,confirmedCount=0;
         for(PartRow part:snapshot.parts().stream().sorted(Comparator.comparing(PartRow::name).thenComparing(PartRow::partId)).toList()) {
@@ -86,7 +93,20 @@ public class SalesPartSettlementService {
             Standard standard=standard(snapshot,part.partId(),db);Parent parent=parent(snapshot,part.partId());boolean confirmed=parent!=null&&parent.confirmed();
             boolean active=activeAtMonthEnd(part,snapshot.history(),db);
             boolean eligible=active&&standard.valid();List<Issue> problems=new ArrayList<>();
-            if(active&&!standard.valid()) {var issue=issue("PART_STANDARD_UNKNOWN","파트 기준 미확인: 유효 기준 부재·중첩 또는 허용 범위를 확인해 주세요.","standard",null,month,"TB_BS_PART_STD",true);problems.add(issue);issues.add(issue);}
+            if(active&&!standard.valid()) {
+                long matching=snapshot.standards().stream()
+                    .filter(s->part.partId().equals(s.partId())&&s.month().compareTo(db)<=0
+                        &&(s.endMonth()==null||s.endMonth().compareTo(db)>=0)).count();
+                if(!closing||matching>0) {
+                    String message=closing
+                        ? part.name()+"의 "+month+(matching>1?" 기준이 두 줄 이상 겹칩니다.":" 배분율 또는 공통관리비가 허용 범위를 벗어났습니다.")
+                            +" 거래처·영업 파트에서 기준을 확인해 주세요."
+                        : "파트 기준 미확인: 유효 기준 부재·중첩 또는 허용 범위를 확인해 주세요.";
+                    var problem=issue("PART_STANDARD_UNKNOWN",message,"standard",null,month,"TB_BS_PART_STD",true);
+                    problems.add(problem);
+                    issues.add(problem);
+                }
+            }
             if(eligible) {count++;if(confirmed)confirmedCount++;}
             if(eligible||confirmed)tabs.add(new Tab(part.partId(),part.name(),eligible,!eligible&&confirmed,parent==null?"WORK":parent.status(),standard,List.copyOf(problems)));
         }
