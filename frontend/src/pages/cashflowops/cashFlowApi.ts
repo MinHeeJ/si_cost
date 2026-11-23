@@ -1,6 +1,7 @@
 import { request } from "../../shared/api";
 import { downloadB7File, saveDownload } from "../b7/b7Api";
 export type CashUnit = "WON" | "THOUSAND_WON" | "MILLION_WON";
+export type CashSourcePageSize = 20 | 50 | 100;
 export const cashItems = [
   "CASH_SALES",
   "MISC",
@@ -58,7 +59,7 @@ export type CashSourcesPage = {
   items: CashSource[];
   total: number;
   page: number;
-  size: number;
+  size: CashSourcePageSize;
   hasMore: boolean;
 };
 export type CashValues = {
@@ -116,7 +117,7 @@ export const getCashFlowSources = (
   month: string,
   item: CashItem,
   page = 1,
-  size = 50,
+  size: CashSourcePageSize = 50,
   signal?: AbortSignal,
 ) =>
   request<CashSourcesPage>(

@@ -1,5 +1,5 @@
-import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
+import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -9,13 +9,14 @@ import {
   getCashFlowSources,
   type CashItem,
   type CashSource,
+  type CashSourcePageSize,
   type CashSourcesPage,
 } from "./cashFlowApi";
 export type CashSelection = {
   month: string;
   item: CashItem;
   page: number;
-  size: number;
+  size: CashSourcePageSize;
 };
 export function SourceBreakdown({
   selection,
@@ -68,6 +69,92 @@ export function SourceBreakdown({
     refresh,
     retry,
   ]);
+  const columns: Column<CashSource>[] = [
+    {
+      id: "origin",
+      label: "원천 종류 / 번호",
+      render: (source) => (
+        <>
+          {source.sourceTypeLabel}
+          <small className="cash-source-meta">{source.sourceId}</small>
+        </>
+      ),
+    },
+    {
+      id: "attribution",
+      label: "귀속일 / 기준월",
+      render: (source) => (
+        <>
+          {source.attributionDate ?? "–"}
+          <small className="cash-source-meta">
+            {source.sourceMonth} → {source.attributionMonth}
+          </small>
+        </>
+      ),
+    },
+    {
+      id: "status",
+      label: "구분",
+      align: "center",
+      render: (source) => {
+        if (source.status === "UNKNOWN") return <StatusBadge tone="warn">미확인</StatusBadge>;
+        if (source.status === "ACTUAL") return <StatusBadge tone="lock">실적</StatusBadge>;
+        return <StatusBadge tone="info">예정</StatusBadge>;
+      },
+    },
+    {
+      id: "amount",
+      label: `금액 (${unit})`,
+      align: "right",
+      render: (source) => (
+        <>
+          {formatAmount(source.amount, unit)}
+          <small className="cash-source-meta">
+            부가세 {formatAmount(source.vatAmount, unit)} · {source.includesVat ? "포함" : "별도"}
+          </small>
+        </>
+      ),
+    },
+    {
+      id: "reference",
+      label: "참조 급여월 / 직원구분",
+      render: (source) => (
+        <>
+          {source.referencePayrollMonth ?? "–"}
+          <small className="cash-source-meta">
+            {source.employeeType
+              ? (data?.employeeTypeLabels[source.employeeType] ?? "미확인")
+              : "–"}
+          </small>
+        </>
+      ),
+    },
+    {
+      id: "formula",
+      label: "계산 근거",
+      render: (source) => (
+        <>
+          {source.formula}
+          {source.issues.map((issue, index) => (
+            <p key={index} className="cash-unknown">
+              {issue.sourceId} {issue.message}
+            </p>
+          ))}
+        </>
+      ),
+    },
+    {
+      id: "link",
+      label: "이동",
+      align: "center",
+      render: (source) =>
+        source.sourceLink && (
+          <button type="button" onClick={() => onSource(source)}>
+            원천 보기
+          </button>
+        ),
+    },
+  ];
   return (
     <DetailDrawer
       title={`${selection.month} ${cashLabels[selection.item]} 계산근거`}
@@ -75,14 +162,13 @@ export function SourceBreakdown({
       closeTestId="cash-source-close"
       onClose={onClose}
     >
-      <div className="cash-source-panel operating-profit">
+      <div className="cash-source-breakdown">
         {notice && (
           <p role="status" className="operating-banner">
             {notice}
           </p>
         )}
-        {loading && <p role="status">원천을 불러오는 중입니다.</p>}
-        {error != null && (
+        {error != null ? (
           <ErrorBanner
             message={
               error instanceof Error
@@ -94,152 +180,22 @@ export function SourceBreakdown({
             }
             onRetry={() => setRetry((n) => n + 1)}
           />
-        )}
-        {data && (
-          <>
-            <p>
-              전체 {data.total}건 · {data.page}페이지 · 전체 금액은 페이지와
-              무관합니다.
-            </p>
-            {data.items.length === 0 ? (
-              <div className="operating-empty">
-                조회된 원천이 없습니다.
-                <button
-                  data-testid="cash-source-reset"
-                  type="button"
-                  onClick={onClose}
-                >
-                  조건 초기화
-                </button>
-              </div>
-            ) : (
-              <div className="operating-table-scroll">
-                <table aria-label="현금 원천">
-                  <thead>
-                    <tr>
-                      {[
-                        "원천 종류 / 원천 번호",
-                        "귀속일 / 기준월",
-                        "실적·예정",
-                        "금액",
-                        "참조 급여월 / 직원구분",
-                        "계산 근거 / 미확인 사유",
-                        "원천",
-                      ].map((label) => (
-                        <th key={label}>
-                          {label}
-                          <FieldHelp label={label} kind="B" />
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.items.map((s, i) => (
-                      <tr
-                        key={`${s.sourceType}:${s.sourceId}:${s.attributionDate}`}
-                        data-testid={`cash-source-row-${i}`}
-                      >
-                        <td>
-                          {s.sourceTypeLabel}
-                          <br />
-                          {s.sourceId}
-                        </td>
-                        <td>
-                          {s.attributionDate ?? "–"}
-                          <br />
-                          {s.sourceMonth} → {s.attributionMonth}
-                        </td>
-                        <td>
-                          <StatusBadge
-                            tone={
-                              s.status === "UNKNOWN"
-                                ? "warn"
-                                : s.status === "ACTUAL"
-                                  ? "lock"
-                                  : "info"
-                            }
-                          >
-                            {s.status === "UNKNOWN"
-                              ? "미확인"
-                              : s.status === "ACTUAL"
-                                ? "실적"
-                                : "예정"}
-                          </StatusBadge>
-                        </td>
-                        <td>
-                          {formatAmount(s.amount, unit)}
-                          <br />
-                          부가세 {formatAmount(s.vatAmount, unit)} ·{" "}
-                          {s.includesVat ? "포함" : "별도"}
-                        </td>
-                        <td>
-                          {s.referencePayrollMonth ?? "–"}
-                          <br />
-                          {s.employeeType
-                            ? (data.employeeTypeLabels[s.employeeType] ??
-                              "미확인")
-                            : "–"}
-                        </td>
-                        <td>
-                          {s.formula}
-                          {s.issues.map((issue, j) => (
-                            <p key={j} className="cash-unknown">
-                              {issue.sourceId} {issue.message}
-                            </p>
-                          ))}
-                        </td>
-                        <td>
-                          {s.sourceLink && (
-                            <button
-                              data-testid={`cash-source-link-${i}`}
-                              onClick={() => onSource(s)}
-                            >
-                              원천 보기
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="operating-toolbar">
-              <button
-                data-testid="cash-source-prev"
-                disabled={loading || data.page <= 1}
-                onClick={() => onChange({ ...selection, page: data.page - 1 })}
-              >
-                이전 근거
-              </button>
-              <button
-                data-testid="cash-source-next"
-                disabled={loading || !data.hasMore}
-                onClick={() => onChange({ ...selection, page: data.page + 1 })}
-              >
-                다음 근거
-              </button>
-              <label>
-                페이지 크기{" "}
-                <select
-                  data-testid="cash-source-size"
-                  value={selection.size}
-                  disabled={loading}
-                  onChange={(e) =>
-                    onChange({
-                      ...selection,
-                      page: 1,
-                      size: Number(e.target.value),
-                    })
-                  }
-                >
-                  {[20, 50, 100].map((n) => (
-                    <option key={n}>{n}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </>
+        ) : (
+          <DataTable
+            rows={data?.items ?? []}
+            columns={columns}
+            rowKey={(source) => `${source.sourceType}:${source.sourceId}:${source.attributionDate}`}
+            tableLabel="현금 원천"
+            testId="cash-source"
+            loading={loading}
+            loadingMessage="조회 중입니다."
+            empty="조회된 원천이 없습니다."
+            page={data?.total ? data.page : undefined}
+            size={data?.size ?? selection.size}
+            total={data?.total ?? 0}
+            onPageChange={(page) => onChange({ ...selection, page })}
+            onSizeChange={(size) => onChange({ ...selection, size, page: 1 })}
+          />
         )}
       </div>
     </DetailDrawer>

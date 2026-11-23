@@ -103,30 +103,23 @@ beforeEach(() => {
     issues: [],
   };
   sources = [source("UNKNOWN")];
-  fetcher.mockImplementation(async (url) =>
-    String(url).startsWith("/api/cash-flow/sources")
-      ? response({
-          month: "2026-11",
-          employeeTypeLabels: {
-            FT: "정규직",
-            CT: "계약직",
-            FL: "프리랜서",
-            OS: "외주",
-          },
-          item: "REG_PAY",
-          items: sources,
-          total: 21,
-          page:
-            new URL(String(url), "https://test.invalid").searchParams.get(
-              "page",
-            ) === "2"
-              ? 2
-              : 1,
-          size: 50,
-          hasMore: true,
-        })
-      : response(data),
-  );
+  fetcher.mockImplementation(async (url) => {
+    if (!String(url).startsWith("/api/cash-flow/sources")) return response(data);
+    const params = new URL(String(url), "https://test.invalid").searchParams;
+    const page = Number(params.get("page") ?? "1");
+    const size = Number(params.get("size") ?? "50");
+    const start = (page - 1) * size;
+    return response({
+      month: "2026-11",
+      employeeTypeLabels: { FT: "정규직", CT: "계약직", FL: "프리랜서", OS: "외주" },
+      item: "REG_PAY",
+      items: sources.slice(start, start + size),
+      total: sources.length,
+      page,
+      size,
+      hasMore: start + size < sources.length,
+    });
+  });
 });
 afterEach(() => vi.unstubAllGlobals());
 function Destination() {
@@ -204,7 +197,7 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   expect(within(panel).getByRole("heading")).toHaveTextContent(
     "2026-11 인건비(정규직) 계산근거",
   );
-  const evidence = await within(panel).findByTestId("cash-source-row-0");
+  const evidence = await within(panel).findByTestId(/^cash-source-row-/);
   expect(evidence).toHaveTextContent("급여");
   expect(evidence).toHaveTextContent("정규직");
   expect(evidence).toHaveTextContent("부가세");
@@ -214,10 +207,10 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   expect(screen.getByRole("table", { name: "자금수지표" })).toBeInTheDocument();
   await within(panel).findByText("필수 급여 미확인", { exact: false });
   expect(
-    within(panel).getByText("202610:001", { exact: false }),
+    within(panel).getByText("202610:001"),
   ).toBeInTheDocument();
   expect(within(panel).getByText("미확인")).toHaveClass("sicost-tone-warn");
-  expect(within(panel).getByTestId("cash-source-row-0")).toHaveTextContent(
+  expect(within(panel).getByTestId(/^cash-source-row-/)).toHaveTextContent(
     "2026-10",
   );
   await userEvent.click(screen.getByTestId("cash-source-close"));
@@ -230,19 +223,25 @@ it("opens a NULL leaf in the right detail drawer, shows reference and unknown ev
   ).toBe(true);
 });
 it("paginates full sources using server count and resets page on size change", async () => {
+  sources = Array.from({ length: 51 }, (_, index) => ({
+    ...source(),
+    sourceId: `급여-${index + 1}`,
+  }));
   ready();
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByText("전체 21건", { exact: false });
-  await userEvent.click(screen.getByTestId("cash-source-next"));
+  const pager = await screen.findByRole("navigation", { name: "페이지" });
+  expect(within(pager).getByText("1-50 / 51건")).toBeInTheDocument();
+  await userEvent.click(within(pager).getByRole("button", { name: "다음 페이지" }));
   await waitFor(() =>
     expect(
       fetcher.mock.calls.some(([url]) => String(url).includes("page=2")),
     ).toBe(true),
   );
-  await screen.findByText("2페이지", { exact: false });
-  await userEvent.selectOptions(screen.getByTestId("cash-source-size"), "20");
+  await screen.findByText("51-51 / 51건");
+  await userEvent.selectOptions(screen.getByTestId("cash-source-page-size"), "20");
+  await screen.findByText("1-20 / 51건");
   await waitFor(() =>
     expect(
       fetcher.mock.calls.some(([url]) =>
@@ -297,8 +296,7 @@ it("sends source month and tax section as one-time navigation context without sa
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 법인세 납부 계산근거" }),
   );
-  await screen.findByTestId("cash-source-link-0");
-  await userEvent.click(screen.getByTestId("cash-source-link-0"));
+  await userEvent.click(await screen.findByRole("button", { name: "원천 보기" }));
   expect(await screen.findByTestId("destination")).toHaveTextContent(
     '"month":"2026-11"',
   );
@@ -315,8 +313,7 @@ it("refuses future destination navigation but allows future evidence", async () 
   await userEvent.click(
     await screen.findByRole("button", { name: "12월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByTestId("cash-source-link-0");
-  await userEvent.click(screen.getByTestId("cash-source-link-0"));
+  await userEvent.click(await screen.findByRole("button", { name: "원천 보기" }));
   expect(screen.getByTestId("cash-flow-screen")).toBeInTheDocument();
   expect(
     screen.getByText("목적 화면의 조회 기간 범위를 벗어나", { exact: false }),
@@ -327,7 +324,7 @@ it("refreshes annual table and selected evidence after an actual commit event", 
   await userEvent.click(
     await screen.findByRole("button", { name: "11월 인건비(정규직) 계산근거" }),
   );
-  await screen.findByTestId("cash-source-row-0");
+  await screen.findByTestId(/^cash-source-row-/);
   const before = fetcher.mock.calls.length;
   act(() =>
     window.dispatchEvent(new Event("sicost:financial-items-committed")),

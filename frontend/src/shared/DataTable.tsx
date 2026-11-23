@@ -28,6 +28,7 @@ export type DataTableProps<T> = {
   rows: readonly T[];
   columns: readonly Column<T>[];
   rowKey(row: T): Key;
+  tableLabel?: string;
   loading?: boolean;
   /** Show a message in the table body while loading. Defaults to skeleton rows. */
   loadingMessage?: string;
@@ -68,6 +69,7 @@ export function DataTable<T>({
   rows,
   columns: suppliedColumns,
   rowKey,
+  tableLabel,
   loading,
   loadingMessage,
   empty = "조회된 자료가 없습니다.",
@@ -236,7 +238,10 @@ export function DataTable<T>({
         </button>
       )}
       <div className="sicost-table-viewport">
-        <table className={dense ? "sicost-table sicost-dense" : "sicost-table"}>
+        <table
+          aria-label={tableLabel}
+          className={dense ? "sicost-table sicost-dense" : "sicost-table"}
+        >
           <thead>
             <tr>
               {onSelectionChange && (

@@ -9,8 +9,7 @@
   box-shadow: var(--e1);
   border-radius: 10px;
 }
-.cash-chart h2,
-.cash-source-panel h2 {
+.cash-chart h2 {
   font-size: 16px;
   margin: 0;
 }
@@ -105,29 +104,53 @@
 .cash-flow .cash-statement-column-status > .sicost-badge {
   margin: 0;
 }
-.cash-source-panel {
+.sicost-drawer:has(.cash-source-breakdown) {
+  width: min(960px, 100%);
+}
+.cash-source-breakdown {
   display: grid;
-  gap: 16px;
-  padding: 20px 24px;
-  background: var(--surface);
-  border: 0;
-  box-shadow: var(--e1);
-  border-radius: 10px;
+  gap: 12px;
   min-width: 0;
 }
-.cash-source-panel td {
-  text-align: left;
+.cash-source-breakdown .sicost-table {
+  min-width: 760px;
+}
+.cash-source-breakdown .sicost-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.cash-source-breakdown td[data-column="formula"] {
+  min-width: 170px;
   white-space: normal;
   overflow-wrap: anywhere;
-  max-width: 320px;
+}
+.cash-source-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-sub);
 }
 .cash-unknown {
+  margin: 3px 0 0;
   color: var(--warn);
 }
 @media (max-width: 767px) {
-  .cash-chart,
-  .cash-source-panel {
+  .cash-chart {
     padding: 16px;
+  }
+  .cash-source-breakdown .sicost-pagination {
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+  }
+  .cash-source-breakdown .sicost-pagination > div {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+  .cash-source-breakdown .sicost-pagination select {
+    grid-row: 1;
+    grid-column: 2;
+    justify-self: end;
   }
 }
 
@@ -218,18 +241,4 @@
     grid-column: 2;
     justify-self: end;
   }
-}
-
-.cash-source-panel table {
-  min-width: 1100px;
-}
-.cash-source-panel th,
-.cash-source-panel td {
-  white-space: nowrap;
-  overflow-wrap: normal;
-}
-.cash-source-panel td:nth-child(6) {
-  white-space: normal;
-  min-width: 240px;
-  overflow-wrap: anywhere;
 }
