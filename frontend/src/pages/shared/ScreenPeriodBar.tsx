@@ -24,6 +24,7 @@ export function ScreenPeriodBar({
   controlled?: {
     month: string;
     currentMonth: string;
+    minMonth?: string;
     onChange(month: string): void;
     disabled?: boolean;
   };
@@ -271,6 +272,21 @@ export function ScreenPeriodBar({
       closeRead.current++;
     };
   }, [context, value, type, closeRefresh]);
+  if (controlled?.minMonth)
+    return (
+      <section className="sicost-period-bar" aria-label="화면 기간">
+        <div className="sicost-period-controls">
+          <PeriodSelector
+            type="YEAR_MONTH"
+            value={controlled.month}
+            min={controlled.minMonth}
+            max={controlled.currentMonth}
+            disabled={controlled.disabled}
+            onChange={controlled.onChange}
+          />
+        </div>
+      </section>
+    );
   if (controlled)
     return (
       <section

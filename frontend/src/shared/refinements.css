@@ -139,7 +139,7 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .sicost-motion-reset h1,.sicost-motion-reset progress,.sicost-motion-reset .sicost-kpi-label::before,.sicost-motion-reset .dashboard-metric>span:first-child::before{animation:none!important}
 
 /* Summary beside a period picker. */
-.sicost-screen-content:has(> .dashboard-content, > .sicost-period-row .sicost-period-summary) {
+.sicost-screen-content:has(> .dashboard-content, .sicost-period-row .sicost-period-summary) {
   container: period-summary / inline-size;
 }
 .sicost-period-row:has(.sicost-period-summary) { gap: 12px; }
