@@ -173,6 +173,27 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+.financial-section-heading small {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--head-bg);
+  font-weight: 600;
+}
+:is(.financial-section-heading, .financial-subsection-heading) .sicost-help-icon {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  color: var(--info);
+  background: var(--info-bg);
+}
+:is(.financial-section-heading, .financial-subsection-heading) .sicost-help-icon:hover {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+:is(.financial-section-heading, .financial-subsection-heading) .sicost-help-icon svg {
+  width: 16px;
+  height: 16px;
+}
 .financial-editor :is(.financial-section, .financial-read-panel) .sicost-grid {
   display: flow-root;
 }
