@@ -82,7 +82,12 @@ public class RecommendationActionService {
         Map<String,String> connection=new TreeMap<>();connection.put("tentativeAssignmentId",saved.tentativeId());connection.put("finalOpportunityId",need.opportunityId());connection.put("finalNeedSn",need.needSn());
         if(!same&&!active.isEmpty())connection.put("releasedTentativeAssignmentId",active.get(0).id());
         Choice choice=new Choice(key,"TENT",null,actor,now());repository.select(row,choice,payload,connection);
-        return repository.completed(row,choice,connection,need.name()+" / "+need.needSn()+"행 / "+need.jobCode()+" 가배정했습니다."+(connection.containsKey("releasedTentativeAssignmentId")?" 이전 가배정을 해제했습니다.":""));
+        boolean moved=connection.containsKey("releasedTentativeAssignmentId");
+        var names=mapper.messageNames(new MessageContext(row.developerId(),need.jobCode(),moved?active.get(0).opportunityId():null));
+        if(names==null)throw new IllegalStateException("가배정 인력·직무 이름을 확인하지 못했습니다.");
+        String message=names.developerName()+"님을 「"+need.name()+"」 "+need.needSn()+"번 자리("+names.jobName()+")에 가배정했습니다.";
+        if(moved)message+=" (이전 가배정 「"+names.previousOpportunityName()+"」은 풀렸습니다)";
+        return repository.completed(row,choice,connection,message);
     }
     private YearMonth start(Row row,Need need){
         YearMonth result=YearMonth.parse(AssignmentMonthlyService.api(row.startMonth()));

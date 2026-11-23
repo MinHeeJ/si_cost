@@ -2,6 +2,14 @@ import { request } from "../../shared/api";
 import type { RecommendationCandidate } from "../candidates/recommendationActionsApi";
 
 export type TargetType = "OPPORTUNITY" | "PROJECT";
+export function recommendationEntryUrl(condition: {
+  targetType: TargetType;
+  targetId: string;
+  jobCode: string;
+  startMonth: string;
+}) {
+  return `/UI-30?${new URLSearchParams(condition)}`;
+}
 export type RecommendationCondition = {
   targetType: TargetType;
   targetId: string;

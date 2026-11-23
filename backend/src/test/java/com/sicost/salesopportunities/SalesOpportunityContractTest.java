@@ -59,6 +59,10 @@ class SalesOpportunityContractTest {
         when(tentatives.resolve(any(),any())).thenAnswer(c->c.getArgument(0));when(tentatives.changes(any(),any(),any(),any())).thenReturn(List.of());when(tentatives.apply(anyString(),any())).thenReturn(List.of());
     }
     ObjectNode edit(){ObjectNode b=body();((ObjectNode)b.withArray("needs").get(0)).put("needSn",1);return b.put("expectedRevision",revision());}
+    @Test void negotiationBeforeApprovalReturnsSpecifiedMessageWithoutWrites() throws Exception {
+        mvc.perform(put("/api/sales-opportunities/O-0101").contentType("application/json").content(edit().put("stage","NEGO").toString()))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("견적 승인 전이라 협상 단계로 옮길 수 없습니다"));noWrites();
+    }
     @Test void validationReturnsSpecificMessagesAndAllIndependentFields() throws Exception {
         mvc.perform(post("/api/sales-opportunities").contentType("application/json")
             .content(body().put("probability","101").put("amount","0").toString()))

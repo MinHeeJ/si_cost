@@ -23,6 +23,7 @@ public interface RecommendationActionMapper {
     void lockClose();
     Need need(Slot slot);
     Developer developer(String id);
+    MessageNames messageNames(MessageContext context);
     Withdrawal withdrawal(String id);
     boolean hasConfirmedNext(@Param("developerId") String developerId,@Param("date") java.time.LocalDate date);
     boolean hasConvertedNext(String developerId);

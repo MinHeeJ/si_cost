@@ -1,5 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { recommendationEntryUrl } from "../workforcerecommendationsops/recommendationBrowseApi";
 import {
   errorOutsideFields,
   useFieldErrorFocus,
@@ -31,6 +33,53 @@ const createFieldsWithMessage = new Set([
   "contractMm",
   "billingUnitPrice",
 ]);
+
+function AssignmentRecommendationButton({
+  form,
+  pending,
+  onRequest,
+}: {
+  form: api.Create;
+  pending: boolean;
+  onRequest(proceed: () => void): void;
+}) {
+  const navigate = useNavigate();
+  const missing =
+    !form.projectId || !form.jobCode
+      ? "프로젝트와 직무를 먼저 선택해 주세요."
+      : !form.startDate
+        ? "투입 시작일을 먼저 입력해 주세요."
+        : "";
+  return (
+    <div className="assignment-create-wide">
+      <button
+        type="button"
+        data-testid="assignment-ai-recommend"
+        disabled={pending || Boolean(missing)}
+        aria-describedby={missing ? "assignment-ai-reason" : undefined}
+        onClick={() =>
+          onRequest(() =>
+            navigate(
+              recommendationEntryUrl({
+                targetType: "PROJECT",
+                targetId: form.projectId,
+                jobCode: form.jobCode,
+                startMonth: form.startDate.slice(0, 7),
+              }),
+            ),
+          )
+        }
+      >
+        AI 추천 받기
+      </button>
+      {missing && (
+        <p id="assignment-ai-reason" data-testid="assignment-ai-reason">
+          {missing}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function AssignmentCreateForm({
   year,
@@ -85,6 +134,7 @@ export function AssignmentCreateForm({
     submitAssignment ? "저장됐지만 다시 불러오지 못했습니다" : undefined,
   );
   const generation = useRef(0);
+  const leaveToRecommendation = useRef<(() => void) | undefined>();
   const [missingMonthlyRate, setMissingMonthlyRate] = useState(false);
   const formRoot = useRef<HTMLDivElement>(null);
   useFieldErrorFocus(formRoot, fields);
@@ -502,6 +552,16 @@ export function AssignmentCreateForm({
           {field("투입일 *", "startDate", "date")}
           {field("철수일 *", "endDate", "date")}
           {field("계약 월MM (빈칸 1.00)", "contractMm")}
+          {!submitAssignment && (
+            <AssignmentRecommendationButton
+              form={form}
+              pending={pending}
+              onRequest={(proceed) => {
+                leaveToRecommendation.current = proceed;
+                setLeaving(true);
+              }}
+            />
+          )}
           {paid && canRate && (
             <>
               {field("청구 단가 (원) *", "billingUnitPrice")}
@@ -662,8 +722,17 @@ export function AssignmentCreateForm({
         title="작성 중인 내용을 나가시겠습니까?"
         confirmLabel="나가기"
         cancelLabel="계속 작성"
-        onCancel={() => setLeaving(false)}
-        onConfirm={onClose}
+        onCancel={() => {
+          leaveToRecommendation.current = undefined;
+          setLeaving(false);
+        }}
+        onConfirm={() => {
+          const proceed = leaveToRecommendation.current;
+          leaveToRecommendation.current = undefined;
+          setLeaving(false);
+          onClose();
+          proceed?.();
+        }}
       >
         <p>자동 저장하지 않습니다. 작성한 배정은 폐기됩니다.</p>
       </Dialog>

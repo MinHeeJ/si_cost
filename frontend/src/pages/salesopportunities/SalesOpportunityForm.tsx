@@ -124,6 +124,47 @@ export function SalesOpportunityForm({
     [peopleLoading, setPeopleLoading] = useState(false),
     [peopleError, setPeopleError] = useState<unknown>();
   const [committed, setCommitted] = useState<api.Result>();
+  const [rowWarnings, setRowWarnings] = useState<Record<string, string[]>>({});
+  const warningInputs = JSON.stringify(
+    rows.map((r) => ({
+      key: r.rowKey,
+      month: r.startMonth ?? "",
+      ids: r.selected,
+    })),
+  );
+  useEffect(() => {
+    let live = true;
+    setRowWarnings({});
+    const inputs = JSON.parse(warningInputs) as {
+      key: string;
+      month: string;
+      ids: string[];
+    }[];
+    void Promise.all(
+      inputs
+        .filter((r) => r.ids.length)
+        .map(async (r) => {
+          try {
+            const warnings = await Promise.all(
+              r.ids.map((id) => api.getNeedWarnings(id, r.month, detail?.id)),
+            );
+            return [r.key, warnings.flat()] as const;
+          } catch {
+            return [
+              r.key,
+              [
+                "가배정·투입 경고를 조회하지 못했습니다. 개발자를 다시 선택해 확인해 주세요.",
+              ],
+            ] as const;
+          }
+        }),
+    ).then((entries) => {
+      if (live) setRowWarnings(Object.fromEntries(entries));
+    });
+    return () => {
+      live = false;
+    };
+  }, [warningInputs, detail?.id]);
   useFieldErrorFocus(node, fields);
   const destination = useRef<string>(),
     { pending, message, commit } = useCommitRefresh(
@@ -413,10 +454,9 @@ export function SalesOpportunityForm({
         {errorOutsideFields(error, formFieldWithMessage) != null && (
           <SalesCommandError error={error} />
         )}
-        {message &&
-          !(error instanceof Error && error.message === message) && (
-            <p role="status">{message}</p>
-          )}
+        {message && !(error instanceof Error && error.message === message) && (
+          <p role="status">{message}</p>
+        )}
         {warning && (
           <p role="status" className="sales-command-warning">
             {warning}
@@ -614,7 +654,8 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 근무지
-                <FieldHelp label="근무지" /><input
+                <FieldHelp label="근무지" />
+                <input
                   data-testid="opportunity-workplace"
                   name="workplace"
                   value={form.workplace ?? ""}
@@ -634,7 +675,8 @@ export function SalesOpportunityForm({
               </label>
               <label>
                 기한
-                <FieldHelp label="기한" /><input
+                <FieldHelp label="기한" />
+                <input
                   data-testid="opportunity-next-due"
                   name="nextDue"
                   type="date"
@@ -836,6 +878,15 @@ export function SalesOpportunityForm({
                               해제
                             </button>
                           </span>
+                        ))}
+                        {rowWarnings[r.rowKey]?.map((text, i) => (
+                          <p
+                            key={i}
+                            data-testid={`need-warning-${r.rowKey}-${i}`}
+                            className="sales-command-warning"
+                          >
+                            {text}
+                          </p>
                         ))}
                         {detail?.tentativeAssignments
                           .filter(

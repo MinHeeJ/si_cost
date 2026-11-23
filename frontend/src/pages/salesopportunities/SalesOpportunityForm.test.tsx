@@ -90,6 +90,7 @@ async function ready() {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(api.getNeedWarnings).mockResolvedValue([]);
   saved.mockResolvedValue(undefined);
   vi.mocked(api.getClientOptions).mockResolvedValue({
     items: [{ id: "C-a", name: "고객사", type: "CUST" }],
@@ -296,6 +297,40 @@ it("developer picker loads real direct active list and empty state; selection is
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
 });
 
+it("다른 기회·월 투입 경고는 저장 전 해당 줄에 표시하고 저장을 막지 않는다", async () => {
+  vi.mocked(api.getNeedWarnings).mockResolvedValue([
+    "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
+    "8월에 이미 1.00 MM 투입 중입니다.",
+  ]);
+  const o = detail();
+  o.tentativeAssignments = [];
+  vi.mocked(api.getDevelopers).mockResolvedValue({
+    items: [{ id: "D-a", name: "업로드03" }],
+    total: 1,
+    page: 1,
+    size: 20,
+  } as Awaited<ReturnType<typeof api.getDevelopers>>);
+  mount(o);
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
+  await userEvent.click(await screen.findByTestId("opportunity-developer-d-a"));
+  await userEvent.click(screen.getByRole("button", { name: "선택 완료" }));
+  const row = screen.getByTestId("opportunity-need-need-1");
+  await within(row).findByText(
+    "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
+  );
+  expect(row).toHaveTextContent("8월에 이미 1.00 MM 투입 중입니다.");
+  expect(api.putSalesOpportunity).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() =>
+    expect(api.putSalesOpportunity).toHaveBeenCalledWith(
+      o.id,
+      expect.objectContaining({
+        tentativeSelections: [expect.objectContaining({ developerId: "D-a" })],
+      }),
+    ),
+  );
+});
 it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
   mount();
   await ready();

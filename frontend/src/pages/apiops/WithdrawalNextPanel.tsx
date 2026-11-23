@@ -51,6 +51,7 @@ export function WithdrawalNextPanel({
   const [data, setData] = useState<api.NextPositionData>();
   const [skills, setSkills] = useState<string[]>();
   const [error, setError] = useState<unknown>();
+  const [selectionNotice, setSelectionNotice] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [confirmation, setConfirmation] = useState<{
     candidate: api.NextPositionCandidate;
@@ -114,9 +115,15 @@ export function WithdrawalNextPanel({
   ) {
     if (!data?.rcmdId || pending) return;
     setError(undefined);
+    setSelectionNotice(undefined);
     try {
       await commit(async () => {
-        await api.selectWithdrawalPosition(data.rcmdId!, candidate, warnings);
+        const result = await api.selectWithdrawalPosition(
+          data.rcmdId!,
+          candidate,
+          warnings,
+        );
+        setSelectionNotice(result.message);
         setData(
           (previous) =>
             previous && {
@@ -165,7 +172,7 @@ export function WithdrawalNextPanel({
         <WithdrawalError error={error} />
         {message && (
           <p role="status">
-            {message}{" "}
+            {message === "저장했습니다." ? selectionNotice || message : message}{" "}
             <button
               data-testid="withdrawal-next-refresh"
               disabled={pending}

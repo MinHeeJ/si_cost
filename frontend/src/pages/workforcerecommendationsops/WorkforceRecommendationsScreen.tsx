@@ -26,8 +26,10 @@ function initialCondition(
   };
 }
 export function WorkforceRecommendationsScreen({
+  entrySearch = "",
   renderRecommendation,
 }: {
+  entrySearch?: string;
   renderRecommendation?(
     value: api.RecommendationSnapshot,
     currentNeedSn: string | null,
@@ -61,6 +63,7 @@ export function WorkforceRecommendationsScreen({
     request = useRef<AbortController>();
   const initialized = useRef(false),
     busy = useRef(false);
+  const appliedEntry = useRef<string>();
   const canAct =
     !loading &&
     !pending &&
@@ -183,7 +186,25 @@ export function WorkforceRecommendationsScreen({
         const first =
           value.items.find((t) => t.targetId === value.firstTargetId) ??
           value.items[0];
-        const next = retained || converted || first;
+        const params = new URLSearchParams(entrySearch);
+        const entryTarget = params.get("targetId");
+        const incoming = entryTarget && appliedEntry.current !== entrySearch;
+        const addressed =
+          incoming &&
+          value.items.find(
+            (t) =>
+              t.targetType === params.get("targetType") &&
+              t.targetId === entryTarget,
+          );
+        if (incoming && !addressed) {
+          setTargetError(
+            new Error(
+              "지정한 추천 대상이 진행 중이 아니거나 조회할 수 없습니다.",
+            ),
+          );
+          return;
+        }
+        const next = addressed || retained || converted || first;
         selection.current = next;
         setSelected(next);
         if (!next) {
@@ -191,10 +212,26 @@ export function WorkforceRecommendationsScreen({
           setResult(undefined);
           return;
         }
-        if (!retained || !draftRef.current) update(initialCondition(next));
-        if (!initialized.current) {
+        const condition = initialCondition(next);
+        if (addressed) {
+          condition.jobCode = params.get("jobCode") ?? condition.jobCode;
+          condition.startMonth =
+            params.get("startMonth") ?? condition.startMonth;
+          const need = next.needs.find((n) => n.jobCode === condition.jobCode);
+          if (next.targetType === "OPPORTUNITY" && need) {
+            condition.needSn = need.needSn;
+            condition.requestedGradeCode =
+              need.gradeCode ?? condition.requestedGradeCode;
+          }
+          appliedEntry.current = entrySearch;
+          generation.current++;
+          request.current?.abort();
+          busy.current = false;
+        }
+        if (addressed || !retained || !draftRef.current) update(condition);
+        if (addressed || !initialized.current) {
           initialized.current = true;
-          void recommend(initialCondition(next), next, value.baseMonth);
+          void recommend(condition, next, value.baseMonth);
         } else if (previous && !retained) {
           generation.current++;
           request.current?.abort();
@@ -213,7 +250,7 @@ export function WorkforceRecommendationsScreen({
         }
       });
     return () => controller.abort();
-  }, [retry]);
+  }, [retry, entrySearch]);
   function undefinedCondition(): api.RecommendationCondition {
     return {
       targetType: "OPPORTUNITY",
@@ -411,7 +448,8 @@ export function WorkforceRecommendationsScreen({
             </button>
           </fieldset>
           <p className="sicost-banner sicost-tone-info">
-            추천은 참고용입니다. 배정은 담당자가 정합니다.
+            안내: 휴직·퇴사 예정자와 그 기간 MM 1.0인 사람 제외, 나이·성별·학력
+            미사용
           </p>
         </form>
       )}

@@ -70,7 +70,7 @@ public class AiWorkforceScoring {
     public static String normalize(String text){return text==null?"":Normalizer.normalize(text,Normalizer.Form.NFKC).trim().toLowerCase(Locale.ROOT);}
     private static boolean notBlank(String value){return value!=null&&!value.isBlank();}
     private String area(String address,String code,List<Area> areas){if(code!=null){String found=areas.stream().filter(a->code.equals(a.code())).map(Area::name).findFirst().orElse(null);if(found!=null)return found;}
-        String first=normalize(address).split("\\s+")[0];return areas.stream().filter(a->first.equals(normalize(a.name()))||first.equals(normalize(a.fullName()))).map(Area::name).findFirst().orElse(null);}
+        String first=normalize(address).split("\\s+")[0];return areas.stream().filter(a->first.equals(normalize(a.name()))||first.equals(normalize(a.fullName()))||first.equals(normalize(a.name())+"시")).map(Area::name).findFirst().orElse(null);}
     private static BigDecimal clamp(BigDecimal v,int low,int high){return v.max(BigDecimal.valueOf(low)).min(BigDecimal.valueOf(high));}
     public static String decimal(BigDecimal v){return v.stripTrailingZeros().toPlainString();}
 }

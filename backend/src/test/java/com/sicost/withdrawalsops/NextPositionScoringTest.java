@@ -26,7 +26,18 @@ class NextPositionScoringTest {
     NextPositionScoreDetail detail(Source source,Position position){return NextPositionScoreDetail.from(source,WithdrawalPositionCalculator.calculate(source,day,List.of(position),List.of()).get(0));}
     @ParameterizedTest @CsvSource({"2026-12,0,25","2027-01,1,15","2027-02,2,8","2027-03,3,3"}) void calendarGapsHaveFixedScores(String month,int gap,int score){var d=detail(person("MD","FT"),position("O-1",1,month));assertThat(d.e().gap()).isEqualTo(gap);assertThat(d.s().get(2)).isEqualByComparingTo(Integer.toString(score));}
     @Test void gapFourExcluded(){assertThat(WithdrawalPositionCalculator.calculate(person("MD","FT"),day,List.of(position("O-1",1,"2027-04")),List.of())).isEmpty();}
-    @Test void alreadyStartedValidSlotHasZeroGapAndWaitTenDays(){var d=detail(person("MD","FT"),position("O-1",1,"2026-10"));assertThat(d.e().gap()).isZero();assertThat(d.e().waitDays()).isEqualTo(10);}
+    @Test void alreadyStartedValidSlotHasZeroGapAndNoWait(){var d=detail(person("MD","FT"),position("O-1",1,"2026-10"));assertThat(d.e().gap()).isZero();assertThat(d.e().waitDays()).isZero();}
+    @ParameterizedTest @CsvSource({"2026-12-14,2026-12,0,2027-01", "2026-12-14,2027-01,17,2027-01", "2026-11-20,2026-12,10,2026-12"})
+    void formula81UsesOriginalSlotStartWithoutChangingActualStartOrGapScore(LocalDate withdrawal,String month,int expectedWait,String expectedActual) {
+        var s=person("MD","FT");
+        var source=new Source(s.assignmentId(),s.developerId(),s.name(),s.managementNumber(),s.developerJob(),s.subJobCode(),s.gradeCode(),s.employeeTypeCode(),s.projectId(),s.projectName(),s.jobCode(),withdrawal,0,false,null,s.projectStatus(),s.developerUse(),s.directClass(),s.workStatus(),s.joinDate(),s.retireDate(),s.customerId());
+        var result=WithdrawalPositionCalculator.calculate(source,day,List.of(position("O-1",1,month)),List.of()).get(0);
+        assertThat(result.waitDays()).isEqualTo(expectedWait);
+        assertThat(result.actualStart()).isEqualTo(YearMonth.parse(expectedActual));
+        assertThat(result.gap()).isZero();
+        assertThat(result.gapScore()).isEqualTo(25);
+        assertThat(result.total()).isEqualTo(100);
+    }
     @Test void expiredSlotExcluded(){var p=new Position("O-1",1,"BE","MD","2026-10",1,1,"MO",null,"C-001",new BigDecimal("60"));assertThat(WithdrawalPositionCalculator.calculate(person("MD","FT"),day,List.of(p),List.of())).isEmpty();}
     @Test void monthEndWithdrawalHasNoWait(){var s=person("MD","FT");var end=new Source(s.assignmentId(),s.developerId(),s.name(),s.managementNumber(),s.developerJob(),s.subJobCode(),s.gradeCode(),s.employeeTypeCode(),s.projectId(),s.projectName(),s.jobCode(),LocalDate.of(2026,11,30),0,false,null,s.projectStatus(),s.developerUse(),s.directClass(),s.workStatus(),s.joinDate(),s.retireDate(),s.customerId());assertThat(detail(end,position("O-1",1,"2026-12")).e().waitDays()).isZero();}
     @Test void primaryJobScoresFortyDirectionalRelatedTwentyAuxiliaryOnlyExcluded(){var s=person("MD","FT");assertThat(detail(s,position("O-1",1,"2026-12")).s().get(0)).isEqualByComparingTo("40");var related=new Position("O-2",1,"PL","MD","2026-12",12,1,"MO","BE, FE","C-001",new BigDecimal("60"));assertThat(detail(s,related).s().get(0)).isEqualByComparingTo("20");var auxiliary=new Position("O-3",1,"FE","MD","2026-12",12,1,"MO",null,"C-001",new BigDecimal("60"));assertThat(WithdrawalPositionCalculator.calculate(s,day,List.of(auxiliary),List.of())).isEmpty();}
