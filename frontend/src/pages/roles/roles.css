@@ -1,100 +1,261 @@
-.roles-editor {
+.roles-editor,
+.roles-editor [role="tabpanel"] {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
 }
+
+.roles-editor {
+  padding-bottom: var(--sicost-editor-footer-space, 0px);
+}
+
 .roles-toolbar,
-.roles-settings {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-.roles-toolbar {
-  justify-content: space-between;
-}
-.roles-toolbar > div,
-.roles-tabs {
+.roles-role-actions,
+.roles-actions,
+.roles-settings,
+.roles-sensitive,
+.roles-sensitive label,
+.roles-footer-note {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
-.roles-tabs [aria-selected="true"] {
-  background: var(--primary-bg);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.roles-settings {
-  margin: 16px 0;
-}
-.roles-group th {
-  background: var(--head-bg);
-  color: var(--text-sub);
-}
-.roles-hint {
-  margin: 12px 0;
-  color: var(--text-sub);
-  font-size: 13px;
-}
-.roles-revision {
-  overflow-wrap: anywhere;
-  color: var(--text-sub);
-}
-.roles-editor [role="tabpanel"] {
+
+.roles-toolbar {
+  justify-content: space-between;
+  gap: 12px;
   min-width: 0;
 }
-.roles-editor h3 {
-  margin: 0;
-}
-.roles-savebar {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  padding: 14px 20px;
-  border-top: 1px solid var(--divider);
-  background: var(--surface);
-  box-shadow: 0 -10px 24px -18px rgba(17, 24, 39, 0.35);
-}
-.roles-editor td details {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  max-width: 300px;
+
+.roles-role-actions {
+  margin-inline-start: auto;
 }
 
-.roles-tabs button {
-  height: 34px;
-  min-height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-sub);
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: none;
-}
-.roles-tabs
-  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
-  background: var(--surface);
-  color: var(--text);
-  border: 0;
-  box-shadow:
-    0 1px 2px rgba(17, 24, 39, 0.1),
-    0 0 0 1px rgba(17, 24, 39, 0.04);
+.roles-settings {
+  gap: 8px 14px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--divider);
+  border-radius: 8px 8px 0 0;
+  background: var(--head-bg);
 }
 
-.roles-tabs {
+.roles-field-title {
   display: flex;
   align-items: center;
-  gap: 2px;
-  border-bottom: 0;
-  background: #eceff3;
-  border-radius: 6px;
-  padding: 4px;
-  width: max-content;
+  gap: 4px;
+}
+
+.roles-field-title :is(h2, label) {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.roles-field-line {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
   max-width: 100%;
-  overflow-x: auto;
+  min-width: 0;
+}
+
+.roles-field-line :is(select, .roles-search input) {
+  width: min(210px, 45vw);
+  max-width: 100%;
+  height: 32px;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.roles-stop {
+  margin-inline-start: auto;
+}
+
+.roles-table {
+  min-width: 0;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: var(--e1);
+}
+
+.roles-table-toolbar {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.roles-settings .roles-sensitive {
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--divider);
+}
+
+.roles-search {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+
+.roles-search svg {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-sub);
+  pointer-events: none;
+}
+
+.roles-search input {
+  display: block;
+  padding-inline-start: 30px;
+}
+
+.roles-sensitive label {
   flex-wrap: nowrap;
+}
+
+.roles-editor :is(.roles-sensitive, .roles-permission-cell) input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.roles-total {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.roles-matrix {
+  border: 0;
+  border-radius: 0 0 8px 8px;
+  max-height: min(48vh, 560px);
+}
+
+.roles-matrix .sicost-table {
+  min-width: 740px;
+  table-layout: fixed;
+}
+
+.roles-menu-column {
+  width: 28%;
+}
+
+.roles-matrix .sicost-table thead th:not(:first-child),
+.roles-matrix .sicost-table td {
+  padding-inline: 4px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.roles-action-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.roles-matrix .sicost-table tbody th {
+  position: static;
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: none;
+  border-bottom: 1px solid var(--divider);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.roles-matrix .sicost-table .roles-group th {
+  height: 32px;
+  background: var(--head-bg);
+  color: var(--text-sub);
+  font-size: 12px;
+}
+
+.roles-permission-cell {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+
+.roles-permission-cell:has(input:disabled) {
+  cursor: default;
+}
+
+.roles-table + .sicost-pagination,
+[data-testid="role-history-panel"] .sicost-pagination {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.roles-editor .sicost-editor-footer .roles-actions {
+  margin-inline-start: auto;
+}
+
+.roles-history-table {
+  max-height: 48vh;
+  margin-bottom: 12px;
+}
+
+.roles-history-table .sicost-table th {
+  text-align: center;
+}
+
+.roles-history-table .sicost-table td {
+  vertical-align: middle;
+}
+
+.roles-history-table td:is(:nth-child(4), :nth-child(5), :last-child) {
+  min-width: 110px;
+  max-width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.roles-self-permissions {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.roles-self-permissions p,
+.roles-self-permissions dl,
+.roles-self-permissions dd {
+  margin: 0;
+}
+
+.roles-self-permissions .roles-toolbar > button {
+  margin-inline-start: auto;
+}
+
+.roles-self-permissions dl {
+  display: grid;
+  grid-template-columns: minmax(95px, max-content) minmax(0, 1fr);
+  gap: 8px 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.roles-self-permissions dt {
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+.roles-self-permissions :is(th:not(:first-child), td) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.roles-self-permissions tbody th {
+  position: static;
+  box-shadow: none;
+  border-bottom: 1px solid var(--divider);
 }

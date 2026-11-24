@@ -10,6 +10,11 @@
   justify-content: space-between;
   gap: 12px;
 }
+.project-expenses-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .project-expenses-help {
   font-size: 13px;
   color: var(--text-sub);

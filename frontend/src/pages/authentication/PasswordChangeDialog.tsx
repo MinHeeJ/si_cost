@@ -41,39 +41,41 @@ export function PasswordChangeDialog({
         90일마다 변경을 권장합니다. 8자 이상 영문·숫자·특수문자를 포함하고 공백
         없이 입력하세요.
       </p>
-      <label>
-        현재 비밀번호
-        <input
-          data-testid="authentication-password-change-current-input"
-          type="password"
-          autoComplete="current-password"
-          value={currentPassword}
-          onChange={(e) => setCurrent(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        새 비밀번호
-        <input
-          data-testid="authentication-password-change-new-input"
-          type="password"
-          autoComplete="new-password"
-          value={newPassword}
-          onChange={(e) => setNew(e.target.value)}
-          required
-        />
-      </label>
-      <label>
-        새 비밀번호 확인
-        <input
-          data-testid="authentication-password-change-confirm-input"
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassword}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-        />
-      </label>
+      <div className="authentication-password-fields">
+        <label>
+          <span>현재 비밀번호</span>
+          <input
+            data-testid="authentication-password-change-current-input"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrent(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          <span>새 비밀번호</span>
+          <input
+            data-testid="authentication-password-change-new-input"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNew(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          <span>새 비밀번호 확인</span>
+          <input
+            data-testid="authentication-password-change-confirm-input"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+          />
+        </label>
+      </div>
     </Dialog>
   );
 }

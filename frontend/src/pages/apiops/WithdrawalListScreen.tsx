@@ -1,6 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { HelpTooltip } from "../../shared/HelpTooltip";
+import { PageSizeSelect } from "../../shared/Pagination";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
@@ -105,6 +106,7 @@ export function WithdrawalContent({ year }: { year: number }) {
   const [loading, setLoading] = useState(true);
   const [dense, setDense] = useState(shared.dense ?? false);
   const [densityPending, setDensityPending] = useState(false);
+  const [pageSizePending, setPageSizePending] = useState(false);
   const [assignment, setAssignment] = useState<string>();
   const [developer, setDeveloper] = useState<string>();
   const [panel, setPanel] = useState<{
@@ -113,6 +115,8 @@ export function WithdrawalContent({ year }: { year: number }) {
   }>();
   const [rowError, setRowError] = useState<{ id: string; error: unknown }>();
   const [notice, setNotice] = useState("");
+  const historical =
+    data !== undefined && year < Number(data.serverDate.slice(0, 4));
   const generation = useRef(0);
   const { pending, message, commit } = useCommitRefresh();
   const load = useCallback(async () => {
@@ -171,6 +175,17 @@ export function WithdrawalContent({ year }: { year: number }) {
     }));
     setNotice("");
   };
+  const changePageSize = async (size: api.WithdrawalQuery["size"]) => {
+    setPageSizePending(true);
+    try {
+      await shared.savePageSize?.(size);
+      setQuery((previous) => ({ ...previous, size, page: 1 }));
+    } catch (error) {
+      setError(error);
+    } finally {
+      setPageSizePending(false);
+    }
+  };
   const openNext = (row: api.WithdrawalRow) => {
     const initial = api.createNextPositionRecommendation(row, year);
     void initial.catch(() => undefined);
@@ -199,7 +214,7 @@ export function WithdrawalContent({ year }: { year: number }) {
       label: "이름",
       sortable: true,
       render: (row) => (
-        <>
+        <span>
           <button
             className="withdrawal-link"
             data-testid={`withdrawal-person-${row.assignmentId.toLowerCase()}`}
@@ -213,7 +228,7 @@ export function WithdrawalContent({ year }: { year: number }) {
           <small className="withdrawal-sub">
             {row.developer.managementNumber}
           </small>
-        </>
+        </span>
       ),
     },
     {
@@ -222,6 +237,7 @@ export function WithdrawalContent({ year }: { year: number }) {
       sortable: true,
       render: (row) => (
         <Link
+          className="withdrawal-link"
           data-testid={`withdrawal-project-${row.assignmentId.toLowerCase()}`}
           onClick={(e) => e.stopPropagation()}
           to={`/UI-01?${new URLSearchParams({ projectId: row.projectId, year: String(year) })}`}
@@ -233,6 +249,7 @@ export function WithdrawalContent({ year }: { year: number }) {
     {
       id: "job",
       label: "직무",
+      align: "center",
       sortable: true,
       render: (row) =>
         jobs.find((j) => j.code === row.jobCode)?.name ?? row.jobCode,
@@ -240,12 +257,14 @@ export function WithdrawalContent({ year }: { year: number }) {
     {
       id: "date",
       label: "철수일",
+      align: "center",
       sortable: true,
       render: (row) => row.withdrawalDate,
     },
     {
       id: "days",
       label: "남은 일수",
+      align: "center",
       sortable: true,
       render: (row) => (
         <StatusBadge
@@ -266,19 +285,21 @@ export function WithdrawalContent({ year }: { year: number }) {
     {
       id: "history",
       label: "연장·조기 철수",
+      align: "center",
       sortable: true,
       render: (row) => (
-        <>
+        <span>
           연장 {row.extensionCount}회
           {row.earlyWithdrawal && (
             <small className="withdrawal-sub">조기철수 이력</small>
           )}
-        </>
+        </span>
       ),
     },
     {
       id: "extension",
       label: "연장 가능성",
+      align: "center",
       sortable: true,
       render: (row) => (
         <div
@@ -371,50 +392,54 @@ export function WithdrawalContent({ year }: { year: number }) {
   ];
   return (
     <div className="withdrawal-screen" data-testid="withdrawal-content">
-      <ScreenTitleActions>
-        <div className="withdrawal-toolbar">
-          <button
-            className="withdrawal-download"
-            data-testid="withdrawal-download"
-            disabled={loading || pending || !data || Boolean(error)}
-            onClick={() => {
-              setNotice("");
-              void api
-                .downloadWithdrawals(query)
-                .then(() => setNotice("다운로드했습니다."))
-                .catch(setError);
-            }}
-          >
-            엑셀 다운로드
-          </button>
-        </div>
-      </ScreenTitleActions>
-      {data?.guidance.visible && (
-        <div
-          className="sicost-banner sicost-tone-info"
-          data-testid="withdrawal-guidance"
-        >
-          <span>{data.guidance.message}</span>
-          <button
-            data-testid="withdrawal-guidance-recommend"
-            onClick={() => {
-              const filters = { ...defaults(), period: "SOON" as const };
-              setDraft(filters);
-              apply(filters);
-            }}
-          >
-            추천
-          </button>
-        </div>
-      )}
-      <HelpTooltip label="안내" testId="withdrawal-help">
-        연장가능성 변경은 인력 운영 보드/수요 예측에 반영됩니다. 연도 경계의
-        다른 연도 자료는 연도를 바꿔 조회하세요.
-      </HelpTooltip>
-      {data && year < Number(data.serverDate.slice(0, 4)) && (
-        <p className="sicost-banner sicost-tone-lock">
-          지난 연도는 조회만 할 수 있습니다.
-        </p>
+      {data && (
+        <PeriodStatus className="sicost-period-summary sicost-period-summary-compact withdrawal-period-summary">
+          <span className="sicost-period-summary-item">
+            <span className="sicost-period-summary-label">기준일</span>
+            <b>{data.serverDate}</b>
+          </span>
+          {historical && (
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">조회 상태</span>
+              <b>과거 조회 전용</b>
+            </span>
+          )}
+          {data.guidance.visible && (
+            <section
+              className="withdrawal-summary"
+              data-testid="withdrawal-guidance"
+              aria-labelledby="withdrawal-summary-title"
+            >
+              <div className="withdrawal-summary-heading">
+                <h2 id="withdrawal-summary-title">3개월 이내 철수 요약</h2>
+                <HelpTooltip label="3개월 이내 철수 요약" iconOnly>
+                  <p>
+                    기준일부터 두 달 뒤 월말까지의 인원입니다. 표에는 선택한
+                    연도의 배정이 표시됩니다.
+                  </p>
+                  <p>
+                    다음 배정이 없는 인원은 연장 가능성이 높은 경우를 제외해
+                    집계합니다. 추천 자리가 있는 인원은 이 인원 중에서 셉니다.
+                  </p>
+                </HelpTooltip>
+              </div>
+              <ul className="withdrawal-summary-counts">
+                <li className="sicost-tone-info">
+                  철수 예정{" "}
+                  <strong>{data.guidance.withinThreeMonthsPeople}명</strong>
+                </li>
+                <li className="sicost-tone-warn">
+                  다음 배정 없음{" "}
+                  <strong>{data.guidance.withoutNextAssignmentPeople}명</strong>
+                </li>
+                <li className="sicost-tone-ok">
+                  추천 자리 있음{" "}
+                  <strong>{data.guidance.withMatchingPositionsPeople}명</strong>
+                </li>
+              </ul>
+            </section>
+          )}
+        </PeriodStatus>
       )}
       <FilterBar
         testId="withdrawal-filters"
@@ -466,7 +491,8 @@ export function WithdrawalContent({ year }: { year: number }) {
         </label>
         <label className="sicost-field">
           직무
-          <FieldHelp label="직무" /><select
+          <FieldHelp label="직무" />
+          <select
             data-testid="withdrawal-job"
             value={draft.job}
             onChange={(e) => setDraft((v) => ({ ...v, job: e.target.value }))}
@@ -496,7 +522,15 @@ export function WithdrawalContent({ year }: { year: number }) {
         </p>
       )}
       <div className="withdrawal-toolbar">
-        <strong>총 {data?.totalCount ?? 0}건</strong>
+        <div className="withdrawal-table-count">
+          <PageSizeSelect
+            size={query.size}
+            testId="withdrawal-table-page-size"
+            disabled={loading || pageSizePending}
+            onSizeChange={(size) => void changePageSize(size)}
+          />
+          <strong>총 {data?.totalCount ?? 0}건</strong>
+        </div>
         <button
           data-testid="withdrawal-density"
           aria-pressed={dense}
@@ -512,6 +546,20 @@ export function WithdrawalContent({ year }: { year: number }) {
           }}
         >
           {dense ? "넓게 보기" : "좁게 보기"}
+        </button>
+        <button
+          className="withdrawal-download"
+          data-testid="withdrawal-download"
+          disabled={loading || pending || !data || Boolean(error)}
+          onClick={() => {
+            setNotice("");
+            void api
+              .downloadWithdrawals(query)
+              .then(() => setNotice("다운로드했습니다."))
+              .catch(setError);
+          }}
+        >
+          엑셀 다운로드
         </button>
       </div>
       <DataTable
@@ -553,19 +601,13 @@ export function WithdrawalContent({ year }: { year: number }) {
           }))
         }
         onPageChange={(page) => setQuery((v) => ({ ...v, page }))}
-        onSizeChange={(size) => {
-          void Promise.resolve()
-            .then(() => shared.savePageSize?.(size))
-            .then(() => setQuery((v) => ({ ...v, size, page: 1 })))
-            .catch(setError);
-        }}
         onRowAction={(row) => setAssignment(row.assignmentId)}
       />
       {assignment && data && (
         <AssignmentDrawer
           id={assignment}
           year={year}
-          readonly={year < Number(data.serverDate.slice(0, 4))}
+          readonly={historical}
           onClose={() => setAssignment(undefined)}
           onChange={() => void load().catch(() => undefined)}
         />
@@ -614,7 +656,11 @@ function NextLink({ next, id }: { next: api.WithdrawalNext; id: string }) {
       >
         {kind}
       </StatusBadge>{" "}
-      <Link data-testid={`withdrawal-next-link-${id.toLowerCase()}`} to={path}>
+      <Link
+        className="withdrawal-link"
+        data-testid={`withdrawal-next-link-${id.toLowerCase()}`}
+        to={path}
+      >
         {next.name}
       </Link>
       <small className="withdrawal-sub">

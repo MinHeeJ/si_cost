@@ -1,6 +1,6 @@
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
-import { PeriodStatus } from "../../shared/PeriodStatus";
+import { CompactPeriodSummary } from "../../shared/PeriodStatus";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
@@ -331,16 +331,12 @@ export function RateRenegotiationsScreen({
       data-testid="renegotiation-screen"
     >
       {data && (
-        <PeriodStatus className="sicost-period-summary">
-          <span className="sicost-period-summary-item">
-            <span className="sicost-period-summary-label">기준월</span>
-            <b>{data.baseMonth}</b>
-          </span>
-          <span className="sicost-period-summary-item">
-            <span className="sicost-period-summary-label">계산 시각</span>
-            <b>{formatDateTime(data.calculatedAt)}</b>
-          </span>
-        </PeriodStatus>
+        <CompactPeriodSummary
+          items={[
+            { label: "기준월", value: data.baseMonth },
+            { label: "계산 시각", value: formatDateTime(data.calculatedAt) },
+          ]}
+        />
       )}
       {canDownload && (
         <ScreenTitleActions>

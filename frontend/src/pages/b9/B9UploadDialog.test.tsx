@@ -268,9 +268,11 @@ it("파일 크기·확장자 오류는 서버 검사 없이 표시한다", () =>
   expect(screen.getByRole("button", { name: "검사" })).toBeDisabled();
   expect(api.createB9Validation).not.toHaveBeenCalled();
 });
-it("PC 목록에 양식과 업로드 CTA를 제공하고 읽기 전용이면 업로드만 막는다", () => {
+it("PC 목록은 양식 버튼을 숨기고 읽기 전용이면 업로드를 막는다", () => {
   render(<B9UploadActions year={2025} readOnly onApplied={vi.fn()} />);
-  expect(screen.getByRole("button", { name: "양식 내려받기" })).toBeEnabled();
+  expect(
+    screen.queryByRole("button", { name: "양식 내려받기" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "엑셀 업로드" })).toBeDisabled();
 });
 it("모바일 직접 진입은 PC 안내만 표시하고 업로드 컨트롤은 숨긴다", () => {

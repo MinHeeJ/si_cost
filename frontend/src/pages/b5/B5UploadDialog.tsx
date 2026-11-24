@@ -334,31 +334,9 @@ export function B5Actions({
   onApplied(): void | Promise<void>;
   onDirtyChange?(dirty: boolean): void;
 }) {
-  const [open, setOpen] = useState(false),
-    [pending, setPending] = useState(false),
-    [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
   return (
     <span className="b7-actions assignment-desktop" data-testid="b5-actions">
-      <button
-        type="button"
-        data-testid="b5-template"
-        disabled={pending}
-        onClick={async () => {
-          setPending(true);
-          setError("");
-          try {
-            api.saveDownload(await api.getB5Template());
-          } catch (e) {
-            setError(
-              e instanceof Error ? e.message : "양식을 받지 못했습니다.",
-            );
-          } finally {
-            setPending(false);
-          }
-        }}
-      >
-        양식 내려받기
-      </button>
       <button
         type="button"
         data-testid="b5-upload"
@@ -367,11 +345,6 @@ export function B5Actions({
       >
         엑셀 업로드
       </button>
-      {error && (
-        <span role="alert" className="b7-bad">
-          {error}
-        </span>
-      )}
       {open && (
         <B5UploadDialog
           year={year}

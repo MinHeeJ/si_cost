@@ -188,6 +188,7 @@ export function WorkspaceUsability({
         onCancel={onClose}
         onConfirm={onClose}
         confirmLabel="닫기"
+        hideCancel
       >
         <p>Enter · 조회 조건에서 조회</p>
         <p>Ctrl+S · 활성 업무 저장</p>

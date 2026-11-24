@@ -18,6 +18,8 @@ const paths: Record<string, string> = {
   bell: "M5 16V9a7 7 0 0 1 14 0v7l2 3H3z M10 22h4",
   user: "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 22v-3a8 8 0 0 1 16 0v3",
   chevron: "m8 4 8 8-8 8",
+  caretUp: "M12 7 19 16H5z",
+  caretDown: "M12 17 5 8h14z",
   star: "m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z",
   clock: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 6v6l4 3",
   search: "M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0 M15 15l6 6",

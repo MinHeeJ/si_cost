@@ -129,11 +129,11 @@ beforeEach(() => {
 });
 it("renders the forecast screen, four authoritative cards, six month tables and charts without period or write controls", async () => {
   mount();
-  expect(
-    await screen.findByText(
-      "범위 2026-08 ~ 2027-01 · 기준일 2026-07-15 · 기준월 2026-07",
-    ),
-  ).toBeInTheDocument();
+  expect(await screen.findByText("2026-08 ~ 2027-01")).toBeInTheDocument();
+  const period = screen.getByRole("group", { name: "조회 기간 상태" });
+  expect(within(period).getByText("기준일", { exact: true })).toBeVisible();
+  expect(within(period).getByText("2026-07-15", { exact: true })).toBeVisible();
+  expect(period).toHaveTextContent("조회한 달의 다음 달부터 6개월");
   expect(screen.getByTestId("forecast-revenue-card")).toHaveTextContent(
     "90,071,992.5억 원",
   );
@@ -145,7 +145,7 @@ it("renders the forecast screen, four authoritative cards, six month tables and 
   ).toBeInTheDocument();
   expect(screen.getByRole("img", { name: "수요·공급" })).toBeInTheDocument();
   expect(
-    screen.getByText(/실제 손익·청구·미수에 저장하지 않습니다/),
+    within(period).getByText(/실제 손익·청구·미수에 저장하지 않습니다/),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "저장" }),
@@ -201,9 +201,8 @@ it("loading is distinct from an empty forecast", async () => {
   expect(
     screen.getByText("채용 검토가 필요한 직무가 없습니다."),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("button", { name: "조건 초기화" })).toHaveLength(
-    2,
-  );
+  expect(screen.queryByRole("button", { name: "조건 초기화" })).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "재조회" })).toHaveLength(1);
 });
 it("failed reads expose request id, retry only the GET, and recover", async () => {
   vi.mocked(api.getSalesOpportunityForecast).mockRejectedValueOnce(

@@ -128,6 +128,7 @@ it("카드의 인력 추천은 첫 직무·기회 시작월 query를 전달하�
     </MemoryRouter>,
   );
   const link = await screen.findByTestId("opportunity-recommend-o-0101");
+  expect(link).toHaveAccessibleName("인력 추천으로 이동");
   const url = new URL(link.getAttribute("href")!, "https://test.invalid");
   expect(Object.fromEntries(url.searchParams)).toEqual({
     targetType: "OPPORTUNITY",
@@ -232,7 +233,8 @@ it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤�
       <SalesPipelinePanel />
     </MemoryRouter>,
   );
-  await screen.findByText("가배정 1");
+  const tentativeCount = await screen.findByTestId("opportunity-tentative-count-o-0101");
+  expect(within(tentativeCount).getByText("1건")).toBeVisible();
   await userEvent.click(screen.getByTestId("opportunity-open-o-0101"));
   await userEvent.click(await screen.findByTestId("detail-tab-needs"));
   expect(screen.getByTestId("opportunity-needs-table")).toHaveTextContent(
@@ -247,7 +249,7 @@ it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤�
   act(() => {
     window.dispatchEvent(new Event("sicost:staffing-committed"));
   });
-  await screen.findByText("가배정 0");
+  await within(tentativeCount).findByText("0건");
   await within(table).findByText("가배정한 사람이 없습니다");
   expect(within(table).queryByText("업로드03")).not.toBeInTheDocument();
 });

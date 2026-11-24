@@ -14,6 +14,44 @@ import {
 import { projectColumns } from "./projectFormat";
 import { ProjectsScreen, type ProjectsRegistration } from "./ProjectsScreen";
 
+export const projectScreenGuide = (
+  <dl>
+    <div>
+      <dt>프로젝트 조회</dt>
+      <dd>
+        연도를 선택하고 계약유형, 상태, 영업 파트, 프로젝트명 또는 고객사로
+        검색할 수 있습니다. [영업파트 미지정] 버튼을 누르면 영업 파트가
+        지정되지 않은 프로젝트를 조회합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>등록과 상세 관리</dt>
+      <dd>
+        [등록]에서 프로젝트를 한 건씩 추가할 수 있습니다. 목록에서 프로젝트명을
+        누르면 기본 정보, 진행 현황, 이슈, 인원 계획, 투입 인력, 계약 변경
+        이력을 확인할 수 있습니다.
+      </dd>
+    </div>
+    <div>
+      <dt>엑셀 신규 등록</dt>
+      <dd>
+        [엑셀 업로드]를 열어 [양식 내려받기]를 누르세요. 첫 시트의 열 제목을
+        유지하고, 프로젝트명·계약유형·시작일·종료일을 입력하세요. 외부
+        프로젝트에는 고객사·영업 파트·계약금액도 필요합니다.
+        엑셀은 새 프로젝트를 등록할 때 사용하며 기존 프로젝트는 상세에서 수정합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>엑셀 입력 형식</dt>
+      <dd>
+        날짜는 2026-12-01 형식으로, 금액은 원 단위 정수로 입력하세요.
+        계약유형은 ‘턴키’처럼 화면에 표시되는 이름을 쓰세요. 프로젝트ID를
+        비우면 등록할 때 자동 발급됩니다. 검사를 마친 뒤 [전량 반영]을 누르세요.
+      </dd>
+    </div>
+  </dl>
+);
+
 export function ProjectsWorkspace({
   active = true,
   onDirtyChange,

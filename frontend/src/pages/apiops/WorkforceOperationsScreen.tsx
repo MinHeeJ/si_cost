@@ -1,6 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { Pagination } from "../../shared/Pagination";
 import { HelpTooltip } from "../../shared/HelpTooltip";
+import { CompactPeriodSummary } from "../../shared/PeriodStatus";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +21,7 @@ import {
 } from "../shared/sharedApi";
 import * as api from "./workforceCalendarApi";
 import { BusinessName } from "../../shared/BusinessName";
+import "./projectAnalysis.css";
 import "./workforceCalendar.css";
 
 const events = [
@@ -30,6 +32,7 @@ const events = [
   "sicost:project-plans-committed",
 ];
 const decimal = (v: string | null | undefined) => formatFixedDecimal(v, 2);
+const supplyForecastMonths = 6;
 const statuses: Record<api.CalendarCell["status"], string> = {
   BEFORE_JOIN: "입사 전",
   RETIRED: "퇴사",
@@ -39,6 +42,25 @@ const statuses: Record<api.CalendarCell["status"], string> = {
   AVAILABLE: "비어있음",
   PAST_EMPTY: "–",
 };
+const calendarLegend = [
+  { label: "투입 중", appearance: "workforce-calendar-assigned" },
+  {
+    label: "일부 투입",
+    appearance: "workforce-calendar-assigned workforce-calendar-legend-partial",
+  },
+  { label: "2건 동시 투입", appearance: "workforce-calendar-concurrent" },
+  { label: "철수 예정", appearance: "workforce-calendar-ending" },
+  { label: "비어 있음", appearance: "workforce-calendar-available" },
+  { label: "가배정", appearance: "workforce-calendar-tentative" },
+  { label: "휴직", appearance: "workforce-calendar-leave" },
+  { label: "퇴사", appearance: "workforce-calendar-retired" },
+  {
+    label: "미계약 선투입",
+    appearance: "workforce-calendar-assigned workforce-calendar-precontract",
+    symbol: "⚠",
+  },
+];
+
 export function WorkforceOperationsScreen() {
   const location = useLocation();
   const incoming = location.state as {
@@ -104,8 +126,26 @@ export function WorkforceOperationsScreen() {
       {!context && !error && <p role="status">기간을 불러오는 중입니다.</p>}
       {context && year && (
         <>
-          <SegmentedTabList as="div" role="tablist" aria-label="인력 운영 보기">
+          <CompactPeriodSummary
+            items={[
+              { label: "기준일", value: context.currentDate },
+              {
+                label: "조회 상태",
+                value:
+                  year < Number(context.currentMonth.slice(0, 4))
+                    ? "과거 조회 전용"
+                    : "조회 전용",
+              },
+            ]}
+          />
+          <SegmentedTabList
+            as="div"
+            role="tablist"
+            aria-label="인력 운영 보기"
+            className="project-analysis-tabs"
+          >
             <button
+              type="button"
               role="tab"
               data-testid="calendar-tab"
               aria-selected={tab === "calendar"}
@@ -114,6 +154,7 @@ export function WorkforceOperationsScreen() {
               달력
             </button>
             <button
+              type="button"
               role="tab"
               data-testid="supply-tab"
               aria-selected={tab === "supply"}
@@ -136,9 +177,13 @@ export function WorkforceOperationsScreen() {
             data-testid="supply-panel"
             hidden={tab !== "supply"}
           >
-            <p>달력 필터 미적용 · {next}부터 6개월 전체 인력입니다.</p>
             <WorkforceForecastPanel
-              query={{ from: next, months: 6, includeUnfilled: true }}
+              periodRule={`조회한 달의 다음 달부터 ${supplyForecastMonths}개월`}
+              query={{
+                from: next,
+                months: supplyForecastMonths,
+                includeUnfilled: true,
+              }}
               onDownload={(unit) =>
                 api.downloadWorkforceCalendar({ year }, "SUPPLY_DEMAND", unit)
               }
@@ -300,12 +345,6 @@ export function WorkforceCalendar({
       data-testid="workforce-calendar-content"
       className="workforce-calendar"
     >
-      <p className="sicost-calendar-caption">
-        {year}년 · 기준일 {context.currentDate} ·{" "}
-        {year < Number(context.currentMonth.slice(0, 4))
-          ? "과거 조회 전용"
-          : "조회 전용"}
-      </p>
       {data && (
         <KpiStrip className="workforce-calendar-summary">
           <button
@@ -413,38 +452,32 @@ export function WorkforceCalendar({
         <CalendarError error={error} retry={() => setReload((n) => n + 1)} />
       )}
       <div className="workforce-calendar-toolbar">
-        <span>
-          {loading && !data ? "조회 중…" : `총 ${data?.total ?? 0}명`}
-        </span>
-        <div className="workforce-calendar-legend" aria-label="달력 범례">
-          {[
-            "투입 중",
-            "일부 투입",
-            "2건 동시 투입",
-            "철수 예정",
-            "비어 있음",
-            "가배정",
-            "휴직",
-            "퇴사",
-            "⚠ 미계약 선투입",
-          ].map((text, index) => (
-            <span
-              data-testid={`calendar-legend-item-${index}`}
-              key={text}
-              className={`calendar-legend-${index}`}
-            >
-              {text}
-            </span>
+        <ul className="workforce-calendar-legend" aria-label="달력 범례">
+          {calendarLegend.map(({ label, appearance, symbol }, index) => (
+            <li data-testid={`calendar-legend-item-${index}`} key={label}>
+              <span
+                className={`workforce-calendar-legend-sample ${appearance}`}
+                aria-hidden="true"
+              >
+                {symbol}
+              </span>
+              {label}
+            </li>
           ))}
+        </ul>
+        <div className="workforce-calendar-actions">
+          <span className="workforce-calendar-count">
+            {loading && !data ? "조회 중…" : `총 ${data?.total ?? 0}명`}
+          </span>
+          <button
+            className="workforce-calendar-download"
+            data-testid="calendar-download"
+            disabled={loading || pending || !data}
+            onClick={() => void download()}
+          >
+            {pending ? "파일 생성 중…" : "엑셀 다운로드"}
+          </button>
         </div>
-        <button
-          className="workforce-calendar-download"
-          data-testid="calendar-download"
-          disabled={loading || pending || !data}
-          onClick={() => void download()}
-        >
-          {pending ? "파일 생성 중…" : "엑셀 다운로드"}
-        </button>
       </div>
       {notice && <p role="status">{notice}</p>}
       {loading && <p role="status">달력을 불러오는 중입니다.</p>}
@@ -638,10 +671,20 @@ export function WorkforceCalendarCell({
       />
     );
   const filled = Math.max(0, Math.min(1, Number(cell.actualMm ?? 0))) * 100;
+  const appearance = [
+    "workforce-calendar-cell",
+    `workforce-calendar-${cell.status.toLowerCase()}`,
+    cell.leavingSoon && "workforce-calendar-ending",
+    cell.overAssigned && "workforce-calendar-over",
+    cell.assignmentCount >= 2 && "workforce-calendar-concurrent",
+    pre && "workforce-calendar-precontract",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div
       data-testid={`calendar-cell-root-${Array.from(String(personId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${cell.month}`}
-      className={`workforce-calendar-cell workforce-calendar-${cell.status.toLowerCase()}${cell.leavingSoon ? " workforce-calendar-ending" : ""}${cell.overAssigned ? " workforce-calendar-over" : ""}${cell.assignmentCount >= 2 ? " workforce-calendar-concurrent" : ""}`}
+      className={appearance}
       style={{ "--assigned-fill": `${filled}%` } as React.CSSProperties}
     >
       <HelpTooltip
@@ -653,6 +696,9 @@ export function WorkforceCalendarCell({
               formatRate(cell.tentativeProbability)
             ) : cell.leavingSoon ? (
               <span>
+                {pre && (
+                  <span className="workforce-calendar-warning-mark">⚠ </span>
+                )}
                 철수 예정{" "}
                 <small>
                   {[
@@ -677,7 +723,7 @@ export function WorkforceCalendarCell({
             ) : cell.status === "LEAVE" || cell.status === "RETIRED" ? (
               statuses[cell.status]
             ) : pre ? (
-              "⚠"
+              <span className="workforce-calendar-warning-mark">⚠</span>
             ) : (
               <span className="sicost-sr-only">{label}</span>
             )}

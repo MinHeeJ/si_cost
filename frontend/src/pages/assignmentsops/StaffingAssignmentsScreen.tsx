@@ -4,6 +4,7 @@ import { HelpTooltip } from "../../shared/HelpTooltip";
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type Key,
@@ -165,6 +166,10 @@ export function AssignmentsContent({
       id: "projectName",
       direction: "ASC" as "ASC" | "DESC",
     });
+  const extraConditionsId = useId();
+  const [extraConditionsOpen, setExtraConditionsOpen] = useState(
+    Boolean(draft.month),
+  );
   const [data, setData] = useState<api.Page<api.Assignment>>(),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>(),
@@ -443,6 +448,7 @@ export function AssignmentsContent({
     column.sortable = column.id !== "warnings";
   });
   function resetFilters() {
+    setExtraConditionsOpen(false);
     setDraft({
       projectId: "",
       jobCode: "",
@@ -473,7 +479,7 @@ export function AssignmentsContent({
               onClick={() => setCreating(true)}
               className="sicost-primary"
             >
-              + 배정
+              배정
             </button>
           </div>
         </div>
@@ -508,7 +514,7 @@ export function AssignmentsContent({
         onReset={resetFilters}
       >
         <label className="sicost-field">
-          프로젝트
+          <span className="assignment-filter-label">프로젝트</span>
           <select
             data-testid="assignments-project-filter"
             value={draft.projectId}
@@ -529,7 +535,7 @@ export function AssignmentsContent({
           </select>
         </label>
         <label className="sicost-field">
-          직무
+          <span className="assignment-filter-label">직무</span>
           <FieldHelp label="직무" />
           <select
             data-testid="assignments-job-filter"
@@ -550,29 +556,8 @@ export function AssignmentsContent({
             ))}
           </select>
         </label>
-        <details
-          className="assignment-extra-conditions"
-          open={Boolean(draft.month)}
-        >
-          <summary data-testid="assignments-extra-conditions-toggle">
-            추가 조건
-          </summary>
-          <label className="sicost-field assignment-extra-month">
-            선택월
-            <input
-              type="month"
-              data-testid="assignments-month-filter"
-              value={draft.month}
-              min={`${year}-01`}
-              max={`${year}-12`}
-              onChange={(e) =>
-                setDraft((v) => ({ ...v, month: e.target.value }))
-              }
-            />
-          </label>
-        </details>
         <label className="sicost-field">
-          경고
+          <span className="assignment-filter-label">경고</span>
           <select
             data-testid="assignments-warning-filter"
             value={draft.warning}
@@ -586,7 +571,7 @@ export function AssignmentsContent({
           </select>
         </label>
         <label className="sicost-field">
-          이름
+          <span className="assignment-filter-label">이름</span>
           <input
             placeholder="이름 또는 관리번호"
             data-testid="assignments-search"
@@ -605,6 +590,34 @@ export function AssignmentsContent({
           />
           취소된 배정 포함
         </label>
+        <button
+          type="button"
+          data-testid="assignments-extra-conditions-toggle"
+          aria-controls={extraConditionsId}
+          aria-expanded={extraConditionsOpen}
+          onClick={() => setExtraConditionsOpen((open) => !open)}
+        >
+          추가 조건
+        </button>
+        <div
+          id={extraConditionsId}
+          className="assignment-extra-fields"
+          hidden={!extraConditionsOpen}
+        >
+          <label className="sicost-field assignment-extra-month">
+            <span className="assignment-filter-label">선택 월</span>
+            <input
+              type="month"
+              data-testid="assignments-month-filter"
+              value={draft.month}
+              min={`${year}-01`}
+              max={`${year}-12`}
+              onChange={(e) =>
+                setDraft((v) => ({ ...v, month: e.target.value }))
+              }
+            />
+          </label>
+        </div>
       </FilterBar>
       <AssignmentError
         error={error}

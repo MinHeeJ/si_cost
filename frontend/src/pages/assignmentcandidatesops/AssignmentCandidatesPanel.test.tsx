@@ -136,7 +136,8 @@ it("renders API-backed CNVT region and the reference columns without hiding amou
   expect(screen.getByText("CNVT")).toHaveClass("sicost-tone-info");
   for (const name of ["프로젝트", "사람", "직무", "예정기간", "상태", "행동"])
     expect(screen.getByRole("columnheader", { name })).toBeVisible();
-  expect(screen.getByRole("heading", { name: "배정 후보 1" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: /^배정 후보/ })).toBeVisible();
+  expect(screen.getByText("1건")).toHaveClass("sicost-tone-info");
 });
 it("opens the existing form with API defaults, fixed identity, NEW and developer effective price", async () => {
   await open();
@@ -206,12 +207,12 @@ it("cancel after dirty confirmation leaves CNVT and sends no mutation", async ()
 });
 it("drop requires explicit confirmation and refreshes without creating assignment", async () => {
   view();
-  await userEvent.click(await screen.findByRole("button", { name: /^빼기$/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "제외" }));
   expect(api.dropAssignmentCandidate).not.toHaveBeenCalled();
   await userEvent.click(
-    within(screen.getByRole("dialog", { name: "배정 후보 빼기" })).getByRole(
+    within(screen.getByRole("dialog", { name: "배정 후보 제외" })).getByRole(
       "button",
-      { name: "빼기" },
+      { name: "제외" },
     ),
   );
   await waitFor(() =>
@@ -222,7 +223,7 @@ it("drop requires explicit confirmation and refreshes without creating assignmen
 });
 it("cancel drop does not mutate", async () => {
   view();
-  await userEvent.click(await screen.findByRole("button", { name: "빼기" }));
+  await userEvent.click(await screen.findByRole("button", { name: "제외" }));
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
   expect(api.dropAssignmentCandidate).not.toHaveBeenCalled();
 });

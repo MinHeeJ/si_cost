@@ -9,24 +9,71 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.workforce-forecast-toolbar > p {
-  margin-right: auto;
+.workforce-forecast-toolbar > .workforce-forecast-scope {
+  flex: 1 1 420px;
+  min-width: 0;
+  height: auto;
 }
-.workforce-forecast-toolbar label {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-}
-.workforce-forecast-toolbar select {
-  height: 28px;
-}
-.workforce-forecast-info {
+.workforce-forecast-scope-with-basis .sicost-period-summary-label {
   color: var(--info);
-  background: var(--info-bg);
-  border-radius: 4px;
   font-size: 12px;
-  padding: 3px 6px;
+}
+.workforce-forecast-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-inline-start: auto;
+}
+.workforce-calendar .workforce-forecast-table {
+  min-width: 720px;
+}
+.sicost-table.workforce-forecast-table thead th {
+  text-align: center;
+}
+.sicost-table.workforce-forecast-table thead th:not(:first-child) {
+  min-width: 100px;
+}
+.sicost-table.workforce-forecast-table tbody tr > :is(th, td) {
+  padding-block: 6px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--divider);
+}
+.sicost-table.workforce-forecast-table tbody tr:last-child > :is(th, td) {
+  border-bottom-width: 0;
+}
+.sicost-table.workforce-forecast-table tbody th {
+  position: static;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: 600;
+}
+.sicost-table.workforce-forecast-table tbody tr:hover > :is(th, td) {
+  background: var(--head-bg);
+}
+.workforce-calculation-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.workforce-calculation-detail p {
+  margin: 0;
+}
+.workforce-calculation-detail h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.workforce-calculation-detail .workforce-calculation-data :is(th, td) {
+  min-width: 0;
+  white-space: nowrap;
+}
+.workforce-calculation-detail .workforce-calculation-data td:nth-child(6) {
+  min-width: 180px;
+  white-space: normal;
 }
 .workforce-forecast-muted {
   color: var(--text-sub);
@@ -143,10 +190,6 @@
     0 -1px 0 var(--divider);
   background: transparent;
   padding: 18px 22px 17px;
-}
-.workforce-forecast-card:has(.sicost-chart-host > .sicost-sr-only)
-  > .workforce-chart-legend {
-  display: none;
 }
 .workforce-forecast-card:has(.sicost-chart-host > .sicost-sr-only)
   > .workforce-chart-legend {

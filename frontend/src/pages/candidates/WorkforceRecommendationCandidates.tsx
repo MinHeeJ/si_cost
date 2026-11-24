@@ -7,6 +7,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
+import { StatusBadge } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import { AssignmentCreateForm } from "../assignmentsops/AssignmentCreateForm";
@@ -266,9 +267,11 @@ export function WorkforceRecommendationCandidates(
       data-screen-id={type === "AI" ? "SCR-UI-30" : "SCR-UI-05"}
       aria-busy={loading || pending}
     >
-      <p className="sicost-banner sicost-tone-info">
-        추천은 참고용입니다. 배정은 담당자가 정합니다
-      </p>
+      {type === "NEXT" && (
+        <p className="sicost-banner sicost-tone-info">
+          추천은 참고용입니다. 배정은 담당자가 정합니다
+        </p>
+      )}
       <AssignmentError
         error={props.error ?? error}
         retry={() => {
@@ -327,34 +330,113 @@ export function WorkforceRecommendationCandidates(
             const selected =
               !!selection.actionCode || !!next?.alreadyTentativelyAssigned;
             const needSn = type === "NEXT" ? row.needSn : selectedNeedSn;
+            const aiRecommendation = type === "AI";
+            const availability = row.scoreItems.find(
+              (item) => item.itemCode === "AVAIL",
+            );
+            const cost = row.scoreItems.find((item) => item.itemCode === "COST");
+            const developerLink = (
+              <button
+                type="button"
+                className="recommendation-link recommendation-person"
+                data-testid={`recommendation-person-${row.rank}`}
+                onClick={() => props.onDeveloperDetails(row.developer.detailId)}
+              >
+                {row.developer.name}
+              </button>
+            );
+            const appliedCondition = (
+              <p>
+                적용:{" "}
+                <button
+                  type="button"
+                  className="recommendation-link"
+                  data-testid={`recommendation-target-${row.rank}`}
+                  onClick={() => props.onTargetDetails(target.type, target.id)}
+                >
+                  {target.name}
+                </button>{" "}
+                · {name("JOB", row.jobCode)} · {row.startMonth} ·{" "}
+                {name("GRADE", row.requestedGradeCode)}
+              </p>
+            );
+            const otherAssignments = row.otherTentativeAssignments.map((t) => {
+              const opportunityLink = (
+                <button
+                  type="button"
+                  className="recommendation-link"
+                  data-testid={`recommendation-other-${row.rank}-${t.tentativeAssignmentId}`}
+                  onClick={() =>
+                    props.onTargetDetails("OPPORTUNITY", t.opportunityId)
+                  }
+                >
+                  {t.opportunityName}
+                </button>
+              );
+              return (
+                <p
+                  data-testid={`recommendation-other-assignment-${row.rank}-${t.tentativeAssignmentId.toLowerCase().replace(/_/g, "-")}`}
+                  className={`sicost-banner sicost-tone-warn${aiRecommendation ? " recommendation-other-assignment" : ""}`}
+                  key={t.tentativeAssignmentId}
+                >
+                  {aiRecommendation ? (
+                    <>
+                      <strong>다른 기회 가배정</strong>
+                      <span>{opportunityLink} · 필요 인력 {t.needSn}번 자리</span>
+                    </>
+                  ) : (
+                    <>다른 기회 가배정: {opportunityLink} / {t.needSn}행</>
+                  )}
+                </p>
+              );
+            });
             return (
               <article
                 className="recommendation-card"
                 data-testid={`recommendation-card-${row.rank}`}
                 key={row.rank}
               >
-                <header>
-                  <span className="recommendation-rank">순위 {row.rank}</span>
-                  <button
-                    type="button"
-                    className="recommendation-link"
-                    data-testid={`recommendation-person-${row.rank}`}
-                    onClick={() =>
-                      props.onDeveloperDetails(row.developer.detailId)
-                    }
-                  >
-                    {row.developer.name}
-                  </button>
-                  <span>{row.developer.managementNumber}</span>
-                  <strong className="recommendation-total">
-                    총점 {row.totalScore}
-                  </strong>
-                </header>
-                <p>
-                  {name("JOB", row.developer.jobCode)} ·{" "}
-                  {name("GRADE", row.developer.gradeCode)} ·{" "}
-                  {name("EMP_TYPE", row.developer.employeeTypeCode)}
-                </p>
+                {aiRecommendation ? (
+                  <header className="recommendation-candidate-profile">
+                    <div className="recommendation-identity">
+                      <span className="recommendation-rank">순위 {row.rank}</span>
+                      <span>{row.developer.managementNumber}</span>
+                    </div>
+                    {developerLink}
+                    <p>{name("JOB", row.developer.jobCode)}</p>
+                    <p className="recommendation-profile-meta">
+                      {name("GRADE", row.developer.gradeCode)} ·{" "}
+                      {name("EMP_TYPE", row.developer.employeeTypeCode)}
+                    </p>
+                    {availability && (
+                      <StatusBadge
+                        tone={
+                          /^(?:가용 상태 )?IDLE$/.test(availability.basis)
+                            ? "ok"
+                            : "lock"
+                        }
+                      >
+                        {recommendationBasis(availability)}
+                      </StatusBadge>
+                    )}
+                  </header>
+                ) : (
+                  <>
+                    <header>
+                      <span className="recommendation-rank">순위 {row.rank}</span>
+                      {developerLink}
+                      <span>{row.developer.managementNumber}</span>
+                      <strong className="recommendation-total">
+                        총점 {row.totalScore}
+                      </strong>
+                    </header>
+                    <p>
+                      {name("JOB", row.developer.jobCode)} ·{" "}
+                      {name("GRADE", row.developer.gradeCode)} ·{" "}
+                      {name("EMP_TYPE", row.developer.employeeTypeCode)}
+                    </p>
+                  </>
+                )}
                 {type === "NEXT" && next ? (
                   <>
                     <button
@@ -392,73 +474,68 @@ export function WorkforceRecommendationCandidates(
                       ))}
                     </div>
                   </>
-                ) : (
-                  <p>
-                    적용:{" "}
-                    <button
-                      type="button"
-                      className="recommendation-link"
-                      data-testid={`recommendation-target-${row.rank}`}
-                      onClick={() =>
-                        props.onTargetDetails(target.type, target.id)
-                      }
-                    >
-                      {target.name}
-                    </button>{" "}
-                    · {name("JOB", row.jobCode)} · {row.startMonth} ·{" "}
-                    {name("GRADE", row.requestedGradeCode)}
-                  </p>
-                )}
-                {row.otherTentativeAssignments.map((t) => (
-                  <p
-                    data-testid={`recommendation-other-assignment-${row.rank}-${t.tentativeAssignmentId.toLowerCase().replace(/_/g, "-")}`}
-                    className="sicost-banner sicost-tone-warn"
-                    key={t.tentativeAssignmentId}
-                  >
-                    다른 기회 가배정:{" "}
-                    <button
-                      type="button"
-                      className="recommendation-link"
-                      data-testid={`recommendation-other-${row.rank}-${t.tentativeAssignmentId}`}
-                      onClick={() =>
-                        props.onTargetDetails("OPPORTUNITY", t.opportunityId)
-                      }
-                    >
-                      {t.opportunityName}
-                    </button>{" "}
-                    / {t.needSn}행
-                  </p>
-                ))}
-                <div className="recommendation-scores">
-                  {row.scoreItems.map((item) => (
-                    <div
-                      data-testid={`recommendation-score-${row.rank}-${item.itemCode.toLowerCase().replace(/_/g, "-")}`}
-                      className="recommendation-score"
-                      title={
-                        item.itemCode === "COST"
-                          ? undefined
-                          : recommendationBasis(item)
-                      }
-                      key={item.itemCode}
-                    >
-                      <span>{itemLabels[item.itemCode] ?? item.itemCode}</span>
-                      <progress
-                        max={item.weight === "0" ? "1" : item.weight}
-                        value={item.score}
-                        aria-label={`${itemLabels[item.itemCode] ?? item.itemCode} 득점`}
-                      />
-                      <span>
-                        {item.score}/{item.weight}
-                      </span>
-                      <small>
-                        {item.itemCode === "COST"
-                          ? costBasis(row, "원", item.basis)
-                          : recommendationBasis(item)}
-                      </small>
-                    </div>
-                  ))}
+                ) : !aiRecommendation && appliedCondition}
+                {!aiRecommendation && otherAssignments}
+                <div
+                  className={aiRecommendation ? "recommendation-score-panel" : undefined}
+                >
+                  {aiRecommendation && (
+                    <p className="recommendation-score-total">
+                      <span>총점</span>
+                      <strong>
+                        {row.totalScore}<small> / 100</small>
+                      </strong>
+                    </p>
+                  )}
+                  <div className="recommendation-scores">
+                    {row.scoreItems.map((item) => (
+                      <div
+                        data-testid={`recommendation-score-${row.rank}-${item.itemCode.toLowerCase().replace(/_/g, "-")}`}
+                        className="recommendation-score"
+                        title={
+                          item.itemCode === "COST"
+                            ? undefined
+                            : recommendationBasis(item)
+                        }
+                        key={item.itemCode}
+                      >
+                        <span>{itemLabels[item.itemCode] ?? item.itemCode}</span>
+                        <progress
+                          max={item.weight === "0" ? "1" : item.weight}
+                          value={item.score}
+                          aria-label={`${itemLabels[item.itemCode] ?? item.itemCode} 득점`}
+                        />
+                        <span>
+                          {item.score}/{item.weight}
+                        </span>
+                        {!aiRecommendation && (
+                          <small>
+                            {item.itemCode === "COST"
+                              ? costBasis(row, "원", item.basis)
+                              : recommendationBasis(item)}
+                          </small>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {aiRecommendation && (
+                    <details className="recommendation-score-details">
+                      <summary>채점 근거</summary>
+                      <div className="recommendation-score-evidence">
+                        {appliedCondition}
+                        <p>{recommendationReason(row.reason)}</p>
+                        {cost && <p>{costBasis(row, "원", cost.basis)}</p>}
+                      </div>
+                    </details>
+                  )}
                 </div>
-                <p>{recommendationReason(row.reason)}</p>
+                {aiRecommendation ? (
+                  <div className="recommendation-other-assignments">
+                    {otherAssignments}
+                  </div>
+                ) : (
+                  <p>{recommendationReason(row.reason)}</p>
+                )}
                 <footer>
                   {selected ? (
                     <span
@@ -473,6 +550,11 @@ export function WorkforceRecommendationCandidates(
                     <>
                       <button
                         type="button"
+                        className={
+                          aiRecommendation && target.type === "OPPORTUNITY"
+                            ? "recommendation-tentative-button"
+                            : "recommendation-assign-button"
+                        }
                         data-testid={`recommendation-assign-${row.rank}`}
                         disabled={
                           disabled ||
@@ -500,6 +582,7 @@ export function WorkforceRecommendationCandidates(
                       {type === "AI" && (
                         <button
                           type="button"
+                          className="recommendation-exclude-button"
                           data-testid={`recommendation-exclude-${row.rank}`}
                           disabled={disabled}
                           onClick={() => {

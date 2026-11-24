@@ -6,15 +6,19 @@ import "./financialWarnings.css";
 export function FinancialWarnings({
   warnings,
   description,
+  groupTitle,
+  labelPrefix = "확인 필요",
 }: {
   warnings: string[];
   description?: string;
+  groupTitle?: string;
+  labelPrefix?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const label = `확인 필요 ${warnings.length}건`;
+  const label = `${labelPrefix} ${warnings.length.toLocaleString("ko-KR")}건`;
   const groups = new Map<string, string[]>();
   for (const warning of warnings) {
-    const prefix = warning.match(/^(\d{4}-(?:0[1-9]|1[0-2]))\s+/);
+    const prefix = groupTitle ? null : warning.match(/^(\d{4}-(?:0[1-9]|1[0-2]))\s+/);
     const month = prefix?.[1] ?? "";
     const message = prefix ? warning.slice(prefix[0].length) : warning;
     const messages = groups.get(month);
@@ -47,9 +51,11 @@ export function FinancialWarnings({
         <div className="sicost-financial-warning-groups">
           {[...groups].map(([month, messages]) => (
             <section className="sicost-financial-warning-group" key={month}>
-              <h3>{month || "기타 확인 사항"}</h3>
+              <h3>{month || groupTitle || "기타 확인 사항"}</h3>
               <ul>
-                {messages.map((message) => <li key={message}>{message}</li>)}
+                {messages.map((message, index) => (
+                  <li key={`${index}-${message}`}>{message}</li>
+                ))}
               </ul>
             </section>
           ))}

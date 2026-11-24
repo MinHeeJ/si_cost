@@ -561,7 +561,7 @@ it("project summary uses the exact same response and current-month entry", async
     "contract",
     undefined,
   );
-  fireEvent.click(screen.getByRole("link", { name: "원가 분석" }));
+  fireEvent.click(screen.getByRole("button", { name: "원가 분석" }));
   expect(screen.getByTestId("location")).toHaveTextContent(
     "/UI-04?projectId=contract&month=2026-01&costTab=months",
   );

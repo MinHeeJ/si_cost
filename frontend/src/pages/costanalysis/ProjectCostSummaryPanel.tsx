@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import {
@@ -175,23 +175,41 @@ export function ProjectCostEntryLink({
   origin?: "board" | "project";
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const search = new URLSearchParams({ projectId, month, costTab: "months" });
+  const to = { pathname: "/UI-04", search: search.toString() };
+  const state = { returnTo: location.pathname + location.search };
   return (
     <span
+      className={origin === "project" ? "project-cost-entry" : undefined}
       data-testid={`cost-entry-${origin}`}
       data-screen-id={
         origin === "board" ? "SCR-UI-31-B138-COST" : "SCR-UI-01-B138-COST"
       }
     >
-      <Link
-        data-testid={`cost-entry-${origin}-link`}
-        to={{ pathname: "/UI-04", search: search.toString() }}
-        state={{ returnTo: location.pathname + location.search }}
-      >
-        원가 분석
-      </Link>
-      {sourceStatus === "PRE" && (
-        <small> 선투입 원가 · 매출 0 · 예상 최종 미계산</small>
+      {origin === "project" ? (
+        <>
+          {sourceStatus === "PRE" && (
+            <small>선투입 원가 · 매출 0 · 예상 최종 미계산</small>
+          )}
+          <button
+            type="button"
+            className="sicost-primary"
+            data-testid="cost-entry-project-link"
+            onClick={() => navigate(to, { state })}
+          >
+            원가 분석
+          </button>
+        </>
+      ) : (
+        <>
+          <Link data-testid="cost-entry-board-link" to={to} state={state}>
+            원가 분석
+          </Link>
+          {sourceStatus === "PRE" && (
+            <small> 선투입 원가 · 매출 0 · 예상 최종 미계산</small>
+          )}
+        </>
       )}
     </span>
   );

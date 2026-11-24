@@ -8,6 +8,7 @@ import {
   within,
 } from "../../shared/testSupport/businessFixtures";
 import { Link, MemoryRouter, useLocation } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { PermissionContext } from "../../shared/permission/PermissionBoundary";
@@ -632,7 +633,7 @@ describe("프로젝트 현황판", () => {
       "tab=progress",
     );
   });
-  it("메모 없는 이유 배지·띠·마지막 업데이트를 같은 표현으로 표시한다", async () => {
+  it("메모 없는 이유를 배지·지연 목록·마지막 업데이트에서 같은 표현으로 표시한다", async () => {
     const data = board();
     data.items[0] = {
       ...data.items[0],
@@ -662,12 +663,16 @@ describe("프로젝트 현황판", () => {
     expect(
       within(row).getAllByText("주간 메모 없음(계약 시작 79일)"),
     ).toHaveLength(2);
-    expect(screen.getByTestId("status-stale-banner")).toHaveTextContent(
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const name = "14일 이내 업데이트가 없는 프로젝트 1건";
+    await userEvent.click(screen.getByRole("button", { name }));
+    const updates = screen.getByRole("dialog", { name });
+    expect(updates).toHaveTextContent(
       "주간 메모 없음(계약 시작 79일)",
     );
     expect(screen.queryByText(/메모경과/)).not.toBeInTheDocument();
   });
-  it("renders all signal reasons with distinct severities, all PMs, unknown and off-page stale banner", async () => {
+  it("renders signal reasons, all PMs, unknown costs and off-page stale projects", async () => {
     mount(<ProjectStatusBoard />, "/UI-31");
     await screen.findByTestId("status-board-table-row-owned");
     expect(screen.getByTestId("project-status-board")).not.toHaveClass(
@@ -677,9 +682,16 @@ describe("프로젝트 현황판", () => {
     expect(screen.getByText("메모경과 21")).toHaveClass("sicost-tone-warn");
     expect(screen.getByText("담당 하나, 담당 둘")).toBeInTheDocument();
 
-    expect(screen.getByText("원가 미확인")).toBeInTheDocument();
-    expect(screen.getByTestId("status-stale-banner")).toHaveTextContent(
-      "다른 페이지 미갱신 (메모경과 30)",
+    expect(
+      within(screen.getByTestId("status-board-table-row-owned")).getByText(
+        "원가 미확인",
+      ),
+    ).toBeInTheDocument();
+    const name = "14일 이내 업데이트가 없는 프로젝트 1건";
+    await userEvent.click(screen.getByRole("button", { name }));
+    const updates = screen.getByRole("dialog", { name });
+    expect(updates).toHaveTextContent(
+      "다른 페이지 미갱신 · 마지막 메모 작성 후 30일",
     );
     expect(screen.queryByText("월 선택")).not.toBeInTheDocument();
   });

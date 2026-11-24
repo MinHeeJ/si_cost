@@ -1,9 +1,44 @@
 .sales-command-screen,
+.sales-pipeline-content,
 .sales-command-quote,
 .sales-command-actions {
   display: grid;
   gap: 16px;
   min-width: 0;
+}
+.sales-pipeline-actions {
+  justify-content: flex-end;
+}
+.sales-pipeline-content a.sicost-text-link {
+  text-decoration: none;
+}
+.sales-pipeline-filters > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-pipeline-content .sales-command-summary p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.sales-pipeline-content .sales-command-summary strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.sicost-table.sales-pipeline-closed-table thead th {
+  text-align: center;
+}
+.sicost-table.sales-pipeline-closed-table tbody td {
+  padding-block: 6px;
+  vertical-align: middle;
+}
+.sales-pipeline-pagination > .sicost-pagination {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 .sales-command-toolbar,
 .sales-command-tabs {
@@ -73,47 +108,183 @@
 .sales-command-kanban {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 14px;
-  align-items: start;
 }
 .sales-command-column {
-  background: #eef1f4;
+  background: var(--head-bg);
+  border: 1px solid var(--divider);
   border-radius: 10px;
   padding: 10px;
   min-width: 0;
 }
-.sales-command-column h2 {
-  font-size: 14px;
-  margin-bottom: 8px;
+.sales-command-column-heading {
+  padding: 3px 3px 10px;
+  border-bottom: 1px solid var(--divider);
 }
-.sales-command-column > p {
+.sales-command-column-heading h2 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+.sales-command-column-heading p {
+  display: flex;
+  gap: 4px 8px;
+  flex-wrap: wrap;
+  margin: 0;
   font-size: 12px;
   color: var(--text-sub);
 }
+.sales-command-column-heading strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
 .sales-command-card {
+  --sales-card-padding-block: 13px;
+  --sales-card-gap: 8px;
+  box-sizing: border-box;
+  min-block-size: calc(
+    var(--sales-card-content-height, 0px) + 2 * var(--sales-card-padding-block) +
+      var(--sales-card-gap)
+  );
   background: var(--surface);
   border: 0;
   box-shadow: var(--e1);
   border-radius: 8px;
-  padding: 13px 14px;
+  padding: var(--sales-card-padding-block) 14px;
   margin-top: 8px;
   overflow-wrap: anywhere;
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sales-card-gap);
 }
-.sales-command-card > button {
+.sales-opportunity-card-body {
+  display: grid;
+  gap: var(--sales-card-gap);
+}
+.sales-opportunity-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 2px 6px;
+}
+.sales-opportunity-card-heading > button {
+  min-width: 0;
   text-align: left;
   border: 0;
   padding: 0;
   background: transparent;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .sales-command-card p {
+  margin: 0;
   color: var(--text-sub);
   font-size: 12px;
 }
-.sales-command-card select {
+.sales-opportunity-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px 8px;
+  flex-wrap: wrap;
+}
+.sales-opportunity-status {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.sales-opportunity-status > span {
+  white-space: nowrap;
+}
+.sales-opportunity-meta > span + span {
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--divider);
+}
+.sales-opportunity-status:empty {
+  display: none;
+}
+.sales-opportunity-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: var(--head-bg);
+}
+.sales-opportunity-amount {
+  grid-column: 1 / -1;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--divider);
+}
+.sales-opportunity-metrics dt,
+.sales-opportunity-next-label,
+.sales-opportunity-roles span {
+  color: var(--text-sub);
+  font-size: 11px;
+}
+.sales-opportunity-metrics dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.sales-opportunity-metrics small {
+  color: var(--text-sub);
+  font-weight: 400;
+}
+.sales-opportunity-amount dd {
+  font-size: 16px;
+}
+.sales-opportunity-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.sales-opportunity-roles strong,
+.sales-opportunity-next strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.sales-opportunity-next {
+  display: grid;
+  gap: 2px;
+  padding-top: 7px;
+  border-top: 1px solid var(--divider);
+}
+.sales-opportunity-next p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.sales-opportunity-stage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.sales-opportunity-stage select {
   width: 100%;
+}
+.sales-opportunity-recommend {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-block-start: auto;
+  padding: 4px 8px;
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.sales-opportunity-recommend:hover {
+  background: var(--primary-bg);
 }
 .sales-command-badge {
   display: inline-block;
@@ -187,9 +358,15 @@
   }
 }
 @media (max-width: 767px) {
+  .sales-command-kanban {
+    grid-auto-rows: auto;
+  }
   .sales-command-kanban,
   .sales-command-summary {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .sales-pipeline-content > .sales-command-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .sales-command-summary > div,
   .sales-command-quote {

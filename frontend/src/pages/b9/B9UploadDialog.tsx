@@ -4,7 +4,6 @@ import {
   type ExcelUploadDialogProps,
   type UploadWorkflow,
 } from "../b7/ExcelUploadDialog";
-import { ApiError } from "../../shared/api";
 import * as api from "./b9Api";
 import "./b9.css";
 
@@ -54,28 +53,8 @@ export function B9UploadActions({
   readOnly = false,
   ...props
 }: Omit<Props, "onClose">) {
-  const [open, setOpen] = useState(false),
-    [pending, setPending] = useState(false),
-    [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
   if (window.matchMedia?.("(max-width: 767px)")?.matches) return null;
-  async function download() {
-    if (pending) return;
-    setPending(true);
-    setError("");
-    try {
-      await template();
-    } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? `${e.message} (요청 ID: ${e.body.requestId})`
-          : e instanceof Error
-            ? e.message
-            : "다운로드하지 못했습니다.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
   return (
     <section
       className="b9-upload-actions"
@@ -84,25 +63,12 @@ export function B9UploadActions({
     >
       <button
         type="button"
-        data-testid="b9-template-button"
-        disabled={pending}
-        onClick={() => void download()}
-      >
-        {pending ? "파일 생성 중…" : "양식 내려받기"}
-      </button>
-      <button
-        type="button"
         data-testid="b9-upload-button"
         disabled={readOnly}
         onClick={() => setOpen(true)}
       >
         엑셀 업로드
       </button>
-      {error && (
-        <p role="alert">
-          {error} 접근기록이 저장되지 않으면 파일은 전송되지 않습니다.
-        </p>
-      )}
       {open && (
         <B9UploadDialog
           {...props}

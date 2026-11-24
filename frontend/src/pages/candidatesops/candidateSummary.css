@@ -72,7 +72,6 @@
 .candidate-summary-interview {
   color: var(--warn);
 }
-.candidate-summary-help,
 .candidate-summary-empty {
   margin-top: 12px;
   color: var(--text-sub);

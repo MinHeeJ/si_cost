@@ -9,8 +9,58 @@
   align-items: center;
   flex-wrap: wrap;
 }
-.sales-forecast-toolbar h2 {
-  margin-right: auto;
+.sales-forecast-toolbar > .sales-forecast-scope {
+  flex: 1 1 420px;
+  min-width: 0;
+  height: auto;
+}
+.sales-forecast-scope .sicost-period-summary-label {
+  color: var(--info);
+  font-size: 12px;
+}
+.sales-forecast-scope-note {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.sales-forecast-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-inline-start: auto;
+}
+.sales-forecast-basis {
+  min-width: 0;
+  margin-top: 16px;
+}
+.sales-forecast-basis h3 {
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+.sicost-table.sales-forecast-table thead th {
+  text-align: center;
+}
+.sales-forecast-table a.sicost-text-link {
+  text-decoration: none;
+}
+.sicost-table.sales-forecast-table tbody tr > :is(th, td) {
+  padding-block: 6px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--divider);
+}
+.sicost-table.sales-forecast-table tbody tr:last-child > :is(th, td) {
+  border-bottom-width: 0;
+}
+.sicost-table.sales-forecast-table tbody th {
+  position: static;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: 600;
+}
+.sicost-table.sales-forecast-table tbody tr:hover > :is(th, td) {
+  background: var(--head-bg);
 }
 .sales-forecast-toolbar .sicost-field {
   flex-direction: row;
@@ -19,28 +69,15 @@
 .sales-forecast-toolbar select {
   height: 28px;
 }
-.sales-forecast-badge {
-  color: var(--info);
-  background: var(--info-bg);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 400;
-  padding: 3px 6px;
-}
 .sales-forecast-muted {
   color: var(--text-sub);
   font-size: 12px;
 }
-.sales-forecast-banner,
 .sales-forecast-warning,
 .sales-forecast-error {
   padding: 10px 16px;
   border-radius: 8px;
   font-size: 13px;
-}
-.sales-forecast-banner {
-  background: var(--info-bg);
-  color: var(--info);
 }
 .sales-forecast-warning {
   background: var(--warn-bg);
@@ -162,6 +199,12 @@
   }
 }
 @media (max-width: 767px) {
+  .sicost-period-status.sicost-period-summary.sales-forecast-scope
+    > .sales-forecast-scope-note {
+    flex-basis: 100%;
+    border-block-start: 1px solid var(--divider);
+    padding-block-start: 8px;
+  }
   .sales-forecast-charts {
     grid-template-columns: minmax(0, 1fr);
   }

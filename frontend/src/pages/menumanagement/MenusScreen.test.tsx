@@ -88,9 +88,10 @@ async function open() {
   render(<MenusScreen />);
   await screen.findByLabelText("M1 메뉴이름");
 }
-it("전체 중지포함 트리와 실제 권한 안내·불변화면·루트 체크없음·잠금에서 PC편집 가능", async () => {
+it("중지 메뉴를 포함해 표시하고 잠금 상태에서도 PC 전용 설정을 편집할 수 있다", async () => {
   await open();
-  expect(screen.getByText("저장된 역할·메뉴 권한과 담당 범위를 적용합니다.")).toBeInTheDocument();
+  expect(screen.getByRole("table", { name: "메뉴 설정" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   expect(screen.getByLabelText("M2 사용")).not.toBeChecked();
   expect(screen.queryByLabelText("G1 사용")).not.toBeInTheDocument();
   expect(screen.getByLabelText("M3 사용")).toBeDisabled();
@@ -293,7 +294,7 @@ it("접기에도 전체초안 보존·이력은 선택 menuId만 조회·닫아�
   expect(screen.getByLabelText("M1 메뉴이름")).toHaveValue("초안");
   await userEvent.click(
     within(screen.getByTestId("menu-row-g1")).getByRole("button", {
-      name: "접기",
+      name: "업무 접기",
     }),
   );
   expect(screen.queryByLabelText("M1 메뉴이름")).not.toBeInTheDocument();

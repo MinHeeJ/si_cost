@@ -2,14 +2,12 @@
   display: grid;
   gap: 16px;
 }
-.staffing-comparison-note {
-  margin: 16px 0;
-  color: var(--text-sub);
-  font-size: 13px;
-  background: var(--surface);
-  padding: 10px 14px;
-  border-radius: 8px;
-  box-shadow: var(--e1);
+.staffing-comparison .sicost-table a.project-link {
+  color: var(--primary);
+  text-decoration: none;
+}
+.staffing-comparison .sicost-table a.project-link:hover {
+  color: var(--primary-hover, var(--primary));
 }
 .staffing-comparison .sicost-filterbar label {
   display: flex;

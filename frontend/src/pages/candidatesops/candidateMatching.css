@@ -6,38 +6,45 @@
   border-radius: 10px;
   background: var(--surface);
 }
-.candidate-matching-panel > header {
+.candidate-positions-panel {
+  min-width: 0;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+:is(.candidate-matching-panel, .candidate-positions-panel) > header {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px 16px;
   margin-bottom: 12px;
 }
-.candidate-matching-panel h3 {
+:is(.candidate-matching-panel, .candidate-positions-panel) h3 {
   margin: 0;
   font-size: 16px;
 }
-.candidate-matching-panel header > span,
-.candidate-matching-help {
+:is(.candidate-matching-panel, .candidate-positions-panel) header > span {
   color: var(--text-sub);
   font-size: 13px;
 }
-.candidate-matching-panel a {
+.candidate-positions-panel .sicost-table-viewport {
+  max-height: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.candidate-positions-panel .sicost-table {
+  min-width: max-content;
+}
+.candidate-positions-panel a {
   color: var(--primary);
   text-decoration: none;
 }
-.candidate-matching-panel a:hover {
+.candidate-positions-panel a:hover {
   text-decoration: underline;
 }
 .candidate-position-below {
   color: var(--bad);
   font-weight: 600;
-}
-.candidate-shortage-context {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 @media (max-width: 767px) {
   .candidate-matching-panel {

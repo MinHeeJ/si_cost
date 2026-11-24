@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   authenticate,
   session,
@@ -10,8 +10,16 @@ import { PasswordChangeDialog } from "./PasswordChangeDialog";
 import { ErrorBanner } from "../../shared/Feedback";
 export function SessionIndicator({
   logoutOnly = false,
+  renderMenu,
+  onPasswordOpen,
 }: {
   logoutOnly?: boolean;
+  renderMenu?(actions: {
+    passwordChange: ReactNode;
+    logout: ReactNode;
+    sessionStatus: ReactNode;
+  }): ReactNode;
+  onPasswordOpen?(): void;
 }) {
   const [state, setState] = useState<AuthenticationSession>(),
     [received, setReceived] = useState(performance.now()),
@@ -110,83 +118,96 @@ export function SessionIndicator({
       live = false;
     };
   }, [remaining]);
+  const logout = (
+    <button
+      data-testid="authentication-session-logout-button"
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        if (!window.confirm("미저장 내용은 사라집니다. 로그아웃하시겠습니까?"))
+          return;
+        setBusy(true);
+        try {
+          await authenticate("logout");
+          clearAuthentication();
+        } catch (e) {
+          setError(
+            e instanceof Error
+              ? e.message
+              : "로그아웃 응답을 확인하지 못했습니다.",
+          );
+          // The server may have already discarded the session before an audit failure.
+          try {
+            if ((await session()).nextStep === "LOGIN") clearAuthentication();
+          } catch {
+            /* A terminal 401 clears all consumers through the common transport. */
+          }
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      로그아웃
+    </button>
+  );
+  const passwordChange = (
+    <button
+      data-testid="authentication-session-password-change-button"
+      type="button"
+      onClick={() => {
+        onPasswordOpen?.();
+        setChange(true);
+      }}
+    >
+      비밀번호 변경
+    </button>
+  );
+  const sessionStatus = (
+    <div className="authentication-session-status">
+      <span>
+        자동 로그아웃까지{" "}
+        <strong>
+          {remaining === undefined
+            ? "–"
+            : `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`}
+        </strong>
+      </span>
+      <button
+        data-testid="authentication-session-extend-button"
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            apply(await authenticate("session/extend"));
+            authenticationChannel?.postMessage({ type: "extended" });
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "연장하지 못했습니다.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        연장
+      </button>
+    </div>
+  );
   return (
     <div
       className="authentication-session"
       data-testid="authentication-session-indicator"
     >
       {error && <ErrorBanner message={error} />}
-      {!logoutOnly && (
-        <>
-          <span>
-            자동 로그아웃까지{" "}
-            {remaining === undefined
-              ? "–"
-              : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`}
-          </span>
-          <button
-            data-testid="authentication-session-extend-button"
-            type="button"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError("");
-              try {
-                apply(await authenticate("session/extend"));
-                authenticationChannel?.postMessage({ type: "extended" });
-              } catch (e) {
-                setError(
-                  e instanceof Error ? e.message : "연장하지 못했습니다.",
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            연장
-          </button>
-          <button
-            data-testid="authentication-session-password-change-button"
-            type="button"
-            onClick={() => setChange(true)}
-          >
-            비밀번호 변경
-          </button>
-        </>
+      {logoutOnly ? logout : (
+        renderMenu ? renderMenu({ passwordChange, logout, sessionStatus }) : (
+          <>
+            {sessionStatus}
+            {passwordChange}
+            {logout}
+          </>
+        )
       )}
-      <button
-        data-testid="authentication-session-logout-button"
-        type="button"
-        disabled={busy}
-        onClick={async () => {
-          if (
-            !window.confirm("미저장 내용은 사라집니다. 로그아웃하시겠습니까?")
-          )
-            return;
-          setBusy(true);
-          try {
-            await authenticate("logout");
-            clearAuthentication();
-          } catch (e) {
-            setError(
-              e instanceof Error
-                ? e.message
-                : "로그아웃 응답을 확인하지 못했습니다.",
-            );
-            // Audit can fail after the server has already discarded the session. Read
-            // back its state; never retry the POST or leave old private DOM in that case.
-            try {
-              if ((await session()).nextStep === "LOGIN") clearAuthentication();
-            } catch {
-              /* A terminal 401 clears all consumers through the common transport. */
-            }
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        로그아웃
-      </button>
       {change && !logoutOnly && (
         <PasswordChangeDialog
           changedAt={state?.passwordChangedAt}

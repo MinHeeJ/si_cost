@@ -1171,7 +1171,23 @@ describe("공식 진입점 합성", () => {
       expect.objectContaining({ light: "위험" }),
       expect.any(AbortSignal),
     );
-    expect(screen.getByTestId("issue-create")).toBeVisible();
+    const create = screen.getByTestId("issue-create");
+    expect(create).toBeVisible();
+    expect(
+      within(create.parentElement!).getByRole("button", { name: "열 설정" }),
+    ).toBeVisible();
+    expect(screen.queryByTestId("status-filters")).not.toBeInTheDocument();
+    expect(screen.getByTestId("issues-filters")).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: /이슈 모아 보기/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(await screen.findByRole("group", { name: "조회 기간 상태" }))
+        .queryByText("기준일"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("project-issues-panel")).queryByText(/^기준일/),
+    ).not.toBeInTheDocument();
   });
   it("재무 직접 진입은 저장된 기간 대신 서버 현재월과 기존 프레임을 사용한다", async () => {
     preferences.push({
@@ -1769,12 +1785,18 @@ describe("공식 진입점 합성", () => {
         else expect(managedMenus.getMenuManagement).toHaveBeenCalled();
         if (id === "UI-24") {
           expect(roles.getRoles).toHaveBeenCalled();
+          expect(screen.queryByTestId("permission-settings-panel")).not.toBeInTheDocument();
+          await userEvent.click(screen.getByRole("button", { name: "내 저장 권한" }));
           expect(
             await screen.findByTestId("permission-settings-panel"),
           ).toBeVisible();
           expect(
             permissionSettings.getCurrentUserPermissionSettings,
           ).toHaveBeenCalled();
+          await userEvent.click(
+            within(screen.getByRole("dialog", { name: "내 저장 권한" }))
+              .getByRole("button", { name: "닫기" }),
+          );
         }
         expect(
           screen.queryByText("이 화면은 다음 단계에서 만듭니다."),

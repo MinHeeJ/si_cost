@@ -159,14 +159,44 @@ beforeEach(() => {
   });
 });
 it("renders immutable rank and score, zero-weight empty bar, and reuses detail actions", async () => {
-  render(<WorkforceRecommendationCandidates {...props} />);
+  render(
+    <WorkforceRecommendationCandidates
+      {...props}
+      candidates={[
+        {
+          ...candidate,
+          otherTentativeAssignments: [
+            {
+              tentativeAssignmentId: "T-09",
+              opportunityId: "O-09",
+              opportunityName: "다른 영업 기회",
+              needSn: "1",
+              startMonth: "2026-07",
+            },
+          ],
+        },
+      ]}
+    />,
+  );
   expect(screen.getByText("순위 3")).toBeInTheDocument();
-  expect(screen.getByText("총점 82.3")).toBeInTheDocument();
+  expect(screen.getByText("총점").parentElement).toHaveTextContent("82.3 / 100");
   expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
   await userEvent.click(screen.getByRole("button", { name: "검토 인력" }));
   expect(onDeveloperDetails).toHaveBeenCalledWith("D-0101");
+  const basis = screen.getByText("채점 근거", { exact: true });
+  const other = screen.getByRole("button", { name: "다른 영업 기회" });
+  const banner = screen.getByTestId("recommendation-other-assignment-3-t-09");
+  expect(banner).toHaveTextContent("필요 인력 1번 자리");
+  expect(banner).toHaveClass("sicost-banner", "sicost-tone-warn");
+  expect(basis.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING)
+    .toBeTruthy();
+  expect(basis.closest("details")).not.toHaveAttribute("open");
+  await userEvent.click(basis);
+  expect(basis.closest("details")).toHaveAttribute("open");
   await userEvent.click(screen.getByRole("button", { name: "현재 기회" }));
   expect(onTargetDetails).toHaveBeenCalledWith("OPPORTUNITY", "O-01");
+  await userEvent.click(other);
+  expect(onTargetDetails).toHaveBeenCalledWith("OPPORTUNITY", "O-09");
 });
 it("opening and cancelling exclusion does not post", async () => {
   render(<WorkforceRecommendationCandidates {...props} />);
@@ -206,7 +236,7 @@ it("exclusion removes only that card and never renumbers remaining rows", async 
     ).not.toBeInTheDocument(),
   );
   expect(screen.getByText("순위 5")).toBeInTheDocument();
-  expect(screen.getByText("총점 82.3")).toBeInTheDocument();
+  expect(screen.getByText("총점").parentElement).toHaveTextContent("82.3 / 100");
   expect(api.createWorkforceRecommendationExclusion).toHaveBeenCalledWith(
     "101",
     3,
@@ -466,7 +496,7 @@ it.each([
     expect(
       screen.getByText(new RegExp(`인건비 ${expected} 원`)),
     ).toHaveTextContent("단가 0 원");
-    expect(screen.getByText(/총점/)).toHaveTextContent("82.3");
+    expect(screen.getByText("총점").parentElement).toHaveTextContent("82.3");
     expect(
       api.createWorkforceRecommendationTentativeAssignment,
     ).not.toHaveBeenCalled();

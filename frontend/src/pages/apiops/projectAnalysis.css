@@ -4,6 +4,82 @@
   min-width: 0;
   color: var(--text);
 }
+.project-status-board {
+  grid-template-columns: minmax(0, 1fr);
+}
+.project-status-board > [role="tabpanel"] {
+  min-width: 0;
+}
+.project-status-board .sicost-table-viewport {
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+.project-status-board-table .sicost-table tbody td {
+  padding-block: 6px;
+  vertical-align: middle;
+}
+.project-status-issues-table .sicost-table tbody td {
+  padding-block: 6px;
+  vertical-align: middle;
+}
+.project-status-issues-table .issue-link {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--primary);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+.project-status-issues-table .issue-link:hover {
+  color: var(--primary-hover, var(--primary));
+}
+.project-status-board-table a.project-link {
+  color: var(--primary);
+  text-decoration: none;
+}
+.project-status-board-table a.project-link:hover {
+  color: var(--primary-hover, var(--primary));
+}
+.sicost-kpi-strip.project-status-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.project-status-kpis > section {
+  min-width: 0;
+}
+.project-status-kpis > section > span {
+  display: block;
+  color: var(--text-sub);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.project-status-kpi-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.project-status-view-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+@media (max-width: 1150px) {
+  .sicost-kpi-strip.project-status-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .sicost-kpi-strip.project-status-kpis > section {
+    padding: 12px 10px;
+  }
+}
 .project-analysis-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

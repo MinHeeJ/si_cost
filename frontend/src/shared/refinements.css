@@ -79,12 +79,7 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .sicost-pagination button {min-width:34px;height:34px; padding:0 8px}
 .sicost-pagination button[aria-current="page"] {background:var(--primary);color:white;border-color:var(--primary)}
 .sicost-pagination select {border:1px solid var(--divider);border-radius:6px;background:var(--surface);height:34px}
-.sicost-calendar-caption {font-size:12.5px;color:var(--text-sub);margin:0}
 .sicost-footnote {font-size:12px;color:var(--text-sub);margin:4px 0}
-.workforce-calendar-toolbar {justify-content:space-between;gap:8px}
-.workforce-calendar-legend {display:flex;flex-wrap:wrap;gap:5px;flex:1}
-.workforce-calendar-legend > span {font-size:11px;border-radius:4px;padding:3px 6px;background:#EFF6FF;border:1px solid #D5DAE1}
-.workforce-calendar-legend .calendar-legend-3 {background:#FEF3C7}.workforce-calendar-legend .calendar-legend-4{background:white;border:1px dashed #EF4444}.workforce-calendar-legend .calendar-legend-5{border:1px dashed #3D6CF2}
 .workforce-calendar-content {min-width:0}
 .workforce-calendar .sicost-table-viewport {max-height:640px;overflow:auto;isolation:isolate;border-radius:10px;border:1px solid #E7EAEE}
 .workforce-calendar-table {border-collapse:separate;border-spacing:0;table-layout:fixed}
@@ -98,10 +93,6 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .workforce-calendar-cell {height:30px;margin:3px 0;border-radius:4px;overflow:hidden}
 .workforce-calendar-cell .sicost-help-anchor,.workforce-calendar-cell .sicost-help-value {height:100%;width:100%;display:block}
 .calendar-cell-visual {display:flex;height:100%;justify-content:center;align-items:center;font-size:11px}
-.workforce-calendar-assigned {background:linear-gradient(90deg,#DBEAFE var(--assigned-fill,100%),transparent var(--assigned-fill,100%))}
-.workforce-calendar-concurrent {background:repeating-linear-gradient(135deg,#DBEAFE 0 6px,#BFDBFE 6px 12px)}
-.workforce-calendar-ending {background:#FEF3C7}
-.workforce-calendar-available {border:1px dashed #EF4444;background:transparent}
 .workforce-calendar-before_join {background:transparent}
 .sicost-period-row {display:flex;align-items:stretch;gap:10px;container-type:inline-size;min-width:0}
 .sicost-period-row:empty {display:none}
@@ -131,7 +122,7 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .dashboard-panel progress::-webkit-progress-value,.dashboard-panel progress::-moz-progress-bar{animation:none}
 @media(prefers-reduced-motion:reduce){.dashboard-panel progress{animation:none!important}}
 .codegroups-group-entry{display:flex;align-items:center;gap:4px}.codegroups-group-entry>button{flex:1;min-width:0}
-.assignment-extra-conditions{font-size:12.5px;align-self:center}.assignment-extra-conditions summary{cursor:pointer;color:var(--text-sub)}.assignment-extra-conditions[open]{flex-basis:100%}.assignment-extra-conditions .sicost-field{max-width:180px;margin:8px 0}.assignment-column-option{display:flex;align-items:center;gap:8px;margin:9px 0}
+.assignment-column-option{display:flex;align-items:center;gap:8px;margin:9px 0}
 .codegroups-list .sicost-help-value{width:22px;height:28px;padding:0;justify-content:center}
 /* A fixed application viewport gives the main panel its intended scroll container. */
 .sicost-app{height:100dvh;min-height:0}.sicost-main{min-height:0}
@@ -185,6 +176,21 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
   .sicost-period-status.sicost-period-summary { padding: 6px 4px; }
   .sicost-period-status.sicost-period-summary > .sicost-period-summary-item { padding: 4px 10px; }
   .sicost-period-summary-item + .sicost-period-summary-item::before { display: none; }
+}
+.sicost-period-status.sicost-period-summary-compact {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 36px;
+  height: auto;
+  margin-inline-start: auto;
+  justify-content: flex-end;
+}
+.sicost-period-summary-compact .sicost-period-summary-label {
+  color: var(--info);
+  font-size: 12px;
+}
+.sicost-period-summary-compact .sicost-period-summary-item {
+  white-space: nowrap;
 }
 
 /* Floating feedback lives outside the application grid and its scroll areas. */

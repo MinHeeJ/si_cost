@@ -1,6 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { Pagination } from "../../shared/Pagination";
 import { HelpTooltip } from "../../shared/HelpTooltip";
+import { StatusBadge } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
@@ -67,8 +68,19 @@ export function AssignmentCandidatesPanel({
       className="assignment-form"
       aria-busy={loading}
     >
-      <h2>배정 후보 {data && <span className="sicost-badge sicost-tone-neutral">{data.total}</span>} <HelpTooltip label="배정 후보 안내" iconOnly>수주한 기회의 배정 후보입니다. 연도 필터와 별개로 전체 후보를 표시합니다.</HelpTooltip></h2>
-
+      <header className="assignment-candidates-heading">
+        <h2>
+          배정 후보
+          <HelpTooltip label="배정 후보 안내" iconOnly>
+            수주한 기회의 배정 후보입니다. 연도 필터와 별개로 전체 후보를 표시합니다.
+          </HelpTooltip>
+        </h2>
+        {!loading && !error && data && data.total > 0 && (
+          <StatusBadge tone="info">
+            {data.total.toLocaleString("ko-KR")}건
+          </StatusBadge>
+        )}
+      </header>
       <AssignmentError
         error={error}
         retry={() => {
@@ -85,7 +97,7 @@ export function AssignmentCandidatesPanel({
             {data.items.length === 0 ? (
               <div className="sicost-empty"><Icon name="folder" size={26} /><p>배정 후보가 없습니다.</p></div>
             ) : (
-              <div className="sicost-table-viewport">
+              <div className="sicost-table-viewport assignment-candidates-table">
                 <table className="sicost-table">
                   <thead>
                     <tr>
@@ -124,28 +136,32 @@ export function AssignmentCandidatesPanel({
                           </span>
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            data-testid={`candidate-confirm-${row.id}`}
-                            disabled={pending}
-                            onClick={() => {
-                              setNotice("");
-                              setConfirming(row);
-                            }}
-                          >
-                            확정
-                          </button>
-                          <button
-                            type="button"
-                            data-testid={`candidate-drop-${row.id}`}
-                            disabled={pending}
-                            onClick={() => {
-                              setNotice("");
-                              setDropping(row);
-                            }}
-                          >
-                            빼기
-                          </button>
+                          <div className="assignment-candidate-actions">
+                            <button
+                              type="button"
+                              className="assignment-candidate-confirm"
+                              data-testid={`candidate-confirm-${row.id}`}
+                              disabled={pending}
+                              onClick={() => {
+                                setNotice("");
+                                setConfirming(row);
+                              }}
+                            >
+                              확정
+                            </button>
+                            <button
+                              type="button"
+                              className="assignment-candidate-exclude"
+                              data-testid={`candidate-drop-${row.id}`}
+                              disabled={pending}
+                              onClick={() => {
+                                setNotice("");
+                                setDropping(row);
+                              }}
+                            >
+                              제외
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -196,8 +212,9 @@ export function AssignmentCandidatesPanel({
       )}
       <Dialog
         open={Boolean(dropping)}
-        title="배정 후보 빼기"
-        confirmLabel="빼기"
+        title="배정 후보 제외"
+        confirmLabel="제외"
+        confirmClassName="assignment-candidate-exclude"
         pending={pending}
         onCancel={() => setDropping(undefined)}
         onConfirm={async () => {

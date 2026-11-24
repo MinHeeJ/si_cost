@@ -276,7 +276,7 @@ it("uses exact money normalization and unit division without Number", () => {
   expect(projectAmount("999999999999999", "백만원")).toBe("999,999,999.999999");
   expect(projectAmount(null, "원")).toBe("–");
 });
-it("list renders all ten columns and server banner total with distinct badge tones", async () => {
+it("list renders all ten columns, the server unassigned count, and distinct badge tones", async () => {
   render(<ProjectsScreen {...props} />);
   await screen.findByText(project.name);
   for (const text of [
@@ -294,9 +294,9 @@ it("list renders all ten columns and server banner total with distinct badge ton
     expect(
       screen.getByRole("columnheader", { name: new RegExp(text) }),
     ).toBeInTheDocument();
-  expect(screen.getByTestId("project-unassigned-banner")).toHaveTextContent(
-    "7건",
-  );
+  expect(
+    screen.getByRole("button", { name: "영업파트 미지정 7건" }),
+  ).toBeInTheDocument();
   expect(
     screen.getAllByText("진행").find((node) => node.tagName === "SPAN"),
   ).toHaveClass("sicost-tone-info");
@@ -338,7 +338,10 @@ it("unassigned CTA only changes part filter and resets page preserving year sear
       expect.objectContaining({ page: 2 }),
     ),
   );
-  await userEvent.click(screen.getByText("이 건만 보기"));
+  await userEvent.click(
+    screen.getByRole("button", { name: "영업파트 미지정 7건" }),
+  );
+  expect(screen.getByLabelText("영업 파트")).toHaveValue("UNASSIGNED");
   await waitFor(() =>
     expect(api.getProjects).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -719,7 +722,12 @@ it("detail excludes estimate and fake progress, displays four areas, all PMs and
   expect(screen.getAllByRole("tab")).toHaveLength(4);
   expect(screen.getByText(/PM 가/)).toBeInTheDocument();
   expect(screen.getByText(/PM 나/)).toBeInTheDocument();
-  expect(screen.getByTitle("사유: 예약 사유 · 변경자")).toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: "2027-01 영업 파트 변경 사유 도움말" }),
+  );
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "사유: 예약 사유 · 변경자: 변경자",
+  );
   expect(screen.getByText("(예정)")).toHaveClass("sicost-tone-info");
   expect(screen.getByText(/진행현황·이슈는 후속 기능/)).toBeInTheDocument();
 });

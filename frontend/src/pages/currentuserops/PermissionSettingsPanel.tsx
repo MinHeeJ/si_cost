@@ -18,7 +18,7 @@ const actions: { key: keyof Omit<MenuPermission, "menuId">; label: string }[] =
     { key: "confirm", label: "확정" },
   ];
 
-export function PermissionSettingsPanel() {
+export function PermissionSettingsPanel({ embedded = false }: { embedded?: boolean }) {
   const [settings, setSettings] = useState<CurrentPermissionSettings>();
   const [error, setError] = useState<unknown>();
   const [pending, setPending] = useState(true);
@@ -45,13 +45,14 @@ export function PermissionSettingsPanel() {
   }, [refresh]);
   return (
     <section
+      className="roles-self-permissions"
       aria-label="현재 사용자 저장 권한"
       data-screen-id="SCR-UI-24"
       data-testid="permission-settings-panel"
       aria-busy={pending}
     >
-      <div className="sicost-toolbar">
-        <h2>현재 사용자 저장 권한</h2>
+      <div className="roles-toolbar">
+        {!embedded && <h2>현재 사용자 저장 권한</h2>}
         <button
           type="button"
           data-testid="permission-settings-refresh"
@@ -155,10 +156,6 @@ export function PermissionSettingsPanel() {
                     </span>
                   ))
                 : "담당프로젝트가 없습니다."}
-            </dd>
-            <dt>설정 revision</dt>
-            <dd style={{ overflowWrap: "anywhere" }}>
-              {settings.settingsRevision}
             </dd>
           </dl>
           <div className="sicost-table-viewport">

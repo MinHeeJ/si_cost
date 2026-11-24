@@ -43,9 +43,9 @@ export function ProfileDialog({
       onCancel={onClose}
       onConfirm={onClose}
       confirmLabel="닫기"
+      hideCancel
       testId="profile-dialog"
       confirmTestId="profile-close-button"
-      cancelTestId="profile-cancel-button"
     >
       <section
         data-screen-id="SCR-UI-16-M4"

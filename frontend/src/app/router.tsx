@@ -15,9 +15,11 @@ import { BusinessPartnersScreen } from "../pages/shared/BusinessPartnersScreen";
 import { UsersScreen } from "../pages/shared/UsersScreen";
 import { PermissionsScreen } from "../pages/shared/PermissionsScreen";
 import { MenusScreen } from "../pages/shared/MenusScreen";
-import { PermissionSettingsPanel } from "../pages/currentuserops/PermissionSettingsPanel";
 import { BusinessUsersWorkspace } from "../pages/businessusers/BusinessUsersWorkspace";
-import { ProjectsWorkspace } from "../pages/projects/ProjectsWorkspace";
+import {
+  ProjectsWorkspace,
+  projectScreenGuide,
+} from "../pages/projects/ProjectsWorkspace";
 import type { ProjectsRegistration } from "../pages/projects/ProjectsScreen";
 import type { ProjectDetailContext } from "../pages/projects/ProjectDetailPanel";
 import {
@@ -38,8 +40,11 @@ import { ProjectIssuesPanel } from "../pages/issues/ProjectIssuesPanel";
 import { ProjectStatusIssuesPanel } from "../pages/issues/ProjectStatusIssuesPanel";
 import { B6UploadDialog } from "../pages/b6/B6UploadDialog";
 import { ClientsScreen } from "../pages/clients/ClientsScreen";
-import { DeveloperPoolScreen } from "../pages/shared/DeveloperPoolScreen";
-import { StaffingAssignmentsScreen } from "../pages/shared/StaffingAssignmentsScreen";
+import { DeveloperPoolScreen, developerPoolGuide } from "../pages/shared/DeveloperPoolScreen";
+import {
+  StaffingAssignmentsScreen,
+  assignmentScreenGuide,
+} from "../pages/shared/StaffingAssignmentsScreen";
 import { BillingReceiptsScreen } from "../pages/shared/BillingReceiptsScreen";
 import { DashboardScreen } from "../pages/shared/DashboardScreen";
 import { FinancialItemsScreen } from "../pages/financialitems/FinancialItemsScreen";
@@ -48,10 +53,16 @@ import { OperatingProfitScreen } from "../pages/shared/OperatingProfitScreen";
 import { NetProfitScreen } from "../pages/shared/NetProfitScreen";
 import { BusinessPlanPerformanceScreen } from "../pages/shared/BusinessPlanPerformanceScreen";
 import { CashFlowScreen } from "../pages/shared/CashFlowScreen";
-import { CandidatesScreen } from "../pages/candidates/CandidatesScreen";
+import {
+  CandidatesScreen,
+  candidateScreenGuide,
+} from "../pages/candidates/CandidatesScreen";
 import { SharedScreenFrame } from "../pages/shared/FollowUpScreen";
 import { SalesPipelineScreen } from "../pages/salesopportunitiesops/SalesPipelineScreen";
-import { WorkforceRecommendationsScreen } from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
+import {
+  recommendationScreenGuide,
+  WorkforceRecommendationsScreen,
+} from "../pages/workforcerecommendationsops/WorkforceRecommendationsScreen";
 import { WorkforceRecommendationCandidates } from "../pages/candidates/WorkforceRecommendationCandidates";
 import { DeveloperDrawer } from "../pages/developers/DeveloperDrawer";
 import { SalesPartsScreen } from "../pages/salesparts/SalesPartsScreen";
@@ -87,6 +98,7 @@ import {
 import { PreferenceSettings } from "../pages/me/PreferenceSettings";
 import {
   ColumnPreferencesDialog,
+  ColumnSettingsButton,
   type PreferenceColumn,
 } from "../pages/me/ColumnPreferencesDialog";
 import type {
@@ -481,6 +493,7 @@ function CloseLinkedAssignments({
       key={entry.current?.key}
       screenId="UI-12"
       initialMonth={month}
+      screenGuide={assignmentScreenGuide}
     >
       <StaffingAssignmentsScreen
         onDirtyChange={onDirtyChange}
@@ -598,7 +611,10 @@ function PeopleWorkspace({
     },
   };
   return (
-    <SharedScreenFrame screenId={screenId}>
+    <SharedScreenFrame
+      screenId={screenId}
+      screenGuide={screenId === "UI-02" ? developerPoolGuide : candidateScreenGuide}
+    >
       {error != null && (
         <ErrorBanner
           message={
@@ -952,13 +968,10 @@ function RegisteredProjectAnalysis({
     | ScreenColumnPreferences
     | undefined;
   const renderColumns = () => (
-    <button
-      type="button"
-      data-testid={`project-${viewId === "projectCost" ? "cost" : "status"}-columns`}
+    <ColumnSettingsButton
+      testId={`project-${viewId === "projectCost" ? "cost" : "status"}-columns`}
       onClick={() => setColumns(true)}
-    >
-      열 설정
-    </button>
+    />
   );
   if (preferences.loading)
     return <p role="status">화면 설정을 불러오는 중입니다.</p>;
@@ -1036,7 +1049,11 @@ function RegisteredWorkforceRecommendations() {
   }, [location.pathname, location.search, navigate]);
   const [developer, setDeveloper] = useState<string>();
   return (
-    <SharedScreenFrame screenId="UI-30" periodBar={null}>
+    <SharedScreenFrame
+      screenId="UI-30"
+      periodBar={null}
+      screenGuide={recommendationScreenGuide}
+    >
       <WorkforceRecommendationsScreen
         entrySearch={entrySearch.current}
         renderRecommendation={(value, currentNeedSn, canAct, context) => (
@@ -1199,7 +1216,7 @@ function RegisteredApplication() {
         "UI-16": <DashboardScreen />,
         "UI-29": <SalesPipelineScreen onDirtyChange={setSalesDirty} />,
         "UI-01": (
-          <SharedScreenFrame screenId="UI-01">
+          <SharedScreenFrame screenId="UI-01" screenGuide={projectScreenGuide}>
             <RegisteredProjectsWorkspace onDirtyChange={onProjectsDirty} />
           </SharedScreenFrame>
         ),
@@ -1243,10 +1260,10 @@ function RegisteredApplication() {
           </UsersScreen>
         ),
         "UI-24": (
-          <>
-            <PermissionsScreen onDirtyChange={setPermissionsDirty} />
-            <PermissionSettingsPanel key={settingsVersion} />
-          </>
+          <PermissionsScreen
+            onDirtyChange={setPermissionsDirty}
+            settingsVersion={settingsVersion}
+          />
         ),
         "UI-25": <MenusScreen onDirtyChange={setMenusDirty} />,
       }}

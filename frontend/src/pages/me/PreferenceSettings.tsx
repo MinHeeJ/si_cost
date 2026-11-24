@@ -56,7 +56,7 @@ export function PreferenceSettings({
         onCancel={onClose}
         onConfirm={onClose}
         confirmLabel="닫기"
-        cancelLabel="취소"
+        hideCancel
         pending={preferences.pending}
       >
         <div data-screen-id="SCR-UI-16-M1" className="me-settings">

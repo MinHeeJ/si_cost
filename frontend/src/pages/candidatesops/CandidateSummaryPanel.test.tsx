@@ -20,7 +20,7 @@ beforeEach(() => {
 function metric(id: string) {
   return screen.getByTestId(`candidate-summary-${id}`);
 }
-it("renders all five API counts with global boundary wording, never list-only totals", async () => {
+it("renders all five API counts for the full candidate pool", async () => {
   render(<CandidateSummaryPanel />);
   await screen.findByText("전체 후보");
   expect(metric("total")).toHaveTextContent("1,234명");
@@ -31,8 +31,8 @@ it("renders all five API counts with global boundary wording, never list-only to
   );
   expect(metric("overdue-contact")).toHaveTextContent("30일 넘게 미연락3명");
   expect(
-    screen.getByText(/목록의 ‘다음 달까지’는 다음 달 말일/),
-  ).toHaveTextContent("다음 달 1일");
+    screen.queryByText(/목록의 ‘다음 달까지’는 다음 달 말일/),
+  ).not.toBeInTheDocument();
   expect(metric("in-progress")).toHaveAttribute("title", "보류·계약 완료 제외");
   expect(metric("total")).toContainElement(metric("in-progress"));
   expect(metric("overdue-contact")).toHaveAttribute(

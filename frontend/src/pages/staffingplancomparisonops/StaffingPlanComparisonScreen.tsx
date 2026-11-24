@@ -5,6 +5,7 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
 import { formatDecimal } from "../../shared/format";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import {
   getPeriodContext,
   getSharedCodes,
@@ -185,6 +186,7 @@ export function StaffingComparisonContent({
       sortable: true,
       render: (r) => (
         <Link
+          className="project-link"
           data-testid={`comparison-project-${r.projectId.toLowerCase()}-${r.jobCode.toLowerCase()}`}
           to={`/UI-01?${new URLSearchParams({ projectId: r.projectId, tab: "plans", year: String(year) })}`}
         >
@@ -225,10 +227,16 @@ export function StaffingComparisonContent({
   }
   return (
     <div data-testid="staffing-comparison-content">
-      <p className="staffing-comparison-note">
-        {year}년 1~12월 계획과 실제·예정입니다. 프로젝트 상세는 전체 계약기간
-        계획과 비교합니다.
-      </p>
+      <PeriodStatus className="sicost-period-summary">
+        <span className="sicost-period-summary-item">
+          <span className="sicost-period-summary-label">조회 범위</span>
+          <b>{year}-01 ~ {year}-12</b>
+        </span>
+        <span className="sicost-period-summary-item">
+          계획과 실제·예정 투입을 비교합니다. 프로젝트 상세는 전체 계약기간의
+          계획과 비교합니다.
+        </span>
+      </PeriodStatus>
       <FilterBar
         testId="comparison-filters"
         resetTestId="comparison-reset"

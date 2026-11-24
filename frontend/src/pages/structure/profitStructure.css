@@ -219,21 +219,6 @@
 .profit-structure .profit-structure-child-row > th {
   padding-left: 28px;
 }
-.profit-structure-methods > summary {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-}
-.profit-structure .profit-structure-method-table th,
-.profit-structure .profit-structure-method-table td {
-  text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.6;
-}
-.profit-structure-method-table td {
-  min-width: 220px;
-}
 @media (max-width: 1100px) {
   .profit-structure-summary,
   .profit-structure-compositions {
