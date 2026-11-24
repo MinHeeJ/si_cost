@@ -90,7 +90,7 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
   for (const entry of data.history.items)
     await expect(
       page.getByTestId(
-        `month-close-history-${entry.month}-${entry.historySequence}`,
+        `month-close-history-row-${entry.month}-${entry.historySequence}`,
       ),
     ).toContainText(entry.actorName ?? "–");
 });

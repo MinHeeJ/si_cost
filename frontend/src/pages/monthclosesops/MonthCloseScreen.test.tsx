@@ -154,7 +154,7 @@ beforeEach(() => {
     status: "WORK",
   });
 });
-async function mount() {
+function renderMonthClose() {
   render(
     <MemoryRouter>
       <MonthCloseScreen />
@@ -171,8 +171,27 @@ async function mount() {
       }),
     ),
   );
+}
+async function mount() {
+  renderMonthClose();
   await screen.findByText("마감 점검");
 }
+it("shows the shared loading state until the first result is available", async () => {
+  let resolve!: (result: api.MonthCloses) => void;
+  vi.mocked(api.getMonthCloses).mockImplementationOnce(
+    () => new Promise((done) => { resolve = done; }),
+  );
+  renderMonthClose();
+  const loading = await screen.findByTestId("month-close-loading");
+  expect(loading).toHaveRole("status");
+  expect(loading).toHaveTextContent("월 마감 자료를 불러오는 중입니다.");
+  expect(screen.queryByRole("table", { name: "마감 이력" })).not.toBeInTheDocument();
+  await act(async () => resolve(data()));
+  expect(loading).not.toBeInTheDocument();
+  expect(screen.getByRole("table", { name: "마감 이력" })).toHaveTextContent(
+    "선택연도 마감 이력이 없습니다.",
+  );
+});
 it("renders exact six cards, current calculation and empty yearly history without a payroll action", async () => {
   await mount();
   expect(
@@ -187,6 +206,34 @@ it("renders exact six cards, current calculation and empty yearly history withou
     screen.getByText("선택연도 마감 이력이 없습니다."),
   ).toBeInTheDocument();
   expect(api.getMonthCloses).toHaveBeenCalledWith("2026-01", 1, 50);
+});
+it("uses the server history count and returns to page one when page size changes", async () => {
+  const entries = Array.from({ length: 51 }, (_, index) => ({
+    ...committed.history,
+    historySequence: index + 1,
+  }));
+  vi.mocked(api.getMonthCloses).mockImplementation(async (_month, page = 1, size = 50) => {
+    const start = (page - 1) * size;
+    return {
+      ...data(),
+      history: {
+        items: entries.slice(start, start + size),
+        total: entries.length,
+        page,
+        size,
+        hasMore: start + size < entries.length,
+      },
+    };
+  });
+  await mount();
+  const navigation = screen.getByRole("navigation", { name: "페이지" });
+  expect(within(navigation).getByText("1-50 / 51건")).toBeInTheDocument();
+  await userEvent.click(within(navigation).getByRole("button", { name: "다음 페이지" }));
+  await screen.findByText("51-51 / 51건");
+  expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 2, 50);
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "한 화면 건수" }), "20");
+  await screen.findByText("1-20 / 51건");
+  expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 1, 20);
 });
 it.each([0, 3])(
   "shows the pre-close banner from server warning count %i above the checks",
@@ -629,7 +676,7 @@ it.each(["close", "reopen"] as const)(
     expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
     expect(api.publishMonthCloseCommit).toHaveBeenCalledWith("2026-01");
     expect(
-      screen.getByTestId("month-close-history-2026-01-1"),
+      screen.getByTestId("month-close-history-row-2026-01-1"),
     ).toHaveTextContent("재무담당");
     if (kind === "close") {
       expect(screen.getByTestId("month-close-closed-notice")).toHaveTextContent(
@@ -645,7 +692,7 @@ it.each(["close", "reopen"] as const)(
       ).not.toBeInTheDocument();
       expect(screen.getByTestId("month-close-close-button")).toBeEnabled();
       expect(
-        screen.getByTestId("month-close-history-2026-01-1"),
+        screen.getByTestId("month-close-history-row-2026-01-1"),
       ).toHaveTextContent("청구 누락 반영");
     }
   },

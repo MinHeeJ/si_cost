@@ -23,7 +23,7 @@ export function SharedScreenFrame({
   screenId: string;
   children: ReactNode;
   periodBar?: ReactNode;
-  periodBarOptions?: Pick<ComponentProps<typeof ScreenPeriodBar>, "showMonthCloseStatus" | "showCumulativeRange">;
+  periodBarOptions?: Pick<ComponentProps<typeof ScreenPeriodBar>, "showMonthCloseStatus" | "showCumulativeRange" | "loadingFallback">;
   initialMonth?: string;
   headerActions?: ReactNode;
   screenGuide?: ReactNode;

@@ -3,13 +3,62 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ApiError } from "../../shared/api";
+import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
+import { Pagination } from "../../shared/Pagination";
+import { PeriodStatus } from "../../shared/PeriodStatus";
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { PeriodContext } from "../shared/sharedApi";
 import { formatDecimal, formatDateTime } from "../../shared/format";
 import * as api from "./monthCloseApi";
 import "./monthClose.css";
+
+const monthCloseGuide = (
+  <>
+    <section>
+      <h3>마감 점검</h3>
+      <p>
+        선택한 달의 급여, 투입, 청구, 재무 항목, 영업 파트 정산을 점검합니다.
+        확인이 필요한 항목의 [확인하기]를 누르면 해당 업무 화면으로 이동합니다.
+        [다시 점검]을 누르면 점검 결과를 저장하며, 저장 검사 시각은 각 항목에서
+        확인할 수 있습니다.
+      </p>
+    </section>
+    <section>
+      <h3>마감과 변경 이력</h3>
+      <p>
+        마감 이후 수정이 필요하면 다음 달에 전월 조정을 입력합니다. 마감 이력에서
+        선택한 연도의 마감·해제 기록, 처리 사유, 마감 당시 남은 점검을 확인할 수
+        있습니다.
+      </p>
+    </section>
+  </>
+);
+
+const historyColumns: Column<api.CloseHistory>[] = [
+  { id: "month", label: "연월", align: "center", render: (row) => row.month },
+  {
+    id: "action",
+    label: "작업",
+    align: "center",
+    render: (row) => (
+      <StatusBadge tone={row.action === "CLOSE" ? "lock" : "info"}>
+        {row.action === "CLOSE" ? "마감" : "해제"}
+      </StatusBadge>
+    ),
+  },
+  {
+    id: "actor",
+    label: "처리자",
+    align: "center",
+    render: (row) => row.actorName ?? "–",
+  },
+  { id: "date", label: "일시", align: "center", render: (row) => row.occurredAt },
+  { id: "reason", label: "사유", render: (row) => row.reason ?? "–" },
+  { id: "checks", label: "남은 점검", render: (row) => row.remainingChecks ?? "–" },
+];
 
 const failedRefresh =
   "저장됐지만 다시 불러오지 못했습니다. 다시 조회해 주세요.";
@@ -439,12 +488,83 @@ export function MonthCloseScreen() {
   };
 
   return (
-    <SharedScreenFrame screenId="UI-14">
+    <SharedScreenFrame
+      screenId="UI-14"
+      screenGuide={monthCloseGuide}
+      periodBarOptions={{
+        showMonthCloseStatus: false,
+        loadingFallback: <ScreenLoading message="월 마감 자료를 불러오는 중입니다." />,
+      }}
+    >
       <div
         className="month-close"
         data-screen-id="UI-14"
         data-testid="month-close-screen"
       >
+        <ScreenTitleActions>
+          <div className="month-close-actions">
+            <button
+              type="button"
+              data-testid="month-close-reload-button"
+              disabled={pending || loading || opening || !month}
+              onClick={() => void reload().catch(() => {})}
+            >
+              다시 조회
+            </button>
+            {data?.status === "WORK" && (
+              <>
+                <button
+                  data-testid="month-close-check-button"
+                  data-action-id="B143-14-CHECK"
+                  disabled={
+                    blocked ||
+                    loading ||
+                    !data.managementAllowed ||
+                    !data.canCheck
+                  }
+                  onClick={() =>
+                    void save(() =>
+                      api.saveMonthCloseChecks(month, data.revision),
+                    ).catch(() => {})
+                  }
+                >
+                  다시 점검
+                </button>
+                <button
+                  className="sicost-primary"
+                  data-testid="month-close-close-button"
+                  data-action-id="B143-14-CLOSE-OPEN"
+                  disabled={
+                    blocked ||
+                    loading ||
+                    !data.managementAllowed ||
+                    !data.canClose
+                  }
+                  onClick={() => void open("close")}
+                >
+                  마감하기
+                </button>
+              </>
+            )}
+            {data?.status === "CLOSE" && (
+              <>
+                {data.canReopen &&
+                  data.month === data.latestCloseMonth && (
+                    <button
+                      data-testid="month-close-reopen-button"
+                      data-action-id="B143-14-REOPEN-OPEN"
+                      disabled={
+                        blocked || loading || !data.managementAllowed
+                      }
+                      onClick={() => void open("reopen")}
+                    >
+                      마감 해제
+                    </button>
+                  )}
+              </>
+            )}
+          </div>
+        </ScreenTitleActions>
         {error && (
           <ErrorBanner
             message={error}
@@ -453,25 +573,36 @@ export function MonthCloseScreen() {
             onRetry={() => void reload().catch(() => {})}
           />
         )}
-        {message && <p role="status">{message}</p>}
-        {opening && <p role="status">최신 영향을 확인하는 중입니다.</p>}
-        {loading && (
-          <p role="status" data-testid="month-close-loading">
-            불러오는 중
-          </p>
+        {message && (
+          <p className="sicost-banner sicost-tone-warn" role="status">{message}</p>
         )}
-        {!month && <p role="status">관리 기간을 불러오는 중입니다.</p>}
+        {opening && (
+          <ScreenLoading inline message="최신 영향을 확인하는 중입니다." />
+        )}
+        {month && !error && (loading || !data) && (
+          <ScreenLoading
+            inline={Boolean(data)}
+            message="월 마감 자료를 불러오는 중입니다."
+            testId="month-close-loading"
+          />
+        )}
         {data && data.month === month && (
           <>
-            <div className="month-close-heading">
-              <p>
-                다음 마감월 {data.nextCloseMonth} / 최신 마감월{" "}
-                {data.latestCloseMonth ?? "없음"}
-              </p>
-              <StatusBadge tone={data.status === "CLOSE" ? "lock" : "info"}>
-                {data.status === "CLOSE" ? "마감" : "미마감"}
-              </StatusBadge>
-            </div>
+            <PeriodStatus className="sicost-period-summary">
+              <span className="sicost-period-summary-item">
+                <StatusBadge tone={data.status === "CLOSE" ? "lock" : "info"}>
+                  {data.status === "CLOSE" ? "마감" : "미마감"}
+                </StatusBadge>
+              </span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">다음 마감월</span>
+                <b>{data.nextCloseMonth}</b>
+              </span>
+              <span className="sicost-period-summary-item">
+                <span className="sicost-period-summary-label">최신 마감월</span>
+                <b>{data.latestCloseMonth ?? "없음"}</b>
+              </span>
+            </PeriodStatus>
 
             {data.status === "WORK" && (
               <div
@@ -500,71 +631,15 @@ export function MonthCloseScreen() {
                 </small>
               </div>
             )}
-            <section className="month-close-card">
-              <div className="month-close-heading">
+            <section className="month-close-card sicost-section-card">
+              <header className="sicost-section-heading">
                 <h2>마감 점검</h2>
-                <ScreenTitleActions>
-                  <div className="month-close-actions">
-                    {data.status === "WORK" && (
-                      <>
-                        <button
-                          data-testid="month-close-check-button"
-                          data-action-id="B143-14-CHECK"
-                          disabled={
-                            blocked ||
-                            loading ||
-                            !data.managementAllowed ||
-                            !data.canCheck
-                          }
-                          onClick={() =>
-                            void save(() =>
-                              api.saveMonthCloseChecks(month, data.revision),
-                            ).catch(() => {})
-                          }
-                        >
-                          다시 점검
-                        </button>
-                        <button
-                          className="sicost-primary"
-                          data-testid="month-close-close-button"
-                          data-action-id="B143-14-CLOSE-OPEN"
-                          disabled={
-                            blocked ||
-                            loading ||
-                            !data.managementAllowed ||
-                            !data.canClose
-                          }
-                          onClick={() => void open("close")}
-                        >
-                          마감하기
-                        </button>
-                      </>
-                    )}
-                    {data.status === "CLOSE" && (
-                      <>
-                        {data.canReopen &&
-                          data.month === data.latestCloseMonth && (
-                            <button
-                              data-testid="month-close-reopen-button"
-                              data-action-id="B143-14-REOPEN-OPEN"
-                              disabled={
-                                blocked || loading || !data.managementAllowed
-                              }
-                              onClick={() => void open("reopen")}
-                            >
-                              마감 해제
-                            </button>
-                          )}
-                      </>
-                    )}
-                  </div>
-                </ScreenTitleActions>
-              </div>
-              <p>
-                {data.status === "CLOSE"
-                  ? "마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다."
-                  : `점검 6개 중 ${data.warningCount}개 확인 필요 · 현재 계산 · 마지막 저장 검사 시각은 항목별 표시`}
-              </p>
+                {data.status === "CLOSE" && (
+                  <span className="month-close-section-note">
+                    마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다.
+                  </span>
+                )}
+              </header>
               <CloseCheckCards
                 items={data.checks}
                 onLink={link}
@@ -572,112 +647,51 @@ export function MonthCloseScreen() {
               />
               <Issues items={data.issues} />
             </section>
-            <section className="month-close-card">
-              <h2>{month.slice(0, 4)}년 마감 이력</h2>
-              {data.history.items.length === 0 ? (
-                <div className="month-close-empty">
-                  <p>선택연도 마감 이력이 없습니다.</p>
+            <section className="month-close-card sicost-section-card">
+              <header className="sicost-section-heading">
+                <h2>{month.slice(0, 4)}년 마감 이력</h2>
+              </header>
+              <DataTable
+                testId="month-close-history"
+                tableLabel="마감 이력"
+                rows={data.history.items}
+                columns={historyColumns}
+                rowKey={(row) => `${row.month}-${row.historySequence}`}
+                empty="선택연도 마감 이력이 없습니다."
+                emptyAction={
                   <button
                     type="button"
                     data-testid="month-close-reset-button"
                     onClick={() =>
-                      window.dispatchEvent(
-                        new Event("sicost:month-close-reset-period"),
-                      )
+                      window.dispatchEvent(new Event("sicost:month-close-reset-period"))
                     }
                   >
                     조건 초기화
                   </button>
-                </div>
-              ) : (
-                <div className="month-close-table">
-                  <table aria-label="마감 이력">
-                    <thead>
-                      <tr>
-                        {[
-                          "연월",
-                          "작업",
-                          "처리자",
-                          "일시",
-                          "사유",
-                          "남은 점검",
-                        ].map((h) => (
-                          <th key={h}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.history.items.map((h) => (
-                        <tr
-                          key={`${h.month}-${h.historySequence}`}
-                          data-testid={`month-close-history-${h.month}-${h.historySequence}`}
-                        >
-                          <td>{h.month}</td>
-                          <td>
-                            <StatusBadge
-                              tone={h.action === "CLOSE" ? "lock" : "info"}
-                            >
-                              {h.action === "CLOSE" ? "마감" : "해제"}
-                            </StatusBadge>
-                          </td>
-                          <td>{h.actorName ?? "–"}</td>
-                          <td>{h.occurredAt}</td>
-                          <td>{h.reason ?? "–"}</td>
-                          <td>{h.remainingChecks ?? "–"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                }
+              />
+              {data.history.total > 0 && (
+                <Pagination
+                  page={data.history.page}
+                  size={data.history.size}
+                  total={data.history.total}
+                  testId="month-close-history"
+                  disabled={loading || blocked}
+                  actionIds={{
+                    previous: "B143-14-HISTORY-PREV",
+                    next: "B143-14-HISTORY-NEXT",
+                    size: "B143-14-HISTORY-SIZE",
+                  }}
+                  onPageChange={setPage}
+                  onSizeChange={(nextSize) => {
+                    setSize(nextSize);
+                    setPage(1);
+                  }}
+                />
               )}
-              <div className="month-close-actions">
-                <span>
-                  전체 {data.history.total}건 · {data.history.page}페이지
-                </span>
-                <button
-                  data-testid="month-close-history-previous"
-                  data-action-id="B143-14-HISTORY-PREV"
-                  disabled={loading || blocked || page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  이전 이력
-                </button>
-                <button
-                  data-testid="month-close-history-next"
-                  data-action-id="B143-14-HISTORY-NEXT"
-                  disabled={loading || blocked || !data.history.hasMore}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  다음 이력
-                </button>
-                <label>
-                  이력 크기{" "}
-                  <select
-                    data-testid="month-close-history-size"
-                    data-action-id="B143-14-HISTORY-SIZE"
-                    value={size}
-                    disabled={loading || blocked}
-                    onChange={(e) => {
-                      setSize(Number(e.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    {[20, 50, 100].map((n) => (
-                      <option key={n}>{n}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
             </section>
           </>
         )}
-        <button
-          data-testid="month-close-reload-button"
-          disabled={pending || loading || !month}
-          onClick={() => void reload().catch(() => {})}
-        >
-          다시 조회
-        </button>
         {preview && (
           <ClosePreviewDialog
             key={preview.revision}

@@ -1,15 +1,14 @@
+[data-screen-id="SCR-UI-14"] .sicost-period-row > .sicost-period-bar {
+  min-width: 0;
+}
 .month-close {
   display: grid;
   gap: 20px;
   min-width: 0;
 }
-.month-close-card {
-  background: var(--surface);
-  border: 0;
-  box-shadow: var(--e1);
-  border-radius: 10px;
-  padding: 20px 24px;
-  min-width: 0;
+.month-close-section-note {
+  color: var(--text-sub);
+  font-size: 12px;
 }
 .month-close-heading {
   display: flex;
@@ -29,24 +28,22 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
-  margin: 16px 0;
-  background: var(--surface);
-  border-radius: 10px;
-  box-shadow: var(--e1);
-  overflow: hidden;
 }
 .month-close-check {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto minmax(0, 2fr) auto;
+  grid-template-columns: minmax(190px, 1fr) 64px minmax(0, 2fr) 86px;
   align-items: center;
   gap: 10px 20px;
-  padding: 18px 20px;
+  padding: 14px 4px;
   border: 0;
-  box-shadow: inset 0 -1px 0 var(--divider);
+  border-bottom: 1px solid var(--divider);
   border-radius: 0;
   background: var(--surface);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.month-close-check:last-child {
+  border-bottom: 0;
 }
 .month-close-check .month-close-heading {
   margin-bottom: 0;
@@ -58,16 +55,24 @@
   margin: 0;
 }
 .month-close-check strong {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
   font-size: 20px;
   line-height: 28px;
 }
 .month-close-check.warn {
-  border-color: var(--warn);
+  border-radius: 6px;
   background: var(--warn-bg);
 }
-.month-close-check small {
-  color: var(--text-sub);
+.month-close-check p {
   grid-column: 3;
+  grid-row: 1;
+}
+.month-close-check small {
+  grid-column: 3;
+  grid-row: 2;
+  color: var(--text-sub);
 }
 .month-close-check button {
   grid-column: 4;
@@ -99,17 +104,23 @@
   color: var(--info);
   background: var(--info-bg);
 }
-.month-close-table {
-  overflow: auto;
-  margin: 16px 0;
+.month-close-card .sicost-table-viewport {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
-.month-close table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+.month-close-card .sicost-table {
+  min-width: 640px;
 }
-.month-close th,
-.month-close td,
+.month-close-card .sicost-table th {
+  text-align: center !important;
+}
+.month-close-card .sicost-table td:is([data-column="reason"], [data-column="checks"]) {
+  min-width: 140px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 [data-screen-id="SCR-UI-14-M2"] th,
 [data-screen-id="SCR-UI-14-M2"] td {
   padding: 10px 12px;
@@ -118,15 +129,9 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
-.month-close th,
 [data-screen-id="SCR-UI-14-M2"] th {
   background: var(--head-bg);
   font-weight: 600;
-}
-.month-close-empty {
-  padding: 48px 16px;
-  text-align: center;
-  color: var(--text-sub);
 }
 [data-screen-id="SCR-UI-14-M1"] > *,
 [data-screen-id="SCR-UI-14-M2"] > * {
@@ -142,6 +147,7 @@
   .month-close-check p,
   .month-close-check small {
     grid-column: 1/-1;
+    grid-row: auto;
   }
   .month-close-check button {
     grid-column: 2;

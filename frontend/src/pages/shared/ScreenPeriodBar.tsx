@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { OPERATING_STANDARDS_COMMITTED } from "../operatingstandards/operatingStandardsApi";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -18,11 +18,13 @@ export function ScreenPeriodBar({
   screenId,
   controlled,
   initialMonth,
+  loadingFallback,
   showMonthCloseStatus = true,
   showCumulativeRange = true,
 }: {
   screenId: string;
   initialMonth?: string;
+  loadingFallback?: ReactNode;
   showMonthCloseStatus?: boolean;
   showCumulativeRange?: boolean;
   controlled?: {
@@ -321,7 +323,7 @@ export function ScreenPeriodBar({
       </section>
     );
   if (type === "NONE") return null;
-  if (loading) return <p role="status">기간을 불러오는 중입니다.</p>;
+  if (loading) return loadingFallback ?? <p role="status">기간을 불러오는 중입니다.</p>;
   if (!context || !value)
     return (
       <ErrorBanner
