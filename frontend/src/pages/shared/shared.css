@@ -238,13 +238,12 @@
   min-width: 96px;
   height: 34px;
   white-space: nowrap;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: 6px 6px 0 0;
 }
 .sicost-screen-tabs > div.active {
   background: var(--bg);
-  border-color: var(--divider);
 }
 .sicost-screen-tabs button {
   height: 32px;
