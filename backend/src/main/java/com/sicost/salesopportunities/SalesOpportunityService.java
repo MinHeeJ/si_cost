@@ -102,7 +102,7 @@ public class SalesOpportunityService {
             for(StoredTent t:existing)if(Set.of("CNVT","DONE").contains(t.status())&&rows.stream().noneMatch(n->n.needSn()==t.needSn()))throw new ApiException(409,"INVALID_STATE","전환·확정 가배정은 삭제할 수 없습니다.");
             boolean content=create||!clean(effective[0],rows).equals(normalized(old[0],commands.needs(id)));
             quote[0]=quotes.calculate(rows,source);state[0]=approval(old[0],quote[0],content);
-            if((create||!old[0].stage().equals(input.stage()))&&Set.of("NEGO","PRE").contains(input.stage())&&(state[0].rate()==null||!Set.of("NONE","OK").contains(state[0].status())))throw new ApiException(409,"INVALID_STATE","견적 원가와 승인을 확인한 후 협상 단계로 이동해 주세요.");
+            if((create||!old[0].stage().equals(input.stage()))&&Set.of("NEGO","PRE").contains(input.stage())&&(state[0].rate()==null||!Set.of("NONE","OK").contains(state[0].status())))throw new ApiException(409,"INVALID_STATE","견적 승인 전이라 협상 단계로 옮길 수 없습니다");
             changed[0]=content||!changes.isEmpty()||tentatives.additions(selected[0],existing)||!Objects.equals(str(old[0]==null?null:old[0].profitRate()),str(state[0].rate()))||old[0]!=null&&!old[0].approvalStatus().equals(state[0].status());
         };
         Runnable persist=()->{

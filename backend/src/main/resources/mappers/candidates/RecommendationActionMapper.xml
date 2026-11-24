@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.sicost.candidates.RecommendationActionMapper">
+  <resultMap id="messageNamesResult" type="com.sicost.candidates.RecommendationActionDtos$MessageNames">
+    <constructor>
+      <arg column="developerName" javaType="java.lang.String"/>
+      <arg column="jobName" javaType="java.lang.String"/>
+      <arg column="previousOpportunityName" javaType="java.lang.String"/>
+    </constructor>
+  </resultMap>
+  <select id="messageNames" resultMap="messageNamesResult">
+    SELECT d.dev_nm AS "developerName",c.code_nm AS "jobName",
+      (SELECT o.opp_nm FROM tb_sl_opp o WHERE o.opp_id=#{previousOpportunityId,jdbcType=VARCHAR}) AS "previousOpportunityName"
+    FROM tb_hr_dev d JOIN tb_sy_code c ON c.code_grp_id='JOB' AND c.code=#{jobCode}
+    WHERE d.dev_id=#{developerId}
+  </select>
   <sql id="rowColumns">rcmd_id::text AS "rcmdId",rank_ord::int AS rank,rcmd_type_cd AS type,opp_id AS "opportunityId",need_sn::text AS "needSn",proj_id AS "projectId",job_cd AS "jobCode",bgn_ym AS "startMonth",dev_id AS "developerId",score_dtl AS "scoreDetail",user_act_cd AS "actionCode",rcmd_excl_cd AS "exclusionReasonCode",act_user_id AS "actedBy",act_dttm AS "actedAt",reg_dttm AS "registeredAt"</sql>
   <select id="row" resultType="com.sicost.candidates.RecommendationActionDtos$Row" useCache="false" flushCache="true">SELECT <include refid="rowColumns"/> FROM tb_sl_rcmd_log WHERE rcmd_id=CAST(#{rcmdId} AS numeric) AND rank_ord=#{rank}</select>
   <select id="lockRow" resultType="com.sicost.candidates.RecommendationActionDtos$Row" useCache="false" flushCache="true">SELECT <include refid="rowColumns"/> FROM tb_sl_rcmd_log WHERE rcmd_id=CAST(#{rcmdId} AS numeric) AND rank_ord=#{rank} FOR UPDATE</select>

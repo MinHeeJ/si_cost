@@ -21,9 +21,6 @@ public class BusinessPlanPerformanceService {
         String status=targets.isEmpty()?"UNREGISTERED":targets.size()!=12?"INCOMPLETE":read.targets().stream().allMatch(t->zero(t.sales())&&zero(t.profit()))?"ZERO_TARGETS":"REGISTERED";
         List<Month> months=new ArrayList<>();List<String> notices=new ArrayList<>(read.notices());
         if("UNREGISTERED".equals(status))notices.add(query.year()+"년 사업계획 목표가 아직 없습니다. [목표 업로드]로 올려 주세요.");
-        if ("INCOMPLETE".equals(status)) {
-            notices.add("일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요.");
-        }
         if ("ZERO_TARGETS".equals(status)) {
             notices.add("12개월 목표가 모두 0입니다(목표 없음). 달성률은 표시하지 않습니다.");
         }
@@ -34,6 +31,9 @@ public class BusinessPlanPerformanceService {
             months.add(new Month(actual.month(),salesTarget,profitTarget,sales,profit,ratio(sales,salesTarget,true),margin.rate(),under(sales,salesTarget),margin.adverse(),target!=null,actual));
         }
         var cumulative=months.stream().filter(m->m.month().compareTo(query.month())<=0).toList();
+        if("INCOMPLETE".equals(status))notices.add(cumulative.stream().anyMatch(m->m.salesTargetAmt()==null||m.operatingProfitTargetAmt()==null)
+            ?"일부 달의 목표가 없어 누계 달성률을 표시하지 않습니다. 12개월 목표를 올려 주세요."
+            :"일부 달의 목표가 아직 미등록입니다(누계 달성률은 표시됩니다). 12개월 목표를 올려 주세요.");
         Month current=months.stream().filter(m->m.month().equals(query.month())).findFirst().orElseThrow();
         List<Summary> summary=List.of(summary("CUMULATIVE_SALES",actualTotal(cumulative,Month::salesActualAmt),sum(cumulative,Month::salesTargetAmt)),
             summary("CUMULATIVE_OPERATING_PROFIT",actualTotal(cumulative,Month::operatingProfitActualAmt),sum(cumulative,Month::operatingProfitTargetAmt)),

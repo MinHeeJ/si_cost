@@ -49,6 +49,7 @@ class WithdrawalActionsContractTest {
     @Autowired ObjectMapper json;
     @Autowired RevisionService revisions;
     @MockBean AssignmentActionsMapper assignments;
+    @MockBean com.sicost.projects.ProjectMapper projectReferences;
     @MockBean AssignmentMonthlyMapper months;
     @MockBean ChangeHistoryMapper audit;
     @MockBean AccessLogMapper access;

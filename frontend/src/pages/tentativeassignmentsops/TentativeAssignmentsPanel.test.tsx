@@ -10,7 +10,9 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
 import { TentativeAssignmentsPanel } from "./TentativeAssignmentsPanel";
 import * as api from "./tentativeAssignmentsApi";
+import * as developers from "../developers/peopleClient";
 vi.mock("./tentativeAssignmentsApi");
+vi.mock("../developers/peopleClient");
 const tentative: api.SalesTentative = {
   id: "101",
   opportunityId: "O-0101",
@@ -24,6 +26,10 @@ const tentative: api.SalesTentative = {
 const refresh = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(developers.getDeveloper).mockResolvedValue({
+    name: "검토 인력",
+    managementNo: "00101",
+  } as developers.DeveloperDetail);
   refresh.mockResolvedValue(undefined);
   vi.mocked(api.releaseTentativeAssignment).mockResolvedValue({
     changed: true,
@@ -69,17 +75,19 @@ function failure(code: string, message: string, field?: string) {
     field,
   });
 }
-it("renders selected NEED and real developer with source, month and processing state", () => {
+it("renders the specified person, management number, slot and source columns", async () => {
   view();
   expect(screen.getByText("검토 인력")).toBeVisible();
+  expect(await screen.findByText("00101")).toBeVisible();
   expect(screen.getByText("2026-07")).toBeVisible();
   expect(screen.getByText("UI-29")).toBeVisible();
   expect(screen.getByText("ACT")).toHaveClass("sicost-tone-info");
   for (const label of [
-    "필요행",
-    "개발자",
+    "이름",
+    "관리번호",
+    "자리",
     "시작월",
-    "출처",
+    "출처 화면",
     "상태",
     "처리시각",
     "행동",

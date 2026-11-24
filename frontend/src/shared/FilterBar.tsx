@@ -16,17 +16,7 @@ export type FilterBarProps = {
   embedded?: boolean;
   /** 초기화·조회 왼쪽에 붙이는 추가 칸이나 버튼. */
   extra?: ReactNode;
-  /** 화면이 확정한 조건 중 기본값과 다른 조건 수. 지정한 목록에만 표시한다. */
-  appliedCount?: number;
 };
-
-export function countAppliedFilters(filters: object, defaults: object): number {
-  const values = filters as Record<string, unknown>;
-  return Object.entries(defaults).filter(([key, fallback]) => {
-    const value = values[key] ?? fallback;
-    return (typeof value === "string" ? value.trim() : value) !== fallback;
-  }).length;
-}
 
 /**
  * 검색 조건 영역의 공통 부품(요구서 3.1 `FilterBar`).
@@ -43,7 +33,6 @@ export function FilterBar({
   disabled,
   embedded = false,
   extra,
-  appliedCount,
 }: FilterBarProps) {
   const Container = embedded ? "div" : "form";
   const id = useId();
@@ -54,13 +43,12 @@ export function FilterBar({
         <button
           type="button"
           className="sicost-filter-toggle"
-          style={appliedCount === undefined ? undefined : { display: "inline-flex" }}
           data-testid={`${testId ?? `filter-${id.replace(/:/g, "")}`}-toggle`}
           aria-expanded={expanded}
           aria-controls={id}
           onClick={() => setExpanded((value) => !value)}
         >
-          {appliedCount === undefined ? "조건" : `[조건 (${appliedCount})]`}
+          조건
         </button>
       )}
       <Container

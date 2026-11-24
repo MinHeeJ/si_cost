@@ -46,6 +46,7 @@ class AssignmentCandidateContractTest {
     @Autowired RevisionService revisions;
     @MockBean AssignmentCandidateMapper candidates;
     @MockBean AssignmentActionsMapper mapper;
+    @MockBean com.sicost.projects.ProjectMapper projectReferences;
     @MockBean AssignmentMapper references;
     @MockBean AssignmentMonthlyMapper months;
     @MockBean CurrentUserProvider users;

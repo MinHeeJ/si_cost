@@ -3,6 +3,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -167,6 +168,32 @@ it("전체 이력·담당자·수정자·날짜와 서로 다른 상태 색을 �
     screen.queryByRole("button", { name: "삭제" }),
   ).not.toBeInTheDocument();
 });
+it.each([
+  ["OPEN", "2026-11-13", true, "2026-11-13 (3일 지남)"],
+  ["ACT", "2026-11-13", true, "2026-11-13 (3일 지남)"],
+  ["CLOSE", "2026-11-13", false, "2026-11-13"],
+  ["OPEN", "2026-11-16", false, "2026-11-16"],
+  ["OPEN", "2026-11-17", false, "2026-11-17"],
+] as const)(
+  "%s 기한 %s의 지난 일수와 빨간 글씨",
+  async (status, dueDate, overdue, text) => {
+    vi.mocked(api.getProjectIssues).mockResolvedValue({
+      ...page,
+      baseDate: "2026-11-16",
+      items: [{ ...row, status, dueDate, overdue }],
+    });
+    draw();
+    await ready();
+    const due = within(
+      screen.getByTestId("project-issues-table-row-18"),
+    ).getByText(text, { exact: false, selector: "span" });
+    if (overdue) expect(due).toHaveClass("issue-overdue");
+    else {
+      expect(due).not.toHaveClass("issue-overdue");
+      expect(screen.queryByText(/일 지남/)).not.toBeInTheDocument();
+    }
+  },
+);
 it("조회 실패와 빈 목록을 구별하고 다시 조회만 한다", async () => {
   vi.mocked(api.getProjectIssues).mockRejectedValueOnce(
     new ApiError(500, {
@@ -264,7 +291,9 @@ it("수정 종료는 최초 소속과 담당자를 전송하지 않고 PUT 후 �
   await ready();
   await userEvent.click(screen.getByRole("button", { name: row.title }));
   const audit = screen.getByTestId("issue-audit");
-  expect(audit).toHaveTextContent("06-01 최초 담당자 등록 · 06-02 다른 수정자 고침");
+  expect(audit).toHaveTextContent(
+    "06-01 최초 담당자 등록 · 06-02 다른 수정자 고침",
+  );
   expect(audit.querySelector("br")).toBeNull();
   expect(audit).not.toHaveTextContent("+09:00");
   await waitFor(() =>

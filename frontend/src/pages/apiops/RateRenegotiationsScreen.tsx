@@ -50,7 +50,7 @@ const help: Record<string, string> = {
   monthlyLaborCost:
     "동일 DEV/PROJ/ASGN의 LABOR_ALLOC_AMT만 사용. 회사보험 포함 노동비, 팀비·경비 제외",
   marginRate:
-    "(기준월 매출 R − 노동비 C) ÷ R × 100. 필터는 반올림 전 엄격 미만",
+    "(기준월 매출 R − 노동비 C) ÷ R × 100. 필터는 화면에 보이는 반올림 값이 아니라 실제값 기준입니다(15.0%로 보여도 실제 15% 미만이면 '15% 미만'에 포함).",
   targetUnitPrice: "C ÷ 월MM m ÷ (1 − 목표율 T/100), 만 원 단위 올림",
   requiredIncreaseRate: "max(0, (올림된 목표 단가 V − 현재 단가 U) ÷ U × 100)",
   annualGain:

@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface NotificationPublicationMapper {
-    record QuoteRejection(String userId,int historySn) {}
+    record QuoteRejection(String userId,int historySn,String opportunityName,String reason) {}
     QuoteRejection quoteRejection(String opportunityId);
     record AppliedUpload(String userId,String screenId) {}
     AppliedUpload appliedUpload(long uploadId);

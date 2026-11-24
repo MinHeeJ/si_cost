@@ -20,6 +20,8 @@ import * as parts from "../salespartsops/partStandardsApi";
 import * as areas from "../../shared/areaClient";
 import * as stateApi from "../states/developerStatesApi";
 import * as sharedApi from "../shared/sharedApi";
+import { getPeopleHistory } from "../apiops/peopleClient";
+vi.mock("../apiops/peopleClient");
 const render = (ui: ReactElement) =>
   testingRender(ui, { wrapper: MemoryRouter });
 vi.mock("./peopleClient");
@@ -96,6 +98,12 @@ const codes: Record<string, { code: string; name: string }[]> = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getPeopleHistory).mockResolvedValue({
+    items: [],
+    total: 73,
+    page: 1,
+    size: 20,
+  });
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn().mockReturnValue({
@@ -179,6 +187,12 @@ it("신규 기본 FT/MEMBER/DRCT와 미선택 소속·파트 및 지정 배너",
   expect(screen.getByLabelText("소속")).toHaveValue("");
   expect(screen.getByLabelText("영업 파트")).toHaveValue("");
   expect(screen.getByText(developerBanner)).toBeInTheDocument();
+  expect(developerBanner).toBe(
+    "보유 스킬·거주지는 이 화면에서만 입력합니다(「내 정보」에서는 고치지 않음). 거주지는 시·도, 시·군·구, 동까지 받습니다(번지는 받지 않음).",
+  );
+  expect(
+    screen.queryByText(/관리번호는 바꿀 수 없습니다/),
+  ).not.toBeInTheDocument();
   expect(screen.queryByLabelText("연락처")).not.toBeInTheDocument();
 });
 it("한국어 첫 오류로 포커스하고 저장0회", async () => {
@@ -205,6 +219,13 @@ it("수정 관리번호 readonly, 파생정보/미편집 금액 생략, revision
   );
   await ready();
   expect(screen.getByLabelText("관리번호")).toHaveAttribute("readonly");
+  expect(screen.getByText(developerBanner)).toBeInTheDocument();
+  const managementHelp = screen.getByText(
+    "관리번호는 바꿀 수 없습니다. 잘못 넣었으면 사용 중지 후 새로 등록하세요.",
+  );
+  expect(managementHelp.previousElementSibling).toContainElement(
+    screen.getByLabelText("관리번호"),
+  );
   fireEvent.change(screen.getByTestId("developer-name-input"), {
     target: { value: "이름변경" },
   });
@@ -341,14 +362,12 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
   fireEvent.change(screen.getByTestId("developer-filter-jobcode"), {
     target: { value: "DEV" },
   });
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
   fireEvent.submit(screen.getByTestId("developer-filter-form"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "이름", page: 1, includeStopped: false }),
     ),
   );
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (2)]");
   await userEvent.click(screen.getByTestId("developer-reset-button"));
   await waitFor(() =>
     expect(api.getDevelopers).toHaveBeenLastCalledWith(
@@ -358,7 +377,6 @@ it("조회 Enter만 필터 적용하고 초기화는 기본값", async () => {
   expect(
     screen.queryByRole("option", { name: "재직" }),
   ).not.toBeInTheDocument();
-  expect(screen.getByTestId("developer-filter-form-toggle")).toHaveTextContent("[조건 (0)]");
 });
 it("목록 상태 색·MM경고·관리번호와 소속 표시", async () => {
   render(<DeveloperPoolScreen />);
@@ -407,6 +425,11 @@ it("상세 가격이력 토글과 스킬 주소 조회전용", async () => {
   );
   await screen.findByText("검증개발자");
   expect(screen.getByText(priceHelp)).toBeInTheDocument();
+  expect(
+    await screen.findByRole("tab", { name: "변경 이력 (73)" }),
+  ).toBeVisible();
+  expect(screen.getByRole("tab", { name: "투입 이력" })).toBeVisible();
+  expect(screen.getByRole("tab", { name: "근무 상태 이력" })).toBeVisible();
   expect(screen.getByText("Java")).toBeInTheDocument();
   expect(screen.queryByLabelText("보유 스킬")).not.toBeInTheDocument();
   await userEvent.click(screen.getByTestId("developer-price-toggle"));

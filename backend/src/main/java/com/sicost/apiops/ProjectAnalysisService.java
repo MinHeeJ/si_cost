@@ -48,7 +48,9 @@ public class ProjectAnalysisService {
             .filter(r->query.value("light")==null||query.value("light").equals(r.get("light")))
             .filter(r->part==null||("UNASSIGNED".equals(part)?r.get("partId")==null:part.equals(r.get("partId"))))
             .sorted(order(query,true)).toList();
-        var stale=rows.stream().filter(r->Boolean.TRUE.equals(r.get("updateWarning"))).map(r->fields("projectId",r.get("projectId"),"projectName",r.get("projectName"),"elapsedDays",r.get("elapsedDays"))).toList();
+        var stale=rows.stream().filter(r->Boolean.TRUE.equals(r.get("updateWarning")))
+            .map(r->fields("projectId",r.get("projectId"),"projectName",r.get("projectName"),
+                "elapsedDays",r.get("elapsedDays"),"lastUpdatedDate",r.get("lastUpdatedDate"))).toList();
         Set<Object> ids=new HashSet<>();rows.forEach(r->ids.add(r.get("projectId")));
         long high=snapshot.issues().stream().filter(i->ids.contains(i.projectId())&&!"CLOSE".equals(i.status())&&"HIGH".equals(i.importance())).count();
         var summary=fields("baseDate",day,"projectCount",rows.size(),"normalCount",count(rows,"light","정상"),"warningCount",count(rows,"light","주의"),

@@ -24,6 +24,9 @@ import static com.sicost.common.assignments.AssignmentMonthlyService.*;
 
 @Service
 public class AssignmentActionsService {
+    private com.sicost.projects.ProjectMapper projectReferences;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setProjectReferences(com.sicost.projects.ProjectMapper projectReferences) {this.projectReferences=projectReferences;}
     private com.sicost.permission.PermissionProjectionService projection;
     @org.springframework.beans.factory.annotation.Autowired
     public void setProjection(com.sicost.permission.PermissionProjectionService projection) {this.projection=projection;}
@@ -141,10 +144,16 @@ public class AssignmentActionsService {
         if("DP".equals(p.contractType())&&Set.of("FL","OS").contains(d.employeeType()))result.add(warning("EMPLOYEE_TYPE","파견 프로젝트의 FL·OS 인력입니다.",List.of(),source));
         if(mapper().leave(new LeaveQuery(d.id(),source.startDate(),source.endDate())))result.add(warning("LEAVE","휴직 기간이 겹칩니다.",List.of(),source));
         String part=mapper().projectPart(new PartQuery(p.id(),db(YearMonth.from(source.startDate()).toString())));
-        if(!"IN".equals(p.contractType())&&part!=null&&!part.equals(d.partId()))result.add(warning("PART_DIFFERENCE","프로젝트 매출과 사람 소속파트 정산은 별개입니다. 소속파트는 자동 변경하지 않습니다.",List.of(),source));
+        if(!"IN".equals(p.contractType())&&part!=null&&!part.equals(d.partId()))result.add(warning("PART_DIFFERENCE",
+            "영업 파트가 다릅니다: "+d.name()+"님은 "+partName(d.partId())+" 소속, 프로젝트는 "+partName(part)+"입니다. 매출은 프로젝트 파트로, 이 사람 이익금은 소속 파트(본사면 파트 정산 제외)로 잡힙니다. 파트를 잘못 골랐다면 개발자 풀에서 고쳐 주세요.",List.of(),source));
         for(Month month:values){BigDecimal limit=mapper().mmLimit(db(month.month()));BigDecimal total=mapper().totalMm(new TotalQuery(d.id(),db(month.month()),source.id().isEmpty()?null:source.id())).add(new BigDecimal(month.monthlyMm()));
             if(limit!=null&&total.compareTo(limit)>0)result.add(warning("MM_OVER",month.month()+" 전프로젝트 월MM "+total.toPlainString()+" > "+limit.toPlainString(),List.of(month.month()),source));}
         return List.copyOf(result);
+    }
+    private String partName(String id) {
+        if(id==null)return "본사";
+        var part=projectReferences.part(id);
+        return part==null?"본사":part.name();
     }
     private Warning warning(String code,String message,List<String> keys,Source row) {return new Warning(code,message,keys,row.id().isEmpty()?List.of():List.of(row.id()));}
     private record Plan(Source source,LocalDate date,String before,String after,boolean retroactive,boolean changed) {}
@@ -177,6 +186,7 @@ public class AssignmentActionsService {
     public Save change(String id,Change c) {
         if("EXTP".equals(c.type())) {
             ExtensionResult result=extensionPossibility(id,c);
+            if(!result.changed())throw new ApiException(400,"SAME_VALUE","지금 연장 가능성과 같습니다. 다른 값을 골라 주세요.","extensionPossibility",null);
             return saved(id,c.year(),result.changed());
         }
         users.currentUser();Source discovery=repository.required(id);lock(keys(discovery));writable(c.year());Source before=repository.required(id);present(before,c.year());revisions.requireExpected(c.expectedRevision(),repository.revision(id));

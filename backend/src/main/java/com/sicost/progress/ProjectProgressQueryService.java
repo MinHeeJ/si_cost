@@ -54,7 +54,7 @@ public class ProjectProgressQueryService implements ProjectProgressView {
         LocalDate updated=memos.stream().map(Memo::writtenDate).max(LocalDate::compareTo).orElse(null);
         LocalDate fallback=p.registeredAt().toLocalDate().isAfter(p.startDate())?p.registeredAt().toLocalDate():p.startDate();
         int elapsed=(int)Math.max(0,ChronoUnit.DAYS.between(updated==null?fallback:updated,today));
-        if(elapsed>14)reasons.add(new Reason("메모경과","주의",Integer.toString(elapsed),">14","기준일 − MAX(WRT_DT), 메모 없음: max(등록일, 계약시작일), 미래 0"));
+        if(elapsed>14)reasons.add(new Reason(updated==null?"주간 메모 없음":"메모경과","주의",Integer.toString(elapsed),">14","기준일 − MAX(WRT_DT), 메모 없음: max(등록일, 계약시작일), 미래 0"));
         String light=reasons.stream().anyMatch(r->r.light().equals("위험"))?"위험":reasons.isEmpty()?"정상":"주의";
         Step current=steps.stream().filter(s->s.status().equals("지연")).findFirst().orElseGet(()->steps.stream().filter(s->s.status().equals("진행중")).findFirst().orElseGet(()->steps.stream().filter(s->s.status().equals("예정")).findFirst().orElse(null)));
         boolean valid=valid(p,raw);String basis=valid?"단계 기준":raw.isEmpty()?"기간 기준·단계 미입력":"기간 기준·단계 집합 확인 필요";

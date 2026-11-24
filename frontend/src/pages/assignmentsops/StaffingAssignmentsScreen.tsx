@@ -1,6 +1,6 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { HelpTooltip } from "../../shared/HelpTooltip";
-import { Icon } from "../../shared/Icon";
+
 import {
   useCallback,
   useEffect,
@@ -9,7 +9,7 @@ import {
   type Key,
   type ReactNode,
 } from "react";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -341,12 +341,29 @@ export function AssignmentsContent({
       label: "경고",
       render: (r) =>
         r.warnings.length ? (
-          <HelpTooltip
-            label="배정 경고"
-            trigger={<Icon name="warning" size={16} />}
-          >
-            {r.warnings.map((w) => w.message).join(" · ")}
-          </HelpTooltip>
+          <span>
+            {r.warnings.map((w, index) => {
+              const labels: Record<string, string> = {
+                UNCONTRACTED: "미계약 선투입",
+                MM_OVER: "⚠",
+                PART_DIFFERENCE: "영업 파트 다름",
+                EMPLOYEE_TYPE: "직원구분 경고",
+                LEAVE: "휴직 기간 겹침",
+                CLOSE_CROSS: "마감월 포함",
+              };
+              const label = labels[w.code] ?? "배정 경고";
+              return (
+                <HelpTooltip
+                  key={`${w.code}-${index}`}
+                  label={label}
+                  trigger={<span title={w.message}>{label}</span>}
+                  testId={`assignment-warning-${r.id.toLowerCase()}-${index}`}
+                >
+                  {w.message}
+                </HelpTooltip>
+              );
+            })}
+          </span>
         ) : (
           "–"
         ),
@@ -468,7 +485,6 @@ export function AssignmentsContent({
       )}
       <FilterBar
         testId="assignments-filter-form"
-        appliedCount={countAppliedFilters(filters, { projectId: "", jobCode: "", warning: "", month: "", q: "", includeCancelled: false })}
         className="assignment-filters"
         resetTestId="assignments-reset"
         searchTestId="assignments-query"
@@ -566,7 +582,7 @@ export function AssignmentsContent({
           >
             <option value="">전체</option>
             <option value="MM_OVER">MM초과</option>
-            <option value="UNCONTRACTED">미계약</option>
+            <option value="UNCONTRACTED">미계약 선투입</option>
           </select>
         </label>
         <label className="sicost-field">
@@ -634,8 +650,22 @@ export function AssignmentsContent({
           <strong>{loading ? "조회 중…" : <>총 {data?.total ?? 0}건</>}</strong>
         )}
         <div className="assignment-toolbar assignment-bar-actions">
-          <button type="button" data-testid="assignments-columns" onClick={()=>setColumnsOpen(true)}>열 설정</button>
-          <button type="button" className="assignment-density-toggle" data-testid="assignments-density" aria-pressed={dense} onClick={()=>setDense(!dense)}>좁게 보기</button>
+          <button
+            type="button"
+            data-testid="assignments-columns"
+            onClick={() => setColumnsOpen(true)}
+          >
+            열 설정
+          </button>
+          <button
+            type="button"
+            className="assignment-density-toggle"
+            data-testid="assignments-density"
+            aria-pressed={dense}
+            onClick={() => setDense(!dense)}
+          >
+            좁게 보기
+          </button>
           {renderActions?.({
             year,
             filters,

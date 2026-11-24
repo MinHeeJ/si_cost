@@ -254,6 +254,8 @@ export type DeveloperOption = {
   name: string;
   managementNo: string;
   jobCode?: string;
+  status?: string;
+  withdrawalDate?: string | null;
 };
 export const projectOptions = (q: string) =>
   request<{ items: ProjectOption[] }>(

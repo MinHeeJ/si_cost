@@ -108,8 +108,11 @@ public class FinancialPreviewService {
             if(input.has("copySource"))for(JsonNode source:repository.previous(month.minusMonths(1)))if(Objects.equals(text(source,"item_sn"),input.path("copySource").path("itemSn").asText())&&Objects.equals(text(source,"sga_item_cd"),code))keep=true;
             if(code!=null&&!repository.itemCodeExists(code,keep))throw FinancialPreviewInput.invalid("items.sgaItemCode");
         }
-        if(collection.equals("adjustments")){YearMonth target=YearMonth.parse(apiMonth(text(row,"trgt_ym")));YearMonth latest=repository.yearStatus(String.format("%04d",today().getYear())).stream().filter(m->m.closeStatus().equals("CLOSE")).map(m->YearMonth.parse(m.month())).max(Comparator.naturalOrder()).orElse(null);
-            if(latest==null||!target.isBefore(month)||target.isBefore(repository.cashBase())||target.isBefore(latest.minusMonths(11))||!repository.closed(target))throw FinancialPreviewInput.invalid("adjustments.targetMonth");}
+        if(collection.equals("adjustments")){YearMonth target=YearMonth.parse(apiMonth(text(row,"trgt_ym")));
+            YearMonth base=repository.cashBase(),now=YearMonth.from(today()),latest=null;
+            for(int y=now.getYear();latest==null&&y>=base.getYear();y--)
+                latest=repository.yearStatus(String.format("%04d",y)).stream().filter(m->m.closeStatus().equals("CLOSE")).map(m->YearMonth.parse(m.month())).filter(ym->!ym.isBefore(base)&&!ym.isAfter(now)).max(Comparator.naturalOrder()).orElse(null);
+            if(latest==null||!target.isBefore(month)||target.isBefore(base)||target.isBefore(latest.minusMonths(11))||!repository.closed(target))throw FinancialPreviewInput.invalid("adjustments.targetMonth");}
     }
     private void protectOld(ObjectNode old,String collection,YearMonth month){if(collection.equals("items")){String date=text(old,"io_dt");protectCash(date==null?month:YearMonth.from(LocalDate.parse(date)),"items.ioDate");}}
     private void cards(ObjectNode draft,JsonNode changes){

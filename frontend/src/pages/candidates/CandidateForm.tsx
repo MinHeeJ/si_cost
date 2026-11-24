@@ -129,7 +129,11 @@ export function CandidateForm({
     value: api.CandidateFields[K],
   ) {
     resume.touch(key);
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+      ...(key === "employeeType" && value === "FL" ? { companyId: null } : {}),
+    }));
     changed.current = true;
     onDirtyChange?.(true);
     setFields((f) => ({ ...f, [key]: "" }));
@@ -302,22 +306,20 @@ export function CandidateForm({
             onChange={(v) => change("employeeType", v)}
             disabled={pending}
           />
-          <div className="sicost-field">
-            <ClientSelect
-              purpose="VENDOR"
-              required={form.employeeType === "OS"}
-              value={form.companyId ?? ""}
-              selectedLabel={candidate?.companyName ?? undefined}
-              disabled={pending || form.employeeType !== "OS"}
-              onChange={(v) => change("companyId", v || null)}
-            />
-            {fields.companyId && <p role="alert">{fields.companyId}</p>}
-            {form.employeeType === "FL" && form.companyId && (
-              <p className="sicost-tone-warn">
-                프리랜서는 입력한 업체를 저장하지 않습니다.
-              </p>
-            )}
-          </div>
+          {form.employeeType === "OS" && (
+            <div className="sicost-field">
+              <ClientSelect
+                purpose="VENDOR"
+                label="소속 업체"
+                required
+                value={form.companyId ?? ""}
+                selectedLabel={candidate?.companyName ?? undefined}
+                disabled={pending}
+                onChange={(v) => change("companyId", v || null)}
+              />
+              {fields.companyId && <p role="alert">{fields.companyId}</p>}
+            </div>
+          )}
           {text("phone", "전화번호")}
           {text("email", "이메일")}
           <div className="candidate-form-wide">
@@ -354,6 +356,7 @@ export function CandidateForm({
             disabled={pending}
           />
           <SkillsInput
+            label="기술"
             required
             value={form.skills}
             onChange={(v) => change("skills", v)}

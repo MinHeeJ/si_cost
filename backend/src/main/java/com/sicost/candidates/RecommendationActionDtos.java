@@ -21,6 +21,8 @@ public final class RecommendationActionDtos {
     public record AuditValue(String item,String value) {}
     public record Choice(Key key,String action,String reason,String actor,LocalDateTime now) {}
     public record Slot(String opportunityId,String needSn) {}
+    public record MessageContext(String developerId,String jobCode,String previousOpportunityId) {}
+    public record MessageNames(String developerName,String jobName,String previousOpportunityName) {}
     public record Need(String opportunityId,String needSn,String jobCode,String startMonth,int months,int count,String status,String contractType,String name) {}
     public record Developer(String id,String jobCode,String employeeType,String directClass,String useYn,LocalDate joinDate,LocalDate retireDate) {}
     public record Period(String developerId,LocalDate startDate,LocalDate endDate) {}

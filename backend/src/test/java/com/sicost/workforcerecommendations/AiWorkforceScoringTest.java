@@ -4,6 +4,8 @@ import java.math.*;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.sicost.common.assignments.AssignmentMonthlyService.Source;
 import static org.assertj.core.api.Assertions.*;
 import static com.sicost.workforcerecommendations.WorkforceRecommendationDtos.*;
@@ -11,6 +13,13 @@ import static com.sicost.workforcerecommendations.AiWorkforceScoring.*;
 
 class AiWorkforceScoringTest {
     final AiWorkforceScoring scoring=new AiWorkforceScoring();
+    @ParameterizedTest @ValueSource(strings={"서울시", "서울특별시", "서울"})
+    void locationNormalizesOfficialShortAndShortPlusCityNames(String province) {
+        var result=calculate(person("BE",null,"MD"),context(null,province+" 중구",List.of(),List.of(),codes()));
+        assertThat(result.detail().e().l()).isEqualTo("S");
+        assertThat(result.detail().b().get(7)).isEqualByComparingTo("10");
+        assertThat(result.detail().s().get(7)).isEqualByComparingTo("10");
+    }
     final List<BigDecimal> weights=List.of(25,20,15,10,5,5,10,10).stream().map(BigDecimal::valueOf).toList();
     final LocalDate day=LocalDate.of(2026,7,15);
     Person person(String job,String sub,String grade){return new Person("D-1","이름","01",job,sub,grade,"FT","Y","DRCT","WORK",null,null,"11","서울시 강남구");}

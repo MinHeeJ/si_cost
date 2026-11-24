@@ -158,6 +158,46 @@ it("renders twelve months, authoritative cards and read-only controls", async ()
     expect.stringContaining("/UI-05?"),
   );
 });
+it("reveals the highlighted current month on first load and preserves name sorting", async () => {
+  const left = vi
+    .spyOn(HTMLElement.prototype, "offsetLeft", "get")
+    .mockImplementation(function (this: HTMLElement) {
+      return this.dataset.testid === "calendar-month-header-10" ? 1100 : 0;
+    });
+  const width = vi
+    .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+    .mockReturnValue(100);
+  const viewportWidth = vi
+    .spyOn(HTMLElement.prototype, "clientWidth", "get")
+    .mockReturnValue(500);
+  try {
+    mount();
+    await screen.findByTestId("calendar-person-D-1");
+    expect(screen.getByTestId("calendar-month-header-10")).toHaveClass(
+      "calendar-current-month",
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("calendar-viewport").scrollLeft).toBe(900),
+    );
+    expect(
+      vi.mocked(api.getWorkforceOperations).mock.calls[0][0].sort,
+    ).toBeUndefined();
+    expect(
+      vi.mocked(api.getWorkforceOperations).mock.calls[0][0].direction,
+    ).toBeUndefined();
+    await userEvent.click(screen.getByTestId("calendar-sort-name"));
+    await waitFor(() =>
+      expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: "name", direction: "ASC" }),
+        expect.any(AbortSignal),
+      ),
+    );
+  } finally {
+    left.mockRestore();
+    width.mockRestore();
+    viewportWidth.mockRestore();
+  }
+});
 it("filters only on search, resets and keeps supply query independent", async () => {
   mount();
   await screen.findByTestId("calendar-person-D-1");
@@ -285,8 +325,12 @@ it("shows actual before tentative and opens full cell evidence on activation", a
   render(<WorkforceCalendarCell cell={c} />);
   const button = screen.getByRole("button");
   expect(button).toHaveAccessibleName(/0.50 MM/);
-  expect(button.closest(".workforce-calendar-cell")).toHaveClass("workforce-calendar-assigned");
-  expect(button.closest(".workforce-calendar-cell")).not.toHaveClass("workforce-calendar-tentative");
+  expect(button.closest(".workforce-calendar-cell")).toHaveClass(
+    "workforce-calendar-assigned",
+  );
+  expect(button.closest(".workforce-calendar-cell")).not.toHaveClass(
+    "workforce-calendar-tentative",
+  );
   await userEvent.click(button);
   expect(screen.getByRole("tooltip")).toHaveTextContent("P-1 · 0.50 MM");
   expect(screen.getByRole("tooltip")).toHaveTextContent("가배정 영업 기회");
@@ -314,7 +358,10 @@ it("distinguishes precontract, concurrent and over-one cues", async () => {
   };
   render(<WorkforceCalendarCell cell={c} />);
   expect(screen.getByRole("button")).toHaveAccessibleName(/미계약/);
-  expect(document.querySelector(".workforce-calendar-cell")).toHaveClass("workforce-calendar-concurrent", "workforce-calendar-over");
+  expect(document.querySelector(".workforce-calendar-cell")).toHaveClass(
+    "workforce-calendar-concurrent",
+    "workforce-calendar-over",
+  );
   const button = screen.getByRole("button", { name: /1\.0 초과/ });
   await userEvent.click(button);
   expect(screen.getByRole("tooltip")).toHaveTextContent("1.0 초과");
@@ -332,7 +379,12 @@ it("name header toggles server sorting, resets the page and exports the same ord
   );
   await screen.findByRole("button", { name: "이름 ↕" });
   await userEvent.click(screen.getByTestId("calendar-next-page"));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }), expect.any(AbortSignal)));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+      expect.any(AbortSignal),
+    ),
+  );
   await userEvent.click(await screen.findByRole("button", { name: "이름 ↕" }));
   await waitFor(() =>
     expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
@@ -378,13 +430,19 @@ it("refreshes unchanged search conditions once per click and keeps applied filte
   await screen.findByTestId("calendar-person-D-1");
   expect(api.getWorkforceOperations).toHaveBeenCalledTimes(1);
   await userEvent.click(screen.getByTestId("calendar-search"));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenCalledTimes(2),
+  );
   await userEvent.selectOptions(screen.getByLabelText("직무"), "DEV");
   expect(api.getWorkforceOperations).toHaveBeenCalledTimes(2);
   await userEvent.click(screen.getByTestId("calendar-search"));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(3));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenCalledTimes(3),
+  );
   await userEvent.click(screen.getByTestId("calendar-search"));
-  await waitFor(() => expect(api.getWorkforceOperations).toHaveBeenCalledTimes(4));
+  await waitFor(() =>
+    expect(api.getWorkforceOperations).toHaveBeenCalledTimes(4),
+  );
   expect(api.getWorkforceOperations).toHaveBeenLastCalledWith(
     expect.objectContaining({ jobCode: "DEV", page: 1 }),
     expect.any(AbortSignal),

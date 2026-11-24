@@ -17,6 +17,10 @@ import { ProjectPlansPanel } from "../plans/ProjectPlansPanel";
 import { ProjectExpensesPanel } from "../expenses/ProjectExpensesPanel";
 import { projectAmount, projectStatusTone } from "./projectFormat";
 import * as api from "./projectsApi";
+import {
+  getProjectProgress,
+  type ProgressStatus,
+} from "../progress/projectProgressApi";
 import { useAnalysisScreenContext } from "../shared/SharedScreenContext";
 export type ProjectDetailContext = {
   detail: api.ProjectDetail;
@@ -75,6 +79,27 @@ export function ProjectDetailPanel({
     [error, setError] = useState<unknown>(),
     [loading, setLoading] = useState(true);
   const [localTab, setLocalTab] = useState("basic");
+  const [signal, setSignal] = useState<ProgressStatus>();
+  const [signalError, setSignalError] = useState<unknown>();
+  const [signalReload, setSignalReload] = useState(0);
+  useEffect(() => {
+    let live = true;
+    setSignal(undefined);
+    setSignalError(undefined);
+    if (detail && !["END", "LOSE"].includes(detail.effectiveStatus)) {
+      void (async () => {
+        try {
+          const value = await getProjectProgress(id, year);
+          if (live) setSignal(value?.status);
+        } catch (e) {
+          if (live) setSignalError(e);
+        }
+      })();
+    }
+    return () => {
+      live = false;
+    };
+  }, [id, year, detail, signalReload]);
   const requestedTab = registration?.activeTab ?? localTab;
   const tab = [
     "basic",
@@ -336,6 +361,47 @@ export function ProjectDetailPanel({
                         사용자에서 담당 프로젝트 관리
                       </a>
                     </dd>
+                    {!["END", "LOSE"].includes(detail.effectiveStatus) && (
+                      <>
+                        <dt>신호등</dt>
+                        <dd data-testid="project-basic-signal">
+                          {signal ? (
+                            <StatusBadge
+                              tone={
+                                signal.light === "위험"
+                                  ? "bad"
+                                  : signal.light === "주의"
+                                    ? "warn"
+                                    : "ok"
+                              }
+                            >
+                              {signal.light}
+                            </StatusBadge>
+                          ) : signalError ? (
+                            <ErrorBanner
+                              message="신호등을 조회하지 못했습니다."
+                              onRetry={() =>
+                                setSignalReload((value) => value + 1)
+                              }
+                            />
+                          ) : (
+                            <span role="status">
+                              신호등을 불러오는 중입니다.
+                            </span>
+                          )}
+                          {registration?.progress && (
+                            <button
+                              type="button"
+                              data-testid="project-basic-progress-link"
+                              disabled={dirty}
+                              onClick={() => setTab("progress")}
+                            >
+                              진행 현황 보기
+                            </button>
+                          )}
+                        </dd>
+                      </>
+                    )}
                     <dt>상태</dt>
                     <dd>
                       <StatusBadge

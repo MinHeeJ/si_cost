@@ -2,16 +2,22 @@ import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
-import { FilterBar, countAppliedFilters } from "../../shared/FilterBar";
+import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
 import {
   getSalesPartOptions,
   type PartOption,
 } from "../salespartsops/partStandardsApi";
 import * as api from "./projectAnalysisApi";
+import { noWeeklyMemo, progressReasonText } from "../progress/progressFormat";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   AnalysisSummary,
@@ -175,8 +181,19 @@ export function ProjectStatusBoard({
                         ? "기한 지난 이슈"
                         : reason.kind;
                   return (
-                    <HelpTooltip label={`${name} ${reason.value}`} trigger={<StatusBadge tone={reason.light === "위험" ? "bad" : "warn"}>{name} {reason.value}</StatusBadge>}>
-                      {reason.kind === "기한지난HIGH" ? "기한 지난 높음 이슈가 있습니다." : `${reason.formula} · 기준 ${reason.threshold}`}
+                    <HelpTooltip
+                      label={progressReasonText(name, reason.value)}
+                      trigger={
+                        <StatusBadge
+                          tone={reason.light === "위험" ? "bad" : "warn"}
+                        >
+                          {progressReasonText(name, reason.value)}
+                        </StatusBadge>
+                      }
+                    >
+                      {reason.kind === "기한지난HIGH"
+                        ? "기한 지난 높음 이슈가 있습니다."
+                        : `${reason.formula} · 기준 ${reason.threshold}`}
                     </HelpTooltip>
                   );
                 })()}
@@ -311,7 +328,10 @@ export function ProjectStatusBoard({
       id: "lastUpdatedDate",
       label: "마지막 업데이트",
       sortable: true,
-      render: (row) => analysisDisplay(row.lastUpdatedDate),
+      render: (row) =>
+        row.lastUpdatedDate == null
+          ? noWeeklyMemo(String(row.elapsedDays))
+          : analysisDisplay(row.lastUpdatedDate),
     },
     {
       id: "elapsedDays",
@@ -363,7 +383,7 @@ export function ProjectStatusBoard({
                 {result.data.staleProjects
                   .map(
                     (project) =>
-                      `${project.projectName} (${project.elapsedDays}일)`,
+                      `${project.projectName} (${project.lastUpdatedDate == null ? noWeeklyMemo(project.elapsedDays) : `메모경과 ${project.elapsedDays}`})`,
                   )
                   .join(" · ")}
               </span>
@@ -398,7 +418,6 @@ export function ProjectStatusBoard({
       </SegmentedTabList>
       <FilterBar
         testId="status-filters"
-        appliedCount={countAppliedFilters(query, { light: "", contractType: "", partId: "" })}
         resetTestId="status-reset"
         searchTestId="status-search"
         onSubmit={() => apply({ ...draft, page: 1 })}
@@ -445,7 +464,8 @@ export function ProjectStatusBoard({
         </label>
         <label className="sicost-field">
           영업 파트
-          <FieldHelp label="영업 파트" /><select
+          <FieldHelp label="영업 파트" />
+          <select
             data-testid="status-part"
             value={String(draft.partId ?? "")}
             onChange={(e) => change("partId", e.target.value)}
@@ -481,7 +501,9 @@ export function ProjectStatusBoard({
       >
         <DataTable
           testId="status-board-table"
-          onRowAction={canProjects ? (row) => navigate(projectLink(row)) : undefined}
+          onRowAction={
+            canProjects ? (row) => navigate(projectLink(row)) : undefined
+          }
           mobileRowAction={canProjects}
           dense={dense}
           rows={result.error ? [] : (result.data?.items ?? [])}

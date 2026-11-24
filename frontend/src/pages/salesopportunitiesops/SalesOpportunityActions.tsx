@@ -120,6 +120,12 @@ export function SalesOpportunityActions({
     o.quote.storedProfitRate != null &&
     !["UNKNOWN", "INCOMPLETE"].includes(o.quote.judgement);
   const canAdvance = quoteKnown && !["WAIT", "REJ"].includes(o.approvalStatus);
+  const rejection =
+    o.approvalStatus === "REJ"
+      ? [...o.approvalHistory]
+          .filter((h) => h.action === "REJ")
+          .sort((a, b) => b.histSn - a.histSn)[0]
+      : undefined;
   function open(next: Action) {
     setAction(next);
     setError(undefined);
@@ -188,6 +194,16 @@ export function SalesOpportunityActions({
       className="sales-command-actions"
       data-testid="sales-opportunity-actions"
     >
+      {o.approvalStatus === "REJ" && (
+        <p
+          className="sales-command-warning"
+          data-testid="quote-rejection-banner"
+        >
+          견적 반려
+          {rejection ? ` (${rejection.registeredAt.slice(5, 10)})` : ""}
+          {rejection?.reason?.trim() ? ` · 사유: ${rejection.reason}` : ""}
+        </p>
+      )}
       {message && <p role="status">{message}</p>}
       {message === "저장은 됐지만 다시 불러오지 못했습니다" && (
         <button
@@ -201,7 +217,10 @@ export function SalesOpportunityActions({
       )}
       {error != null && !action && <SalesCommandError error={error} />}
       {projectId && (
-        <Link data-testid="win-project-link" to="/UI-01" state={{ projectId }}>
+        <Link
+          data-testid="win-project-link"
+          to={`/UI-01?${new URLSearchParams({ projectId })}`}
+        >
           프로젝트 {projectId} 보기
         </Link>
       )}
@@ -232,7 +251,8 @@ export function SalesOpportunityActions({
               </select>
             </label>
             <label>
-              수주 확률<FieldHelp label="수주 확률" />{" "}
+              수주 확률
+              <FieldHelp label="수주 확률" />{" "}
               <NumericInput
                 data-testid="opportunity-probability-input"
                 value={probability}
@@ -415,7 +435,8 @@ export function SalesOpportunityActions({
                 </label>
                 <label>
                   메모
-                  <FieldHelp label="메모" /><textarea
+                  <FieldHelp label="메모" />
+                  <textarea
                     aria-label="메모"
                     data-testid="loss-memo-input"
                     value={memo}
@@ -454,7 +475,8 @@ export function SalesOpportunityActions({
                 </p>
                 <label>
                   계약금액
-                  <FieldHelp label="계약금액" /><input
+                  <FieldHelp label="계약금액" />
+                  <input
                     data-testid="win-amount-input"
                     value={win.contractAmount}
                     onChange={(e) =>

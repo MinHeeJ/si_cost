@@ -13,6 +13,8 @@ import * as api from "./peopleClient";
 import { ApiError, request } from "../../shared/api";
 import { getCandidateSummary } from "../candidatesops/candidateSummaryApi";
 import { getCandidateContacts } from "../contacts/peopleClient";
+import { getPeopleHistory } from "../apiops/peopleClient";
+vi.mock("../apiops/peopleClient");
 vi.mock("../candidatesops/candidateMatchingApi", async (original) => ({
   ...(await original<typeof import("../candidatesops/candidateMatchingApi")>()),
   getCandidateShortages: async () => ({
@@ -97,6 +99,12 @@ const detail: api.CandidateDetail = {
 const empty: api.CandidatesPage = { items: [], total: 0, page: 1, size: 50 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getPeopleHistory).mockResolvedValue({
+    items: [],
+    total: 64,
+    page: 1,
+    size: 20,
+  });
   vi.mocked(request).mockResolvedValue({ items: [] });
   vi.mocked(getCandidateSummary).mockResolvedValue({
     total: 0,
@@ -153,9 +161,45 @@ async function begin() {
 async function fill() {
   await userEvent.type(screen.getByLabelText("이름 *"), "새 후보");
   await userEvent.selectOptions(screen.getByLabelText("주 직무 *"), "DEV");
-  await userEvent.type(screen.getByLabelText("보유 스킬"), "Java, SQL");
+  await userEvent.type(screen.getByLabelText("기술"), "Java, SQL");
   await userEvent.type(screen.getByLabelText("희망 단가 (원/월) *"), "1");
 }
+it("외주에서만 소속 업체가 필수이며 프리랜서 전환 시 값을 비운다", async () => {
+  vi.mocked(request).mockResolvedValue({
+    items: [{ id: "C-901", name: "등록업체", type: "VNDR" }],
+  });
+  render(<CandidatesScreen />);
+  await begin();
+  await fill();
+  expect(screen.queryByTestId("vendor-client-open")).not.toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("구분 *"), "OS");
+  expect(screen.getByTestId("vendor-client-open")).toHaveTextContent(
+    "소속 업체 *",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
+  expect(
+    await screen.findByText("사용 중인 협력사를 선택해 주세요."),
+  ).toBeVisible();
+  expect(api.createCandidate).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByTestId("vendor-client-open"));
+  await userEvent.selectOptions(
+    await screen.findByTestId("vendor-client-select"),
+    "C-901",
+  );
+  await userEvent.selectOptions(screen.getByLabelText("구분 *"), "FL");
+  expect(screen.queryByTestId("vendor-client-open")).not.toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText("구분 *"), "OS");
+  expect(screen.getByTestId("vendor-client-open")).toHaveTextContent(
+    "선택해 주세요",
+  );
+  await userEvent.selectOptions(screen.getByLabelText("구분 *"), "FL");
+  await userEvent.click(screen.getByRole("button", { name: "등록" }));
+  await waitFor(() =>
+    expect(api.createCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({ companyId: null }),
+    ),
+  );
+}, 15000);
 it("renders loading then real empty state without out-of-scope controls", async () => {
   let resolve!: (page: api.CandidatesPage) => void;
   vi.mocked(api.getCandidates).mockReturnValue(
@@ -243,12 +287,19 @@ it("cancel and retained screen changes preserve dirty input until explicit disca
   expect(screen.getByLabelText("이름 *")).toHaveValue("보존");
   expect(api.createCandidate).not.toHaveBeenCalled();
 });
-it("successful registration refreshes immediately, closes modal, highlights once then returns to normal", async () => {
+it("successful registration pins the new row beyond six-second highlight until query", async () => {
+  const earlier = {
+    ...detail,
+    id: "CAND-900002",
+    name: "먼저 가능한 후보",
+    availableDate: "2026-06-01",
+  };
   vi.mocked(api.getCandidates).mockResolvedValue({
     ...empty,
-    items: [detail],
-    total: 1,
+    items: [earlier, detail],
+    total: 2,
   });
+  const timers = vi.spyOn(window, "setTimeout");
   render(<CandidatesScreen />);
   await begin();
   await fill();
@@ -274,9 +325,19 @@ it("successful registration refreshes immediately, closes modal, highlights once
   expect(api.getCandidate).toHaveBeenCalledWith(detail.id);
   const name = await screen.findByTestId("candidate-name-cand-900001");
   expect(name).toHaveClass("candidate-new");
-  await waitFor(() => expect(name).not.toHaveClass("candidate-new"), {
-    timeout: 3000,
+  const table = name.closest("table")!;
+  const rows = () => within(table).getAllByRole("row");
+  expect(rows()[1]).toContainElement(name);
+  const timer = timers.mock.calls.find(([, delay]) => delay === 6000);
+  expect(timer).toBeDefined();
+  await act(async () => {
+    (timer![0] as () => void)();
   });
+  expect(name).not.toHaveClass("candidate-new");
+  expect(rows()[1]).toContainElement(name);
+  await userEvent.click(screen.getByTestId("candidate-query"));
+  await waitFor(() => expect(rows()[1]).toHaveTextContent(earlier.name));
+  timers.mockRestore();
 });
 it("committed refresh failure offers only re-query and never repeats POST", async () => {
   vi.mocked(api.getCandidate).mockRejectedValueOnce(new Error("조회 실패"));
@@ -294,6 +355,12 @@ it("committed refresh failure offers only re-query and never repeats POST", asyn
   expect(api.createCandidate).toHaveBeenCalledTimes(1);
 });
 it("edit uses retrieved revision and consent, preserves recent contact in read-only detail", async () => {
+  vi.mocked(getCandidateContacts).mockResolvedValue({
+    items: [],
+    total: 82,
+    page: 1,
+    size: 20,
+  });
   vi.mocked(api.getCandidates).mockResolvedValue({
     ...empty,
     items: [detail],
@@ -305,6 +372,12 @@ it("edit uses retrieved revision and consent, preserves recent contact in read-o
   );
   await userEvent.click(await screen.findByRole("button", { name: "수정" }));
   expect(screen.getByLabelText("자체 메모")).toHaveValue("자체 메모");
+  expect(await screen.findByTestId("candidate-tab-contacts")).toHaveTextContent(
+    "연락 기록 (82)",
+  );
+  expect(screen.getByTestId("candidate-tab-history")).toHaveTextContent(
+    "변경 이력 (64)",
+  );
   await userEvent.type(screen.getByLabelText("자체 메모"), " 수정");
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   await waitFor(() =>

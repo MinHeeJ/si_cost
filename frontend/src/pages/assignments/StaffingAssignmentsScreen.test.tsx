@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { StaffingAssignmentsScreen } from "./StaffingAssignmentsScreen";
 import * as downloads from "./assignmentDownloadsApi";
 import * as api from "../assignmentsops/assignmentActionsApi";
@@ -98,10 +99,12 @@ it("download failure retains list and retry never saves the business record", as
 it("preserves dirty callback and upstream actions extension instead of replacing merged screens", async () => {
   const dirty = vi.fn();
   render(
-    <StaffingAssignmentsScreen
-      onDirtyChange={dirty}
-      renderActions={(c) => <span>연결 연도 {c.year}</span>}
-    />,
+    <MemoryRouter>
+      <StaffingAssignmentsScreen
+        onDirtyChange={dirty}
+        renderActions={(c) => <span>연결 연도 {c.year}</span>}
+      />
+    </MemoryRouter>,
   );
   await screen.findByText("연결 연도 2026");
   await waitFor(() =>

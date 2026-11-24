@@ -116,7 +116,10 @@ class SalesCommandContractTest {
     @Test void overlongLossMemoIs400()throws Exception{request("lose",body().put("reasonCode","PRICE").put("memo","x".repeat(501)),400);noWrites();}
     @Test void staleWriteStopsAllEffects()throws Exception{request("stop",body().put("expectedRevision","old"),409);noWrites();}
     @Test void missingTargetIs404()throws Exception{mvc.perform(post("/api/sales-opportunities/O-9999/stop").contentType("application/json").content(body().toString())).andExpect(status().isNotFound());noWrites();}
-    @Test void upwardUnknownIsStateConflictNotRoleForbidden()throws Exception{request("stage",body().put("stage","NEGO"),409);noWrites();}
+    @Test void upwardUnknownIsStateConflictNotRoleForbidden()throws Exception{
+        mvc.perform(post("/api/sales-opportunities/O-0101/stage").contentType("application/json").content(body().put("stage","NEGO").toString()))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("견적 승인 전이라 협상 단계로 옮길 수 없습니다"));noWrites();
+    }
     @Test void sourceQuoteChangeWinsOverStaleRevision()throws Exception{
         row=withRate("0.00","WAIT");request("approval",body().put("action","OK").put("expectedRevision","old"),409);
         mvc.perform(post("/api/sales-opportunities/O-0101/approval").contentType("application/json").content(body().put("action","OK").put("expectedRevision","old").toString())).andExpect(jsonPath("$.code").value("QUOTE_CHANGED"));noWrites();

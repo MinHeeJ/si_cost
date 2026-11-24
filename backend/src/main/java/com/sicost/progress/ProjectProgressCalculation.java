@@ -89,7 +89,8 @@ public final class ProjectProgressCalculation {
     private static BigDecimal[] fraction(BigDecimal weight,LocalDate start,LocalDate end,LocalDate today) {
         if(today.isBefore(start))return new BigDecimal[]{BigDecimal.ZERO,BigDecimal.ONE};
         if(!today.isBefore(end))return new BigDecimal[]{weight,BigDecimal.ONE};
-        return new BigDecimal[]{weight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(start,today))),BigDecimal.valueOf(ChronoUnit.DAYS.between(start,end))};
+        return new BigDecimal[]{weight.multiply(BigDecimal.valueOf(ChronoUnit.DAYS.between(start,today))),
+            BigDecimal.valueOf(days(start,end))};
     }
     public static Step step(StepRow r,LocalDate today) {
         String status=r.completedDate()!=null?"완료":r.endDate().isBefore(today)?"지연":r.startDate().isAfter(today)?"예정":"진행중";

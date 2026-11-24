@@ -1022,10 +1022,23 @@ function RegisteredProjectAnalysis({
 
 function RegisteredWorkforceRecommendations() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const entrySearch = useRef("");
+  if (location.pathname === "/UI-30" && location.search)
+    entrySearch.current = location.search;
+  useEffect(() => {
+    if (
+      location.pathname === "/UI-30" &&
+      !location.search &&
+      entrySearch.current
+    )
+      navigate(`/UI-30${entrySearch.current}`, { replace: true });
+  }, [location.pathname, location.search, navigate]);
   const [developer, setDeveloper] = useState<string>();
   return (
     <SharedScreenFrame screenId="UI-30" periodBar={null}>
       <WorkforceRecommendationsScreen
+        entrySearch={entrySearch.current}
         renderRecommendation={(value, currentNeedSn, canAct, context) => (
           <WorkforceRecommendationCandidates
             key={value.rcmdId ?? "empty"}
