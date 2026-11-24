@@ -54,18 +54,76 @@
 .sicost-user-menu {
   position: absolute;
   right: 0;
-  top: 40px;
-  min-width: 220px;
-  padding: 8px;
+  top: calc(100% + 6px);
+  width: min(220px, calc(100vw - 24px));
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
-.sicost-user-menu button {
+.sicost-user-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+}
+.sicost-user-menu-header > :is(strong, span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sicost-user-menu-header > span {
+  flex-shrink: 0;
+  max-width: 65%;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sicost-user-menu .authentication-session {
+  display: block;
+}
+.sicost-user-menu .sicost-user-menu-items > button {
+  display: block;
   border: 0;
+  border-bottom: 1px solid var(--divider);
+  border-radius: 0;
   width: 100%;
-  text-align: left;
+  min-height: 41px;
+  padding: 0 14px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+}
+.sicost-user-menu .sicost-user-menu-items > button:hover:not(:disabled),
+.sicost-user-menu .sicost-user-menu-items > button:focus-visible {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+.sicost-user-menu .sicost-user-menu-items > button:focus-visible {
+  outline-offset: -2px;
+}
+.sicost-user-menu .authentication-session-status {
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 14px;
+  color: var(--text-sub);
+}
+.sicost-user-menu .authentication-session-status button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 600;
 }
 .sicost-app-body {
   display: flex;

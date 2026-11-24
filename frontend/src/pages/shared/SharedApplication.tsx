@@ -11,6 +11,7 @@ import { HeaderActions } from "./HeaderActions";
 import { SessionIndicator } from "../authentication/SessionIndicator";
 import { WorkspaceUsability } from "./WorkspaceUsability";
 import { ProfileDialog } from "../meops/ProfileDialog";
+import { getMyProfile } from "../meops/profileApi";
 import {
   getMenuManagement,
   type ManagedMenuTree,
@@ -112,6 +113,7 @@ function SharedApplicationContent({
       null,
     ),
     [userMenu, setUserMenu] = useState(false);
+  const [menuRoleNames, setMenuRoleNames] = useState<string[]>([]);
   const [favoriteNotice, setFavoriteNotice] = useState("");
   useEffect(() => {
     if (!favoriteNotice) return;
@@ -119,6 +121,36 @@ function SharedApplicationContent({
     return () => clearTimeout(timer);
   }, [favoriteNotice]);
   const userButton = useRef<HTMLButtonElement>(null);
+  const userAnchor = useRef<HTMLDivElement>(null);
+  const menuUserId = user?.userId;
+  const menuRoleIds = user?.roleIds.join(",");
+  const closeUserMenu = () => {
+    userButton.current?.focus();
+    setUserMenu(false);
+  };
+  useEffect(() => {
+    if (!userMenu || !menuUserId) return;
+    let active = true;
+    setMenuRoleNames([]);
+    void getMyProfile()
+      .then(({ activeRoles }) => {
+        if (active) setMenuRoleNames(activeRoles.map((role) => role.roleName));
+      })
+      .catch(() => {});
+    const dismiss = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !userAnchor.current?.contains(event.target)
+      ) {
+        setUserMenu(false);
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => {
+      active = false;
+      document.removeEventListener("pointerdown", dismiss);
+    };
+  }, [userMenu, menuUserId, menuRoleIds]);
   const saving = useRef(false),
     recentActivation = useRef(""),
     lru = useRef<string[]>([]);
@@ -169,6 +201,9 @@ function SharedApplicationContent({
     const resize = () => setMobile(window.innerWidth < 768);
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (userAnchor.current?.contains(document.activeElement)) {
+          userButton.current?.focus();
+        }
         setUserMenu(false);
         setMobileOpen(false);
       }
@@ -602,57 +637,75 @@ function SharedApplicationContent({
           {user.developmentMode && (
             <span className="sicost-development">개발용 임시 관리자</span>
           )}
-          <div className="sicost-user-anchor">
+          <div className="sicost-user-anchor" ref={userAnchor}>
             <button
               type="button"
               aria-label={user.name}
               ref={userButton}
               onClick={() => setUserMenu((open) => !open)}
               aria-expanded={userMenu}
+              aria-controls="sicost-user-menu"
             >
               <Icon name="user" size={16} />
               <span className="sicost-user-name">{user.name}</span>
               <Icon name="chevron" size={12} className="sicost-chevron-down" />
             </button>
-            <div className="sicost-user-menu" hidden={!userMenu}>
-              <SessionIndicator />
-              <button
-                type="button"
-                data-testid="profile-menu-button"
-                onClick={() => {
-                  userButton.current?.focus();
-                  setDialog("profile");
-                  setUserMenu(false);
-                }}
-              >
-                내 정보
-              </button>
-              <button
-                onClick={() => {
-                  setDialog("settings");
-                  setUserMenu(false);
-                }}
-              >
-                화면 설정
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUtility("search");
-                  setUserMenu(false);
-                }}
-              >
-                메뉴 찾기
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setUtility("help");
-                  setUserMenu(false);
-                }}
-              >
-                단축키 보기
-              </button>
+            <div
+              id="sicost-user-menu"
+              className="sicost-user-menu"
+              role="group"
+              aria-label="사용자 메뉴"
+              hidden={!userMenu}
+            >
+              <div className="sicost-user-menu-header">
+                <strong title={user.name}>{user.name}</strong>
+                {menuRoleNames.length > 0 && (
+                  <span title={menuRoleNames.join(", ")}>
+                    {menuRoleNames[0]}
+                    {menuRoleNames.length > 1 && ` 외 ${menuRoleNames.length - 1}`}
+                  </span>
+                )}
+              </div>
+              <SessionIndicator
+                onPasswordOpen={closeUserMenu}
+                renderMenu={({ passwordChange, logout, sessionStatus }) => (
+                  <>
+                    <div className="sicost-user-menu-items">
+                      <button
+                        type="button"
+                        data-testid="profile-menu-button"
+                        onClick={() => {
+                          closeUserMenu();
+                          setDialog("profile");
+                        }}
+                      >
+                        내 정보
+                      </button>
+                      {passwordChange}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeUserMenu();
+                          setDialog("settings");
+                        }}
+                      >
+                        화면 설정
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeUserMenu();
+                          setUtility("help");
+                        }}
+                      >
+                        단축키 보기
+                      </button>
+                      {logout}
+                    </div>
+                    {sessionStatus}
+                  </>
+                )}
+              />
             </div>
           </div>
         </header>

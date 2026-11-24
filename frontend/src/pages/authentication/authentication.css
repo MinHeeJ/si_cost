@@ -396,6 +396,30 @@
   font: inherit;
   cursor: pointer;
 }
+.authentication-session-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.authentication-session-status strong {
+  margin-inline-start: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.authentication-password-fields {
+  display: grid;
+  gap: 10px;
+}
+.authentication-password-fields label {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+.authentication-password-fields input {
+  width: 100%;
+  min-width: 0;
+}
 .authentication-recommend {
   position: fixed;
   right: 24px;

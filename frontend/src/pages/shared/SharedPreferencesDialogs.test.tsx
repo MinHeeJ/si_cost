@@ -16,7 +16,9 @@ import { SharedApplication } from "./SharedApplication";
 import { SharedScreenContext } from "./SharedScreenContext";
 import { FinancialItemsScreen } from "./FinancialItemsScreen";
 import * as api from "./sharedApi";
+import { getMyProfile } from "../meops/profileApi";
 vi.mock("./sharedApi");
+vi.mock("../meops/profileApi");
 vi.mock("../dashboardops/dashboardApi", async (original) => ({ ...(await original<typeof import("../dashboardops/dashboardApi")>()), getDashboard: vi.fn(async () => dashboardFixture()) }));
 const child = (screenId: string, name: string, pcOnly = false) => ({
   menuId: screenId,
@@ -55,6 +57,17 @@ beforeEach(() => {
     roleIds: ["ADMIN"],
     developmentMode: true,
   });
+  vi.mocked(getMyProfile).mockResolvedValue({
+    userId: "admin",
+    userName: "임시 관리자",
+    activeRoles: [
+      { roleId: "ADMIN", roleName: "시스템 관리자" },
+      { roleId: "FIN", roleName: "재무 담당" },
+    ],
+    parts: [],
+    basisMonth: "2026-11",
+    editGuidance: "",
+  });
   vi.mocked(api.getSharedPreferences).mockResolvedValue({
     items: [
       {
@@ -82,6 +95,32 @@ beforeEach(() => {
       preference: { type, key, value, revision: "new", stored: true },
     }),
   );
+});
+it("사용자 메뉴는 활성 역할과 작업 순서를 표시하고 비밀번호 변경 창으로 이어진다", async () => {
+  render(
+    <MemoryRouter initialEntries={["/UI-16"]}>
+      <SharedApplication />
+    </MemoryRouter>,
+  );
+  const trigger = await screen.findByRole("button", { name: "임시 관리자" });
+  expect(getMyProfile).not.toHaveBeenCalled();
+  await userEvent.click(trigger);
+  const menu = within(screen.getByRole("group", { name: "사용자 메뉴" }));
+  expect(await menu.findByText("시스템 관리자 외 1")).toBeVisible();
+  expect(menu.getAllByRole("button").map((button) => button.textContent)).toEqual([
+    "내 정보",
+    "비밀번호 변경",
+    "화면 설정",
+    "단축키 보기",
+    "로그아웃",
+    "연장",
+  ]);
+  await userEvent.click(menu.getByRole("button", { name: "비밀번호 변경" }));
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  const dialog = within(screen.getByRole("dialog", { name: "비밀번호 변경" }));
+  expect(dialog.getByLabelText("현재 비밀번호")).toHaveFocus();
+  await userEvent.click(dialog.getByRole("button", { name: "취소" }));
+  expect(trigger).toHaveFocus();
 });
 it("화면 설정의 명시 변경만 해당 설정을 저장하고 성공 후 표시한다", async () => {
   render(
