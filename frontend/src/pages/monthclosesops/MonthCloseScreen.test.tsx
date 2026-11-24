@@ -154,7 +154,7 @@ beforeEach(() => {
     status: "WORK",
   });
 });
-async function mount() {
+function renderMonthClose() {
   render(
     <MemoryRouter>
       <MonthCloseScreen />
@@ -171,8 +171,27 @@ async function mount() {
       }),
     ),
   );
+}
+async function mount() {
+  renderMonthClose();
   await screen.findByText("마감 점검");
 }
+it("shows the shared loading state until the first result is available", async () => {
+  let resolve!: (result: api.MonthCloses) => void;
+  vi.mocked(api.getMonthCloses).mockImplementationOnce(
+    () => new Promise((done) => { resolve = done; }),
+  );
+  renderMonthClose();
+  const loading = await screen.findByTestId("month-close-loading");
+  expect(loading).toHaveRole("status");
+  expect(loading).toHaveTextContent("월 마감 자료를 불러오는 중입니다.");
+  expect(screen.queryByRole("table", { name: "마감 이력" })).not.toBeInTheDocument();
+  await act(async () => resolve(data()));
+  expect(loading).not.toBeInTheDocument();
+  expect(screen.getByRole("table", { name: "마감 이력" })).toHaveTextContent(
+    "선택연도 마감 이력이 없습니다.",
+  );
+});
 it("renders exact six cards, current calculation and empty yearly history without a payroll action", async () => {
   await mount();
   expect(
@@ -188,26 +207,84 @@ it("renders exact six cards, current calculation and empty yearly history withou
   ).toBeInTheDocument();
   expect(api.getMonthCloses).toHaveBeenCalledWith("2026-01", 1, 50);
 });
-it.each([0, 3])(
-  "shows the pre-close banner from server warning count %i above the checks",
-  async (warningCount) => {
-    vi.mocked(api.getMonthCloses).mockResolvedValue({
+it("shows the check instructions from the heading tooltip", async () => {
+  await mount();
+  const help = screen.getByRole("button", { name: "마감 점검 도움말" });
+  await userEvent.click(help);
+  const tooltip = screen.getByRole("tooltip");
+  expect(tooltip).toHaveTextContent("선택한 달의 급여, 투입, 청구");
+  expect(tooltip).toHaveTextContent("[다시 점검]을 누르면 점검 결과를 저장");
+  await userEvent.keyboard("{Escape}");
+  expect(tooltip).not.toBeInTheDocument();
+});
+it("refreshes in the background on window focus without showing the loading state", async () => {
+  await mount();
+  let resolve!: (result: api.MonthCloses) => void;
+  vi.mocked(api.getMonthCloses).mockImplementation(
+    () => new Promise((done) => { resolve = done; }),
+  );
+  act(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  expect(api.getMonthCloses).toHaveBeenCalledTimes(2);
+  expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "마감 점검" })).toBeVisible();
+  await act(async () => resolve({ ...data(), nextCloseMonth: "2026-02" }));
+  expect(screen.getByRole("group", { name: "조회 기간 상태" })).toHaveTextContent("2026-02");
+  expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
+});
+it("uses the server history count and returns to page one when page size changes", async () => {
+  const entries = Array.from({ length: 51 }, (_, index) => ({
+    ...committed.history,
+    historySequence: index + 1,
+  }));
+  vi.mocked(api.getMonthCloses).mockImplementation(async (_month, page = 1, size = 50) => {
+    const start = (page - 1) * size;
+    return {
       ...data(),
-      warningCount,
-    });
-    await mount();
-    const banner = screen.getByTestId("month-close-check-banner");
-    expect(banner).toHaveTextContent(
-      `2026-01 마감 전 점검 6개 중 ${warningCount}개를 확인해야 합니다.`,
-    );
-    expect(banner).toHaveClass(warningCount ? "warn" : "info");
-    expect(
-      banner.compareDocumentPosition(screen.getByText("마감 점검")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  },
-);
-it("preserves the closed-month notice instead of the pre-close banner", async () => {
+      history: {
+        items: entries.slice(start, start + size),
+        total: entries.length,
+        page,
+        size,
+        hasMore: start + size < entries.length,
+      },
+    };
+  });
+  await mount();
+  const navigation = screen.getByRole("navigation", { name: "페이지" });
+  expect(within(navigation).getByText("1-50 / 51건")).toBeInTheDocument();
+  await userEvent.click(within(navigation).getByRole("button", { name: "다음 페이지" }));
+  await screen.findByText("51-51 / 51건");
+  expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 2, 50);
+  await userEvent.selectOptions(screen.getByRole("combobox", { name: "한 화면 건수" }), "20");
+  await screen.findByText("1-20 / 51건");
+  expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 1, 20);
+});
+it("opens the shared warning dialog from the check heading", async () => {
+  await mount();
+  const title = screen.getByRole("heading", { name: "마감 점검" });
+  const warning = screen.getByRole("button", { name: "확인 필요 1건" });
+  expect(title.closest("header")).toContainElement(warning);
+  await userEvent.click(warning);
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(dialog).getByRole("heading", { name: "2026-01" })).toBeVisible();
+  expect(within(dialog).getByText("영업 파트 정산 · 전체 원천 점검")).toBeVisible();
+  expect(within(dialog).queryByText(/급여 업로드/)).not.toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  expect(dialog).not.toBeInTheDocument();
+});
+it("omits the warning button when all checks are normal", async () => {
+  vi.mocked(api.getMonthCloses).mockResolvedValue({
+    ...data(),
+    warningCount: 0,
+    checks: checks.map((check) => ({ ...check, status: "OK" })),
+  });
+  await mount();
+  expect(screen.queryByRole("button", { name: /확인 필요 .*건/ })).not.toBeInTheDocument();
+});
+it("preserves the closed-month notice without the pre-close warning button", async () => {
   vi.mocked(api.getMonthCloses).mockResolvedValue({
     ...data(),
     status: "CLOSE",
@@ -216,7 +293,7 @@ it("preserves the closed-month notice instead of the pre-close banner", async ()
   });
   await mount();
   expect(
-    screen.queryByTestId("month-close-check-banner"),
+    screen.queryByRole("button", { name: /확인 필요 .*건/ }),
   ).not.toBeInTheDocument();
   expect(screen.getByText(/2026-01는 마감되었습니다/)).toHaveTextContent(
     "고칠 내용은 다음 달 전월 조정으로 입력하세요.",
@@ -629,7 +706,7 @@ it.each(["close", "reopen"] as const)(
     expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
     expect(api.publishMonthCloseCommit).toHaveBeenCalledWith("2026-01");
     expect(
-      screen.getByTestId("month-close-history-2026-01-1"),
+      screen.getByTestId("month-close-history-row-2026-01-1"),
     ).toHaveTextContent("재무담당");
     if (kind === "close") {
       expect(screen.getByTestId("month-close-closed-notice")).toHaveTextContent(
@@ -645,7 +722,7 @@ it.each(["close", "reopen"] as const)(
       ).not.toBeInTheDocument();
       expect(screen.getByTestId("month-close-close-button")).toBeEnabled();
       expect(
-        screen.getByTestId("month-close-history-2026-01-1"),
+        screen.getByTestId("month-close-history-row-2026-01-1"),
       ).toHaveTextContent("청구 누락 반영");
     }
   },

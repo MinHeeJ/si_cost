@@ -66,20 +66,26 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
     await expect(
       page.getByRole("button", { name: "전월 조정 입력", exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByTestId("month-close-check-banner")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /확인 필요 .*건/ })).toHaveCount(0);
     await expect(page.getByTestId("month-close-check-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-close-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-reopen-button")).toHaveCount(
       data.canReopen ? 1 : 0,
     );
   } else {
-    const banner = page.getByTestId("month-close-check-banner");
-    await expect(banner).toHaveText(
-      `${data.month} 마감 전 점검 6개 중 ${data.warningCount}개를 확인해야 합니다.`,
-    );
-    await expect(banner).toHaveClass(
-      new RegExp(data.warningCount > 0 ? "warn" : "info"),
-    );
+    const warning = page.getByRole("button", {
+      name: `확인 필요 ${data.warningCount}건`,
+      exact: true,
+    });
+    if (data.warningCount > 0) {
+      await expect(warning).toBeVisible();
+      await warning.click();
+      const dialog = page.getByRole("dialog", { name: `확인 필요 ${data.warningCount}건` });
+      await expect(dialog.getByRole("heading", { name: data.month })).toBeVisible();
+      await page.keyboard.press("Escape");
+    } else {
+      await expect(warning).toHaveCount(0);
+    }
     await expect(page.getByTestId("month-close-check-button")).toBeEnabled({
       enabled: data.managementAllowed && data.canCheck,
     });
@@ -90,7 +96,7 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
   for (const entry of data.history.items)
     await expect(
       page.getByTestId(
-        `month-close-history-${entry.month}-${entry.historySequence}`,
+        `month-close-history-row-${entry.month}-${entry.historySequence}`,
       ),
     ).toContainText(entry.actorName ?? "–");
 });
