@@ -6,6 +6,11 @@
   gap: 20px;
   min-width: 0;
 }
+.month-close-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .month-close-section-note {
   color: var(--text-sub);
   font-size: 12px;

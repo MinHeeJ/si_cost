@@ -207,6 +207,33 @@ it("renders exact six cards, current calculation and empty yearly history withou
   ).toBeInTheDocument();
   expect(api.getMonthCloses).toHaveBeenCalledWith("2026-01", 1, 50);
 });
+it("shows the check instructions from the heading tooltip", async () => {
+  await mount();
+  const help = screen.getByRole("button", { name: "마감 점검 도움말" });
+  await userEvent.click(help);
+  const tooltip = screen.getByRole("tooltip");
+  expect(tooltip).toHaveTextContent("선택한 달의 급여, 투입, 청구");
+  expect(tooltip).toHaveTextContent("[다시 점검]을 누르면 점검 결과를 저장");
+  await userEvent.keyboard("{Escape}");
+  expect(tooltip).not.toBeInTheDocument();
+});
+it("refreshes in the background on window focus without showing the loading state", async () => {
+  await mount();
+  let resolve!: (result: api.MonthCloses) => void;
+  vi.mocked(api.getMonthCloses).mockImplementation(
+    () => new Promise((done) => { resolve = done; }),
+  );
+  act(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  expect(api.getMonthCloses).toHaveBeenCalledTimes(2);
+  expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "마감 점검" })).toBeVisible();
+  await act(async () => resolve({ ...data(), nextCloseMonth: "2026-02" }));
+  expect(screen.getByRole("group", { name: "조회 기간 상태" })).toHaveTextContent("2026-02");
+  expect(screen.queryByTestId("month-close-loading")).not.toBeInTheDocument();
+});
 it("uses the server history count and returns to page one when page size changes", async () => {
   const entries = Array.from({ length: 51 }, (_, index) => ({
     ...committed.history,

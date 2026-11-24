@@ -10,22 +10,23 @@ import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
 import { FinancialWarnings } from "../../shared/FinancialWarnings";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { PeriodContext } from "../shared/sharedApi";
 import { formatDecimal, formatDateTime } from "../../shared/format";
 import * as api from "./monthCloseApi";
 import "./monthClose.css";
 
+const checkHelp =
+  "선택한 달의 급여, 투입, 청구, 재무 항목, 영업 파트 정산을 점검합니다. " +
+  "확인이 필요한 항목의 [확인하기]를 누르면 해당 업무 화면으로 이동합니다. " +
+  "[다시 점검]을 누르면 점검 결과를 저장하며, 저장 검사 시각은 각 항목에서 확인할 수 있습니다.";
+
 const monthCloseGuide = (
   <>
     <section>
       <h3>마감 점검</h3>
-      <p>
-        선택한 달의 급여, 투입, 청구, 재무 항목, 영업 파트 정산을 점검합니다.
-        확인이 필요한 항목의 [확인하기]를 누르면 해당 업무 화면으로 이동합니다.
-        [다시 점검]을 누르면 점검 결과를 저장하며, 저장 검사 시각은 각 항목에서
-        확인할 수 있습니다.
-      </p>
+      <p>{checkHelp}</p>
     </section>
     <section>
       <h3>마감과 변경 이력</h3>
@@ -343,11 +344,13 @@ export function MonthCloseScreen() {
   const [opening, setOpening] = useState(false);
   const [needsReload, setNeedsReload] = useState(false);
   const action = useRef(false);
+  const reading = useRef(false);
   const generation = useRef(0);
   const currentMonth = useRef(month);
   currentMonth.current = month;
   const { pending, message, commit } = useCommitRefresh(failedRefresh);
   const blocked = pending || opening || needsReload;
+  const hasData = data != null && data.month === month;
   useEffect(() => {
     const changed = (event: Event) => {
       const detail = (
@@ -386,22 +389,29 @@ export function MonthCloseScreen() {
     return () =>
       window.removeEventListener("sicost:screen-period-changing", changing);
   }, [pending, opening, preview, reopen]);
-  const reload = useCallback(async () => {
-    if (!month) return;
+  const reload = useCallback(async ({ background = false } = {}) => {
+    if (!month || (background && reading.current)) return;
     const request = ++generation.current;
-    setLoading(true);
-    setError("");
+    reading.current = true;
+    if (!background) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const result = await api.getMonthCloses(month, page, size);
       if (request === generation.current && currentMonth.current === month) {
         setData(result);
+        setError("");
         setNeedsReload(false);
       }
     } catch (e) {
       if (request === generation.current) setError(errorText(e));
       throw e;
     } finally {
-      if (request === generation.current) setLoading(false);
+      if (request === generation.current) {
+        reading.current = false;
+        setLoading(false);
+      }
     }
   }, [month, page, size]);
   useEffect(() => {
@@ -414,13 +424,18 @@ export function MonthCloseScreen() {
     const refresh = () => {
       if (!action.current) void reload().catch(() => {});
     };
+    const refreshOnFocus = () => {
+      if (hasData && !action.current) {
+        void reload({ background: true }).catch(() => {});
+      }
+    };
     window.addEventListener(api.MONTH_CLOSE_COMMITTED, refresh);
-    window.addEventListener("focus", refresh);
+    window.addEventListener("focus", refreshOnFocus);
     return () => {
       window.removeEventListener(api.MONTH_CLOSE_COMMITTED, refresh);
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", refreshOnFocus);
     };
-  }, [reload]);
+  }, [hasData, reload]);
   const save = async (operation: () => Promise<unknown>) => {
     if (action.current || blocked) return;
     action.current = true;
@@ -632,7 +647,10 @@ export function MonthCloseScreen() {
             )}
             <section className="month-close-card sicost-section-card">
               <header className="sicost-section-heading">
-                <h2>마감 점검</h2>
+                <div className="month-close-section-title">
+                  <h2>마감 점검</h2>
+                  <HelpTooltip label="마감 점검" iconOnly>{checkHelp}</HelpTooltip>
+                </div>
                 {warnings.length > 0 && (
                   <FinancialWarnings warnings={warnings} />
                 )}
