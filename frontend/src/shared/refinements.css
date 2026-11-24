@@ -213,3 +213,8 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
   font-weight: 500;
 }
 .sicost-toast-stack .sicost-toast-check { flex: none; color: #4ade80; }
+.sicost-toast-stack .sicost-toast.sicost-tone-bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+  border: 1px solid currentColor;
+}

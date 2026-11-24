@@ -6,7 +6,7 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { PeriodSelector } from "../shared/PeriodSelector";
 import { getSharedCodes } from "../shared/sharedApi";
-import { ErrorBanner, StatusBadge, Toast } from "../../shared/Feedback";
+import { ErrorBanner, StatusBadge, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 
@@ -899,9 +899,11 @@ export function FinancialItemsEditor({
           </button>
         </div>
       )}
-      {state.message && !state.error && <Toast message={state.message} />}
+      {state.message && !state.error && (
+        <FloatingToast key={state.messageSequence} message={state.message} />
+      )}
       {state.error != null && (
-        <Toast
+        <FloatingToast
           tone="bad"
           message={
             state.error instanceof Error
