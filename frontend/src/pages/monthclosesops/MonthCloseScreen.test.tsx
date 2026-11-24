@@ -235,26 +235,29 @@ it("uses the server history count and returns to page one when page size changes
   await screen.findByText("1-20 / 51건");
   expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 1, 20);
 });
-it.each([0, 3])(
-  "summarizes the server warning count %i in the heading",
-  async (warningCount) => {
-    vi.mocked(api.getMonthCloses).mockResolvedValue({
-      ...data(),
-      warningCount,
-    });
-    await mount();
-    const summary = screen.getByTestId("month-close-check-summary");
-    expect(summary).toHaveRole("status");
-    expect(summary).toHaveTextContent("전체 6개");
-    expect(within(summary).getByText(
-      warningCount ? `확인 필요 ${warningCount}개` : "모두 정상",
-    )).toHaveClass(warningCount ? "sicost-tone-warn" : "sicost-tone-ok");
-    expect(summary.closest("header")).toContainElement(
-      screen.getByRole("heading", { name: "마감 점검" }),
-    );
-  },
-);
-it("preserves the closed-month notice without the pre-close summary", async () => {
+it("opens the shared warning dialog from the check heading", async () => {
+  await mount();
+  const title = screen.getByRole("heading", { name: "마감 점검" });
+  const warning = screen.getByRole("button", { name: "확인 필요 1건" });
+  expect(title.closest("header")).toContainElement(warning);
+  await userEvent.click(warning);
+  const dialog = screen.getByRole("dialog", { name: "확인 필요 1건" });
+  expect(within(dialog).getByRole("heading", { name: "2026-01" })).toBeVisible();
+  expect(within(dialog).getByText("영업 파트 정산 · 전체 원천 점검")).toBeVisible();
+  expect(within(dialog).queryByText(/급여 업로드/)).not.toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  expect(dialog).not.toBeInTheDocument();
+});
+it("omits the warning button when all checks are normal", async () => {
+  vi.mocked(api.getMonthCloses).mockResolvedValue({
+    ...data(),
+    warningCount: 0,
+    checks: checks.map((check) => ({ ...check, status: "OK" })),
+  });
+  await mount();
+  expect(screen.queryByRole("button", { name: /확인 필요 .*건/ })).not.toBeInTheDocument();
+});
+it("preserves the closed-month notice without the pre-close warning button", async () => {
   vi.mocked(api.getMonthCloses).mockResolvedValue({
     ...data(),
     status: "CLOSE",
@@ -263,7 +266,7 @@ it("preserves the closed-month notice without the pre-close summary", async () =
   });
   await mount();
   expect(
-    screen.queryByTestId("month-close-check-summary"),
+    screen.queryByRole("button", { name: /확인 필요 .*건/ }),
   ).not.toBeInTheDocument();
   expect(screen.getByText(/2026-01는 마감되었습니다/)).toHaveTextContent(
     "고칠 내용은 다음 달 전월 조정으로 입력하세요.",

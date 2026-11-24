@@ -9,6 +9,7 @@ import { Pagination } from "../../shared/Pagination";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { PeriodContext } from "../shared/sharedApi";
 import { formatDecimal, formatDateTime } from "../../shared/format";
@@ -487,6 +488,14 @@ export function MonthCloseScreen() {
     });
   };
 
+  const warnings = data?.status === "WORK"
+    ? data.checks
+        .filter((check) => check.status === "WARN")
+        .map((check) =>
+          `${data.month} ${check.name}${check.description ? ` · ${check.description}` : ""}`,
+        )
+    : [];
+
   return (
     <SharedScreenFrame
       screenId="UI-14"
@@ -624,18 +633,10 @@ export function MonthCloseScreen() {
             <section className="month-close-card sicost-section-card">
               <header className="sicost-section-heading">
                 <h2>마감 점검</h2>
-                {data.status === "WORK" ? (
-                  <div
-                    className="month-close-check-summary"
-                    role="status"
-                    data-testid="month-close-check-summary"
-                  >
-                    <span className="month-close-section-note">전체 {data.checks.length}개</span>
-                    <StatusBadge tone={data.warningCount > 0 ? "warn" : "ok"}>
-                      {data.warningCount > 0 ? `확인 필요 ${data.warningCount}개` : "모두 정상"}
-                    </StatusBadge>
-                  </div>
-                ) : (
+                {warnings.length > 0 && (
+                  <FinancialWarnings warnings={warnings} />
+                )}
+                {data.status === "CLOSE" && (
                   <span className="month-close-section-note">
                     마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다.
                   </span>
