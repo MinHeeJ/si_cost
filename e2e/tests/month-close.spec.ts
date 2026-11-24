@@ -66,20 +66,18 @@ test("실제 API의 현재 또는 당시 6점검·이력을 표시하고 서버 
     await expect(
       page.getByRole("button", { name: "전월 조정 입력", exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByTestId("month-close-check-banner")).toHaveCount(0);
+    await expect(page.getByTestId("month-close-check-summary")).toHaveCount(0);
     await expect(page.getByTestId("month-close-check-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-close-button")).toHaveCount(0);
     await expect(page.getByTestId("month-close-reopen-button")).toHaveCount(
       data.canReopen ? 1 : 0,
     );
   } else {
-    const banner = page.getByTestId("month-close-check-banner");
-    await expect(banner).toHaveText(
-      `${data.month} 마감 전 점검 6개 중 ${data.warningCount}개를 확인해야 합니다.`,
-    );
-    await expect(banner).toHaveClass(
-      new RegExp(data.warningCount > 0 ? "warn" : "info"),
-    );
+    const summary = page.getByTestId("month-close-check-summary");
+    await expect(summary).toContainText(`전체 ${data.checks.length}개`);
+    await expect(
+      summary.getByText(data.warningCount ? `확인 필요 ${data.warningCount}개` : "모두 정상"),
+    ).toHaveClass(new RegExp(data.warningCount ? "sicost-tone-warn" : "sicost-tone-ok"));
     await expect(page.getByTestId("month-close-check-button")).toBeEnabled({
       enabled: data.managementAllowed && data.canCheck,
     });

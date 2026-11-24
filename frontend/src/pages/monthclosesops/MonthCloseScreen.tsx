@@ -604,16 +604,6 @@ export function MonthCloseScreen() {
               </span>
             </PeriodStatus>
 
-            {data.status === "WORK" && (
-              <div
-                className={`month-close-check-banner ${data.warningCount > 0 ? "warn" : "info"}`}
-                role={data.warningCount > 0 ? "alert" : "status"}
-                data-testid="month-close-check-banner"
-              >
-                {data.month} 마감 전 점검 6개 중 {data.warningCount}개를
-                확인해야 합니다.
-              </div>
-            )}
             {data.status === "CLOSE" && (
               <div
                 className="month-close-lock"
@@ -634,7 +624,18 @@ export function MonthCloseScreen() {
             <section className="month-close-card sicost-section-card">
               <header className="sicost-section-heading">
                 <h2>마감 점검</h2>
-                {data.status === "CLOSE" && (
+                {data.status === "WORK" ? (
+                  <div
+                    className="month-close-check-summary"
+                    role="status"
+                    data-testid="month-close-check-summary"
+                  >
+                    <span className="month-close-section-note">전체 {data.checks.length}개</span>
+                    <StatusBadge tone={data.warningCount > 0 ? "warn" : "ok"}>
+                      {data.warningCount > 0 ? `확인 필요 ${data.warningCount}개` : "모두 정상"}
+                    </StatusBadge>
+                  </div>
+                ) : (
                   <span className="month-close-section-note">
                     마감 당시 남은 항목은 마감 이력에서 볼 수 있습니다.
                   </span>

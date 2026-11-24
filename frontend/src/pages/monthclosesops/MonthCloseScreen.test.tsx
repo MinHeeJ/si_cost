@@ -236,25 +236,25 @@ it("uses the server history count and returns to page one when page size changes
   expect(api.getMonthCloses).toHaveBeenLastCalledWith("2026-01", 1, 20);
 });
 it.each([0, 3])(
-  "shows the pre-close banner from server warning count %i above the checks",
+  "summarizes the server warning count %i in the heading",
   async (warningCount) => {
     vi.mocked(api.getMonthCloses).mockResolvedValue({
       ...data(),
       warningCount,
     });
     await mount();
-    const banner = screen.getByTestId("month-close-check-banner");
-    expect(banner).toHaveTextContent(
-      `2026-01 마감 전 점검 6개 중 ${warningCount}개를 확인해야 합니다.`,
+    const summary = screen.getByTestId("month-close-check-summary");
+    expect(summary).toHaveRole("status");
+    expect(summary).toHaveTextContent("전체 6개");
+    expect(within(summary).getByText(
+      warningCount ? `확인 필요 ${warningCount}개` : "모두 정상",
+    )).toHaveClass(warningCount ? "sicost-tone-warn" : "sicost-tone-ok");
+    expect(summary.closest("header")).toContainElement(
+      screen.getByRole("heading", { name: "마감 점검" }),
     );
-    expect(banner).toHaveClass(warningCount ? "warn" : "info");
-    expect(
-      banner.compareDocumentPosition(screen.getByText("마감 점검")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   },
 );
-it("preserves the closed-month notice instead of the pre-close banner", async () => {
+it("preserves the closed-month notice without the pre-close summary", async () => {
   vi.mocked(api.getMonthCloses).mockResolvedValue({
     ...data(),
     status: "CLOSE",
@@ -263,7 +263,7 @@ it("preserves the closed-month notice instead of the pre-close banner", async ()
   });
   await mount();
   expect(
-    screen.queryByTestId("month-close-check-banner"),
+    screen.queryByTestId("month-close-check-summary"),
   ).not.toBeInTheDocument();
   expect(screen.getByText(/2026-01는 마감되었습니다/)).toHaveTextContent(
     "고칠 내용은 다음 달 전월 조정으로 입력하세요.",
