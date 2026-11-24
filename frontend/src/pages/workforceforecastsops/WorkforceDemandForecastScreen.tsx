@@ -1,6 +1,8 @@
+import { CalculationMethods } from "../../shared/CalculationMethods";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
-import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
+import { PeriodStatus } from "../../shared/PeriodStatus";
+import { StatusBadge } from "../../shared/Feedback";
 import { useEffect, useRef, useState } from "react";
 
 import { ApiError } from "../../shared/api";
@@ -31,9 +33,50 @@ const sourceEvents = [
 ];
 const people = (value: string | null | undefined) =>
   formatFixedDecimal(value, 1);
+const forecastMonthLabel = new Intl.DateTimeFormat("ko-KR", {
+  year: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+function forecastRange(from: string, months: number) {
+  const first = new Date(`${from}-01T00:00:00Z`);
+  const last = new Date(first);
+  last.setUTCMonth(last.getUTCMonth() + months - 1);
+  return `${forecastMonthLabel.format(first)} ~ ${forecastMonthLabel.format(last)}`;
+}
+
 function failure(error: unknown) {
   return `${error instanceof Error ? error.message : "조회하지 못했습니다."}${error instanceof ApiError ? ` · 요청 ID ${error.body.requestId}` : ""}`;
 }
+
+const workforceForecastGuide = (
+  <dl>
+    <div>
+      <dt>예측 연도 선택</dt>
+      <dd>
+        올해를 선택하면 이번 달부터 12월까지, 내년을 선택하면 1월부터
+        12월까지 전체 직무의 전망을 봅니다.
+      </dd>
+    </div>
+    <div>
+      <dt>월별 필요·가용 인력</dt>
+      <dd>
+        필요 인력에는 영업 기회의 수요와 진행 프로젝트의 미충원분이 포함됩니다.
+        차이는 가용 인력에서 필요 인력을 뺀 값입니다. 1 MM은 한 사람이 한 달간
+        풀타임으로 일하는 양입니다.
+      </dd>
+    </div>
+    <div>
+      <dt>산출 근거와 채용 검토</dt>
+      <dd>
+        하단의 [계산 방법]에서 직무별 월별 산출 값과 채용 검토 근거를 확인할 수
+        있습니다.
+      </dd>
+    </div>
+  </dl>
+);
+
 export function WorkforceDemandForecastScreen() {
   const [context, setContext] = useState<PeriodContext>();
   const [year, setYear] = useState("");
@@ -108,19 +151,43 @@ export function WorkforceDemandForecastScreen() {
     }
   };
   const currentYear = context?.currentMonth.slice(0, 4);
+  const isCurrentYear = year === currentYear;
   const query =
     context && year
       ? {
-          from: year === currentYear ? context.currentMonth : `${year}-01`,
+          from: isCurrentYear ? context.currentMonth : `${year}-01`,
           months:
-            year === currentYear
+            isCurrentYear
               ? 13 - Number(context.currentMonth.slice(5))
               : 12,
           includeUnfilled: true,
         }
       : undefined;
   return (
-    <SharedScreenFrame screenId="UI-17" periodBar={null}>
+    <SharedScreenFrame
+      screenId="UI-17"
+      screenGuide={workforceForecastGuide}
+      periodBar={
+        currentYear && query ? (
+          <section className="sicost-period-bar" aria-label="화면 기간">
+            <div className="sicost-period-controls">
+              <PeriodSelector
+                type="YEAR"
+                label="예측 연도"
+                value={year}
+                min={currentYear}
+                max={String(Math.min(9999, Number(currentYear) + 1))}
+                disabled={pending}
+                onChange={(value) => void changeYear(value)}
+              />
+              <StatusBadge tone={isCurrentYear ? "ok" : "info"}>
+                {isCurrentYear ? "올해" : "내년·계획"}
+              </StatusBadge>
+            </div>
+          </section>
+        ) : null
+      }
+    >
       <section
         className="workforce-forecast"
         data-testid="workforce-forecast-screen"
@@ -140,23 +207,14 @@ export function WorkforceDemandForecastScreen() {
           <p role="status">기간을 불러오는 중입니다.</p>
         )}
         {context && query && (
-          <>
-            <div className="sicost-period-bar">
-              <PeriodSelector
-                type="YEAR"
-                label="예측 연도"
-                value={year}
-                min={currentYear!}
-                max={String(Math.min(9999, Number(currentYear) + 1))}
-                disabled={pending}
-                onChange={(v) => void changeYear(v)}
-              />
-              <span className="workforce-forecast-info">예측</span>
-              <span>인력 운영 보드의 ‘수요·공급’과 같은 계산입니다.</span>
-              <span>기준일 {context.currentDate}</span>
-            </div>
-            <WorkforceForecastPanel query={query} disabled={pending} />
-          </>
+          <WorkforceForecastPanel
+            query={query}
+            basisDate={context.currentDate}
+            disabled={pending}
+            periodRule={
+              isCurrentYear ? "이번 달부터 12월까지" : "내년 1월부터 12월까지"
+            }
+          />
         )}
       </section>
     </SharedScreenFrame>
@@ -164,11 +222,15 @@ export function WorkforceDemandForecastScreen() {
 }
 export function WorkforceForecastPanel({
   query,
+  basisDate,
   disabled = false,
+  periodRule,
   onDownload,
 }: {
   query: api.WorkforceForecastQuery;
+  basisDate?: string;
   disabled?: boolean;
+  periodRule?: string;
   onDownload?(unit: api.WorkforceAmountUnit): Promise<void>;
 }) {
   const [data, setData] = useState<api.WorkforceForecast>();
@@ -244,6 +306,26 @@ export function WorkforceForecastPanel({
       setDownloading(false);
     }
   };
+  const refreshButton = (
+    <button
+      type="button"
+      data-testid="workforce-refresh"
+      disabled={loading || disabled}
+      onClick={() => setReload((n) => n + 1)}
+    >
+      재조회
+    </button>
+  );
+  const downloadButton = !mobile && (
+    <button
+      type="button"
+      data-testid="workforce-download"
+      disabled={disabled || loading || downloading || !data}
+      onClick={() => void download()}
+    >
+      {downloading ? "파일 생성 중…" : "엑셀 다운로드"}
+    </button>
+  );
   return (
     <section
       className="workforce-forecast"
@@ -251,29 +333,28 @@ export function WorkforceForecastPanel({
       aria-busy={loading}
     >
       <div className="workforce-forecast-toolbar">
-        <p>
-          {query.from} ~{" "}
-          {data?.totals.at(-1)?.month ?? `${query.from.slice(0, 4)}-12`} · 전체
-          직무
-        </p>
-        <ScreenTitleActions>
-          {!mobile && (
-            <button
-              data-testid="workforce-download"
-              disabled={disabled || loading || downloading || !data}
-              onClick={() => void download()}
-            >
-              {downloading ? "파일 생성 중…" : "엑셀 다운로드"}
-            </button>
+        <PeriodStatus
+          inline
+          className={`sicost-period-summary workforce-forecast-scope${basisDate ? " workforce-forecast-scope-with-basis" : ""}`}
+        >
+          {basisDate && (
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">기준일</span>
+              <b>{basisDate}</b>
+            </span>
           )}
-          <button
-            data-testid="workforce-refresh"
-            disabled={loading || disabled}
-            onClick={() => setReload((n) => n + 1)}
-          >
-            재조회
-          </button>
-        </ScreenTitleActions>
+          <span className="sicost-period-summary-item">
+            <span className="sicost-period-summary-label">예측 기간</span>
+            <b>{forecastRange(query.from, query.months)}</b>
+          </span>
+          <span className="sicost-period-summary-item">
+            {periodRule ? `${periodRule} · 전체 직무` : "전체 직무"}
+          </span>
+        </PeriodStatus>
+        <div className="workforce-forecast-actions">
+          {refreshButton}
+          {downloadButton}
+        </div>
       </div>
       {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
       {loading && <p role="status">예측을 불러오는 중입니다.</p>}
@@ -290,10 +371,6 @@ export function WorkforceForecastPanel({
       {downloaded && <p role="status">다운로드했습니다.</p>}
       {data && (
         <>
-          <p className="workforce-forecast-muted">
-            기준일 {data.basisDate} · 기준월 {data.standardMonth} · 미충원 포함
-            · 단위: 명(MM)
-          </p>
           {data.issues.length > 0 && (
             <div role="note" className="workforce-forecast-warning">
               <strong>원천·기준 미확인 — 0과 구분합니다.</strong>
@@ -339,17 +416,22 @@ export function WorkforceForecastPanel({
             <>
               <WorkforceBars data={data} />
               <section className="workforce-forecast-card">
-                <h2>전체 사람수(MM)</h2>
+                <h2>월별 필요·가용 인력 (MM)</h2>
                 <div className="sicost-table-viewport">
-                  <table className="sicost-table">
+                  <table
+                    aria-label="월별 필요·가용 인력"
+                    className="sicost-table workforce-forecast-table"
+                  >
                     <thead>
                       <tr>
-                        <th>
+                        <th scope="col">
                           구분
                           <FieldHelp label="구분" kind="B" />
                         </th>
                         {data.totals.map((m) => (
-                          <th key={m.month}>{m.month}</th>
+                          <th scope="col" key={m.month}>
+                            {m.month}
+                          </th>
                         ))}
                       </tr>
                     </thead>
@@ -393,58 +475,135 @@ export function WorkforceForecastPanel({
               </section>
             </>
           )}
-          <details className="workforce-forecast-card">
-            <summary data-testid="workforce-calculation-toggle">
-              계산 방법 / 범위 / 기준일
-            </summary>
-            <p>
-              활성 직접 인력의 주직무 기준입니다. 입퇴사와 하루라도 겹치는
-              휴직월을 제외하고 확정 MM과 종료 후 예상 연장을 차감합니다.
-              가배정은 차감하지 않습니다.
-            </p>
-            <p>
-              필요 인력은 기회 인원×월MM×확률 및 진행 프로젝트 미충원입니다.
-              직무별 1자리 HALF_UP 후 합산합니다. 차이=가용−필요, 경계와 같은
-              값은 경고가 아닙니다.
-            </p>
-            <p>추가 투입하지 않으면 PM이 인원 계획을 실제에 맞게 줄입니다.</p>
-            {data.jobDiagnostics.map((j, n) => (
-              <p
-                key={`${j.jobCode}:${j.month.month}`}
-                data-testid={`workforce-basis-${n}`}
-              >
-                {j.jobCode} · {j.month.month} · 반올림 전 가용{" "}
-                {j.month.rawSupply ?? "–"} / 기회{" "}
-                {j.month.rawOpportunityDemand ?? "–"} / 미충원{" "}
-                {j.month.rawUnfilledDemand ?? "–"} · {j.basis}
-              </p>
-            ))}
-            <h3>채용 검토 근거</h3>
-            {data.hiring.length === 0 ? (
-              <p>
-                {data.issues.length
-                  ? "미확인 원천과 기준을 확인해 주세요."
-                  : "채용 검토가 필요한 직무가 없습니다."}
-              </p>
-            ) : (
-              data.hiring.map((h) => (
-                <p
-                  key={h.jobCode}
-                  data-testid={`workforce-hiring-${h.jobCode}`}
-                >
-                  {h.jobCode} · 첫부족월 {h.firstShortageMonth} · 최대부족{" "}
-                  {people(h.maximumShortage)}명 · 권장시작{" "}
-                  {h.startNow ? "지금" : h.recommendedStartMonth} · 후보{" "}
-                  {h.candidateCount}명
-                </p>
-              ))
-            )}
-          </details>
+          <WorkforceForecastCalculation data={data} />
         </>
       )}
     </section>
   );
 }
+
+const workforceCalculationMethods = [
+  {
+    metric: "가용 인력",
+    formula:
+      "1인당 1 MM − 확정 투입 MM − 예상 연장 MM. 음수는 0으로 보고 직무별로 합산합니다.",
+    reference:
+      "활성 직접 인력의 주직무를 기준으로 집계합니다. 입사월부터 퇴사월까지 반영하며, 휴직과 하루라도 겹치는 달은 제외합니다. 가배정은 차감하지 않습니다.",
+  },
+  {
+    metric: "필요 인력",
+    formula: "영업 기회 인원 × 월 MM × 수주 확률 + 진행 프로젝트 미충원 MM",
+    reference:
+      "미충원 MM은 직무별 인원 계획에서 확정 투입분을 뺀 잔여량을 남은 계약 개월에 나눠 반영합니다.",
+  },
+  {
+    metric: "차이와 경고",
+    formula: "가용 인력 − 필요 인력",
+    reference:
+      "가용과 필요는 직무별로 소수점 첫째 자리까지 반올림한 뒤 합산합니다. 차이가 부족·여유 기준을 넘을 때 경고합니다.",
+  },
+] as const;
+
+function WorkforceForecastCalculation({ data }: { data: api.WorkforceForecast }) {
+  return (
+    <CalculationMethods
+      rows={workforceCalculationMethods}
+      testId="workforce-calculation-toggle"
+    >
+      <div className="workforce-calculation-detail">
+        <p>
+          기준일 {data.basisDate}에 진행 중인 프로젝트를 판단합니다. 운영
+          기준은 {data.standardMonth}에 적용되는 값을 사용하며, 전체 직무의{" "}
+          {forecastRange(data.from, data.months)} 전망을 집계합니다.
+        </p>
+        <p>
+          추가 투입 계획이 없다면 PM이 인원 계획을 실제 투입에 맞게 조정합니다.
+        </p>
+        <section>
+          <h3>직무별 월별 산출 근거 (반올림 전 MM)</h3>
+          {data.jobDiagnostics.length === 0 ? (
+            <p>표시할 직무별 산출 근거가 없습니다.</p>
+          ) : (
+            <div className="sicost-calculation-table-scroll">
+              <table
+                aria-label="직무별 월별 산출 근거"
+                className="sicost-calculation-table workforce-calculation-data"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">직무 코드</th>
+                    <th scope="col">예측 월</th>
+                    <th scope="col">가용 MM</th>
+                    <th scope="col">영업 기회 수요 MM</th>
+                    <th scope="col">미충원 수요 MM</th>
+                    <th scope="col">산출 기준</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.jobDiagnostics.map(({ jobCode, month, basis }, index) => (
+                    <tr
+                      key={`${jobCode}:${month.month}`}
+                      data-testid={`workforce-basis-${index}`}
+                    >
+                      <th scope="row">{jobCode}</th>
+                      <td>{month.month}</td>
+                      <td>{month.rawSupply ?? "–"}</td>
+                      <td>{month.rawOpportunityDemand ?? "–"}</td>
+                      <td>{month.rawUnfilledDemand ?? "–"}</td>
+                      <td>{basis}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+        <section>
+          <h3>채용 검토 근거</h3>
+          {data.hiring.length === 0 ? (
+            <p>
+              {data.issues.length
+                ? "미확인 원천과 기준을 확인해 주세요."
+                : "채용 검토가 필요한 직무가 없습니다."}
+            </p>
+          ) : (
+            <div className="sicost-calculation-table-scroll">
+              <table
+                aria-label="채용 검토 근거"
+                className="sicost-calculation-table workforce-calculation-data"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">직무 코드</th>
+                    <th scope="col">첫 부족 월</th>
+                    <th scope="col">최대 부족 MM</th>
+                    <th scope="col">채용 검토 시작</th>
+                    <th scope="col">후보 인원</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.hiring.map((hiring) => (
+                    <tr
+                      key={hiring.jobCode}
+                      data-testid={`workforce-hiring-${hiring.jobCode}`}
+                    >
+                      <th scope="row">{hiring.jobCode}</th>
+                      <td>{hiring.firstShortageMonth}</td>
+                      <td>{people(hiring.maximumShortage)}</td>
+                      <td>{hiring.startNow ? "지금" : hiring.recommendedStartMonth}</td>
+                      <td>{hiring.candidateCount}명</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </CalculationMethods>
+  );
+}
+
 function difference(value: string | null, status: string) {
   if (value == null) return "– · 미확인";
   const zero = /^-?0(?:\.0+)?$/.test(value);

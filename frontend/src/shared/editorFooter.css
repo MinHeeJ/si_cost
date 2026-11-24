@@ -1,0 +1,30 @@
+.sicost-editor-footer {
+  position: fixed;
+  left: var(--sicost-editor-footer-left, 0px);
+  right: var(--sicost-editor-footer-right, 0px);
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+}
+
+.sicost-editor-footer > :first-child {
+  margin-inline-end: auto;
+}
+
+.sicost-editor-footer small {
+  color: var(--text-sub);
+}
+
+.sicost-editor-footer button {
+  box-shadow: none;
+}
+
+.sicost-editor-footer button:active:not(:disabled) {
+  transform: none;
+}

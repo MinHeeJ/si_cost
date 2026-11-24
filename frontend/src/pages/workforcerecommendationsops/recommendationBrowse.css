@@ -5,15 +5,15 @@
   gap: 16px;
   min-width: 0;
 }
-.recommendation-heading,
-.recommendation-pagination {
+.recommendation-heading {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-}
-.recommendation-heading {
   justify-content: space-between;
+}
+.recommendation-heading h2 {
+  margin: 0;
 }
 .recommendation-card {
   background: var(--surface);
@@ -37,6 +37,41 @@
 }
 .recommendation-filters .sicost-field {
   flex: 1 1 180px;
+  min-width: 0;
+}
+.recommendation-filters .sicost-field > :is(select, input) {
+  width: 100%;
+  min-width: 0;
+}
+.recommendation-condition-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.recommendation-condition-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+.sicost-banner.recommendation-condition-note {
+  display: block;
+  flex: 1 1 280px;
+  margin: 0;
+  padding: 8px 12px;
+}
+.recommendation-condition-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 4px;
+  font-weight: 750;
+}
+.recommendation-condition-actions > button {
+  margin-inline-start: auto;
 }
 .recommendation-results {
   border: 0;
@@ -47,6 +82,94 @@
 .recommendation-results[aria-disabled="true"] {
   opacity: 0.65;
 }
+.recommendation-card.recommendation-exclusions > header,
+.recommendation-exclusion-reasons {
+  display: grid;
+  justify-content: stretch;
+  gap: 8px;
+}
+.recommendation-exclusions :is(h2, h3, p) {
+  margin: 0;
+}
+.recommendation-exclusions p {
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.recommendation-exclusion-reasons h3 {
+  font-size: 14px;
+}
+.recommendation-exclusion-reason-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sicost-kpi-strip.recommendation-exclusion-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--divider);
+  box-shadow: none;
+}
+.recommendation-exclusions .recommendation-exclusion-summary > section {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.recommendation-exclusion-summary strong {
+  color: var(--text);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.recommendation-exclusion-summary > section:last-child strong {
+  color: var(--warn);
+}
+.recommendation-exclusions .recommendation-exclusion-table thead th {
+  text-align: center;
+}
+.recommendation-exclusions .recommendation-exclusion-table tbody td {
+  padding-block: 6px;
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.recommendation-exclusion-reason-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.recommendation-exclusion-reason-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--warn-bg);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.recommendation-exclusion-reason-list strong {
+  color: var(--warn);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.recommendation-exclusion-details {
+  border-top: 1px solid var(--divider);
+  padding-top: 12px;
+}
+.recommendation-exclusion-details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.recommendation-exclusion-details > .sicost-table-viewport {
+  margin-top: 10px;
+  max-height: 320px;
+}
 .recommendation-empty {
   padding: 48px 16px;
   color: var(--text-sub);
@@ -56,11 +179,17 @@
 .recommendation-saved p {
   overflow-wrap: anywhere;
 }
-.recommendation-pagination select {
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
+.recommendation-history > .sicost-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.recommendation-history .sicost-table thead th {
+  text-align: center;
+}
+.recommendation-history .sicost-table tbody td {
+  padding-block: 6px;
+  vertical-align: middle;
 }
 @media (max-width: 600px) {
   .recommendation-card {

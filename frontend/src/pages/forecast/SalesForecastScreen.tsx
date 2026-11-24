@@ -1,5 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
+import { CalculationMethods } from "../../shared/CalculationMethods";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -21,6 +23,37 @@ const unitNames: Record<api.ForecastAmountUnit, AmountUnit> = {
   THOUSAND: "천원",
   MILLION: "백만원",
 };
+const forecastMethods = [
+  {
+    metric: "월단위·파견 프로젝트 매출",
+    formula: "투입 배정의 해당 월 유상 매출",
+    reference: "확정 유상 투입을 철수일까지 반영하며 예상 연장은 제외합니다.",
+  },
+  {
+    metric: "턴키 프로젝트 매출",
+    formula: "(계약금액 − 미취소 청구액) ÷ 원래 남은 계약 개월 수",
+    reference:
+      "미래일의 미취소 청구액도 포함합니다. 잔액의 최솟값은 0원이고, 나눗셈의 나머지는 마지막 계약월에 반영합니다.",
+  },
+  {
+    metric: "영업 기회 매출",
+    formula: "예상 금액 × 수주 확률을 원 단위로 절사한 뒤 계약 개월 수로 나눔",
+    reference:
+      "월별 금액도 원 단위로 절사하고 나머지는 마지막 달에 반영합니다. 수주 후 프로젝트 매출로 집계합니다.",
+  },
+  {
+    metric: "가용 인력",
+    formula: "투입 가능한 인력 1인당 1 MM에서 확정 투입 MM과 예상 연장 MM을 차감",
+    reference:
+      "활성 직접 인력의 주직무에 입·퇴사월을 반영하고, 휴직과 하루라도 겹치는 달을 제외합니다. 가배정은 가용 인력에 남겨둡니다.",
+  },
+  {
+    metric: "필요 인력과 6개월 평균",
+    formula: "확률 반영 영업 기회 수요 + 진행 프로젝트의 직무별 미충원",
+    reference:
+      "직무별로 소수점 첫째 자리까지 반올림한 후 합산합니다. 6개월 평균은 월별 합계를 6으로 나눈 뒤 소수점 첫째 자리까지 반올림합니다.",
+  },
+] as const;
 export function SalesForecastScreen() {
   return (
     <SharedScreenFrame screenId="UI-29">
@@ -91,18 +124,53 @@ export function SalesForecastPanel() {
       aria-busy={loading}
     >
       <div className="sales-forecast-toolbar">
-        <h2>
-          매출·인력 예측 <span className="sales-forecast-badge">예측</span>
-        </h2>
-
-        <SalesForecastDownloadPanel amountUnit={amountUnit} />
-        <button
-          data-testid="forecast-refresh-button"
-          disabled={loading}
-          onClick={() => setRevision((v) => v + 1)}
-        >
-          재조회
-        </button>
+        {data && (
+          <PeriodStatus inline className="sicost-period-summary sales-forecast-scope">
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">기준일</span>
+              <b>{data.workforce.basisDate}</b>
+            </span>
+            <span className="sicost-period-summary-item">
+              <span className="sicost-period-summary-label">예측 기간</span>
+              <b>{data.from} ~ {data.revenueMonths.at(-1)?.month ?? data.from}</b>
+            </span>
+            <span className="sicost-period-summary-item">
+              조회한 달의 다음 달부터 {data.months}개월
+            </span>
+            <span className="sicost-period-summary-item sales-forecast-scope-note">
+              실제 손익·청구·미수에 저장하지 않습니다. 인력 필요에는 프로젝트
+              미충원이 포함됩니다.
+            </span>
+          </PeriodStatus>
+        )}
+        <div className="sales-forecast-actions">
+          {data && (
+            <label className="sicost-field" htmlFor="sales-forecast-unit">
+              금액 단위
+              <select
+                id="sales-forecast-unit"
+                data-testid="forecast-unit-select"
+                value={amountUnit}
+                onChange={(e) =>
+                  setAmountUnit(e.target.value as api.ForecastAmountUnit)
+                }
+              >
+                <option value="WON">원</option>
+                <option value="THOUSAND">천원</option>
+                <option value="MILLION">백만원</option>
+              </select>
+            </label>
+          )}
+          <button
+            type="button"
+            data-testid="forecast-refresh-button"
+            disabled={loading}
+            onClick={() => setRevision((v) => v + 1)}
+          >
+            재조회
+          </button>
+          <SalesForecastDownloadPanel amountUnit={amountUnit} />
+        </div>
       </div>
       {loading && <p role="status">예측을 불러오는 중입니다.</p>}
       {error != null && (
@@ -116,14 +184,6 @@ export function SalesForecastPanel() {
       )}
       {data && (
         <>
-          <p className="sales-forecast-muted">
-            범위 {data.from} ~ {data.revenueMonths.at(-1)?.month} · 기준일{" "}
-            {data.workforce.basisDate} · 기준월 {data.workforce.standardMonth}
-          </p>
-          <p className="sales-forecast-banner">
-            다음 달부터 6개월 예측입니다. 실제 손익·청구·미수에 저장하지
-            않습니다. 인력 필요에는 프로젝트 미충원이 포함됩니다.
-          </p>
           {data.workforce.issues.length > 0 && (
             <div className="sales-forecast-warning" role="note">
               <strong>원천·기준 미확인 — 0과 구분합니다.</strong>
@@ -191,31 +251,13 @@ export function SalesForecastPanel() {
             <h2>
               월별 매출 <small>단위: {unit}</small>
             </h2>
-            <label className="sicost-field" htmlFor="sales-forecast-unit">
-              금액 단위
-              <select
-                id="sales-forecast-unit"
-                data-testid="forecast-unit-select"
-                value={amountUnit}
-                onChange={(e) =>
-                  setAmountUnit(e.target.value as api.ForecastAmountUnit)
-                }
-              >
-                <option value="WON">원</option>
-                <option value="THOUSAND">천원</option>
-                <option value="MILLION">백만원</option>
-              </select>
-            </label>
             {identities.length === 0 && (
               <div className="sales-forecast-empty">
                 <p>예측 대상 프로젝트·기회가 없습니다.</p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>
-                  조건 초기화
-                </button>
               </div>
             )}
             <div className="sicost-table-viewport">
-              <table className="sicost-table">
+              <table className="sicost-table sales-forecast-table" aria-label="월별 매출">
                 <thead>
                   <tr>
                     <th scope="col">구분<FieldHelp label="구분" kind="B" /></th>
@@ -276,7 +318,7 @@ export function SalesForecastPanel() {
               월별 인력 수요·공급 <small>단위: 명</small>
             </h2>
             <div className="sicost-table-viewport">
-              <table className="sicost-table">
+              <table className="sicost-table sales-forecast-table" aria-label="월별 인력 수요·공급">
                 <thead>
                   <tr>
                     <th>구분<FieldHelp label="구분" kind="B" /></th>
@@ -326,20 +368,17 @@ export function SalesForecastPanel() {
                     ? "미확인 기준과 원천을 확인해 주세요."
                     : "채용 검토가 필요한 직무가 없습니다."}
                 </p>
-                <button type="button" onClick={() => setRevision((v) => v + 1)}>
-                  조건 초기화
-                </button>
               </div>
             ) : (
               <div className="sicost-table-viewport">
-                <table className="sicost-table">
+                <table className="sicost-table sales-forecast-table" aria-label="채용·외부인력 검토">
                   <thead>
                     <tr>
                       <th>직무<FieldHelp label="직무" kind="B" /></th>
-                      <th>첫부족월</th>
-                      <th>최대부족</th>
-                      <th>권장시작</th>
-                      <th>후보</th>
+                      <th scope="col">첫 부족 월</th>
+                      <th scope="col">최대 부족</th>
+                      <th scope="col">채용 검토 시작</th>
+                      <th scope="col">후보 인원</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -362,6 +401,7 @@ export function SalesForecastPanel() {
                         </td>
                         <td>
                           <Link
+                            className="sicost-text-link"
                             data-testid={`forecast-candidates-${h.jobCode}`}
                             to="/UI-33"
                             state={{ jobCode: h.jobCode }}
@@ -376,31 +416,39 @@ export function SalesForecastPanel() {
               </div>
             )}
           </section>
-          <details className="sales-forecast-card">
-            <summary data-testid="forecast-method-toggle">
-              계산 방법 / 원천
-            </summary>
-            <p>
-              MO/DP: 05 해당월 유상 매출, 철수일까지, 예상 연장 제외. TK: 미취소
-              청구(미래일 포함)를 차감한 잔액 ÷ 원래 전체 잔여 계약개월, 마지막
-              계약월 끝자리. 기회: DOWN(예상금액 ÷ 유효개월 × 확률 ÷ 100), 수주
-              후 중복 합산 없음.
-            </p>
-            <p>
-              공급: 활성 직접 인력의 주직무, 입퇴사·하루라도 겹친 휴직 제외.
-              확정월MM과 종료 후 예상 연장만 차감하며 가배정은 차감하지
-              않습니다. 필요: NEED 확률 수요 + 전체 계약의 직무별 미충원. 직무별
-              1자리 HALF_UP 결과합, 평균은 6개월 합 ÷ 6 HALF_UP 1자리입니다.
-            </p>
-            {data.revenueSources.map((r, i) => (
-              <p
-                key={`${r.sourceType}:${r.sourceId}:${r.month}`}
-                data-testid={`forecast-basis-${i}`}
-              >
-                {r.name} · {r.month}: {r.basis}
-              </p>
-            ))}
-          </details>
+          <CalculationMethods rows={forecastMethods} testId="forecast-method-toggle">
+            <div className="sales-forecast-basis">
+              <p>운영 기준은 {data.workforce.standardMonth}에 적용되는 값을 사용합니다.</p>
+              <h3>월별 매출 산출 근거</h3>
+              {data.revenueSources.length === 0 ? (
+                <p>표시할 매출 산출 근거가 없습니다.</p>
+              ) : (
+                <div className="sicost-calculation-table-scroll">
+                  <table aria-label="월별 매출 산출 근거" className="sicost-calculation-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">프로젝트·기회</th>
+                        <th scope="col">예측 월</th>
+                        <th scope="col">산출 기준</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.revenueSources.map((source, index) => (
+                        <tr
+                          key={`${source.sourceType}:${source.sourceId}:${source.month}`}
+                          data-testid={`forecast-basis-${index}`}
+                        >
+                          <th scope="row">{source.name}</th>
+                          <td>{source.month}</td>
+                          <td>{source.basis}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </CalculationMethods>
         </>
       )}
     </section>

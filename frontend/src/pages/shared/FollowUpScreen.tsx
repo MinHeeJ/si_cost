@@ -1,5 +1,3 @@
-import { HelpTooltip } from "../../shared/HelpTooltip";
-import { helpContent } from "../../shared/helpContent";
 import { useState } from "react";
 import { PeriodStatusTarget } from "../../shared/PeriodStatus";
 import { useScreenMotion } from "../../shared/useScreenMotion";
@@ -135,7 +133,6 @@ export function SharedScreenFrame({
             periodBar
           )}
           <div className="sicost-period-status-slot" ref={setStatusTarget} /></div>
-          {["UI-05","UI-11"].includes(screenId) && <HelpTooltip label="안내">{helpContent.filter(e=>e.screen===screenId && e.kind==="C").map((e,i)=><p key={i}>{e.text}</p>)}</HelpTooltip>}
           {analysisEntry?.scope && (
             <p className="sicost-banner sicost-tone-info" role="note">
               분석에서 연 원천 화면 · {analysisEntry.scope.fromMonth} ~{" "}

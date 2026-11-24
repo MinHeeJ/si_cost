@@ -3,7 +3,6 @@ import {
   screen,
   within,
   fireEvent,
-  waitFor,
 } from "../../shared/testSupport/businessFixtures";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ApiError } from "../../shared/api";
@@ -150,17 +149,16 @@ it("failed refresh never leaves outdated permissions presented as current", asyn
   );
   expect(screen.queryByRole("table")).not.toBeInTheDocument();
 });
-it("refresh replaces stored revision and settings without writing", async () => {
+it("refresh replaces the displayed permission settings without writing", async () => {
   render(<PermissionSettingsPanel />);
-  await screen.findByText("stored-revision");
+  await screen.findByText("허용 설정");
   vi.mocked(api.getCurrentUserPermissionSettings).mockResolvedValue({
     ...settings(),
     settingsRevision: "latest-revision",
     sensitiveView: false,
   });
   fireEvent.click(screen.getByRole("button", { name: "다시 조회" }));
-  expect(await screen.findByText("latest-revision")).toBeInTheDocument();
-  await waitFor(() =>
-    expect(screen.getByText("허용 안 함")).toBeInTheDocument(),
-  );
+  expect(await screen.findByText("허용 안 함")).toBeInTheDocument();
+  expect(screen.queryByText("latest-revision")).not.toBeInTheDocument();
+  expect(api.getCurrentUserPermissionSettings).toHaveBeenCalledTimes(2);
 });

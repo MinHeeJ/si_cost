@@ -1,6 +1,7 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
+import { Pagination } from "../../shared/Pagination";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import * as api from "./recommendationBrowseApi";
@@ -252,6 +253,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
                       ).map(([id, label]) => (
                         <th
                           key={id}
+                          scope="col"
                           aria-sort={
                             query.sort === id
                               ? query.direction === "DESC"
@@ -262,6 +264,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
                         >
                           <button
                             type="button"
+                            className="sicost-sort-header"
                             onClick={() =>
                               setQuery((old) => ({
                                 ...old,
@@ -294,6 +297,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
                         <td>
                           <button
                             type="button"
+                            className="sicost-text-link"
                             data-testid={`history-open-${row.rcmdId}`}
                             aria-pressed={selected === row.rcmdId}
                             onClick={() => setSelected(row.rcmdId)}
@@ -324,49 +328,17 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
                 </table>
               </div>
             )}
-            <nav
-              className="recommendation-pagination"
-              aria-label="추천 기록 페이지"
-            >
-              <span>전체 {data.totalCount}건</span>
-              <button
-                type="button"
-                data-testid="history-previous"
-                disabled={query.page <= 1}
-                onClick={() => setQuery({ ...query, page: query.page - 1 })}
-              >
-                이전
-              </button>
-              <span>{data.page}</span>
-              <button
-                type="button"
-                data-testid="history-next"
-                disabled={query.page * query.size >= data.totalCount}
-                onClick={() => setQuery({ ...query, page: query.page + 1 })}
-              >
-                다음
-              </button>
-              <label>
-                페이지 크기
-                <select
-                  data-testid="history-size"
-                  value={query.size}
-                  onChange={(e) =>
-                    setQuery({
-                      ...query,
-                      page: 1,
-                      size: Number(e.target.value),
-                    })
-                  }
-                >
-                  {[20, 50, 100].map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </nav>
+            <Pagination
+              label="추천 기록 페이지"
+              testId="history"
+              page={data.page}
+              size={query.size}
+              total={data.totalCount}
+              onPageChange={(page) => setQuery((old) => ({ ...old, page }))}
+              onSizeChange={(size) =>
+                setQuery((old) => ({ ...old, page: 1, size }))
+              }
+            />
           </>
         )}
         {selected && (

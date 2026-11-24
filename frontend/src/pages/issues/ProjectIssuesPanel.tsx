@@ -11,6 +11,7 @@ import {
 } from "../shared/sharedApi";
 import { notifyProjectsCommitted } from "../projects/projectsApi";
 import { getProjectStatusBoard } from "../apiops/projectAnalysisApi";
+import { ColumnSettingsButton } from "../me/ColumnPreferencesDialog";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
   ProjectIssueDialog,
@@ -171,27 +172,29 @@ export function ProjectIssuesPanel({
     setFilter(next);
     setDraft(next);
   }
+  const createAction = (
+    <button
+      type="button"
+      className="sicost-primary"
+      data-testid="issue-create"
+      disabled={!canRegister || locked || loading || refreshFailed}
+      onClick={() => setEditing("new")}
+    >
+      이슈 등록
+    </button>
+  );
   return (
     <section
       className="project-issues"
       data-testid="project-issues-panel"
       data-screen-id={board ? "SCR-UI-31" : "SCR-UI-01"}
     >
-      <header className="issue-toolbar">
-        <h2>
-          {board ? "이슈 모아 보기" : "이슈"} ({data?.openCount ?? "–"}){" "}
-          {projectName}
-        </h2>
-        <button
-          type="button"
-          className="sicost-primary"
-          data-testid="issue-create"
-          disabled={!canRegister || locked || loading || refreshFailed}
-          onClick={() => setEditing("new")}
-        >
-          이슈 등록
-        </button>
-      </header>
+      {!board && (
+        <header className="issue-toolbar">
+          <h2>이슈 ({data?.openCount ?? "–"}) {projectName}</h2>
+          {createAction}
+        </header>
+      )}
       {locked && (
         <p className="sicost-banner sicost-tone-lock">
           현재연도 진행·선투입 프로젝트만 편집할 수 있습니다. 종료·실주는 이력
@@ -267,7 +270,9 @@ export function ProjectIssuesPanel({
           </label>
         )}
       </FilterBar>
-      <span className="cost-help">기준일 {data?.baseDate ?? "–"}</span>
+      {!board && (
+        <span className="cost-help">기준일 {data?.baseDate ?? "–"}</span>
+      )}
       {settings.error != null && (
         <ErrorBanner
           message={
@@ -312,6 +317,17 @@ export function ProjectIssuesPanel({
           재조회만
         </button>
       )}
+      {board && (
+        <div className="project-analysis-toolbar">
+          {onColumnsChange && (
+            <ColumnSettingsButton
+              testId="project-issues-table-columns-button"
+              onClick={onColumnsChange}
+            />
+          )}
+          {createAction}
+        </div>
+      )}
       <ProjectIssueTable
         onReset={() => apply({ ...defaults, size: analysisPageSize(pageSize) })}
         data={data}
@@ -330,7 +346,7 @@ export function ProjectIssuesPanel({
           });
         }}
         view={columnView}
-        onColumnsChange={onColumnsChange}
+        onColumnsChange={board ? undefined : onColumnsChange}
       />
       {editing && selectedYear && data && (
         <ProjectIssueDialog

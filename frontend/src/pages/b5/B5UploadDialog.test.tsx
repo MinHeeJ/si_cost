@@ -264,8 +264,8 @@ it("검사실패는 빈 정상상태로 감추지 않는다", async () => {
   expect(screen.getByRole("button", { name: "검사" })).toBeEnabled();
   expect(api.createB5Apply).not.toHaveBeenCalled();
 });
-it("읽기전용 액션은 다운로드 가능하며 업로드를 막는다", () => {
+it("화면 상단에서 양식 다운로드 버튼을 숨기고 읽기 전용 업로드를 막는다", () => {
   render(<B5Actions year={2025} readOnly onApplied={vi.fn()} />);
   expect(screen.getByRole("button", { name: "엑셀 업로드" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "양식 내려받기" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: "양식 내려받기" })).not.toBeInTheDocument();
 });

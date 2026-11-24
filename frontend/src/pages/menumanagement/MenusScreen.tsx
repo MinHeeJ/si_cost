@@ -3,14 +3,17 @@ import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner } from "../../shared/Feedback";
+import { EditorFooter } from "../../shared/EditorFooter";
+import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { Icon } from "../../shared/Icon";
+import { Pagination } from "../../shared/Pagination";
+import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { COMMITTED_REFRESH_FAILED } from "../../shared/useCommitRefresh";
 import * as api from "./menuManagementApi";
 import { MenuRegistrationDialog } from "../menumanagementops/MenuRegistrationDialog";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import "./menus.css";
 
-const modeMessage = "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.";
 export function MenusScreen({
   onDirtyChange,
 }: {
@@ -34,6 +37,7 @@ export function MenusScreen({
     registration?: boolean;
   }>();
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  const editorRef = useRef<HTMLElement>(null);
   const busy = useRef(false),
     drag = useRef<string>();
   const dirty = Boolean(
@@ -161,19 +165,31 @@ export function MenusScreen({
   const roots = draft.filter((row) => row.level === 1);
   return (
     <section
+      ref={editorRef}
       className="menu-management"
       data-screen-id="SCR-UI-25"
       data-testid="menus-screen"
     >
-      <header className="menu-management-heading">
-        <div>
-          <p>시스템</p>
-          <h1>
-            메뉴 <small>UI-25</small>
-          </h1>
-        </div>
+      <ScreenTitleActions>
+        <button
+          type="button"
+          data-testid="menus-reload-button"
+          disabled={pending || loading}
+          onClick={() =>
+            dirty
+              ? setLeave({
+                  label: "최신값 다시 조회",
+                  proceed: () => void load(),
+                })
+              : void load()
+          }
+        >
+          {refreshOnly ? "저장 후 재조회" : "최신값 다시 조회"}
+        </button>
         {canRegister && (
           <button
+            type="button"
+            className="sicost-primary"
             data-testid="menus-register-button"
             disabled={loading || pending || !tree || refreshOnly}
             onClick={openRegistration}
@@ -181,8 +197,7 @@ export function MenusScreen({
             메뉴 등록
           </button>
         )}
-      </header>
-      <p className="sicost-banner sicost-tone-info">{modeMessage}</p>
+      </ScreenTitleActions>
       {message && (
         <p role="status" className="sicost-banner sicost-tone-info">
           {message}
@@ -205,41 +220,32 @@ export function MenusScreen({
           }}
         />
       )}
-      <div className="menu-management-actions">
-        <p>
-          드래그 또는 위·아래 버튼과 그룹 선택으로 순서를 편집합니다. 저장
-          전에는 반영되지 않습니다.
-        </p>
-        <button
-          data-testid="menus-reload-button"
-          disabled={pending || loading}
-          onClick={() =>
-            dirty
-              ? setLeave({
-                  label: "최신값 다시 조회",
-                  proceed: () => void load(),
-                })
-              : void load()
-          }
-        >
-          {refreshOnly ? "저장 후 재조회" : "최신값 다시 조회"}
-        </button>
-      </div>
       {loading ? (
         <p role="status">메뉴를 불러오는 중…</p>
       ) : (
-        <div className="sicost-table-viewport">
-          <table className="sicost-table">
+        <div className="sicost-table-viewport menu-management-viewport">
+          <table className="sicost-table" aria-label="메뉴 설정">
+            <colgroup>
+              <col className="menu-management-col-handle" />
+              <col className="menu-management-col-name" />
+              <col className="menu-management-col-screen" />
+              <col className="menu-management-col-order" />
+              <col />
+              <col className="menu-management-col-toggle" span={2} />
+              <col className="menu-management-col-lock" />
+              <col className="menu-management-col-history" />
+            </colgroup>
             <thead>
               <tr>
-                <th>손잡이</th>
-                <th>메뉴이름<FieldHelp label="메뉴이름" kind="B" /></th>
-                <th>화면번호<FieldHelp label="화면번호" kind="B" /></th>
-                <th>형제 내 순서</th>
-                <th>사용</th>
-                <th>PC전용</th>
-                <th>잠금</th>
-                <th>기록</th>
+                <th scope="col">이동</th>
+                <th scope="col">메뉴 이름<FieldHelp label="메뉴이름" kind="B" /></th>
+                <th scope="col">화면 번호<FieldHelp label="화면번호" kind="B" /></th>
+                <th scope="col">순서</th>
+                <th scope="col">대메뉴</th>
+                <th scope="col">사용</th>
+                <th scope="col">PC 전용</th>
+                <th scope="col">상태</th>
+                <th scope="col">이력</th>
               </tr>
             </thead>
             <tbody>
@@ -282,6 +288,7 @@ export function MenusScreen({
                       <td>
                         <button
                           type="button"
+                          className="menu-management-handle"
                           data-testid={`menu-drag-${row.menuId.toLowerCase()}`}
                           draggable={canUpdate && !pending}
                           disabled={!canUpdate || pending || refreshOnly}
@@ -312,11 +319,14 @@ export function MenusScreen({
                         </button>
                       </td>
                       <td>
-                        <div className="sicost-field menu-management-name">
-                          {row.level === 1 && (
+                        <div className="menu-management-name">
+                          {row.level === 1 ? (
                             <button
+                              type="button"
+                              className="menu-management-fold"
                               data-testid={`menu-collapse-${row.menuId.toLowerCase()}`}
                               aria-expanded={!collapsed.includes(row.menuId)}
+                              aria-label={`${row.name} ${collapsed.includes(row.menuId) ? "펼치기" : "접기"}`}
                               onClick={() =>
                                 setCollapsed((ids) =>
                                   ids.includes(row.menuId)
@@ -325,10 +335,10 @@ export function MenusScreen({
                                 )
                               }
                             >
-                              {collapsed.includes(row.menuId)
-                                ? "펼치기"
-                                : "접기"}
+                              <Icon name="chevron" size={15} />
                             </button>
+                          ) : (
+                            <span className="menu-management-child-mark" aria-hidden="true" />
                           )}
                           <input
                             data-testid={`menu-name-${row.menuId.toLowerCase()}`}
@@ -347,11 +357,11 @@ export function MenusScreen({
                           )}
                         </div>
                       </td>
-                      <td>{row.screenId ?? "–"}</td>
+                      <td className="menu-management-screen-number">{row.screenId ?? "–"}</td>
                       <td>
                         <div className="menu-management-order">
-                          <span>{row.sortOrder}</span>
                           <button
+                            type="button"
                             data-testid={`menu-up-${row.menuId.toLowerCase()}`}
                             aria-label={`${row.menuId} 위`}
                             disabled={
@@ -371,9 +381,11 @@ export function MenusScreen({
                               )
                             }
                           >
-                            위
+                            <Icon name="caretUp" size={20} fill="currentColor" stroke="none" />
                           </button>
+                          <span>{row.sortOrder}</span>
                           <button
+                            type="button"
                             data-testid={`menu-down-${row.menuId.toLowerCase()}`}
                             aria-label={`${row.menuId} 아래`}
                             disabled={
@@ -393,41 +405,41 @@ export function MenusScreen({
                               )
                             }
                           >
-                            아래
+                            <Icon name="caretDown" size={20} fill="currentColor" stroke="none" />
                           </button>
-                          {row.level === 2 && (
-                            <select
-                              data-testid={`menu-group-${row.menuId.toLowerCase()}`}
-                              aria-label={`${row.menuId} 그룹`}
-                              value={row.parentId!}
-                              disabled={
-                                !canUpdate ||
-                                pending ||
-                                refreshOnly ||
-                                protectedRow
-                              }
-                              onChange={(event) =>
-                                setDraft((items) =>
-                                  api.moveMenu(
-                                    items,
-                                    row.menuId,
-                                    event.target.value,
-                                    items.filter(
-                                      (item) =>
-                                        item.parentId === event.target.value,
-                                    ).length,
-                                  ),
-                                )
-                              }
-                            >
-                              {roots.map((root) => (
-                                <option key={root.menuId} value={root.menuId}>
-                                  {root.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
                         </div>
+                      </td>
+                      <td className="menu-management-parent">
+                        {row.level === 2 ? (
+                          <select
+                            data-testid={`menu-group-${row.menuId.toLowerCase()}`}
+                            aria-label={`${row.menuId} 그룹`}
+                            value={row.parentId!}
+                            disabled={
+                              !canUpdate || pending || refreshOnly || protectedRow
+                            }
+                            onChange={(event) => {
+                              const parentId = event.target.value;
+                              setDraft((items) =>
+                                api.moveMenu(
+                                  items,
+                                  row.menuId,
+                                  parentId,
+                                  items.filter((item) => item.parentId === parentId)
+                                    .length,
+                                ),
+                              );
+                            }}
+                          >
+                            {roots.map((root) => (
+                              <option key={root.menuId} value={root.menuId}>
+                                {root.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          "–"
+                        )}
                       </td>
                       <td>
                         {row.level === 2 && (
@@ -474,6 +486,7 @@ export function MenusScreen({
                       </td>
                       <td>
                         <button
+                          type="button"
                           data-testid={`menu-history-${row.menuId.toLowerCase()}`}
                           onClick={() => setHistory(row)}
                         >
@@ -490,11 +503,12 @@ export function MenusScreen({
           )}
         </div>
       )}
-      {canUpdate && (
-        <footer className="menu-management-actions">
-          <span>
-            {dirty ? "저장하지 않은 변경이 있습니다." : "저장된 메뉴 설정"}
-          </span>
+      {canUpdate && tree && (
+        <EditorFooter editorRef={editorRef} label="메뉴 설정 저장">
+          <div className="menu-management-footer-note">
+            <small>메뉴 이름, 순서, 사용 여부, PC 전용 설정을 함께 저장합니다.</small>
+            {dirty && <StatusBadge tone="warn">저장 전</StatusBadge>}
+          </div>
           <button
             data-testid="menus-cancel-button"
             disabled={!dirty || pending}
@@ -516,7 +530,7 @@ export function MenusScreen({
           >
             {pending ? "저장 중…" : "저장"}
           </button>
-        </footer>
+        </EditorFooter>
       )}
       {leave && (
         <Dialog
@@ -603,7 +617,7 @@ function MenuHistory({
   const [data, setData] = useState<api.MenuHistoryPage>(),
     [error, setError] = useState<unknown>(),
     [page, setPage] = useState(1),
-    [size, setSize] = useState(50),
+    [size, setSize] = useState<20 | 50 | 100>(50),
     [reload, setReload] = useState(0);
   useEffect(() => {
     let live = true;
@@ -622,19 +636,26 @@ function MenuHistory({
     };
   }, [menu.menuId, page, size, reload]);
   return (
-    <section
-      className="menu-management-history"
-      aria-label="메뉴 변경 이력"
-      data-testid="menu-history-panel"
-    >
-      <header className="menu-management-actions">
-        <h2>
-          {menu.name} ({menu.menuId}) 변경 이력
-        </h2>
-        <button data-testid="menu-history-close" onClick={onClose}>
-          닫기
+    <Dialog
+      open
+      wide
+      hideCancel
+      title={`${menu.name} (${menu.menuId}) 변경 이력`}
+      testId="menu-history-panel"
+      confirmTestId="menu-history-close"
+      confirmLabel="닫기"
+      onCancel={onClose}
+      onConfirm={onClose}
+      footerStart={
+        <button
+          type="button"
+          data-testid="menu-history-reload"
+          onClick={() => setReload((n) => n + 1)}
+        >
+          새로고침
         </button>
-      </header>
+      }
+    >
       {error != null ? (
         <ErrorBanner
           message={
@@ -646,14 +667,14 @@ function MenuHistory({
         <p role="status">이력을 불러오는 중…</p>
       ) : (
         <>
-          <div className="sicost-table-viewport">
-            <table className="sicost-table">
+          <div className="sicost-table-viewport menu-management-history">
+            <table className="sicost-table" aria-label="메뉴 변경 이력">
               <thead>
                 <tr>
                   <th>일시</th>
                   <th>항목</th>
-                  <th>전</th>
-                  <th>후</th>
+                  <th>변경 전</th>
+                  <th>변경 후</th>
                   <th>처리자</th>
                   <th>사유</th>
                 </tr>
@@ -692,48 +713,20 @@ function MenuHistory({
               <p className="sicost-empty">변경 이력이 없습니다.</p>
             )}
           </div>
-          <div className="menu-management-actions">
-            <button
-              data-testid="menu-history-prev"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              이전
-            </button>
-            <span>
-              {page} / {Math.max(1, Math.ceil(data.total / size))}
-            </span>
-            <button
-              data-testid="menu-history-next"
-              disabled={page * size >= data.total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              다음
-            </button>
-            <select
-              data-testid="menu-history-size"
-              aria-label="이력 한 화면 건수"
-              value={size}
-              onChange={(e) => {
-                setSize(Number(e.target.value));
-                setPage(1);
-              }}
-            >
-              {[20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-            <button
-              data-testid="menu-history-reload"
-              onClick={() => setReload((n) => n + 1)}
-            >
-              재조회
-            </button>
-          </div>
+          <Pagination
+            page={page}
+            size={size}
+            total={data.total}
+            onPageChange={setPage}
+            onSizeChange={(nextSize) => {
+              setSize(nextSize);
+              setPage(1);
+            }}
+            label="메뉴 변경 이력 페이지"
+            testId="menu-history"
+          />
         </>
       )}
-    </section>
+    </Dialog>
   );
 }

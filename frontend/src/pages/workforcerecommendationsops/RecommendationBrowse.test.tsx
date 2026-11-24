@@ -236,7 +236,7 @@ it("기록 열기·페이지·닫기는 GET만 사용하고 조건과 열린 화
     { page: 1, size: 50 },
     expect.any(AbortSignal),
   );
-  await userEvent.click(screen.getByTestId("history-next"));
+  await userEvent.click(screen.getByTestId("history-next-page"));
   await waitFor(() =>
     expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
       { page: 2, size: 50 },
@@ -244,9 +244,9 @@ it("기록 열기·페이지·닫기는 GET만 사용하고 조건과 열린 화
     ),
   );
   await waitFor(() =>
-    expect(screen.getByTestId("history-size")).toBeInTheDocument(),
+    expect(screen.getByTestId("history-page-size")).toBeInTheDocument(),
   );
-  await userEvent.selectOptions(screen.getByTestId("history-size"), "20");
+  await userEvent.selectOptions(screen.getByTestId("history-page-size"), "20");
   await waitFor(() =>
     expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
       { page: 1, size: 20 },
@@ -485,8 +485,8 @@ it("기록 빈 목록은 별도 안내이며 이전·다음이 비활성이다",
   });
   render(<RecommendationHistoryPanel onClose={vi.fn()} />);
   await screen.findByText("추천 기록이 없습니다.");
-  expect(screen.getByTestId("history-next")).toBeDisabled();
-  expect(screen.getByTestId("history-previous")).toBeDisabled();
+  expect(screen.getByTestId("history-next-page")).toBeDisabled();
+  expect(screen.getByTestId("history-previous-page")).toBeDisabled();
 });
 it("기록 오류는 문의번호·재조회이고 재시도도 GET만 한다", async () => {
   vi.mocked(api.getWorkforceRecommendationHistory).mockRejectedValueOnce(
@@ -527,7 +527,7 @@ it("로딩 상태는 기록 조회 중을 표시하고 서버 응답 전 행동�
   render(<RecommendationHistoryPanel onClose={vi.fn()} />);
   expect(screen.getByRole("status")).toHaveTextContent("기록 조회 중");
   expect(screen.getByTestId("history-search")).toBeDisabled();
-  expect(screen.queryByTestId("history-next")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("history-next-page")).not.toBeInTheDocument();
 });
 
 it("빈 추천에서도 서버의 제외 집계와 겹치는 개인 사유를 표시한다", async () => {
@@ -550,11 +550,74 @@ it("빈 추천에서도 서버의 제외 집계와 겹치는 개인 사유를 �
   });
   render(<WorkforceRecommendationsScreen />);
   const diagnostics = await screen.findByTestId("recommendation-exclusions");
-  expect(diagnostics).toHaveTextContent("전체 후보 3명 · 고유 제외 2명");
-  expect(diagnostics).toHaveTextContent("휴직 2명");
-  expect(diagnostics).toHaveTextContent("퇴사 또는 퇴사 예정 1명");
-  expect(diagnostics).toHaveTextContent("D-002: 휴직 · 퇴사 또는 퇴사 예정");
+  const summary = within(diagnostics).getByLabelText("후보 검토 요약");
+  for (const [label, count] of [
+    ["전체 검토", "3명"],
+    ["채점 대상", "1명"],
+    ["제외 인원", "2명"],
+  ]) {
+    expect(within(summary).getByText(label).parentElement).toHaveTextContent(count);
+  }
+  const reasons = within(diagnostics).getByRole("list", { name: "제외 사유별 인원" });
+  expect(
+    within(reasons).getByText("휴직").closest("li"),
+  ).toHaveTextContent("2명");
+  expect(
+    within(reasons).getByText("퇴사 또는 퇴사 예정").closest("li"),
+  ).toHaveTextContent("1명");
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  await userEvent.click(
+    within(diagnostics).getByRole("button", { name: "제외 사유별 인원 도움말" }),
+  );
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/제외 인원에는 한 번만 셉니다/);
+  await userEvent.keyboard("{Escape}");
+  const detail = within(diagnostics).getByText("개인별 제외 사유", { selector: "summary" });
+  expect(detail.parentElement).not.toHaveAttribute("open");
+  await userEvent.click(detail);
+  const individual = within(diagnostics).getByRole("table", { name: "개인별 제외 사유" });
+  expect(
+    within(individual).getByRole("row", { name: "D-002 휴직 · 퇴사 또는 퇴사 예정" }),
+  ).toBeVisible();
   expect(api.requestTargetRecommendation).toHaveBeenCalledTimes(1);
+});
+
+it("후보를 다시 읽어도 추천 실행 당시 제외 진단을 유지한다", async () => {
+  vi.mocked(api.requestTargetRecommendation).mockImplementation(async (condition) => ({
+    ...snapshot,
+    appliedCondition: condition,
+    exclusions: {
+      totalCandidateCount: 17,
+      excludedUniqueCount: 12,
+      reasonCountsOverlap: true,
+      byReason: [{ reason: "휴직", count: 12 }],
+      diagnostics: [],
+    },
+  }));
+  vi.mocked(api.getRecommendationHistorySnapshot).mockResolvedValue({
+    ...snapshot,
+    message: "후보 조회 완료",
+    exclusions: {
+      totalCandidateCount: 1,
+      excludedUniqueCount: 0,
+      reasonCountsOverlap: true,
+      byReason: [],
+      diagnostics: [],
+    },
+  });
+  render(
+    <WorkforceRecommendationsScreen
+      renderRecommendation={(value, _need, _canAct, { onRefresh }) => (
+        <button type="button" onClick={() => void onRefresh()}>
+          {value.message === "후보 조회 완료" ? value.message : "후보 새로고침"}
+        </button>
+      )}
+    />,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "후보 새로고침" }));
+  await screen.findByRole("button", { name: "후보 조회 완료" });
+  const summary = screen.getByLabelText("후보 검토 요약");
+  expect(within(summary).getByText("전체 검토").parentElement).toHaveTextContent("17명");
+  expect(within(summary).getByText("제외 인원").parentElement).toHaveTextContent("12명");
 });
 
 it("기록의 빈 결과 안에서 조건 초기화하면 필터와 오류를 지우고 전체를 다시 조회한다", async () => {
@@ -615,7 +678,7 @@ it("history headers request every ASC/DESC server sort and return to page one", 
       await screen.findByTestId("history-round-12");
     }
   }
-  fireEvent.click(screen.getByTestId("history-next"));
+  fireEvent.click(screen.getByTestId("history-next-page"));
   await waitFor(() =>
     expect(api.getWorkforceRecommendationHistory).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 2 }),

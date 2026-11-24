@@ -210,9 +210,10 @@ it("keeps ASGN rows, full totals and guidance instead of merging the same develo
   await screen.findAllByText("00012");
   expect(screen.getAllByText("00012")).toHaveLength(2);
   expect(screen.getByText("총 55건")).toBeInTheDocument();
-  expect(screen.getByTestId("withdrawal-guidance")).toHaveTextContent(
-    "없는 1명",
-  );
+  const guidance = screen.getByTestId("withdrawal-guidance");
+  expect(guidance).toHaveTextContent(/철수 예정\s*1명/);
+  expect(guidance).toHaveTextContent(/다음 배정 없음\s*1명/);
+  expect(guidance).toHaveTextContent(/추천 자리 있음\s*1명/);
   expect(api.createNextPositionRecommendation).not.toHaveBeenCalled();
 });
 it("applies drafts only on search, distinguishes UNSET from ALL and resets filters", async () => {
@@ -281,8 +282,8 @@ it("renders historical read-only rows and hides new recommendation controls", as
     screen.queryByRole("button", { name: /^추천/ }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByText("지난 연도는 조회만 할 수 있습니다."),
-  ).toBeInTheDocument();
+    screen.getByRole("group", { name: "조회 기간 상태" }),
+  ).toHaveTextContent("과거 조회 전용");
 });
 it("respects high/later/confirmed/candidate restrictions and allows existing ACT change", async () => {
   vi.mocked(api.getWithdrawals).mockResolvedValue(
@@ -381,7 +382,7 @@ it("opens the exact assignment drawer from the row and links projects to existin
     "href",
     "/UI-01?projectId=p-1&year=2026",
   );
-  fireEvent.click(screen.getByText("2026-11-15"));
+  fireEvent.click(screen.getByRole("cell", { name: "2026-11-15" }));
   expect(screen.getByRole("dialog")).toHaveTextContent("투입 상세 a-1");
 });
 it("restores the saved extension and exposes field/requestId when mutation fails", async () => {
@@ -439,10 +440,23 @@ it("provides loading, empty, and retryable failure states", async () => {
     await screen.findByText("조건에 맞는 결과가 없습니다."),
   ).toBeInTheDocument();
 });
-it("guidance recommendation is GET-only and does not pick an arbitrary person", async () => {
+it("explains the summary window in a tooltip and applies the three-month period via the filters", async () => {
   mount();
   await screen.findByText("00012");
-  fireEvent.click(screen.getByTestId("withdrawal-guidance-recommend"));
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "3개월 이내 철수 요약 도움말" }),
+  );
+  expect(screen.getByRole("tooltip")).toHaveTextContent(
+    "기준일부터 두 달 뒤 월말까지의 인원입니다. 표에는 선택한 연도의 배정이 표시됩니다.",
+  );
+  expect(
+    screen.queryByRole("button", { name: "3개월 안 조회" }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByTestId("withdrawal-period"), {
+    target: { value: "SOON" },
+  });
+  fireEvent.click(screen.getByTestId("withdrawal-search"));
   await waitFor(() =>
     expect(api.getWithdrawals).toHaveBeenLastCalledWith(
       expect.objectContaining({ period: "SOON", page: 1 }),

@@ -57,12 +57,18 @@ export function Toast({
   );
 }
 
-export function FloatingToast({ message }: { message: string }) {
+export function FloatingToast({
+  message,
+  durationMs = 3500,
+}: {
+  message: string;
+  durationMs?: number;
+}) {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const timer = window.setTimeout(() => setVisible(false), 3500);
+    const timer = window.setTimeout(() => setVisible(false), durationMs);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [durationMs]);
   return visible
     ? createPortal(
         <div className="sicost-toast-stack">

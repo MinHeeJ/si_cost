@@ -18,6 +18,23 @@
 .assignment-filters input:not([type="checkbox"]) {
   width: 160px;
 }
+.assignment-filter-label {
+  flex: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.assignment-extra-fields {
+  order: 1;
+  flex: 1 0 100%;
+  border-top: 1px solid var(--divider);
+  padding-top: 12px;
+}
+.assignment-filters .assignment-extra-month {
+  width: max-content;
+  max-width: 100%;
+  flex-direction: row;
+  align-items: center;
+}
 .assignment-cancelled {
   display: inline-flex;
   align-items: center;
@@ -58,6 +75,47 @@
 [data-testid="assignment-candidates-panel"] {
   max-width: none;
   width: 100%;
+}
+.assignment-candidates-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.assignment-candidates-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.assignment-candidates-table .sicost-table th,
+.assignment-candidates-table .sicost-table td:nth-child(n + 2):nth-child(-n + 5) {
+  text-align: center;
+}
+.assignment-candidate-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.assignment-candidate-actions button {
+  height: 32px;
+  padding: 0 10px;
+}
+button.assignment-candidate-confirm {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-color: color-mix(in srgb, var(--ok) 35%, var(--divider));
+}
+button.assignment-candidate-exclude {
+  color: var(--bad);
+  background: var(--surface);
+  border-color: var(--bad);
+}
+button.assignment-candidate-confirm:hover:not(:disabled) {
+  border-color: var(--ok);
+}
+button.assignment-candidate-exclude:hover:not(:disabled) {
+  background: var(--bad-bg);
 }
 .assignment-form input,
 .assignment-form select {

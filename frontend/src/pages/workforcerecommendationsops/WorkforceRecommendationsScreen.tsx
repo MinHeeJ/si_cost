@@ -1,6 +1,9 @@
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { Icon } from "../../shared/Icon";
+import { KpiStrip } from "../../shared/Surface";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import { RecommendationHistoryPanel } from "./RecommendationHistoryPanel";
 import {
@@ -10,6 +13,33 @@ import {
 import * as api from "./recommendationBrowseApi";
 import { useCodeNames } from "../../shared/codeNames";
 import "./recommendationBrowse.css";
+
+export const recommendationScreenGuide = (
+  <dl>
+    <div>
+      <dt>추천 조건 설정</dt>
+      <dd>
+        진행 중인 프로젝트나 영업 기회를 선택한 뒤 직무, 시작월, 요청 등급을
+        확인하세요. 영업 기회는 가배정할 자리도 선택합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>후보 비교와 배정</dt>
+      <dd>
+        순위와 항목별 점수를 보고 후보를 비교할 수 있습니다. 프로젝트는
+        배정, 영업 기회는 가배정을 진행할 수 있습니다. 후보 제외 사유는
+        아래의 [후보 제외 진단]에서 확인합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>추천 기록 확인</dt>
+      <dd>
+        [추천 기록]에서 실행한 추천의 조건과 당시 후보 점수를 확인할 수
+        있습니다.
+      </dd>
+    </div>
+  </dl>
+);
 
 const targetKey = (t: api.RecommendationTarget) =>
   `${t.targetType}:${t.targetId}`;
@@ -296,163 +326,181 @@ export function WorkforceRecommendationsScreen({
       data-testid="workforce-recommendations-screen"
       data-screen-id="UI-30 SCR-UI-30"
     >
-      <header className="recommendation-heading">
-        <h2>AI 인력 추천</h2>
-        <ScreenTitleActions>
+      <ScreenTitleActions>
+        <button
+          type="button"
+          data-testid="recommendation-history-open"
+          onClick={() => setHistory(true)}
+        >
+          추천 기록
+        </button>
+      </ScreenTitleActions>
+      <section className="recommendation-card recommendation-condition-card">
+        <header className="recommendation-heading">
+          <h2>추천 조건</h2>
           <button
             type="button"
-            data-testid="recommendation-history-open"
-            onClick={() => setHistory(true)}
+            data-testid="recommendation-target-refresh"
+            disabled={loading || pending}
+            onClick={() => setRetry((n) => n + 1)}
           >
-            추천 기록
+            대상 새로고침
           </button>
-        </ScreenTitleActions>
-      </header>
-      <RecommendationBrowseError
-        error={targetError}
-        retry={() => setRetry((n) => n + 1)}
-      />
-      {loading && <p role="status">진행 대상을 불러오는 중입니다.</p>}
-      {!loading && !targetError && targets?.items.length === 0 && (
-        <p className="recommendation-empty">진행 중인 추천 대상이 없습니다.</p>
-      )}
-      {selected && draft && (
-        <form
-          className="recommendation-card"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (targets && !disabled)
-              void recommend(draft, selected, targets.baseMonth);
-          }}
-        >
-          <h2>어떤 자리에 추천할까요?</h2>
-          <fieldset disabled={disabled} className="recommendation-filters">
-            <label className="sicost-field">
-              프로젝트·영업 기회 *
-              <select
-                data-testid="recommendation-target"
-                value={targetKey(selected)}
-                onChange={(e) => choose(e.target.value)}
-              >
-                {targets?.items.map((t) => (
-                  <option key={targetKey(t)} value={targetKey(t)}>
-                    [{t.targetType === "OPPORTUNITY" ? "기회" : "프로젝트"}]{" "}
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="sicost-field">
-              직무 *
-              <select
-                data-testid="recommendation-job"
-                value={draft.jobCode}
-                aria-invalid={Boolean(fields.jobCode)}
-                onChange={(e) => {
-                  const jobCode = e.target.value;
-                  const need = selected.needs.find(
-                    (n) => n.jobCode === jobCode,
-                  );
-                  update({
-                    ...draft,
-                    jobCode,
-                    needSn:
-                      selected.targetType === "OPPORTUNITY"
-                        ? (need?.needSn ?? selected.needs[0]?.needSn ?? null)
-                        : null,
-                  });
-                }}
-              >
-                <option value="">선택</option>
-                {jobs.map((job) => (
-                  <option key={job.code} value={job.code}>
-                    {job.name}
-                  </option>
-                ))}
-              </select>
-              {fields.jobCode && (
-                <span role="alert" className="sicost-field-error">
-                  {fields.jobCode}
-                </span>
-              )}
-            </label>
-            {selected.targetType === "OPPORTUNITY" && (
+        </header>
+        <RecommendationBrowseError
+          error={targetError}
+          retry={() => setRetry((n) => n + 1)}
+        />
+        {loading && <p role="status">진행 대상을 불러오는 중입니다.</p>}
+        {!loading && !targetError && targets?.items.length === 0 && (
+          <p className="recommendation-empty">진행 중인 추천 대상이 없습니다.</p>
+        )}
+        {selected && draft && (
+          <form
+            className="recommendation-condition-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (targets && !disabled)
+                void recommend(draft, selected, targets.baseMonth);
+            }}
+          >
+            <fieldset disabled={disabled} className="recommendation-filters">
               <label className="sicost-field">
-                가배정 자리 *
+                프로젝트·영업 기회 *
                 <select
-                  data-testid="recommendation-need"
-                  value={draft.needSn ?? ""}
-                  aria-invalid={Boolean(fields.needSn)}
-                  onChange={(e) =>
-                    update({ ...draft, needSn: e.target.value || null })
-                  }
+                  data-testid="recommendation-target"
+                  value={targetKey(selected)}
+                  onChange={(e) => choose(e.target.value)}
                 >
-                  <option value="">선택</option>
-                  {selected.needs.map((n) => (
-                    <option key={n.needSn} value={n.needSn}>
-                      {n.needSn}.{" "}
-                      {jobs.find((j) => j.code === n.jobCode)?.name ??
-                        name("JOB", n.jobCode)}{" "}
-                      {n.needCount}명 · {n.startMonth}
+                  {targets?.items.map((t) => (
+                    <option key={targetKey(t)} value={targetKey(t)}>
+                      [{t.targetType === "OPPORTUNITY" ? "기회" : "프로젝트"}]{" "}
+                      {t.name}
                     </option>
                   ))}
                 </select>
-                {fields.needSn && (
+              </label>
+              <label className="sicost-field">
+                직무 *
+                <select
+                  data-testid="recommendation-job"
+                  value={draft.jobCode}
+                  aria-invalid={Boolean(fields.jobCode)}
+                  onChange={(e) => {
+                    const jobCode = e.target.value;
+                    const need = selected.needs.find(
+                      (n) => n.jobCode === jobCode,
+                    );
+                    update({
+                      ...draft,
+                      jobCode,
+                      needSn:
+                        selected.targetType === "OPPORTUNITY"
+                          ? (need?.needSn ?? selected.needs[0]?.needSn ?? null)
+                          : null,
+                    });
+                  }}
+                >
+                  <option value="">선택</option>
+                  {jobs.map((job) => (
+                    <option key={job.code} value={job.code}>
+                      {job.name}
+                    </option>
+                  ))}
+                </select>
+                {fields.jobCode && (
                   <span role="alert" className="sicost-field-error">
-                    {fields.needSn}
+                    {fields.jobCode}
                   </span>
                 )}
               </label>
-            )}
-            <label className="sicost-field">
-              시작월 *
-              <input
-                type="month"
-                data-testid="recommendation-start-month"
-                min={targets?.baseMonth}
-                max={selected.contractEndDate?.slice(0, 7)}
-                value={draft.startMonth}
-                aria-invalid={Boolean(fields.startMonth)}
-                onChange={(e) =>
-                  update({ ...draft, startMonth: e.target.value })
-                }
-              />
-              {fields.startMonth && (
-                <span role="alert" className="sicost-field-error">
-                  {fields.startMonth}
-                </span>
+              {selected.targetType === "OPPORTUNITY" && (
+                <label className="sicost-field">
+                  가배정 자리 *
+                  <select
+                    data-testid="recommendation-need"
+                    value={draft.needSn ?? ""}
+                    aria-invalid={Boolean(fields.needSn)}
+                    onChange={(e) =>
+                      update({ ...draft, needSn: e.target.value || null })
+                    }
+                  >
+                    <option value="">선택</option>
+                    {selected.needs.map((n) => (
+                      <option key={n.needSn} value={n.needSn}>
+                        {n.needSn}.{" "}
+                        {jobs.find((j) => j.code === n.jobCode)?.name ??
+                          name("JOB", n.jobCode)}{" "}
+                        {n.needCount}명 · {n.startMonth}
+                      </option>
+                    ))}
+                  </select>
+                  {fields.needSn && (
+                    <span role="alert" className="sicost-field-error">
+                      {fields.needSn}
+                    </span>
+                  )}
+                </label>
               )}
-            </label>
-            <label className="sicost-field">
-              요청등급 *
-              <select
-                data-testid="recommendation-grade"
-                value={draft.requestedGradeCode}
-                onChange={(e) =>
-                  update({ ...draft, requestedGradeCode: e.target.value })
-                }
+              <label className="sicost-field">
+                시작월 *
+                <input
+                  type="month"
+                  data-testid="recommendation-start-month"
+                  min={targets?.baseMonth}
+                  max={selected.contractEndDate?.slice(0, 7)}
+                  value={draft.startMonth}
+                  aria-invalid={Boolean(fields.startMonth)}
+                  onChange={(e) =>
+                    update({ ...draft, startMonth: e.target.value })
+                  }
+                />
+                {fields.startMonth && (
+                  <span role="alert" className="sicost-field-error">
+                    {fields.startMonth}
+                  </span>
+                )}
+              </label>
+              <label className="sicost-field">
+                요청 등급 *
+                <select
+                  data-testid="recommendation-grade"
+                  value={draft.requestedGradeCode}
+                  onChange={(e) =>
+                    update({ ...draft, requestedGradeCode: e.target.value })
+                  }
+                >
+                  {["JR", "MD", "SR", "EX"].map((code) => (
+                    <option key={code} value={code}>
+                      {name("GRADE", code)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </fieldset>
+            <div className="recommendation-condition-actions">
+              <p
+                className="sicost-banner sicost-tone-info recommendation-condition-note"
+                role="note"
               >
-                {["JR", "MD", "SR", "EX"].map((code) => (
-                  <option key={code} value={code}>
-                    {name("GRADE", code)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              data-testid="recommendation-run"
-              className="sicost-primary"
-            >
-              {pending ? "추천 중…" : "추천 받기"}
-            </button>
-          </fieldset>
-          <p className="sicost-banner sicost-tone-info">
-            안내: 휴직·퇴사 예정자와 그 기간 MM 1.0인 사람 제외, 나이·성별·학력
-            미사용
-          </p>
-        </form>
-      )}
+                <strong className="recommendation-condition-note-label">
+                  안내 <Icon name="info" size={15} strokeWidth={2.4} />
+                </strong>{" "}
+                휴직·퇴사 예정자와 그 기간 MM 1.0인 사람 제외, 나이·성별·학력 미사용
+                (추천은 참고용이며 실제 배정은 담당자가 정합니다.)
+              </p>
+              <button
+                type="submit"
+                data-testid="recommendation-run"
+                className="sicost-primary"
+                disabled={disabled}
+              >
+                {pending ? "추천 중…" : "추천 받기"}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
       <RecommendationBrowseError
         error={error}
         retry={() => {
@@ -464,6 +512,7 @@ export function WorkforceRecommendationsScreen({
       {result && (
         <fieldset
           className="recommendation-results"
+          aria-label="추천 결과"
           disabled={!canAct}
           aria-disabled={!canAct}
           data-testid="recommendation-results"
@@ -486,8 +535,9 @@ export function WorkforceRecommendationsScreen({
                 const value = await api.getRecommendationHistorySnapshot(
                   result.rcmdId,
                 );
+                // Saved rounds contain candidate results rather than the original screening counts.
                 if (active.current && current === generation.current)
-                  setResult(value);
+                  setResult({ ...value, exclusions: result.exclusions });
               },
             })
           ) : (
@@ -496,46 +546,102 @@ export function WorkforceRecommendationsScreen({
         </fieldset>
       )}
       {result?.exclusions && (
-        <section
-          className="recommendation-card"
-          data-testid="recommendation-exclusions"
-        >
-          <h2>후보 제외 진단</h2>
-          <p>
-            전체 후보 {result.exclusions.totalCandidateCount}명 · 고유 제외{" "}
-            {result.exclusions.excludedUniqueCount}명
-          </p>
-          <p>
-            한 사람에게 여러 사유가 있을 수 있어 사유별 건수 합과 고유 인원은
-            다를 수 있습니다.
-          </p>
-          <div>
-            {result.exclusions.byReason.map((r) => (
-              <span className="sicost-badge sicost-tone-neutral" key={r.reason}>
-                {r.reason} {r.count}명
-              </span>
-            ))}
-          </div>
-          <details>
-            <summary>개인 진단</summary>
-            {result.exclusions.diagnostics.map((d) => (
-              <p key={d.developerId}>
-                {d.developerId}: {d.reasons.join(" · ")}
-              </p>
-            ))}
-          </details>
-        </section>
+        <RecommendationExclusions exclusions={result.exclusions} />
       )}
-      <button
-        type="button"
-        data-testid="recommendation-target-refresh"
-        disabled={loading || pending}
-        onClick={() => setRetry((n) => n + 1)}
-      >
-        대상 새로고침
-      </button>
       {history && (
         <RecommendationHistoryPanel onClose={() => setHistory(false)} />
+      )}
+    </section>
+  );
+}
+
+function RecommendationExclusions({
+  exclusions,
+}: {
+  exclusions: NonNullable<api.RecommendationSnapshot["exclusions"]>;
+}) {
+  const { totalCandidateCount, excludedUniqueCount, byReason, diagnostics } =
+    exclusions;
+  const reasons = [...byReason].sort((left, right) => right.count - left.count);
+  return (
+    <section
+      className="recommendation-card recommendation-exclusions"
+      data-testid="recommendation-exclusions"
+    >
+      <header>
+        <h2>후보 제외 진단</h2>
+        <p>이번 추천에서 채점 전에 검토한 인원과 제외 사유입니다.</p>
+      </header>
+      <KpiStrip label="후보 검토 요약" className="recommendation-exclusion-summary">
+        <section>
+          <span>전체 검토</span>
+          <strong>{totalCandidateCount}명</strong>
+        </section>
+        <section>
+          <span>채점 대상</span>
+          <strong>{totalCandidateCount - excludedUniqueCount}명</strong>
+        </section>
+        <section>
+          <span>제외 인원</span>
+          <strong>{excludedUniqueCount}명</strong>
+        </section>
+      </KpiStrip>
+      {reasons.length > 0 ? (
+        <section className="recommendation-exclusion-reasons">
+          <div className="recommendation-exclusion-reason-heading">
+            <h3>제외 사유별 인원</h3>
+            {exclusions.reasonCountsOverlap && (
+              <HelpTooltip label="제외 사유별 인원" iconOnly>
+                여러 사유에 해당하는 사람은 사유별로 각각 세고, 위의 제외 인원에는
+                한 번만 셉니다.
+              </HelpTooltip>
+            )}
+          </div>
+          <ul
+            className="recommendation-exclusion-reason-list"
+            role="list"
+            aria-label="제외 사유별 인원"
+          >
+            {reasons.map(({ reason, count }) => (
+              <li key={reason}>
+                <span>{reason}</span>
+                <strong>{count}명</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p>
+          {excludedUniqueCount === 0
+            ? "이번 추천에서 제외된 인원이 없습니다."
+            : "표시할 사유별 집계가 없습니다."}
+        </p>
+      )}
+      {diagnostics.length > 0 && (
+        <details className="recommendation-exclusion-details">
+          <summary>개인별 제외 사유</summary>
+          <div className="sicost-table-viewport">
+            <table
+              className="sicost-table recommendation-exclusion-table"
+              aria-label="개인별 제외 사유"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">인력 ID</th>
+                  <th scope="col">제외 사유</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diagnostics.map(({ developerId, reasons }) => (
+                  <tr key={developerId}>
+                    <td>{developerId}</td>
+                    <td>{reasons.join(" · ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
       )}
     </section>
   );

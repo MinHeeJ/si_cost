@@ -124,7 +124,7 @@ export function CandidatePositionsPanel({
   ];
   return (
     <section
-      className="candidate-matching-panel"
+      className="candidate-positions-panel"
       aria-label="맞는 자리"
       aria-busy={loading}
       data-testid="candidate-positions-panel"
@@ -133,9 +133,6 @@ export function CandidatePositionsPanel({
         <h3>맞는 자리</h3>
         <span>최대 4곳 · 영업 기회 기준</span>
       </header>
-      <p className="candidate-matching-help">
-        자동 개발자 등록·실제 배정·가배정이 아닌 조회 결과입니다.
-      </p>
       {error ? (
         <ErrorBanner
           message={
@@ -166,6 +163,7 @@ export function CandidatePositionsPanel({
             (result.data.items.length > 0 || !result.issues.length) ? (
             <DataTable
               testId="candidate-positions-table"
+              tableLabel="맞는 자리"
               rows={result.data.items}
               columns={columns.filter(
                 (column) => column.id !== "profitRate" || canRate,

@@ -1,6 +1,7 @@
 import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
+import { CalculationMethods } from "../../shared/CalculationMethods";
 import { FinancialEmptyReset } from "../shared/FinancialEmptyReset";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -658,41 +659,19 @@ export function ProfitStructureScreen({
                 영업이익표·순이익표에서 봅니다. 같은 계산이라 숫자가 같습니다.
               </p>
             </section>
-            <details
-              className="profit-structure-card profit-structure-methods"
-              data-testid="structure-method-panel"
+            <CalculationMethods
+              testId="structure-method-panel"
+              rowTestIdPrefix="structure-method"
+              rows={data.calculationMethods.map((method) => ({
+                metric: method.metric,
+                formula: method.formula,
+                reference: method.sources.join(" "),
+              }))}
             >
-              <summary>계산 방법</summary>
-              <div className="profit-structure-table-scroll">
-                <table
-                  aria-label="계산 방법"
-                  className="profit-structure-method-table"
-                >
-                  <thead>
-                    <tr>
-                      <th>항목</th>
-                      <th>계산</th>
-                      <th>참고</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.calculationMethods.map((method, i) => (
-                      <tr
-                        key={method.metric}
-                        data-testid={`structure-method-${i}`}
-                      >
-                        <th scope="row">{method.metric}</th>
-                        <td>{method.formula}</td>
-                        <td>{method.sources.join(" ")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
               <p className="profit-structure-muted">
                 금액은 모두 부가세 제외입니다.
               </p>
-            </details>
+            </CalculationMethods>
             <div className="profit-structure-toolbar">
               <button
                 data-testid="structure-operating-link"

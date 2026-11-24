@@ -10,6 +10,21 @@ export type PreferenceColumn = {
   label: string;
   required?: boolean;
 };
+
+export function ColumnSettingsButton({
+  testId,
+  onClick,
+}: {
+  testId?: string;
+  onClick(): void;
+}) {
+  return (
+    <button type="button" data-testid={testId} onClick={onClick}>
+      열 설정
+    </button>
+  );
+}
+
 // Callers supply the complete view definition, excluding check/action columns.
 export function ColumnPreferencesDialog({
   open,

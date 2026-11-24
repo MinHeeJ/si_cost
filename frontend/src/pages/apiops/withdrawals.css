@@ -3,29 +3,87 @@
   gap: 16px;
   min-width: 0;
 }
+.sicost-period-summary.sicost-period-summary-compact.withdrawal-period-summary {
+  min-height: 44px;
+  gap: 4px 0;
+  margin-inline-start: 0;
+  justify-content: flex-start;
+}
+@container (min-width: 920px) {
+  .sicost-period-row > .sicost-period-status-slot:has(> .sicost-period-status.withdrawal-period-summary) {
+    flex-basis: auto;
+  }
+  .withdrawal-period-summary:has(.withdrawal-summary) > .sicost-period-summary-item:last-of-type {
+    box-shadow: inset -1px 0 var(--divider);
+    margin-inline-end: 8px;
+  }
+  .sicost-period-row:has(.withdrawal-period-summary) > .sicost-period-bar {
+    align-self: stretch;
+  }
+  .sicost-period-summary.sicost-period-summary-compact.withdrawal-period-summary {
+    height: 100%;
+    align-content: center;
+  }
+}
+.withdrawal-summary,
+.withdrawal-summary-counts,
 .withdrawal-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 4px 14px;
+  flex-wrap: wrap;
 }
-.withdrawal-download {
-  margin-left: auto;
+.withdrawal-summary {
+  min-width: 0;
+  padding: 2px 6px;
+  gap: 4px 10px;
 }
-.withdrawal-help,
-.withdrawal-sub {
-  color: var(--text-sub);
-  font-size: 12px;
+.withdrawal-summary-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.withdrawal-help {
+.withdrawal-summary-heading h2 {
   margin: 0;
-  background: var(--surface);
-  padding: 10px 14px;
-  border-radius: 8px;
-  box-shadow: var(--e1);
+  color: var(--text);
+  font-size: 13px;
+}
+.withdrawal-summary-heading .sicost-help-icon {
+  color: inherit;
+}
+.withdrawal-summary-counts {
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-sub);
+  font-size: 13px;
+}
+.withdrawal-summary-counts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.withdrawal-toolbar {
+  gap: 12px;
+  justify-content: flex-end;
+}
+.withdrawal-table-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-inline-end: auto;
+  white-space: nowrap;
 }
 .withdrawal-sub {
   display: block;
+  color: var(--text-sub);
+  font-size: 12px;
 }
 .withdrawal-screen select {
   height: 36px;
@@ -41,14 +99,28 @@
 }
 .withdrawal-link {
   color: var(--primary);
+  text-decoration: none;
+}
+.withdrawal-screen button.withdrawal-link {
+  min-height: 0;
+  padding: 0;
   border: 0;
   background: transparent;
-  padding: 0;
-  cursor: pointer;
+  color: var(--primary);
+  box-shadow: none;
+}
+.withdrawal-screen .sicost-table th {
+  text-align: center;
 }
 .withdrawal-screen .sicost-table td {
   padding-top: 6px;
   padding-bottom: 6px;
+  vertical-align: middle;
+}
+.withdrawal-screen .sicost-pagination {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 .withdrawal-screen details {
   font-size: 12px;
@@ -97,6 +169,7 @@
     display: none;
   }
   .withdrawal-screen .sicost-table-viewport {
+    max-height: none;
     overflow: visible;
   }
   .withdrawal-screen .sicost-table,
@@ -114,6 +187,7 @@
   }
   .withdrawal-screen .sicost-table td {
     display: flex;
+    align-items: center;
     gap: 12px;
     height: auto;
     min-height: 28px;

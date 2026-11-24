@@ -158,7 +158,7 @@ export function ProjectStatusIssuesPanel({
       render: (row) => (
         <button
           type="button"
-          className="project-analysis-link"
+          className="issue-link"
           data-testid={`status-issue-edit-${row.issueId}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -174,6 +174,7 @@ export function ProjectStatusIssuesPanel({
       label: "프로젝트",
       render: (row) => (
         <Link
+          className="issue-link"
           data-testid={`status-issue-project-${row.issueId}`}
           onClick={(e) => e.stopPropagation()}
           to={`/UI-01?${new URLSearchParams({ projectId: row.projectId, tab: "issues", returnTo: `${location.pathname}${location.search}` })}`}
@@ -233,17 +234,6 @@ export function ProjectStatusIssuesPanel({
       data-slice-id="SLICE-002"
       data-testid="project-status-issues"
     >
-      <div className="project-analysis-toolbar">
-        <h2>이슈 모아 보기 ({result.data?.openCount ?? "–"})</h2>
-        <button
-          type="button"
-          data-testid="status-issue-create"
-          onClick={() => open(null)}
-        >
-          이슈 등록
-        </button>
-        {renderColumns?.()}
-      </div>
       <FilterBar
         testId="status-issue-filters"
         resetTestId="status-issue-reset"
@@ -310,6 +300,17 @@ export function ProjectStatusIssuesPanel({
         retry={() => setOptionAttempt((value) => value + 1)}
       />
       <AnalysisFailure error={result.error} retry={result.retry} />
+      <div className="project-analysis-toolbar">
+        {renderColumns?.()}
+        <button
+          type="button"
+          className="sicost-primary"
+          data-testid="status-issue-create"
+          onClick={() => open(null)}
+        >
+          이슈 등록
+        </button>
+      </div>
       <DataTable<api.StatusIssue>
         testId="status-issue-table"
         rows={result.error ? [] : (result.data?.items ?? [])}

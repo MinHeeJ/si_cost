@@ -18,14 +18,29 @@
   flex: 1;
   min-width: 180px;
 }
-.project-unassigned {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.sicost-period-row:has(> .sicost-period-status-slot > .project-period-actions) {
   flex-wrap: wrap;
 }
-.project-unassigned span {
-  flex: 1;
+.sicost-period-row > .sicost-period-status-slot:has(> .project-period-actions) {
+  flex-basis: max-content;
+}
+.sicost-period-status.project-period-actions {
+  justify-content: flex-end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+button.project-unassigned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: color-mix(in srgb, var(--warn) 24%, var(--divider));
+  background: var(--warn-bg);
+  color: var(--warn);
+  white-space: nowrap;
+}
+button.project-unassigned:hover {
+  border-color: var(--warn);
 }
 .project-link {
   border: 0;
@@ -75,7 +90,8 @@
 }
 .project-info {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: center;
   gap: 16px 12px;
   margin: 20px 0;
 }
@@ -85,6 +101,33 @@
 .project-info dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+.project-info-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.project-info-action > div {
+  flex: 1 1 90px;
+  min-width: 0;
+}
+.project-cost-entry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 12px;
+}
+.project-cost-entry > button {
+  margin-inline-start: auto;
+}
+.project-info-action > button {
+  margin-inline-start: auto;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 .project-tabs {
   display: flex;
@@ -139,7 +182,7 @@
     grid-column: auto;
   }
   .project-info {
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: 100px minmax(0, 1fr);
   }
   .project-tabs {
     align-items: stretch;

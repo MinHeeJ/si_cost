@@ -94,12 +94,13 @@ it.each([
     expect(screen.getByTestId("recommendation-target")).toHaveValue(
       `${type}:${id}`,
     );
-    expect(
-      screen.getByText(
-        "안내: 휴직·퇴사 예정자와 그 기간 MM 1.0인 사람 제외, 나이·성별·학력 미사용",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/추천은 참고용입니다/)).not.toBeInTheDocument();
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent(
+      "안내 휴직·퇴사 예정자와 그 기간 MM 1.0인 사람 제외, 나이·성별·학력 미사용 (추천은 참고용이며 실제 배정은 담당자가 정합니다.)",
+    );
+    expect(note.parentElement).toContainElement(
+      screen.getByTestId("recommendation-run"),
+    );
     view.unmount();
     render(<WorkforceRecommendationsScreen {...props} />);
     await waitFor(() =>

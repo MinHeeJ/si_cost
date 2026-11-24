@@ -12,6 +12,8 @@ import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { Icon } from "../../shared/Icon";
+import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ApiError } from "../../shared/api";
 import { getSharedCodes } from "../shared/sharedApi";
 import { CodeName } from "../../shared/codeNames";
@@ -485,24 +487,20 @@ export function ProjectsScreen({
             </header>
           </ScreenTitleActions>
           {data && data.unassignedCount > 0 && (
-            <div
-              className="sicost-banner sicost-tone-warn project-unassigned"
-              data-testid="project-unassigned-banner"
-            >
-              <span>
-                영업 파트 미지정 프로젝트 {data.unassignedCount}건이 있습니다.
-              </span>
+            <PeriodStatus className="project-period-actions">
               <button
                 type="button"
+                className="project-unassigned"
                 data-testid="project-unassigned-only"
                 onClick={() => {
                   setDraft((d) => ({ ...d, partId: "UNASSIGNED" }));
                   setFilters((f) => ({ ...f, partId: "UNASSIGNED", page: 1 }));
                 }}
               >
-                이 건만 보기
+                <Icon name="warning" size={16} />
+                영업파트 미지정 {data.unassignedCount.toLocaleString("ko-KR")}건
               </button>
-            </div>
+            </PeriodStatus>
           )}
           <FilterBar
             testId="project-filter-form"

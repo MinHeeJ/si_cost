@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { formatAmount } from "../../shared/format";
 import {
@@ -29,6 +29,42 @@ import { getCandidateContacts } from "../contacts/peopleClient";
 import { CandidateForm } from "./CandidateForm";
 import * as api from "./peopleClient";
 import "./candidates.css";
+
+export const candidateScreenGuide = (
+  <dl>
+    <div>
+      <dt>후보 요약과 투입 가능일</dt>
+      <dd>
+        요약은 전체 후보 기준이며 목록의 조회 조건과는 별도로 집계합니다.
+        요약의 ‘다음 달 시작까지 가능’은 다음 달 1일까지 투입 가능한
+        진행 중 후보를 셉니다. 목록에서 ‘다음 달까지’를 선택하면 다음 달
+        말일까지 투입 가능한 후보를 조회합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>부족 직무별 후보 조회</dt>
+      <dd>
+        [후보 보기]를 누르면 해당 직무에서 첫 부족월 말일까지 투입 가능한
+        후보를 조회합니다. 보류와 계약 완료 상태는 제외합니다.
+      </dd>
+    </div>
+    <div>
+      <dt>후보 등록과 상세 확인</dt>
+      <dd>
+        [후보 등록]에서 외부 인력 정보를 입력할 수 있습니다. 목록에서 이름을
+        누르면 기본 정보, 연락 기록과 변경 이력을 확인할 수 있습니다.
+      </dd>
+    </div>
+    <div>
+      <dt>맞는 자리</dt>
+      <dd>
+        후보 상세에서 해당 후보가 투입될 수 있는 영업 기회를 최대 4곳까지
+        확인할 수 있습니다. 개발자 등록과 배정·가배정은 별도 업무 화면에서
+        진행합니다.
+      </dd>
+    </div>
+  </dl>
+);
 
 export type CandidatesScreenProps = {
   entryJob?: { key: string; jobCode: string };
@@ -101,6 +137,11 @@ export function CandidatesScreen({
     [error, setError] = useState<unknown>();
   const [shortageContext, setShortageContext] =
     useState<CandidateShortageContext>();
+  const [shortageToast, setShortageToast] =
+    useState<{ sequence: number; message: string }>();
+  useEffect(() => {
+    if (!active) setShortageToast(undefined);
+  }, [active]);
   const [codes, setCodes] = useState<Record<string, api.CandidateCode[]>>({}),
     [today, setToday] = useState("");
   const [version, setVersion] = useState(0),
@@ -326,8 +367,10 @@ export function CandidatesScreen({
       reset ||
       values.jobCode !== shortageContext?.jobCode ||
       values.availability
-    )
+    ) {
       setShortageContext(undefined);
+      setShortageToast(undefined);
+    }
     if (reset) setDraft(initialFilters);
     setHighlight(undefined);
     setFilters({
@@ -486,6 +529,10 @@ export function CandidatesScreen({
         active={active}
         jobLabel={(code) => label("JOB", code)}
         onView={(row) => {
+          setShortageToast((previous) => ({
+            sequence: (previous?.sequence ?? 0) + 1,
+            message: `${label("JOB", row.jobCode)} 직무에서 ${row.availableUntil}까지 투입 가능한 후보를 조회합니다. 보류·계약 완료는 제외합니다. [초기화]를 누르면 조회 조건이 해제됩니다.`,
+          }));
           setShortageContext({
             jobCode: row.jobCode,
             availableUntil: row.availableUntil,
@@ -495,20 +542,12 @@ export function CandidatesScreen({
           setFilters({ jobCode: row.jobCode, page: 1, size: filters.size });
         }}
       />
-      {shortageContext && (
-        <div
-          className="candidate-shortage-context sicost-banner sicost-tone-info"
-          data-testid="candidate-shortage-context"
-        >
-          {label("JOB", shortageContext.jobCode)} ·{" "}
-          {shortageContext.availableUntil}까지 가능 · 보류·계약 완료 제외
-          <button
-            data-testid="candidate-shortage-reset"
-            onClick={() => apply(true)}
-          >
-            초기화
-          </button>
-        </div>
+      {active && shortageToast && (
+        <FloatingToast
+          key={shortageToast.sequence}
+          message={shortageToast.message}
+          durationMs={7000}
+        />
       )}
       {lookupError != null && (
         <ErrorBanner

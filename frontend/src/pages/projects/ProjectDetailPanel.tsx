@@ -11,6 +11,7 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
 import { ProjectBudgetDialog } from "../budget/ProjectBudgetDialog";
 import { ProjectPlansPanel } from "../plans/ProjectPlansPanel";
@@ -324,9 +325,11 @@ export function ProjectDetailPanel({
                     {p.contractType !== "IN" && (
                       <>
                         <dt>예산</dt>
-                        <dd>
-                          {money(p.budgetAmount)} ·{" "}
-                          {p.budgetManual === "Y" ? "수기" : "자동"}{" "}
+                        <dd className="project-info-action">
+                          <div>
+                            {money(p.budgetAmount)} ·{" "}
+                            {p.budgetManual === "Y" ? "수기" : "자동"}
+                          </div>
                           <button
                             type="button"
                             data-testid="project-budget-open"
@@ -339,56 +342,67 @@ export function ProjectDetailPanel({
                           </button>
                         </dd>
                         <dt>영업 파트</dt>
-                        <dd>
-                          {part?.partName ?? "미지정"}{" "}
+                        <dd className="project-info-action">
+                          <div>{part?.partName ?? "미지정"}</div>
                           {context && registration?.partAction?.(context)}
                         </dd>
                       </>
                     )}
                     <dt>PM</dt>
-                    <dd>
-                      {detail.pm.length
-                        ? detail.pm.map((pm) => (
-                            <span
-                              key={`${pm.userId}-${pm.scopeSn}`}
-                              data-testid={`project-pm-${pm.userId.toLowerCase()}-${pm.scopeSn}`}
-                            >
-                              {pm.name} ({pm.userId}){" "}
-                            </span>
-                          ))
-                        : "미지정"}{" "}
-                      <a data-testid="project-users-link" href="/UI-23">
-                        사용자에서 담당 프로젝트 관리
-                      </a>
+                    <dd className="project-info-action">
+                      <div>
+                        {detail.pm.length
+                          ? detail.pm.map((pm) => (
+                              <span
+                                key={`${pm.userId}-${pm.scopeSn}`}
+                                data-testid={`project-pm-${pm.userId.toLowerCase()}-${pm.scopeSn}`}
+                              >
+                                {pm.name} ({pm.userId}){" "}
+                              </span>
+                            ))
+                          : "미지정"}
+                      </div>
+                      <button
+                        type="button"
+                        data-testid="project-users-link"
+                        onClick={() => window.location.assign("/UI-23")}
+                      >
+                        사용자 담당 프로젝트 관리
+                      </button>
                     </dd>
                     {!["END", "LOSE"].includes(detail.effectiveStatus) && (
                       <>
                         <dt>신호등</dt>
-                        <dd data-testid="project-basic-signal">
-                          {signal ? (
-                            <StatusBadge
-                              tone={
-                                signal.light === "위험"
-                                  ? "bad"
-                                  : signal.light === "주의"
-                                    ? "warn"
-                                    : "ok"
-                              }
-                            >
-                              {signal.light}
-                            </StatusBadge>
-                          ) : signalError ? (
-                            <ErrorBanner
-                              message="신호등을 조회하지 못했습니다."
-                              onRetry={() =>
-                                setSignalReload((value) => value + 1)
-                              }
-                            />
-                          ) : (
-                            <span role="status">
-                              신호등을 불러오는 중입니다.
-                            </span>
-                          )}
+                        <dd
+                          className="project-info-action"
+                          data-testid="project-basic-signal"
+                        >
+                          <div>
+                            {signal ? (
+                              <StatusBadge
+                                tone={
+                                  signal.light === "위험"
+                                    ? "bad"
+                                    : signal.light === "주의"
+                                      ? "warn"
+                                      : "ok"
+                                }
+                              >
+                                {signal.light}
+                              </StatusBadge>
+                            ) : signalError ? (
+                              <ErrorBanner
+                                message="신호등을 조회하지 못했습니다."
+                                onRetry={() =>
+                                  setSignalReload((value) => value + 1)
+                                }
+                              />
+                            ) : (
+                              <span role="status">
+                                신호등을 불러오는 중입니다.
+                              </span>
+                            )}
+                          </div>
                           {registration?.progress && (
                             <button
                               type="button"
@@ -442,13 +456,13 @@ export function ProjectDetailPanel({
                               <StatusBadge tone="info">(예정)</StatusBadge>
                             )}{" "}
                             {row.reason && (
-                              <span
-                                tabIndex={0}
-                                title={`사유: ${row.reason} · ${row.actor}`}
-                                aria-label={`사유: ${row.reason} · ${row.actor}`}
+                              <HelpTooltip
+                                label={`${row.effectiveMonth} 영업 파트 변경 사유`}
+                                iconOnly
                               >
-                                ⓘ
-                              </span>
+                                사유: {row.reason}
+                                {row.actor && ` · 변경자: ${row.actor}`}
+                              </HelpTooltip>
                             )}
                           </li>
                         ))}

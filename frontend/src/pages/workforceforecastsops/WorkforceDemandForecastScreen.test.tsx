@@ -25,8 +25,17 @@ vi.mock("../shared/sharedApi", async (original) => ({
   putSharedPreference: vi.fn(),
 }));
 vi.mock("../shared/FollowUpScreen", () => ({
-  SharedScreenFrame: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+  SharedScreenFrame: ({
+    children,
+    periodBar,
+  }: {
+    children: ReactNode;
+    periodBar?: ReactNode;
+  }) => (
+    <section>
+      {periodBar}
+      {children}
+    </section>
   ),
 }));
 const query = { from: "2026-10", months: 3, includeUnfilled: true };
@@ -63,6 +72,61 @@ function mount() {
     </MemoryRouter>,
   );
 }
+
+it("places forecast inputs and hiring evidence under labeled columns", async () => {
+  const data = result();
+  vi.mocked(api.getWorkforceForecasts).mockResolvedValue({
+    ...data,
+    jobDiagnostics: [
+      { jobCode: "BE", month: data.totals[0], basis: "확정 투입 반영" },
+    ],
+    hiring: [
+      {
+        jobCode: "BE",
+        firstShortageMonth: "2026-10",
+        maximumShortage: "0.6",
+        recommendedStartMonth: "2026-09",
+        startNow: true,
+        candidateCount: 3,
+      },
+    ],
+  });
+  render(<WorkforceForecastPanel query={query} />);
+  await userEvent.click(await screen.findByText("계산 방법", { exact: true }));
+
+  const methods = screen.getByRole("table", { name: "계산 방법" });
+  expect(
+    within(methods).getAllByRole("columnheader").map((cell) => cell.textContent),
+  ).toEqual(["항목", "계산", "참고"]);
+  const diagnostics = screen.getByRole("table", { name: "직무별 월별 산출 근거" });
+  const diagnosticColumns = within(diagnostics)
+    .getAllByRole("columnheader")
+    .map((cell) => cell.textContent);
+  expect(diagnosticColumns).toEqual([
+    "직무 코드",
+    "예측 월",
+    "가용 MM",
+    "영업 기회 수요 MM",
+    "미충원 수요 MM",
+    "산출 기준",
+  ]);
+  expect(
+    within(screen.getByTestId("workforce-basis-0"))
+      .getAllByRole("cell")
+      .map((cell) => cell.textContent),
+  ).toEqual(["2026-10", "2", "2.05", "0.5", "확정 투입 반영"]);
+
+  const hiring = screen.getByRole("table", { name: "채용 검토 근거" });
+  expect(
+    within(hiring).getByRole("columnheader", { name: "채용 검토 시작" }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByTestId("workforce-hiring-BE"))
+      .getAllByRole("cell")
+      .map((cell) => cell.textContent),
+  ).toEqual(["2026-10", "0.6", "지금", "3명"]);
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(shared.getSharedCodes).mockResolvedValue({
@@ -100,10 +164,10 @@ it("loads server year remaining months and displays three authoritative table ro
   mount();
   await screen.findByTestId("workforce-supply-card");
   expect(api.getWorkforceForecasts).toHaveBeenCalledWith(query);
-  expect(screen.getByText("예측", { exact: true })).toBeInTheDocument();
+  expect(screen.getByText("2026년 10월 ~ 2026년 12월")).toBeVisible();
   expect(
-    screen.getByText("인력 운영 보드의 ‘수요·공급’과 같은 계산입니다."),
-  ).toBeInTheDocument();
+    screen.getByText("이번 달부터 12월까지 · 전체 직무"),
+  ).toBeVisible();
   expect(screen.getByLabelText("예측 연도")).toHaveTextContent("2026년2027년");
   expect(screen.getByTestId("workforce-demand-card")).toHaveTextContent(
     "2.6명",
@@ -119,13 +183,16 @@ it("loads server year remaining months and displays three authoritative table ro
   expect(
     screen.getByRole("img", { name: "월별 가용 vs 필요" }),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("row")).toHaveLength(4);
+  const monthlyTable = screen.getByRole("table", { name: "월별 필요·가용 인력" });
+  expect(within(monthlyTable).getAllByRole("row")).toHaveLength(4);
   expect(
     screen.queryByRole("button", { name: "저장" }),
   ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByText("계산 방법", { exact: true }));
+  expect(screen.getByRole("table", { name: "계산 방법" })).toBeVisible();
   expect(
-    screen.getByText(/PM이 인원 계획을 실제에 맞게 줄입니다/),
-  ).toBeInTheDocument();
+    screen.getByText(/PM이 인원 계획을 실제 투입에 맞게 조정합니다/),
+  ).toBeVisible();
 });
 it("next year saves existing preference then requests exactly January through December", async () => {
   mount();
@@ -144,6 +211,8 @@ it("next year saves existing preference then requests exactly January through De
     { type: "YEAR", value: "2027" },
     null,
   );
+  expect(screen.getByText("2027년 1월 ~ 2027년 12월")).toBeVisible();
+  expect(screen.getByText("내년 1월부터 12월까지 · 전체 직무")).toBeVisible();
 });
 it("stored next year is restored, while past years are not offered", async () => {
   vi.mocked(shared.getSharedPreferences).mockResolvedValue({

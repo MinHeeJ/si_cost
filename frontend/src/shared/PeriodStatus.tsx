@@ -19,3 +19,20 @@ export function PeriodStatus({
   if (inline || target === undefined) return status;
   return target ? createPortal(status, target) : null;
 }
+
+export function CompactPeriodSummary({
+  items,
+}: {
+  items: readonly { label: string; value: ReactNode }[];
+}) {
+  return (
+    <PeriodStatus className="sicost-period-summary sicost-period-summary-compact">
+      {items.map(({ label, value }) => (
+        <span className="sicost-period-summary-item" key={label}>
+          <span className="sicost-period-summary-label">{label}</span>
+          <b>{value}</b>
+        </span>
+      ))}
+    </PeriodStatus>
+  );
+}

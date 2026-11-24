@@ -411,7 +411,7 @@ test("현황판→프로젝트→원가 분석 이동은 세 폭에서 활성 �
     await page.getByTestId("project-tab-basic").click();
     await page
       .getByTestId("project-cost-summary")
-      .getByRole("link", { name: "원가 분석", exact: true })
+      .getByRole("button", { name: "원가 분석", exact: true })
       .click();
     await expect(page.getByTestId("project-cost-detail")).toBeVisible();
     await expect(page.locator('[role="dialog"]:visible')).toHaveCount(1);

@@ -151,12 +151,20 @@ function open(path = "/UI-24") {
     </MemoryRouter>,
   );
 }
+async function openCurrentPermissions() {
+  await userEvent.click(await screen.findByRole("button", { name: "내 저장 권한" }));
+  return screen.getByRole("dialog", { name: "내 저장 권한" });
+}
 it("UI-24 registers the real role editor and current-user union without enforcing saved permissions", async () => {
   open();
   expect(
     await screen.findByRole("checkbox", { name: "민감항목 보기" }),
   ).toBeEnabled();
-  expect(await screen.findByText("저장된 메뉴 권한이 없습니다.")).toBeVisible();
+  expect(settings.getCurrentUserPermissionSettings).not.toHaveBeenCalled();
+  const dialog = await openCurrentPermissions();
+  expect(
+    await within(dialog).findByText("저장된 메뉴 권한이 없습니다."),
+  ).toBeVisible();
   expect(screen.getByTestId("roles-screen")).toHaveAttribute(
     "data-screen-id",
     "SCR-UI-24",
@@ -191,6 +199,7 @@ it.each([
     await userEvent.click(
       await screen.findByRole("checkbox", { name: "민감항목 보기" }),
     );
+    const dialog = await openCurrentPermissions();
     await waitFor(() =>
       expect(settings.getCurrentUserPermissionSettings).toHaveBeenCalledTimes(
         1,
@@ -206,6 +215,7 @@ it.each([
       ),
     );
     expect(vi.mocked(shared.getMenus).mock.calls.length).toBeGreaterThan(reads);
+    await userEvent.click(within(dialog).getByRole("button", { name: "닫기" }));
     expect(
       screen.getByRole("checkbox", { name: "민감항목 보기" }),
     ).toBeChecked();
@@ -234,5 +244,8 @@ it("registered UI-24 preserves its own read error while the union remains usable
   vi.mocked(roles.getRoles).mockRejectedValue(new Error("역할 조회 실패"));
   open();
   expect(await screen.findByText("역할 조회 실패")).toBeVisible();
-  expect(await screen.findByText("저장된 메뉴 권한이 없습니다.")).toBeVisible();
+  const dialog = await openCurrentPermissions();
+  expect(
+    await within(dialog).findByText("저장된 메뉴 권한이 없습니다."),
+  ).toBeVisible();
 });

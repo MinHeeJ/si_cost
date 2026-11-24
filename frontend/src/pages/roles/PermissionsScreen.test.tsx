@@ -133,13 +133,9 @@ it("DB 역할 탭·범위·민감·중지메뉴와 독립 7동작을 표시하�
   expect(screen.getByLabelText("데이터범위")).toHaveValue("ALL");
   expect(screen.getByLabelText("민감항목 보기")).not.toBeChecked();
   expect(screen.getByText("사용 중지")).toHaveClass("sicost-tone-lock");
-  expect(screen.getByText("시스템 역할")).toHaveClass("sicost-tone-info");
+  expect(screen.queryByRole("heading", { name: role.name })).not.toBeInTheDocument();
   expect(screen.queryByTestId("role-stop-open")).not.toBeInTheDocument();
-  expect(
-    screen.getByText(
-      "저장된 역할·메뉴 권한과 담당 범위를 적용합니다.",
-    ),
-  ).toHaveClass("sicost-tone-info");
+  expect(screen.getByRole("heading", { name: "메뉴별 권한" })).toBeVisible();
   expect(screen.getByRole("checkbox", { name: "권한 수정" })).toBeChecked();
   await userEvent.click(screen.getByRole("checkbox", { name: "권한 조회" }));
   expect(screen.getByRole("checkbox", { name: "권한 수정" })).toBeChecked();
@@ -188,20 +184,26 @@ it("다른 역할 이동은 미저장 Dialog에서 계속 작성 또는 명시 �
   );
   expect(api.putRole).not.toHaveBeenCalled();
 });
-it("페이지 전환은 모든 초안을 보존하고 숨은 행까지 저장한다", async () => {
+it("페이지 전환과 메뉴 검색은 모든 초안을 보존하고 숨은 행까지 저장한다", async () => {
   const many = {
     ...role,
     menuPermissions: Array.from({ length: 25 }, (_, i) => ({
       ...permission,
       menuId: `menu-${i}`,
       name: `메뉴 ${i}`,
+      screenId: `UI-${i + 100}`,
     })),
   };
   vi.mocked(api.getRole).mockResolvedValue(many);
   await mountMany();
   await userEvent.click(screen.getByRole("checkbox", { name: "메뉴 0 조회" }));
-  await userEvent.click(screen.getByTestId("role-page-next"));
+  const pages = screen.getByRole("navigation", { name: "메뉴별 권한 페이지" });
+  await userEvent.click(within(pages).getByRole("button", { name: "다음 페이지" }));
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  const search = screen.getByRole("searchbox", { name: "메뉴 검색" });
+  await userEvent.type(search, "ui-124");
+  expect(screen.getByText("총 1개")).toBeInTheDocument();
+  expect(screen.queryByRole("checkbox", { name: "메뉴 21 조회" })).not.toBeInTheDocument();
   await userEvent.click(
     screen.getByRole("checkbox", { name: "메뉴 24 다운로드" }),
   );
@@ -313,11 +315,11 @@ it("COPY는 미저장 초안이 아닌 저장 원본·revision을 보내고 취�
   await mount();
   await userEvent.selectOptions(screen.getByLabelText("데이터범위"), "PROJ");
   await userEvent.click(screen.getByTestId("role-copy-open"));
-  await screen.findByText(/저장 원본: 전체/);
+  await screen.findByText(/저장 원본 · 전체/);
   await userEvent.click(screen.getByTestId("role-create-cancel"));
   expect(screen.getByLabelText("데이터범위")).toHaveValue("PROJ");
   await userEvent.click(screen.getByTestId("role-copy-open"));
-  await screen.findByText(/저장 원본: 전체/);
+  await screen.findByText(/저장 원본 · 전체/);
   fireEvent.change(within(screen.getByRole("dialog")).getByLabelText("이름"), {
     target: { value: "복사 역할" },
   });
@@ -359,7 +361,11 @@ it("변경 이력은 읽기 전용·빈 상태와 새로고침을 제공하고 �
   await mount();
   await userEvent.click(screen.getByLabelText("민감항목 보기"));
   await userEvent.click(screen.getByTestId("role-history-open"));
-  await screen.findByText("변경 이력이 없습니다.");
+  const dialog = screen.getByRole("dialog", { name: `${role.name} 변경 이력` });
+  await within(dialog).findByText("변경 이력이 없습니다.");
+  expect(
+    within(dialog).getByRole("navigation", { name: "역할 변경 이력 페이지" }),
+  ).toBeVisible();
   expect(api.getRoleHistory).toHaveBeenCalledWith("ADMIN", 1, 50);
   await userEvent.click(screen.getByTestId("role-history-refresh"));
   await waitFor(() => expect(api.getRoleHistory).toHaveBeenCalledTimes(2));

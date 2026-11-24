@@ -12,6 +12,10 @@ import { type Column } from "../../shared/DataTable";
 import { AnalysisTable as DataTable } from "./AnalysisTable";
 import { FilterBar } from "../../shared/FilterBar";
 import { StatusBadge } from "../../shared/Feedback";
+import { FinancialWarnings } from "../../shared/FinancialWarnings";
+import { CalculationMethods } from "../../shared/CalculationMethods";
+import { KpiStrip } from "../../shared/Surface";
+import { CompactPeriodSummary } from "../../shared/PeriodStatus";
 import {
   getSalesPartOptions,
   type PartOption,
@@ -20,7 +24,6 @@ import * as api from "./projectAnalysisApi";
 import { noWeeklyMemo, progressReasonText } from "../progress/progressFormat";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import {
-  AnalysisSummary,
   AnalysisCompleteness,
   AnalysisFailure,
   AnalysisProgress,
@@ -31,19 +34,91 @@ import {
   type AnalysisSlots,
 } from "./ProjectAnalysisParts";
 import "./projectAnalysis.css";
-const fields = [
-  ["projectCount", "진행 프로젝트"],
-  ["dangerCount", "위험"],
-  ["openIssueCount", "열린 이슈"],
-  ["overdueIssueCount", "기한 지남"],
-  ["staleProjectCount", "14일 초과 업데이트 없음"],
-] as const;
+function ProjectBoardOverview({
+  data,
+  showBaseDate,
+}: {
+  data: api.BoardPage;
+  showBaseDate: boolean;
+}) {
+  const { summary } = data;
+  return (
+    <>
+      <CompactPeriodSummary
+        items={[
+          ...(showBaseDate ? [{ label: "기준일", value: data.baseDate }] : []),
+          { label: "원가 기준월", value: data.currentMonth },
+        ]}
+      />
+      <KpiStrip className="project-status-kpis">
+        <section>
+          <span>진행 프로젝트</span>
+          <strong>{analysisDisplay(summary.projectCount)}</strong>
+          <div className="project-status-kpi-badges">
+            <StatusBadge tone="ok">
+              정상 {analysisDisplay(summary.normalCount)}
+            </StatusBadge>
+            <StatusBadge tone="warn">
+              주의 {analysisDisplay(summary.warningCount)}
+            </StatusBadge>
+            <StatusBadge tone="bad">
+              <span data-testid="analysis-summary-danger-count">
+                위험 {analysisDisplay(summary.dangerCount)}
+              </span>
+            </StatusBadge>
+          </div>
+        </section>
+        <section>
+          <span>열린 이슈</span>
+          <strong>{analysisDisplay(summary.openIssueCount)}</strong>
+          <div className="project-status-kpi-badges">
+            <StatusBadge
+              tone={Number(summary.openHighIssueCount) > 0 ? "warn" : "neutral"}
+            >
+              높음 {analysisDisplay(summary.openHighIssueCount)}
+            </StatusBadge>
+          </div>
+        </section>
+        <section>
+          <span>기한 지난 이슈</span>
+          <strong>{analysisDisplay(summary.overdueIssueCount)}</strong>
+        </section>
+        <section>
+          <span>원가 미확인</span>
+          <strong>{analysisDisplay(summary.unknownCostProjectCount)}</strong>
+        </section>
+      </KpiStrip>
+    </>
+  );
+}
 const types: Record<string, string> = {
   TK: "턴키",
   MO: "월단위",
   DP: "파견",
   IN: "내부",
 };
+const calculationMethods = [
+  {
+    metric: "일정 지연",
+    formula: "계획 진척률 − 실적 진척률",
+    reference: "10.0%p 이상 위험, 5.0%p 이상 주의",
+  },
+  {
+    metric: "진척 대비 원가",
+    formula: "턴키 원가 사용률 − 실적 진척률",
+    reference: "15.0%p 이상 위험, 5.0%p 이상 주의",
+  },
+  {
+    metric: "기한 지난 이슈",
+    formula: "기준일 전에 기한이 지난 미종결 이슈 건수",
+    reference: "1건 이상이면 주의, 그중 중요도 높음이 1건 이상이면 위험",
+  },
+  {
+    metric: "주간 메모 경과일",
+    formula: "기준일 − 마지막 메모 작성일",
+    reference: "14일 초과 시 주의. 메모가 없으면 등록일과 계약 시작일 중 늦은 날부터 계산",
+  },
+] as const;
 export type ProjectStatusBoardProps = AnalysisSlots & {
   renderIssues?(query: api.AnalysisQuery, onChanged: () => void): ReactNode;
 };
@@ -211,6 +286,7 @@ export function ProjectStatusBoard({
         <>
           {canProjects ? (
             <Link
+              className="project-link"
               data-testid={`status-project-${row.projectId.toLowerCase()}`}
               onClick={(event) => event.stopPropagation()}
               to={projectLink(row)}
@@ -233,6 +309,7 @@ export function ProjectStatusBoard({
             </>
           ) : canCosts ? (
             <Link
+              className="project-link"
               data-testid={`status-cost-${row.projectId.toLowerCase()}`}
               onClick={(event) => event.stopPropagation()}
               to={`/UI-04?${new URLSearchParams({ month: result.data?.currentMonth ?? "", projectId: row.projectId, detailProjectId: row.projectId, returnTo: `/UI-31?${params}` })}`}
@@ -267,6 +344,7 @@ export function ProjectStatusBoard({
             </>
           ) : canProjects ? (
             <Link
+              className="project-link"
               data-testid={`status-stage-${row.projectId.toLowerCase()}`}
               onClick={(event) => event.stopPropagation()}
               to={projectLink(row)}
@@ -352,139 +430,128 @@ export function ProjectStatusBoard({
           : [];
       })
     : columns;
+  const staleWarnings = (result.data?.staleProjects ?? []).map((project) => {
+    const elapsed = project.lastUpdatedDate == null
+      ? noWeeklyMemo(project.elapsedDays)
+      : `마지막 메모 작성 후 ${project.elapsedDays}일`;
+    return `${project.projectName} · ${elapsed}`;
+  });
   return (
     <div
       data-testid="project-status-board"
       data-screen-id="SCR-UI-31"
       data-slice-id="SLICE-002"
-      className="project-analysis"
+      className="project-analysis project-status-board"
     >
       {result.data && (
-        <>
-          <p>
-            기준일 {result.data.baseDate} · Asia/Seoul · 원가 기준월{" "}
-            {result.data.currentMonth}
-          </p>
-          <AnalysisSummary fields={fields} summary={result.data.summary} />
-          <p>
-            정상 {result.data.summary.normalCount} · 주의{" "}
-            {result.data.summary.warningCount} · 위험{" "}
-            {result.data.summary.dangerCount} · 열린 높음{" "}
-            {result.data.summary.openHighIssueCount} · 원가 미확인{" "}
-            {result.data.summary.unknownCostProjectCount}
-          </p>
-          {result.data.staleProjects.length > 0 && (
-            <div
-              className="sicost-banner sicost-tone-warn"
-              data-testid="status-stale-banner"
-            >
-              <span>
-                14일 초과 업데이트 없음:{" "}
-                {result.data.staleProjects
-                  .map(
-                    (project) =>
-                      `${project.projectName} (${project.lastUpdatedDate == null ? noWeeklyMemo(project.elapsedDays) : `메모경과 ${project.elapsedDays}`})`,
-                  )
-                  .join(" · ")}
-              </span>
-            </div>
-          )}
-        </>
+        <ProjectBoardOverview data={result.data} showBaseDate={tab === "board"} />
       )}
-      <SegmentedTabList
-        as="div"
-        role="tablist"
-        aria-label="프로젝트 현황 보기"
-        className="project-analysis-tabs"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "board"}
-          data-testid="status-board-tab"
-          onClick={() => selectTab("board")}
+      <div className="project-status-view-row">
+        <SegmentedTabList
+          as="div"
+          role="tablist"
+          aria-label="프로젝트 현황 보기"
+          className="project-analysis-tabs"
         >
-          현황판
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "issues"}
-          data-testid="status-issues-tab"
-          onClick={() => selectTab("issues")}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "board"}
+            data-testid="status-board-tab"
+            onClick={() => selectTab("board")}
+          >
+            현황판
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "issues"}
+            data-testid="status-issues-tab"
+            onClick={() => selectTab("issues")}
+          >
+            이슈 모아 보기 ({result.data?.summary.openIssueCount ?? "–"})
+          </button>
+        </SegmentedTabList>
+        {staleWarnings.length > 0 && (
+          <FinancialWarnings
+            warnings={staleWarnings}
+            labelPrefix="14일 이내 업데이트가 없는 프로젝트"
+            description="14일 넘게 업데이트가 없는 프로젝트입니다."
+            groupTitle="업데이트 지연"
+          />
+        )}
+      </div>
+      {tab === "board" && (
+        <FilterBar
+          testId="status-filters"
+          resetTestId="status-reset"
+          searchTestId="status-search"
+          onSubmit={() => apply({ ...draft, page: 1 })}
+          onReset={() =>
+            apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
+          }
         >
-          이슈 모아 보기 ({result.data?.summary.openIssueCount ?? "–"})
-        </button>
-      </SegmentedTabList>
-      <FilterBar
-        testId="status-filters"
-        resetTestId="status-reset"
-        searchTestId="status-search"
-        onSubmit={() => apply({ ...draft, page: 1 })}
-        onReset={() =>
-          apply({ page: 1, size: analysisPageSize(pageSize ?? 50) })
-        }
-      >
-        <label className="sicost-field">
-          신호등
-          <select
-            data-testid="status-light"
-            value={String(draft.light ?? "")}
-            onChange={(e) => change("light", e.target.value)}
-          >
-            <option value="">전체</option>
-            {["위험", "주의", "정상"].map((light) => (
-              <option
-                data-testid={`status-light-option-${Array.from(light, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                key={light}
-              >
-                {light}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="sicost-field">
-          계약유형
-          <select
-            data-testid="status-type"
-            value={String(draft.contractType ?? "")}
-            onChange={(e) => change("contractType", e.target.value)}
-          >
-            <option value="">전체</option>
-            {Object.entries(types).map(([id, label]) => (
-              <option
-                data-testid={`status-type-option-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                key={id}
-                value={id}
-              >
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="sicost-field">
-          영업 파트
-          <FieldHelp label="영업 파트" />
-          <select
-            data-testid="status-part"
-            value={String(draft.partId ?? "")}
-            onChange={(e) => change("partId", e.target.value)}
-          >
-            <option value="">전체</option>
-            <option value="UNASSIGNED">미지정</option>
-            {parts.map((part) => (
-              <option
-                data-testid={`status-part-option-${Array.from(String(part.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                key={part.id}
-                value={part.id}
-              >
-                {part.name}
-                {part.hqYn === "Y" ? " (본사 직접 영업)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-      </FilterBar>
+          <label className="sicost-field">
+            신호등
+            <select
+              data-testid="status-light"
+              value={String(draft.light ?? "")}
+              onChange={(e) => change("light", e.target.value)}
+            >
+              <option value="">전체</option>
+              {["위험", "주의", "정상"].map((light) => (
+                <option
+                  data-testid={`status-light-option-${Array.from(light, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={light}
+                >
+                  {light}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="sicost-field">
+            계약유형
+            <select
+              data-testid="status-type"
+              value={String(draft.contractType ?? "")}
+              onChange={(e) => change("contractType", e.target.value)}
+            >
+              <option value="">전체</option>
+              {Object.entries(types).map(([id, label]) => (
+                <option
+                  data-testid={`status-type-option-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={id}
+                  value={id}
+                >
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="sicost-field">
+            영업 파트
+            <FieldHelp label="영업 파트" />
+            <select
+              data-testid="status-part"
+              value={String(draft.partId ?? "")}
+              onChange={(e) => change("partId", e.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="UNASSIGNED">미지정</option>
+              {parts.map((part) => (
+                <option
+                  data-testid={`status-part-option-${Array.from(String(part.id), (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={part.id}
+                  value={part.id}
+                >
+                  {part.name}
+                  {part.hqYn === "Y" ? " (본사 직접 영업)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        </FilterBar>
+      )}
       <AnalysisFailure error={settings.error} retry={settings.clear} />
       <AnalysisFailure error={result.error} retry={result.retry} />
       {tab === "board" && (
@@ -496,6 +563,7 @@ export function ProjectStatusBoard({
       )}
       <section
         role="tabpanel"
+        className="project-status-board-table"
         data-testid="status-board-panel"
         hidden={tab !== "board"}
       >
@@ -555,6 +623,7 @@ export function ProjectStatusBoard({
       </section>
       <section
         role="tabpanel"
+        className="project-status-issues-table"
         data-testid="status-issues-panel"
         hidden={tab !== "issues"}
       >
@@ -563,15 +632,12 @@ export function ProjectStatusBoard({
             <p>프로젝트를 선택해 진행 상세에서 이슈를 확인하세요.</p>
           ))}
       </section>
-      <details>
-        <summary data-testid="status-calculation-summary">계산 방법</summary>
-        <p>{result.data?.calculationNotice}</p>
-        <p>
-          일정 늦음 = 계획 − 실적: 10.0%p 이상 위험, 5.0%p 이상 주의. TK 진척
-          대비 원가 = 사용률 − 실적: 15.0%p 이상 위험, 5.0%p 이상 주의. 기한
-          지난 높음 이슈 1건 이상 위험, 기한 지난 이슈 1건 이상 또는 메모 14일
-          초과 주의. 모든 사유를 함께 표시합니다.
-        </p>
+      <CalculationMethods
+        testId="status-calculation-panel"
+        rows={calculationMethods}
+      >
+        {result.data?.calculationNotice && <p>{result.data.calculationNotice}</p>}
+        <p>해당하는 신호등 사유는 모두 표시합니다.</p>
         {result.data?.items
           .filter((row) => row.completeness.issues.length > 0)
           .map((row) => (
@@ -583,7 +649,7 @@ export function ProjectStatusBoard({
               <AnalysisCompleteness value={row.completeness} />
             </section>
           ))}
-      </details>
+      </CalculationMethods>
     </div>
   );
 }

@@ -1,9 +1,14 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Fragment, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
+import { EditorFooter } from "../../shared/EditorFooter";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
+import { Icon } from "../../shared/Icon";
+import { Pagination } from "../../shared/Pagination";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import type { MasterHistoryPage } from "../apiops/masterHistoryApi";
 import * as api from "./rolesApi";
@@ -23,6 +28,7 @@ const actions = [
   ["confirm", "확정"],
 ] as const;
 const scopeNames = { ALL: "전체", PART: "담당파트", PROJ: "담당프로젝트" };
+const menuPageSize = 20;
 function ScopeSelect({
   value,
   onChange,
@@ -36,6 +42,7 @@ function ScopeSelect({
 }) {
   return (
     <select
+      id={testId}
       aria-label="데이터범위"
       data-testid={testId}
       disabled={disabled}
@@ -52,8 +59,10 @@ function ScopeSelect({
 }
 export function PermissionsScreen({
   onDirtyChange,
+  historyActionTarget,
 }: {
   onDirtyChange?(dirty: boolean): void;
+  historyActionTarget?: HTMLElement | null;
 }) {
   const canRegister = usePermission("UI-24", "REG"),
     canUpdate = usePermission("UI-24", "UPD"),
@@ -66,6 +75,7 @@ export function PermissionsScreen({
     [error, setError] = useState<unknown>();
   const [page, setPage] = useState(1),
     [historyOpen, setHistoryOpen] = useState(false);
+  const [menuSearch, setMenuSearch] = useState("");
   const [history, setHistory] = useState<MasterHistoryPage>(),
     [historyError, setHistoryError] = useState<unknown>();
   const [historyPage, setHistoryPage] = useState(1),
@@ -80,6 +90,7 @@ export function PermissionsScreen({
   const [modalError, setModalError] = useState<unknown>(),
     [localFields, setLocalFields] = useState<Record<string, string>>({});
   const [leave, setLeave] = useState<() => void>();
+  const editorRef = useRef<HTMLElement>(null);
   const sequence = useRef(0),
     { pending, message, commit } = useCommitRefresh();
   const dirty =
@@ -287,43 +298,49 @@ export function PermissionsScreen({
     ...(modalError instanceof ApiError ? modalError.fieldMessages : {}),
     ...localFields,
   };
-  const rows = draft?.menuPermissions.slice((page - 1) * 20, page * 20) ?? [];
+  const search = menuSearch.trim().toLocaleLowerCase();
+  const menuNames = new Map(menus.map((menu) => [menu.menuId, menu.name]));
+  const filteredMenus = (draft?.menuPermissions ?? []).filter(
+    (menu) =>
+      !search ||
+      [menu.name, menu.screenId, menuNames.get(menu.parentId)].some((value) =>
+        value?.toLocaleLowerCase().includes(search),
+      ),
+  );
+  const currentPage = Math.min(
+    page,
+    Math.max(1, Math.ceil(filteredMenus.length / menuPageSize)),
+  );
+  const rows = filteredMenus.slice(
+    (currentPage - 1) * menuPageSize,
+    currentPage * menuPageSize,
+  );
   const groups = [...new Set(rows.map((row) => row.parentId))];
+  const historyButton = (
+    <button
+      type="button"
+      data-testid="role-history-open"
+      aria-haspopup="dialog"
+      disabled={!saved || loading}
+      onClick={() => {
+        setHistoryPage(1);
+        setHistoryOpen(true);
+      }}
+    >
+      역할 변경 이력
+    </button>
+  );
   return (
     <section
+      ref={editorRef}
       className="roles-editor"
       data-screen-id="SCR-UI-24"
       data-testid="roles-screen"
       aria-busy={loading || pending}
     >
-      <div className="roles-toolbar">
-        <h2>역할별 권한 설정</h2>
-        <div>
-          {canRegister && (
-            <button
-              data-testid="role-new-open"
-              data-action-id="R-NEW-OPEN"
-              disabled={pending || loading}
-              onClick={() => open("NEW")}
-            >
-              역할 추가
-            </button>
-          )}
-          {canRegister && (
-            <button
-              data-testid="role-copy-open"
-              data-action-id="R-COPY-OPEN"
-              disabled={pending || loading || !saved}
-              onClick={() => open("COPY")}
-            >
-              역할 복사
-            </button>
-          )}
-        </div>
-      </div>
-      <p role="note" className="sicost-banner sicost-tone-info">
-        저장된 역할·메뉴 권한과 담당 범위를 적용합니다.
-      </p>
+      {historyActionTarget
+        ? createPortal(historyButton, historyActionTarget)
+        : historyActionTarget === undefined && historyButton}
       {message && (
         <p role="status" className="sicost-banner sicost-tone-info">
           {message}
@@ -347,38 +364,60 @@ export function PermissionsScreen({
         </p>
       ))}
       <div className="roles-toolbar">
-        <SegmentedTabList
-          as="div"
-          role="tablist"
-          aria-label="역할"
-          className="roles-tabs"
-        >
-          {roles.map((role) => (
-            <button
-              role="tab"
-              data-testid={`role-tab-${role.roleId}`}
-              data-action-id="R-TAB"
-              key={role.roleId}
-              aria-selected={saved?.roleId === role.roleId}
-              disabled={pending || loading}
-              onClick={() =>
-                guard(() => {
-                  setHistoryOpen(false);
-                  void load(role.roleId).catch(() => {});
-                })
-              }
-            >
-              {role.name}
-            </button>
-          ))}
-        </SegmentedTabList>
-        <button
-          data-testid="role-refresh"
-          disabled={pending || loading}
-          onClick={() => guard(() => void load(saved?.roleId).catch(() => {}))}
-        >
-          최신값 다시 조회
-        </button>
+        {roles.length > 0 && (
+          <SegmentedTabList aria-label="역할">
+            {roles.map((role) => (
+              <button
+                type="button"
+                role="tab"
+                data-testid={`role-tab-${role.roleId}`}
+                data-action-id="R-TAB"
+                key={role.roleId}
+                aria-selected={saved?.roleId === role.roleId}
+                disabled={pending || loading}
+                onClick={() => {
+                  if (saved?.roleId === role.roleId) return;
+                  guard(() => {
+                    setHistoryOpen(false);
+                    void load(role.roleId).catch(() => {});
+                  });
+                }}
+              >
+                {role.name}
+              </button>
+            ))}
+          </SegmentedTabList>
+        )}
+        <div className="roles-role-actions">
+          <button
+            data-testid="role-refresh"
+            disabled={pending || loading}
+            onClick={() => guard(() => void load(saved?.roleId).catch(() => {}))}
+          >
+            새로고침
+          </button>
+          {canRegister && (
+            <>
+              <button
+                data-testid="role-copy-open"
+                data-action-id="R-COPY-OPEN"
+                disabled={pending || loading || !saved}
+                onClick={() => open("COPY")}
+              >
+                역할 복사
+              </button>
+              <button
+                className="sicost-primary"
+                data-testid="role-new-open"
+                data-action-id="R-NEW-OPEN"
+                disabled={pending || loading}
+                onClick={() => open("NEW")}
+              >
+                역할 추가
+              </button>
+            </>
+          )}
+        </div>
       </div>
       {loading && <p role="status" className={draft ? "sicost-refresh-status" : undefined}>{draft ? "갱신 중…" : "역할 설정을 불러오고 있습니다."}</p>}
       {!loading && !roles.length && !error && (
@@ -392,165 +431,190 @@ export function PermissionsScreen({
           data-testid="role-editor-panel"
           aria-label={`${draft.name} 권한`}
         >
-          <div className="roles-toolbar">
-            <h3>
-              {draft.name} <small>{draft.roleId}</small>
-            </h3>
-            <StatusBadge tone={draft.systemRole ? "info" : "neutral"}>
-              {draft.systemRole ? "시스템 역할" : "추가 역할"}
-            </StatusBadge>
-          </div>
-          <div className="roles-settings">
-            <label className="sicost-field">
-              데이터범위
-              <FieldHelp label="데이터범위" /><ScopeSelect
-                testId="role-scope"
-                disabled={!canUpdate || pending || loading}
-                value={draft.dataScope}
-                onChange={(value) => setDraft({ ...draft, dataScope: value })}
-              />
-            </label>
-            <label>
-              <input
-                data-testid="role-sensitive"
-                disabled={!canUpdate || pending || loading}
-                type="checkbox"
-                checked={draft.sensitiveView}
-                onChange={(e) =>
-                  setDraft({ ...draft, sensitiveView: e.target.checked })
-                }
-              />{" "}
-              민감항목 보기
-            </label>
-            <span>
-              급여·지급단가·개인별원가·거래처 지급계좌는 허용된 업무와 담당
-              범위에서만 표시됩니다.
-            </span>
-          </div>
-          <div className="sicost-table-viewport">
-            <table className="sicost-table" aria-label="메뉴별 7동작 권한">
-              <thead>
-                <tr>
-                  <th>서브메뉴</th>
-                  {actions.map(([key, label]) => (
-                    <th key={key}>{label}<FieldHelp label={label} kind="B" /></th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((parentId) => (
-                  <Fragment key={parentId}>
-                    <tr
-                      data-testid={`role-group-${parentId}`}
-                      className="roles-group"
-                    >
-                      <th colSpan={8}>
-                        {menus.find((menu) => menu.menuId === parentId)?.name ??
-                          parentId}
-                      </th>
-                    </tr>
-                    {rows
-                      .filter((row) => row.parentId === parentId)
-                      .map((row) => (
-                        <tr
-                          key={row.menuId}
-                          data-testid={`role-menu-${row.menuId}`}
-                        >
-                          <th scope="row">
-                            {row.name}{" "}
-                            {!row.use && (
-                              <StatusBadge tone="lock">사용 중지</StatusBadge>
-                            )}
-                          </th>
-                          {actions.map(([key, label]) => (
-                            <td key={key}>
-                              <input
-                                type="checkbox"
-                                aria-label={`${row.name} ${label}`}
-                                data-testid={`role-${row.menuId}-${key}`}
-                                checked={row[key]}
-                                disabled={!canUpdate || pending || loading}
-                                onChange={(e) =>
-                                  setDraft({
-                                    ...draft,
-                                    menuPermissions: draft.menuPermissions.map(
-                                      (p) =>
-                                        p.menuId === row.menuId
-                                          ? { ...p, [key]: e.target.checked }
-                                          : p,
-                                    ),
-                                  })
-                                }
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-            {!draft.menuPermissions.length && (
-              <p className="sicost-empty">등록된 서브메뉴가 없습니다.</p>
-            )}
-          </div>
-          <p className="roles-hint">
-            각 동작은 독립적으로 저장되며 업무 접근에는 조회 권한도 필요합니다.
-            확정은 월마감·영업파트 정산확정/취소·견적승인/반려에 적용됩니다.
-            마감해제는 별도 관리자 자격을 검사합니다.
-          </p>
-          <div className="roles-toolbar roles-savebar">
-            <div>
-              <button
-                data-testid="role-page-previous"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
-                이전
-              </button>
-              <span>
-                {" "}
-                {page} /{" "}
-                {Math.max(1, Math.ceil(draft.menuPermissions.length / 20))}{" "}
-              </span>
-              <button
-                data-testid="role-page-next"
-                disabled={page * 20 >= draft.menuPermissions.length}
-                onClick={() => setPage(page + 1)}
-              >
-                다음
-              </button>
-            </div>
-            <div>
-              <button
-                data-testid="role-history-open"
-                onClick={() => {
-                  setHistoryPage(1);
-                  setHistoryOpen((value) => !value);
-                }}
-              >
-                변경 이력
-              </button>
+          <div className="roles-table">
+            <div className="roles-settings" role="group" aria-label="역할 편집 설정">
+              <div className="roles-field-line">
+                <div className="roles-field-title">
+                  <label htmlFor="role-scope">데이터 범위</label>
+                  <FieldHelp label="데이터 범위" screenId="UI-24" />
+                </div>
+                <ScopeSelect
+                  testId="role-scope"
+                  disabled={!canUpdate || pending || loading}
+                  value={draft.dataScope}
+                  onChange={(value) => setDraft({ ...draft, dataScope: value })}
+                />
+              </div>
+              <div className="roles-sensitive">
+                <label>
+                  <input
+                    data-testid="role-sensitive"
+                    disabled={!canUpdate || pending || loading}
+                    type="checkbox"
+                    checked={draft.sensitiveView}
+                    onChange={(e) =>
+                      setDraft({ ...draft, sensitiveView: e.target.checked })
+                    }
+                  />
+                  민감항목 보기
+                </label>
+                <HelpTooltip label="민감항목 보기" iconOnly>
+                  급여·지급단가·개인별 원가·거래처 지급계좌는 허용된 업무와
+                  담당 범위에서만 표시됩니다.
+                </HelpTooltip>
+              </div>
               {canStop && !draft.systemRole && (
                 <button
+                  className="roles-stop"
                   data-testid="role-stop-open"
-                  disabled={pending}
+                  disabled={pending || loading}
                   onClick={() => guard(() => open("STOP"))}
                 >
-                  사용 중지
+                  역할 사용 중지
                 </button>
               )}
-              {canUpdate && (
+            </div>
+            <div className="roles-toolbar roles-table-toolbar">
+              <div className="roles-field-line">
+                <div className="roles-field-title">
+                  <h2>메뉴별 권한</h2>
+                  <HelpTooltip label="메뉴별 권한" iconOnly>
+                    각 동작은 독립적으로 저장되며 업무 접근에는 조회 권한도
+                    필요합니다. 확정은 월마감, 영업파트 정산확정·취소,
+                    견적승인·반려에 적용됩니다. 마감해제는 별도 관리자 자격을
+                    검사합니다.
+                  </HelpTooltip>
+                </div>
+                <label className="roles-search">
+                  <Icon name="search" size={16} />
+                  <input
+                    type="search"
+                    aria-label="메뉴 검색"
+                    value={menuSearch}
+                    placeholder="메뉴명 또는 화면 번호"
+                    onChange={(event) => {
+                      setMenuSearch(event.target.value);
+                      setPage(1);
+                    }}
+                  />
+                </label>
+              </div>
+              <strong className="roles-total">총 {filteredMenus.length}개</strong>
+            </div>
+            <div className="sicost-table-viewport roles-matrix">
+              <table className="sicost-table" aria-label="메뉴별 7동작 권한">
+                <colgroup>
+                  <col className="roles-menu-column" />
+                  <col span={actions.length} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">메뉴</th>
+                    {actions.map(([key, label]) => (
+                      <th scope="col" key={key}>
+                        <span className="roles-action-heading">
+                          {label}
+                          <FieldHelp label={label} kind="B" />
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((parentId) => (
+                    <Fragment key={parentId}>
+                      <tr
+                        data-testid={`role-group-${parentId}`}
+                        className="roles-group"
+                      >
+                        <th colSpan={8}>
+                          {menus.find((menu) => menu.menuId === parentId)?.name ??
+                            parentId}
+                        </th>
+                      </tr>
+                      {rows
+                        .filter((row) => row.parentId === parentId)
+                        .map((row) => (
+                          <tr
+                            key={row.menuId}
+                            data-testid={`role-menu-${row.menuId}`}
+                          >
+                            <th scope="row">
+                              {row.name}{" "}
+                              {!row.use && (
+                                <StatusBadge tone="lock">사용 중지</StatusBadge>
+                              )}
+                            </th>
+                            {actions.map(([key, label]) => (
+                              <td key={key}>
+                                <label className="roles-permission-cell">
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`${row.name} ${label}`}
+                                    data-testid={`role-${row.menuId}-${key}`}
+                                    checked={row[key]}
+                                    disabled={!canUpdate || pending || loading}
+                                    onChange={(event) => {
+                                      const checked = event.target.checked;
+                                      setDraft({
+                                        ...draft,
+                                        menuPermissions: draft.menuPermissions.map(
+                                          (permission) =>
+                                            permission.menuId === row.menuId
+                                              ? { ...permission, [key]: checked }
+                                              : permission,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                </label>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+              {!filteredMenus.length && (
+                <p className="sicost-empty">
+                  {search && draft.menuPermissions.length
+                    ? "검색 조건에 맞는 메뉴가 없습니다."
+                    : "등록된 서브메뉴가 없습니다."}
+                </p>
+              )}
+            </div>
+          </div>
+          <Pagination
+            page={currentPage}
+            size={menuPageSize}
+            total={filteredMenus.length}
+            onPageChange={setPage}
+            disabled={pending || loading}
+            label="메뉴별 권한 페이지"
+            unit="개"
+            testId="role-menu"
+            hideSingle
+          />
+          {canUpdate && (
+            <EditorFooter editorRef={editorRef} label="선택한 역할 저장">
+              <div className="roles-footer-note">
+                <small>데이터 범위, 민감항목 보기, 메뉴별 권한을 함께 저장합니다.</small>
+                {dirty && (
+                  <StatusBadge tone="warn">저장 전</StatusBadge>
+                )}
+              </div>
+              <div className="roles-actions">
                 <button
+                  type="button"
                   data-testid="role-cancel"
                   disabled={pending || loading || !dirty}
                   onClick={() => setDraft(saved)}
                 >
                   취소
                 </button>
-              )}
-              {canUpdate && (
                 <button
+                  type="button"
                   data-testid="role-save"
                   className="sicost-primary"
                   disabled={pending || loading || !dirty}
@@ -558,29 +622,32 @@ export function PermissionsScreen({
                 >
                   저장
                 </button>
-              )}
-            </div>
-          </div>
-          <details>
-            <summary>저장 설정 식별값</summary>
-            <p className="roles-revision">역할 revision: {saved?.revision}</p>
-            <p className="roles-revision">
-              설정 revision: {saved?.settingsRevision}
-            </p>
-          </details>
+              </div>
+            </EditorFooter>
+          )}
         </div>
       )}
       {historyOpen && saved && (
-        <section data-testid="role-history-panel" aria-label="역할 변경 이력">
-          <div className="roles-toolbar">
-            <h3>{saved.name} 변경 이력</h3>
+        <Dialog
+          open
+          wide
+          hideCancel
+          title={`${saved.name} 변경 이력`}
+          testId="role-history-panel"
+          confirmTestId="role-history-close"
+          confirmLabel="닫기"
+          onConfirm={() => setHistoryOpen(false)}
+          onCancel={() => setHistoryOpen(false)}
+          footerStart={
             <button
-              data-testid="role-history-close"
-              onClick={() => setHistoryOpen(false)}
+              type="button"
+              data-testid="role-history-refresh"
+              onClick={() => setHistoryRefresh((value) => value + 1)}
             >
-              닫기
+              이력 다시 조회
             </button>
-          </div>
+          }
+        >
           {historyError != null && (
             <ErrorBanner
               message={
@@ -595,15 +662,15 @@ export function PermissionsScreen({
           )}
           {history && (
             <>
-              <div className="sicost-table-viewport">
-                <table className="sicost-table">
+              <div className="sicost-table-viewport roles-history-table">
+                <table className="sicost-table" aria-label="역할 변경 이력">
                   <thead>
                     <tr>
                       <th>일시</th>
                       <th>대상</th>
                       <th>항목</th>
-                      <th>전</th>
-                      <th>후</th>
+                      <th>변경 전</th>
+                      <th>변경 후</th>
                       <th>처리자</th>
                       <th>사유</th>
                     </tr>
@@ -619,7 +686,7 @@ export function PermissionsScreen({
                         <td>{item.itemName}</td>
                         <td>
                           <details>
-                            <summary>전후값 펼침/접기</summary>
+                            <summary>변경 전 값 보기</summary>
                             {item.beforeValue ?? "–"}
                           </details>
                         </td>
@@ -636,42 +703,21 @@ export function PermissionsScreen({
               {!history.items.length && (
                 <p className="sicost-empty">변경 이력이 없습니다.</p>
               )}
-              <button
-                data-testid="role-history-prev"
-                disabled={historyPage === 1}
-                onClick={() => setHistoryPage(historyPage - 1)}
-              >
-                이력 이전
-              </button>
-              <button
-                data-testid="role-history-next"
-                disabled={historyPage * historySize >= history.total}
-                onClick={() => setHistoryPage(historyPage + 1)}
-              >
-                이력 다음
-              </button>
-              <select
-                aria-label="이력 표시 수"
-                data-testid="role-history-size"
-                value={historySize}
-                onChange={(e) => {
+              <Pagination
+                page={historyPage}
+                size={historySize}
+                total={history.total}
+                onPageChange={setHistoryPage}
+                onSizeChange={(size) => {
                   setHistoryPage(1);
-                  setHistorySize(Number(e.target.value) as 20 | 50 | 100);
+                  setHistorySize(size);
                 }}
-              >
-                {[20, 50, 100].map((size) => (
-                  <option key={size}>{size}</option>
-                ))}
-              </select>
+                label="역할 변경 이력 페이지"
+                testId="role-history"
+              />
             </>
           )}
-          <button
-            data-testid="role-history-refresh"
-            onClick={() => setHistoryRefresh((value) => value + 1)}
-          >
-            이력 다시 조회
-          </button>
-        </section>
+        </Dialog>
       )}
       {(modal === "NEW" || modal === "COPY") && (
         <Dialog
@@ -714,13 +760,14 @@ export function PermissionsScreen({
             <>
               <label className="sicost-field">
                 데이터범위
-                <FieldHelp label="데이터범위" /><ScopeSelect
+                <FieldHelp label="데이터범위" />
+                <ScopeSelect
                   testId="role-create-scope"
                   value={newScope}
                   onChange={setNewScope}
                 />
               </label>
-              <p>민감 N · 모든 서브메뉴 7동작 N · ID·순서는 서버 발급</p>
+              <p>새 역할은 민감 항목 보기와 모든 메뉴 권한이 해제된 상태로 시작합니다. 역할 ID와 표시 순서는 자동으로 지정됩니다.</p>
             </>
           ) : (
             <>
@@ -752,8 +799,8 @@ export function PermissionsScreen({
               )}
               {source && (
                 <p>
-                  저장 원본: {scopeNames[source.dataScope]} · 민감{" "}
-                  {source.sensitiveView ? "Y" : "N"} · 메뉴{" "}
+                  저장 원본 · {scopeNames[source.dataScope]} · 민감항목 보기{" "}
+                  {source.sensitiveView ? "허용" : "해제"} · 메뉴{" "}
                   {source.menuPermissions.length}개
                 </p>
               )}

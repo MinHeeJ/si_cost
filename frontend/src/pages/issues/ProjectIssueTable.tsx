@@ -101,6 +101,7 @@ export function ProjectIssueTable({
             label: "프로젝트",
             render: (r: ProjectIssue) => (
               <Link
+                className="issue-link"
                 data-testid={`issue-project-${r.issueId}`}
                 data-screen-id="SCR-UI-31-B138-PROJECT-ISSUES"
                 onClick={(e) => e.stopPropagation()}

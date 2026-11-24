@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
 import { formatDecimal, validMonth } from "../../shared/format";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -296,7 +297,13 @@ function ExpensesContent({
       data-testid="project-expenses-panel"
     >
       <header className="project-expenses-heading">
-        <h2>추가 직접 경비</h2>
+        <div className="project-expenses-title">
+          <h2>추가 직접 경비</h2>
+          <HelpTooltip label="추가 직접 경비" iconOnly>
+            월 반복 팀비/경비와 별개인 일회성 직접 경비입니다. 미마감·비이관 월만
+            등록·삭제할 수 있습니다.
+          </HelpTooltip>
+        </div>
         <button
           type="button"
           data-testid="pj-exps-open"
@@ -316,10 +323,6 @@ function ExpensesContent({
           경비 추가
         </button>
       </header>
-      <p className="project-expenses-help">
-        월 반복 팀비/경비와 별개인 일회성 직접 경비입니다. 미마감·비이관 월만
-        등록·삭제할 수 있습니다.
-      </p>
       {locked && period && (
         <p className="sicost-banner sicost-tone-lock">
           실주 또는 지난 연도는 조회만 할 수 있습니다.

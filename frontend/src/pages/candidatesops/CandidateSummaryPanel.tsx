@@ -128,10 +128,6 @@ export function CandidateSummaryPanel({
           {data.total === 0 && (
             <p className="candidate-summary-empty">등록된 후보가 없습니다.</p>
           )}
-          <p className="candidate-summary-help">
-            요약은 전체 후보 기준입니다. 다음 달 시작까지 가능은 다음 달 1일
-            기준이며, 목록의 ‘다음 달까지’는 다음 달 말일 기준입니다.
-          </p>
         </>
       ) : null}
     </section>
