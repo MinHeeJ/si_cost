@@ -281,7 +281,13 @@ export function useFinancialEditor(
   const [editor, setEditor] = useState<api.FinancialEditor>();
   const [draft, setDraft] = useState<FinancialDraft>();
   const [error, setError] = useState<unknown>();
-  const [message, setMessage] = useState("");
+  const [{ message, sequence: messageSequence }, setNotice] = useState({
+    message: "",
+    sequence: 0,
+  });
+  const setMessage = useCallback((message: string) => {
+    setNotice((previous) => ({ message, sequence: previous.sequence + 1 }));
+  }, []);
   const [loading, setLoading] = useState(true),
     [pending, setPending] = useState(false),
     [retry, setRetry] = useState(0);
@@ -554,6 +560,7 @@ export function useFinancialEditor(
     error,
     setError,
     message,
+    messageSequence,
     setMessage,
     calculated,
     previewError,

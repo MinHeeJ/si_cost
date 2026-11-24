@@ -273,6 +273,26 @@ it("loads server current month without preferences and renders empty states, sha
   );
   expect(writes()).toHaveLength(0);
 });
+it("shows repeated identical notices outside the editor after the toast expires", async () => {
+  await ready();
+  vi.useFakeTimers();
+  try {
+    fireEvent.click(screen.getByTestId("financial-save"));
+    const toast = screen.getByText("바뀐 내용이 없습니다.");
+    expect(toast.closest(".sicost-toast-stack")?.parentElement).toBe(document.body);
+    expect(screen.getByTestId("financial-editor")).not.toContainElement(toast);
+    act(() => vi.advanceTimersByTime(3500));
+    expect(screen.queryByText("바뀐 내용이 없습니다.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("financial-save"));
+    expect(screen.getByText("바뀐 내용이 없습니다.")).toHaveClass("sicost-tone-ok");
+    act(() => vi.advanceTimersByTime(3500));
+    expect(screen.queryByText("바뀐 내용이 없습니다.")).not.toBeInTheDocument();
+    expect(writes()).toHaveLength(0);
+  } finally {
+    vi.useRealTimers();
+  }
+});
 it("retains both tab drafts and sends exactly one atomic add/update/delete request without audit fields", async () => {
   await ready();
   await addItem();
@@ -443,6 +463,10 @@ it("hidden-tab server row errors reveal that tab and keep all inputs", async () 
       .getAllByRole("alert")
       .some((node) => node.textContent?.includes("finance-trace")),
   ).toBe(true);
+  const toast = screen.getByText("대여금 오류", { selector: ".sicost-toast" });
+  expect(toast).toHaveClass("sicost-toast", "sicost-tone-bad");
+  expect(toast.closest(".sicost-toast-stack")?.parentElement).toBe(document.body);
+  expect(screen.getByTestId("financial-editor")).not.toContainElement(toast);
   await userEvent.click(screen.getByTestId("financial-tab-financial"));
   expect(screen.getByTestId("financial-items-new-1-amount")).toHaveValue(
     "1,000 원",
