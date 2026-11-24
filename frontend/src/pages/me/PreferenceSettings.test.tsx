@@ -15,7 +15,7 @@ it("기본값으로는 목록수와 밀도만 저장하며 즐겨찾기·기간�
  await waitFor(() => expect(api.putPreference).toHaveBeenCalledTimes(2));
  expect(vi.mocked(api.putPreference).mock.calls.map(c=>c.slice(0,3))).toEqual([["PAGE_SIZE","*",50],["DENSE","*","넓게"]]);
  expect(api.deletePreference).not.toHaveBeenCalled();
- await userEvent.click(dialog.getByRole("button", { name: "닫기", exact: true }));
+ await userEvent.click(dialog.getByRole("button", { name: /^닫기$/ }));
  expect(onClose).toHaveBeenCalledOnce();
  expect(api.putPreference).toHaveBeenCalledTimes(2);
 });
