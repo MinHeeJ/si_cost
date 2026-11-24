@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { PreferencesProvider } from "./usePreferences";
@@ -6,10 +6,16 @@ import { PreferenceSettings } from "./PreferenceSettings";
 import type { PreferenceApi } from "./preferencesApi";
 it("기본값으로는 목록수와 밀도만 저장하며 즐겨찾기·기간·단위를 보존한다", async () => {
  const api: PreferenceApi = { getPreferences: vi.fn(async () => ({items: [{type:"PAGE_SIZE" as const,key:"*",value:20,stored:true,revision:"p"},{type:"DENSE" as const,key:"*",value:"좁게",stored:true,revision:"d"}]})), putPreference: vi.fn(async (type,key,value) => ({changed:true,preference:{type,key,value,stored:true,revision:"r"}})), deletePreference: vi.fn() };
- render(<PreferencesProvider api={api}><PreferenceSettings open onClose={vi.fn()} /></PreferencesProvider>);
+ const onClose = vi.fn();
+ render(<PreferencesProvider api={api}><PreferenceSettings open onClose={onClose} /></PreferencesProvider>);
+ const dialog = within(screen.getByRole("dialog", { name: "화면 설정" }));
+ expect(dialog.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
  await waitFor(() => expect(screen.queryByText("불러오는 중…")).not.toBeInTheDocument());
  await userEvent.click(screen.getByRole("button",{name:"기본값으로"}));
  await waitFor(() => expect(api.putPreference).toHaveBeenCalledTimes(2));
  expect(vi.mocked(api.putPreference).mock.calls.map(c=>c.slice(0,3))).toEqual([["PAGE_SIZE","*",50],["DENSE","*","넓게"]]);
  expect(api.deletePreference).not.toHaveBeenCalled();
+ await userEvent.click(dialog.getByRole("button", { name: "닫기", exact: true }));
+ expect(onClose).toHaveBeenCalledOnce();
+ expect(api.putPreference).toHaveBeenCalledTimes(2);
 });

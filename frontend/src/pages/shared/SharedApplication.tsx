@@ -952,8 +952,8 @@ function SharedApplicationContent({
         <Dialog
           open={dialog === "settings"}
           title="화면 설정"
-          cancelLabel="닫기"
-          confirmLabel="완료"
+          confirmLabel="닫기"
+          hideCancel
           onCancel={() => setDialog(null)}
           onConfirm={() => setDialog(null)}
           pending={pending}

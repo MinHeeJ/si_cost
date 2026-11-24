@@ -126,7 +126,9 @@ it("닫기와Esc는 쓰기나 추가조회 없이 초점을 호출 메뉴로 돌
   const trigger = screen.getByRole("button", { name: "내 정보" });
   await userEvent.click(trigger);
   await screen.findByText(profile.userName);
-  await userEvent.click(screen.getByRole("button", { name: "닫기" }));
+  const dialog = within(screen.getByRole("dialog", { name: "내 정보" }));
+  expect(dialog.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "닫기" }));
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );

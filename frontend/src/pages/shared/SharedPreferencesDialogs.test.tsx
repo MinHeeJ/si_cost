@@ -111,6 +111,8 @@ it("화면 설정의 명시 변경만 해당 설정을 저장하고 성공 후 �
     ),
   );
   expect(within(dialog).getByLabelText("한 화면 건수")).toHaveValue("20");
+  expect(within(dialog).queryByRole("button", { name: "완료" })).not.toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "닫기", exact: true })).toBeEnabled();
 });
 it("즐겨찾기 재정렬과 해제는 서버 성공 후 순서를 적용한다", async () => {
   render(
