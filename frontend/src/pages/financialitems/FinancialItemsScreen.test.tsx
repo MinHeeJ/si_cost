@@ -12,6 +12,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { FinancialItemsEditor } from "./FinancialItemsScreen";
 import { financialEditorFixture } from "./financialFixtures";
 import type { FinancialEditor } from "./financialApi";
+import * as imports from "../b2/financialImportApi";
 
 const fetcher = vi.fn<typeof fetch>();
 let data: FinancialEditor;
@@ -41,6 +42,8 @@ beforeEach(() => {
     const path = String(url);
     if (path.startsWith("/api/codes/"))
       return response({ items: [{ code: "RENT", name: "임대료" }] });
+    if (path.startsWith("/api/financial-history?"))
+      return response({ items: [], total: 0, page: 1, size: 50 });
     if (path.startsWith("/api/financial-items/year-status"))
       return response({
         year: data.month.slice(0, 4),
@@ -108,6 +111,143 @@ async function addItem() {
     "1,000 원",
   );
 }
+
+it("keeps only previous-month and upload title actions, with the template inside the unchanged upload dialog", async () => {
+  const template = vi
+    .spyOn(imports, "getB2Template")
+    .mockRejectedValue(new Error("양식 조회 실패"));
+  await ready();
+  const title = within(
+    screen
+      .getByTestId("financial-load-previous")
+      .closest(".sicost-title-action-group") as HTMLElement,
+  );
+  expect(
+    title.getAllByRole("button").map((button) => button.textContent),
+  ).toEqual(["지난달 항목 불러오기", "엑셀 업로드"]);
+  expect(
+    title.queryByRole("button", { name: /변경 이력|양식 내려받기/ }),
+  ).not.toBeInTheDocument();
+  await userEvent.click(title.getByRole("button", { name: "엑셀 업로드" }));
+  const dialog = await screen.findByRole("dialog", {
+    name: "엑셀 업로드 · 재무 항목",
+  });
+  expect(
+    within(dialog).getByTestId("financial-upload-month"),
+  ).toHaveTextContent(data.month);
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "양식 내려받기" }),
+  );
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+    "양식 조회 실패",
+  );
+  expect(template).toHaveBeenCalledTimes(1);
+  expect(template).toHaveBeenCalledWith(data.month);
+  await userEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(writes()).toHaveLength(0);
+});
+
+it.each(["먼저 저장", "변경 버리기"])(
+  "upload still waits for dirty changes: cancel then %s",
+  async (action) => {
+    await ready();
+    await addItem();
+    await userEvent.click(screen.getByTestId("financial-upload-button"));
+    const confirmation = await screen.findByRole("dialog", {
+      name: "저장 전 변경을 먼저 처리해 주세요",
+    });
+    expect(screen.getByTestId("financial-upload-button")).toBeDisabled();
+    expect(screen.queryByTestId("b7-file-input")).not.toBeInTheDocument();
+    await userEvent.click(
+      within(confirmation).getByRole("button", { name: "취소" }),
+    );
+    expect(screen.getByTestId("financial-items-new-1-item-name")).toHaveValue(
+      "임대료",
+    );
+    expect(screen.queryByTestId("b7-file-input")).not.toBeInTheDocument();
+    expect(writes()).toHaveLength(0);
+    await userEvent.click(screen.getByTestId("financial-upload-button"));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: action,
+      }),
+    );
+    await screen.findByRole("dialog", { name: "엑셀 업로드 · 재무 항목" });
+    expect(screen.getByTestId("b7-file-input")).toBeVisible();
+    expect(writes()).toHaveLength(action === "먼저 저장" ? 1 : 0);
+  },
+);
+
+it.each([
+  { label: "editable", overrides: {} },
+  {
+    label: "closed",
+    overrides: { editable: false, closeStatus: "CLOSE" as const },
+  },
+  {
+    label: "past year",
+    overrides: {
+      editable: false,
+      month: "2025-12",
+      readOnlyReason: "지난 연도는 조회 전용입니다.",
+    },
+  },
+])(
+  "$label month always has one initially collapsed bottom history panel",
+  async ({ overrides }) => {
+    data = financialEditorFixture(overrides);
+    await ready();
+    const panel = screen.getByTestId("financial-history-panel");
+    const toggle = within(panel).getByRole("button", { name: "변경 이력" });
+    expect(screen.getAllByTestId("financial-history-toggle")).toHaveLength(1);
+    expect(panel.closest(".sicost-title-action-group")).toBeNull();
+    expect(panel).toBeVisible();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(panel).queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      fetcher.mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/financial-history?"),
+      ),
+    ).toHaveLength(0);
+    if (!data.editable) {
+      expect(
+        screen.queryByTestId("financial-load-previous"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("financial-upload-button"),
+      ).not.toBeInTheDocument();
+    }
+    await userEvent.click(toggle);
+    expect(await within(panel).findByRole("table")).toBeVisible();
+    await within(panel).findByText("해당 범위의 변경 이력이 없습니다.");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      fetcher.mock.calls.some(
+        ([url]) =>
+          String(url) ===
+          `/api/financial-history?month=${data.month}&scope=MONTH&page=1&size=50`,
+      ),
+    ).toBe(true);
+    await userEvent.click(toggle);
+    expect(within(panel).queryByRole("table")).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    await within(panel).findByRole("table");
+    await userEvent.click(within(panel).getByRole("button", { name: "닫기" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+    expect(panel).toBeVisible();
+    await userEvent.click(screen.getByTestId("financial-tab-cash"));
+    expect(panel).toBeVisible();
+    const ids = Array.from(
+      screen.getByTestId("financial-editor").querySelectorAll("[data-testid]"),
+      (element) => element.getAttribute("data-testid"),
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(writes()).toHaveLength(0);
+  },
+);
 
 it("loads server current month without preferences and renders empty states, shared tables and future disabled", async () => {
   await ready();

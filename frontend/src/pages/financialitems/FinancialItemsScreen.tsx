@@ -11,7 +11,7 @@ import { ApiError } from "../../shared/api";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 
 import { Dialog } from "../../shared/Dialog";
-import { FinancialUploadActions } from "../b2/FinancialUploadDialog";
+import { FinancialUploadDialog } from "../b2/FinancialUploadDialog";
 import { FinancialHistoryPanel } from "../apiops/FinancialHistoryPanel";
 import { TaxPaymentDialog } from "../corporatetaxesops/TaxPaymentDialog";
 import { FinancialTaxPanel, taxExplanation } from "./FinancialTaxPanel";
@@ -30,15 +30,15 @@ const financialItemsGuide = (
     <section>
       <h3>조회월과 입력 현황</h3>
       <p>
-        입력 현황에서 연도를 고른 뒤 월을 누르면 그 달의 항목이 열립니다.
-        입력 현황의 건수는 저장된 재무 항목을 기준으로 표시합니다.
+        입력 현황에서 연도를 고른 뒤 월을 누르면 그 달의 항목이 열립니다. 입력
+        현황의 건수는 저장된 재무 항목을 기준으로 표시합니다.
       </p>
     </section>
     <section>
       <h3>금액 단위와 저장</h3>
       <p>
-        입력 금액은 원 단위 정수로 입력합니다. 탭 옆 ‘단위’에서 조회 금액의
-        표시 단위를 바꿀 수 있습니다. [저장]은 두 탭의 변경사항을 함께 반영합니다.
+        입력 금액은 원 단위 정수로 입력합니다. 탭 옆 ‘단위’에서 조회 금액의 표시
+        단위를 바꿀 수 있습니다. [저장]은 두 탭의 변경사항을 함께 반영합니다.
       </p>
     </section>
   </>
@@ -69,7 +69,11 @@ export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const section = incoming?.section;
   const openAdjustments = section === "adjustments";
   return (
-    <SharedScreenFrame screenId="UI-10" periodBar={null} screenGuide={financialItemsGuide}>
+    <SharedScreenFrame
+      screenId="UI-10"
+      periodBar={null}
+      screenGuide={financialItemsGuide}
+    >
       <FinancialItemsEditor
         key={savedEntry.current?.key}
         {...props}
@@ -103,8 +107,9 @@ export function FinancialItemsEditor({
     state.discard,
   );
   const [tab, setTab] = useState<"financial" | "cash">("financial");
-  const [unit, setUnit] = useState<FinancialUnit>("천원"),
-    [history, setHistory] = useState(false);
+  const [unit, setUnit] = useState<FinancialUnit>("천원");
+  const [uploadOpen, setUploadOpen] = useState(false),
+    [uploadOpening, setUploadOpening] = useState(false);
   const [payment, setPayment] = useState<CorporateTaxPayment>();
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -440,12 +445,14 @@ export function FinancialItemsEditor({
         })
       }
       onAdd={() => add(collection)}
-      notice={collection === "items" && automaticCount > 0 ? (
-        <p className="sicost-banner sicost-tone-info">
-          ‘매달 반복’ 항목 {automaticCount}개를 지난달({previousMonth})에서 채웠습니다.
-          금액을 확인한 뒤 저장해 주세요.
-        </p>
-      ) : undefined}
+      notice={
+        collection === "items" && automaticCount > 0 ? (
+          <p className="sicost-banner sicost-tone-info">
+            ‘매달 반복’ 항목 {automaticCount}개를 지난달({previousMonth})에서
+            채웠습니다. 금액을 확인한 뒤 저장해 주세요.
+          </p>
+        ) : undefined
+      }
       summary={
         collection === "adjustments" ? (
           <>
@@ -457,9 +464,15 @@ export function FinancialItemsEditor({
           </>
         ) : collection === "loans" ? (
           <>
-            <span>받음 합계 {amount(editor.contributions.cashLoanIn, false, true)}</span>
-            <span>갚음 합계 {amount(editor.contributions.cashLoanOut, false, true)}</span>
-            <span>순액 {amount(editor.contributions.cashLoanNet, false, true)}</span>
+            <span>
+              받음 합계 {amount(editor.contributions.cashLoanIn, false, true)}
+            </span>
+            <span>
+              갚음 합계 {amount(editor.contributions.cashLoanOut, false, true)}
+            </span>
+            <span>
+              순액 {amount(editor.contributions.cashLoanNet, false, true)}
+            </span>
           </>
         ) : undefined
       }
@@ -589,8 +602,17 @@ export function FinancialItemsEditor({
       }
     />
   );
-  const amount = (value: string | null | undefined, plus = false, showUnit = false) => (
-    <FinancialAmount value={value} unit={unit} plus={plus} showUnit={showUnit} />
+  const amount = (
+    value: string | null | undefined,
+    plus = false,
+    showUnit = false,
+  ) => (
+    <FinancialAmount
+      value={value}
+      unit={unit}
+      plus={plus}
+      showUnit={showUnit}
+    />
   );
   const automaticCount = draft.items.filter((row) => row.automatic).length;
   const selectedYear = editor.month.slice(0, 4);
@@ -599,7 +621,8 @@ export function FinancialItemsEditor({
   const earliestListedYear = String(
     Math.max(
       1,
-      Math.min(Number(editor.cashBaseMonth.slice(0, 4)), Number(currentYear)) - 1,
+      Math.min(Number(editor.cashBaseMonth.slice(0, 4)), Number(currentYear)) -
+        1,
     ),
   ).padStart(4, "0");
   const contributions = state.calculated?.contributions ?? editor.contributions;
@@ -660,24 +683,40 @@ export function FinancialItemsEditor({
               >
                 지난달 항목 불러오기
               </button>
-              <FinancialUploadActions
-                month={editor.month}
-                readOnly={disabled}
-                beforeOpen={() => guard.ask("B.2 업로드 시작", true)}
-                onApplied={async () => {
-                  await refresh();
-                }}
-              />
+              <section
+                data-testid="financial-upload-actions"
+                className="b7-actions"
+              >
+                <button
+                  type="button"
+                  data-testid="financial-upload-button"
+                  disabled={disabled || uploadOpening}
+                  onClick={async () => {
+                    if (uploadOpening) return;
+                    setUploadOpening(true);
+                    try {
+                      if (await guard.ask("B.2 업로드 시작", true))
+                        setUploadOpen(true);
+                    } finally {
+                      setUploadOpening(false);
+                    }
+                  }}
+                >
+                  엑셀 업로드
+                </button>
+                {uploadOpen && (
+                  <FinancialUploadDialog
+                    month={editor.month}
+                    readOnly={disabled}
+                    onClose={() => setUploadOpen(false)}
+                    onApplied={async () => {
+                      await refresh();
+                    }}
+                  />
+                )}
+              </section>
             </>
           )}
-          <button
-            type="button"
-            data-testid="financial-history-toggle"
-            aria-expanded={history}
-            onClick={() => setHistory((value) => !value)}
-          >
-            변경 이력 {history ? "접기" : "펼침"}
-          </button>
         </div>
       </ScreenTitleActions>
       <section
@@ -705,7 +744,11 @@ export function FinancialItemsEditor({
           <h2 id="financial-month-status-title">입력 현황</h2>
           <span>저장된 재무 항목만 집계합니다</span>
         </header>
-        <div className="financial-month-grid" role="group" aria-label="12개월 입력 현황">
+        <div
+          className="financial-month-grid"
+          role="group"
+          aria-label="12개월 입력 현황"
+        >
           {Array.from(
             { length: 12 },
             (_, index) =>
@@ -732,7 +775,9 @@ export function FinancialItemsEditor({
                     ? "–"
                     : status
                       ? `${status.closeStatus === "CLOSE" ? "마감" : "작업중"} · ${status.itemCount ?? "–"}건`
-                      : statusError || !canLoadYear ? "–" : "조회 중"}
+                      : statusError || !canLoadYear
+                        ? "–"
+                        : "조회 중"}
                 </small>
               </button>
             );
@@ -915,12 +960,10 @@ export function FinancialItemsEditor({
         {panel("transfers")}
         {panel("loans")}
       </div>
-      {history && (
-        <FinancialHistoryPanel
-          month={editor.month}
-          refreshKey={editor.revision}
-        />
-      )}
+      <FinancialHistoryPanel
+        month={editor.month}
+        refreshKey={editor.revision}
+      />
       {canUpdate && editor.editable && (
         <footer className="financial-footer" data-testid="financial-footer">
           <small>금액 입력은 원 정수 · 두 탭을 함께 저장합니다.</small>

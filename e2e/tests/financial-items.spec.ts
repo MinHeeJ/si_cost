@@ -2,6 +2,7 @@ import { expect, test, type Page } from "./support/authenticatedTest";
 import type {
   FinancialEditor,
   Preview,
+  YearStatus,
 } from "../../frontend/src/pages/financialitems/financialApi";
 
 async function openEditor(page: Page): Promise<FinancialEditor> {
@@ -23,7 +24,157 @@ async function openEditor(page: Page): Promise<FinancialEditor> {
   return (await current.json()).data;
 }
 
+async function assertHistory(page: Page, month: string, scope = "MONTH") {
+  const panel = page.getByTestId("financial-history-panel");
+  const toggle = panel.getByTestId("financial-history-toggle");
+  await expect(panel).toBeVisible();
+  await expect(page.getByTestId("financial-history-toggle")).toHaveCount(1);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel.getByRole("table")).toHaveCount(0);
+  const open = async () => {
+    const pending = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/financial-history" &&
+        url.searchParams.get("month") === month &&
+        url.searchParams.get("scope") === scope
+      );
+    });
+    await toggle.click();
+    const response = await pending;
+    expect(response.status()).toBe(200);
+    expect((await response.json()).success).toBe(true);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(panel.getByTestId("financial-history-scope")).toHaveValue(
+      scope,
+    );
+    await expect(panel.getByRole("table")).toBeVisible();
+  };
+  await open();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel.getByRole("table")).toHaveCount(0);
+  await open();
+  await panel.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await expect(panel.getByRole("table")).toHaveCount(0);
+  await expect(panel).toBeVisible();
+}
+
 // Real authenticated runner-owned disposable app; no intercepted APIs or production fixture rows.
+test("UI-10 제목은 두 편집 버튼만, 양식은 업로드 창 안에서 받고 이력은 아래에서 한 번에 펼친다", async ({
+  page,
+}) => {
+  const data = await openEditor(page);
+  if (!data.editable) {
+    expect(
+      data.firstEditableMonth,
+      "runner must provide an editable month",
+    ).toBeTruthy();
+    const month = data.firstEditableMonth!;
+    await page.getByLabel("입력 현황 연도").selectOption(month.slice(0, 4));
+    await page.getByTestId(`financial-month-${month}`).click();
+  }
+  const upload = page.getByTestId("financial-upload-button");
+  await expect(upload).toBeEnabled();
+  const title = page
+    .getByTestId("financial-editor")
+    .locator(".sicost-title-action-group");
+  await expect(title.getByRole("button")).toHaveText([
+    "지난달 항목 불러오기",
+    "엑셀 업로드",
+  ]);
+  await expect(
+    title.getByRole("button", { name: /양식 내려받기|변경 이력/ }),
+  ).toHaveCount(0);
+  await upload.click();
+  const dialog = page.getByRole("dialog", { name: "엑셀 업로드 · 재무 항목" });
+  const template = dialog.getByRole("button", { name: "양식 내려받기" });
+  await expect(template).toBeVisible();
+  const pending = page.waitForEvent("download");
+  await template.click();
+  const download = await pending;
+  expect(await download.failure()).toBeNull();
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const month = await page
+    .locator('[data-testid^="financial-month-"][aria-pressed="true"]')
+    .getAttribute("data-testid");
+  await assertHistory(page, month!.replace("financial-month-", ""));
+  const ids = await page
+    .getByTestId("financial-editor")
+    .locator("[data-testid]")
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-testid")),
+    );
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
+test("UI-10 실제 마감월도 편집 버튼 없이 아래 이력을 펼칠 수 있다", async ({
+  page,
+}) => {
+  const data = await openEditor(page);
+  let closedMonth: string | undefined;
+  for (
+    let year = Number(data.today.slice(0, 4));
+    year >= Number(data.cashBaseMonth.slice(0, 4));
+    year--
+  ) {
+    const result = await page.request.get(
+      `/api/financial-items/year-status?year=${year}`,
+    );
+    expect(result.status()).toBe(200);
+    const status = (await result.json()).data as YearStatus;
+    closedMonth = status.months.find(
+      (month) => month.selectable && month.closeStatus === "CLOSE",
+    )?.month;
+    if (closedMonth) break;
+  }
+  expect(
+    closedMonth,
+    "runner must provide an already closed month; this test never closes financial data",
+  ).toBeTruthy();
+  await page
+    .getByLabel("입력 현황 연도")
+    .selectOption(closedMonth!.slice(0, 4));
+  await page.getByTestId(`financial-month-${closedMonth}`).click();
+  await expect(page.getByTestId("financial-read-only")).toContainText(
+    `${closedMonth}는 마감되었습니다.`,
+  );
+  await expect(page.getByTestId("financial-load-previous")).toHaveCount(0);
+  await expect(page.getByTestId("financial-upload-button")).toHaveCount(0);
+  await expect(page.getByTestId("financial-save")).toHaveCount(0);
+  await assertHistory(page, closedMonth!);
+});
+
+for (const screen of [
+  {
+    route: "/UI-08",
+    endpoint: "/api/profit-loss/operating",
+    scope: "HISTORICAL_PROFIT_LOSS",
+  },
+  {
+    route: "/UI-18",
+    endpoint: "/api/business-plans/performance",
+    scope: "BUSINESS_PLAN",
+  },
+]) {
+  test(`${screen.route} 공통 이력의 초기 접힘·범위·펼치기·닫기는 그대로다`, async ({
+    page,
+  }) => {
+    const pending = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === screen.endpoint,
+    );
+    await page.goto(screen.route);
+    const response = await pending;
+    expect(response.status()).toBe(200);
+    const data = (await response.json()).data;
+    await assertHistory(page, data.context.month, screen.scope);
+  });
+}
+
 test("UI-10 계산 줄·표 안 합계·월할 접기와 마감월 숨김", async ({ page }) => {
   const data = await openEditor(page);
   const table = page.getByTestId("financial-items-table");
