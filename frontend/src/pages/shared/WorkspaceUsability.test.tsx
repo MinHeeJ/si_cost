@@ -2,6 +2,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "../../shared/testSupport/businessFixtures";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
@@ -105,10 +106,15 @@ it("입력칸 Ctrl화살표와 IME·반복 키는 가로채지 않는다", () =>
   fireEvent.keyDown(document.body, { key: "ArrowRight", ctrlKey: true });
   expect(next).toHaveBeenCalledTimes(1);
 });
-it("단축키 도움말에 모든 키를 표시한다", () => {
-  render(<WorkspaceUsability {...props()} mode="help" />);
+it("단축키 도움말에 모든 키와 닫기 버튼을 표시한다", async () => {
+  const p = props();
+  render(<WorkspaceUsability {...p} mode="help" />);
+  const dialog = within(screen.getByRole("dialog", { name: "단축키 보기" }));
   for (const text of [/Enter/, /Ctrl\+S/, /Esc/, /Ctrl\+K/, /Ctrl\+←/])
-    expect(screen.getByText(text)).toBeVisible();
+    expect(dialog.getByText(text)).toBeVisible();
+  expect(dialog.queryByRole("button", { name: "취소" })).not.toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "닫기", exact: true }));
+  expect(p.onClose).toHaveBeenCalledOnce();
 });
 it("CSS로 가려진 PC전용 업무는 단축키로 저장하지 않는다", () => {
   const save = vi.fn();
