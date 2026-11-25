@@ -1,4 +1,5 @@
 import { FieldHelp } from "../../shared/FieldHelp";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -237,8 +238,12 @@ export function SalesPartnerProfitScreen({
     ["payAmount", "급여"],
     ["salesExpenseAmount", "공통관리비"],
     ["retirementAmount", "퇴직금"],
-    ["costAmount", "비용 계 ⓘ"],
-    ["profitAmount", "이익 ⓘ"],
+    [
+      "costAmount",
+      "비용 계",
+      "급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)",
+    ],
+    ["profitAmount", "이익", "단가 − 파트 비용"],
     ["profitShareAmount", "이익금"],
   ] as const;
   if (tabs?.projection === "RESTRICTED" || data?.projection === "RESTRICTED")
@@ -314,20 +319,13 @@ export function SalesPartnerProfitScreen({
       render: (row) => formatMm(row.mm),
     },
     ...moneyColumns.map(
-      ([id, label]): Column<api.SettlementRow> => ({
+      ([id, label, explanation]): Column<api.SettlementRow> => ({
         id,
-        label: (
-          <span
-            title={
-              id === "costAmount"
-                ? "급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)"
-                : id === "profitAmount"
-                  ? "단가 − 파트 비용"
-                  : undefined
-            }
-          >
-            {label}
-          </span>
+        label,
+        help: explanation && (
+          <HelpTooltip label={label} iconOnly>
+            {explanation}
+          </HelpTooltip>
         ),
         align: "right",
         sortable: [
@@ -337,24 +335,26 @@ export function SalesPartnerProfitScreen({
           "profitAmount",
           "profitShareAmount",
         ].includes(id),
-        render: (row) => (
-          <span
-            className={
-              id === "payAmount" && row.basis.firstMonthMissingPay
-                ? "settlement-negative"
-                : undefined
-            }
-            title={
-              id === "costAmount"
-                ? "파트 비용 = 급여 + 공통관리비 + FT 퇴직금(급여÷12, 원 미만 절사)"
-                : id === "profitAmount"
-                  ? "이익 = 단가 − 파트 비용"
-                  : row.basis.warnings.map((w) => w.message).join("\n")
-            }
-          >
-            {amount(row[id])}
-          </span>
-        ),
+        render: (row) =>
+          explanation ? (
+            <HelpTooltip
+              label={`${label} ${formatAmount(row[id], displayUnit)}`}
+              trigger={amount(row[id])}
+            >
+              {explanation}
+            </HelpTooltip>
+          ) : (
+            <span
+              className={
+                id === "payAmount" && row.basis.firstMonthMissingPay
+                  ? "settlement-negative"
+                  : undefined
+              }
+              title={row.basis.warnings.map((w) => w.message).join("\n")}
+            >
+              {amount(row[id])}
+            </span>
+          ),
       }),
     ),
     {
