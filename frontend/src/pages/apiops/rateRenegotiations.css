@@ -184,6 +184,9 @@
   cursor: pointer;
   font-weight: 600;
 }
+.renegotiation-copy {
+  white-space: pre-line;
+}
 .renegotiation-guide table {
   border-collapse: collapse;
   width: 100%;

@@ -1,5 +1,6 @@
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
+import { helpContent } from "../../shared/helpContent";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { KpiStrip } from "../../shared/Surface";
@@ -12,6 +13,7 @@ import { FilterBar } from "../../shared/FilterBar";
 import { ApiError } from "../../shared/api";
 import {
   formatDateTime,
+  formatDecimal,
   formatRate,
   type AmountUnit,
 } from "../../shared/format";
@@ -42,19 +44,22 @@ export const renegotiationColumns = [
   { id: "requiredIncreaseRate", label: "필요 인상률" },
   { id: "annualGain", label: "올리면 연 이익" },
 ];
-const help: Record<string, string> = {
-  renewalDate:
-    "투입 배정 종료일 − 서버 오늘. D-0 포함, 0~30일 빨강·31~92일 주황",
-  contractMm:
-    "표는 기준월 계약MM k. 월 이익률·목표 단가는 월MM m, 연 증가는 계약MM k 사용",
-  monthlyLaborCost:
-    "동일 DEV/PROJ/ASGN의 LABOR_ALLOC_AMT만 사용. 회사보험 포함 노동비, 팀비·경비 제외",
-  marginRate:
-    "(기준월 매출 R − 노동비 C) ÷ R × 100. 필터는 화면에 보이는 반올림 값이 아니라 실제값 기준입니다(15.0%로 보여도 실제 15% 미만이면 '15% 미만'에 포함).",
-  targetUnitPrice: "C ÷ 월MM m ÷ (1 − 목표율 T/100), 만 원 단위 올림",
-  requiredIncreaseRate: "max(0, (올림된 목표 단가 V − 현재 단가 U) ÷ U × 100)",
-  annualGain:
-    "인상으로 늘어나는 단가에 월 계약 투입량(MM)과 12개월을 곱한 값입니다. 원 미만은 버립니다.",
+const columnHelp = new Map<string, string>(
+  helpContent
+    .filter((entry) => entry.screen === "UI-32" && entry.kind === "B")
+    .map(({ target, text }) => [target, text]),
+);
+const simulationHelp = helpContent.find(
+  (entry) => entry.screen === "UI-32" && entry.target === "단가 인상 시뮬레이션",
+)?.text;
+const guideColumns = renegotiationColumns.filter(({ label }) =>
+  columnHelp.has(label),
+);
+const guideNotes: Record<string, string> = {
+  renewalDate: "빨강 30일 안, 주황 3개월 안",
+  monthlyLaborCost: "개인 원가·수익표와 같음",
+  targetUnitPrice: "만 원 단위 올림",
+  annualGain: "1년 계속 투입 가정",
 };
 const emptyView = (): ColumnView => ({
   order: renegotiationColumns.map((c) => c.id),
@@ -207,6 +212,17 @@ export function RateRenegotiationsScreen({
   const amount = (value: string | null | undefined) => (
     <ProfitabilityValue value={value} unit={unit} />
   );
+  const annualGainLabel =
+    `${data?.appliedIncreaseRate ?? applied.increaseRate}% 올리면 연 이익`;
+  const targetPercent =
+    data?.targetMarginRate == null
+      ? undefined
+      : `${formatDecimal(data.targetMarginRate)}%`;
+  const helpFor = (label: string) =>
+    columnHelp
+      .get(label)
+      ?.replace("{현재 목표 안내}", targetPercent ? `(지금 ${targetPercent})` : "")
+      .replace("{목표 이익률}", targetPercent ?? "목표 이익률");
   const columns: Column<api.RenegotiationRow>[] = view.order
     .filter(
       (id) =>
@@ -216,10 +232,11 @@ export function RateRenegotiationsScreen({
       const definition = renegotiationColumns.find((c) => c.id === id)!;
       const label =
         id === "annualGain"
-          ? `${data?.appliedIncreaseRate ?? applied.increaseRate}% 올리면 연 이익`
+          ? annualGainLabel
           : id === "targetUnitPrice"
             ? `목표 단가 (${formatRate(data?.targetMarginRate)})`
             : definition.label;
+      const explanation = helpFor(definition.label);
       return {
         id,
         sortable: id !== "employeeType",
@@ -229,7 +246,11 @@ export function RateRenegotiationsScreen({
           ? "left"
           : "right",
         label,
-        help: help[id] ? <HelpTooltip label={label} iconOnly>{help[id]}</HelpTooltip> : undefined,
+        help: explanation && (
+          <HelpTooltip label={label} iconOnly>
+            <span className="renegotiation-copy">{explanation}</span>
+          </HelpTooltip>
+        ),
         render: (row) => {
           const marker = row.assignmentId
             .toLowerCase()
@@ -296,8 +317,8 @@ export function RateRenegotiationsScreen({
             );
           if (id === "contractMm")
             return (
-              <HelpTooltip label="계약 MM" trigger={<ProfitabilityValue value={row.contractMm} kind="mm" />}>
-                계약 MM {row.contractMm} / 기준월 월 MM {row.monthlyMm}
+              <HelpTooltip label="계약 투입량" trigger={<ProfitabilityValue value={row.contractMm} kind="mm" />}>
+                계약 투입량 {row.contractMm} / 이번 달 실제 투입량 {row.monthlyMm}
               </HelpTooltip>
             );
           const value = row[id as keyof api.RenegotiationRow] as string | null;
@@ -394,17 +415,17 @@ export function RateRenegotiationsScreen({
               kind="rate"
             />
           </strong>
-          <small>전체 대상 매출 가중 평균</small>
+          <small>받는 돈이 큰 사람일수록 크게 반영한 평균</small>
         </article>
         <article>
-          <h2>예상 연간 이익 증가액</h2>
+          <h2>{annualGainLabel}</h2>
           <strong>{amount(data?.summary.annualGain)}</strong>
           <small>
             인상률 {data?.appliedIncreaseRate ?? "–"}% · {unit}
           </small>
         </article>
         <article>
-          <h2>목표 연 증가</h2>
+          <h2>목표 단가까지 올리면 연 이익</h2>
           <strong>{amount(data?.summary.targetAnnualGain)}</strong>
           <small>
             목표 이익률 {formatRate(data?.targetMarginRate)} · {unit}
@@ -422,7 +443,7 @@ export function RateRenegotiationsScreen({
       >
         <div className="renegotiation-assumption-heading">
           <HelpTooltip label="단가 인상 시뮬레이션" iconOnly>
-            단순 조회용이며, DB에는 변경값이 반영되지않습니다.
+            <span className="renegotiation-copy">{simulationHelp}</span>
           </HelpTooltip>
           <h2 id="renegotiation-assumption-title">단가 인상 시뮬레이션</h2>
         </div>
@@ -592,7 +613,7 @@ export function RateRenegotiationsScreen({
               >
                 {i.developerId}
               </button>{" "}
-              · {i.projectId} · {i.assignmentId} · {i.field} · {i.source}
+              · {i.projectId} · {i.assignmentId}
               <p>{i.message}</p>
             </article>
           ))}
@@ -712,8 +733,8 @@ export function RateRenegotiationsScreen({
       >
         <summary data-testid="renegotiation-guide-summary">계산 방법</summary>
         <p>
-          기준월 {data?.baseMonth ?? "–"} · 목표율은 기준월 유효
-          TGT_MRGN_RT입니다. 월 계산은 월MM m, 연 증가는 계약MM k를 사용합니다.
+          기준월 {data?.baseMonth ?? "–"} 기준입니다. 목표 이익률
+          {targetPercent ? ` ${targetPercent}는` : "은"} 기준정보 › 운영 기준값에서 정한 값입니다.
         </p>
         <table>
           <thead>
@@ -724,35 +745,35 @@ export function RateRenegotiationsScreen({
             </tr>
           </thead>
           <tbody>
-            {Object.entries(help)
-              .filter(([id]) => id !== "contractMm")
-              .map(([id, text]) => (
+            {guideColumns.map(({ id, label }) => (
                 <tr
                   data-testid={`renegotiation-guide-row-${Array.from(id, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
                   key={id}
                 >
                   <td>
-                    {renegotiationColumns.find((c) => c.id === id)?.label}
+                    {id === "annualGain" ? annualGainLabel : label}
                   </td>
-                  <td>{text}</td>
-                  <td>
-                    {id === "targetUnitPrice"
-                      ? "만 원 단위 올림"
-                      : "기준월 원천"}
-                  </td>
+                  <td className="renegotiation-copy">{helpFor(label)}</td>
+                  <td>{guideNotes[id]}</td>
                 </tr>
               ))}
           </tbody>
         </table>
         <p>
-          목표 연 증가 = DOWN(max(0,V−U) × k × 12). 미래 연장·급여·부가세를
-          추정하지 않습니다.
+          목표 단가까지 올릴 때 연 이익 = (목표 단가 - 현재 단가) × 계약
+          투입량 × 12개월(원 단위 버림, 이미 목표 이상이면 0).
+          앞으로의 연장, 급여 변동, 부가세는 미리 넣지 않습니다.
         </p>
         <p>
-          계산 예시: U 6,000,000원 · m/k 1.00 · C 5,400,000원 · T 20% → 현재
-          10.0%, 목표 6,750,000원, 필요 12.5%, 목표 연 9,000,000원, 가정 5% 연
-          3,600,000원.
+          예) [예시] 이저마진: 현재 단가 7,000,000원, 투입량 1.00, 월 원가 7,150,000원
         </p>
+        <ul>
+          <li>이익률 (7,000,000 - 7,150,000) ÷ 7,000,000 = -2.1%</li>
+          <li>목표 단가 7,150,000 ÷ 1.00 ÷ 0.8 = 8,937,500 → 만 원 올림 8,940,000원</li>
+          <li>필요 인상률 (8,940,000 - 7,000,000) ÷ 7,000,000 = 27.7%</li>
+          <li>5% 올리면 연 이익 7,000,000 × 5% × 1.00 × 12 = 4,200,000원</li>
+          <li>목표 단가까지 올리면 연 이익 (8,940,000 - 7,000,000) × 1.00 × 12 = 23,280,000원</li>
+        </ul>
       </details>
       {person && canPerson && (
         <DeveloperDrawer id={person} onClose={() => setPerson(undefined)} />

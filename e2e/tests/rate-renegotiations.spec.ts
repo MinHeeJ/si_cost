@@ -55,10 +55,10 @@ async function summaries(page: Page, data: RenegotiationsResult) {
     cards.filter({ hasText: "대상 평균 이익률" }).locator("strong"),
   ).toHaveText(formatRate(data.summary.weightedMarginRate));
   await expect(
-    cards.filter({ hasText: "가정 연 증가" }).locator("strong"),
+    cards.filter({ hasText: `${data.appliedIncreaseRate}% 올리면 연 이익` }).locator("strong"),
   ).toHaveText(formatAmount(data.summary.annualGain, unit));
   await expect(
-    cards.filter({ hasText: "목표 연 증가" }).locator("strong"),
+    cards.filter({ hasText: "목표 단가까지 올리면 연 이익" }).locator("strong"),
   ).toHaveText(formatAmount(data.summary.targetAnnualGain, unit));
   await expect(
     page
