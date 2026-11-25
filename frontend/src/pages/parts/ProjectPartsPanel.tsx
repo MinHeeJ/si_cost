@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -68,7 +69,7 @@ export function ProjectPartsPanel(props: ProjectPartsPanelProps) {
           선택 연도 또는 프로젝트 상태에 따라 조회만 할 수 있습니다.
         </p>
       )}
-      {loading && <p role="status">영업 파트를 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="영업 파트를 불러오는 중입니다." />}
       {error != null ? (
         <ErrorBanner
           message={

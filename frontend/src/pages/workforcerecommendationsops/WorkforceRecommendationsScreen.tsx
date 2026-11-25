@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
@@ -351,7 +352,7 @@ export function WorkforceRecommendationsScreen({
           error={targetError}
           retry={() => setRetry((n) => n + 1)}
         />
-        {loading && <p role="status">진행 대상을 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="진행 대상을 불러오는 중입니다." />}
         {!loading && !targetError && targets?.items.length === 0 && (
           <p className="recommendation-empty">진행 중인 추천 대상이 없습니다.</p>
         )}

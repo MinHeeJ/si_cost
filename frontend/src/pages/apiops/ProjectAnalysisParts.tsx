@@ -109,17 +109,21 @@ export function AnalysisCompleteness({
 export function AnalysisProgress({
   value,
   label,
+  status = "normal",
 }: {
   value: unknown;
   label: string;
+  status?: "normal" | "warning" | "error";
 }) {
   return (
     <div
       className="project-analysis-progress"
+      data-status={status}
       data-testid={`analysis-progress-${useRef(Math.random().toString(36).slice(2)).current}`}
     >
       <span>
-        {label} {analysisDisplay(value, "rate")}
+        {label}{" "}
+        <span className="project-analysis-progress-value">{analysisDisplay(value, "rate")}</span>
       </span>
       {value != null && (
         <div className="project-analysis-track">

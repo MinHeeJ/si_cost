@@ -1,3 +1,4 @@
+import { FeedbackNotice, FloatingToast } from "../../shared/Feedback";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 
@@ -79,6 +80,7 @@ export function MasterDataExportButton({
       aria-busy={pending}
     >
       <button
+        className="sicost-download-button"
         type="button"
         data-testid="master-data-export-button"
         disabled={disabled || pending}
@@ -102,30 +104,29 @@ export function MasterDataExportButton({
           조회 조건에 맞는 전체 결과를 생성하고 있습니다.
         </span>
       )}
-      {success && <span role="status">파일을 내려받았습니다.</span>}
+      {success && <FloatingToast message="파일을 내려받았습니다." />}
       {error != null && (
-        <div role="alert" className="sicost-banner sicost-tone-bad">
-          <span>
-            {error instanceof Error
-              ? error.message
-              : "파일을 내려받지 못했습니다."}
-            {error instanceof ApiError && (
-              <small>
-                {" "}
-                {error.body.field && `항목: ${error.body.field} · `}문의 번호:{" "}
-                {error.body.requestId}
-              </small>
-            )}
-          </span>
-          <button
-            type="button"
-            data-testid="master-data-export-retry"
-            disabled={disabled || pending}
-            onClick={() => void download()}
-          >
-            다시 시도
-          </button>
-        </div>
+        <FeedbackNotice
+          tone="bad"
+          title="목록 다운로드 실패"
+          action={
+            <button
+              type="button"
+              data-testid="master-data-export-retry"
+              disabled={disabled || pending}
+              onClick={() => void download()}
+            >
+              다시 시도
+            </button>
+          }
+        >
+          {error instanceof Error ? error.message : "파일을 내려받지 못했습니다."}
+          {error instanceof ApiError && (
+            <small className="sicost-feedback-reference">
+              {error.body.field && `항목: ${error.body.field} · `}문의 번호: {error.body.requestId}
+            </small>
+          )}
+        </FeedbackNotice>
       )}
     </div>
   );

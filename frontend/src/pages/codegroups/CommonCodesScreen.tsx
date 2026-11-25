@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -6,9 +7,9 @@ import { DataTable, type Column } from "../../shared/DataTable";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
-import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
-import { Icon } from "../../shared/Icon";
+import { Icon, TableControlIcon } from "../../shared/Icon";
 import { normalizeDecimal } from "../../shared/format";
 import * as api from "./codeGroupsApi";
 import type {
@@ -658,14 +659,21 @@ export function CommonCodesScreen({
           />
         )}
         {notice && (
-          <p role="status" className="sicost-banner sicost-tone-info">
-            {notice}
-            {notice.includes("다시 불러오지") && (
-              <button data-testid="common-codes-retry" onClick={retry}>
-                다시 조회
-              </button>
-            )}
-          </p>
+          notice.includes("다시 불러오지") ? (
+            <FeedbackNotice
+              tone="warn"
+              title="변경 완료 · 화면 갱신 실패"
+              action={
+                <button type="button" data-testid="common-codes-retry" onClick={retry}>
+                  다시 조회
+                </button>
+              }
+            >
+              {notice}
+            </FeedbackNotice>
+          ) : (
+            <FeedbackNotice tone="info" title={notice} onDismiss={() => setNotice("")} />
+          )
         )}
         {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {tab === "codes" ? (
@@ -673,9 +681,7 @@ export function CommonCodesScreen({
             <div className="codegroups-split">
               <nav className="codegroups-list" aria-label="코드 그룹">
                 {!groups.length && loading && (
-                  <div role="status" className="sicost-empty">
-                    그룹을 불러오는 중입니다.
-                  </div>
+                  <ScreenLoading message="그룹을 불러오는 중입니다." />
                 )}
                 {groups.map((item) => (
                   <div className="codegroups-group-entry" key={item.groupId}>
@@ -723,6 +729,7 @@ export function CommonCodesScreen({
                         data-testid="common-codes-columns-button"
                         onClick={onColumnsChange}
                       >
+                        <TableControlIcon name="columns" />
                         열 설정
                       </button>
                     )}
@@ -732,6 +739,7 @@ export function CommonCodesScreen({
                         onClick={onDensityChange}
                         aria-pressed={dense}
                       >
+                        <TableControlIcon name="rows" />
                         목록 밀도
                       </button>
                     )}

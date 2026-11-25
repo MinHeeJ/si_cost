@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
@@ -53,7 +54,7 @@ export function ProfileDialog({
         className="profile-content"
         aria-busy={loading}
       >
-        {loading && <p role="status">내 정보를 불러오는 중…</p>}
+        {loading && <ScreenLoading message="내 정보를 불러오는 중…" />}
         {failure != null && (
           <ErrorBanner
             message={

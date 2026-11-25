@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
@@ -209,7 +210,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
           error={error}
           retry={() => setRetry((n) => n + 1)}
         />
-        {loading && <p role="status">기록 조회 중</p>}
+        {loading && <ScreenLoading message="기록 조회 중" />}
         {!loading && !error && data && (
           <>
             {data.items.length === 0 ? (
@@ -343,7 +344,7 @@ export function RecommendationHistoryPanel({ onClose }: { onClose(): void }) {
         )}
         {selected && (
           <section data-testid="history-detail" aria-busy={detailLoading}>
-            {detailLoading && <p role="status">저장된 추천을 조회 중입니다.</p>}
+            {detailLoading && <ScreenLoading message="저장된 추천을 조회 중입니다." />}
             <RecommendationBrowseError
               error={detailError}
               retry={() => setDetailRetry((n) => n + 1)}

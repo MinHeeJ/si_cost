@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
@@ -221,7 +222,7 @@ export function MenusScreen({
         />
       )}
       {loading ? (
-        <p role="status">메뉴를 불러오는 중…</p>
+        <ScreenLoading message="메뉴를 불러오는 중…" />
       ) : (
         <div className="sicost-table-viewport menu-management-viewport">
           <table className="sicost-table" aria-label="메뉴 설정">
@@ -664,7 +665,7 @@ function MenuHistory({
           onRetry={() => setReload((n) => n + 1)}
         />
       ) : !data ? (
-        <p role="status">이력을 불러오는 중…</p>
+        <ScreenLoading message="이력을 불러오는 중…" />
       ) : (
         <>
           <div className="sicost-table-viewport menu-management-history">

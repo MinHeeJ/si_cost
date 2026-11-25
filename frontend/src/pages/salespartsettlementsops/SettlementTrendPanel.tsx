@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { Dialog } from "../../shared/Dialog";
 import { Icon } from "../../shared/Icon";
 import { Pagination } from "../../shared/Pagination";
@@ -73,7 +74,7 @@ export function SettlementTrendPanel({
           onRetry={() => setRetry((n) => n + 1)}
         />
       ) : !data ? (
-        <p role="status">기간 추이를 불러오는 중입니다.</p>
+        <ScreenLoading message="기간 추이를 불러오는 중입니다." />
       ) : (
         <>
           <div className="settlement-toolbar">

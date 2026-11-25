@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
 import {
   useCallback,
@@ -598,6 +600,7 @@ export function DeveloperPoolScreen({
                 data-testid="developer-columns-button"
                 onClick={onColumnsChange}
               >
+                <TableControlIcon name="columns" />
                 열 설정
               </button>
             )}
@@ -607,11 +610,13 @@ export function DeveloperPoolScreen({
                 data-testid="developer-density-button"
                 onClick={onDensityChange}
               >
+                <TableControlIcon name="rows" />
                 좁게 보기
               </button>
             )}
             {!mobile && (
               <button
+                className="sicost-download-button"
                 type="button"
                 data-testid="developer-export-button"
                 disabled={downloading}
@@ -680,7 +685,7 @@ export function DeveloperPoolScreen({
           />
         ) : (
           <div className="developer-cards">
-            {loading && <p role="status">불러오는 중입니다.</p>}
+            {loading && <ScreenLoading message="불러오는 중입니다." />}
             {!loading && !data?.items.length && (
               <div className="sicost-empty">
                 <p>조건에 맞는 결과가 없습니다.</p>

@@ -3,6 +3,9 @@ import type { SVGProps } from "react";
 // Menu names come from MenuNode.icon; unknown DB icons use the folder fallback.
 const paths: Record<string, string> = {
   info: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 11v6 M12 7h.01",
+  checkCircle: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M7.5 12l3 3L16.5 9",
+  errorCircle: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 7v6 M12 17h.01",
+  close: "m6 6 12 12M18 6 6 18",
   warning: "M12 3 22 21H2z M12 10v5 M12 18h.01",
   grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   db: "M4 6c0-4 16-4 16 0s-16 4-16 0 M4 6v12c0 4 16 4 16 0V6 M4 12c0 4 16 4 16 0",
@@ -18,6 +21,8 @@ const paths: Record<string, string> = {
   bell: "M5 16V9a7 7 0 0 1 14 0v7l2 3H3z M10 22h4",
   user: "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 22v-3a8 8 0 0 1 16 0v3",
   chevron: "m8 4 8 8-8 8",
+  columns: "M4 4h16v16H4zM10 4v16M16 4v16",
+  rows: "M4 6h16M4 10h16M4 14h16M4 18h16",
   caretUp: "M12 7 19 16H5z",
   caretDown: "M12 17 5 8h14z",
   star: "m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z",
@@ -49,5 +54,16 @@ export function Icon({
     >
       <path d={paths[name ?? "folder"] ?? paths.folder} />
     </svg>
+  );
+}
+
+export function TableControlIcon({ name }: { name: "columns" | "rows" }) {
+  return (
+    <Icon
+      name={name}
+      size={16}
+      strokeWidth={1.8}
+      className="sicost-table-control-icon"
+    />
   );
 }

@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -94,7 +96,7 @@ export function StaffingPlanComparisonScreen() {
       ) : context && year ? (
         <StaffingComparisonContent key={year} year={year} amountUnit={unit} />
       ) : (
-        <p role="status">조회 기간을 불러오는 중입니다.</p>
+        <ScreenLoading message="조회 기간을 불러오는 중입니다." />
       )}
     </section>
   );
@@ -302,6 +304,7 @@ export function StaffingComparisonContent({
           aria-pressed={dense}
           onClick={() => setDense((v) => !v)}
         >
+          <TableControlIcon name="rows" />
           {dense ? "넓게 보기" : "좁게 보기"}
         </button>
         <StaffingComparisonDownload
@@ -434,6 +437,7 @@ export function StaffingComparisonDownload({
       data-testid="comparison-download"
     >
       <button
+        className="sicost-download-button"
         data-testid="comparison-download-button"
         type="button"
         disabled={disabled || pending}

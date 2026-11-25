@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useId, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import {
@@ -62,7 +63,7 @@ export function SalesPartSelect({
       {open && (
         <div id={panel} data-testid="sales-part-options-panel">
           {loading ? (
-            <p role="status">불러오는 중입니다.</p>
+            <ScreenLoading inline message="불러오는 중입니다." />
           ) : error ? (
             <ErrorBanner
               message={

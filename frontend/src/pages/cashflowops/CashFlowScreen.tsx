@@ -1,10 +1,10 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FinancialWarnings } from "../../shared/FinancialWarnings";
-import { Icon } from "../../shared/Icon";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner } from "../../shared/Feedback";
+import { FeedbackNotice, ErrorBanner } from "../../shared/Feedback";
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { CashFlowStatementTable } from "../shared/FinancialStatementTable";
@@ -313,6 +313,7 @@ export function CashFlowScreen({
         !mobile && (
           <div className="sicost-title-action-group">
             <button
+              className="sicost-download-button"
               type="button"
               data-testid="cash-export"
               disabled={pending || loading || !displayed || error != null}
@@ -339,12 +340,10 @@ export function CashFlowScreen({
         data-testid="cash-flow-screen"
       >
         {loading && !data && (
-          <p role="status">자금수지표를 불러오는 중입니다.</p>
+          <ScreenLoading message="자금수지표를 불러오는 중입니다." />
         )}
         {data && loading && (
-          <p role="status" className="sicost-refresh-status">
-            갱신 중…
-          </p>
+          <ScreenLoading inline message="갱신 중…" />
         )}
         {error != null && (
           <ErrorBanner
@@ -403,35 +402,34 @@ export function CashFlowScreen({
               </span>
             </PeriodStatus>
             {displayed.shortages.length > 0 && (
-              <div
-                className="cash-shortage-alert"
-                role="alert"
-                data-testid="cash-shortage-alert"
+              <FeedbackNotice
+                tone="warn"
+                title="월말 자금 부족 예상"
+                heading
+                testId="cash-shortage-alert"
+                action={
+                  <button
+                    type="button"
+                    data-testid="cash-shortage-receivables"
+                    onClick={openReceivables}
+                  >
+                    미수금 보기
+                  </button>
+                }
               >
-                <Icon name="warning" size={21} />
-                <div className="cash-shortage-content">
-                  <h2>월말 자금 부족 예상</h2>
-                  <p>
-                    {displayed.shortages.map((point) => `${Number(point.month.slice(5))}월`).join(", ")}{" "}
-                    월말 잔액이 최소 운영자금({formatAmount(displayed.minimumCash, "원")}원)보다 적을 것으로 예상됩니다.
-                  </p>
-                  <ul aria-label="월별 예상 잔액">
-                    {displayed.shortages.map((point) => (
-                      <li key={point.month}>
-                        <span>{Number(point.month.slice(5))}월</span>
-                        <strong>{formatAmount(point.balance, "원")}원</strong>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <button
-                  type="button"
-                  data-testid="cash-shortage-receivables"
-                  onClick={openReceivables}
-                >
-                  미수금 보기
-                </button>
-              </div>
+                <p>
+                  {displayed.shortages.map((point) => `${Number(point.month.slice(5))}월`).join(", ")}{" "}
+                  월말 잔액이 최소 운영자금({formatAmount(displayed.minimumCash, "원")}원)보다 적을 것으로 예상됩니다.
+                </p>
+                <ul className="cash-shortage-balances" aria-label="월별 예상 잔액">
+                  {displayed.shortages.map((point) => (
+                    <li key={point.month}>
+                      <span>{Number(point.month.slice(5))}월</span>
+                      <strong>{formatAmount(point.balance, "원")}원</strong>
+                    </li>
+                  ))}
+                </ul>
+              </FeedbackNotice>
             )}
             {(displayed.shortages.length === 0 || canOpenStandards || issues.length > 0) && (
               <div className="operating-toolbar">

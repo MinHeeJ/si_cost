@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useId, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -106,7 +107,7 @@ export function ClientSelect({
             </button>
           </form>
           {loading ? (
-            <p role="status">불러오는 중입니다.</p>
+            <ScreenLoading inline message="불러오는 중입니다." />
           ) : error ? (
             <ErrorBanner
               message={

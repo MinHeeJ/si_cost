@@ -1,6 +1,7 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { HelpTooltip } from "../../shared/HelpTooltip";
-import { PageSizeSelect } from "../../shared/Pagination";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -79,7 +80,7 @@ export function WithdrawalListScreen() {
       ) : year ? (
         <WithdrawalContent key={year} year={year} />
       ) : (
-        <p role="status">조회 기간을 불러오는 중입니다.</p>
+        <ScreenLoading message="조회 기간을 불러오는 중입니다." />
       )}
     </section>
   );
@@ -511,7 +512,6 @@ export function WithdrawalContent({ year }: { year: number }) {
         </label>
       </FilterBar>
       <WithdrawalError error={optionsError} />
-      {loading && <p role="status">철수 조회 중</p>}
       <WithdrawalError
         error={error}
         retry={() => void load().catch(() => undefined)}
@@ -522,15 +522,9 @@ export function WithdrawalContent({ year }: { year: number }) {
         </p>
       )}
       <div className="withdrawal-toolbar">
-        <div className="withdrawal-table-count">
-          <PageSizeSelect
-            size={query.size}
-            testId="withdrawal-table-page-size"
-            disabled={loading || pageSizePending}
-            onSizeChange={(size) => void changePageSize(size)}
-          />
-          <strong>총 {data?.totalCount ?? 0}건</strong>
-        </div>
+        <strong className="withdrawal-table-count">
+          총 {data?.totalCount ?? 0}건
+        </strong>
         <button
           data-testid="withdrawal-density"
           aria-pressed={dense}
@@ -545,10 +539,11 @@ export function WithdrawalContent({ year }: { year: number }) {
               .finally(() => setDensityPending(false));
           }}
         >
+          <TableControlIcon name="rows" />
           {dense ? "넓게 보기" : "좁게 보기"}
         </button>
         <button
-          className="withdrawal-download"
+          className="sicost-download-button withdrawal-download"
           data-testid="withdrawal-download"
           disabled={loading || pending || !data || Boolean(error)}
           onClick={() => {
@@ -568,6 +563,7 @@ export function WithdrawalContent({ year }: { year: number }) {
         columns={columns}
         rowKey={(row) => row.assignmentId}
         loading={loading}
+        loadingMessage="철수 조회 중"
         dense={dense}
         empty="조건에 맞는 결과가 없습니다."
         emptyAction={
@@ -601,6 +597,8 @@ export function WithdrawalContent({ year }: { year: number }) {
           }))
         }
         onPageChange={(page) => setQuery((v) => ({ ...v, page }))}
+        onSizeChange={(size) => void changePageSize(size)}
+        pageSizeDisabled={pageSizePending}
         onRowAction={(row) => setAssignment(row.assignmentId)}
       />
       {assignment && data && (

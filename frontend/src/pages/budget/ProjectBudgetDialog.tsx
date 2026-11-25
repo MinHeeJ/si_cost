@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
@@ -172,7 +173,7 @@ export function ProjectBudgetDialog({
           <p>
             대상 {projectId} · {projectName}
           </p>
-          {loading && <p role="status">예산을 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="예산을 불러오는 중입니다." />}
           {final && (
             <>
               <p>

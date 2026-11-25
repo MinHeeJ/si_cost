@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
@@ -165,7 +166,7 @@ export function SalesPartStandardDialog({
           data-testid="part-standard-editor"
         >
           {loading ? (
-            <p role="status">불러오는 중입니다.</p>
+            <ScreenLoading message="불러오는 중입니다." />
           ) : (
             detail && (
               <>

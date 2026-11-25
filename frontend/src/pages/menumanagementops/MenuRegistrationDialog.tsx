@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
@@ -220,7 +221,7 @@ export function MenuRegistrationDialog({
             PC전용
           </label>
           {loading ? (
-            <p role="status">가능 화면을 불러오는 중…</p>
+            <ScreenLoading inline message="가능 화면을 불러오는 중…" />
           ) : (
             screens &&
             !screens.items.length && (

@@ -1,5 +1,7 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
+import { Pagination } from "../../shared/Pagination";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -66,6 +68,20 @@ export function DeliveryStatusPanel({
   }, [billId, page, size, reload]);
   return (
     <DetailDrawer
+      feedback={!!error && (
+        <ErrorBanner
+          title="전달 상태 조회 실패"
+          message={
+            error instanceof Error
+              ? error.message
+              : "전달상태를 불러오지 못했습니다."
+          }
+          requestId={
+            error instanceof ApiError ? error.body.requestId : undefined
+          }
+          onRetry={() => setReload((v) => v + 1)}
+        />
+      )}
       title={`전달상태 ${billId}`}
       onClose={onClose}
       testId="delivery-status-panel"
@@ -84,20 +100,7 @@ export function DeliveryStatusPanel({
         className="dunning-delivery"
         data-testid="delivery-status-content"
       >
-        {loading && <p role="status">전달상태를 불러오는 중입니다.</p>}
-        {!!error && (
-          <ErrorBanner
-            message={
-              error instanceof Error
-                ? error.message
-                : "전달상태를 불러오지 못했습니다."
-            }
-            requestId={
-              error instanceof ApiError ? error.body.requestId : undefined
-            }
-            onRetry={() => setReload((v) => v + 1)}
-          />
-        )}
+        {loading && <ScreenLoading message="전달상태를 불러오는 중입니다." />}
         {data && !error && (
           <>
             <p>
@@ -179,42 +182,20 @@ export function DeliveryStatusPanel({
                 )}
               </details>
             ))}
-            <div className="dunning-toolbar">
-              <button
-                type="button"
-                data-testid="delivery-previous"
-                disabled={page === 1 || loading}
-                onClick={() => setPage((v) => v - 1)}
-              >
-                이전
-              </button>
-              <span>{page} 페이지</span>
-              <button
-                type="button"
-                data-testid="delivery-next"
-                disabled={!data.hasMore || loading}
-                onClick={() => setPage((v) => v + 1)}
-              >
-                다음
-              </button>
-              <label>
-                한 화면 건수{" "}
-                <select
-                  data-testid="delivery-size"
-                  value={size}
-                  onChange={(e) => {
-                    setSize(Number(e.target.value) as 20 | 50 | 100);
-                    setPage(1);
-                  }}
-                >
-                  {[20, 50, 100].map((value) => (
-                    <option key={value} value={value}>
-                      {value}건씩
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <Pagination
+              page={page}
+              size={size}
+              total={data.total}
+              unit="회"
+              label="전달 이력 페이지"
+              testId="delivery"
+              disabled={loading}
+              onPageChange={setPage}
+              onSizeChange={(nextSize) => {
+                setSize(nextSize);
+                setPage(1);
+              }}
+            />
           </>
         )}
         <p className="sicost-banner sicost-tone-info">

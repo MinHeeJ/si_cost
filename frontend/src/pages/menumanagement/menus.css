@@ -187,9 +187,3 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-
-.menu-management-history + .sicost-pagination {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}

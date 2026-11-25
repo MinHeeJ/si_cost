@@ -74,6 +74,51 @@
   }
 }
 
+.cost-cause-reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--info-bg);
+  color: var(--info);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.cost-cause-reference svg {
+  flex: none;
+}
+.cost-cause-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.cost-cause-summary > div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--primary-bg);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.cost-cause-summary > .cost-cause-summary-unit {
+  background: var(--head-bg);
+}
+.cost-cause-summary dt {
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+.cost-cause-summary dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .cost-cause-bars {
   display: grid;
   gap: 12px;

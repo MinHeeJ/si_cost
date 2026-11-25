@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -81,7 +82,7 @@ export function SalesPartDefaultsFields({
       data-testid="sales-part-default-fields"
       className="part-standard-editor"
     >
-      {loading && <p role="status">기본값을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading inline message="기본값을 불러오는 중입니다." />}
       {error != null && (
         <ErrorBanner
           message={

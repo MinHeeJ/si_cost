@@ -10,6 +10,7 @@ export type DetailDrawerProps = {
   subtitle?: ReactNode;
   /** 머리 줄 오른쪽 작업 버튼들(수정·기준 변경 등). 닫기 버튼은 늘 마지막에 붙는다. */
   actions?: ReactNode;
+  feedback?: ReactNode;
   children: ReactNode;
   /** 처리 중에는 닫지 못하게 막는다. */
   pending?: boolean;
@@ -30,6 +31,7 @@ export function DetailDrawer({
   title,
   subtitle,
   actions,
+  feedback,
   children,
   pending = false,
   hidden = false,
@@ -118,6 +120,7 @@ export function DetailDrawer({
             </button>
           </div>
         </header>
+        {feedback && <div className="sicost-feedback-slot">{feedback}</div>}
         <div className="sicost-drawer-body">{children}</div>
       </aside>
     </>,

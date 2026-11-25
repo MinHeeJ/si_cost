@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import {
   useCallback,
@@ -203,6 +204,20 @@ export function ProjectDetailPanel({
   return (
     <>
       <DetailDrawer
+        feedback={error != null && (
+          <ErrorBanner
+            title="프로젝트 상세 조회 실패"
+            message={
+              error instanceof Error
+                ? error.message
+                : "상세를 조회하지 못했습니다."
+            }
+            requestId={
+              error instanceof ApiError ? error.body.requestId : undefined
+            }
+            onRetry={() => void load().catch(() => {})}
+          />
+        )}
         hidden={!active}
         title={p?.name ?? "프로젝트 상세"}
         subtitle={
@@ -241,20 +256,7 @@ export function ProjectDetailPanel({
           )
         }
       >
-        {loading && <p role="status">상세를 불러오는 중입니다.</p>}
-        {error != null && (
-          <ErrorBanner
-            message={
-              error instanceof Error
-                ? error.message
-                : "상세를 조회하지 못했습니다."
-            }
-            requestId={
-              error instanceof ApiError ? error.body.requestId : undefined
-            }
-            onRetry={() => void load().catch(() => {})}
-          />
-        )}
+        {loading && <ScreenLoading message="상세를 불러오는 중입니다." />}
         {detail && p && (
           <section
             data-testid="project-detail-content"
@@ -398,9 +400,7 @@ export function ProjectDetailPanel({
                                 }
                               />
                             ) : (
-                              <span role="status">
-                                신호등을 불러오는 중입니다.
-                              </span>
+                              <ScreenLoading inline message="신호등을 불러오는 중입니다." />
                             )}
                           </div>
                           {registration?.progress && (

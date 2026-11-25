@@ -1,3 +1,4 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { useState } from "react";
 import { ColumnPreferencesDialog } from "../me/ColumnPreferencesDialog";
 import { profitabilityColumns } from "./profitabilityColumns";
@@ -12,6 +13,7 @@ export function ProfitabilityColumnSettings() {
         data-testid="profitability-columns-button"
         onClick={() => setOpen(true)}
       >
+        <TableControlIcon name="columns" />
         열 설정
       </button>
       {open && (

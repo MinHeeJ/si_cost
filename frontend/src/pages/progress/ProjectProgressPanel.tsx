@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
@@ -128,7 +129,7 @@ export function ProjectProgressPanel({
       data-screen-id="SCR-UI-01"
       className="project-progress"
     >
-      {loading && <p role="status">진행 현황을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="진행 현황을 불러오는 중입니다." />}
       {message && (
         <p
           role="status"
@@ -445,7 +446,7 @@ export function ProjectProgressPanel({
                 <option value="TB_PJ_ISSUE">이슈</option>
               </select>
               {historyLoading && (
-                <p role="status">변경 이력을 불러오는 중입니다.</p>
+                <ScreenLoading message="변경 이력을 불러오는 중입니다." />
               )}
               {historyError != null && (
                 <ErrorBanner
@@ -499,7 +500,7 @@ export function ProjectProgressPanel({
                       관련 변경 이력이 없습니다.
                     </p>
                   )}
-                  <div className="project-progress-actions">
+                  <nav className="sicost-inline-pagination" aria-label="진행 변경 이력 페이지">
                     <span>
                       {history.total}건 · {history.page}페이지
                     </span>
@@ -522,7 +523,7 @@ export function ProjectProgressPanel({
                     >
                       다음
                     </button>
-                  </div>
+                  </nav>
                 </>
               )}
             </section>

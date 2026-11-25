@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
@@ -92,7 +93,7 @@ export function ReminderDialog({
       onCancel={onClose}
     >
       <section className="dunning-delivery" data-testid="reminder-preview">
-        {loading && <p role="status">최신 미리보기를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="최신 미리보기를 불러오는 중입니다." />}
         {!!error && (
           <ErrorBanner
             message={

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { KpiStrip } from "../../shared/Surface";
@@ -235,6 +236,7 @@ export function OperatingProfitScreen({
           </button>
 
           <button
+            className="sicost-download-button"
             type="button"
             data-testid="operating-export"
             disabled={!data || loading || pending || mobile}
@@ -253,7 +255,7 @@ export function OperatingProfitScreen({
         {mobile && (
           <p role="note">엑셀 업로드·다운로드는 PC에서 이용해 주세요.</p>
         )}
-        {loading && <p role="status">영업이익표를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="영업이익표를 불러오는 중입니다." />}
         {error != null && (
           <ErrorBanner
             message={`${committed.current ? "저장은 완료됐지만 손익표를 다시 불러오지 못했습니다. " : ""}${error instanceof Error ? error.message : "영업이익표 조회 실패"}`}

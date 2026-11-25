@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { Pagination } from "../../shared/Pagination";
 import { HelpTooltip } from "../../shared/HelpTooltip";
@@ -123,7 +124,7 @@ export function WorkforceOperationsScreen() {
       {error != null && (
         <CalendarError error={error} retry={() => setReload((n) => n + 1)} />
       )}
-      {!context && !error && <p role="status">기간을 불러오는 중입니다.</p>}
+      {!context && !error && <ScreenLoading message="기간을 불러오는 중입니다." />}
       {context && year && (
         <>
           <CompactPeriodSummary
@@ -470,7 +471,7 @@ export function WorkforceCalendar({
             {loading && !data ? "조회 중…" : `총 ${data?.total ?? 0}명`}
           </span>
           <button
-            className="workforce-calendar-download"
+            className="sicost-download-button workforce-calendar-download"
             data-testid="calendar-download"
             disabled={loading || pending || !data}
             onClick={() => void download()}
@@ -480,7 +481,7 @@ export function WorkforceCalendar({
         </div>
       </div>
       {notice && <p role="status">{notice}</p>}
-      {loading && <p role="status">달력을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="달력을 불러오는 중입니다." />}
       {data && (
         <>
           <div

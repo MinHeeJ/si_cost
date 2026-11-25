@@ -1,7 +1,8 @@
+import { errorOutsideFields, FieldError } from "../../shared/FieldErrors";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner } from "../../shared/Feedback";
+import { FeedbackNotice } from "../../shared/Feedback";
 import { formatDecimal } from "../../shared/format";
 import { getMonthClose, type PeriodContext } from "../shared/sharedApi";
 import type { Bill, Receipt, ReceiptResult } from "./receiptsApi";
@@ -94,6 +95,17 @@ export function ReceiptEntryDialog({
       setMessage("저장됐지만 다시 불러오지 못했습니다");
     }
   }
+  async function retryRefresh(value: ReceiptResult) {
+    if (flight.current) return;
+    flight.current = true;
+    setPending(true);
+    try {
+      await refresh(value);
+    } finally {
+      flight.current = false;
+      setPending(false);
+    }
+  }
   async function submit() {
     if (flight.current || readonly || stale || saved || checking || blocked)
       return;
@@ -123,11 +135,11 @@ export function ReceiptEntryDialog({
     }
     if (month.slice(0, 4) < period.currentMonth.slice(0, 4))
       validation.date = "지난 연도의 입금은 변경할 수 없습니다.";
+    setError(undefined);
     setFields(validation);
     if (Object.keys(validation).length) return;
     flight.current = true;
     setPending(true);
-    setError(undefined);
     try {
       const value = receipt
         ? await api.saveBillReceiptCancellation(bill.id, receipt.id, {
@@ -161,6 +173,9 @@ export function ReceiptEntryDialog({
     }
   }
   const title = receipt ? "입금 취소" : "입금 등록";
+  const bannerError = errorOutsideFields(error, (field) =>
+    receipt ? field === "reason" : field === "date" || field === "amount",
+  );
   function close() {
     if (!pending) {
       if (dirty && !saved) setLeaving(true);
@@ -177,6 +192,53 @@ export function ReceiptEntryDialog({
         pending={pending}
         confirmLabel={receipt ? "입금 취소" : "등록"}
         cancelLabel="닫기"
+        feedback={
+          message ? (
+            <FeedbackNotice
+              tone="warn"
+              title="저장 완료 · 화면 갱신 실패"
+              action={
+                <button
+                  type="button"
+                  data-testid="receipt-refresh-saved"
+                  disabled={pending}
+                  onClick={() => {
+                    if (saved) void retryRefresh(saved);
+                  }}
+                >
+                  다시 조회
+                </button>
+              }
+            >
+              {message}
+            </FeedbackNotice>
+          ) : bannerError || stale ? (
+            <FeedbackNotice
+              tone="bad"
+              title={blocked && !stale ? "입금 기준 조회 실패" : `${title} 실패`}
+              onDismiss={!stale && !blocked ? () => setError(undefined) : undefined}
+              focusOnShow={Boolean(stale || !Object.values(fields).some(Boolean))}
+            >
+              {bannerError instanceof Error ? bannerError.message : "요청을 처리하지 못했습니다."}
+              {stale && <p>다시 조회한 뒤 원래 입금행을 확인해 주세요. 자동으로 재저장하지 않습니다.</p>}
+              {bannerError instanceof ApiError && (
+                <small className="sicost-feedback-reference">문의 번호: {bannerError.body.requestId}</small>
+              )}
+            </FeedbackNotice>
+          ) : readonly ? (
+            <FeedbackNotice tone="warn" title="지난 연도 입금">
+              지난 연도는 조회만 할 수 있습니다.
+            </FeedbackNotice>
+          ) : blocked && !checking ? (
+            <FeedbackNotice tone="warn" title="입금 변경 제한">
+              입금일의 월이 마감·이관되어 변경할 수 없습니다.
+            </FeedbackNotice>
+          ) : Object.values(fields).some(Boolean) ? (
+            <FeedbackNotice tone="warn" title="입력 항목 확인">
+              입력칸 아래의 안내를 확인해 주세요.
+            </FeedbackNotice>
+          ) : undefined
+        }
         confirmDisabled={
           readonly || stale || Boolean(saved) || checking || blocked
         }
@@ -199,14 +261,6 @@ export function ReceiptEntryDialog({
               현재 미수 {formatDecimal(bill.unpaidAmount)} 원 · 분할 입금 가능
             </p>
           )}
-          {Boolean(error) && (
-            <ErrorBanner
-              message={error instanceof Error ? error.message : "요청 실패"}
-              requestId={
-                error instanceof ApiError ? error.body.requestId : undefined
-              }
-            />
-          )}
           {receipt ? (
             <div className="sicost-field">
               <label htmlFor="receipt-reason">취소 사유 *</label>
@@ -217,8 +271,9 @@ export function ReceiptEntryDialog({
                 disabled={pending || Boolean(saved)}
                 onChange={(e) => setReason(e.target.value)}
                 aria-invalid={Boolean(fields.reason)}
+                aria-describedby={fields.reason ? "receipt-reason-error" : undefined}
               />
-              {fields.reason && <span role="alert">{fields.reason}</span>}
+              <FieldError message={fields.reason} id="receipt-reason-error" />
             </div>
           ) : (
             <div className="receipt-fields">
@@ -233,8 +288,9 @@ export function ReceiptEntryDialog({
                   disabled={pending || Boolean(saved)}
                   onChange={(e) => setDate(e.target.value)}
                   aria-invalid={Boolean(fields.date)}
+                  aria-describedby={fields.date ? "receipt-date-error" : undefined}
                 />
-                {fields.date && <span role="alert">{fields.date}</span>}
+                <FieldError message={fields.date} id="receipt-date-error" />
               </div>
               <div className="sicost-field">
                 <label htmlFor="receipt-amount">입금액 (원) *</label>
@@ -246,40 +302,11 @@ export function ReceiptEntryDialog({
                   disabled={pending || Boolean(saved)}
                   onChange={(e) => setAmount(e.target.value)}
                   aria-invalid={Boolean(fields.amount)}
+                  aria-describedby={fields.amount ? "receipt-amount-error" : undefined}
                 />
-                {fields.amount && <span role="alert">{fields.amount}</span>}
+                <FieldError message={fields.amount} id="receipt-amount-error" />
               </div>
             </div>
-          )}
-          {readonly && (
-            <p className="sicost-banner sicost-tone-lock">
-              지난 연도는 조회만 할 수 있습니다.
-            </p>
-          )}
-          {blocked && !checking && (
-            <p className="sicost-banner sicost-tone-lock">
-              입금일의 월이 마감·이관되어 변경할 수 없습니다.
-            </p>
-          )}
-          {stale && (
-            <p role="alert">
-              다시 조회한 뒤 원래 입금행을 확인해 주세요. 자동으로 재저장하지
-              않습니다.
-            </p>
-          )}
-          {message && (
-            <p role="status">
-              {message}
-              <button
-                type="button"
-                data-testid="receipt-refresh-saved"
-                onClick={() => {
-                  if (saved) void refresh(saved);
-                }}
-              >
-                다시 조회
-              </button>
-            </p>
           )}
           {receipt && (
             <p>

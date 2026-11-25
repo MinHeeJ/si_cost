@@ -1,3 +1,4 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState, type Key } from "react";
 import { ApiError } from "../../shared/api";
@@ -238,6 +239,7 @@ export function CodeMappingsScreen({
             type="button"
             onClick={onColumnsChange}
           >
+            <TableControlIcon name="columns" />
             열 설정
           </button>
         )}
@@ -247,6 +249,7 @@ export function CodeMappingsScreen({
             type="button"
             onClick={onDenseChange}
           >
+            <TableControlIcon name="rows" />
             목록 밀도
           </button>
         )}

@@ -4,7 +4,8 @@ import { useFieldErrorFocus } from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./assignmentActionsApi";
@@ -36,8 +37,12 @@ export function AssignmentError({
   ) : null;
 }
 const warningLabel: Record<string, string> = {
-  MM_OVER: "MM 초과",
-  UNCONTRACTED: "미계약",
+  MM_OVER: "월 MM 한도 초과",
+  UNCONTRACTED: "미계약 선투입",
+  EMPLOYEE_TYPE: "파견 인력 유형 확인",
+  LEAVE: "휴직 기간과 중복",
+  PART_DIFFERENCE: "영업 파트 다름",
+  CLOSE_CROSS: "마감월 포함",
 };
 /** 연속한 월을 `2026-03 ~ 2026-12`처럼 줄인다. 월이 하나면 그대로. */
 function monthRanges(months: string[]): string {
@@ -62,6 +67,45 @@ function monthRanges(months: string[]): string {
   if (start) parts.push(start === prev ? start : `${start} ~ ${prev}`);
   return parts.join(", ");
 }
+export function AssignmentWarningSummary({
+  assignmentId,
+  warnings,
+}: {
+  assignmentId: string;
+  warnings: api.Warning[];
+}) {
+  if (!warnings.length) return "–";
+
+  const byType = new Map<string, api.Warning[]>();
+  for (const warning of warnings) {
+    const items = byType.get(warning.code) ?? [];
+    items.push(warning);
+    byType.set(warning.code, items);
+  }
+
+  const label = `경고 ${byType.size}개`;
+  return (
+    <HelpTooltip
+      label={label}
+      trigger={<StatusBadge tone="warn">{label}</StatusBadge>}
+      testId={`assignment-warning-${assignmentId.toLowerCase()}`}
+    >
+      <ol className="assignment-warning-list">
+        {[...byType].map(([code, items]) => (
+          <li key={code}>
+            <strong>{warningLabel[code] ?? "투입 조건 확인"}</strong>
+            {code === "CLOSE_CROSS" && (
+              <span>{monthRanges(items.flatMap((item) => item.months))}</span>
+            )}
+            {[...new Set(items.map((item) => item.message))].map((message) => (
+              <span key={message}>{message}</span>
+            ))}
+          </li>
+        ))}
+      </ol>
+    </HelpTooltip>
+  );
+}
 export function AssignmentWarnings({
   warnings,
   protectedMonths,
@@ -74,7 +118,12 @@ export function AssignmentWarnings({
     string,
     { code: string; text: string; months: string[] }
   >();
+  const closedMonths = new Set(protectedMonths);
   for (const w of warnings) {
+    if (w.code === "CLOSE_CROSS") {
+      w.months.forEach((month) => closedMonths.add(month));
+      continue;
+    }
     let text = w.message;
     for (const m of w.months) text = text.replace(m, "").replace(/\s+/g, " ");
     text = text.trim();
@@ -83,25 +132,25 @@ export function AssignmentWarnings({
     group.months.push(...w.months);
     groups.set(key, group);
   }
+  if (!closedMonths.size && !groups.size) return null;
   return (
     <div data-testid="assignment-warnings" className="assignment-warnings">
-      {[...groups.values()].map((g, i) => (
-        <p
-          data-testid={`assignment-warning-${g.code.toLowerCase().replace(/_/g, "-")}-${i}`}
-          key={`${g.code}-${i}`}
-          className="sicost-banner sicost-tone-warn"
-        >
-          <strong>{warningLabel[g.code] ?? g.code}</strong>
-          {g.months.length > 0 && <> · {monthRanges(g.months)}</>}
-          {g.text && <> · {g.text}</>}
-        </p>
-      ))}
-      {protectedMonths.length > 0 && (
-        <p className="sicost-banner sicost-tone-lock">
-          보호월 {protectedMonths.join(", ")} · 마감한 달 값은 유지하고 미마감
-          달부터 반영합니다. 과거 차액은 전월 조정으로 입력하세요.
-        </p>
+      {closedMonths.size > 0 && (
+        <FeedbackNotice tone="warn" title="마감된 월의 투입값 유지">
+          <p>{monthRanges([...closedMonths])} 마감 자료에는 기존 투입값이 유지됩니다.</p>
+          <p>마감월 차액은 전월 조정에서 입력해 주세요.</p>
+        </FeedbackNotice>
       )}
+      {[...groups.values()].map((group, index) => (
+        <FeedbackNotice
+          key={`${group.code}-${index}`}
+          testId={`assignment-warning-${group.code.toLowerCase().replace(/_/g, "-")}-${index}`}
+          tone="warn"
+          title={warningLabel[group.code] ?? "투입 조건 확인"}
+        >
+          {[monthRanges(group.months), group.text].filter(Boolean).join(" · ")}
+        </FeedbackNotice>
+      ))}
     </div>
   );
 }
@@ -316,6 +365,27 @@ export function AssignmentChangeDialog({
         onConfirm={submit}
         confirmLabel={preview ? "확인 후 저장" : "저장"}
         confirmDisabled={stale}
+        feedback={preview && (
+          <>
+            <AssignmentWarnings warnings={preview.warnings} protectedMonths={preview.protectedMonths} />
+            {preview.affectedMonths.length > 0 && (
+              <small className="assignment-preview-months">
+                영향월 {monthRanges(preview.affectedMonths)}
+              </small>
+            )}
+          </>
+        )}
+        footerStart={preview && (
+          <button
+            type="button"
+            className="assignment-preview-edit"
+            data-testid="assignment-change-edit"
+            onClick={() => setPreview(undefined)}
+            disabled={pending}
+          >
+            입력 수정
+          </button>
+        )}
       >
         <div data-testid="assignment-change-dialog" ref={formRoot}>
           <p>
@@ -431,22 +501,6 @@ export function AssignmentChangeDialog({
               error={fields}
               onChange={(k, v) => (k === "reason" ? setReason(v) : setMemo(v))}
             />
-          )}
-          {preview && (
-            <>
-              <AssignmentWarnings
-                warnings={preview.warnings}
-                protectedMonths={preview.protectedMonths}
-              />
-              <p>영향월 {preview.affectedMonths.join(", ")}</p>
-              <button
-                type="button"
-                data-testid="assignment-change-edit"
-                onClick={() => setPreview(undefined)}
-              >
-                입력 수정
-              </button>
-            </>
           )}
         </div>
       </Dialog>

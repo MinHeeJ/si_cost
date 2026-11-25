@@ -457,7 +457,15 @@ describe("프로젝트 원가 목록", () => {
     expect(
       screen.getByTestId("analysis-summary-low-margin-count"),
     ).toHaveTextContent("2");
-    expect(screen.getByText("소진율 125.0%")).toBeInTheDocument();
+    const table = screen.getByTestId("project-cost-table");
+    for (const header of within(table).getAllByRole("columnheader")) {
+      expect(header).toHaveStyle({ textAlign: "center" });
+    }
+    expect(table.querySelector('td[data-column="cumulativeCost"]')).toHaveStyle({ textAlign: "right" });
+    expect(table.querySelector('td[data-column="budgetUsage"]')).toHaveStyle({ textAlign: "center" });
+    expect(table.querySelector('td[data-column="alerts"]')).toHaveStyle({ textAlign: "center" });
+    const usage = screen.getByText("125.0%", { selector: ".project-analysis-progress-value" });
+    expect(usage.parentElement).toHaveTextContent("소진율 125.0%");
     expect(screen.getByText("계획 없음")).toBeInTheDocument();
     expect(screen.getByText("예산 주의")).toHaveClass("sicost-tone-warn");
     expect(
@@ -465,6 +473,34 @@ describe("프로젝트 원가 목록", () => {
         .getByTestId("analysis-summary-cumulative-profit")
         .querySelector("strong"),
     ).toHaveClass("analysis-negative");
+  });
+  it.each([
+    { alerts: [], budgetWarning: false, status: "normal" },
+    { alerts: [], budgetWarning: true, status: "normal" },
+    { alerts: ["LOW_MARGIN"], budgetWarning: false, status: "warning" },
+    { alerts: ["BUDGET_OVER"], budgetWarning: false, status: "error" },
+    { alerts: ["LOW_MARGIN", "BUDGET_OVER"], budgetWarning: true, status: "error" },
+  ] as const)("colors the budget usage bar according to the server alert state ($status)", async ({
+    alerts, budgetWarning, status,
+  }) => {
+    const data = costs();
+    data.items[0] = {
+      ...data.items[0],
+      budgetWarning,
+      alerts: alerts.map((kind) => ({
+        kind,
+        message: kind === "BUDGET_OVER" ? "예산 초과" : "저마진",
+        actualNumerator: "125",
+        actualDenominator: "100",
+        threshold: "100",
+        comparison: "기준 대비",
+        primaryCause: null,
+      })),
+    };
+    vi.mocked(api.getProjectCosts).mockResolvedValue(data);
+    mount(<ProjectCostAnalysis />);
+    const usage = await screen.findByText("125.0%", { selector: ".project-analysis-progress-value" });
+    expect(usage.closest(".project-analysis-progress")).toHaveAttribute("data-status", status);
   });
   it("formats per-MM amounts in the selected unit without scaling MM or rates", async () => {
     const data = costs();
@@ -607,6 +643,8 @@ describe("프로젝트 원가 목록", () => {
     expect(
       within(screen.getByTestId("project-cost-table")).getByText("내부"),
     ).toHaveClass("sicost-tone-neutral");
+    const usage = screen.getByTestId("project-cost-table").querySelector('td[data-column="budgetUsage"]');
+    expect(usage).toHaveTextContent("해당 없음");
     expect(screen.queryByText("예산 주의")).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { saveMasterDataDownload } from "../exportsops/masterDataExportApi";
 import { downloadBillingReview, type BillExportFilters } from "./billingReviewExportApi";
 import type { ReviewAmountUnit } from "./billingReviewApi";
@@ -21,6 +21,7 @@ export function BillingReviewDownloadButton({
   const [pending, setPending] = useState(false),
     [error, setError] = useState<string>();
   const active = useRef(false);
+  const [successCount, setSuccessCount] = useState(0);
   const canDownload = usePermission("UI-13", "DNLD");
   async function download() {
     if (
@@ -36,6 +37,7 @@ export function BillingReviewDownloadButton({
       saveMasterDataDownload(
         await downloadBillingReview({ view, month, amountUnit, bills }),
       );
+      setSuccessCount((count) => count + 1);
     } catch (e) {
       setError(
         e instanceof ApiError
@@ -54,6 +56,7 @@ export function BillingReviewDownloadButton({
     <>
       <div className="billing-review-download">
         <button
+          className="sicost-download-button"
           type="button"
           data-testid={`billing-review-download-${view.toLowerCase().replace(/_/g, "-")}`}
           disabled={disabled || pending}
@@ -61,7 +64,8 @@ export function BillingReviewDownloadButton({
         >
           {pending ? "파일 생성 중…" : "엑셀 다운로드"}
         </button>
-        {error && <ErrorBanner message={error} />}
+        {error && <ErrorBanner title="엑셀 다운로드 실패" message={error} onDismiss={() => setError("")} />}
+        {successCount > 0 && <FloatingToast key={successCount} message="엑셀 다운로드 완료" />}
       </div>
       <p className="billing-review-mobile-notice">
         다운로드는 PC에서 이용해 주세요.

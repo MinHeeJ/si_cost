@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { SegmentedTabs } from "../../shared/SegmentedTabs";
@@ -126,6 +127,20 @@ export function DeveloperDrawer({
   }, [load, refreshKey]);
   return (
     <DetailDrawer
+      feedback={error != null && (
+        <ErrorBanner
+          title="개발자 상세 조회 실패"
+          message={
+            error instanceof Error
+              ? error.message
+              : "상세를 조회하지 못했습니다."
+          }
+          requestId={
+            error instanceof ApiError ? error.body.requestId : undefined
+          }
+          onRetry={() => void load()}
+        />
+      )}
       title={data?.name ?? "개발자 상세"}
       subtitle={data?.managementNo}
       testId="developer-drawer"
@@ -162,20 +177,7 @@ export function DeveloperDrawer({
         )
       }
     >
-      {loading && <p role="status">불러오는 중입니다.</p>}
-      {error != null && (
-        <ErrorBanner
-          message={
-            error instanceof Error
-              ? error.message
-              : "상세를 조회하지 못했습니다."
-          }
-          requestId={
-            error instanceof ApiError ? error.body.requestId : undefined
-          }
-          onRetry={() => void load()}
-        />
-      )}
+      {loading && <ScreenLoading message="불러오는 중입니다." />}
       {data && (
         <>
           {historyError && (
@@ -440,7 +442,7 @@ function DeveloperStates({
           onRetry={() => setRetry((n) => n + 1)}
         />
       )}
-      {!currentDate && !error && <p role="status">불러오는 중입니다.</p>}
+      {!currentDate && !error && <ScreenLoading message="불러오는 중입니다." />}
       {currentDate && (
         <DeveloperStatesPanel
           developerId={id}

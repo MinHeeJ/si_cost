@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { Icon } from "../../shared/Icon";
 import { ApiError } from "../../shared/api";
 import { formatAmount, type AmountUnit } from "../../shared/format";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
@@ -301,7 +303,7 @@ export function ProjectCostDetailPanel({
               </button>
             ))}
           </SegmentedTabList>
-          {loading && <p role="status">원가 상세를 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="원가 상세를 불러오는 중입니다." />}
           {error != null && (
             <ErrorBanner
               message={
@@ -334,15 +336,28 @@ export function ProjectCostDetailPanel({
             )}
             {tab === "causes" && causes && (
               <>
-                <p
-                  className={`sicost-banner sicost-tone-${causes.highlight ? "bad" : "neutral"}`}
-                >
-                  {causes.message}
-                </p>
-                <p>
-                  진척 대비 초과 {money(causes.progressExcess)} · 나머지{" "}
-                  {money(causes.remainder)} {amountUnit}
-                </p>
+                {causes.highlight ? (
+                  <p className="sicost-banner sicost-tone-bad">{causes.message}</p>
+                ) : (
+                  <p className="cost-cause-reference" role="note">
+                    <Icon name="info" size={16} />
+                    <span>현재 프로젝트는 경보가 없으므로 아래 내용은 참고용입니다.</span>
+                  </p>
+                )}
+                <dl className="cost-cause-summary" data-testid="cost-cause-summary">
+                  <div>
+                    <dt>진척 대비 초과금</dt>
+                    <dd>{causes.progressExcess == null ? "없음" : money(causes.progressExcess)}</dd>
+                  </div>
+                  <div>
+                    <dt>나머지</dt>
+                    <dd>{causes.remainder == null ? "없음" : money(causes.remainder)}</dd>
+                  </div>
+                  <div className="cost-cause-summary-unit">
+                    <dt>단위</dt>
+                    <dd>{amountUnit}</dd>
+                  </div>
+                </dl>
                 <CostCauseBars value={causes} unit={amountUnit} />
                 <DataTable
                   testId="cost-causes"

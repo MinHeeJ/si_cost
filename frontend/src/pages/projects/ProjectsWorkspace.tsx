@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import { usePreferences } from "../me/usePreferences";
@@ -150,7 +151,7 @@ export function ProjectsWorkspace({
       year === undefined ||
       currentYear === undefined ||
       preferences.loading ? (
-        <p role="status">프로젝트 기간과 설정을 불러오는 중입니다.</p>
+        <ScreenLoading message="프로젝트 기간과 설정을 불러오는 중입니다." />
       ) : (
         <ProjectsScreen
           active={active}

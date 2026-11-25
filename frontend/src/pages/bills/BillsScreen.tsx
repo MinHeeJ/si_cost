@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { HelpTooltip } from "../../shared/HelpTooltip";
@@ -147,7 +148,7 @@ export function BillsScreen(props: BillsScreenProps = {}) {
           dense={dense}
         />
       ) : (
-        !error && <p role="status">청구 기간을 불러오는 중입니다.</p>
+        !error && <ScreenLoading message="청구 기간을 불러오는 중입니다." />
       )}
     </section>
   );
@@ -599,7 +600,7 @@ function BillsContent({
         className="bill-summary"
         aria-busy={summaryLoading}
       >
-        {summaryLoading && <p role="status">요약을 불러오는 중입니다.</p>}
+        {summaryLoading && <ScreenLoading message="요약을 불러오는 중입니다." />}
         {summary && (
           <>
             {(
@@ -974,7 +975,7 @@ function BillsContent({
           />
         </div>
         <div className="bill-mobile">
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {!loading && !data?.items.length && <p>조회된 청구가 없습니다.</p>}
           {(mobile ? mobileRows : (data?.items.slice(0, 20) ?? [])).map((b) => (
             <article key={b.id} data-testid={`bill-card-${b.id.toLowerCase()}`}>
@@ -1049,26 +1050,28 @@ function BillsContent({
             </p>
           ))}
           {!projectOptions.length && <p>검색된 프로젝트가 없습니다.</p>}
-          <button
-            type="button"
-            data-testid="bill-project-prev"
-            disabled={projectPage <= 1}
-            onClick={() => {
-              void searchProjects(projectPage - 1);
-            }}
-          >
-            이전
-          </button>
-          <button
-            type="button"
-            data-testid="bill-project-next"
-            disabled={projectPage * 20 >= projectTotal}
-            onClick={() => {
-              void searchProjects(projectPage + 1);
-            }}
-          >
-            다음
-          </button>
+          <nav className="sicost-inline-pagination" aria-label="프로젝트 선택 페이지">
+            <button
+              type="button"
+              data-testid="bill-project-prev"
+              disabled={projectPage <= 1}
+              onClick={() => {
+                void searchProjects(projectPage - 1);
+              }}
+            >
+              이전
+            </button>
+            <button
+              type="button"
+              data-testid="bill-project-next"
+              disabled={projectPage * 20 >= projectTotal}
+              onClick={() => {
+                void searchProjects(projectPage + 1);
+              }}
+            >
+              다음
+            </button>
+          </nav>
         </section>
       </Dialog>
       {detailId && !form && (

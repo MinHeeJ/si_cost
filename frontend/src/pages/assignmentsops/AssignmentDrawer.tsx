@@ -151,6 +151,9 @@ export function AssignmentDrawer({
           변경 이력 ({history?.total ?? "–"})
         </button>
       </SegmentedTabList>
+      {tab === "info" && row && (
+        <AssignmentWarnings warnings={row.warnings} protectedMonths={row.protectedMonths} />
+      )}
       {row && (
         <>
           <dl className="assignment-details">
@@ -190,10 +193,6 @@ export function AssignmentDrawer({
               </div>
             ))}
           </dl>
-          <AssignmentWarnings
-            warnings={row.warnings}
-            protectedMonths={row.protectedMonths}
-          />
         </>
       )}
       {tab === "info" ? (

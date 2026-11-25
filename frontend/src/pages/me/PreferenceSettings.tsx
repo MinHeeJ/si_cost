@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useState } from "react";
 import { Dialog, ConfirmDialog } from "../../shared/Dialog";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -61,7 +62,7 @@ export function PreferenceSettings({
       >
         <div data-screen-id="SCR-UI-16-M1" className="me-settings">
           {preferences.loading ? (
-            <p role="status">불러오는 중…</p>
+            <ScreenLoading message="불러오는 중…" />
           ) : (
             settings.map((setting) => {
               const pref = preferences.get(setting.type);

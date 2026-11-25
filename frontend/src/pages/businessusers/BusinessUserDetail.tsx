@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
@@ -232,7 +233,7 @@ export function BusinessUserDetail({
             onRetry={() => setRefresh((v) => v + 1)}
           />
         )}
-        {!error && !user && <p role="status">불러오는 중입니다.</p>}
+        {!error && !user && <ScreenLoading message="불러오는 중입니다." />}
         {user && tab === "basic" && (
           <dl
             role="tabpanel"

@@ -1,8 +1,9 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Text } from "../../shared/Text";
-import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { formatDecimal } from "../../shared/format";
@@ -255,10 +256,16 @@ export function OperatingStandardsScreen({
           <h2>운영 기준값</h2>
           <div>
             {onColumnsChange && (
-              <button onClick={onColumnsChange}>열 설정</button>
+              <button onClick={onColumnsChange}>
+                <TableControlIcon name="columns" />
+                열 설정
+              </button>
             )}
             {onDensityChange && (
-              <button onClick={onDensityChange}>목록 밀도</button>
+              <button onClick={onDensityChange}>
+                <TableControlIcon name="rows" />
+                목록 밀도
+              </button>
             )}
           </div>
         </div>
@@ -277,14 +284,21 @@ export function OperatingStandardsScreen({
           />
         )}
         {notice && (
-          <p role="status" className="sicost-banner sicost-tone-info">
-            {notice}
-            {notice.includes("다시 불러오지") && (
-              <button onClick={() => void load().catch(() => {})}>
-                다시 조회
-              </button>
-            )}
-          </p>
+          notice.includes("다시 불러오지") ? (
+            <FeedbackNotice
+              tone="warn"
+              title="변경 완료 · 화면 갱신 실패"
+              action={
+                <button type="button" onClick={() => void load().catch(() => {})}>
+                  다시 조회
+                </button>
+              }
+            >
+              {notice}
+            </FeedbackNotice>
+          ) : (
+            <FeedbackNotice tone="info" title={notice} onDismiss={() => setNotice("")} />
+          )
         )}
         {saveToast && <FloatingToast key={saveToast.sequence} message={saveToast.message} />}
         {(!error || rows.length > 0) && (

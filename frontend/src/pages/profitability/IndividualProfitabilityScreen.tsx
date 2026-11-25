@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useSensitivePermission, usePermission } from "../../shared/permission/PermissionBoundary";
@@ -302,7 +303,7 @@ export function IndividualProfitabilityScreen({
       {state.errorMessage && (
         <ErrorBanner message={state.errorMessage} onRetry={state.refresh} />
       )}
-      {loading && <p role="status">개인 원가·수익을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="개인 원가·수익을 불러오는 중입니다." />}
       {data && (
         <>
           {mobile ? (

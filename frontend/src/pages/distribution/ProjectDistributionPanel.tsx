@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge, type Tone } from "../../shared/Feedback";
@@ -176,7 +177,7 @@ export function ProjectDistributionPanel({
           </button>
         </div>
       </header>
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="불러오는 중입니다." />}
       {Boolean(error) && banner(error, () => setReload((value) => value + 1))}
       {Boolean(actionError) && banner(actionError)}
       {header && (

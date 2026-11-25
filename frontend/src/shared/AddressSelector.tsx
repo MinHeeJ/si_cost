@@ -1,3 +1,4 @@
+import { ScreenLoading } from "./ScreenLoading";
 import { FieldHelp } from "./FieldHelp";
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiError } from "./api";
@@ -185,9 +186,7 @@ export function AddressSelector({
         )}
       </div>
       {loading && (
-        <p role="status" className="sicost-address-hint">
-          행정구역을 불러오는 중…
-        </p>
+        <ScreenLoading inline message="행정구역을 불러오는 중…" />
       )}
       {!loading && !failure && sidos.length === 0 && (
         <p className="sicost-empty">선택할 행정구역이 없습니다.</p>

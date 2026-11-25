@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -97,7 +98,7 @@ export function FinancialYearStatusPanel({
           달을 누르면 그 달 항목으로 바뀝니다 (헤더 기준 연월도 함께 바뀜)
         </small>
       </header>
-      {loading && <p role="status">현황을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="현황을 불러오는 중입니다." />}
       {Boolean(error) && (
         <ErrorBanner
           message={

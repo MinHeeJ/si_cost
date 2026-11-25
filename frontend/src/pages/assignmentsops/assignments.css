@@ -217,13 +217,38 @@ button.assignment-candidate-exclude:hover:not(:disabled) {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.assignment-warning-list {
+  margin: 0;
+  padding-inline: 20px 4px;
+  max-height: min(55vh, 24rem);
+  overflow-y: auto;
+}
+.assignment-warning-list li + li {
+  margin-top: 8px;
+}
+.assignment-warning-list li > span {
+  display: block;
+}
 .assignment-warnings {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
 }
-.assignment-warnings p {
-  margin: 0;
+.sicost-feedback-slot > .assignment-warnings,
+.assignment-tabs + .assignment-warnings {
+  margin-top: 6px;
+}
+.sicost-feedback-slot > .assignment-warnings {
+  margin-bottom: 0;
+}
+.assignment-warnings p + p {
+  margin-top: 4px;
+}
+.assignment-preview-months {
+  color: var(--text-sub);
+}
+.assignment-preview-edit {
+  margin-inline-end: auto;
 }
 .assignment-history-filter {
   margin: 0 0 8px;

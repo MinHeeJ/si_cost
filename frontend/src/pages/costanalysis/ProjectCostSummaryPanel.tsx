@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../shared/api";
@@ -135,7 +136,7 @@ export function ProjectCostSummaryPanel({
       data-testid="project-cost-summary"
       data-screen-id="SCR-UI-01-B138-COST"
     >
-      {!detail && !error && <p role="status">원가를 불러오는 중입니다.</p>}
+      {!detail && !error && <ScreenLoading message="원가를 불러오는 중입니다." />}
       {error != null && (
         <ErrorBanner
           message={

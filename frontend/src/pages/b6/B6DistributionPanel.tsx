@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
@@ -155,7 +156,7 @@ export function B6DistributionPanel({
           배분표 다운로드
         </button>
       </header>
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="불러오는 중입니다." />}
       {error ? feedback(error) : null}
       {actionError ? feedback(actionError) : null}
       {data && data.project.contractType !== "TK" ? (

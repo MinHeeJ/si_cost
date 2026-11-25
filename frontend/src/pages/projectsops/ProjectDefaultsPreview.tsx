@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
@@ -47,7 +48,7 @@ export function ProjectDefaultsPreview({
       aria-label="서버 기본금액 미리보기"
     >
       <h3>기본금액 미리보기</h3>
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading inline message="불러오는 중입니다." />}
       {Boolean(error) && (
         <ErrorBanner
           message={
@@ -153,7 +154,7 @@ export function ProjectOptionSelect({
           disabled={disabled}
         />
       </label>
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading inline message="불러오는 중입니다." />}
       {Boolean(error) && (
         <ErrorBanner
           message={

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
@@ -196,7 +197,7 @@ export function ProjectPartDialog({
           <p>
             대상 {projectId} · {projectName}
           </p>
-          {loading && <p role="status">영업 파트를 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="영업 파트를 불러오는 중입니다." />}
           {value && (
             <>
               <p>

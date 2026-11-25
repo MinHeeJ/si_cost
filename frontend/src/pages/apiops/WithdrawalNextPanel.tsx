@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { formatDecimal, formatRate } from "../../shared/format";
 import { Link } from "react-router-dom";
@@ -183,7 +184,7 @@ export function WithdrawalNextPanel({
           </p>
         )}
         {loading ? (
-          <p role="status">다음 자리 추천 중</p>
+          <ScreenLoading message="다음 자리 추천 중" />
         ) : (
           data && (
             <>

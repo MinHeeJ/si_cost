@@ -81,9 +81,9 @@ it("already stopped has no resume/delete/stop action", () => {
 it("dirty editor requires saving or cancelling draft first", () => {
   render(<RoleStopAction role={role} dirty onRefresh={vi.fn()} />);
   expect(screen.getByRole("button", { name: "사용 중지" })).toBeDisabled();
-  expect(screen.getByText(/변경 내용을 저장하거나 취소/)).toHaveClass(
-    "sicost-tone-warn",
-  );
+  const warning = screen.getByRole("alert");
+  expect(warning).toHaveClass("sicost-tone-warn");
+  expect(warning).toHaveTextContent(/변경 내용을 저장하거나 취소/);
 });
 it("confirm sends saved role revision once then refreshes and hides stopped action", async () => {
   const refresh = vi.fn().mockResolvedValue(undefined);
@@ -170,9 +170,9 @@ it("committed refresh failure never replays stop; explicit retry only reads", as
     .mockResolvedValue(undefined);
   const dialog = await open(refresh);
   await userEvent.click(within(dialog).getByRole("button", { name: "중지" }));
-  expect(await screen.findByText(/저장은 완료됐지만/)).toHaveClass(
-    "sicost-tone-warn",
-  );
+  const warning = (await screen.findByText(/저장은 완료됐지만/)).closest('[role="alert"]');
+  expect(warning).toHaveClass("sicost-tone-warn");
+  expect(warning).toHaveTextContent("저장 완료 · 화면 갱신 실패");
   await userEvent.click(screen.getByRole("button", { name: "다시 조회" }));
   expect(refresh).toHaveBeenCalledTimes(2);
   expect(api.saveRoleStop).toHaveBeenCalledTimes(1);

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { request } from "../../shared/api";
@@ -208,6 +209,7 @@ export function ClientsTableScreen({
               엑셀 업로드
             </button>
             <button
+              className="sicost-download-button"
               type="button"
               data-testid="clients-export-button"
               disabled={pending}
@@ -351,7 +353,7 @@ export function ClientsTableScreen({
               </button>
             </p>
           )}
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {!loading && !rows.length && !error && <p>조회된 자료가 없습니다.</p>}
           {rows.map((row) => (
             <article

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { FinancialWarnings } from "../../shared/FinancialWarnings";
@@ -274,7 +275,7 @@ export function BusinessPlanPerformanceScreen({
           />
         )}
         {loading && (
-          <p role="status">사업계획 대비 실적을 불러오는 중입니다.</p>
+          <ScreenLoading message="사업계획 대비 실적을 불러오는 중입니다." />
         )}
         {data && (
           <>

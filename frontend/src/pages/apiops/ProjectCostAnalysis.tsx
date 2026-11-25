@@ -360,7 +360,7 @@ export function ProjectCostAnalysis({
         id,
         label: <CostColumnHelp id={id} label={label} />,
         sortable: sorts.has(id),
-        align: "right",
+        align: id === "budgetUsage" ? "center" : "right",
         render: (row) => (
           <span
             className={
@@ -370,12 +370,35 @@ export function ProjectCostAnalysis({
             }
           >
             {id === "budgetUsage" ? (
-              <>
-                <AnalysisProgress label="소진율" value={row[id]} />
-                {row.budgetWarning && (
-                  <StatusBadge tone="warn">예산 주의</StatusBadge>
-                )}
-              </>
+              row[id] == null ? (
+                <HelpTooltip
+                  label="예산 소진율"
+                  trigger={<span>{row.contractType === "IN" ? "해당 없음" : "계산 불가"}</span>}
+                >
+                  {row.contractType === "IN"
+                    ? "내부 프로젝트에는 예산 소진율을 산정하지 않습니다."
+                    : Number(row.budgetAmount) > 0
+                      ? "누적 원가를 확인할 수 없어 예산 소진율을 계산할 수 없습니다."
+                      : "예산이 등록되지 않았거나 0 이하라서 소진율을 계산할 수 없습니다."}
+                </HelpTooltip>
+              ) : (
+                <>
+                  <AnalysisProgress
+                    label="소진율"
+                    value={row[id]}
+                    status={
+                      row.alerts.some((alert) => alert.kind === "BUDGET_OVER")
+                        ? "error"
+                        : row.alerts.some((alert) => alert.kind === "LOW_MARGIN")
+                          ? "warning"
+                          : "normal"
+                    }
+                  />
+                  {row.budgetWarning && (
+                    <StatusBadge tone="warn">예산 주의</StatusBadge>
+                  )}
+                </>
+              )
             ) : id === "planMm" && row[id] == null ? (
               "계획 없음"
             ) : id === "targetGap" ? (
@@ -402,6 +425,7 @@ export function ProjectCostAnalysis({
     {
       id: "alerts",
       label: "경보",
+      align: "center",
       render: (row) => (
         <>
           {row.contractType === "IN"
@@ -617,6 +641,7 @@ export function ProjectCostAnalysis({
       <AnalysisFailure error={result.error} retry={result.retry} />
       <DataTable
         testId="project-cost-table"
+        headerAlign="center"
         dense={dense}
         rows={result.error ? [] : (result.data?.items ?? [])}
         columns={visibleColumns}

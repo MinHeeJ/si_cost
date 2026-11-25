@@ -287,7 +287,10 @@ it("restores the causes tab, preserves negative remainder, and routes to project
     "data-highlight",
     "true",
   );
-  expect(screen.getByText(/나머지 −262/)).toBeInTheDocument();
+  const summary = screen.getByTestId("cost-cause-summary");
+  expect(within(summary).getByText("진척 대비 초과금").parentElement).toHaveTextContent("30");
+  expect(within(summary).getByText("나머지").parentElement).toHaveTextContent("−262");
+  expect(within(summary).getByText("단위").parentElement).toHaveTextContent("원");
   expect(
     screen.queryByText("위 세 가지로 설명되지 않습니다"),
   ).not.toBeInTheDocument();
@@ -311,6 +314,8 @@ it("shows positive unexplained and warning tone from the server only", async () 
 it("경보 없는 원인 막대는 서버의 참고 표시를 따라 회색으로 남는다", async () => {
   vi.mocked(api.getProjectCostCauses).mockResolvedValue({
     ...causes,
+    progressExcess: null,
+    remainder: null,
     highlight: false,
     message: "경보가 없는 프로젝트라 참고용",
   });
@@ -320,7 +325,8 @@ it("경보 없는 원인 막대는 서버의 참고 표시를 따라 회색으�
     "data-highlight",
     "false",
   );
-  expect(screen.getByText("경보가 없는 프로젝트라 참고용")).toBeInTheDocument();
+  expect(screen.getByRole("note")).toHaveTextContent("현재 프로젝트는 경보가 없으므로 아래 내용은 참고용입니다.");
+  expect(within(screen.getByTestId("cost-cause-summary")).getAllByText("없음")).toHaveLength(2);
 });
 it("free support opens the assignment tab without changing month or project", async () => {
   panel("causes");

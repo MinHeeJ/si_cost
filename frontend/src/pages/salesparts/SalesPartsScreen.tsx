@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useFeaturePermission, usePermission } from "../../shared/permission/PermissionBoundary";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
@@ -292,6 +293,7 @@ export function SalesPartsScreen({
         extra={
           !mobile && canDownload && (
             <button
+              className="sicost-download-button"
               data-testid="sales-part-export-button"
               type="button"
               disabled={downloading}
@@ -352,6 +354,7 @@ export function SalesPartsScreen({
         />
       ) : mobile ? (
         <>
+          {loading && query.page === 1 && <ScreenLoading />}
           <div className="sales-part-cards">
             {mobileRows.map((row) => (
               <article
@@ -379,11 +382,10 @@ export function SalesPartsScreen({
               </article>
             ))}
           </div>
-          {loading ? (
-            <p role="status">불러오는 중입니다.</p>
-          ) : !mobileRows.length ? (
+          {loading && query.page > 1 && <ScreenLoading inline />}
+          {!loading && !mobileRows.length && (
             <p className="sicost-empty">조회된 자료가 없습니다.</p>
-          ) : null}
+          )}
           {(data?.total ?? 0) > mobileRows.length && (
             <button
               data-testid="sales-part-load-more"
@@ -453,7 +455,7 @@ export function SalesPartsScreen({
             onClose={closeDetail}
           >
             {detailLoading ? (
-              <p role="status">불러오는 중입니다.</p>
+              <ScreenLoading message="불러오는 중입니다." />
             ) : (
               <ErrorBanner
                 message={

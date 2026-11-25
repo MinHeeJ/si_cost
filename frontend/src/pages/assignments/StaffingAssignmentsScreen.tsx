@@ -69,6 +69,7 @@ function AssignmentDownloads({ context }: { context: AssignmentListActions }) {
       data-testid="assignment-download-actions"
     >
       <button
+        className="sicost-download-button"
         type="button"
         data-testid="assignment-download"
         disabled={pending}

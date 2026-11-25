@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
@@ -141,7 +142,7 @@ export function SalesPartCreateDialog({
               }
             />
           )}
-          {loading && <p role="status">기본값을 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="기본값을 불러오는 중입니다." />}
           {defaults?.defaultErrors.map((item) => (
             <p className="sicost-banner sicost-tone-warn" key={item.source}>
               {item.source}: {item.message} 수동 입력할 수 있습니다.

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -70,7 +71,7 @@ export function PermissionSettingsPanel({ embedded = false }: { embedded?: boole
         민감항목 자격을 서버에서 검사하며 연결이 완료되지 않은 경로는
         거부합니다.
       </p>
-      {pending && <p role="status">저장 권한을 조회하고 있습니다.</p>}
+      {pending && <ScreenLoading inline message="저장 권한을 조회하고 있습니다." />}
       {error != null && (
         <>
           <ErrorBanner

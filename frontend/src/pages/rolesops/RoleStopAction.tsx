@@ -1,11 +1,8 @@
 import { useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner, Toast } from "../../shared/Feedback";
-import {
-  COMMITTED_REFRESH_FAILED,
-  useCommitRefresh,
-} from "../../shared/useCommitRefresh";
+import { ErrorBanner, FeedbackNotice, FloatingToast } from "../../shared/Feedback";
+import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { saveRoleStop, type RoleStopTarget } from "./roleStopApi";
 
 const defaultRoles = new Set(["ADMIN", "EXEC", "FIN", "SALES_LDR", "PM"]);
@@ -51,6 +48,7 @@ export function RoleStopAction({
     setError(undefined);
     try {
       await onRefresh();
+      command.clearOutcome();
     } catch (reason) {
       setError(reason);
     } finally {
@@ -78,25 +76,30 @@ export function RoleStopAction({
         </button>
       )}
       {dirty && !protectedRole && (
-        <p className="sicost-banner sicost-tone-warn">
+        <FeedbackNotice tone="warn" title="저장되지 않은 권한 변경사항">
           변경 내용을 저장하거나 취소한 뒤 사용 중지해 주세요.
-        </p>
+        </FeedbackNotice>
       )}
-      {command.message && !error && (
-        <Toast
-          message={command.message}
-          tone={command.message === COMMITTED_REFRESH_FAILED ? "warn" : "ok"}
-        />
+      {committed && command.outcome?.kind === "saved" && (
+        <FloatingToast message={command.outcome.message} />
       )}
-      {committed && (
-        <button
-          type="button"
-          data-testid="R-REFRESH"
-          disabled={busy}
-          onClick={() => void refresh()}
+      {committed && command.outcome?.kind === "refresh-failed" && !error && (
+        <FeedbackNotice
+          tone="warn"
+          title="저장 완료 · 화면 갱신 실패"
+          action={
+            <button
+              type="button"
+              data-testid="R-REFRESH"
+              disabled={busy}
+              onClick={() => void refresh()}
+            >
+              다시 조회
+            </button>
+          }
         >
-          다시 조회
-        </button>
+          {command.outcome.message}
+        </FeedbackNotice>
       )}
       {!target && error != null && (
         <ErrorBanner

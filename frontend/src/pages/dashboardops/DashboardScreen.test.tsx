@@ -509,15 +509,17 @@ it("실제 점검 수만큼 구간을 만들고 통과한 구간만 채운다", 
     data.closeProgress.passedCheckCount!,
   );
 });
-it("로딩 스켈레톤은 장식이며 초점 가능한 요소를 만들지 않는다", () => {
+it("초기 조회에는 공통 스피너와 대시보드 로딩 문구를 표시한다", () => {
   vi.mocked(api.getDashboard).mockReturnValue(new Promise(() => {}));
   ready();
-  const skeleton = screen.getByTestId("dashboard-skeleton");
-  expect(skeleton).toHaveAttribute("aria-hidden", "true");
-  expect(
-    skeleton.querySelector("button,input,a,select,textarea,[tabindex]"),
-  ).toBeNull();
+  const loading = screen.getByText("대시보드를 불러오는 중입니다.");
+  expect(loading).toHaveAttribute("role", "status");
+  expect(loading.querySelector(".sicost-screen-loading-spinner")).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
 });
+
 it("연도를 넘는 최근 3개월과 전체 기간은 원본 값·화면 단위를 보존한다", async () => {
   data.selectedMonth = "2027-01";
   data.salesCostTrend = ["2026-10", "2026-11", "2026-12", "2027-01"].map(

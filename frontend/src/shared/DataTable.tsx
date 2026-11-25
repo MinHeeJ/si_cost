@@ -1,3 +1,4 @@
+import { ScreenLoading } from "./ScreenLoading";
 import { Pagination } from "./Pagination";
 import { FieldHelp } from "./FieldHelp";
 import {
@@ -9,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { ErrorBanner } from "./Feedback";
-import { Icon } from "./Icon";
+import { Icon, TableControlIcon } from "./Icon";
 import {
   PermissionContext,
   ScreenPermissionContext,
@@ -29,6 +30,7 @@ export type DataTableProps<T> = {
   columns: readonly Column<T>[];
   rowKey(row: T): Key;
   tableLabel?: string;
+  headerAlign?: Column<T>["align"];
   loading?: boolean;
   /** Show a message in the table body while loading. Defaults to skeleton rows. */
   loadingMessage?: string;
@@ -40,6 +42,7 @@ export type DataTableProps<T> = {
   total?: number;
   onPageChange?(page: number): void;
   onSizeChange?(size: 20 | 50 | 100): void;
+  pageSizeDisabled?: boolean;
   selectedKeys?: readonly Key[];
   onSelectionChange?(keys: Key[]): void;
   /** 지금 정렬 기준. 없으면 화살표를 그리지 않는다. */
@@ -70,6 +73,7 @@ export function DataTable<T>({
   columns: suppliedColumns,
   rowKey,
   tableLabel,
+  headerAlign,
   loading,
   loadingMessage,
   empty = "조회된 자료가 없습니다.",
@@ -80,6 +84,7 @@ export function DataTable<T>({
   total = rows.length,
   onPageChange,
   onSizeChange,
+  pageSizeDisabled,
   selectedKeys,
   onSelectionChange,
   sort,
@@ -199,9 +204,9 @@ export function DataTable<T>({
     String(key)
       .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
       .replace(/[^a-z0-9-]/g, "-");
-  const cellStyle = (column: Column<T>): CSSProperties => {
+  const cellStyle = (column: Column<T>, align = column.align): CSSProperties => {
     const fixed = stickyColumns?.find((item) => item.id === column.id);
-    if (!fixed) return { textAlign: column.align };
+    if (!fixed) return { textAlign: align };
     const before = columns.slice(0, columns.indexOf(column));
     const left = before.reduce(
       (sum, item) =>
@@ -209,7 +214,7 @@ export function DataTable<T>({
       (onSelectionChange ? 44 : 0) + (expandableRow ? 44 : 0),
     );
     return {
-      textAlign: column.align,
+      textAlign: align,
       position: "sticky",
       left,
       width: fixed.width,
@@ -234,6 +239,7 @@ export function DataTable<T>({
           data-testid={`${testId}-columns-button`}
           onClick={onColumnsChange}
         >
+          <TableControlIcon name="columns" />
           열 설정
         </button>
       )}
@@ -299,7 +305,7 @@ export function DataTable<T>({
                       ? "sicost-sticky-cell"
                       : undefined
                   }
-                  style={cellStyle(column)}
+                  style={cellStyle(column, headerAlign)}
                   aria-sort={
                     sort?.id === column.id
                       ? sort.direction === "ASC"
@@ -332,17 +338,11 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {loading ? (
-              loadingMessage ? (
-                <tr>
-                  <td colSpan={span}>
-                    <div className="sicost-empty sicost-table-loading" role="status">
-                      {loadingMessage}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <>{Array.from({length:5},(_,index)=><tr key={index} className="sicost-skeleton-row" aria-hidden="true">{Array.from({length:span},(_,column)=><td key={column}><i /></td>)}</tr>)}<tr className="sicost-sr-only"><td colSpan={span}><span role="status">불러오는 중입니다.</span></td></tr></>
-              )
+              <tr>
+                <td colSpan={span} className="sicost-table-loading-cell">
+                  <ScreenLoading message={loadingMessage} />
+                </td>
+              </tr>
             ) : !rows.length ? (
               <tr>
                 <td colSpan={span}>
@@ -514,7 +514,16 @@ export function DataTable<T>({
         </table>
       </div>
       {page !== undefined && (
-        <Pagination page={page} size={size} total={total} loading={loading} onPageChange={onPageChange} onSizeChange={onSizeChange} testId={testId} />
+        <Pagination
+          page={page}
+          size={size}
+          total={total}
+          loading={loading}
+          onPageChange={onPageChange}
+          onSizeChange={onSizeChange}
+          pageSizeDisabled={pageSizeDisabled}
+          testId={testId}
+        />
       )}
     </div>
   );

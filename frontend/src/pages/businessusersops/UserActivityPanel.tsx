@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -112,7 +113,7 @@ export function UserScopesPanel({ id }: { id: string }) {
           onRetry={() => setRefresh((n) => n + 1)}
         />
       ) : !data ? (
-        <p role="status">불러오는 중입니다.</p>
+        <ScreenLoading message="불러오는 중입니다." />
       ) : (
         <p>{data.assignedParts.map((part) => part.name).join(", ") || "–"}</p>
       )}

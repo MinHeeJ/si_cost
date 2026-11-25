@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
@@ -178,7 +179,7 @@ export function StandardValueDialog({
           적용월은 보존합니다.
         </p>
         {loading ? (
-          <p role="status">불러오는 중입니다.</p>
+          <ScreenLoading message="불러오는 중입니다." />
         ) : (
           <div className="operatingstandards-group">
             {rows.map((row) => (

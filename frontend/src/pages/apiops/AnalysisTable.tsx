@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type DataTableProps } from "../../shared/DataTable";
 import { PROJECTS_COMMITTED } from "../projects/projectsApi";
@@ -72,6 +73,9 @@ export function AnalysisTable<T>(
   return (
     <section className="analysis-mobile-list" data-testid={props.testId}>
       <p>총 {props.total ?? 0}건</p>
+      {props.loading && page === 1 && (
+        <ScreenLoading message={props.loadingMessage} />
+      )}
       {rows.map((row) => (
         <article
           key={props.rowKey(row)}
@@ -104,7 +108,9 @@ export function AnalysisTable<T>(
           </dl>
         </article>
       ))}
-      {props.loading && <p role="status">불러오는 중입니다.</p>}
+      {props.loading && page > 1 && (
+        <ScreenLoading inline message={props.loadingMessage} />
+      )}
       {!props.loading && !rows.length && (
         <div className="analysis-mobile-empty">
           {props.empty ?? "조회된 자료가 없습니다."}

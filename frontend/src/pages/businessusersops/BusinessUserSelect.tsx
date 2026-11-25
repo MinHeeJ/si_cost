@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -108,7 +109,7 @@ export function BusinessUserSelect({
       {open && !disabled && (
         <div id={panelId} className="business-user-select-panel">
           {loading ? (
-            <p role="status">불러오는 중입니다.</p>
+            <ScreenLoading inline message="불러오는 중입니다." />
           ) : error != null ? (
             <ErrorBanner
               message={

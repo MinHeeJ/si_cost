@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useId, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog, ConfirmDialog } from "../../shared/Dialog";
@@ -249,7 +250,7 @@ function Contacts({
         />
       ) : mobile ? (
         <div className="candidate-contact-cards" aria-busy={loading}>
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {!loading && !mobileRows.length && (
             <p className="sicost-empty">연락 기록이 없습니다.</p>
           )}

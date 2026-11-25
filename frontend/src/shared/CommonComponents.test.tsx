@@ -259,6 +259,25 @@ describe("공통 부품 계약", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(cancel).not.toHaveBeenCalled();
   });
+  it("제출 오류를 다이얼로그 상단에 유지하고 알림만 닫을 수 있다", async () => {
+    const close = vi.fn();
+    const confirm = vi.fn().mockRejectedValue(new Error("서버가 요청을 거절했습니다."));
+    render(
+      <Dialog open title="입력" confirmLabel="저장" onConfirm={confirm} onCancel={close}>
+        <Text label="이름" value="보존" onChange={vi.fn()} />
+      </Dialog>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "저장" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("저장 실패");
+    expect(alert).toHaveTextContent("서버가 요청을 거절했습니다.");
+    expect(alert.parentElement?.previousElementSibling?.tagName).toBe("HEADER");
+    expect(alert).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "알림 닫기" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("이름")).toHaveValue("보존");
+    expect(close).not.toHaveBeenCalled();
+  });
   it("pending prop 갱신 전 빠른 중복 클릭도 한 번만 제출한다", async () => {
     let finish!: () => void;
     const confirm = vi.fn(

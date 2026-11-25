@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -439,7 +440,7 @@ export function SalesOpportunityForm({
           </button>
         }
       >
-        {loading && <p role="status">입력 기준을 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="입력 기준을 불러오는 중입니다." />}
         {lookupError != null && (
           <>
             <SalesCommandError error={lookupError} />
@@ -989,7 +990,7 @@ export function SalesOpportunityForm({
                 }}
               />
             </label>
-            {peopleLoading && <p role="status">개발자를 불러오는 중입니다.</p>}
+            {peopleLoading && <ScreenLoading message="개발자를 불러오는 중입니다." />}
             {peopleError != null && <SalesCommandError error={peopleError} />}
             {!peopleLoading && !people.length && (
               <p>선택할 개발자가 없습니다.</p>
@@ -1009,22 +1010,24 @@ export function SalesOpportunityForm({
                 {p.name}
               </label>
             ))}
-            <button
-              type="button"
-              data-testid="opportunity-people-previous"
-              disabled={peoplePage <= 1 || peopleLoading}
-              onClick={() => setPeoplePage((v) => v - 1)}
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              data-testid="opportunity-people-next"
-              disabled={peoplePage * 20 >= peopleTotal || peopleLoading}
-              onClick={() => setPeoplePage((v) => v + 1)}
-            >
-              다음
-            </button>
+            <nav className="sicost-inline-pagination" aria-label="인력 선택 페이지">
+              <button
+                type="button"
+                data-testid="opportunity-people-previous"
+                disabled={peoplePage <= 1 || peopleLoading}
+                onClick={() => setPeoplePage((v) => v - 1)}
+              >
+                이전
+              </button>
+              <button
+                type="button"
+                data-testid="opportunity-people-next"
+                disabled={peoplePage * 20 >= peopleTotal || peopleLoading}
+                onClick={() => setPeoplePage((v) => v + 1)}
+              >
+                다음
+              </button>
+            </nav>
           </div>
         </Dialog>
       </FormPage>

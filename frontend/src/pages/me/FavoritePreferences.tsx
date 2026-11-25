@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { usePreferences } from "./usePreferences";
@@ -82,7 +83,7 @@ export function PreferenceQuickLinks({
         </button>
       </div>
       {p.loading ? (
-        <p role="status">불러오는 중…</p>
+        <ScreenLoading message="불러오는 중…" />
       ) : (
         <>
           {visible(favorites).map((m) => (

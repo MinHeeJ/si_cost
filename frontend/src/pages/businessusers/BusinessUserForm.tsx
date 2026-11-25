@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -177,7 +178,7 @@ export function BusinessUserForm({
           <fieldset disabled={pending || loading}>
             <legend>역할</legend>
             {loading ? (
-              <p role="status">역할을 불러오는 중입니다.</p>
+              <ScreenLoading inline message="역할을 불러오는 중입니다." />
             ) : (
               options.map((option) => (
                 <label
