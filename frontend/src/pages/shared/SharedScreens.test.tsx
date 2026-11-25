@@ -12,7 +12,7 @@ import {
 } from "../../shared/testSupport/businessFixtures";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { PreferencesProvider } from "../me/usePreferences";
 import type { PreferenceApi } from "../me/preferencesApi";
 import {
@@ -462,6 +462,78 @@ describe("controlled 기간 선택", () => {
     expect(api.getPeriodContext).not.toHaveBeenCalled();
   });
 });
+describe("작업 탭 개수 제한", () => {
+  const firstEight = ["UI-16", "UI-01", "UI-02", "UI-04", "UI-05", "UI-11", "UI-12", "UI-15"];
+  const tabNav = () => screen.getByRole("navigation", { name: "열린 화면" });
+  const tab = (id: string) => within(tabNav()).queryByRole("button", { name: `DB ${id}` });
+  const openMenu = async (id: string) => {
+    const menu = screen.getByRole("complementary", { name: "주 메뉴" });
+    await userEvent.click(within(menu).getAllByRole("link", { name: `DB ${id}` })[0]);
+  };
+  function openWorkspace() {
+    const screens = Object.fromEntries(
+      [...firstEight, "UI-17", "UI-18"].map((id) => [id, <p>업무 화면 {id}</p>]),
+    );
+    render(
+      <MemoryRouter initialEntries={["/UI-16"]}>
+        <SharedApplication screens={screens} />
+        <Location />
+        <Link to="/UI-17?year=2026">업무 링크로 열기</Link>
+      </MemoryRouter>,
+    );
+  }
+  async function fillTabs() {
+    await screen.findByText("업무 화면 UI-16");
+    for (const id of firstEight.slice(1)) await openMenu(id);
+    expect(tabNav().children).toHaveLength(8);
+  }
+
+  it("연속으로 탭을 교체해도 열린 탭 중 가장 오래된 탭만 닫고 8개를 유지한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    try {
+      openWorkspace();
+      await fillTabs();
+      await openMenu("UI-17");
+      expect(confirm).toHaveBeenLastCalledWith("DB UI-01 화면을 닫고 이동할까요?");
+      expect(tab("UI-01")).not.toBeInTheDocument();
+      expect(tab("UI-17")).toBeInTheDocument();
+      expect(tabNav().children).toHaveLength(8);
+
+      await openMenu("UI-18");
+      expect(confirm).toHaveBeenLastCalledWith("DB UI-02 화면을 닫고 이동할까요?");
+      expect(tab("UI-02")).not.toBeInTheDocument();
+      expect(tab("UI-18")).toBeInTheDocument();
+      expect(tab("UI-16")).toBeInTheDocument();
+      expect(tabNav().children).toHaveLength(8);
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
+  it("업무 링크도 탭 제한을 적용하고 취소하면 원래 화면을 유지한다", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValue(true);
+    try {
+      openWorkspace();
+      await fillTabs();
+      const link = screen.getByRole("link", { name: "업무 링크로 열기" });
+      await userEvent.click(link);
+      expect(confirm).toHaveBeenCalledWith("DB UI-01 화면을 닫고 이동할까요?");
+      expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-15");
+      expect(tab("UI-01")).toBeInTheDocument();
+      expect(tab("UI-17")).not.toBeInTheDocument();
+      expect(tabNav().children).toHaveLength(8);
+
+      await userEvent.click(link);
+      expect(screen.getByTestId("current-path")).toHaveTextContent("/UI-17");
+      expect(tab("UI-01")).not.toBeInTheDocument();
+      expect(tab("UI-17")).toBeInTheDocument();
+      expect(tabNav().children).toHaveLength(8);
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+});
+
 describe("공식 화면과 공통 틀", () => {
   it("UI-03 메뉴·작업탭·즐겨찾기 재진입은 동일 경로와 마운트된 화면을 유지한다", async () => {
     let favorites: api.SharedPreference = {

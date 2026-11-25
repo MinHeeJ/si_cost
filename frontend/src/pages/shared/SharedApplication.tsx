@@ -1,7 +1,7 @@
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, type Location } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ScreenPermissionContext } from "../../shared/permission/PermissionBoundary";
 import { Dialog } from "../../shared/Dialog";
@@ -37,6 +37,8 @@ import {
 import "../../shared/common.css";
 import "./shared.css";
 import { AnalysisAssistantProvider } from "./AnalysisAssistantContext";
+const MAX_OPEN_TABS = 8;
+
 export type SharedPreferenceAdapter = {
   items: SharedPreference[];
   loading: boolean;
@@ -109,7 +111,9 @@ function SharedApplicationContent({
     [mobile, setMobile] = useState(() => window.innerWidth < 768),
     [mobileOpen, setMobileOpen] = useState(false),
     [groups, setGroups] = useState<string[]>([]);
-  const [tabs, setTabs] = useState<string[]>(["UI-16"]),
+  const openTabs = useRef(["UI-16"]);
+  const lastTabLocation = useRef<Location>();
+  const [tabs, setTabs] = useState(openTabs.current),
     [dialog, setDialog] = useState<"settings" | "favorites" | "profile" | null>(
       null,
     ),
@@ -345,6 +349,33 @@ function SharedApplicationContent({
       setPending(false);
     }
   };
+  const updateTabs = (next: string[]) => {
+    openTabs.current = next;
+    lru.current = lru.current.filter((id) => next.includes(id));
+    setTabs(next);
+  };
+  const openTab = (id: string, currentId: string) => {
+    const opened = openTabs.current;
+    if (opened.includes(id)) return true;
+
+    if (opened.length < MAX_OPEN_TABS) {
+      updateTabs([...opened, id]);
+      return true;
+    }
+
+    const replaceable = opened.filter((item) => item !== "UI-16" && item !== currentId);
+    const oldest = lru.current.find((item) => replaceable.includes(item)) ?? replaceable[0];
+    if (
+      !oldest ||
+      !window.confirm(`${byScreen(oldest)?.name ?? oldest} 화면을 닫고 이동할까요?`)
+    )
+      return false;
+    if (isDirty?.(oldest) && !window.confirm("저장하지 않은 변경을 버릴까요?"))
+      return false;
+
+    updateTabs([...opened.filter((item) => item !== oldest), id]);
+    return true;
+  };
   useEffect(() => {
     if (!menus || !nodes.length) return;
     const hash = location.hash.match(/^#(UI-\d{2})$/)?.[1];
@@ -363,15 +394,20 @@ function SharedApplicationContent({
       navigate(`/${valid}`, { replace: true });
       return;
     }
+    const previousLocation = lastTabLocation.current;
+    if (!openTab(valid, previousLocation?.pathname.slice(1) ?? active)) {
+      if (previousLocation) {
+        const { pathname, search, hash, state } = previousLocation;
+        navigate({ pathname, search, hash }, { replace: true, state });
+      }
+      return;
+    }
+    lastTabLocation.current = location;
     setGroups((previous) =>
       current?.parentId && !previous.includes(current.parentId)
         ? [...previous, current.parentId]
         : previous,
     );
-    setTabs((previous) => {
-      if (previous.includes(valid)) return previous;
-      return [...previous, valid];
-    });
     lru.current = [...lru.current.filter((id) => id !== valid), valid];
     setMobileOpen(false);
     if (
@@ -422,25 +458,7 @@ function SharedApplicationContent({
       !window.confirm("저장하지 않은 변경을 버릴까요?")
     )
       return;
-    if (!tabs.includes(id) && tabs.length >= 8) {
-      const oldest =
-        lru.current.find((item) => item !== "UI-16" && item !== active) ??
-        tabs.find((item) => item !== "UI-16");
-      if (
-        !oldest ||
-        !window.confirm(
-          `${byScreen(oldest)?.name ?? oldest} 화면을 닫고 이동할까요?`,
-        )
-      )
-        return;
-      if (
-        oldest !== "UI-10" &&
-        isDirty?.(oldest) &&
-        !window.confirm("저장하지 않은 변경을 버릴까요?")
-      )
-        return;
-      setTabs((previous) => previous.filter((item) => item !== oldest));
-    }
+    if (!openTab(id, active)) return;
     navigate(`/${id}`, { state });
     return true;
   };
@@ -467,7 +485,7 @@ function SharedApplicationContent({
         !window.confirm("저장하지 않은 변경을 버릴까요?"))
     )
       return;
-    setTabs((previous) => previous.filter((item) => item !== id));
+    updateTabs(openTabs.current.filter((item) => item !== id));
     if (id === active) navigate("/UI-16");
   };
   const star = (id: string) => {
