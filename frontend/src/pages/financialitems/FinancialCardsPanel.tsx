@@ -16,7 +16,6 @@ type Props = {
   unit: FinancialUnit;
   setDraft: Dispatch<SetStateAction<FinancialDraft | undefined>>;
   violations: { collection: string; rowId: string; field: string }[];
-  onError(error: Error | undefined): void;
 };
 export function FinancialCardsPanel({
   month,
@@ -27,16 +26,14 @@ export function FinancialCardsPanel({
   unit,
   setDraft,
   violations,
-  onError,
 }: Props) {
   const invalid = (rowId: string, field: string) =>
     violations.some(
       (v) => v.collection === "cards" && v.rowId === rowId && v.field === field,
     );
   const [showStopped, setShowStopped] = useState(false);
-  const [name, setName] = useState("");
-  const [last4, setLast4] = useState("");
   const sequence = useRef(0);
+  const focusNewCard = useRef<string | null>(null);
   const update = (key: string, field: string, value: string) =>
     setDraft((old) =>
       old
@@ -51,14 +48,8 @@ export function FinancialCardsPanel({
         : old,
     );
   const add = () => {
-    if (!name.trim()) {
-      onError(new Error("카드 이름을 입력해 주세요."));
-      return;
-    }
-    if (!/^[0-9]{4}$/.test(last4)) {
-      onError(new Error("끝 4자리는 숫자 4개를 입력해 주세요."));
-      return;
-    }
+    const key = `new-card-${++sequence.current}`;
+    focusNewCard.current = key;
     setDraft((old) =>
       old
         ? {
@@ -66,10 +57,10 @@ export function FinancialCardsPanel({
             cards: [
               ...old.cards,
               {
-                key: `new-card-${++sequence.current}`,
+                key,
                 values: {
-                  cardName: name.trim(),
-                  last4,
+                  cardName: "",
+                  last4: "",
                   useYn: "Y",
                   amount: "0",
                 },
@@ -78,9 +69,6 @@ export function FinancialCardsPanel({
           }
         : old,
     );
-    setName("");
-    setLast4("");
-    onError(undefined);
   };
   const amount = (value: string | null | undefined, plus = false) => (
     <FinancialAmount value={value} unit={unit} plus={plus} />
@@ -110,48 +98,11 @@ export function FinancialCardsPanel({
       (/^[0-9]+$/.test(row.values.amount ?? "") &&
         BigInt(row.values.amount!) > 0n),
   );
-  if (!readOnly) rows.push({ key: "card-entry", values: {} });
   rows.push(
     { key: "card-total", values: {} },
     { key: "cash-total", values: {} },
   );
   const special: Record<string, Record<string, React.ReactNode>> = {
-    "card-entry": {
-      name: (
-        <input
-          data-testid="financial-card-new-name"
-          aria-label="새 카드 이름"
-          placeholder="예: 영업 4팀 카드"
-          value={name}
-          maxLength={100}
-          disabled={disabled}
-          onChange={(event) => setName(event.target.value)}
-        />
-      ),
-      last4: (
-        <input
-          data-testid="financial-card-new-last-four"
-          aria-label="새 카드 끝 4자리"
-          placeholder="숫자 4개"
-          value={last4}
-          maxLength={4}
-          inputMode="numeric"
-          disabled={disabled}
-          onChange={(event) => setLast4(event.target.value)}
-        />
-      ),
-      action: (
-        <button
-          type="button"
-          className="financial-card-action"
-          data-testid="financial-card-add"
-          disabled={disabled}
-          onClick={add}
-        >
-          카드 추가
-        </button>
-      ),
-    },
     "card-total": {
       name: <strong>카드별 합계</strong>,
       last4: `${draft.cards.length}장`,
@@ -206,15 +157,27 @@ export function FinancialCardsPanel({
           </HelpTooltip>
           <small>사용 중인 카드 {draft.cards.filter((row) => row.values.useYn === "Y").length}장</small>
         </div>
-        <label className="financial-card-filter">
-          <input
-            type="checkbox"
-            data-testid="financial-show-stopped"
-            checked={showStopped}
-            onChange={(event) => setShowStopped(event.target.checked)}
-          />
-          <span>삭제된 카드 보기</span>
-        </label>
+        <div>
+          <label className="financial-card-filter">
+            <input
+              type="checkbox"
+              data-testid="financial-show-stopped"
+              checked={showStopped}
+              onChange={(event) => setShowStopped(event.target.checked)}
+            />
+            <span>삭제된 카드 보기</span>
+          </label>
+          {!readOnly && (
+            <button
+              type="button"
+              data-testid="financial-card-add"
+              disabled={disabled}
+              onClick={add}
+            >
+              카드 추가
+            </button>
+          )}
+        </div>
       </header>
       <DataTable
         testId="financial-cards-table"
@@ -226,15 +189,28 @@ export function FinancialCardsPanel({
             id: "name",
             label: "카드 이름 *",
             align: "center" as const,
-            render: (row: DraftRow) => (
+            render: (row: DraftRow) => row.id ? row.values.cardName : (
               <>
-                {row.values.cardName}
-                {!row.id && (
-                  <>
-                    <StatusBadge tone="info">새 카드</StatusBadge>
-                    <StatusBadge tone="warn">저장 전</StatusBadge>
-                  </>
-                )}
+                <input
+                  ref={(input) => {
+                    if (input && row.key === focusNewCard.current) {
+                      focusNewCard.current = null;
+                      input.focus();
+                    }
+                  }}
+                  data-testid={`financial-card-${row.key}-card-name`}
+                  aria-label="새 카드 이름"
+                  aria-invalid={invalid(row.key, "cardName") || undefined}
+                  placeholder="예: 영업 4팀 카드"
+                  value={row.values.cardName ?? ""}
+                  maxLength={100}
+                  disabled={disabled}
+                  onChange={(event) => update(row.key, "cardName", event.target.value)}
+                />
+                <span className="financial-row-draft">
+                  <StatusBadge tone="info">새 카드</StatusBadge>{" "}
+                  <StatusBadge tone="warn">저장 전</StatusBadge>
+                </span>
               </>
             ),
           },
@@ -242,7 +218,19 @@ export function FinancialCardsPanel({
             id: "last4",
             label: "끝 4자리 *",
             align: "center" as const,
-            render: (row: DraftRow) => row.values.last4,
+            render: (row: DraftRow) => row.id ? row.values.last4 : (
+              <input
+                data-testid={`financial-card-${row.key}-last4`}
+                aria-label="새 카드 끝 4자리"
+                aria-invalid={invalid(row.key, "last4") || undefined}
+                placeholder="숫자 4개"
+                value={row.values.last4 ?? ""}
+                maxLength={4}
+                inputMode="numeric"
+                disabled={disabled}
+                onChange={(event) => update(row.key, "last4", event.target.value)}
+              />
+            ),
           },
           {
             id: "amount",
