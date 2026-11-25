@@ -361,24 +361,30 @@ export function SalesPartnerProfitScreen({
       id: "remark",
       label: "비고",
       render: (row) => (
-        <div
+        <HelpTooltip
           className="settlement-remark"
-          title={[
+          label={`${row.name} 비고${row.remark ? ` ${row.remark}` : ""}`}
+          trigger={
+            <span>
+              <span>{row.remark ?? "–"}</span>
+              {row.basis.firstMonthMissingPay && (
+                <span className="settlement-remark-warning settlement-negative">
+                  ⚠ 월 급여 없음(시작 달 급여 0)
+                </span>
+              )}
+            </span>
+          }
+        >
+          {[
             `급여 원천: ${row.basis.paySource}`,
             `최초 투입 ${row.basis.firstInputDate ?? "–"} · 시작일수 ${row.basis.payableDays ?? "–"}/${row.basis.calendarDays ?? "–"} · 기본급 ${formatAmount(row.basis.basePayAmount, displayUnit)}`,
             ...row.basis.tkSources.map((source) => `TK ${source}`),
             ...row.basis.warnings.map((warning) => warning.message),
             ...row.issues.map((issue) => issue.message),
-          ].join("\n")}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span>{row.remark ?? "–"}</span>
-          {row.basis.firstMonthMissingPay && (
-            <p className="settlement-negative">
-              ⚠ 월 급여 없음(시작 달 급여 0)
-            </p>
-          )}
-        </div>
+          ].map((line, index) => (
+            <div key={index}>{line}</div>
+          ))}
+        </HelpTooltip>
       ),
     },
   ];

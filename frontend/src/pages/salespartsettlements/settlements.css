@@ -158,7 +158,8 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.settlement-remark p {
+.settlement-remark-warning {
+  display: block;
   margin: 4px 0;
 }
 .settlement-guide-table {
