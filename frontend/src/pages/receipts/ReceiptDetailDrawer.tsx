@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
@@ -208,7 +209,7 @@ export function ReceiptDetailDrawer({
               입금 내역 ({detail?.receipts.total ?? 0})
             </button>
           </SegmentedTabList>
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {Boolean(error) && (
             <ErrorBanner
               message={

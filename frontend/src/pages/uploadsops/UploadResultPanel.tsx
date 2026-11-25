@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { DataTable } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -73,7 +74,7 @@ function SavedUploadResult({
         원본 파일 없이 저장된 최초 반영 결과를 확인합니다. 자동 재시도하거나
         다시 반영하지 않습니다.
       </p>
-      {pending && <p role="status">업로드 결과를 불러오는 중입니다.</p>}
+      {pending && <ScreenLoading message="업로드 결과를 불러오는 중입니다." />}
       {error !== undefined && (
         <ErrorBanner
           message={

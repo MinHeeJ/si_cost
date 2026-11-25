@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -158,7 +159,7 @@ export function CandidatePositionsPanel({
             </p>
           ))}
           {loading ? (
-            <p role="status">맞는 자리를 불러오는 중입니다.</p>
+            <ScreenLoading message="맞는 자리를 불러오는 중입니다." />
           ) : result &&
             (result.data.items.length > 0 || !result.issues.length) ? (
             <DataTable

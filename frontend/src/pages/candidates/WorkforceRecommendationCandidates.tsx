@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import {
   formatIntegerAmount,
   formatDecimal,
@@ -300,7 +301,7 @@ export function WorkforceRecommendationCandidates(
         </button>
       )}
       {loading ? (
-        <p role="status">추천을 불러오는 중입니다.</p>
+        <ScreenLoading message="추천을 불러오는 중입니다." />
       ) : candidates.filter(
           (row) =>
             !hidden.includes(row.rank) && row.selection.actionCode !== "EXCL",
@@ -655,7 +656,7 @@ export function WorkforceRecommendationCandidates(
                 ))}
               </select>
             </label>
-            {codesLoading && <p role="status">사유를 불러오는 중입니다.</p>}
+            {codesLoading && <ScreenLoading message="사유를 불러오는 중입니다." />}
             {fieldError && <p role="alert">{fieldError}</p>}
             <AssignmentError error={error} />
             <p>같은 대상·적용 직무에서 다시 추천해도 제외됩니다.</p>

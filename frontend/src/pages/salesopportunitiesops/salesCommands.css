@@ -35,11 +35,6 @@
   padding-block: 6px;
   vertical-align: middle;
 }
-.sales-pipeline-pagination > .sicost-pagination {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-}
 .sales-command-toolbar,
 .sales-command-tabs {
   display: flex;

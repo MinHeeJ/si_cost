@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog, Dialog } from "../../shared/Dialog";
 import { DataTable } from "../../shared/DataTable";
@@ -87,7 +88,7 @@ export function DeveloperStatusToolbar({
       </button>
       <span role="status">선택 {selection.count}건</span>
       {selection.loading && (
-        <span role="status">선택 대상을 불러오는 중입니다.</span>
+        <ScreenLoading inline message="선택 대상을 불러오는 중입니다." />
       )}
       {!!selection.error && (
         <ErrorBanner

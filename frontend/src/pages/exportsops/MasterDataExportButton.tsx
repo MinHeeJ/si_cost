@@ -79,6 +79,7 @@ export function MasterDataExportButton({
       aria-busy={pending}
     >
       <button
+        className="sicost-download-button"
         type="button"
         data-testid="master-data-export-button"
         disabled={disabled || pending}

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useClientWriteScope } from "./clientPermissions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useRef, useState } from "react";
@@ -228,7 +229,7 @@ function ClientDrawerContent({
           onRetry={() => void load()}
         />
       )}
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="불러오는 중입니다." />}
       {client &&
         (editing ? (
           <ClientForm

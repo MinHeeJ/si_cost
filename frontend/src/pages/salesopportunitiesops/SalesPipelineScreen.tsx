@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { recommendationEntryUrl } from "../workforcerecommendationsops/recommendationBrowseApi";
 import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
@@ -432,7 +433,7 @@ export function SalesPipelinePanel({
                 </div>
               </>
             )}
-            {loading && <p role="status">영업 기회를 불러오는 중입니다.</p>}
+            {loading && <ScreenLoading message="영업 기회를 불러오는 중입니다." />}
             {error != null && <SalesCommandError error={error} />}
             {data && (
               <>
@@ -759,7 +760,7 @@ export function SalesPipelinePanel({
             </>
           )}
           {!detail && !detailError && (
-            <p role="status">상세를 불러오는 중입니다.</p>
+            <ScreenLoading message="상세를 불러오는 중입니다." />
           )}
           {detail && (
             <>

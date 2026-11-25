@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FormPage } from "../../shared/FormPage";
@@ -353,7 +354,7 @@ export function ProjectForm({
       }
     >
       <section data-testid="project-form" data-screen-id="SCR-UI-01">
-        {loading && <p role="status">선택 항목을 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading inline message="선택 항목을 불러오는 중입니다." />}
         {lookupError != null && (
           <ErrorBanner
             message="선택 항목을 불러오지 못했습니다."

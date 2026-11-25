@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useState } from "react";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -98,7 +99,7 @@ export function TentativeAssignmentSelector({
       >
         개발자 조회
       </button>
-      {loading && <p role="status">개발자를 조회하는 중입니다.</p>}
+      {loading && <ScreenLoading message="개발자를 조회하는 중입니다." />}
       {error != null && (
         <div role="alert">
           {error instanceof Error ? error.message : "저장하지 못했습니다."}

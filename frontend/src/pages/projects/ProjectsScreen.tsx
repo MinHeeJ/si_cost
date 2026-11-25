@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import {
   useCallback,
   useEffect,
@@ -12,7 +13,7 @@ import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
-import { Icon } from "../../shared/Icon";
+import { Icon, TableControlIcon } from "../../shared/Icon";
 import { PeriodStatus } from "../../shared/PeriodStatus";
 import { ApiError } from "../../shared/api";
 import { getSharedCodes } from "../shared/sharedApi";
@@ -586,6 +587,7 @@ export function ProjectsScreen({
                   data-testid="project-columns"
                   onClick={onColumnsChange}
                 >
+                  <TableControlIcon name="columns" />
                   열 설정
                 </button>
               )}
@@ -595,11 +597,13 @@ export function ProjectsScreen({
                   data-testid="project-density"
                   onClick={onDensityChange}
                 >
+                  <TableControlIcon name="rows" />
                   {dense ? "넓게 보기" : "좁게 보기"}
                 </button>
               )}
               {!mobile && (
                 <button
+                  className="sicost-download-button"
                   type="button"
                   data-testid="project-export"
                   disabled={downloading}
@@ -657,7 +661,7 @@ export function ProjectsScreen({
             />
           ) : (
             <div className="project-cards">
-              {loading && <p role="status">불러오는 중입니다.</p>}
+              {loading && <ScreenLoading message="불러오는 중입니다." />}
               {!loading && !data?.items.length && (
                 <div className="sicost-empty">
                   <p>조건에 맞는 결과가 없습니다.</p>

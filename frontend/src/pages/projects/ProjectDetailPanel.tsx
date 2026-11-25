@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import {
   useCallback,
@@ -241,7 +242,7 @@ export function ProjectDetailPanel({
           )
         }
       >
-        {loading && <p role="status">상세를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="상세를 불러오는 중입니다." />}
         {error != null && (
           <ErrorBanner
             message={
@@ -398,9 +399,7 @@ export function ProjectDetailPanel({
                                 }
                               />
                             ) : (
-                              <span role="status">
-                                신호등을 불러오는 중입니다.
-                              </span>
+                              <ScreenLoading inline message="신호등을 불러오는 중입니다." />
                             )}
                           </div>
                           {registration?.progress && (

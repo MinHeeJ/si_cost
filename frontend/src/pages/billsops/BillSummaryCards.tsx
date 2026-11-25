@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { KpiStrip } from "../../shared/Surface";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -79,7 +80,7 @@ export function BillSummaryCards({
         onRetry={() => setRetry((value) => value + 1)}
       />
       {loading ? (
-        <p role="status">청구 요약을 불러오는 중입니다.</p>
+        <ScreenLoading inline message="청구 요약을 불러오는 중입니다." />
       ) : (
         !error &&
         data && (
@@ -165,7 +166,7 @@ export function BillEstimatePanel({
       aria-busy={loading}
     >
       <BillingError error={error} onRetry={() => setRetry((n) => n + 1)} />
-      {loading && <p role="status">추정 근거를 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading inline message="추정 근거를 불러오는 중입니다." />}
       {data && (
         <>
           <p>

@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { usePermission, useSensitivePermission } from "../../shared/permission/PermissionBoundary";
 import { FieldHelp } from "../../shared/FieldHelp";
 import {
@@ -537,6 +539,7 @@ export function ClientsScreen({
                   data-testid="clients-columns"
                   onClick={onColumnsChange}
                 >
+                  <TableControlIcon name="columns" />
                   열 설정
                 </button>
               )}
@@ -546,11 +549,13 @@ export function ClientsScreen({
                   data-testid="clients-density"
                   onClick={onDensityChange}
                 >
+                  <TableControlIcon name="rows" />
                   목록 밀도
                 </button>
               )}
               {!mobile && canDownload && onExport && (
                 <button
+                  className="sicost-download-button"
                   type="button"
                   data-testid="clients-export"
                   onClick={() => onExport(filters)}
@@ -571,7 +576,7 @@ export function ClientsScreen({
             />
           ) : mobile ? (
             <div className="clients-cards">
-              {loading && <p role="status">불러오는 중입니다.</p>}
+              {loading && <ScreenLoading message="불러오는 중입니다." />}
               {data?.items.map((row) => (
                 <article key={row.id} data-testid={`client-card-${row.id}`}>
                   <button

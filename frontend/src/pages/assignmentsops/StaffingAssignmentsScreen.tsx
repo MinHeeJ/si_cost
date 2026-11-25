@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 
@@ -132,7 +134,7 @@ export function StaffingAssignmentsScreen({
           initialWarning={initialWarning}
         />
       ) : (
-        <p role="status">배정 기간을 불러오는 중입니다.</p>
+        <ScreenLoading message="배정 기간을 불러오는 중입니다." />
       )}
     </section>
   );
@@ -668,6 +670,7 @@ export function AssignmentsContent({
             data-testid="assignments-columns"
             onClick={() => setColumnsOpen(true)}
           >
+            <TableControlIcon name="columns" />
             열 설정
           </button>
           <button
@@ -677,6 +680,7 @@ export function AssignmentsContent({
             aria-pressed={dense}
             onClick={() => setDense(!dense)}
           >
+            <TableControlIcon name="rows" />
             좁게 보기
           </button>
           {renderActions?.({

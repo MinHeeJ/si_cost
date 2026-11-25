@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -320,7 +321,7 @@ export function NotificationBell({
           )}
           {message && <p role="status">{message}</p>}
           {notice && <p role="status">{notice}</p>}
-          {loading && <p role="status">알림을 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading inline message="알림을 불러오는 중입니다." />}
           {page && page.items.length === 0 && !listError && (
             <div className="notification-empty">알림이 없습니다.</div>
           )}

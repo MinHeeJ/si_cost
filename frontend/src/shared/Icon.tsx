@@ -18,6 +18,8 @@ const paths: Record<string, string> = {
   bell: "M5 16V9a7 7 0 0 1 14 0v7l2 3H3z M10 22h4",
   user: "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 22v-3a8 8 0 0 1 16 0v3",
   chevron: "m8 4 8 8-8 8",
+  columns: "M4 4h16v16H4zM10 4v16M16 4v16",
+  rows: "M4 6h16M4 10h16M4 14h16M4 18h16",
   caretUp: "M12 7 19 16H5z",
   caretDown: "M12 17 5 8h14z",
   star: "m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z",
@@ -49,5 +51,16 @@ export function Icon({
     >
       <path d={paths[name ?? "folder"] ?? paths.folder} />
     </svg>
+  );
+}
+
+export function TableControlIcon({ name }: { name: "columns" | "rows" }) {
+  return (
+    <Icon
+      name={name}
+      size={16}
+      strokeWidth={1.8}
+      className="sicost-table-control-icon"
+    />
   );
 }

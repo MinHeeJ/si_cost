@@ -48,11 +48,6 @@
 .workforce-calendar-count {
   white-space: nowrap;
 }
-.workforce-calendar > .sicost-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
 .workforce-calendar [hidden] {
   display: none;
 }

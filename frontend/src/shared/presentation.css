@@ -475,7 +475,7 @@ input[type="radio"] {
   display: none;
 }
 .sicost-title-action-group button,
-button.sicost-download-button {
+:where(button.sicost-download-button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;

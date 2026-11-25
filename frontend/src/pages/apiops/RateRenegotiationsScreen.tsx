@@ -1,3 +1,4 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { CompactPeriodSummary } from "../../shared/PeriodStatus";
@@ -603,6 +604,7 @@ export function RateRenegotiationsScreen({
             setColumnDraft({ order: [...view.order], hidden: [...view.hidden] })
           }
         >
+          <TableControlIcon name="columns" />
           열 설정
         </button>
         <button
@@ -616,6 +618,7 @@ export function RateRenegotiationsScreen({
               .catch(setError);
           }}
         >
+          <TableControlIcon name="rows" />
           좁게 보기
         </button>
         <label>

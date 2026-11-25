@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useState } from "react";
 import {
@@ -301,7 +302,7 @@ export function ProjectCostDetailPanel({
               </button>
             ))}
           </SegmentedTabList>
-          {loading && <p role="status">원가 상세를 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="원가 상세를 불러오는 중입니다." />}
           {error != null && (
             <ErrorBanner
               message={

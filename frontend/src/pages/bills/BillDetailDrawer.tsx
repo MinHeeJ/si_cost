@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
@@ -198,7 +199,7 @@ export function BillDetailDrawer({
       }
     >
       <BillError error={error} retry={() => setReload((v) => v + 1)} />
-      {loading && <p role="status">청구 상세를 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="청구 상세를 불러오는 중입니다." />}
       {detail && bill && (
         <>
           <SegmentedTabList

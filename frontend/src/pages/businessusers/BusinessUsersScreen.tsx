@@ -1,3 +1,4 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
@@ -359,6 +360,7 @@ export function BusinessUsersScreen({
                 data-testid="business-users-columns"
                 onClick={onColumnsChange}
               >
+                <TableControlIcon name="columns" />
                 열 설정
               </button>
             )}
@@ -367,6 +369,7 @@ export function BusinessUsersScreen({
                 data-testid="business-users-density"
                 onClick={onDensityChange}
               >
+                <TableControlIcon name="rows" />
                 {dense ? "넓게 보기" : "좁게 보기"}
               </button>
             )}

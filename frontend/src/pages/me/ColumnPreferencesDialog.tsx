@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { useContext, useState } from "react";
 import { PermissionContext } from "../../shared/permission/PermissionBoundary";
 import { Dialog, ConfirmDialog } from "../../shared/Dialog";
@@ -20,6 +22,7 @@ export function ColumnSettingsButton({
 }) {
   return (
     <button type="button" data-testid={testId} onClick={onClick}>
+      <TableControlIcon name="columns" />
       열 설정
     </button>
   );
@@ -112,7 +115,7 @@ export function ColumnPreferencesDialog({
           data-testid="column-preferences-panel"
         >
           {p.loading ? (
-            <p role="status">불러오는 중…</p>
+            <ScreenLoading message="불러오는 중…" />
           ) : !value ? (
             <p role="alert">열 설정을 불러오지 못했습니다.</p>
           ) : (

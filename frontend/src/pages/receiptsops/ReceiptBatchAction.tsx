@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState } from "react";
 import { ErrorBanner } from "../../shared/Feedback";
 import {
@@ -82,7 +83,7 @@ function ReceiptBatchActionContent({
       >
         일괄 입금
       </button>
-      {loading && <span role="status">입금 대상을 불러오는 중입니다.</span>}
+      {loading && <ScreenLoading inline message="입금 대상을 불러오는 중입니다." />}
       {error && (
         <ErrorBanner message={error} onRetry={() => void prepare()} />
       )}

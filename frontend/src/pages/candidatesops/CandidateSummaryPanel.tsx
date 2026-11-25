@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
@@ -82,7 +83,7 @@ export function CandidateSummaryPanel({
           onRetry={() => setRetry((value) => value + 1)}
         />
       ) : loading ? (
-        <p role="status">후보 요약을 불러오는 중입니다.</p>
+        <ScreenLoading message="후보 요약을 불러오는 중입니다." />
       ) : data ? (
         <>
           <dl className="candidate-summary-metrics">

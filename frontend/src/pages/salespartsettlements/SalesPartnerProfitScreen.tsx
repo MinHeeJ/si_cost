@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
@@ -476,7 +477,7 @@ export function SalesPartnerProfitScreen({
             onRetry={refresh}
           />
         )}
-        {loading && <p role="status">정산 자료를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="정산 자료를 불러오는 중입니다." />}
         {tabs?.issues.map((issue, i) => (
           <p className="settlement-banner warn" role="alert" key={i}>
             {issue.message}

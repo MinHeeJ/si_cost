@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -62,7 +63,7 @@ export function DistributionUploadResultDialog({
         data-testid="distribution-upload-result"
         data-screen-id="SCR-UI-01"
       >
-        {loading && <p role="status">불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="불러오는 중입니다." />}
         {Boolean(error) && (
           <ErrorBanner
             message={

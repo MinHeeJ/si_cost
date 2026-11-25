@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { CodeSelect } from "../../shared/CodeSelect";
@@ -116,7 +117,7 @@ export function MappingCreateDialog({
           disabled={pending || loading || !groupId || Boolean(error)}
           error={fields.code}
         />
-        {loading && <p role="status">코드를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="코드를 불러오는 중입니다." />}
         {error && (
           <ErrorBanner
             message={error}

@@ -1,3 +1,4 @@
+import { ScreenLoading } from "./ScreenLoading";
 import { Pagination } from "./Pagination";
 import { FieldHelp } from "./FieldHelp";
 import {
@@ -9,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { ErrorBanner } from "./Feedback";
-import { Icon } from "./Icon";
+import { Icon, TableControlIcon } from "./Icon";
 import {
   PermissionContext,
   ScreenPermissionContext,
@@ -40,6 +41,7 @@ export type DataTableProps<T> = {
   total?: number;
   onPageChange?(page: number): void;
   onSizeChange?(size: 20 | 50 | 100): void;
+  pageSizeDisabled?: boolean;
   selectedKeys?: readonly Key[];
   onSelectionChange?(keys: Key[]): void;
   /** 지금 정렬 기준. 없으면 화살표를 그리지 않는다. */
@@ -80,6 +82,7 @@ export function DataTable<T>({
   total = rows.length,
   onPageChange,
   onSizeChange,
+  pageSizeDisabled,
   selectedKeys,
   onSelectionChange,
   sort,
@@ -234,6 +237,7 @@ export function DataTable<T>({
           data-testid={`${testId}-columns-button`}
           onClick={onColumnsChange}
         >
+          <TableControlIcon name="columns" />
           열 설정
         </button>
       )}
@@ -332,17 +336,11 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {loading ? (
-              loadingMessage ? (
-                <tr>
-                  <td colSpan={span}>
-                    <div className="sicost-empty sicost-table-loading" role="status">
-                      {loadingMessage}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <>{Array.from({length:5},(_,index)=><tr key={index} className="sicost-skeleton-row" aria-hidden="true">{Array.from({length:span},(_,column)=><td key={column}><i /></td>)}</tr>)}<tr className="sicost-sr-only"><td colSpan={span}><span role="status">불러오는 중입니다.</span></td></tr></>
-              )
+              <tr>
+                <td colSpan={span} className="sicost-table-loading-cell">
+                  <ScreenLoading message={loadingMessage} />
+                </td>
+              </tr>
             ) : !rows.length ? (
               <tr>
                 <td colSpan={span}>
@@ -514,7 +512,16 @@ export function DataTable<T>({
         </table>
       </div>
       {page !== undefined && (
-        <Pagination page={page} size={size} total={total} loading={loading} onPageChange={onPageChange} onSizeChange={onSizeChange} testId={testId} />
+        <Pagination
+          page={page}
+          size={size}
+          total={total}
+          loading={loading}
+          onPageChange={onPageChange}
+          onSizeChange={onSizeChange}
+          pageSizeDisabled={pageSizeDisabled}
+          testId={testId}
+        />
       )}
     </div>
   );

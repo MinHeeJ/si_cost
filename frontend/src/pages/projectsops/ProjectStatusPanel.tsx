@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import "./projectStatus.css";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
@@ -333,7 +334,7 @@ function StatusContent({
               영향 미리보기
             </button>
           </div>
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {preview && (
             <>
               <h3>

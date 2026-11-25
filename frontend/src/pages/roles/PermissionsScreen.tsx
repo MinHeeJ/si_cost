@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -419,7 +420,12 @@ export function PermissionsScreen({
           )}
         </div>
       </div>
-      {loading && <p role="status" className={draft ? "sicost-refresh-status" : undefined}>{draft ? "갱신 중…" : "역할 설정을 불러오고 있습니다."}</p>}
+      {loading && (
+        <ScreenLoading
+          inline={Boolean(draft)}
+          message={draft ? "갱신 중…" : "역할 설정을 불러오고 있습니다."}
+        />
+      )}
       {!loading && !roles.length && !error && (
         <p className="sicost-empty" role="status">
           사용 중인 역할이 없습니다. 역할을 추가해 주세요.
@@ -658,7 +664,7 @@ export function PermissionsScreen({
             />
           )}
           {!history && !historyError && (
-            <p role="status">변경 이력을 불러오고 있습니다.</p>
+            <ScreenLoading message="변경 이력을 불러오고 있습니다." />
           )}
           {history && (
             <>
@@ -795,7 +801,7 @@ export function PermissionsScreen({
                 />
               )}
               {!source && !sourceError && (
-                <p role="status">저장된 원본을 조회하고 있습니다.</p>
+                <ScreenLoading message="저장된 원본을 조회하고 있습니다." />
               )}
               {source && (
                 <p>

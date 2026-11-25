@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
@@ -278,7 +279,7 @@ export function ProjectIssueDialog(props: ProjectIssueDialogProps) {
               </select>
             </div>
           )}
-          {loading && <p role="status">입력 기준을 불러오는 중입니다.</p>}
+          {loading && <ScreenLoading inline message="입력 기준을 불러오는 중입니다." />}
           {error != null && (
             <ErrorBanner
               message={

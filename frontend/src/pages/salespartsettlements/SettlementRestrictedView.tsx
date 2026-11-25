@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
@@ -130,7 +131,7 @@ export function SettlementRestrictedView({
           onRetry={onRetry}
         />
       )}
-      {loading && <p role="status">정산 자료를 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="정산 자료를 불러오는 중입니다." />}
       {tabs && !tabs.parts.length && (
         <p>
           맡은 영업 파트가 없습니다. 본사(직접 영업)는 파트 이익금 정산 대상이
@@ -202,7 +203,7 @@ export function SettlementRestrictedView({
           {trend ? (
             <div role="tabpanel" data-testid="settlement-trend-panel">
               {!months ? (
-                <p role="status">기간 추이를 불러오는 중입니다.</p>
+                <ScreenLoading message="기간 추이를 불러오는 중입니다." />
               ) : (
                 <table className="sicost-table">
                   <thead>

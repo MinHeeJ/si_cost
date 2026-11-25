@@ -68,7 +68,7 @@ export function ProfitabilityExportButton({
       >
         <button
           type="button"
-          className="sicost-button"
+          className="sicost-download-button sicost-button"
           data-testid="profitability-export-button"
           disabled={pending || preferences.loading || preferences.pending}
           onClick={() => void download()}

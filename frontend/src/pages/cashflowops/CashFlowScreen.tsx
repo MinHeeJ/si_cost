@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FinancialWarnings } from "../../shared/FinancialWarnings";
 import { Icon } from "../../shared/Icon";
 import { PeriodStatus } from "../../shared/PeriodStatus";
@@ -313,6 +314,7 @@ export function CashFlowScreen({
         !mobile && (
           <div className="sicost-title-action-group">
             <button
+              className="sicost-download-button"
               type="button"
               data-testid="cash-export"
               disabled={pending || loading || !displayed || error != null}
@@ -339,12 +341,10 @@ export function CashFlowScreen({
         data-testid="cash-flow-screen"
       >
         {loading && !data && (
-          <p role="status">자금수지표를 불러오는 중입니다.</p>
+          <ScreenLoading message="자금수지표를 불러오는 중입니다." />
         )}
         {data && loading && (
-          <p role="status" className="sicost-refresh-status">
-            갱신 중…
-          </p>
+          <ScreenLoading inline message="갱신 중…" />
         )}
         {error != null && (
           <ErrorBanner

@@ -1,3 +1,5 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
+import { TableControlIcon } from "../../shared/Icon";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -622,16 +624,19 @@ export function CandidatesScreen({
         <div className="candidate-actions">
           {onColumnsChange && (
             <button data-testid="candidate-columns" onClick={onColumnsChange}>
+              <TableControlIcon name="columns" />
               열 설정
             </button>
           )}
           {onDensityChange && (
             <button data-testid="candidate-density" onClick={onDensityChange}>
+              <TableControlIcon name="rows" />
               {dense ? "넓게 보기" : "좁게 보기"}
             </button>
           )}
           {!mobile && (
             <button
+              className="sicost-download-button"
               data-testid="candidate-export"
               disabled={!canDownload || downloading || Boolean(committed)}
               onClick={async () => {
@@ -698,7 +703,7 @@ export function CandidatesScreen({
         />
       ) : mobile ? (
         <div className="candidate-cards" aria-busy={loading}>
-          {loading && <p role="status">불러오는 중입니다.</p>}
+          {loading && <ScreenLoading message="불러오는 중입니다." />}
           {!loading && !sortedRows.length && (
             <div className="sicost-empty">
               <p>조건에 맞는 결과가 없습니다.</p>
@@ -822,7 +827,7 @@ export function CandidatesScreen({
           }
         >
           {detailLoading ? (
-            <p role="status">상세를 불러오는 중입니다.</p>
+            <ScreenLoading message="상세를 불러오는 중입니다." />
           ) : detailError != null ? (
             <ErrorBanner
               message="후보 상세를 불러오지 못했습니다."

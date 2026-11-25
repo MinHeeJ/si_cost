@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useSensitivePermission } from "../../shared/permission/PermissionBoundary";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -152,7 +153,7 @@ export function ProfitabilityMonthlyLedger({
           onRetry={retry}
         />
       )}
-      {loading && <p role="status">월별 원본을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="월별 원본을 불러오는 중입니다." />}
       {data && (
         <>
           <ul aria-label="월별 인건비 출처">

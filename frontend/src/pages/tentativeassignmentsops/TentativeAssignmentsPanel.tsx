@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { getDeveloper } from "../developers/peopleClient";
@@ -116,7 +117,7 @@ export function TentativeAssignmentsPanel({
         </p>
       )}
       {loading ? (
-        <p role="status">가배정을 불러오는 중입니다.</p>
+        <ScreenLoading message="가배정을 불러오는 중입니다." />
       ) : (
         !error && (
           <>

@@ -54,6 +54,7 @@ export function BillingReviewDownloadButton({
     <>
       <div className="billing-review-download">
         <button
+          className="sicost-download-button"
           type="button"
           data-testid={`billing-review-download-${view.toLowerCase().replace(/_/g, "-")}`}
           disabled={disabled || pending}

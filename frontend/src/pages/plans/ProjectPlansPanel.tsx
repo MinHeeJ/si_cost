@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
@@ -420,7 +421,7 @@ function ProjectPlansEditor({
       >
         <div data-testid="project-plans-job-dialog">
           {jobLoading ? (
-            <p role="status">직무를 불러오는 중입니다.</p>
+            <ScreenLoading message="직무를 불러오는 중입니다." />
           ) : jobError != null ? (
             showError(jobError, () => void loadJobs())
           ) : available.length ? (

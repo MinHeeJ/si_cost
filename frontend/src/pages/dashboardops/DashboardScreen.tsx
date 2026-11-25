@@ -13,7 +13,7 @@ import {
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { Dialog } from "../../shared/Dialog";
-import { DashboardSkeleton } from "./DashboardSkeleton";
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { DashboardMetricCard } from "./DashboardMetricCard";
 import { SectionCard } from "../../shared/Surface";
 import { HelpTooltip } from "../../shared/HelpTooltip";
@@ -419,6 +419,7 @@ export function DashboardScreen({
           <div className="dashboard-toolbar">
             {!mobile && (
               <button
+                className="sicost-download-button"
                 data-testid="dashboard-export"
                 disabled={loading || exporting || !data || !!error}
                 onClick={() => void download()}
@@ -428,15 +429,12 @@ export function DashboardScreen({
             )}
           </div>
         </ScreenTitleActions>
-        {loading && (
-          <PeriodStatus className="dashboard-loading-status">
-            <span role="status" className="dashboard-loading-label">
-              <span className="dashboard-loading-spinner" aria-hidden="true" />
-              {data ? "갱신 중…" : "대시보드를 불러오는 중입니다."}
-            </span>
-          </PeriodStatus>
-        )}
-        {loading && !data && <DashboardSkeleton />}
+        {loading &&
+          (data ? (
+            <ScreenLoading inline message="갱신 중…" />
+          ) : (
+            <ScreenLoading message="대시보드를 불러오는 중입니다." />
+          ))}
         {data && error != null && (
           <p role="status" className="sicost-refresh-status">
             갱신 실패 ·{" "}

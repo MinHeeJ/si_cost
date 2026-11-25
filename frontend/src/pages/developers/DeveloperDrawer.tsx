@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { SegmentedTabs } from "../../shared/SegmentedTabs";
@@ -162,7 +163,7 @@ export function DeveloperDrawer({
         )
       }
     >
-      {loading && <p role="status">불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="불러오는 중입니다." />}
       {error != null && (
         <ErrorBanner
           message={
@@ -440,7 +441,7 @@ function DeveloperStates({
           onRetry={() => setRetry((n) => n + 1)}
         />
       )}
-      {!currentDate && !error && <p role="status">불러오는 중입니다.</p>}
+      {!currentDate && !error && <ScreenLoading message="불러오는 중입니다." />}
       {currentDate && (
         <DeveloperStatesPanel
           developerId={id}

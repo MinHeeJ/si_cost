@@ -17,9 +17,7 @@ export function useScreenMotion(screenId: string) {
       ];
       nodes
         .filter(
-          (n) =>
-            !n.closest('[data-testid="dashboard-skeleton"]') &&
-            !nodes.some((parent) => parent !== n && parent.contains(n)),
+          (n) => !nodes.some((parent) => parent !== n && parent.contains(n)),
         )
         .forEach((node, index) => {
           node.style.setProperty(

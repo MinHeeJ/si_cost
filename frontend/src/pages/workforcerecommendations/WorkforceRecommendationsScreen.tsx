@@ -1,8 +1,10 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
+import { Pagination } from "../../shared/Pagination";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { StatusBadge } from "../../shared/Feedback";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -328,7 +330,7 @@ export function WorkforceRecommendationsScreen() {
       >
         <h2>어떤 자리에 추천할까요?</h2>
         {loading ? (
-          <p role="status">추천 대상을 불러오는 중입니다.</p>
+          <ScreenLoading message="추천 대상을 불러오는 중입니다." />
         ) : !targets ? (
           <button
             type="button"
@@ -733,7 +735,7 @@ function RecommendationHistory({ onClose }: { onClose(): void }) {
         </div>
         <AssignmentError error={error} retry={() => void load()} />
         {loading ? (
-          <p role="status">기록 조회 중</p>
+          <ScreenLoading message="기록 조회 중" />
         ) : (
           rows && (
             <>
@@ -758,40 +760,19 @@ function RecommendationHistory({ onClose }: { onClose(): void }) {
                   {r.executedBy} · {r.targetId} · {r.jobCode}
                 </button>
               ))}
-              <nav aria-label="추천 기록 페이지">
-                <button
-                  type="button"
-                  data-testid="recommendation-history-previous"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  이전
-                </button>
-                {page}
-                <button
-                  type="button"
-                  data-testid="recommendation-history-next"
-                  disabled={page * size >= rows.totalCount}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  다음
-                </button>
-                <select
-                  aria-label="기록 페이지 크기"
-                  data-testid="recommendation-history-size"
-                  value={size}
-                  onChange={(e) => {
-                    setPage(1);
-                    setSize(Number(e.target.value));
-                  }}
-                >
-                  {[20, 50, 100].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </nav>
+              <Pagination
+                page={page}
+                size={size}
+                total={rows.totalCount}
+                unit="회"
+                label="추천 기록 페이지"
+                testId="recommendation-history"
+                onPageChange={setPage}
+                onSizeChange={(nextSize) => {
+                  setSize(nextSize);
+                  setPage(1);
+                }}
+              />
             </>
           )
         )}

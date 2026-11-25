@@ -1,20 +1,25 @@
 import "./screenLoading.css";
 
 type ScreenLoadingProps = {
-  message: string;
+  message?: string;
   inline?: boolean;
   testId?: string;
 };
 
-export function ScreenLoading({ message, inline = false, testId }: ScreenLoadingProps) {
+export function ScreenLoading({
+  message = "불러오는 중입니다.",
+  inline = false,
+  testId,
+}: ScreenLoadingProps) {
+  const Container = inline ? "span" : "div";
   return (
-    <div
+    <Container
       className={inline ? "sicost-screen-loading is-inline" : "sicost-screen-loading"}
       role="status"
       data-testid={testId}
     >
       <span className="sicost-screen-loading-spinner" aria-hidden="true" />
-      <span>{message}</span>
-    </div>
+      {message}
+    </Container>
   );
 }

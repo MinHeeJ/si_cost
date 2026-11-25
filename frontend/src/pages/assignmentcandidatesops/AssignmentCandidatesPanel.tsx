@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { Pagination } from "../../shared/Pagination";
 import { HelpTooltip } from "../../shared/HelpTooltip";
@@ -89,7 +90,7 @@ export function AssignmentCandidatesPanel({
       />
       {(notice || message) && <p role="status">{notice || message}</p>}
       {loading ? (
-        <p role="status">배정 후보를 불러오는 중입니다.</p>
+        <ScreenLoading message="배정 후보를 불러오는 중입니다." />
       ) : (
         !error &&
         data && (

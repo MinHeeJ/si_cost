@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -183,9 +184,8 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
       <main
         data-testid="authentication-session-loading"
         className="authentication-loading"
-        role="status"
       >
-        인증 정보를 확인하는 중입니다.
+        <ScreenLoading message="인증 정보를 확인하는 중입니다." />
       </main>
     );
   if (state.nextStep !== "AUTHENTICATED")
@@ -536,7 +536,7 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
         {error ? (
           <ErrorBanner message={error} />
         ) : (
-          <p role="status">현재 권한을 확인하는 중입니다.</p>
+          <ScreenLoading message="현재 권한을 확인하는 중입니다." />
         )}
       </main>
     );
@@ -559,9 +559,8 @@ export function AuthenticationBoundary({ children }: { children: ReactNode }) {
       <main
         data-testid="authentication-redirect-loading"
         className="authentication-loading"
-        role="status"
       >
-        허용된 화면으로 이동하는 중입니다.
+        <ScreenLoading message="허용된 화면으로 이동하는 중입니다." />
       </main>
     );
   return (

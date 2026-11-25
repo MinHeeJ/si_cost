@@ -1,3 +1,4 @@
+import { TableControlIcon } from "../../shared/Icon";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
@@ -230,10 +231,14 @@ export function ChangeHistoryPanel({
         <h2>변경 이력</h2>
         <div>
           {onColumnsChange && (
-            <button onClick={onColumnsChange}>열 설정</button>
+            <button onClick={onColumnsChange}>
+              <TableControlIcon name="columns" />
+              열 설정
+            </button>
           )}
           {onDensityChange && (
             <button onClick={onDensityChange} aria-pressed={dense}>
+              <TableControlIcon name="rows" />
               목록 밀도
             </button>
           )}

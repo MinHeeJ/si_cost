@@ -179,11 +179,6 @@
 .recommendation-saved p {
   overflow-wrap: anywhere;
 }
-.recommendation-history > .sicost-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
 .recommendation-history .sicost-table thead th {
   text-align: center;
 }

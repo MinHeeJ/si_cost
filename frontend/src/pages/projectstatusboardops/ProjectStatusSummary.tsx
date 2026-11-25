@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import {
   AnalysisFailure,
   AnalysisSummary,
@@ -16,7 +17,7 @@ export function ProjectStatusSummary({ query }: { query: AnalysisQuery }) {
   return (
     <section data-testid="project-status-summary" aria-busy={result.loading}>
       <AnalysisFailure error={result.error} retry={result.retry} />
-      {result.loading && <p role="status">현황 요약을 조회하고 있습니다.</p>}
+      {result.loading && <ScreenLoading inline message="현황 요약을 조회하고 있습니다." />}
       {!result.error && result.data && (
         <>
           <p>기준일 {result.data.baseDate} · Asia/Seoul</p>

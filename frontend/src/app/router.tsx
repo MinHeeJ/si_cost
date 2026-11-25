@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../shared/ScreenLoading";
 import { useSensitivePermission } from "../shared/permission/PermissionBoundary";
 import "../pages/shared/financialDisplay.css";
 import { AuthenticationBoundary } from "../pages/authentication/AuthenticationBoundary";
@@ -738,7 +739,7 @@ function RegisteredDistributionUpload({
             onRetry={() => setRetry((n) => n + 1)}
           />
         ) : (
-          <p role="status">업로드 대상 프로젝트를 불러오는 중입니다.</p>
+          <ScreenLoading message="업로드 대상 프로젝트를 불러오는 중입니다." />
         )}
         <button
           type="button"
@@ -974,7 +975,7 @@ function RegisteredProjectAnalysis({
     />
   );
   if (preferences.loading)
-    return <p role="status">화면 설정을 불러오는 중입니다.</p>;
+    return <ScreenLoading message="화면 설정을 불러오는 중입니다." />;
   return (
     <>
       {screenId === "UI-04" ? (

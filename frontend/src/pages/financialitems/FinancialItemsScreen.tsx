@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ScreenTitleActions } from "../../shared/ScreenTitleActions";
 import { useEffect, useRef, useState } from "react";
@@ -328,7 +329,7 @@ export function FinancialItemsEditor({
     return (
       <section data-testid="financial-editor">
         {state.loading ? (
-          <p role="status">재무 항목을 불러오는 중입니다.</p>
+          <ScreenLoading message="재무 항목을 불러오는 중입니다." />
         ) : (
           <ErrorBanner
             message={

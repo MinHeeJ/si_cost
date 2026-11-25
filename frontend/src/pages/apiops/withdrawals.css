@@ -74,9 +74,6 @@
   justify-content: flex-end;
 }
 .withdrawal-table-count {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin-inline-end: auto;
   white-space: nowrap;
 }
@@ -116,11 +113,6 @@
   padding-top: 6px;
   padding-bottom: 6px;
   vertical-align: middle;
-}
-.withdrawal-screen .sicost-pagination {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 .withdrawal-screen details {
   font-size: 12px;

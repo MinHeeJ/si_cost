@@ -105,7 +105,7 @@ export function ProjectAnalysisDownload({
       <button
         type="button"
         data-testid="project-download-button"
-        className={view === "projectCost" ? "sicost-download-button" : undefined}
+        className="sicost-download-button"
         disabled={
           !canDownload ||
           pending ||

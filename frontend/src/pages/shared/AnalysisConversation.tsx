@@ -256,6 +256,7 @@ export function AnalysisConversation({
               ))}
               {a.result.status === "OK" && a.qnaId && (
                 <button
+                  className="sicost-download-button"
                   type="button"
                   data-testid={`${testPrefix}-download`}
                   onClick={() =>

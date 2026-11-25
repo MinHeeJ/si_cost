@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -523,15 +524,10 @@ function SharedApplicationContent({
     );
   if (!menus || !user)
     return (
-      <main className="sicost-startup" role="status" aria-busy="true">
+      <main className="sicost-startup">
         <span className="sicost-logo">SI</span>
         <h1>프로젝트·원가 관리</h1>
-        <p>메뉴를 불러오는 중입니다.</p>
-        <div className="sicost-loading-lines" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
+        <ScreenLoading inline message="메뉴를 불러오는 중입니다." />
       </main>
     );
   if (!nodes.length)

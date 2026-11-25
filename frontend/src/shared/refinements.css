@@ -54,8 +54,6 @@
 .sicost-dialog:has(.sicost-command-results) input { height:46px; font-size:15px; }
 input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier(.34,1.56,.64,1); }
 .analysis-progress .active { background:linear-gradient(90deg,#1D4ED8,#0EA5E9,#1D4ED8); background-size:200% 100%; background-clip:text; -webkit-text-fill-color:transparent; animation:sicost-shimmer 1.3s linear infinite; }
-.sicost-skeleton-row td { height:44px; padding:12px; }
-.sicost-skeleton-row td > i { display:block; height:12px; border-radius:4px; background:linear-gradient(90deg,#EEF0F3,#F7F8FA,#EEF0F3); background-size:200% 100%; animation:sicost-shimmer 1.3s linear infinite; }
 .sicost-grid[aria-busy="true"] .sicost-pagination { visibility:hidden; }
 @keyframes sicost-tab-in { from {transform:scale(.94);opacity:.4} to {transform:none;opacity:1} }
 @keyframes sicost-tip-in { from {transform:translateY(-3px);opacity:0} to {transform:none;opacity:1} }
@@ -79,6 +77,9 @@ input[type="checkbox"]:checked { animation:sicost-checkbox-in 220ms cubic-bezier
 .sicost-pagination button {min-width:34px;height:34px; padding:0 8px}
 .sicost-pagination button[aria-current="page"] {background:var(--primary);color:white;border-color:var(--primary)}
 .sicost-pagination select {border:1px solid var(--divider);border-radius:6px;background:var(--surface);height:34px}
+@container pagination (max-width: 530px) {
+  .sicost-pagination button {min-width: 26px; padding: 0 4px}
+}
 .sicost-footnote {font-size:12px;color:var(--text-sub);margin:4px 0}
 .workforce-calendar-content {min-width:0}
 .workforce-calendar .sicost-table-viewport {max-height:640px;overflow:auto;isolation:isolate;border-radius:10px;border:1px solid #E7EAEE}

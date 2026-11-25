@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FinancialOverview, getFinancialWarnings } from "../../shared/FinancialOverview";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
@@ -366,6 +367,7 @@ export function ProfitStructureScreen({
             </select>
           </label>
           <button
+            className="sicost-download-button"
             data-testid="structure-export"
             type="button"
             disabled={!data || loading || download || mobile}
@@ -408,7 +410,7 @@ export function ProfitStructureScreen({
             onRetry={() => setRevision((n) => n + 1)}
           />
         )}
-        {loading && <p role="status">전체 수익 구조를 불러오는 중입니다.</p>}
+        {loading && <ScreenLoading message="전체 수익 구조를 불러오는 중입니다." />}
         {data && (
           <div
             role="tabpanel"

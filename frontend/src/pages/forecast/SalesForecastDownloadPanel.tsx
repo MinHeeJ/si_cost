@@ -45,6 +45,7 @@ export function SalesForecastDownloadPanel({
         <span role="note">엑셀 다운로드는 PC에서 이용해 주세요.</span>
       ) : (
         <button
+          className="sicost-download-button"
           data-testid="forecast-export-button"
           disabled={pending}
           onClick={() => void download()}

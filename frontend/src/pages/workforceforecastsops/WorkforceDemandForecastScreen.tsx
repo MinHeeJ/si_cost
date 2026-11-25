@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { CalculationMethods } from "../../shared/CalculationMethods";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
@@ -204,7 +205,7 @@ export function WorkforceDemandForecastScreen() {
           </div>
         )}
         {!context && error == null && (
-          <p role="status">기간을 불러오는 중입니다.</p>
+          <ScreenLoading message="기간을 불러오는 중입니다." />
         )}
         {context && query && (
           <WorkforceForecastPanel
@@ -318,6 +319,7 @@ export function WorkforceForecastPanel({
   );
   const downloadButton = !mobile && (
     <button
+      className="sicost-download-button"
       type="button"
       data-testid="workforce-download"
       disabled={disabled || loading || downloading || !data}
@@ -357,7 +359,7 @@ export function WorkforceForecastPanel({
         </div>
       </div>
       {mobile && <p role="note">엑셀 다운로드는 PC에서 이용해 주세요.</p>}
-      {loading && <p role="status">예측을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="예측을 불러오는 중입니다." />}
       {error != null && (
         <p role="alert" className="workforce-forecast-error">
           {failure(error)}

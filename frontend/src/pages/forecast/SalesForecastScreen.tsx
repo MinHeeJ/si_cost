@@ -1,3 +1,4 @@
+import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { KpiStrip } from "../../shared/Surface";
 import { CalculationMethods } from "../../shared/CalculationMethods";
@@ -172,7 +173,7 @@ export function SalesForecastPanel() {
           <SalesForecastDownloadPanel amountUnit={amountUnit} />
         </div>
       </div>
-      {loading && <p role="status">예측을 불러오는 중입니다.</p>}
+      {loading && <ScreenLoading message="예측을 불러오는 중입니다." />}
       {error != null && (
         <div className="sales-forecast-error" role="alert">
           {error instanceof Error

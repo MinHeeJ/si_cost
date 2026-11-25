@@ -189,9 +189,6 @@
 
 .roles-table + .sicost-pagination,
 [data-testid="role-history-panel"] .sicost-pagination {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
   margin: 0;
 }
 
