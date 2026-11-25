@@ -257,6 +257,84 @@ beforeEach(() => {
   });
 });
 describe("프로젝트 원가 목록", () => {
+  it("단가가 없는 턴키만 경고를 표시하고 남은 원가 근거를 hover와 focus로 보여준다", async () => {
+    const data = costs();
+    const template = data.items[0];
+    data.items = [
+      {
+        ...template,
+        projectId: "missing",
+        contractType: "TK",
+        forecastMargin: null,
+        targetGap: null,
+        cumulativeRevenue: "7500000",
+        cumulativeCost: "6000000",
+        cumulativeMargin: "20.0",
+        completeness: {
+          ...completeness,
+          issues: [{
+            code: "UNIT_COST",
+            metric: "forecastMargin",
+            message: "단가 없음",
+            month: "2026-11",
+            personId: "DEV-940007",
+            assignmentId: null,
+          }],
+        },
+        forecastEvidence: {
+          personCount: 2,
+          remainingMm: "7.00",
+          knownRemainingCost: "24000000",
+          missingUnitCostPersonCount: 1,
+          missingUnitCostPersonNames: ["[예시4] 단가없음"],
+        },
+      },
+      { ...template, projectId: "priced", contractType: "TK", forecastMargin: "67.9", targetGap: "47.9" },
+      ...["TK", "MO", "DP", "IN"].map((contractType) => ({
+        ...template,
+        projectId: contractType.toLowerCase(),
+        contractType,
+        forecastMargin: null,
+        monthlyMargin: ["MO", "DP"].includes(contractType) ? "12.5" : null,
+      })),
+    ];
+    data.total = data.items.length;
+    vi.mocked(api.getProjectCosts).mockResolvedValue(data);
+    mount(<ProjectCostAnalysis amountUnit="원" />);
+    const row = (id: string) =>
+      screen.getByTestId(`project-cost-open-${id}`).closest("tr")!;
+    const cell = (project: string, column: string) =>
+      row(project).querySelector(`[data-column="${column}"]`)!;
+    const label = await screen.findByText("단가 없음");
+    expect(label).toHaveClass("sicost-tone-warn");
+    const trigger = within(row("missing")).getByLabelText("단가 없음");
+    expect(trigger).toHaveAttribute("tabindex", "0");
+    expect(cell("missing", "targetGap")).toHaveTextContent(/^–$/);
+    expect(cell("missing", "cumulativeRevenue")).toHaveTextContent("7,500,000");
+    expect(cell("missing", "cumulativeCost")).toHaveTextContent("6,000,000");
+    expect(cell("missing", "cumulativeMargin")).toHaveTextContent("20.0%");
+    expect(cell("priced", "forecastMargin")).toHaveTextContent("67.9%");
+    expect(cell("priced", "targetGap")).toHaveTextContent("+47.9%p");
+    for (const id of ["tk", "mo", "dp", "in"])
+      expect(cell(id, "forecastMargin")).toHaveTextContent(/^–$/);
+    for (const id of ["mo", "dp"])
+      expect(cell(id, "monthlyMargin")).toHaveTextContent("12.5%");
+
+    fireEvent.mouseEnter(trigger);
+    const tooltip = screen.getByRole("tooltip");
+    expect(tooltip).toHaveTextContent("남은 예상 원가 근거");
+    expect(tooltip).toHaveTextContent("2명 · 7.00 MM · 알려진 금액 24,000,000 · 단가 없음 1명");
+    expect(tooltip).toHaveTextContent("단가 없음: [예시4] 단가없음");
+    expect(tooltip).toHaveTextContent("자세한 내용은 행을 눌러 상세 창에서 확인");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "금액 단위" }), { target: { value: "천원" } });
+    fireEvent.focus(trigger);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("알려진 금액 24,000 ·");
+    fireEvent.scroll(row("missing").closest("table")!);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
   it("네 지표 설명은 hover·focus로 열리고 정렬 요청과 함께 유지된다", async () => {
     mount(<ProjectCostAnalysis />);
     await screen.findByTestId("project-cost-open-owned");
@@ -302,7 +380,7 @@ describe("프로젝트 원가 목록", () => {
     }
   });
   it.each([
-    ["11.35", "11.35%p"],
+    ["11.35", "+11.35%p"],
     ["-3.2", "−3.2%p"],
     ["0.00", "0%p"],
     [null, "–"],

@@ -39,6 +39,13 @@ export type CostRow = Record<string, unknown> & {
   completeness: Completeness;
   budgetWarning: boolean | null;
   primaryCause: string | null;
+  forecastEvidence?: {
+    personCount: number;
+    remainingMm: string;
+    knownRemainingCost: string;
+    missingUnitCostPersonCount: number;
+    missingUnitCostPersonNames: string[];
+  } | null;
 };
 export type CostPage = {
   month: string;

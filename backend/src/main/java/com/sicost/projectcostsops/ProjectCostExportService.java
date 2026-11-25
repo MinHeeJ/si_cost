@@ -1,6 +1,7 @@
 package com.sicost.projectcostsops;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sicost.apiops.ProjectAnalysisDtos.Completeness;
 import com.sicost.apiops.ProjectAnalysisService;
 import com.sicost.common.excel.ExcelExportService;
 import com.sicost.common.validation.MasterDataValidator;
@@ -40,19 +41,29 @@ public class ProjectCostExportService {
         if(input.order()!=null)order=input.order();if(input.hidden()!=null)hidden=input.hidden();if(input.unit()!=null)unit=input.unit();
         if(!Set.of("원","천원","백만원").contains(unit))throw ProjectInputPolicy.invalid("unit");
         String resolvedUnit=unit;Set<String> excluded=new HashSet<>(hidden);
-        var columns=order.stream().filter(id->!excluded.contains(id)).map(id->new Column(id,title(id),text(id)?CellType.TEXT:CellType.NUMBER)).toList();
+        var columns=order.stream().filter(id->!excluded.contains(id)).map(id->new Column(id,title(id),cellType(id))).toList();
         var data=costs.getProjectCosts(input.query());
         var sheet=new Sheet("프로젝트 원가",columns,sink->{for(var row:data.items())sink.accept(columns.stream().map(c->cell(row,c.id(),resolvedUnit)).toList());});
-        var completeness=(com.sicost.apiops.ProjectAnalysisDtos.Completeness)data.summary().get("completeness");
+        var completeness=(Completeness)data.summary().get("completeness");
         return new WorkbookData(List.of(sheet),List.of(new Information("기준월",data.month()),new Information("단위",unit),
             new Information("미확인수",completeness.unknownProjectCount()),new Information("열순서",String.join(",",order)),new Information("숨김열",String.join(",",hidden)),
-            new Information("정밀도 안내","금액/MM/율/건수는 숫자 셀입니다. Excel은 15자리 초과 금액을 반올림할 수 있습니다. 정확한 값은 API에서 확인하세요.")),data.total(),data.month().replace("-",""));
+            new Information("정밀도 안내","금액/MM/율/건수는 숫자 셀입니다. 예상 최종 마진율의 단가 없음은 문자 셀입니다. Excel은 15자리 초과 금액을 반올림할 수 있습니다. 정확한 값은 API에서 확인하세요.")),data.total(),data.month().replace("-",""));
     }
     private static String csv(JsonNode value){var result=new ArrayList<String>();value.forEach(n->result.add(n.asText()));return String.join(",",result);}
     private static boolean text(String id){return Set.of("projectName","contractType","status","alerts").contains(id);}
+    private static CellType cellType(String id) {
+        if ("forecastMargin".equals(id)) return CellType.NUMBER_OR_TEXT;
+        return text(id) ? CellType.TEXT : CellType.NUMBER;
+    }
     private static boolean amount(String id){return !text(id)&&!Set.of("planMm","actualMm","freeMm","cumulativeMargin","forecastMargin","monthlyMargin","targetMargin","targetGap","budgetUsage").contains(id);}
     private static Object cell(Map<String,Object> row,String id,String unit) {
-        Object value=row.get(id);if(value==null)return null;
+        Object value=row.get(id);
+        if(value==null) {
+            if("forecastMargin".equals(id) && row.get("completeness") instanceof Completeness completeness
+                && completeness.issues().stream().anyMatch(issue->"UNIT_COST".equals(issue.code()) && id.equals(issue.metric())))
+                return "단가 없음";
+            return null;
+        }
         if("alerts".equals(id))return ((List<?>)value).stream().map(a->Objects.toString(((Map<?,?>)a).get("message"),"")).collect(java.util.stream.Collectors.joining(", "));
         if(text(id))return value.toString();
         var number=new BigDecimal(value.toString());return amount(id)?MasterDataValidator.amountInUnit(number,unit):number;
