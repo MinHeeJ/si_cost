@@ -30,7 +30,6 @@
   font-variant-numeric: tabular-nums;
 }
 .bill-actions,
-.bill-copy-form,
 .bill-selection-panel {
   display: grid;
   gap: 12px;
@@ -39,10 +38,17 @@
 .bill-actions-toolbar {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
 }
-.bill-copy-form input,
+.bill-actions-toolbar:empty {
+  display: none;
+}
+.bill-actions-toolbar > button {
+  flex: none;
+  white-space: nowrap;
+}
 .bill-actions textarea {
   width: 100%;
 }

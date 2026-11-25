@@ -1,6 +1,8 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
+import { FeedbackNotice } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { BillingError } from "./BillSummaryCards";
@@ -36,7 +38,9 @@ export function BillCopyDialog({
     duplicateToken: string;
   }>();
   const [saved, setSaved] = useState<api.BillMutationResult>();
-  const { pending, message, commit } = useCommitRefresh();
+  const { pending, outcome, commit } = useCommitRefresh(
+    "등록은 완료됐지만 청구 정보를 다시 불러오지 못했습니다.",
+  );
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -141,11 +145,23 @@ export function BillCopyDialog({
       }
     }
   }
+  const title = "고쳐서 청구 — 다음월 신규복사";
+  const warnings = [...new Set(draft.warnings)];
   return (
     <>
       <Dialog
         open
-        title="고쳐서 청구 — 다음월 신규복사"
+        title={title}
+        className="bill-form-modal"
+        titleHelp={
+          <HelpTooltip label="고쳐서 청구" iconOnly>
+            <ul>
+              <li>다음 달 청구를 새로 등록하며, 청구번호와 차수는 등록할 때 발급됩니다.</li>
+              <li>세금계산서 번호는 비워 두어도 등록할 수 있습니다.</li>
+              <li>부가세와 합계는 등록 후 청구 상세에서 확인할 수 있습니다.</li>
+            </ul>
+          </HelpTooltip>
+        }
         pending={pending}
         onCancel={close}
         onConfirm={() => submit()}
@@ -153,28 +169,56 @@ export function BillCopyDialog({
         confirmDisabled={stale || Boolean(saved)}
       >
         <div
-          className="bill-copy-form"
+          className="bill-form"
           data-screen-id="SCR-UI-13"
           data-testid="bill-copy-dialog"
         >
           <BillingError error={error} />
-          <p>
-            프로젝트 {projectName} · {draft.projectId}
-          </p>
-          <p>청구월 {draft.billingMonth} (고정)</p>
-          <p>
-            청구번호·차수는 등록 시 발급됩니다. 원청구 {draft.sourceBillId}는
-            변경하지 않습니다.
-          </p>
-          {draft.warnings.map((warning, i) => (
-            <p
-              key={i}
-              className="sicost-banner sicost-tone-warn"
-              data-testid={`bill-copy-warning-${i}`}
+          {stale && (
+            <FeedbackNotice tone="warn" title="원청구 변경">
+              창을 닫고 원청구를 다시 조회해 주세요.
+            </FeedbackNotice>
+          )}
+          {outcome?.kind === "refresh-failed" && saved && (
+            <FeedbackNotice
+              tone="warn"
+              title="등록 완료 · 조회 실패"
+              action={
+                <button
+                  type="button"
+                  data-testid="bill-copy-refresh"
+                  onClick={() => { void refresh(saved).catch(setError); }}
+                >
+                  다시 조회
+                </button>
+              }
             >
-              {warning}
-            </p>
-          ))}
+              {outcome.message}
+            </FeedbackNotice>
+          )}
+          <dl className="bill-copy-context">
+            <div>
+              <dt>프로젝트</dt>
+              <dd>{projectName} <small>{draft.projectId}</small></dd>
+            </div>
+            <div>
+              <dt>청구월</dt>
+              <dd>{draft.billingMonth}</dd>
+            </div>
+            <div>
+              <dt>원청구</dt>
+              <dd>{draft.sourceBillId}</dd>
+            </div>
+          </dl>
+          {warnings.length > 0 && (
+            <FeedbackNotice tone="warn" title="청구 기본값 확인">
+              {warnings.length === 1 ? warnings[0] : (
+                <ul>
+                  {warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              )}
+            </FeedbackNotice>
+          )}
           {(
             [
               ["supplyAmount", "공급가 (원) *", "text"],
@@ -211,30 +255,6 @@ export function BillCopyDialog({
               )}
             </div>
           ))}
-          {!form.taxInvoiceNo.trim() && (
-            <p className="sicost-banner sicost-tone-warn">
-              세금계산서 번호 미입력 — 빈칸으로 등록할 수 있습니다.
-            </p>
-          )}
-          <p>계산 금액은 저장 후 상세에서 확인해 주세요.</p>
-          {stale && (
-            <p role="alert">
-              원청구가 변경되었습니다. 창을 닫고 다시 조회해 주세요. 자동
-              재전송하지 않습니다.
-            </p>
-          )}
-          {message && <p role="status">{message}</p>}
-          {saved && (
-            <button
-              type="button"
-              data-testid="bill-copy-refresh"
-              onClick={() => {
-                void refresh(saved).catch(setError);
-              }}
-            >
-              다시 조회
-            </button>
-          )}
         </div>
       </Dialog>
       <Dialog

@@ -76,6 +76,46 @@
 .bill-filters input[type="checkbox"] {
   min-height: auto;
 }
+.bill-project-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.bill-project-filter-controls input {
+  flex: 1;
+  min-width: 0;
+  width: 160px;
+}
+.bill-project-filter-controls button {
+  flex: none;
+  white-space: nowrap;
+}
+.bill-project-picker {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.bill-project-picker .sicost-filterbar {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+.bill-project-picker .sicost-filterbar .sicost-field {
+  flex: 1 1 200px;
+}
+.bill-project-picker .sicost-filterbar input {
+  flex: 1;
+  min-width: 0;
+}
+.bill-project-picker-name {
+  display: grid;
+  gap: 2px;
+  white-space: normal;
+}
+.bill-project-picker-name small {
+  color: var(--text-sub);
+}
 .bill-list-actions {
   margin: 12px 0;
   justify-content: space-between;
@@ -121,6 +161,38 @@
   border-top: 1px solid var(--divider);
   font-variant-numeric: tabular-nums;
 }
+.sicost-dialog.bill-form-modal {
+  width: min(560px, 100%);
+}
+.sicost-dialog.bill-form-modal > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.bill-form-modal > .sicost-dialog-body {
+  padding-top: 16px;
+}
+.bill-copy-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+.bill-copy-context > :first-child {
+  grid-column: 1 / -1;
+}
+.bill-copy-context dt,
+.bill-copy-context small {
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.bill-copy-context dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 .bill-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -129,7 +201,7 @@
 .bill-form > p,
 .bill-form > section,
 .bill-form > [role="alert"],
-#bill-estimate-sources {
+.bill-estimate-sources {
   grid-column: 1 / -1;
 }
 .bill-form input,
@@ -137,6 +209,25 @@
   min-width: 0;
   width: 100%;
 }
+.bill-estimate-sources {
+  min-width: 0;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+}
+.bill-estimate-sources summary {
+  padding: 8px 12px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bill-estimate-sources[open] summary {
+  border-bottom: 1px solid var(--divider);
+}
+.bill-estimate-sources small {
+  color: var(--text-sub);
+}
+
 .bill-detail-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -271,4 +362,43 @@
   box-shadow:
     0 1px 2px rgba(17, 24, 39, 0.1),
     0 0 0 1px rgba(17, 24, 39, 0.04);
+}
+
+.bill-detail-toolbar,
+.bill-detail-dunning,
+.bill-detail-dunning-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.bill-detail-toolbar,
+.bill-detail-dunning {
+  justify-content: space-between;
+}
+
+.bill-detail-toolbar {
+  margin-bottom: 12px;
+}
+
+.bill-detail-dunning .dunning-toolbar > button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.bill-detail-notice {
+  margin-top: 12px;
+}
+
+.bill-detail-dunning {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.bill-detail-dunning h3 {
+  margin: 0;
+  font-size: 14px;
 }

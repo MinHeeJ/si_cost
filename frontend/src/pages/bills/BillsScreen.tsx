@@ -17,14 +17,15 @@ import {
 } from "react";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
+import { FeedbackNotice, FloatingToast } from "../../shared/Feedback";
 import {
   getPeriodContext,
   getSharedPreferences,
   type PeriodContext,
   type PeriodValue,
 } from "../shared/sharedApi";
-import { getProjects, type ProjectListItem } from "../projects/projectsApi";
-import { BillFormDialog } from "./BillFormDialog";
+import { BillProjectPicker } from "./BillProjectPicker";
+import { BillFormDialog, nextDue } from "./BillFormDialog";
 import { BillingChecksPanel } from "../apiops/BillingChecksPanel";
 import { ReceivablesPanel } from "../apiops/ReceivablesPanel";
 import type { BillingCheckRemedy } from "../apiops/billingReviewApi";
@@ -215,13 +216,12 @@ function BillsContent({
     if (initialBillId) setDetailId(initialBillId);
   }, [initialBillId]);
   const [message, setMessage] = useState(""),
+    [adjustmentToast, setAdjustmentToast] = useState<string>(),
+    [adjustmentRefreshFailed, setAdjustmentRefreshFailed] = useState(false),
     [actionError, setActionError] = useState<unknown>(),
     [pending, setPending] = useState(false);
-  const [projectSearch, setProjectSearch] = useState(""),
-    [projectOptions, setProjectOptions] = useState<ProjectListItem[]>([]),
-    [projectPage, setProjectPage] = useState(1),
-    [projectTotal, setProjectTotal] = useState(0),
-    [projectError, setProjectError] = useState<unknown>();
+  const [projectSearch, setProjectSearch] = useState("");
+  const [pickedProjectId, setPickedProjectId] = useState<string>();
   const [projectOpen, setProjectOpen] = useState(false);
   const generation = useRef(0),
     summaryGeneration = useRef(0);
@@ -301,31 +301,19 @@ function BillsContent({
   async function saved(result: api.Mutation) {
     setForm(undefined);
     setDetailId(result.bill.id);
+    const adjustment = form?.initial?.closedMonthAdjustment;
+    setAdjustmentRefreshFailed(false);
     setMessage(
-      result.changed
+      adjustment ? "" : result.changed
         ? `저장했습니다. ${result.warnings.join(" ")}`
         : "바뀐 내용이 없습니다.",
     );
+    if (adjustment) setAdjustmentToast(result.bill.id);
     try {
       await refresh();
     } catch {
-      setMessage("저장됐지만 다시 불러오지 못했습니다. 재조회해 주세요.");
-    }
-  }
-  async function searchProjects(page = 1) {
-    setProjectPage(page);
-    setProjectError(undefined);
-    try {
-      const result = await getProjects({
-        q: projectSearch || undefined,
-        page,
-        size: 20,
-      });
-      setProjectOptions(result.items);
-      setProjectTotal(result.total);
-      setProjectOpen(true);
-    } catch (e) {
-      setProjectError(e);
+      if (adjustment) setAdjustmentRefreshFailed(true);
+      else setMessage("저장됐지만 다시 불러오지 못했습니다. 재조회해 주세요.");
     }
   }
   async function copy(bill: api.Bill) {
@@ -370,10 +358,12 @@ function BillsContent({
     }
   }
   async function remedy(value: BillingCheckRemedy) {
+    const adjustment = value.mode === "CLOSED_MONTH_ADJUSTMENT";
+    const creating = value.mode === "CREATE" || adjustment;
     if (
       pending ||
       readonly ||
-      (value.mode === "CREATE" ? !canRegister : !canUpdate) ||
+      (creating ? !canRegister : !canUpdate) ||
       !value.proposedSupplyAmount
     ) return;
     setPending(true);
@@ -385,7 +375,7 @@ function BillsContent({
           bill: { ...detail.bill, supplyAmount: value.proposedSupplyAmount },
           initial: { ...detail.bill, year, checkContext: value.checkContext },
         });
-      } else if (value.mode === "CREATE") {
+      } else if (creating) {
         const draft = await api.getEstimate(value.projectId, value.month);
         setForm({
           initial: {
@@ -395,9 +385,12 @@ function BillsContent({
             supplyAmount: value.proposedSupplyAmount,
             vatRate: draft.vatRate ?? "",
             billingDate: draft.defaultBillingDate,
-            dueDate: draft.defaultDueDate,
+            dueDate: adjustment && draft.defaultDueDate < draft.defaultBillingDate
+              ? nextDue(draft.defaultBillingDate.slice(0, 7))
+              : draft.defaultDueDate,
             taxInvoiceNo: null,
             checkContext: value.checkContext,
+            ...(adjustment ? { closedMonthAdjustment: true } : {}),
           },
         });
       }
@@ -585,9 +578,6 @@ function BillsContent({
           지난 연도는 조회만 할 수 있습니다.
         </p>
       )}
-      {year > currentYear && (
-        <p className="sicost-banner sicost-tone-info">계획 · 내년 청구 목록</p>
-      )}
       <BillError
         error={summaryError}
         retry={() => {
@@ -704,6 +694,22 @@ function BillsContent({
                 onBillDetail={setDetailId}
               />
             </div>
+            {adjustmentToast && (
+              <FloatingToast key={adjustmentToast} message="추가 청구를 등록했습니다." />
+            )}
+            {adjustmentRefreshFailed && (
+              <FeedbackNotice
+                tone="warn"
+                title="등록 완료 · 조회 실패"
+                action={
+                  <button type="button" onClick={() => {
+                    void refresh().then(() => setAdjustmentRefreshFailed(false)).catch(() => {});
+                  }}>다시 조회</button>
+                }
+              >
+                청구 목록과 누락 점검을 다시 불러와 주세요.
+              </FeedbackNotice>
+            )}
             <BillError error={actionError} />
           </>
         ))}
@@ -718,11 +724,15 @@ function BillsContent({
           resetTestId="bill-reset"
           onSubmit={() => {
             setSelected([]);
-            if (query.page !== 1) conditions({});
-            else void load().catch(() => {});
+            const projectId = pickedProjectId;
+            const projectName = projectId ? undefined : projectSearch.trim() || undefined;
+            if (query.page === 1 && projectId === query.projectId && projectName === query.projectName)
+              void load().catch(() => {});
+            else conditions({ projectId, projectName });
           }}
           onReset={() => {
             setProjectSearch("");
+            setPickedProjectId(undefined);
             setSelected([]);
             setQuery({
               year,
@@ -732,39 +742,43 @@ function BillsContent({
             });
           }}
         >
-          <label htmlFor="bill-status-filter">상태<FieldHelp label="상태" /></label>
-          <select
-            id="bill-status-filter"
-            data-testid="bill-status-filter"
-            value={query.status ?? ""}
-            onChange={(e) =>
-              conditions({
-                status: (e.target.value || undefined) as
-                  | api.BillStatus
-                  | undefined,
-              })
-            }
-          >
-            <option value="">전체</option>
-            {Object.entries(billStatusNames).map(([value, label]) => (
-              <option
-                key={value}
-                value={value}
-                data-testid={`bill-status-option-${value.toLowerCase().replaceAll("_", "-")}`}
-              >
-                {label}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="bill-month-filter">청구월</label>
-          <input
-            id="bill-month-filter"
-            data-testid="bill-month-filter"
-            type="month"
-            value={query.month ?? ""}
-            onChange={(e) => conditions({ month: e.target.value || undefined })}
-          />
-          <label>
+          <div className="sicost-field">
+            <label htmlFor="bill-status-filter">상태<FieldHelp label="상태" /></label>
+            <select
+              id="bill-status-filter"
+              data-testid="bill-status-filter"
+              value={query.status ?? ""}
+              onChange={(e) =>
+                conditions({
+                  status: (e.target.value || undefined) as
+                    | api.BillStatus
+                    | undefined,
+                })
+              }
+            >
+              <option value="">전체</option>
+              {Object.entries(billStatusNames).map(([value, label]) => (
+                <option
+                  key={value}
+                  value={value}
+                  data-testid={`bill-status-option-${value.toLowerCase().replaceAll("_", "-")}`}
+                >
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="sicost-field">
+            <label htmlFor="bill-month-filter">청구월</label>
+            <input
+              id="bill-month-filter"
+              data-testid="bill-month-filter"
+              type="month"
+              value={query.month ?? ""}
+              onChange={(e) => conditions({ month: e.target.value || undefined })}
+            />
+          </div>
+          <label className="sicost-field">
             계산서 번호
             <select
               data-testid="bill-missing-invoice-filter"
@@ -779,35 +793,30 @@ function BillsContent({
               <option value="true">번호누락만</option>
             </select>
           </label>
-          <label htmlFor="bill-project-filter">프로젝트</label>
-          <input
-            id="bill-project-filter"
-            data-testid="bill-project-filter"
-            value={projectSearch}
-            placeholder="종료·실주 포함 검색"
-            onChange={(e) => setProjectSearch(e.target.value)}
-          />
-          <button
-            type="button"
-            data-testid="bill-project-search"
-            onClick={() => {
-              void searchProjects();
-            }}
-          >
-            프로젝트 검색
-          </button>
-          {query.projectId && (
-            <span>
-              {query.projectId}
+          <div className="sicost-field bill-project-filter">
+            <label htmlFor="bill-project-filter">프로젝트명</label>
+            <div className="bill-project-filter-controls">
+              <input
+                id="bill-project-filter"
+                data-testid="bill-project-filter"
+                type="search"
+                maxLength={100}
+                value={projectSearch}
+                placeholder="프로젝트명 일부 입력"
+                onChange={(event) => {
+                  setProjectSearch(event.target.value);
+                  setPickedProjectId(undefined);
+                }}
+              />
               <button
                 type="button"
-                data-testid="bill-project-clear"
-                onClick={() => conditions({ projectId: undefined })}
+                data-testid="bill-project-search"
+                onClick={() => setProjectOpen(true)}
               >
-                해제
+                프로젝트 선택
               </button>
-            </span>
-          )}
+            </div>
+          </div>
           {year === currentYear && (
             <label>
               <input
@@ -822,12 +831,6 @@ function BillsContent({
             </label>
           )}
         </FilterBar>
-        <BillError
-          error={projectError}
-          retry={() => {
-            void searchProjects();
-          }}
-        />
         <BillError
           error={error}
           retry={() => {
@@ -867,6 +870,7 @@ function BillsContent({
                     month: query.month,
                     missingInvoiceNo: query.missingInvoiceNo,
                     projectId: query.projectId,
+                    projectName: query.projectName,
                     sort: query.sort,
                     direction: query.direction,
                   }}
@@ -914,6 +918,7 @@ function BillsContent({
                   month: query.month,
                   missingInvoiceNo: query.missingInvoiceNo,
                   projectId: query.projectId,
+                  projectName: query.projectName,
                   includeCarryover: query.includeCarryover,
                 },
                 sort: query.sort,
@@ -1022,58 +1027,18 @@ function BillsContent({
           </p>
         )}
       </section>
-      <Dialog
-        open={projectOpen}
-        title="청구 검색 프로젝트"
-        onCancel={() => setProjectOpen(false)}
-        onConfirm={() => setProjectOpen(false)}
-        confirmLabel="닫기"
-      >
-        <section data-testid="bill-project-dialog">
-          <p>종료·실주 프로젝트도 검색할 수 있습니다.</p>
-          {projectOptions.map((p) => (
-            <p
-              key={p.id}
-              data-testid={`bill-project-option-${p.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
-            >
-              <button
-                type="button"
-                data-testid={`bill-project-pick-${p.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
-                onClick={() => {
-                  conditions({ projectId: p.id });
-                  setProjectSearch(p.name);
-                  setProjectOpen(false);
-                }}
-              >
-                {p.name} · {p.status}
-              </button>
-            </p>
-          ))}
-          {!projectOptions.length && <p>검색된 프로젝트가 없습니다.</p>}
-          <nav className="sicost-inline-pagination" aria-label="프로젝트 선택 페이지">
-            <button
-              type="button"
-              data-testid="bill-project-prev"
-              disabled={projectPage <= 1}
-              onClick={() => {
-                void searchProjects(projectPage - 1);
-              }}
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              data-testid="bill-project-next"
-              disabled={projectPage * 20 >= projectTotal}
-              onClick={() => {
-                void searchProjects(projectPage + 1);
-              }}
-            >
-              다음
-            </button>
-          </nav>
-        </section>
-      </Dialog>
+      {projectOpen && (
+        <BillProjectPicker
+          initialSearch={projectSearch}
+          onClose={() => setProjectOpen(false)}
+          onSelect={(project) => {
+            setPickedProjectId(project.id);
+            setProjectSearch(project.name);
+            conditions({ projectId: project.id, projectName: undefined });
+            setProjectOpen(false);
+          }}
+        />
+      )}
       {detailId && !form && (
         <BillDetailDrawer
           id={detailId}

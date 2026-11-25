@@ -1,6 +1,7 @@
 package com.sicost.billsops;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sicost.bills.BillInput;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.validation.ProjectInputPolicy;
 import java.util.*;
@@ -33,7 +34,7 @@ public final class BillOperationsInput {
         query(q,Set.of("year","includeCarryover"));return new SummaryQuery(year(q.getFirst("year")),carryover(q.getFirst("includeCarryover")));
     }
     public static SelectionQuery selection(MultiValueMap<String,String> q) {
-        query(q,Set.of("year","status","month","projectId","includeCarryover","missingInvoiceNo","sort","direction","ids","excludeIds"));
+        query(q,Set.of("year","status","month","projectId","projectName","includeCarryover","missingInvoiceNo","sort","direction","ids","excludeIds"));
         String status=q.getFirst("status"),sort=q.getFirst("sort"),direction=q.getFirst("direction");
         if(status!=null&&!Set.of("PAID","UNPAID","LATE","CNCL").contains(status))throw invalid("status");
         if(sort!=null&&!SORTS.contains(sort))throw invalid("sort");
@@ -41,7 +42,7 @@ public final class BillOperationsInput {
         String missing=q.getFirst("missingInvoiceNo");if(missing!=null&&!Set.of("true","false").contains(missing))throw invalid("missingInvoiceNo");
         return new SelectionQuery(year(q.getFirst("year")),status,q.containsKey("month")?month(q.getFirst("month")):null,
             q.containsKey("projectId")?project(q.getFirst("projectId")):null,carryover(q.getFirst("includeCarryover")),sort,
-            direction==null?"DESC":direction,ids(q,"ids"),ids(q,"excludeIds"),Boolean.parseBoolean(missing));
+            direction==null?"DESC":direction,ids(q,"ids"),ids(q,"excludeIds"),Boolean.parseBoolean(missing),BillInput.projectName(q.getFirst("projectName")));
     }
     private static List<String> ids(MultiValueMap<String,String> q,String key) {
         if(!q.containsKey(key))return Collections.emptyList();

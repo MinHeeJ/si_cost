@@ -8,6 +8,8 @@ import { useOverlayLayer } from "./useOverlayLayer";
 export type DialogProps = {
   open: boolean;
   title: string;
+  titleHelp?: ReactNode;
+  className?: string;
   children: ReactNode;
   pending?: boolean;
   onConfirm(): void | Promise<void>;
@@ -37,6 +39,8 @@ const FOCUSABLE =
 export function Dialog({
   open,
   title,
+  titleHelp,
+  className,
   children,
   pending = false,
   onConfirm,
@@ -158,7 +162,7 @@ export function Dialog({
         noValidate={noValidate}
         ref={ref}
         data-testid={testId}
-        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}${fullPage ? " sicost-dialog-page" : ""}`}
+        className={`sicost-dialog${wide ? " sicost-dialog-wide" : ""}${fullPage ? " sicost-dialog-page" : ""}${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -188,8 +192,15 @@ export function Dialog({
             {fullPage && fullPageBreadcrumb && (
               <p className="sicost-breadcrumb">{fullPageBreadcrumb}</p>
             )}
-            <div className={fullPage ? "sicost-title-row" : undefined}>
+            <div
+              className={
+                titleHelp
+                  ? "sicost-dialog-title-with-help"
+                  : fullPage ? "sicost-title-row" : undefined
+              }
+            >
               <h2 id={titleId}>{title}</h2>
+              {titleHelp}
               {fullPage && permission && <small>{permission.screen}</small>}
             </div>
           </div>

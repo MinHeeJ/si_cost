@@ -387,6 +387,11 @@ button:disabled {
   padding: 16px 16px 8px 24px;
   flex-shrink: 0;
 }
+.sicost-dialog-title-with-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .sicost-dialog-body {
   display: flex;
   flex-direction: column;

@@ -1,5 +1,6 @@
 package com.sicost.billsops;
 
+import com.sicost.bills.BillInput;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.concurrent.RevisionService;
 import com.sicost.common.concurrent.WriteCoordinator;
@@ -48,6 +49,7 @@ public class BillOperationsService {
         users.currentUser();ProjectInputPolicy.year(query.year(),repository.base(),estimates.clock());
         for(String id:query.ids())repository.required(id);
         List<Bill> rows=repository.bills().stream().filter(b->inPopulation(b,query)).map(b->view(b,query.year()))
+            .filter(b->BillInput.matchesProjectName(b.projectName(),query.projectName()))
             .filter(b->query.status()==null||query.status().equals(b.status()))
             .filter(b->query.ids().isEmpty()||query.ids().contains(b.id()))
             .filter(b->!query.excludeIds().contains(b.id())).sorted(order(query)).toList();

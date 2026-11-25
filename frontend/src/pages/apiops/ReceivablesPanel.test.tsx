@@ -112,6 +112,9 @@ it("초기 연체도 숨기지 않고 정밀 금액·3카드를 표시하고 안
   expect(screen.getByTestId("receivable-step-card-1")).toHaveTextContent(
     "7.5일",
   );
+  expect(screen.getByTestId("receivable-step-card-1")).toHaveTextContent("영업 담당자");
+  expect(screen.getByTestId("receivable-step-card-2")).toHaveTextContent("영업 담당자 · 영업 파트장");
+  expect(screen.getByTestId("receivable-step-card-3")).toHaveTextContent("영업 담당자 · 영업 파트장 · 경영진 · 재무 담당");
 });
 it.each([1, 2, 3])(
   "%s단계 색상과 최종 여부를 그대로 표시한다",

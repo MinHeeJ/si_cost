@@ -15,6 +15,7 @@ import static com.sicost.apiops.BillingReviewDtos.*;
 
 @Service
 public class BillingCheckService {
+    public static final String CLOSED_MONTH_ADJUSTMENT = "CLOSED_MONTH_ADJUSTMENT";
     private final BillingReviewRepository repository;
     private final AssignmentMonthlyService monthly;
     private final CurrentUserProvider users;
@@ -98,7 +99,17 @@ public class BillingCheckService {
         List<String> related=bills.stream().map(CheckBill::id).toList();
         CheckBill last=bills.isEmpty()?null:bills.get(0);
         String id=last==null?null:last.id(),expected=last==null?null:repository.billRevision(id);
-        if(closed(context.month()))return new Remedy("DETAIL_ONLY",project.id(),context.month(),id,null,expected,context,"마감·이관 월은 보완할 수 없습니다. 관련 청구를 확인하고 후속 UI-10 전월조정/계좌이체 경로에서 처리해 주세요.",related);
+        if(closed(context.month())) {
+            if (!YearMonth.parse(context.month()).isBefore(base())
+                && Set.of("MO","DP").contains(project.contractType())
+                && !Set.of("PRE","LOSE").contains(project.status())
+                && last != null && "적게 청구".equals(verdict)
+                && difference.compareTo(new BigDecimal("999999999999999")) <= 0) {
+                return new Remedy(CLOSED_MONTH_ADJUSTMENT,project.id(),context.month(),id,decimal(difference),null,context,null,related);
+            }
+            if ("맞음".equals(verdict))return new Remedy("NONE",project.id(),context.month(),id,null,expected,context,null,related);
+            return new Remedy("DETAIL_ONLY",project.id(),context.month(),id,null,expected,context,"마감·이관 월은 보완할 수 없습니다. 관련 청구를 확인한 뒤 재무·자금 → 재무 항목의 전월 조정 또는 계좌이체에서 처리해 주세요.",related);
+        }
         if("맞음".equals(verdict))return new Remedy("NONE",project.id(),context.month(),id,null,expected,context,null,related);
         BigDecimal proposed=last==null?estimate:last.supplyAmount().add(difference);
         String reason=null;

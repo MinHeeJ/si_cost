@@ -1,7 +1,7 @@
 import { usePermission } from "../../shared/permission/PermissionBoundary";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "../../shared/Dialog";
-import { StatusBadge } from "../../shared/Feedback";
+import { FeedbackNotice, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { BillCopyDialog } from "./BillCopyDialog";
@@ -18,6 +18,7 @@ export type BillActionsPanelProps = {
   amountUnit?: "원" | "천원" | "백만원";
   onChanged(result: api.BillMutationResult): Promise<void> | void;
   onDirtyChange?(dirty: boolean): void;
+  children?: ReactNode;
 };
 export function BillActionsPanel({
   bill,
@@ -28,6 +29,7 @@ export function BillActionsPanel({
   amountUnit = "천원",
   onChanged,
   onDirtyChange,
+  children,
 }: BillActionsPanelProps) {
   const [error, setError] = useState<unknown>();
   const [draft, setDraft] = useState<api.BillCopyDraft>();
@@ -40,7 +42,9 @@ export function BillActionsPanel({
   const [lastResult, setLastResult] = useState<api.BillMutationResult>();
   const [loadingDraft, setLoadingDraft] = useState(false);
   const busy = useRef(false);
-  const { pending, message, commit } = useCommitRefresh();
+  const { pending, outcome, clearOutcome, commit } = useCommitRefresh(
+    "저장은 완료됐지만 청구 정보를 다시 불러오지 못했습니다.",
+  );
   const writable = year >= currentYear;
   const registerPermission = usePermission("UI-13", "REG");
   const updatePermission = usePermission("UI-13", "UPD");
@@ -89,6 +93,9 @@ export function BillActionsPanel({
       busy.current = false;
     }
   }
+  const cancelNoticeId = useId();
+  const showCancel = canUpdate && !bill.cancelled;
+  const hasNormalReceipts = normalReceiptCount > 0;
   const blocked = !writable || pending || stale || loadingDraft;
   const canCancel =
     !bill.cancelled &&
@@ -102,32 +109,39 @@ export function BillActionsPanel({
       data-testid="bill-actions-panel"
     >
       <BillingError error={error} />
-      {message && <p role="status">{message}</p>}
-      {lastResult && !saved && (
-        <p className="sicost-banner sicost-tone-info">
-          {lastResult.bill.id} · {lastResult.bill.order}차 · 공급가{" "}
-          {billAmount(lastResult.bill.supplyAmount, amountUnit)} {amountUnit} ·{" "}
-          {lastResult.warnings.join(" · ")}
-        </p>
+      {outcome?.kind === "saved" && lastResult && (
+        <FloatingToast
+          message={lastResult.bill.cancelled ? "청구를 취소했습니다." : outcome.message}
+          detail={lastResult.bill.cancelled ? undefined : (
+            `${lastResult.bill.id} · ${lastResult.bill.order}차 · 공급가 ${billAmount(lastResult.bill.supplyAmount, amountUnit)} ${amountUnit}`
+          )}
+        />
       )}
-      {saved && (
-        <div className="sicost-banner sicost-tone-info">
-          <span>
-            {saved.bill.id} · {saved.bill.order}차 · 공급가{" "}
-            {billAmount(saved.bill.supplyAmount, amountUnit)} {amountUnit}{" "}
-            {saved.warnings.join(" · ")}
-          </span>
-          <button
-            type="button"
-            data-testid="bill-action-refresh"
-            disabled={pending}
-            onClick={() => {
-              void refresh(saved).catch(setError);
-            }}
-          >
-            다시 조회
-          </button>
-        </div>
+      {outcome?.kind === "refresh-failed" && saved && (
+        <FeedbackNotice
+          tone="warn"
+          title="저장 완료 · 조회 실패"
+          action={
+            <button
+              type="button"
+              data-testid="bill-action-refresh"
+              disabled={pending}
+              onClick={() => {
+                setError(undefined);
+                void refresh(saved).then(clearOutcome).catch(setError);
+              }}
+            >
+              다시 조회
+            </button>
+          }
+        >
+          {outcome.message}
+        </FeedbackNotice>
+      )}
+      {lastResult && lastResult.warnings.length > 0 && (
+        <FeedbackNotice tone="warn" title="청구 확인">
+          {lastResult.warnings.join(" · ")}
+        </FeedbackNotice>
       )}
       {!writable && (
         <p className="sicost-banner sicost-tone-lock">
@@ -140,7 +154,11 @@ export function BillActionsPanel({
           재전송하지 않습니다.
         </p>
       )}
-      <div className="bill-actions-toolbar">
+      <div
+        className="bill-actions-toolbar"
+        role="group"
+        aria-label="청구 및 입금 작업"
+      >
         {canRegister && bill.quickActions.copyAllowed && (
           <button
             type="button"
@@ -183,11 +201,16 @@ export function BillActionsPanel({
               다음 달 청구
             </button>
           )}
-        {canUpdate && !bill.cancelled && (
+        {showCancel && (
           <button
             type="button"
             data-testid="bill-cancel-open"
             disabled={blocked || !canCancel}
+            aria-describedby={
+              hasNormalReceipts || cancellationBlockedReason
+                ? cancelNoticeId
+                : undefined
+            }
             onClick={() => {
               setError(undefined);
               setCancelOpen(true);
@@ -198,20 +221,21 @@ export function BillActionsPanel({
             청구 취소
           </button>
         )}
-        {!bill.quickActions.copyAllowed && (
-          <span title={bill.quickActions.reason ?? undefined}>–</span>
-        )}
+        {children}
       </div>
-      {normalReceiptCount > 0 && !bill.cancelled && (
-        <p>정상 입금이 있습니다. 먼저 입금을 취소해 주세요.</p>
-      )}
-      {cancellationBlockedReason && (
-        <p className="sicost-banner sicost-tone-lock">
-          {cancellationBlockedReason}
-        </p>
-      )}
-      {bill.dunning === null && !bill.cancelled && (
-        <StatusBadge tone="neutral">알림 기준 설정 확인 필요</StatusBadge>
+      {showCancel && (hasNormalReceipts || cancellationBlockedReason) && (
+        <div id={cancelNoticeId}>
+          {cancellationBlockedReason ? (
+            <FeedbackNotice tone="info" title="청구 수정·취소 제한">
+              {cancellationBlockedReason}
+            </FeedbackNotice>
+          ) : (
+            <FeedbackNotice tone="warn" title="청구 취소 제한">
+              정상 입금이 있습니다. 청구를 취소하려면 입금 내역에서 먼저
+              입금을 취소해 주세요.
+            </FeedbackNotice>
+          )}
+        </div>
       )}
       {canRegister && draft && (
         <BillCopyDialog

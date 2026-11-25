@@ -40,6 +40,7 @@ class BillContractTest {
     @Autowired ObjectMapper json;
     @Autowired RevisionService revisions;
     @MockBean BillMapper mapper;
+    @MockBean com.sicost.apiops.BillingCheckService billingChecks;
     @MockBean SharedQueriesMapper shared;
     @MockBean CurrentUserProvider users;
     @MockBean ChangeHistoryMapper history;
@@ -93,6 +94,18 @@ class BillContractTest {
     @Test void publicEmptyListAndMissingDetailAreRealAndReadOnly() throws Exception {
         mvc.perform(get("/api/bills").param("year","2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.total").value(0)).andExpect(jsonPath("$.data.totals.totalAmount").value("0"));
         detail("B-202607-001").andExpect(status().isNotFound());noWrites();
+    }
+    @Test void projectNameFiltersListAndTotalsAsLiteralSubstring() throws Exception {
+        project=new Project(project.id(),"저마진 프로젝트",project.customerName(),project.contractType(),project.status(),project.endDate());
+        create(draft()).andExpect(status().isCreated());
+        clearInvocations(mapper,history,invalidation);
+        mvc.perform(get("/api/bills").param("year","2026").param("projectName"," 프로젝트 "))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+            .andExpect(jsonPath("$.data.totals.supplyAmount").value("101"));
+        mvc.perform(get("/api/bills").param("year","2026").param("projectName","%"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0))
+            .andExpect(jsonPath("$.data.totals.supplyAmount").value("0"));
+        noWrites();
     }
     @Test void publicCreatePreservesExplicitSupplyAndCalculatesDownVatAndAudit() throws Exception {
         create(draft()).andExpect(status().isCreated()).andExpect(jsonPath("$.data.bill.id").value("B-202607-001")).andExpect(jsonPath("$.data.bill.order").value(1)).andExpect(jsonPath("$.data.bill.supplyAmount").value("101"))
@@ -175,6 +188,30 @@ class BillContractTest {
         put(update().put("supplyAmount","100").put("vatRate","0")).andExpect(status().isOk()).andExpect(jsonPath("$.data.bill.status").value("PAID"));
     }
     @Test void receiptChangeInvalidatesEvenNoop() throws Exception {create(draft()).andExpect(status().isCreated());var b=update();Stored row=bills.get(0);receipts.add(new ReceiptStored(1,row.id(),row.billingDate(),BigDecimal.ONE,false,null,null,null,"admin",row.registeredAt(),null,null));put(b).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));}
+    @Test void closedMonthAdjustmentRequiresFreshExactDeltaAndAddsOnlyOneBill() throws Exception {
+        create(draft()).andExpect(status().isCreated());
+        Stored original = bills.get(0);
+        when(shared.monthCloses("202607","202607")).thenReturn(List.of(new CloseRow("202607","CLOSE")));
+        var context = new com.sicost.apiops.BillingReviewDtos.CheckContext("P-BILL","2026-07","preview");
+        var remedy = new com.sicost.apiops.BillingReviewDtos.Remedy(
+            "CLOSED_MONTH_ADJUSTMENT","P-BILL","2026-07",original.id(),"50",null,context,null,List.of(original.id()));
+        var row = mock(com.sicost.apiops.BillingReviewDtos.CheckRow.class);
+        when(row.remedy()).thenReturn(remedy);
+        when(billingChecks.validateContext(context)).thenReturn(row,row)
+            .thenThrow(new ApiException(409,"BILL_CHECK_CHANGED","점검을 다시 조회해 주세요."));
+        ObjectNode request = draft().put("closedMonthAdjustment",true);
+        create(request).andExpect(status().isBadRequest());
+        request.putObject("checkContext").put("projectId","P-BILL").put("month","2026-07").put("checkRevision","preview");
+        create(request).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("BILL_CHECK_CHANGED"));
+        request.put("supplyAmount","50");
+        create(request).andExpect(status().isCreated()).andExpect(jsonPath("$.data.bill.supplyAmount").value("50"))
+            .andExpect(jsonPath("$.data.bill.unpaidAmount").value("55"));
+        create(request).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("BILL_CHECK_CHANGED"));
+        ObjectNode ordinary = request.deepCopy();
+        ordinary.remove("closedMonthAdjustment");
+        create(ordinary).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CLOSED_MONTH"));
+        assertThat(bills).hasSize(2).contains(original);
+    }
     @Test void closedBillAndPastContextBlockWrites() throws Exception {create(draft()).andExpect(status().isCreated());when(shared.monthCloses("202607","202607")).thenReturn(List.of(new CloseRow("202607","CLOSE")));put(update()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CLOSED_MONTH"));create(draft()).andExpect(status().isConflict());put(update().put("year",2025)).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("READ_ONLY_YEAR"));}
     @Test void turnkeyOldRecognitionMonthCannotMoveOutOfClose() throws Exception {project=new Project(project.id(),project.name(),project.customerName(),"TK","ING",project.endDate());create(draft().put("billingDate","2026-06-30")).andExpect(status().isCreated());when(shared.monthCloses("202606","202606")).thenReturn(List.of(new CloseRow("202606","CLOSE")));put(update()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CLOSED_MONTH"));assertThat(bills.get(0).billingDate()).isEqualTo(LocalDate.of(2026,6,30));}
     @Test void endedExistingBillIsReadableAndEditableButNotNewOption() throws Exception {create(draft()).andExpect(status().isCreated());project=new Project(project.id(),project.name(),project.customerName(),"MO","END",project.endDate());detail(bills.get(0).id()).andExpect(status().isOk());put(update().put("taxInvoiceNo","END-1")).andExpect(status().isOk());create(draft().put("billingMonth","2026-08")).andExpect(status().isConflict());}

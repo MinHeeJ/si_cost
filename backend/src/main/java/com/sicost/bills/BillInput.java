@@ -6,6 +6,7 @@ import com.sicost.common.validation.ProjectInputPolicy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import static com.sicost.bills.BillDtos.*;
@@ -27,7 +28,7 @@ public final class BillInput {
     }
     public static int detailQuery(Map<String,String> q) {query(q,Set.of("year"));return integer(q.get("year"),"year");}
     public static Query list(Map<String,String> q) {
-        query(q,Set.of("year","status","month","projectId","includeCarryover","missingInvoiceNo","page","size","sort","direction"));
+        query(q,Set.of("year","status","month","projectId","projectName","includeCarryover","missingInvoiceNo","page","size","sort","direction"));
         int year=integer(q.get("year"),"year"),page=q.containsKey("page")?integer(q.get("page"),"page"):1,size=q.containsKey("size")?integer(q.get("size"),"size"):50;
         if(page<1)throw invalid("page");if(!Set.of(20,50,100).contains(size))throw invalid("size");
         String status=q.get("status"),month=q.get("month"),project=q.get("projectId"),sort=q.get("sort"),direction=q.getOrDefault("direction","DESC");
@@ -37,16 +38,27 @@ public final class BillInput {
         if(sort!=null&&!SORTS.contains(sort))throw invalid("sort");if(!Set.of("ASC","DESC").contains(direction))throw invalid("direction");
         String carry=q.getOrDefault("includeCarryover","true");if(!Set.of("true","false").contains(carry))throw invalid("includeCarryover");
         String missing=q.getOrDefault("missingInvoiceNo","false");if(!Set.of("true","false").contains(missing))throw invalid("missingInvoiceNo");
-        return new Query(year,status,month,project,Boolean.parseBoolean(carry),page,size,sort,direction,Boolean.parseBoolean(missing));
+        return new Query(year,status,month,project,Boolean.parseBoolean(carry),page,size,sort,direction,Boolean.parseBoolean(missing),projectName(q.get("projectName")));
+    }
+    public static String projectName(String value) {
+        return ProjectInputPolicy.optionalText(value,100,"projectName");
+    }
+    public static boolean matchesProjectName(String name,String search) {
+        return search == null || name != null && name.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT));
     }
     public static CreateBillRequest create(JsonNode b) {
-        allow(b,Set.of("year","projectId","billingMonth","supplyAmount","vatRate","billingDate","dueDate","taxInvoiceNo","confirmDuplicate","duplicateToken","checkContext","copyContext"));
+        allow(b,Set.of("year","projectId","billingMonth","supplyAmount","vatRate","billingDate","dueDate","taxInvoiceNo","confirmDuplicate","duplicateToken","checkContext","copyContext","closedMonthAdjustment"));
         CheckContext check=check(b);CopyContext copy=null;
         if(b.has("copyContext")) {JsonNode c=b.get("copyContext");allow(c,Set.of("sourceBillId","expectedRevision"));copy=new CopyContext(id(text(c,"sourceBillId")),revision(c,"expectedRevision"));}
         if(check!=null&&copy!=null)throw invalid("checkContext");
         boolean confirm=false;if(b.has("confirmDuplicate")){if(!b.get("confirmDuplicate").isBoolean())throw invalid("confirmDuplicate");confirm=b.get("confirmDuplicate").booleanValue();}
         String token=b.has("duplicateToken")?revision(b,"duplicateToken"):null;
-        return new CreateBillRequest(year(b),ProjectInputPolicy.text(text(b,"projectId"),20,"projectId"),ProjectInputPolicy.month(text(b,"billingMonth"),"billingMonth").toString(),editable(b),confirm,token,check,copy);
+        JsonNode adjustment = b.get("closedMonthAdjustment");
+        if (adjustment != null && !adjustment.isBoolean())throw invalid("closedMonthAdjustment");
+        boolean closedMonthAdjustment = adjustment != null && adjustment.booleanValue();
+        if (closedMonthAdjustment && (check == null || copy != null || confirm || token != null))throw invalid("closedMonthAdjustment");
+        return new CreateBillRequest(year(b),ProjectInputPolicy.text(text(b,"projectId"),20,"projectId"),
+            ProjectInputPolicy.month(text(b,"billingMonth"),"billingMonth").toString(),editable(b),confirm,token,check,copy,closedMonthAdjustment);
     }
     public static PutBillRequest update(JsonNode b) {
         allow(b,Set.of("year","expectedRevision","supplyAmount","vatRate","billingDate","dueDate","taxInvoiceNo","checkContext"));

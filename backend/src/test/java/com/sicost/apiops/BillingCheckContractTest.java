@@ -95,6 +95,23 @@ class BillingCheckContractTest {
             .andExpect(jsonPath("$.data.items[0].sources[0].protected").value(true)).andExpect(jsonPath("$.data.items[0].remedy.mode").value("DETAIL_ONLY"))
             .andExpect(jsonPath("$.data.items[0].remedy.proposedSupplyAmount").isEmpty()).andExpect(jsonPath("$.data.includesPlanned").value(false));
     }
+    @ParameterizedTest
+    @ValueSource(strings={"25","50","60"})
+    void closedMonthWithExistingBillOnlyOffersPositiveUnderbillingDelta(String amount) throws Exception {
+        bills.add(bill("B",amount));
+        when(shared.monthCloses(anyString(),anyString())).thenReturn(List.of(new CloseRow("202607","CLOSE")));
+        when(monthly.closeStatus("202607")).thenReturn("CLOSE");
+        when(monthly.months("A")).thenReturn(List.of(new AssignmentMonthlyService.StoredMonth(
+            "202607",31,new BigDecimal("0.50"),new BigDecimal("101"),new BigDecimal("50"),"Y")));
+        var result = mvc.perform(get("/api/billing-checks").param("month","2026-07")).andExpect(status().isOk());
+        if("25".equals(amount)) {
+            result.andExpect(jsonPath("$.data.items[0].remedy.mode").value("CLOSED_MONTH_ADJUSTMENT"))
+                .andExpect(jsonPath("$.data.items[0].remedy.proposedSupplyAmount").value("25"));
+        } else {
+            result.andExpect(jsonPath("$.data.items[0].remedy.mode").value("50".equals(amount)?"NONE":"DETAIL_ONLY"))
+                .andExpect(jsonPath("$.data.items[0].remedy.proposedSupplyAmount").isEmpty());
+        }
+    }
     @Test void endedProjectWithSourcesIsIncluded() throws Exception {
         when(mapper.checkProjects()).thenReturn(List.of(new Project("P","완료 프로젝트","DP","END")));
         mvc.perform(get("/api/billing-checks")).andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1));

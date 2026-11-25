@@ -6,10 +6,14 @@ import type { ReminderResult } from "./dunningDeliveryApi";
 
 export function ReceivableDeliveryActions({
   billId,
+  reminderLabel = "다시알림",
+  deliveryLabel = "전달상태",
   onChanged,
   onPanelChange,
 }: {
   billId: string;
+  reminderLabel?: string;
+  deliveryLabel?: string;
   onPanelChange?(open: boolean): void;
   onChanged?(): Promise<void> | void;
 }) {
@@ -40,7 +44,7 @@ export function ReceivableDeliveryActions({
           data-testid={`reminder-open-${billId.toLowerCase()}`}
           onClick={() => setOpen("reminder")}
         >
-          다시알림
+          {reminderLabel}
         </button>
       )}
       <button
@@ -48,7 +52,7 @@ export function ReceivableDeliveryActions({
         data-testid={`deliveries-open-${billId.toLowerCase()}`}
         onClick={() => setOpen("deliveries")}
       >
-        전달상태
+        {deliveryLabel}
       </button>
       {activePanel === "reminder" && (
         <ReminderDialog

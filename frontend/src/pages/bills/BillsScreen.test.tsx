@@ -201,6 +201,53 @@ async function choose() {
     expect(screen.getByRole("button", { name: "등록" })).not.toBeDisabled(),
   );
 }
+it("청구 등록 도움말과 현재 청구월의 공급가 안내 및 산정 내역을 구분한다", async () => {
+  const manual = "공급가를 직접 입력해 주세요.";
+  vi.mocked(api.getEstimate).mockImplementation(async (projectId, month) => ({
+    projectId,
+    month,
+    supplyAmount: month === "2026-07" ? "0" : "101",
+    vatRate: "10",
+    defaultBillingDate: "2026-07-15",
+    defaultDueDate: "2026-09-25",
+    warnings: month === "2026-07" ? [manual, manual] : [],
+    sources: month === "2026-07" ? [] : [{
+      assignmentId: "A-TEST",
+      developerName: "시험 인력",
+      managementNo: "DEV-TEST",
+      appliedUnitPrice: "202",
+      mm: "0.5",
+      supplyAmount: "101",
+      protected: false,
+    }],
+  }));
+  form();
+  const help = screen.getByRole("button", { name: "청구 등록 도움말" });
+  await userEvent.click(help);
+  const tooltip = screen.getByRole("tooltip");
+  expect(tooltip).toHaveTextContent("세금계산서 번호는 비워 두어도 저장할 수 있습니다.");
+  expect(tooltip).toHaveTextContent("부가세와 합계는 저장 후 목록·상세에서 확인합니다.");
+
+  await screen.findByRole("option", { name: "청구 시험 프로젝트 · 시험 고객" });
+  fireEvent.change(screen.getByLabelText("프로젝트 *"), {
+    target: { value: "P-TEST" },
+  });
+  expect((await screen.findByText(manual)).closest('[role="alert"]')).toHaveClass(
+    "sicost-tone-warn",
+  );
+  expect(screen.getAllByText(manual)).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText("청구월 *"), {
+    target: { value: "2026-08" },
+  });
+  const sourceSummary = await screen.findByText("공급가 산정 내역 (1건)");
+  expect(screen.queryByText(manual)).not.toBeInTheDocument();
+  expect(sourceSummary.closest("details")).not.toHaveAttribute("open");
+  await userEvent.click(sourceSummary);
+  const sources = screen.getByRole("table", { name: "공급가 산정 내역" });
+  expect(within(sources).getByText("시험 인력")).toBeVisible();
+  expect(within(sources).getByText("101")).toBeVisible();
+});
+
 it.each([
   { actions: ["INQ", "DNLD"], register: false, update: false, download: true },
   { actions: ["INQ", "REG"], register: true, update: false, download: false },
@@ -395,6 +442,51 @@ it("청구 등록은 흰 글자의 파란 주 버튼이다", async () => {
   await screen.findByRole("button", { name: bill.id });
   expect(screen.getByTestId("bill-create")).toHaveClass("sicost-primary");
 });
+it("프로젝트명 직접 조회와 프로젝트 선택을 청구 목록 조건에 적용한다", async () => {
+  vi.mocked(projects.getProjects).mockResolvedValue({
+    items: [{
+      id: "P-LOW",
+      name: "저마진 파견",
+      status: "END",
+      customerName: "시험 고객",
+      contractType: "DP",
+      startDate: "2026-01-01",
+      endDate: "2026-06-30",
+      contractAmount: "1000",
+      personCount: 1,
+      partName: null,
+      distribution: null,
+    }],
+    total: 1,
+    unassignedCount: 0,
+    page: 1,
+    size: 20,
+    year: 2026,
+  });
+  render(<BillsScreen />);
+  await screen.findByRole("button", { name: bill.id });
+  const input = screen.getByTestId("bill-project-filter");
+  fireEvent.change(input, { target: { value: " 저마진 " } });
+  expect(projects.getProjects).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByTestId("bill-search"));
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(
+    expect.objectContaining({ projectId: undefined, projectName: "저마진", page: 1 }),
+  ));
+
+  await userEvent.click(screen.getByRole("button", { name: "프로젝트 선택" }));
+  const picker = await screen.findByRole("dialog", { name: "프로젝트 선택" });
+  await userEvent.click(await within(picker).findByRole("button", { name: "저마진 파견 선택" }));
+  expect(input).toHaveValue("저마진 파견");
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(
+    expect.objectContaining({ projectId: "P-LOW", projectName: undefined, page: 1 }),
+  ));
+
+  fireEvent.change(input, { target: { value: "연간" } });
+  await userEvent.click(screen.getByTestId("bill-search"));
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(
+    expect.objectContaining({ projectId: undefined, projectName: "연간", page: 1 }),
+  ));
+});
 it("조회 버튼은 필터 오른쪽 끝의 [초기화][조회]로 공통 필터 바를 쓴다", async () => {
   render(<BillsScreen />);
   await screen.findByRole("button", { name: bill.id });
@@ -431,6 +523,13 @@ it("청구 목록 다운로드는 현재 조건·정렬 전체를 view=BILLS로 
       expect.objectContaining({ status: "UNPAID" }),
     ),
   );
+  fireEvent.change(screen.getByTestId("bill-project-filter"), {
+    target: { value: "시험 프로젝트" },
+  });
+  await userEvent.click(screen.getByTestId("bill-search"));
+  await waitFor(() => expect(api.getBills).toHaveBeenLastCalledWith(
+    expect.objectContaining({ projectName: "시험 프로젝트" }),
+  ));
   await userEvent.click(screen.getByTestId("billing-review-download-bills"));
   await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   const [url, init] = fetchMock.mock.calls[0];
@@ -440,6 +539,7 @@ it("청구 목록 다운로드는 현재 조건·정렬 전체를 view=BILLS로 
   expect(body.filters).toMatchObject({
     year: 2026,
     status: "UNPAID",
+    projectName: "시험 프로젝트",
     includeCarryover: true,
   });
   expect(body.columns).toHaveLength(12);
@@ -499,7 +599,10 @@ it("다른 화면 기간이벤트는 무시하고 지난해는 조회·계획연
       }),
     );
   });
-  await screen.findByText("계획 · 내년 청구 목록");
+  await waitFor(() =>
+    expect(api.getBills).toHaveBeenLastCalledWith(expect.objectContaining({ year: 2027 })),
+  );
+  expect(screen.queryByText("계획 · 내년 청구 목록")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "청구 등록" })).not.toBeDisabled();
 });
 it("신규는 서버기본과 명시금액을 제출하고 폼에서 계산값을 보이지 않는다", async () => {
@@ -615,7 +718,50 @@ it("월변경은 편집금액 교체확인과 수기예정일 변경 안내를 �
   await waitFor(() =>
     expect(screen.getByLabelText("입금 예정일 *")).toHaveValue("2026-09-25"),
   );
-  await screen.findByText(/수기 입금예정일/);
+  const notice = await screen.findByText("입금 예정일 변경");
+  expect(notice.closest('[role="status"]')).toHaveTextContent("다음 달 25일");
+});
+it("마감월 차액 청구는 프로젝트·청구월·공급가를 고정해 신규 등록한다", async () => {
+  const checkContext = { projectId: bill.projectId, month: "2026-06", checkRevision: "preview" };
+  vi.mocked(shared.getMonthClose).mockResolvedValue({
+    items: [{ month: "2026-06", status: "마감" }],
+  });
+  render(
+    <BillFormDialog
+      year={2026}
+      period={period}
+      initial={{
+        year: 2026,
+        projectId: bill.projectId,
+        billingMonth: "2026-06",
+        supplyAmount: "5000000",
+        vatRate: "10",
+        billingDate: "2026-07-15",
+        dueDate: "2026-08-25",
+        taxInvoiceNo: null,
+        checkContext,
+        closedMonthAdjustment: true,
+      }}
+      onSaved={vi.fn()}
+      onClose={vi.fn()}
+    />,
+  );
+  const dialog = screen.getByRole("dialog", { name: "추가 청구(차액)" });
+  const register = within(dialog).getByRole("button", { name: "등록" });
+  await waitFor(() => expect(register).toBeEnabled());
+  const supply = within(dialog).getByLabelText("공급가 (원) *");
+  expect(supply).toHaveValue("5000000");
+  expect(supply).toHaveAttribute("readonly");
+  expect(within(dialog).queryByLabelText("프로젝트 *")).not.toBeInTheDocument();
+  expect(within(dialog).queryByLabelText("청구월 *")).not.toBeInTheDocument();
+  await userEvent.click(register);
+  expect(api.createBill).toHaveBeenCalledWith(expect.objectContaining({
+    projectId: bill.projectId,
+    billingMonth: "2026-06",
+    supplyAmount: "5000000",
+    checkContext,
+    closedMonthAdjustment: true,
+  }));
 });
 it("마감월은 저장을 차단한다", async () => {
   vi.mocked(shared.getMonthClose).mockResolvedValue({
@@ -725,10 +871,41 @@ it("상세는 취소포함 입금의 전체·정상건수와 번호경고를 구
       onEdit={vi.fn()}
     />,
   );
-  await screen.findByText("번호 미입력");
+  const warning = (await screen.findByText("번호 미입력")).closest('[role="alert"]');
+  expect(warning).toHaveClass("sicost-feedback", "sicost-tone-warn");
+  expect(warning).toHaveTextContent("세금계산서 번호 확인");
   await userEvent.click(screen.getByRole("tab", { name: "입금 내역 (1)" }));
   expect(screen.getByText("정상 입금 0건")).toBeInTheDocument();
   expect(screen.getByText(/오입금 · admin/)).toBeInTheDocument();
+});
+it("상세의 청구 작업·입금 취소 안내·미수금 알림을 구분한다", async () => {
+  vi.mocked(api.getBill).mockResolvedValue({
+    ...detail,
+    bill: { ...bill, status: "PAID" },
+    receipts: { ...detail.receipts, total: 1, normalCount: 1 },
+  });
+  render(
+    <BillDetailDrawer
+      id={bill.id}
+      year={2026}
+      period={period}
+      onClose={vi.fn()}
+      onEdit={vi.fn()}
+    />,
+  );
+  const actions = await screen.findByRole("group", { name: "청구 및 입금 작업" });
+  const cancel = within(actions).getByRole("button", { name: "청구 취소" });
+  await waitFor(() => expect(cancel).toHaveAccessibleDescription(/먼저 입금을 취소/));
+  expect(cancel).toBeDisabled();
+  expect(actions.closest("header")).toBeNull();
+  expect(screen.getByText("정상 입금 1건")).toHaveClass("sicost-badge");
+
+  const reminders = screen.getByRole("region", { name: "미수금 알림" });
+  expect(within(reminders).getByText("알림 기준 설정 확인 필요")).toHaveClass(
+    "sicost-tone-neutral",
+  );
+  expect(within(reminders).getByRole("button", { name: "미수금 다시 알림" })).toBeVisible();
+  expect(within(reminders).getByRole("button", { name: "알림 전달 상태" })).toBeVisible();
 });
 it("기본 업무 호스트가 기존 점검·미수 패널과 다건 선택을 연결한다", async () => {
   render(<BillsScreen />);

@@ -19,7 +19,7 @@ export type BillingCheckContext = {
   checkRevision: string;
 };
 export type BillingCheckRemedy = {
-  mode: "CREATE" | "UPDATE" | "DETAIL_ONLY" | "NONE";
+  mode: "CREATE" | "UPDATE" | "CLOSED_MONTH_ADJUSTMENT" | "DETAIL_ONLY" | "NONE";
   projectId: string;
   month: string;
   billId: string | null;

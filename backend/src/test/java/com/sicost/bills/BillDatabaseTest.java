@@ -48,6 +48,9 @@ class BillDatabaseTest {
         context.registerBean(Clock.class,()->Clock.fixed(Instant.parse("2080-07-15T00:00:00Z"),ZoneId.of("Asia/Seoul")));
         context.registerBean(BillMapper.class,()->session.getMapper(BillMapper.class));context.registerBean(SharedQueriesMapper.class,()->session.getMapper(SharedQueriesMapper.class));context.registerBean(AggregateLockMapper.class,()->session.getMapper(AggregateLockMapper.class));context.registerBean(CurrentUserMapper.class,()->session.getMapper(CurrentUserMapper.class));context.registerBean(ChangeHistoryMapper.class,()->session.getMapper(ChangeHistoryMapper.class));
         context.registerBean(com.sicost.receipts.ReceiptMapper.class,()->session.getMapper(com.sicost.receipts.ReceiptMapper.class));
+        context.registerBean(com.sicost.apiops.BillingReviewMapper.class,()->session.getMapper(com.sicost.apiops.BillingReviewMapper.class));
+        context.registerBean(com.sicost.common.assignments.AssignmentMonthlyMapper.class,()->session.getMapper(com.sicost.common.assignments.AssignmentMonthlyMapper.class));
+        context.register(com.sicost.apiops.BillingCheckService.class,com.sicost.apiops.BillingReviewRepository.class,com.sicost.common.assignments.AssignmentMonthlyService.class);
         context.register(Transactions.class,CurrentUserProvider.class,ChangeHistoryWriter.class,RevisionService.class,WriteCoordinator.class,CommitInvalidation.class,BillRepository.class,BillService.class,com.sicost.receipts.ReceiptRepository.class,com.sicost.receipts.ReceiptService.class);context.register(com.sicost.common.LegacyBusinessPolicyFixtures.class);context.refresh();service=context.getBean(BillService.class);
         mvc=MockMvcBuilders.standaloneSetup(new BillController(service)).setControllerAdvice(new ApiExceptionHandler()).addFilters(new RequestIdFilter()).build();
         projectId="B:"+UUID.randomUUID().toString().replace("-","").substring(0,16);

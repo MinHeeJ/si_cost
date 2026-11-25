@@ -89,6 +89,24 @@ it("API 카드를 같은 집계로 표시하고 고정 보완 문맥을 그대�
     screen.getByText("예정 포함", { selector: ".sicost-badge" }),
   ).toHaveClass("sicost-tone-info");
 });
+it("마감월 차액 조치는 기존 청구 상세와 함께 등록 문맥을 전달한다", async () => {
+  const adjustment: api.BillingCheckRemedy = {
+    ...row.remedy,
+    mode: "CLOSED_MONTH_ADJUSTMENT",
+    billId: "B-202607-001",
+    proposedSupplyAmount: "5000000",
+    relatedBillIds: ["B-202607-001"],
+  };
+  vi.mocked(api.getBillingChecks).mockResolvedValue({
+    ...result,
+    includesPlanned: false,
+    items: [{ ...row, verdict: "적게 청구", billCount: 1, remedy: adjustment }],
+  });
+  const { remedy } = draw();
+  await userEvent.click(await screen.findByRole("button", { name: "추가 청구(차액)" }));
+  expect(remedy).toHaveBeenCalledWith(adjustment);
+  expect(screen.getByRole("button", { name: "관련 청구 상세 B-202607-001" })).toBeVisible();
+});
 it("투입 MM 헤더 도움말에 표시 자릿수를 안내한다", async () => {
   draw();
   await screen.findByRole("button", { name: "보완" });
