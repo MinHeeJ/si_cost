@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterBar } from "../../shared/FilterBar";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { DetailDrawer } from "../../shared/DetailDrawer";
-import { ErrorBanner, FloatingToast, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { formatAmount } from "../../shared/format";
 import {
@@ -139,10 +139,9 @@ export function CandidatesScreen({
     [error, setError] = useState<unknown>();
   const [shortageContext, setShortageContext] =
     useState<CandidateShortageContext>();
-  const [shortageToast, setShortageToast] =
-    useState<{ sequence: number; message: string }>();
+  const [shortageNotice, setShortageNotice] = useState<string>();
   useEffect(() => {
-    if (!active) setShortageToast(undefined);
+    if (!active) setShortageNotice(undefined);
   }, [active]);
   const [codes, setCodes] = useState<Record<string, api.CandidateCode[]>>({}),
     [today, setToday] = useState("");
@@ -371,7 +370,7 @@ export function CandidatesScreen({
       values.availability
     ) {
       setShortageContext(undefined);
-      setShortageToast(undefined);
+      setShortageNotice(undefined);
     }
     if (reset) setDraft(initialFilters);
     setHighlight(undefined);
@@ -525,16 +524,24 @@ export function CandidatesScreen({
           </button>
         </header>
       </ScreenTitleActions>
+      {active && shortageNotice && (
+        <FeedbackNotice
+          tone="info"
+          title="후보 조회 범위"
+          onDismiss={() => setShortageNotice(undefined)}
+        >
+          {shortageNotice}
+        </FeedbackNotice>
+      )}
       <CandidateSummaryPanel refreshKey={version} active={active} />
       <CandidateShortagesPanel
         refreshKey={version}
         active={active}
         jobLabel={(code) => label("JOB", code)}
         onView={(row) => {
-          setShortageToast((previous) => ({
-            sequence: (previous?.sequence ?? 0) + 1,
-            message: `${label("JOB", row.jobCode)} 직무에서 ${row.availableUntil}까지 투입 가능한 후보를 조회합니다. 보류·계약 완료는 제외합니다. [초기화]를 누르면 조회 조건이 해제됩니다.`,
-          }));
+          setShortageNotice(
+            `${label("JOB", row.jobCode)} 직무에서 ${row.availableUntil}까지 투입 가능한 후보를 조회합니다. 보류·계약 완료는 제외합니다. [초기화]를 누르면 조회 조건이 해제됩니다.`,
+          );
           setShortageContext({
             jobCode: row.jobCode,
             availableUntil: row.availableUntil,
@@ -544,13 +551,6 @@ export function CandidatesScreen({
           setFilters({ jobCode: row.jobCode, page: 1, size: filters.size });
         }}
       />
-      {active && shortageToast && (
-        <FloatingToast
-          key={shortageToast.sequence}
-          message={shortageToast.message}
-          durationMs={7000}
-        />
-      )}
       {lookupError != null && (
         <ErrorBanner
           message="필터 코드와 서버 날짜를 불러오지 못했습니다."

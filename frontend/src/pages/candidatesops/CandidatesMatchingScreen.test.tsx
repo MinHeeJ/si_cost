@@ -138,11 +138,11 @@ it("places shortages under existing summary and exact cutoff view resets without
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "후보 보기" }));
-  const toast = await screen.findByText(/2027-06-30까지 투입 가능한 후보를 조회합니다/);
-  expect(toast).toHaveAttribute("role", "status");
-  expect(toast).toHaveTextContent("보류·계약 완료는 제외합니다.");
-  expect(toast).toHaveTextContent("[초기화]를 누르면 조회 조건이 해제됩니다.");
-  expect(screen.getByTestId("candidate-filters")).not.toContainElement(toast);
+  const notice = (await screen.findByText(/2027-06-30까지 투입 가능한 후보를 조회합니다/)).closest<HTMLElement>('[role="status"]');
+  expect(notice).toHaveAttribute("role", "status");
+  expect(notice).toHaveTextContent("보류·계약 완료는 제외합니다.");
+  expect(notice).toHaveTextContent("[초기화]를 누르면 조회 조건이 해제됩니다.");
+  expect(screen.getByTestId("candidate-filters")).not.toContainElement(notice);
   expect(screen.getByTestId("candidate-filter-job-code")).toHaveValue("DEV");
   await waitFor(() =>
     expect(people.getCandidates).toHaveBeenCalledWith(

@@ -3,6 +3,18 @@ import { useEffect, type RefObject } from "react";
 const layers: { element: HTMLElement; priority: number }[] = [];
 let previousOverflow = "";
 
+function topLayer() {
+  return layers.reduce<(typeof layers)[number] | undefined>(
+    (top, layer) => (!top || layer.priority >= top.priority ? layer : top),
+    undefined,
+  );
+}
+
+export function canFocusOverlayContent(element: HTMLElement) {
+  const active = topLayer();
+  return !active || active.element.contains(element);
+}
+
 /** Shared lock and topmost-layer arbitration for nested portals. No business dirty state lives here. */
 export function useOverlayLayer(
   ref: RefObject<HTMLElement>,
@@ -24,9 +36,5 @@ export function useOverlayLayer(
       if (!layers.length) document.body.style.overflow = previousOverflow;
     };
   }, [open, ref, priority]);
-  return () =>
-    layers.reduce<(typeof layers)[number] | undefined>(
-      (top, layer) => (!top || layer.priority >= top.priority ? layer : top),
-      undefined,
-    )?.element === ref.current;
+  return () => topLayer()?.element === ref.current;
 }

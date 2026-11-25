@@ -157,6 +157,7 @@ export function BillDetailDrawer({
   const bill = detail?.bill;
   return (
     <DetailDrawer
+      feedback={error != null && <BillError error={error} retry={() => setReload((v) => v + 1)} />}
       hidden={deliveryOpen}
       title={`청구 상세 ${id}`}
       onClose={onClose}
@@ -198,7 +199,6 @@ export function BillDetailDrawer({
         )
       }
     >
-      <BillError error={error} retry={() => setReload((v) => v + 1)} />
       {loading && <ScreenLoading message="청구 상세를 불러오는 중입니다." />}
       {detail && bill && (
         <>

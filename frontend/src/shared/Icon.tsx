@@ -3,6 +3,9 @@ import type { SVGProps } from "react";
 // Menu names come from MenuNode.icon; unknown DB icons use the folder fallback.
 const paths: Record<string, string> = {
   info: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 11v6 M12 7h.01",
+  checkCircle: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M7.5 12l3 3L16.5 9",
+  errorCircle: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 7v6 M12 17h.01",
+  close: "m6 6 12 12M18 6 6 18",
   warning: "M12 3 22 21H2z M12 10v5 M12 18h.01",
   grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
   db: "M4 6c0-4 16-4 16 0s-16 4-16 0 M4 6v12c0 4 16 4 16 0V6 M4 12c0 4 16 4 16 0",

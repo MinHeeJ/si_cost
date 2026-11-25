@@ -242,7 +242,7 @@ describe("공통코드 편집 계약", () => {
       }),
     );
     const toast = await screen.findByText("저장했습니다.");
-    expect(toast).toHaveClass("sicost-toast");
+    expect(toast.closest(".sicost-toast")).toBeInTheDocument();
     expect(container).not.toContainElement(toast);
   });
   it("신규 창 추가는 로컬행이며 하단 취소가 복원한다", async () => {
@@ -415,9 +415,9 @@ describe("공통코드 편집 계약", () => {
     });
     vi.mocked(api.getCodeGroups).mockRejectedValue(new Error("재조회 실패"));
     await userEvent.click(screen.getByRole("button", { name: "저장" }));
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "저장됐지만 다시 불러오지 못했습니다.",
-    );
+    const warning = (await screen.findByText(/저장됐지만 다시 불러오지 못했습니다/)).closest('[role="alert"]');
+    expect(warning).toHaveClass("sicost-tone-warn");
+    expect(warning).toHaveTextContent("변경 완료 · 화면 갱신 실패");
     expect(api.saveGroupCodes).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
   });

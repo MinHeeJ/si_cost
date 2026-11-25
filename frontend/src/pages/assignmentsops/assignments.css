@@ -222,8 +222,21 @@ button.assignment-candidate-exclude:hover:not(:disabled) {
   gap: 8px;
   margin-bottom: 12px;
 }
-.assignment-warnings p {
-  margin: 0;
+.sicost-feedback-slot > .assignment-warnings,
+.assignment-tabs + .assignment-warnings {
+  margin-top: 6px;
+}
+.sicost-feedback-slot > .assignment-warnings {
+  margin-bottom: 0;
+}
+.assignment-warnings p + p {
+  margin-top: 4px;
+}
+.assignment-preview-months {
+  color: var(--text-sub);
+}
+.assignment-preview-edit {
+  margin-inline-end: auto;
 }
 .assignment-history-filter {
   margin: 0 0 8px;

@@ -439,6 +439,7 @@ export function useFinancialEditor(
     busy.current = true;
     setPending(true);
     setError(undefined);
+    setMessage("");
     try {
       const body = financialPayload(editor, draft);
       const reflected = [

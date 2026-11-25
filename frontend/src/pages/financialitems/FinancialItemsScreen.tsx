@@ -7,7 +7,7 @@ import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { PeriodSelector } from "../shared/PeriodSelector";
 import { getSharedCodes } from "../shared/sharedApi";
-import { ErrorBanner, StatusBadge, FloatingToast } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge, FloatingToast } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { usePermission } from "../../shared/permission/PermissionBoundary";
 
@@ -866,55 +866,53 @@ export function FinancialItemsEditor({
           </select>
         </label>
       </div>
-      {state.error != null && (
-        <ErrorBanner
-          message={
-            state.error instanceof Error
-              ? state.error.message
-              : "요청을 처리하지 못했습니다."
-          }
-          requestId={
-            state.error instanceof ApiError
-              ? state.error.body.requestId
-              : undefined
-          }
-        />
-      )}
-      {state.violations.map((v, index) => (
-        <p role="alert" key={index}>
-          {v.tab === "CARD_TRANSFER_LOAN"
-            ? "카드·이체·대여금"
-            : "판관비·법인세·조정"}{" "}
-          · {v.rowId} · {v.field}: {v.message}
-        </p>
-      ))}
-      {state.refreshFailed && (
-        <div className="sicost-banner sicost-tone-warn">
-          저장됐지만 다시 불러오지 못했습니다. 재저장하지 말고 조회해 주세요.
-          <button
-            type="button"
-            data-testid="financial-refresh-only"
-            onClick={() => void refresh().catch(state.setError)}
+      <div className="sicost-feedback-slot">
+        {state.refreshFailed ? (
+          <FeedbackNotice
+            tone="warn"
+            title="저장 완료 · 화면 갱신 실패"
+            action={
+              <button
+                type="button"
+                data-testid="financial-refresh-only"
+                onClick={() => void refresh().catch(state.setError)}
+              >
+                다시 조회
+              </button>
+            }
           >
-            다시 조회
-          </button>
-        </div>
-      )}
-      {state.message && !state.error && (
+            저장됐지만 다시 불러오지 못했습니다. 재저장하지 말고 조회해 주세요.
+          </FeedbackNotice>
+        ) : state.error != null && (
+          <ErrorBanner
+            title={state.violations.length ? "입력 항목 확인" : "재무항목 처리 실패"}
+            message={state.error instanceof Error ? state.error.message : "요청을 처리하지 못했습니다."}
+            requestId={state.error instanceof ApiError ? state.error.body.requestId : undefined}
+            onDismiss={() => state.setError(undefined)}
+            focusOnShow
+          />
+        )}
+        {state.violations.length > 0 && (
+          <FeedbackNotice tone="warn" title="확인할 항목">
+            <ul>
+              {state.violations.map((v, index) => (
+                <li key={index}>
+                  {v.tab === "CARD_TRANSFER_LOAN" ? "카드·이체·대여금" : "판관비·법인세·조정"}
+                  {" · "}{v.rowId} · {v.field}: {v.message}
+                </li>
+              ))}
+            </ul>
+          </FeedbackNotice>
+        )}
+        {state.previewError != null && (
+          <ErrorBanner
+            title="미리보기 조회 실패"
+            message="서버 미리보기를 불러오지 못했습니다. 입력을 확인한 뒤 다시 시도해 주세요."
+          />
+        )}
+      </div>
+      {state.message && !state.error && !state.pending && !state.refreshFailed && (
         <FloatingToast key={state.messageSequence} message={state.message} />
-      )}
-      {state.error != null && (
-        <FloatingToast
-          tone="bad"
-          message={
-            state.error instanceof Error
-              ? state.error.message
-              : "저장에 실패했습니다."
-          }
-        />
-      )}
-      {state.previewError != null && (
-        <ErrorBanner message="서버 미리보기를 불러오지 못했습니다. 입력을 확인한 뒤 다시 시도해 주세요." />
       )}
       {state.previewing && (
         <p role="status" data-testid="financial-preview-pending">

@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
 import { EditorFooter } from "../../shared/EditorFooter";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, FloatingToast, StatusBadge } from "../../shared/Feedback";
 import { HelpTooltip } from "../../shared/HelpTooltip";
 import { Icon } from "../../shared/Icon";
 import { Pagination } from "../../shared/Pagination";
@@ -93,7 +93,7 @@ export function PermissionsScreen({
   const [leave, setLeave] = useState<() => void>();
   const editorRef = useRef<HTMLElement>(null);
   const sequence = useRef(0),
-    { pending, message, commit } = useCommitRefresh();
+    { pending, outcome, clearOutcome, commit } = useCommitRefresh();
   const dirty =
     !!saved &&
     !!draft &&
@@ -342,28 +342,44 @@ export function PermissionsScreen({
       {historyActionTarget
         ? createPortal(historyButton, historyActionTarget)
         : historyActionTarget === undefined && historyButton}
-      {message && (
-        <p role="status" className="sicost-banner sicost-tone-info">
-          {message}
-        </p>
-      )}
-      {error != null && (
-        <ErrorBanner
-          message={
-            error instanceof Error
-              ? error.message
-              : "역할 설정을 조회하지 못했습니다."
-          }
-          requestId={
-            error instanceof ApiError ? error.body.requestId : undefined
-          }
-        />
-      )}
-      {Object.entries(fields).map(([field, text]) => (
-        <p className="sicost-field-error" key={field}>
-          {field}: {text}
-        </p>
-      ))}
+      {outcome?.kind === "saved" && <FloatingToast message={outcome.message} />}
+      <div className="sicost-feedback-slot">
+        {outcome?.kind === "refresh-failed" ? (
+          <FeedbackNotice
+            tone="warn"
+            title="저장 완료 · 화면 갱신 실패"
+            focusOnShow
+            action={
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void load(saved?.roleId).then(clearOutcome).catch(() => {})}
+              >
+                다시 조회
+              </button>
+            }
+          >
+            {outcome.message}
+          </FeedbackNotice>
+        ) : error != null && (
+          <FeedbackNotice
+            tone="bad"
+            title={outcome?.kind === "save-failed" ? "권한 저장 실패" : "권한 조회 실패"}
+            onDismiss={() => { setError(undefined); clearOutcome(); }}
+            focusOnShow={outcome?.kind === "save-failed"}
+          >
+            {error instanceof Error ? error.message : "역할 설정을 처리하지 못했습니다."}
+            {Object.keys(fields).length > 0 && (
+              <ul>
+                {Object.entries(fields).map(([field, text]) => <li key={field}>{field}: {text}</li>)}
+              </ul>
+            )}
+            {error instanceof ApiError && (
+              <small className="sicost-feedback-reference">문의 번호: {error.body.requestId}</small>
+            )}
+          </FeedbackNotice>
+        )}
+      </div>
       <div className="roles-toolbar">
         {roles.length > 0 && (
           <SegmentedTabList aria-label="역할">
@@ -736,18 +752,17 @@ export function PermissionsScreen({
           confirmLabel={modal === "NEW" ? "추가" : "복사"}
           confirmDisabled={modal === "COPY" && !source}
           onCancel={() => setModal(undefined)}
+          feedback={modalError != null && (
+            <ErrorBanner
+              title="역할 추가·복사 실패"
+              message={modalError instanceof Error ? modalError.message : "역할을 생성하지 못했습니다."}
+              requestId={modalError instanceof ApiError ? modalError.body.requestId : undefined}
+              onDismiss={() => setModalError(undefined)}
+            />
+          )}
           onConfirm={create}
           noValidate
         >
-          {modalError != null && (
-            <ErrorBanner
-              message={
-                modalError instanceof Error
-                  ? modalError.message
-                  : "역할을 생성하지 못했습니다."
-              }
-            />
-          )}
           <label className="sicost-field">
             이름
             <input
@@ -828,6 +843,14 @@ export function PermissionsScreen({
           pending={pending}
           confirmLabel="중지"
           onCancel={() => setModal(undefined)}
+          feedback={modalError != null && (
+            <ErrorBanner
+              title="역할 사용 중지 실패"
+              message={modalError instanceof Error ? modalError.message : "중지하지 못했습니다."}
+              requestId={modalError instanceof ApiError ? modalError.body.requestId : undefined}
+              onDismiss={() => setModalError(undefined)}
+            />
+          )}
           onConfirm={stop}
         >
           <p>
@@ -837,15 +860,6 @@ export function PermissionsScreen({
             시스템 역할은 중지할 수 없고 연결 사용자가 있으면 시스템 ›
             사용자에서 먼저 역할을 빼야 합니다.
           </p>
-          {modalError != null && (
-            <ErrorBanner
-              message={
-                modalError instanceof Error
-                  ? modalError.message
-                  : "중지하지 못했습니다."
-              }
-            />
-          )}
         </Dialog>
       )}
       {leave && (

@@ -268,9 +268,7 @@ it("loads server current month without preferences and renders empty states, sha
   expect(screen.getByTestId("financial-save")).toBeEnabled();
   expect(screen.getByTestId("financial-adjustments-add")).toBeDisabled();
   await userEvent.click(screen.getByTestId("financial-save"));
-  expect(await screen.findByText("바뀐 내용이 없습니다.")).toHaveClass(
-    "sicost-toast",
-  );
+  expect((await screen.findByText("바뀐 내용이 없습니다.")).closest(".sicost-toast")).toBeInTheDocument();
   expect(writes()).toHaveLength(0);
 });
 it("shows repeated identical notices outside the editor after the toast expires", async () => {
@@ -285,7 +283,7 @@ it("shows repeated identical notices outside the editor after the toast expires"
     expect(screen.queryByText("바뀐 내용이 없습니다.")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("financial-save"));
-    expect(screen.getByText("바뀐 내용이 없습니다.")).toHaveClass("sicost-tone-ok");
+    expect(screen.getByText("바뀐 내용이 없습니다.").closest(".sicost-toast")).toHaveClass("sicost-tone-ok");
     act(() => vi.advanceTimersByTime(3500));
     expect(screen.queryByText("바뀐 내용이 없습니다.")).not.toBeInTheDocument();
     expect(writes()).toHaveLength(0);
@@ -352,9 +350,7 @@ it("cancel restores saved rows and does not regenerate automatic drafts or send 
     screen.queryByTestId("financial-items-repeat-0-item-name"),
   ).not.toBeInTheDocument();
   expect(writes()).toHaveLength(0);
-  expect(await screen.findByText("변경을 취소했습니다.")).toHaveClass(
-    "sicost-toast",
-  );
+  expect((await screen.findByText("변경을 취소했습니다.")).closest(".sicost-toast")).toBeInTheDocument();
 });
 it("read-only close locks inputs and hides upload, all add, deletion and save actions without inventing a role denial", async () => {
   data = financialEditorFixture({
@@ -463,10 +459,11 @@ it("hidden-tab server row errors reveal that tab and keep all inputs", async () 
       .getAllByRole("alert")
       .some((node) => node.textContent?.includes("finance-trace")),
   ).toBe(true);
-  const toast = screen.getByText("대여금 오류", { selector: ".sicost-toast" });
-  expect(toast).toHaveClass("sicost-toast", "sicost-tone-bad");
-  expect(toast.closest(".sicost-toast-stack")?.parentElement).toBe(document.body);
-  expect(screen.getByTestId("financial-editor")).not.toContainElement(toast);
+  const alert = screen.getByText("대여금 오류").closest<HTMLElement>('[role="alert"]');
+  expect(alert).toHaveClass("sicost-tone-bad");
+  expect(alert).toHaveTextContent("입력 항목 확인");
+  expect(screen.getByTestId("financial-editor")).toContainElement(alert);
+  expect(screen.getAllByText("대여금 오류")).toHaveLength(1);
   await userEvent.click(screen.getByTestId("financial-tab-financial"));
   expect(screen.getByTestId("financial-items-new-1-amount")).toHaveValue(
     "1,000 원",
@@ -796,18 +793,14 @@ it("previews previous month first, cancels without rows, and only applies after 
     }),
   );
   expect(screen.getByDisplayValue("통신비")).toBeInTheDocument();
-  expect(screen.getByText("1개 항목을 불러왔습니다.")).toHaveClass(
-    "sicost-toast",
-  );
+  expect((screen.getByText("1개 항목을 불러왔습니다.")).closest(".sicost-toast")).toBeInTheDocument();
   expect(writes()).toHaveLength(0);
 });
 
 it("shows no-previous notification and keeps the table unchanged", async () => {
   await ready();
   await userEvent.click(screen.getByTestId("financial-load-previous"));
-  expect(await screen.findByText("불러올 항목이 없습니다.")).toHaveClass(
-    "sicost-toast",
-  );
+  expect((await screen.findByText("불러올 항목이 없습니다.")).closest(".sicost-toast")).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(writes()).toHaveLength(0);
 });

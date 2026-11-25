@@ -1,3 +1,4 @@
+import { ErrorBanner } from "./Feedback";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePermission } from "./permission/PermissionBoundary";
@@ -23,6 +24,7 @@ export type DialogProps = {
   confirmActionId?: string;
   cancelActionId?: string;
   footerStart?: ReactNode;
+  feedback?: ReactNode;
   noValidate?: boolean;
   permission?: { screen: string; action: string };
   hideCancel?: boolean;
@@ -51,6 +53,7 @@ export function Dialog({
   confirmActionId,
   cancelActionId,
   footerStart,
+  feedback,
   noValidate,
   permission,
   hideCancel = false,
@@ -69,7 +72,10 @@ export function Dialog({
   const titleId = useId();
   const errorSignature = useRef("");
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSubmitError(null);
+      return;
+    }
     const previous = document.activeElement as HTMLElement | null;
     const target =
       ref.current?.querySelector<HTMLElement>(
@@ -193,6 +199,19 @@ export function Dialog({
             </button>
           )}
         </header>
+        {(feedback || submitError) && (
+          <div className="sicost-feedback-slot">
+            {feedback}
+            {submitError && (
+              <ErrorBanner
+                title={`${confirmLabel} 실패`}
+                message={submitError}
+                onDismiss={() => setSubmitError(null)}
+                focusOnShow={topmost()}
+              />
+            )}
+          </div>
+        )}
         <div className="sicost-dialog-body">
           {readOnly ? (
             <fieldset
@@ -203,11 +222,6 @@ export function Dialog({
             </fieldset>
           ) : (
             children
-          )}
-          {submitError && (
-            <p role="alert" className="sicost-field-error">
-              {submitError}
-            </p>
           )}
         </div>
         {!readOnly && (

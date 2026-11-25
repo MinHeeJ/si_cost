@@ -182,6 +182,17 @@ function ClientDrawerContent({
   if (!active) return null;
   return (
     <DetailDrawer
+      feedback={error != null && (
+        <ErrorBanner
+          title="거래처 상세 조회 실패"
+          message={
+            error instanceof Error
+              ? error.message
+              : "거래처를 불러오지 못했습니다."
+          }
+          onRetry={() => void load()}
+        />
+      )}
       label="거래처 상세"
       title={client?.name ?? "거래처 상세"}
       subtitle={
@@ -219,16 +230,6 @@ function ClientDrawerContent({
         ) : undefined
       }
     >
-      {error != null && (
-        <ErrorBanner
-          message={
-            error instanceof Error
-              ? error.message
-              : "거래처를 불러오지 못했습니다."
-          }
-          onRetry={() => void load()}
-        />
-      )}
       {loading && <ScreenLoading message="불러오는 중입니다." />}
       {client &&
         (editing ? (

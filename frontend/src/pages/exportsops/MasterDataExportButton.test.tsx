@@ -29,10 +29,7 @@ it("downloads all applied filter results and ordered visible columns without sel
     />,
   );
   await userEvent.click(screen.getByRole("button", { name: "목록 다운로드" }));
-  expect(await screen.findByText("파일을 내려받았습니다.")).toHaveAttribute(
-    "role",
-    "status",
-  );
+  expect(await screen.findByRole("status")).toHaveTextContent("파일을 내려받았습니다.");
   expect(api.createMasterDataExport).toHaveBeenCalledWith(
     {
       view: "CLIENTS",

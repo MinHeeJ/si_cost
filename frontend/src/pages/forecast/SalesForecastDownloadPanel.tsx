@@ -1,3 +1,4 @@
+import { ErrorBanner, FloatingToast } from "../../shared/Feedback";
 import { useEffect, useState } from "react";
 import { ApiError } from "../../shared/api";
 import * as api from "./salesForecastApi";
@@ -54,12 +55,14 @@ export function SalesForecastDownloadPanel({
         </button>
       )}
       {error != null && (
-        <p role="alert">
-          {error instanceof Error ? error.message : "다운로드에 실패했습니다."}
-          {error instanceof ApiError && ` · 요청 ID ${error.body.requestId}`}
-        </p>
+        <ErrorBanner
+          title="엑셀 다운로드 실패"
+          message={error instanceof Error ? error.message : "다운로드에 실패했습니다."}
+          requestId={error instanceof ApiError ? error.body.requestId : undefined}
+          onDismiss={() => setError(undefined)}
+        />
       )}
-      {complete && <p role="status">다운로드했습니다.</p>}
+      {complete && <FloatingToast message="다운로드했습니다." />}
     </section>
   );
 }

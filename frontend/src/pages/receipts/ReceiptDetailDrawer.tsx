@@ -5,7 +5,7 @@ import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, FloatingToast, StatusBadge } from "../../shared/Feedback";
 import { formatDateTime, formatDecimal } from "../../shared/format";
 import {
   getMonthClose,
@@ -40,6 +40,7 @@ export function ReceiptDetailDrawer({
   const [error, setError] = useState<unknown>();
   const [tab, setTab] = useState<"bill" | "receipts">("bill");
   const [action, setAction] = useState<"create" | api.Receipt>();
+  const [notice, setNotice] = useState<{ message: string; sequence: number }>();
   const [dirty, setDirty] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [blockedMonths, setBlockedMonths] = useState<Set<string>>(new Set());
@@ -169,8 +170,17 @@ export function ReceiptDetailDrawer({
   ];
   return (
     <>
+      {notice && <FloatingToast key={notice.sequence} message={notice.message} />}
       <DetailDrawer
         title={`청구 상세 ${billId}`}
+        feedback={!action && Boolean(error) && (
+          <ErrorBanner
+            title="청구 상세 조회 실패"
+            message={error instanceof Error ? error.message : "조회하지 못했습니다."}
+            requestId={error instanceof ApiError ? error.body.requestId : undefined}
+            onRetry={() => void load().catch(() => {})}
+          />
+        )}
         testId="receipt-detail-drawer"
         onClose={close}
         pending={Boolean(action)}
@@ -210,19 +220,6 @@ export function ReceiptDetailDrawer({
             </button>
           </SegmentedTabList>
           {loading && <ScreenLoading message="불러오는 중입니다." />}
-          {Boolean(error) && (
-            <ErrorBanner
-              message={
-                error instanceof Error ? error.message : "조회하지 못했습니다."
-              }
-              requestId={
-                error instanceof ApiError ? error.body.requestId : undefined
-              }
-              onRetry={() => {
-                void load().catch(() => {});
-              }}
-            />
-          )}
           {bill && detail && (
             <>
               {readonly && (
@@ -372,6 +369,10 @@ export function ReceiptDetailDrawer({
           onSaved={async (result) => {
             await load();
             await onChanged?.(result);
+            setNotice((previous) => ({
+              message: action === "create" ? "입금 등록 완료" : "입금 취소 완료",
+              sequence: (previous?.sequence ?? 0) + 1,
+            }));
           }}
         />
       )}

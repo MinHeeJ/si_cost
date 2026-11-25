@@ -68,6 +68,20 @@ export function DeliveryStatusPanel({
   }, [billId, page, size, reload]);
   return (
     <DetailDrawer
+      feedback={!!error && (
+        <ErrorBanner
+          title="전달 상태 조회 실패"
+          message={
+            error instanceof Error
+              ? error.message
+              : "전달상태를 불러오지 못했습니다."
+          }
+          requestId={
+            error instanceof ApiError ? error.body.requestId : undefined
+          }
+          onRetry={() => setReload((v) => v + 1)}
+        />
+      )}
       title={`전달상태 ${billId}`}
       onClose={onClose}
       testId="delivery-status-panel"
@@ -87,19 +101,6 @@ export function DeliveryStatusPanel({
         data-testid="delivery-status-content"
       >
         {loading && <ScreenLoading message="전달상태를 불러오는 중입니다." />}
-        {!!error && (
-          <ErrorBanner
-            message={
-              error instanceof Error
-                ? error.message
-                : "전달상태를 불러오지 못했습니다."
-            }
-            requestId={
-              error instanceof ApiError ? error.body.requestId : undefined
-            }
-            onRetry={() => setReload((v) => v + 1)}
-          />
-        )}
         {data && !error && (
           <>
             <p>

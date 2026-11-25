@@ -564,6 +564,25 @@ it("조회전체는 서버 snapshot을 고정하고 개별 제외는 bulk 대상
   );
 });
 it("변경종류별 payload는 typed 필드만 보내고 서버 경고 확인 뒤 1회 저장한다", async () => {
+  vi.mocked(api.preview).mockResolvedValueOnce({
+    affectedMonths: ["2026-07"],
+    protectedMonths: ["2026-07"],
+    months: [],
+    warnings: [
+      {
+        code: "CLOSE_CROSS",
+        message: "마감한 달 값은 유지하고 미마감 달부터 반영합니다.",
+        months: ["2026-07"],
+        assignmentIds: [row.id],
+      },
+      {
+        code: "MM_OVER",
+        message: "2026-07 전프로젝트 월MM 1.10 > 1.00",
+        months: ["2026-07"],
+        assignmentIds: [row.id],
+      },
+    ],
+  });
   const refresh = vi.fn().mockResolvedValue(undefined);
   render(
     <AssignmentChangeDialog
@@ -582,6 +601,14 @@ it("변경종류별 payload는 typed 필드만 보내고 서버 경고 확인 �
   });
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   await screen.findByText("영향월 2026-07");
+  const dialog = screen.getByRole("dialog", { name: "보호월 영향 확인" });
+  const notices = within(dialog).getByTestId("assignment-warnings");
+  expect(notices.parentElement?.previousElementSibling?.tagName).toBe("HEADER");
+  expect(within(notices).getAllByRole("alert")).toHaveLength(2);
+  expect(within(notices).getAllByText("마감된 월의 투입값 유지")).toHaveLength(1);
+  expect(notices).toHaveTextContent("월 MM 한도 초과");
+  expect(notices).not.toHaveTextContent("CLOSE_CROSS");
+  expect(within(dialog).getByRole("button", { name: "입력 수정" }).parentElement?.tagName).toBe("FOOTER");
   expect(api.changeAssignment).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "확인 후 저장" }));
   await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
@@ -592,6 +619,29 @@ it("변경종류별 payload는 typed 필드만 보내고 서버 경고 확인 �
     applyMonth: "2026-07",
     newContractMm: "0.50",
   });
+});
+it("적용월 입력은 현재월을 기본값으로 표시하고 투입 기간 밖의 월도 서버에 전달한다", async () => {
+  render(
+    <AssignmentChangeDialog
+      assignment={row}
+      year={2026}
+      today="2026-11-25"
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("변경 종류"), { target: { value: "RATE" } });
+  const month = screen.getByLabelText("적용월");
+  expect(month).toHaveValue("2026-11");
+  expect(month).not.toHaveAttribute("min");
+  expect(month).not.toHaveAttribute("max");
+  fireEvent.change(month, { target: { value: "2026-09" } });
+  fireEvent.change(screen.getByLabelText("새 계약MM"), { target: { value: "0.50" } });
+  await userEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() => expect(api.preview).toHaveBeenCalledWith({
+    id: row.id,
+    change: expect.objectContaining({ type: "RATE", applyMonth: "2026-09" }),
+  }));
 });
 it("필드 오류 입력보존과 stale 자동재저장 금지", async () => {
   vi.mocked(api.preview).mockRejectedValue(

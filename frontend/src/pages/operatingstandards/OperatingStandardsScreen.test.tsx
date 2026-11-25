@@ -194,7 +194,7 @@ it("자금 저장에는 적용월을 보내지 않고 날짜를 6자리로 보�
     expect(api.getStandardsPeriodContext).toHaveBeenCalledTimes(2),
   );
   const toast = await screen.findByText("저장했습니다.");
-  expect(toast).toHaveClass("sicost-toast");
+  expect(toast.closest(".sicost-toast")).toBeInTheDocument();
   expect(container).not.toContainElement(toast);
 });
 it("실패한 자금 입력은 보존하고 자동 재시도하지 않는다", async () => {

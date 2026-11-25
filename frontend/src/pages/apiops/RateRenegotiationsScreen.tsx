@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { DataTable, type Column } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner, StatusBadge } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
 import { ApiError } from "../../shared/api";
 import {
@@ -448,23 +448,29 @@ export function RateRenegotiationsScreen({
         >
           재계산
         </button>
-        {errorMessage && (
-          <small role="alert">
-            {errorMessage}
-            {error instanceof ApiError
-              ? ` · 문의 번호: ${error.body.requestId}`
-              : ""}
-          </small>
-        )}
       </form>
       {errorMessage && (
-        <ErrorBanner
-          message="직전 정상 결과를 유지합니다."
-          pending={loading}
-          onRetry={() => setRevision((r) => r + 1)}
-        />
+        <FeedbackNotice
+          tone="bad"
+          title="단가 재협상 결과를 불러오지 못했습니다"
+          action={
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => setRevision((r) => r + 1)}
+            >
+              다시 조회
+            </button>
+          }
+        >
+          <p>{errorMessage}</p>
+          {data && <p>직전 정상 결과를 유지합니다.</p>}
+          {error instanceof ApiError && (
+            <small className="sicost-feedback-reference">문의 번호: {error.body.requestId}</small>
+          )}
+        </FeedbackNotice>
       )}
-      {exportError && <ErrorBanner message={exportError} />}
+      {exportError && <ErrorBanner title="엑셀 다운로드 실패" message={exportError} />}
       <FilterBar
         className="renegotiation-filters"
         disabled={loading}
