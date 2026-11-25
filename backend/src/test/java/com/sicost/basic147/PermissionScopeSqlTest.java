@@ -21,6 +21,16 @@ class PermissionScopeSqlTest {
         assertThat(predicate).contains("bill.proj_id IN ('P-001')", "permission_part.aply_bgn_ym<=bill.bill_ym", "'HQ'", "'PART-001'");
         assertThat(PermissionScopeSql.predicate("tb_co_part_setl","s",new PermissionScopeSql.Scope(false,Set.of(),Set.of(),"202601","202612","u"))).isEqualTo("FALSE");
     }
+    @Test void dunningHistoryInheritsTheLinkedBillsScope() {
+        String scoped=PermissionScopeSql.rewrite(
+            "SELECT dun_sn FROM tb_bl_dun_hist h WHERE h.bill_id=?",scope);
+        String billScope=PermissionScopeSql.predicate("tb_bl_bill","permission_bill",scope);
+        assertThat(scoped).contains(
+            "permission_bill.bill_id=permission_row.bill_id AND "+billScope,
+            ") h WHERE h.bill_id=?");
+        var unassigned=new PermissionScopeSql.Scope(false,Set.of(),Set.of(),"202601","202612","u");
+        assertThat(PermissionScopeSql.predicate("tb_bl_dun_hist","h",unassigned)).contains("AND FALSE");
+    }
     @Test void allDoesNotBypassQnaNotificationAndUploadOwnership() {
         var all=new PermissionScopeSql.Scope(true,Set.of(),Set.of(),"202601","202612","u");
         assertThat(PermissionScopeSql.predicate("tb_pj_proj","p",all)).isNull();

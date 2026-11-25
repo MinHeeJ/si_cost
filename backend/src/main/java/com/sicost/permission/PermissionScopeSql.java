@@ -52,7 +52,7 @@ public final class PermissionScopeSql {
             case "tb_co_mon_cost" -> project(row+".proj_id",row+".cost_ym",scope);
             case "tb_pj_drct_exps" -> project(row+".proj_id",row+".exps_ym",scope);
             case "tb_bl_bill" -> project(row+".proj_id",row+".bill_ym",scope);
-            case "tb_bl_rcpt" -> "EXISTS(SELECT 1 FROM tb_bl_bill permission_bill WHERE permission_bill.bill_id="+row+".bill_id AND "+project("permission_bill.proj_id","permission_bill.bill_ym",scope)+")";
+            case "tb_bl_rcpt","tb_bl_dun_hist" -> "EXISTS(SELECT 1 FROM tb_bl_bill permission_bill WHERE permission_bill.bill_id="+row+".bill_id AND "+project("permission_bill.proj_id","permission_bill.bill_ym",scope)+")";
             case "tb_pj_asgn_hist" -> "EXISTS(SELECT 1 FROM tb_pj_asgn permission_asgn WHERE permission_asgn.asgn_id="+row+".asgn_id AND "+project("permission_asgn.proj_id",null,scope)+")";
             case "tb_hr_dev" -> "("+in(row+".part_id",scope.parts())+" OR EXISTS(SELECT 1 FROM tb_pj_asgn permission_person WHERE permission_person.dev_id="+row+".dev_id AND "+in("permission_person.proj_id",scope.projects())+"))";
             case "tb_hr_dev_prc","tb_hr_dev_skill","tb_hr_dev_stat","tb_hr_mon_pay" -> "EXISTS(SELECT 1 FROM tb_hr_dev permission_dev WHERE permission_dev.dev_id="+row+".dev_id AND "+in("permission_dev.part_id",scope.parts())+")";

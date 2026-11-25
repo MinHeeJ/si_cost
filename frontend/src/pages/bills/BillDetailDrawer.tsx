@@ -4,7 +4,7 @@ import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { DetailDrawer } from "../../shared/DetailDrawer";
 import { DataTable } from "../../shared/DataTable";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
 import { ApiError } from "../../shared/api";
 import { formatDecimal } from "../../shared/format";
 import { getMonthClose, type PeriodContext } from "../shared/sharedApi";
@@ -12,6 +12,9 @@ import { BillActionsPanel } from "../billsops/BillActionsPanel";
 import { ReceiptEntryDialog } from "../receipts/ReceiptEntryDialog";
 import { ReceivableDeliveryActions } from "../receivablesops/ReceivableDeliveryActions";
 import * as api from "./billsApi";
+
+const protectedBillMessage =
+  "청구월 또는 TK 매출월이 마감·이관됐거나 지난 연도입니다. 입금 작업은 입금일이 속한 월을 기준으로 판단합니다.";
 
 export type AmountUnit = "원" | "천원" | "백만원";
 export function billMoney(amount: string, unit: AmountUnit = "천원") {
@@ -155,89 +158,97 @@ export function BillDetailDrawer({
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const canUpdate = usePermission("UI-13", "UPD");
   const bill = detail?.bill;
+  const currentYear = Number(period.currentMonth.slice(0, 4));
+  const showsCancelAction =
+    !renderActions && canUpdate && year >= currentYear && !bill?.cancelled;
   return (
     <DetailDrawer
       feedback={error != null && <BillError error={error} retry={() => setReload((v) => v + 1)} />}
       hidden={deliveryOpen}
-      title={`청구 상세 ${id}`}
+      title="청구 상세"
+      label={`청구 상세 ${id}`}
+      subtitle={
+        <>
+          <span>{id}</span>
+          {bill && <BillStatus bill={bill} />}
+        </>
+      }
       onClose={onClose}
       testId="bill-detail-drawer"
       pending={childDirty}
       actions={
-        bill && (
-          <>
-            {canUpdate && (
-              <button
-                type="button"
-                data-testid="bill-edit"
-                disabled={
-                  loading ||
-                  childDirty ||
-                  protectedBill ||
-                  year < Number(period.currentMonth.slice(0, 4)) ||
-                  bill.cancelled
-                }
-                onClick={() => onEdit(bill)}
-              >
-                수정
-              </button>
-            )}
-            {detail &&
-              (renderActions ? (
-                renderActions(detail, refresh)
-              ) : (
-                <BillingDetailActions
-                  detail={detail}
-                  year={year}
-                  period={period}
-                  protectedBill={protectedBill}
-                  refresh={refresh}
-                  onDirtyChange={changedDirty}
-                />
-              ))}
-          </>
+        bill && canUpdate && (
+          <button
+            type="button"
+            data-testid="bill-edit"
+            disabled={
+              loading || childDirty || protectedBill || year < currentYear || bill.cancelled
+            }
+            onClick={() => onEdit(bill)}
+          >
+            수정
+          </button>
         )
       }
     >
       {loading && <ScreenLoading message="청구 상세를 불러오는 중입니다." />}
       {detail && bill && (
         <>
-          <SegmentedTabList
-            as="div"
-            role="tablist"
-            aria-label="청구 상세 탭"
-            className="bill-tabs"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "bill"}
-              data-testid="bill-info-tab"
-              onClick={() => setTab("bill")}
+          <div className="bill-detail-toolbar">
+            <SegmentedTabList
+              as="div"
+              role="tablist"
+              aria-label="청구 상세 탭"
+              className="bill-tabs"
             >
-              청구 정보
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "receipts"}
-              data-testid="bill-receipts-tab"
-              onClick={() => setTab("receipts")}
-            >
-              입금 내역 ({detail.receipts.total})
-            </button>
-          </SegmentedTabList>
-          <p>정상 입금 {detail.receipts.normalCount}건</p>
-          <ReceivableDeliveryActions
-            billId={bill.id}
-            onChanged={refresh}
-            onPanelChange={setDeliveryOpen}
-          />
-          {protectedBill && (
-            <p className="sicost-banner sicost-tone-lock">
-              청구월·TK 매출월이 마감·이관·지난해이면 청구 수정은 할 수
-              없습니다. 입금은 입금일의 월로 별도 판단합니다.
-            </p>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "bill"}
+                data-testid="bill-info-tab"
+                onClick={() => setTab("bill")}
+              >
+                청구 정보
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "receipts"}
+                data-testid="bill-receipts-tab"
+                onClick={() => setTab("receipts")}
+              >
+                입금 내역 ({detail.receipts.total})
+              </button>
+            </SegmentedTabList>
+            <StatusBadge tone={detail.receipts.normalCount > 0 ? "ok" : "neutral"}>
+              {`정상 입금 ${detail.receipts.normalCount}건`}
+            </StatusBadge>
+          </div>
+          {renderActions ? (
+            renderActions(detail, refresh)
+          ) : (
+            <BillingDetailActions
+              detail={detail}
+              year={year}
+              period={period}
+              protectedBill={protectedBill}
+              refresh={refresh}
+              onDirtyChange={changedDirty}
+            />
+          )}
+          {protectedBill && !showsCancelAction && (
+            <div className="bill-detail-notice">
+              <FeedbackNotice tone="info" title="청구 수정 제한">
+                {protectedBillMessage}
+              </FeedbackNotice>
+            </div>
+          )}
+          {tab === "bill" && bill.taxInvoiceWarning && (
+            <div className="bill-detail-notice">
+              <FeedbackNotice tone="warn" title="세금계산서 번호 확인">
+                {bill.taxInvoiceWarning}
+              </FeedbackNotice>
+            </div>
           )}
           {tab === "bill" ? (
             <section role="tabpanel" data-testid="bill-info-panel">
@@ -281,12 +292,6 @@ export function BillDetailDrawer({
                   </div>
                 ))}
               </dl>
-              <BillStatus bill={bill} />
-              {bill.taxInvoiceWarning && (
-                <p className="sicost-banner sicost-tone-warn">
-                  {bill.taxInvoiceWarning}
-                </p>
-              )}
               {bill.cancelled && (
                 <p title={bill.cancelReason ?? undefined}>
                   취소자 {bill.cancelUserId ?? "–"} ·{" "}
@@ -352,6 +357,21 @@ export function BillDetailDrawer({
               />
             </section>
           )}
+          <section className="bill-detail-dunning" aria-label="미수금 알림">
+            <div className="bill-detail-dunning-heading">
+              <h3>미수금 알림</h3>
+              {bill.dunning === null && !bill.cancelled && (
+                <StatusBadge tone="neutral">알림 기준 설정 확인 필요</StatusBadge>
+              )}
+            </div>
+            <ReceivableDeliveryActions
+              billId={bill.id}
+              reminderLabel="미수금 다시 알림"
+              deliveryLabel="알림 전달 상태"
+              onChanged={refresh}
+              onPanelChange={setDeliveryOpen}
+            />
+          </section>
         </>
       )}
     </DetailDrawer>
@@ -384,35 +404,38 @@ function BillingDetailActions({
     (receipt
       ? !receipt.cancelled
       : !detail.bill.cancelled && detail.bill.status !== "PAID");
+  const receiptButton = allowed && (
+    <button
+      type="button"
+      className={receipt ? undefined : "sicost-primary"}
+      data-testid={
+        receipt
+          ? `bill-receipt-cancel-${receipt.id}`
+          : "bill-receipt-create"
+      }
+      onClick={() => setOpen(true)}
+    >
+      {receipt ? "입금 취소" : "입금 등록"}
+    </button>
+  );
   return (
     <>
-      {!receipt && (canRegister || canUpdate) && (
+      {!receipt && (canRegister || canUpdate) ? (
         <BillActionsPanel
           bill={detail.bill}
           year={year}
           currentYear={currentYear}
           normalReceiptCount={detail.receipts.normalCount}
           cancellationBlockedReason={
-            protectedBill
-              ? "청구월·TK 매출월이 보호되어 취소할 수 없습니다."
-              : undefined
+            protectedBill ? protectedBillMessage : undefined
           }
           onChanged={refresh}
           onDirtyChange={onDirtyChange}
-        />
-      )}
-      {allowed && (
-        <button
-          type="button"
-          data-testid={
-            receipt
-              ? `bill-receipt-cancel-${receipt.id}`
-              : "bill-receipt-create"
-          }
-          onClick={() => setOpen(true)}
         >
-          {receipt ? "입금 취소" : "입금 등록"}
-        </button>
+          {receiptButton}
+        </BillActionsPanel>
+      ) : (
+        receiptButton
       )}
       {open && allowed && (
         <ReceiptEntryDialog

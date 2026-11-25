@@ -162,14 +162,14 @@ function BillingChecksContent({
           data-testid={`billing-check-actions-${r.projectId.toLowerCase()}`}
           className="billing-review-actions"
         >
-          {((r.remedy.mode === "CREATE" && canRegister) ||
+          {(((r.remedy.mode === "CREATE" || r.remedy.mode === "CLOSED_MONTH_ADJUSTMENT") && canRegister) ||
             (r.remedy.mode === "UPDATE" && canUpdate)) && (
             <button
               data-testid={`billing-check-remedy-${r.projectId.toLowerCase()}`}
               type="button"
               onClick={() => onRemedy(r.remedy)}
             >
-              보완
+              {r.remedy.mode === "CLOSED_MONTH_ADJUSTMENT" ? "추가 청구(차액)" : "보완"}
             </button>
           )}
           {r.remedy.reason && (

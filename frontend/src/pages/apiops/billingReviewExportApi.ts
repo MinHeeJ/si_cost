@@ -35,6 +35,7 @@ export type BillExportFilters = {
   status?: string;
   month?: string;
   projectId?: string;
+  projectName?: string;
   includeCarryover?: boolean;
 };
 export const receivableColumns = [

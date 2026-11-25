@@ -15,6 +15,13 @@ import { BillingReviewDownloadButton } from "./BillingReviewDownloadButton";
 import { ReceivableDeliveryActions } from "../receivablesops/ReceivableDeliveryActions";
 import "./billingReview.css";
 
+const recipientRoleLabels: Record<string, string> = {
+  PM: "영업 담당자",
+  SALES_LDR: "영업 파트장",
+  EXEC: "경영진",
+  FIN: "재무 담당",
+};
+
 type Props = {
   year: number;
   currentYear: number;
@@ -234,7 +241,11 @@ function ReceivablesContent({
                 <h3>
                   {card.step}단계 예정일 + {card.thresholdDays}일
                 </h3>
-                <span>{card.recipientRoles.join(" · ")}</span>
+                <span>
+                  {card.recipientRoles
+                    .map((role) => recipientRoleLabels[role] ?? role)
+                    .join(" · ")}
+                </span>
                 <StatusBadge tone={card.step === 1 ? "warn" : "bad"}>
                   {card.count}건
                 </StatusBadge>

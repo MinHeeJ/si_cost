@@ -6,6 +6,7 @@ export type ReceiptBatchFilters = {
   status?: "UNPAID" | "PAID" | "LATE" | "CNCL";
   month?: string;
   projectId?: string;
+  projectName?: string;
   includeCarryover?: boolean;
   sort?:
     | "id"

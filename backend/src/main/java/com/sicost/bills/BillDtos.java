@@ -8,14 +8,17 @@ import java.util.List;
 
 public final class BillDtos {
     private BillDtos() {}
-    public record Query(int year,String status,String month,String projectId,boolean includeCarryover,int page,int size,String sort,String direction,boolean missingInvoiceNo) {
+    public record Query(int year,String status,String month,String projectId,boolean includeCarryover,int page,int size,String sort,String direction,boolean missingInvoiceNo,String projectName) {
+        public Query(int year,String status,String month,String projectId,boolean includeCarryover,int page,int size,String sort,String direction,boolean missingInvoiceNo) {
+            this(year,status,month,projectId,includeCarryover,page,size,sort,direction,missingInvoiceNo,null);
+        }
         public Query(int year,String status,String month,String projectId,boolean includeCarryover,int page,int size,String sort,String direction) {this(year,status,month,projectId,includeCarryover,page,size,sort,direction,false);}
     }
     public record Filter(Query query,int currentYear,LocalDate today) {}
     public record Editable(BigDecimal supplyAmount,BigDecimal vatRate,LocalDate billingDate,LocalDate dueDate,String taxInvoiceNo) {}
     public record CheckContext(String projectId,String month,String checkRevision) {}
     public record CopyContext(String sourceBillId,String expectedRevision) {}
-    public record CreateBillRequest(int year,String projectId,String billingMonth,Editable fields,boolean confirmDuplicate,String duplicateToken,CheckContext checkContext,CopyContext copyContext) {}
+    public record CreateBillRequest(int year,String projectId,String billingMonth,Editable fields,boolean confirmDuplicate,String duplicateToken,CheckContext checkContext,CopyContext copyContext,boolean closedMonthAdjustment) {}
     public record PutBillRequest(int year,String expectedRevision,Editable fields,CheckContext checkContext) {}
     public record Project(String id,String name,String customerName,String contractType,String status,LocalDate endDate) {}
     public record Stored(String id,String projectId,int order,String billingMonth,LocalDate billingDate,BigDecimal supplyAmount,

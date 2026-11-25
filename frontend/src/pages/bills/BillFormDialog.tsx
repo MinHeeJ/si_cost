@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { DataTable } from "../../shared/DataTable";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { ApiError } from "../../shared/api";
-import { validMonth } from "../../shared/format";
+import { formatDecimal, validMonth } from "../../shared/format";
 import {
   getMonthClose,
   getSharedParameter,
@@ -49,7 +51,9 @@ export function BillFormDialog({
     [leaving, setLeaving] = useState(false),
     [stale, setStale] = useState(false),
     [blocked, setBlocked] = useState(false),
-    [notice, setNotice] = useState("");
+    [defaultWarning, setDefaultWarning] = useState(""),
+    [defaultError, setDefaultError] = useState<unknown>(),
+    [dueDateReset, setDueDateReset] = useState(false);
   const [duplicate, setDuplicate] = useState<{
     existingBills: { id: string; order: number }[];
     duplicateToken: string;
@@ -62,6 +66,7 @@ export function BillFormDialog({
   const editedAmount = useRef(false),
     editedDue = useRef(false),
     inFlight = useRef(false);
+  const closedMonthAdjustment = !bill && Boolean(initial?.closedMonthAdjustment);
   const fixed = Boolean(bill || initial?.copyContext || initial?.checkContext);
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -116,9 +121,8 @@ export function BillFormDialog({
             )
               return false;
             const close = await getMonthClose(month, month);
-            return (
-              close.items.length === 1 && close.items[0].status === "작업중"
-            );
+            return close.items.length === 1 &&
+              close.items[0].status === (closedMonthAdjustment ? "마감" : "작업중");
           }),
         );
         if (live) setBlocked(guards.some((v) => !v));
@@ -139,10 +143,14 @@ export function BillFormDialog({
     period,
     projects,
     reload,
+    closedMonthAdjustment,
   ]);
   useEffect(() => {
     if (bill || initial) return;
     let live = true;
+    setEstimate(undefined);
+    setDefaultWarning("");
+    setDefaultError(undefined);
     void (async () => {
       try {
         if (!validMonth(form.billingMonth)) return;
@@ -153,9 +161,6 @@ export function BillFormDialog({
           );
           if (!live) return;
           setEstimate(value);
-          setNotice((old) =>
-            [old, ...value.warnings].filter(Boolean).join(" "),
-          );
           setForm((old) => ({
             ...old,
             supplyAmount: value.supplyAmount ?? "",
@@ -176,17 +181,12 @@ export function BillFormDialog({
             dueDate: nextDue(form.billingMonth),
           }));
           if (!valid)
-            setNotice(
+            setDefaultWarning(
               "부가세율 기본 설정을 확인해 주세요. 유효한 세율을 직접 입력할 수 있습니다.",
             );
         }
       } catch (e) {
-        if (live) {
-          setNotice(
-            "기본값을 불러오지 못했습니다. 유효한 값을 직접 입력해 주세요.",
-          );
-          setError(e);
-        }
+        if (live) setDefaultError(e);
       }
     })();
     return () => {
@@ -208,12 +208,12 @@ export function BillFormDialog({
   }
   function applyChange(key: keyof typeof form, value: string) {
     if (key === "supplyAmount") editedAmount.current = true;
-    if (key === "dueDate") editedDue.current = true;
+    if (key === "dueDate") {
+      editedDue.current = true;
+      setDueDateReset(false);
+    }
     if (key === "billingMonth") {
-      if (editedDue.current)
-        setNotice(
-          "청구월 변경으로 수기 입금예정일을 다음달 25일 기본값으로 변경했습니다.",
-        );
+      setDueDateReset(editedDue.current);
       editedDue.current = false;
       setForm((old) => ({
         ...old,
@@ -281,6 +281,7 @@ export function BillFormDialog({
             ...(initial?.copyContext
               ? { copyContext: initial.copyContext }
               : {}),
+            ...(closedMonthAdjustment ? { closedMonthAdjustment: true } : {}),
             ...(confirmed && duplicate
               ? {
                   confirmDuplicate: true,
@@ -321,6 +322,12 @@ export function BillFormDialog({
     if (dirty) setLeaving(true);
     else onClose();
   }
+  const title = closedMonthAdjustment ? "추가 청구(차액)"
+    : bill ? "청구 수정" : initial?.copyContext ? "고쳐서 청구" : "청구 등록";
+  const warningMessages = [
+    ...new Set(estimate?.warnings ?? (defaultWarning ? [defaultWarning] : [])),
+  ];
+  const visibleError = error ?? defaultError;
   const labels: Record<string, string> = {
     supplyAmount: "공급가 (원) *",
     vatRate: "부가세율 (%) *",
@@ -332,12 +339,15 @@ export function BillFormDialog({
     <>
       <Dialog
         open
-        title={
-          bill
-            ? "청구 수정"
-            : initial?.copyContext
-              ? "고쳐서 청구"
-              : "청구 등록"
+        title={title}
+        className="bill-form-modal"
+        titleHelp={
+          <HelpTooltip label={title} iconOnly>
+            <ul>
+              <li>세금계산서 번호는 비워 두어도 저장할 수 있습니다.</li>
+              <li>부가세와 합계는 저장 후 목록·상세에서 확인합니다.</li>
+            </ul>
+          </HelpTooltip>
         }
         pending={pending}
         onCancel={close}
@@ -348,13 +358,16 @@ export function BillFormDialog({
         }
       >
         <section data-testid="bill-form-dialog" className="bill-form">
-          {error ? (
+          {visibleError ? (
             <ErrorBanner
+              title={error == null ? "청구 기본값 조회 실패" : undefined}
               message={
-                error instanceof Error ? error.message : "저장하지 못했습니다."
+                visibleError instanceof Error
+                  ? visibleError.message
+                  : "요청을 처리하지 못했습니다."
               }
               requestId={
-                error instanceof ApiError ? error.body.requestId : undefined
+                visibleError instanceof ApiError ? visibleError.body.requestId : undefined
               }
             />
           ) : null}
@@ -364,9 +377,11 @@ export function BillFormDialog({
               재저장하지 않습니다.
             </p>
           )}
-          {blocked && (
+          {!loading && blocked && (
             <p className="sicost-banner sicost-tone-lock">
-              마감·이관·지난해 업무월은 변경할 수 없습니다.
+              {closedMonthAdjustment
+                ? "마감 상태를 확인하지 못했습니다. 청구 누락 점검에서 다시 조회해 주세요."
+                : "마감·이관·지난해 업무월은 변경할 수 없습니다."}
             </p>
           )}
           {fixed ? (
@@ -420,6 +435,22 @@ export function BillFormDialog({
               </div>
             </>
           )}
+          {dueDateReset && (
+            <FeedbackNotice tone="info" title="입금 예정일 변경">
+              청구월이 바뀌어 입금 예정일을 다음 달 25일로 설정했습니다.
+            </FeedbackNotice>
+          )}
+          {warningMessages.length > 0 && (
+            <FeedbackNotice tone="warn" title="청구 기본값 확인">
+              {warningMessages.length === 1 ? warningMessages[0] : (
+                <ul>
+                  {warningMessages.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              )}
+            </FeedbackNotice>
+          )}
           {(
             [
               "supplyAmount",
@@ -447,6 +478,7 @@ export function BillFormDialog({
                       : undefined
                 }
                 value={form[key]}
+                readOnly={closedMonthAdjustment && key === "supplyAmount"}
                 disabled={pending}
                 aria-invalid={Boolean(fields[key])}
                 onChange={(e) => change(key, e.target.value)}
@@ -458,33 +490,50 @@ export function BillFormDialog({
               )}
             </div>
           ))}
-          {!form.taxInvoiceNo.trim() && (
-            <p className="sicost-banner sicost-tone-warn">
-              번호 미입력 · 비워 두어도 등록할 수 있습니다.
-            </p>
+          {estimate && estimate.sources.length > 0 && (
+            <details className="bill-estimate-sources" data-testid="bill-estimate-sources">
+              <summary>공급가 산정 내역 ({estimate.sources.length}건)</summary>
+              <DataTable
+                rows={estimate.sources}
+                rowKey={(source) => source.assignmentId}
+                tableLabel="공급가 산정 내역"
+                dense
+                columns={[
+                  {
+                    id: "person",
+                    label: "투입 인력",
+                    render: (source) => (
+                      <div data-testid={`bill-form-estimate-source-${source.assignmentId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}>
+                        <div>{source.developerName}</div>
+                        <small>{source.managementNo}</small>
+                        {source.protected && (
+                          <div><StatusBadge tone="lock">보호월 자료</StatusBadge></div>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    id: "unitPrice",
+                    label: "단가 (원)",
+                    align: "right",
+                    render: (source) => formatDecimal(source.appliedUnitPrice),
+                  },
+                  {
+                    id: "mm",
+                    label: "MM",
+                    align: "right",
+                    render: (source) => formatDecimal(source.mm),
+                  },
+                  {
+                    id: "amount",
+                    label: "공급가 (원)",
+                    align: "right",
+                    render: (source) => formatDecimal(source.supplyAmount),
+                  },
+                ]}
+              />
+            </details>
           )}
-          {notice && <p role="status">{notice}</p>}
-          {estimate && (
-            <div data-testid="bill-estimate-sources">
-              {estimate.sources.length ? (
-                estimate.sources.map((s) => (
-                  <p
-                    key={s.assignmentId}
-                    data-testid={`bill-form-estimate-source-${s.assignmentId.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
-                  >
-                    {s.developerName} ({s.managementNo}) · 단가{" "}
-                    {s.appliedUnitPrice} × MM {s.mm} · {s.supplyAmount}원{" "}
-                    {s.protected ? "보호월 자료" : ""}
-                  </p>
-                ))
-              ) : (
-                <p>
-                  월별 유상 투입 자료가 없습니다. 공급가를 직접 입력해 주세요.
-                </p>
-              )}
-            </div>
-          )}
-          <p>부가세와 합계는 저장 후 목록·상세에서 확인합니다.</p>
         </section>
       </Dialog>
       <Dialog
@@ -562,7 +611,7 @@ function validDate(value: string) {
     !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 }
-function nextDue(month: string) {
+export function nextDue(month: string) {
   if (!validMonth(month)) return "";
   const [year, m] = month.split("-").map(Number);
   return `${m === 12 ? year + 1 : year}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-25`;

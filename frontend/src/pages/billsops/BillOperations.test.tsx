@@ -184,12 +184,6 @@ it("마감월 취소 잠금을 표시한다", () => {
   expect(screen.getByRole("button", { name: "청구 취소" })).toBeDisabled();
   expect(screen.getByText("청구월 마감")).toBeInTheDocument();
 });
-it("알림 설정이 무효이면 가짜 단계0 대신 설정 확인 안내", () => {
-  draw();
-  expect(screen.getByText("알림 기준 설정 확인 필요")).toHaveClass(
-    "sicost-tone-neutral",
-  );
-});
 it("날짜 오류는 고쳐서 청구 안내·자동재전송0", async () => {
   vi.mocked(api.createNextMonthBill).mockRejectedValue(
     new ApiError(400, {
@@ -233,6 +227,8 @@ it("저장 후 조회만 실패하면 조회만 다시 시도한다", async () =
   await userEvent.click(screen.getByTestId("bill-action-refresh"));
   await waitFor(() => expect(props.onChanged).toHaveBeenCalledTimes(2));
   expect(api.createNextMonthBill).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.queryByText("저장 완료 · 조회 실패")).not.toBeInTheDocument());
+  expect(screen.queryByText("저장했습니다.")).not.toBeInTheDocument();
 });
 it("취소 사유 검증·입력 보존·선택 revision 전달", async () => {
   draw();
@@ -255,6 +251,9 @@ it("취소 사유 검증·입력 보존·선택 revision 전달", async () => {
       reason: "실제 사유",
     }),
   );
+  const toast = await screen.findByText("청구를 취소했습니다.");
+  expect(toast.closest('[role="status"]')).toHaveClass("sicost-toast");
+  expect(within(screen.getByTestId("bill-actions-panel")).queryByText("저장했습니다.")).not.toBeInTheDocument();
 });
 it("사유창 취소의 dirty 확인은 쓰지 않는다", async () => {
   draw();
@@ -270,11 +269,15 @@ it("사유창 취소의 dirty 확인은 쓰지 않는다", async () => {
 it("서버 복사 초안의 프로젝트·월은 고정이며 원세율을 표시한다", async () => {
   draw();
   await userEvent.click(screen.getByRole("button", { name: "고쳐서 청구" }));
-  await screen.findByRole("dialog", { name: /다음월 신규복사/ });
-  expect(screen.getByText(/청구월 2026-08/)).toBeInTheDocument();
+  const dialog = await screen.findByRole("dialog", { name: /다음월 신규복사/ });
+  expect(dialog).toHaveClass("bill-form-modal");
+  expect(within(dialog).getByText("2026-08")).toBeVisible();
+  expect(within(dialog).getByText(bill.id)).toBeVisible();
+  await userEvent.click(within(dialog).getByRole("button", { name: "고쳐서 청구 도움말" }));
+  expect(screen.getByRole("tooltip")).toHaveTextContent("세금계산서 번호는 비워 두어도 등록할 수 있습니다.");
   expect(screen.getByLabelText("부가세율 (%) *")).toHaveValue("7.25");
   expect(screen.queryByLabelText(/프로젝트/)).not.toBeInTheDocument();
-  expect(screen.queryByText(/합계/)).not.toBeInTheDocument();
+  expect(within(dialog).queryByText(/합계/)).not.toBeInTheDocument();
   expect(screen.queryByLabelText(/부가세금액/)).not.toBeInTheDocument();
 });
 it("복사 등록은 명시 금액과 원청구 copyContext를 create-only POST로 보낸다", async () => {

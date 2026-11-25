@@ -80,6 +80,7 @@ export type Filters = {
   status?: BillStatus;
   month?: string;
   projectId?: string;
+  projectName?: string;
   includeCarryover: boolean;
   missingInvoiceNo?: boolean;
 };
@@ -120,6 +121,7 @@ export type CreateBill = Editable & {
   duplicateToken?: string;
   checkContext?: CheckContext;
   copyContext?: CopyContext;
+  closedMonthAdjustment?: boolean;
 };
 export type PutBill = Editable & {
   year: number;

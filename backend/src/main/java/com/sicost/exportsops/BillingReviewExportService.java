@@ -71,7 +71,7 @@ public class BillingReviewExportService {
     private Download createBills(JsonNode body,HttpServletRequest request) {
         if(!body.has("columns")||!body.get("columns").isArray()||body.get("columns").size()!=BILL_COLUMNS.size())throw invalid("columns");
         for(int i=0;i<BILL_COLUMNS.size();i++)if(!body.get("columns").get(i).isTextual()||!BILL_COLUMNS.get(i).equals(body.get("columns").get(i).textValue()))throw invalid("columns");
-        JsonNode filters=body.get("filters");allow(filters,Set.of("year","status","month","projectId","includeCarryover","missingInvoiceNo"));
+        JsonNode filters=body.get("filters");allow(filters,Set.of("year","status","month","projectId","projectName","includeCarryover","missingInvoiceNo"));
         Map<String,String> query=new LinkedHashMap<>();
         filters.fieldNames().forEachRemaining(key->{JsonNode v=filters.get(key);if(v.isNull()||(v.isTextual()&&v.textValue().isBlank())){if(key.equals("missingInvoiceNo"))throw invalid(key);return;}
             if(!v.isTextual()&&!v.isBoolean()&&!v.isInt())throw invalid(key);query.put(key,v.asText());});
@@ -86,7 +86,7 @@ public class BillingReviewExportService {
         List<Column> columns=new ArrayList<>();
         for(int i=0;i<BILL_COLUMNS.size();i++){String id=BILL_COLUMNS.get(i);columns.add(new Column(id,titles.get(i)+(money.contains(id)?" ("+unit+")":""),money.contains(id)||"order".equals(id)?CellType.NUMBER:CellType.TEXT));}
         String conditions="year="+list.year()+"; status="+Objects.toString(list.status(),"전체")+"; month="+Objects.toString(list.month(),"")+"; projectId="+Objects.toString(list.projectId(),"")
-            +(list.missingInvoiceNo()?"; missingInvoiceNo=true":"")+"; includeCarryover="+list.includeCarryover()+"; sort="+Objects.toString(list.sort(),"기본")+" "+list.direction();
+            +(list.projectName()==null?"":"; projectName="+list.projectName())+(list.missingInvoiceNo()?"; missingInvoiceNo=true":"")+"; includeCarryover="+list.includeCarryover()+"; sort="+Objects.toString(list.sort(),"기본")+" "+list.direction();
         return excel.generate(new Specification("청구",null,columns,conditions,unit,"UI-13"),sink->{
             for(BillDtos.Bill row:rows)sink.accept(List.of(row.id(),row.projectName(),row.order(),row.billingDate(),amount(row.supplyAmount(),unit),amount(row.vatAmount(),unit),amount(row.totalAmount(),unit),
                 amount(row.receiptAmount(),unit),amount(row.unpaidAmount(),unit),row.dueDate(),BILL_STATUS.getOrDefault(row.status(),row.status()),

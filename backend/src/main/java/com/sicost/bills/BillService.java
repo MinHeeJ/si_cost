@@ -1,5 +1,7 @@
 package com.sicost.bills;
 
+import com.sicost.apiops.BillingCheckService;
+import com.sicost.apiops.BillingReviewDtos;
 import com.sicost.common.TimeConfiguration;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.concurrent.RevisionService;
@@ -21,13 +23,14 @@ import static com.sicost.bills.BillRepository.*;
 @Service
 public class BillService {
     private final BillRepository repository;
+    private final BillingCheckService billingChecks;
     private final WriteCoordinator writes;
     private final RevisionService revisions;
     private final CurrentUserProvider users;
     private final ChangeHistoryWriter audit;
     private final Clock clock;
-    public BillService(BillRepository repository,WriteCoordinator writes,RevisionService revisions,CurrentUserProvider users,ChangeHistoryWriter audit,Clock clock) {
-        this.repository=repository;this.writes=writes;this.revisions=revisions;this.users=users;this.audit=audit;this.clock=clock;
+    public BillService(BillRepository repository,WriteCoordinator writes,RevisionService revisions,CurrentUserProvider users,ChangeHistoryWriter audit,Clock clock,BillingCheckService billingChecks) {
+        this.repository=repository;this.billingChecks=billingChecks;this.writes=writes;this.revisions=revisions;this.users=users;this.audit=audit;this.clock=clock;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public BillsPage getBills(Query query) {
@@ -39,7 +42,11 @@ public class BillService {
     public List<Bill> listAll(Query query) {return matching(query);}
     private List<Bill> matching(Query query) {
         users.currentUser();ProjectInputPolicy.year(query.year(),repository.cashBase(),clock);
-        return repository.list(new Filter(query,today().getYear(),today())).stream().filter(b->!query.missingInvoiceNo()||!b.cancelled()&&(b.taxInvoiceNo()==null||b.taxInvoiceNo().isBlank())).map(b->view(repository.snapshot(b.id()),query.year())).sorted(ordering(query)).toList();
+        return repository.list(new Filter(query,today().getYear(),today())).stream()
+            .filter(b->!query.missingInvoiceNo()||!b.cancelled()&&(b.taxInvoiceNo()==null||b.taxInvoiceNo().isBlank()))
+            .map(b->view(repository.snapshot(b.id()),query.year()))
+            .filter(b->BillInput.matchesProjectName(b.projectName(),query.projectName()))
+            .sorted(ordering(query)).toList();
     }
     private Totals totals(List<Bill> all) {
         List<Bill> effective=all.stream().filter(b->!b.cancelled()).toList();
@@ -57,13 +64,16 @@ public class BillService {
         String actor=users.userId();repository.lockTimeout();String[] id=new String[1];Project[] project=new Project[1];
         List<String> keys=new ArrayList<>(List.of("PROJECT:"+input.projectId(),"BILL_MONTH:"+db(input.billingMonth()),"operating-standards:CASH_BASE_YM"));
         if(input.copyContext()!=null)keys.add("BILL:"+input.copyContext().sourceBillId());
+        if(input.closedMonthAdjustment())keys.addAll(List.of("operating-standards:BILL_MISS_MIN","operating-standards:BILL_MISS_RT"));
         writes.create(keys,()->repository.revisionSnapshot(id[0]),()->{
-            repository.lockClose();project[0]=repository.project(input.projectId());writable(input.year(),input.billingMonth());
+            repository.lockClose();project[0]=repository.project(input.projectId());
+            if(input.closedMonthAdjustment())validateClosedMonthAdjustment(input);
+            else writable(input.year(),input.billingMonth());
             if("TK".equals(project[0].contractType()))protect(YearMonth.from(input.fields().billingDate()).toString());
             String status=effective(project[0]);
             if("IN".equals(project[0].contractType())||(!"ING".equals(status)&&!("END".equals(status)&&input.checkContext()!=null)))
                 throw conflict("INVALID_BILL_STATE","신규 청구는 진행 중인 외부 프로젝트만 선택할 수 있습니다.",null,input.billingMonth());
-            validateCheck(input.checkContext(),input.projectId(),input.billingMonth());
+            if(!input.closedMonthAdjustment())validateCheck(input.checkContext(),input.projectId(),input.billingMonth());
             validateCopy(input,project[0]);
             if(input.checkContext()==null)duplicates(input);
         },()->{
@@ -96,6 +106,28 @@ public class BillService {
                 append(id,"UPD","TOT_AMT",money(old.totalAmount()),money(total));append(id,"UPD","RCPT_SUM_AMT",money(old.receiptAmount()),money(paid));append(id,"UPD","UNPAID_AMT",money(old.unpaidAmount()),money(total.subtract(paid)));
             });
         return result(repository.snapshot(id),input.year(),result.changed());
+    }
+    private void validateClosedMonthAdjustment(CreateBillRequest input) {
+        YearMonth month = YearMonth.parse(input.billingMonth());
+        YearMonth current = YearMonth.from(today());
+        YearMonth base = repository.cashBase();
+        ProjectInputPolicy.requireWritableYear(input.year(),base,clock);
+        CheckContext context = input.checkContext();
+        if (context == null || !input.projectId().equals(context.projectId()) || !input.billingMonth().equals(context.month())
+            || input.year() != current.getYear() || month.getYear() != current.getYear()
+            || month.isBefore(base) || month.isAfter(current) || !repository.closed(db(input.billingMonth()))) {
+            throw adjustmentChanged(input.billingMonth());
+        }
+        var row = billingChecks.validateContext(new BillingReviewDtos.CheckContext(
+            context.projectId(),context.month(),context.checkRevision()));
+        var remedy = row.remedy();
+        if (!BillingCheckService.CLOSED_MONTH_ADJUSTMENT.equals(remedy.mode())
+            || input.fields().supplyAmount().compareTo(new BigDecimal(remedy.proposedSupplyAmount())) != 0) {
+            throw adjustmentChanged(input.billingMonth());
+        }
+    }
+    private ApiException adjustmentChanged(String month) {
+        return conflict("BILL_CHECK_CHANGED","차액 청구 조건이나 공급가가 바뀌었습니다. 점검을 다시 조회해 주세요.",null,month);
     }
     private void writable(int year,String month) {ProjectInputPolicy.requireWritableYear(year,repository.cashBase(),clock);protect(month);}
     private void protect(String value) {

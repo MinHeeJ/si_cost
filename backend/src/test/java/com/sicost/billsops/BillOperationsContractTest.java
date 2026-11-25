@@ -173,6 +173,13 @@ class BillOperationsContractTest {
         mvc.perform(get("/api/bills/selection").param("year","2026")).andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(68)).andExpect(jsonPath("$.data.items.length()").value(68))
             .andExpect(jsonPath("$.data.excludedCount").value(2)).andExpect(jsonPath("$.data.canSave").value(true)).andExpect(jsonPath("$.data.items[0].expectedRevision").isString());noWrites();
     }
+    @Test void selectionRespectsProjectNameFilter() throws Exception {
+        mvc.perform(get("/api/bills/selection").param("year","2026").param("projectName","프로젝트"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].billId").value(ID));
+        mvc.perform(get("/api/bills/selection").param("year","2026").param("projectName","다른 이름"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        noWrites();
+    }
     @Test void selectionAllExcludedCannotSave() throws Exception {receipts.put(ID,List.of(receipt("N","1072")));mvc.perform(get("/api/bills/selection").param("year","2026")).andExpect(jsonPath("$.data.items").isEmpty()).andExpect(jsonPath("$.data.canSave").value(false)).andExpect(jsonPath("$.data.excludedCount").value(1));noWrites();}
     @Test void selectionIdsAndIndividualExclusion() throws Exception {mvc.perform(get("/api/bills/selection").param("year","2026").param("ids",ID).param("excludeIds",ID)).andExpect(jsonPath("$.data.total").value(0));noWrites();}
     @Test void selectionDuplicateIdRejected() throws Exception {mvc.perform(get("/api/bills/selection").param("year","2026").param("ids",ID,ID)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.field").value("ids"));noWrites();}
