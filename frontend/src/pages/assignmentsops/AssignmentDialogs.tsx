@@ -4,7 +4,8 @@ import { useFieldErrorFocus } from "../../shared/FieldErrors";
 import { sanitizeNumber } from "../../shared/NumericInput";
 import { ApiError } from "../../shared/api";
 import { Dialog } from "../../shared/Dialog";
-import { ErrorBanner, FeedbackNotice } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice, StatusBadge } from "../../shared/Feedback";
+import { HelpTooltip } from "../../shared/HelpTooltip";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { getSharedCodes, type SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./assignmentActionsApi";
@@ -41,6 +42,7 @@ const warningLabel: Record<string, string> = {
   EMPLOYEE_TYPE: "파견 인력 유형 확인",
   LEAVE: "휴직 기간과 중복",
   PART_DIFFERENCE: "영업 파트 다름",
+  CLOSE_CROSS: "마감월 포함",
 };
 /** 연속한 월을 `2026-03 ~ 2026-12`처럼 줄인다. 월이 하나면 그대로. */
 function monthRanges(months: string[]): string {
@@ -64,6 +66,45 @@ function monthRanges(months: string[]): string {
   }
   if (start) parts.push(start === prev ? start : `${start} ~ ${prev}`);
   return parts.join(", ");
+}
+export function AssignmentWarningSummary({
+  assignmentId,
+  warnings,
+}: {
+  assignmentId: string;
+  warnings: api.Warning[];
+}) {
+  if (!warnings.length) return "–";
+
+  const byType = new Map<string, api.Warning[]>();
+  for (const warning of warnings) {
+    const items = byType.get(warning.code) ?? [];
+    items.push(warning);
+    byType.set(warning.code, items);
+  }
+
+  const label = `경고 ${byType.size}개`;
+  return (
+    <HelpTooltip
+      label={label}
+      trigger={<StatusBadge tone="warn">{label}</StatusBadge>}
+      testId={`assignment-warning-${assignmentId.toLowerCase()}`}
+    >
+      <ol className="assignment-warning-list">
+        {[...byType].map(([code, items]) => (
+          <li key={code}>
+            <strong>{warningLabel[code] ?? "투입 조건 확인"}</strong>
+            {code === "CLOSE_CROSS" && (
+              <span>{monthRanges(items.flatMap((item) => item.months))}</span>
+            )}
+            {[...new Set(items.map((item) => item.message))].map((message) => (
+              <span key={message}>{message}</span>
+            ))}
+          </li>
+        ))}
+      </ol>
+    </HelpTooltip>
+  );
 }
 export function AssignmentWarnings({
   warnings,

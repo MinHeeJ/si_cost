@@ -243,6 +243,12 @@ it("경고 종류를 구분하고 MM 합계와 미계약 선투입 필터를 제
             months: ["2026-07"],
             assignmentIds: [row.id],
           },
+          ...["2026-08", "2026-09", "2026-10"].map((month) => ({
+            code: "MM_OVER",
+            message: `${month} 전프로젝트 월MM 1.20 > 1.0`,
+            months: [month],
+            assignmentIds: [row.id],
+          })),
         ],
       },
     ],
@@ -252,17 +258,21 @@ it("경고 종류를 구분하고 MM 합계와 미계약 선투입 필터를 제
   });
   draw();
   await ready();
-  expect(screen.getByTestId("assignment-warning-a-101-0")).toHaveTextContent(
-    "미계약 선투입",
-  );
-  expect(screen.getByTestId("assignment-warning-a-101-1")).toHaveTextContent(
-    "영업 파트 다름",
-  );
-  expect(
-    screen.getByTitle("2026-07 전프로젝트 월MM 1.50 > 1.0"),
-  ).toHaveTextContent("⚠");
-  await userEvent.click(screen.getByTestId("assignment-warning-a-101-2"));
-  expect(await screen.findByRole("tooltip")).toHaveTextContent("월MM 1.50");
+  const summary = screen.getByRole("button", { name: "경고 3개 도움말" });
+  expect(summary).toHaveTextContent("경고 3개");
+  await userEvent.hover(summary);
+  const tooltip = await screen.findByRole("tooltip");
+  const items = within(tooltip).getAllByRole("listitem");
+  expect(items).toHaveLength(3);
+  expect(items[0]).toHaveTextContent("미계약 선투입");
+  expect(items[1]).toHaveTextContent("영업 파트 다름");
+  expect(items[2]).toHaveTextContent("월 MM 한도 초과");
+  expect(items[2]).toHaveTextContent("2026-07 전프로젝트 월MM 1.50");
+  expect(items[2]).toHaveTextContent("2026-08 전프로젝트 월MM 1.20");
+  expect(items[2]).toHaveTextContent("2026-09 전프로젝트 월MM 1.20");
+  expect(items[2]).toHaveTextContent("2026-10 전프로젝트 월MM 1.20");
+  await userEvent.unhover(summary);
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText("경고"), "UNCONTRACTED");
   await userEvent.click(screen.getByTestId("assignments-query"));
   await waitFor(() =>

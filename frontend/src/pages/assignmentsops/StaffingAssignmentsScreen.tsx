@@ -1,7 +1,6 @@
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { TableControlIcon } from "../../shared/Icon";
 import { FieldHelp } from "../../shared/FieldHelp";
-import { HelpTooltip } from "../../shared/HelpTooltip";
 
 import {
   useCallback,
@@ -29,6 +28,7 @@ import {
   AssignmentChangeDialog,
   AssignmentBulkDialog,
   AssignmentError,
+  AssignmentWarningSummary,
 } from "./AssignmentDialogs";
 import { AssignmentCreateForm } from "./AssignmentCreateForm";
 import { AssignmentDrawer, kindName, unitPriceNote } from "./AssignmentDrawer";
@@ -346,34 +346,9 @@ export function AssignmentsContent({
     {
       id: "warnings",
       label: "경고",
-      render: (r) =>
-        r.warnings.length ? (
-          <span>
-            {r.warnings.map((w, index) => {
-              const labels: Record<string, string> = {
-                UNCONTRACTED: "미계약 선투입",
-                MM_OVER: "⚠",
-                PART_DIFFERENCE: "영업 파트 다름",
-                EMPLOYEE_TYPE: "직원구분 경고",
-                LEAVE: "휴직 기간 겹침",
-                CLOSE_CROSS: "마감월 포함",
-              };
-              const label = labels[w.code] ?? "배정 경고";
-              return (
-                <HelpTooltip
-                  key={`${w.code}-${index}`}
-                  label={label}
-                  trigger={<span title={w.message}>{label}</span>}
-                  testId={`assignment-warning-${r.id.toLowerCase()}-${index}`}
-                >
-                  {w.message}
-                </HelpTooltip>
-              );
-            })}
-          </span>
-        ) : (
-          "–"
-        ),
+      render: (row) => (
+        <AssignmentWarningSummary assignmentId={row.id} warnings={row.warnings} />
+      ),
     },
     {
       id: "projectName",

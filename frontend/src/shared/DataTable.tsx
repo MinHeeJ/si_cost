@@ -30,6 +30,7 @@ export type DataTableProps<T> = {
   columns: readonly Column<T>[];
   rowKey(row: T): Key;
   tableLabel?: string;
+  headerAlign?: Column<T>["align"];
   loading?: boolean;
   /** Show a message in the table body while loading. Defaults to skeleton rows. */
   loadingMessage?: string;
@@ -72,6 +73,7 @@ export function DataTable<T>({
   columns: suppliedColumns,
   rowKey,
   tableLabel,
+  headerAlign,
   loading,
   loadingMessage,
   empty = "조회된 자료가 없습니다.",
@@ -202,9 +204,9 @@ export function DataTable<T>({
     String(key)
       .replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
       .replace(/[^a-z0-9-]/g, "-");
-  const cellStyle = (column: Column<T>): CSSProperties => {
+  const cellStyle = (column: Column<T>, align = column.align): CSSProperties => {
     const fixed = stickyColumns?.find((item) => item.id === column.id);
-    if (!fixed) return { textAlign: column.align };
+    if (!fixed) return { textAlign: align };
     const before = columns.slice(0, columns.indexOf(column));
     const left = before.reduce(
       (sum, item) =>
@@ -212,7 +214,7 @@ export function DataTable<T>({
       (onSelectionChange ? 44 : 0) + (expandableRow ? 44 : 0),
     );
     return {
-      textAlign: column.align,
+      textAlign: align,
       position: "sticky",
       left,
       width: fixed.width,
@@ -303,7 +305,7 @@ export function DataTable<T>({
                       ? "sicost-sticky-cell"
                       : undefined
                   }
-                  style={cellStyle(column)}
+                  style={cellStyle(column, headerAlign)}
                   aria-sort={
                     sort?.id === column.id
                       ? sort.direction === "ASC"
