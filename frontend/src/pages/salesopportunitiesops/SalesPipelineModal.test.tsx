@@ -41,7 +41,7 @@ beforeEach(() => {
     },
   });
 });
-it("등록 화면에서 다른 탭을 열고 진행 중 탭에 돌아와 초안을 이어서 작성한다", async () => {
+it("등록 화면에서는 파이프라인 탭을 숨기고 목록 복귀 시 복원한다", async () => {
   render(
     <MemoryRouter>
       <SalesPipelinePanel />
@@ -53,13 +53,11 @@ it("등록 화면에서 다른 탭을 열고 진행 중 탭에 돌아와 초안�
   expect(screen.queryByRole("dialog", { name: "영업 기회 입력" })).not.toBeInTheDocument();
   const draft = screen.getByRole("textbox", { name: "기회명 초안" });
   await userEvent.type(draft, "저장 전 기회");
-  await userEvent.click(screen.getByTestId("pipeline-closed-tab"));
-  expect(screen.getByTestId("pipeline-closed-tab")).toHaveAttribute("aria-selected", "true");
-  expect(draft).not.toBeVisible();
-  await userEvent.click(screen.getByTestId("pipeline-ing-tab"));
+  expect(screen.queryByRole("tablist", { name: "영업 파이프라인 보기" })).not.toBeInTheDocument();
   expect(draft).toBeVisible();
   expect(draft).toHaveValue("저장 전 기회");
   await userEvent.click(screen.getByTestId("opportunity-form-back"));
+  expect(screen.getByRole("tablist", { name: "영업 파이프라인 보기" })).toBeVisible();
   expect(screen.getByTestId("pipeline-column-find")).toBeInTheDocument();
   await waitFor(() => expect(screen.getByTestId("pipeline-create-button")).toHaveFocus());
 });

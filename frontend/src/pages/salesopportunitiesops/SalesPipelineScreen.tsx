@@ -290,32 +290,35 @@ export function SalesPipelinePanel({
       data-screen-id="SCR-UI-29"
       aria-busy={loading}
     >
-      <SegmentedTabList
-        as="div"
-        className="project-analysis-tabs"
-        role="tablist"
-        aria-label="영업 파이프라인 보기"
-      >
-        {pipelineTabs.map(([value, label]) => (
-          <button
-            type="button"
-            id={`pipeline-tab-${value.toLowerCase()}`}
-            data-testid={`pipeline-${value.toLowerCase()}-tab`}
-            key={value}
-            role="tab"
-            aria-controls="pipeline-tab-content"
-            aria-selected={tab === value}
-            onClick={() => switchTab(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </SegmentedTabList>
+      {editing !== "new" && (
+        <SegmentedTabList
+          as="div"
+          className="project-analysis-tabs"
+          role="tablist"
+          aria-label="영업 파이프라인 보기"
+        >
+          {pipelineTabs.map(([value, label]) => (
+            <button
+              type="button"
+              id={`pipeline-tab-${value.toLowerCase()}`}
+              data-testid={`pipeline-${value.toLowerCase()}-tab`}
+              key={value}
+              role="tab"
+              aria-controls="pipeline-tab-content"
+              aria-selected={tab === value}
+              onClick={() => switchTab(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </SegmentedTabList>
+      )}
       <div
         className="sales-pipeline-content"
         id="pipeline-tab-content"
         role="tabpanel"
-        aria-labelledby={`pipeline-tab-${tab.toLowerCase()}`}
+        aria-label={editing === "new" ? "영업기회 등록" : undefined}
+        aria-labelledby={editing === "new" ? undefined : `pipeline-tab-${tab.toLowerCase()}`}
       >
         {editing && (
           <div className="sales-pipeline-editor" hidden={tab !== "ING"}>

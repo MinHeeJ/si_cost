@@ -13,14 +13,16 @@
   display: none;
 }
 .sales-opportunity-form-title {
-  margin: 0 0 8px;
-  font-size: 18px;
+  margin: 0;
+  font-size: 20px;
   line-height: 1.4;
   font-weight: 650;
 }
 .sales-opportunity-form-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
 }
 .sales-opportunity-form fieldset {
@@ -86,6 +88,24 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.sales-opportunity-developer-selector .sicost-table :is(th, td):nth-child(3) {
+  min-width: 12rem;
+}
+.sales-opportunity-developer-status {
+  margin: 0;
+  padding-inline-start: 1.25em;
+}
+.sales-opportunity-developer-selector button.sales-opportunity-developer-alert,
+.sales-opportunity-form button.sales-opportunity-developer-alert {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: var(--surface);
+}
+.sales-opportunity-selection-shortfall {
+  display: block;
+  color: var(--bad);
+  margin-top: 4px;
 }
 .sales-opportunity-probability-default > button {
   align-self: start;

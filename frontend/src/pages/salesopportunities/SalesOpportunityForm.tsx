@@ -17,6 +17,7 @@ import {
 import { stageNames } from "../salesopportunitiesops/SalesOpportunityActions";
 import type { SharedCodeLookup } from "../shared/sharedApi";
 import * as api from "./salesOpportunityApi";
+import { OpportunityDeveloperPicker } from "./OpportunityDeveloperPicker";
 import "./salesOpportunity.css";
 /** 빈 칸 문구(SFR-017-03 형식, 고르는 칸은 원문 「개발자를 골라 주세요」처럼). */
 const requiredMessages = {
@@ -116,55 +117,22 @@ export function SalesOpportunityForm({
     [dirty, setDirty] = useState(false),
     [generation, setGeneration] = useState(0),
     [warning, setWarning] = useState<string>();
-  const [selector, setSelector] = useState<string>(),
-    [search, setSearch] = useState(""),
-    [people, setPeople] = useState<{ id: string; name: string }[]>([]),
-    [peoplePage, setPeoplePage] = useState(1),
-    [peopleTotal, setPeopleTotal] = useState(0),
-    [peopleLoading, setPeopleLoading] = useState(false),
-    [peopleError, setPeopleError] = useState<unknown>();
+  const [selector, setSelector] = useState<string>();
+  const [developerNames, setDeveloperNames] = useState<Record<string, string>>({});
   const [committed, setCommitted] = useState<api.Result>();
-  const [rowWarnings, setRowWarnings] = useState<Record<string, string[]>>({});
-  const warningInputs = JSON.stringify(
-    rows.map((r) => ({
-      key: r.rowKey,
-      month: r.startMonth ?? "",
-      ids: r.selected,
-    })),
-  );
-  useEffect(() => {
-    let live = true;
-    setRowWarnings({});
-    const inputs = JSON.parse(warningInputs) as {
-      key: string;
-      month: string;
-      ids: string[];
-    }[];
-    void Promise.all(
-      inputs
-        .filter((r) => r.ids.length)
-        .map(async (r) => {
-          try {
-            const warnings = await Promise.all(
-              r.ids.map((id) => api.getNeedWarnings(id, r.month, detail?.id)),
-            );
-            return [r.key, warnings.flat()] as const;
-          } catch {
-            return [
-              r.key,
-              [
-                "가배정·투입 경고를 조회하지 못했습니다. 개발자를 다시 선택해 확인해 주세요.",
-              ],
-            ] as const;
-          }
-        }),
-    ).then((entries) => {
-      if (live) setRowWarnings(Object.fromEntries(entries));
-    });
-    return () => {
-      live = false;
-    };
-  }, [warningInputs, detail?.id]);
+  const selectedRow = rows.find((row) => row.rowKey === selector);
+  const lastMonth = selectedRow?.startMonth && selectedRow.months
+    ? monthEnd(selectedRow.startMonth, selectedRow.months)
+    : undefined;
+  const scheduledReleases = lastMonth
+    ? (detail?.tentativeAssignments ?? [])
+        .filter((assignment) =>
+          assignment.status === "ACT" &&
+          assignment.needSn === selectedRow?.needSn &&
+          assignment.startMonth > lastMonth,
+        )
+        .map((assignment) => assignment.developerId)
+    : [];
   useFieldErrorFocus(node, fields);
   const { pending, message, commit } = useCommitRefresh(
       "저장됐지만 다시 불러오지 못했습니다",
@@ -259,35 +227,6 @@ export function SalesOpportunityForm({
     window.addEventListener("beforeunload", unload);
     return () => window.removeEventListener("beforeunload", unload);
   }, [dirty, committed]);
-  useEffect(() => {
-    if (!selector) return;
-    let live = true;
-    setPeopleLoading(true);
-    setPeopleError(undefined);
-    void api
-      .getDevelopers({
-        q: search,
-        directClass: "DRCT",
-        includeStopped: false,
-        page: peoplePage,
-        size: 20,
-      })
-      .then((v) => {
-        if (live) {
-          setPeople(v.items);
-          setPeopleTotal(v.total);
-        }
-      })
-      .catch((e) => {
-        if (live) setPeopleError(e);
-      })
-      .finally(() => {
-        if (live) setPeopleLoading(false);
-      });
-    return () => {
-      live = false;
-    };
-  }, [selector, search, peoplePage]);
   function close() {
     if (pending) return;
     if (dirty && !committed) setLeaving(true);
@@ -299,8 +238,8 @@ export function SalesOpportunityForm({
       previous.map((r, i) => (i === index ? { ...r, ...patch } : r)),
     );
   }
-  function selectDeveloper(id: string) {
-    const target = rows.find((r) => r.rowKey === selector);
+  function selectDeveloper(id: string, name?: string) {
+    const target = selectedRow;
     if (!target) return;
     if (target.selected.includes(id)) {
       changeRow(rows.indexOf(target), {
@@ -309,15 +248,11 @@ export function SalesOpportunityForm({
       return;
     }
     if (target.selected.length >= (target.count ?? 0)) {
-      setPeopleError(
-        new Error(
-          "필요 인원수를 초과할 수 없습니다. 먼저 해제 대상을 골라 주세요.",
-        ),
-      );
-      return;
+      return "필요 인원수를 초과할 수 없습니다. 먼저 해제 대상을 골라 주세요.";
     }
     if (rows.some((r) => r.rowKey !== selector && r.selected.includes(id)))
       setWarning("중복 선택한 개발자를 마지막 선택행으로 이동했습니다.");
+    if (name) setDeveloperNames((previous) => ({ ...previous, [id]: name }));
     setDirty(true);
     setRows((previous) =>
       previous.map((r) => ({
@@ -421,9 +356,19 @@ export function SalesOpportunityForm({
       }}
     >
       <div>
-        <h2 className="sales-opportunity-form-title">
-          {detail ? "영업기회 수정" : "영업기회 등록"}
-        </h2>
+        <div className="sales-opportunity-form-actions">
+          <h2 className="sales-opportunity-form-title">
+            {detail ? "영업기회 수정" : "영업기회 등록"}
+          </h2>
+          <button
+            type="button"
+            data-testid="opportunity-form-back"
+            disabled={pending}
+            onClick={close}
+          >
+            목록
+          </button>
+        </div>
         {loading && <ScreenLoading message="입력 기준을 불러오는 중입니다." />}
         {lookupError != null && (
           <>
@@ -458,16 +403,6 @@ export function SalesOpportunityForm({
             </button>
           </div>
         )}
-        <div className="sales-opportunity-form-actions">
-          <button
-            type="button"
-            data-testid="opportunity-form-back"
-            disabled={pending}
-            onClick={close}
-          >
-            목록
-          </button>
-        </div>
         <form
           ref={node}
           noValidate
@@ -851,55 +786,26 @@ export function SalesOpportunityForm({
                       <td>
                         <button
                           type="button"
+                          className={
+                            r.selected.length === r.count && r.selected.length > 0
+                              ? "sicost-primary"
+                              : r.selected.length !== (r.count ?? 0)
+                                ? "sales-opportunity-developer-alert"
+                                : undefined
+                          }
                           data-testid={`need-select-${r.rowKey}`}
-                          onClick={() => {
-                            setSelector(r.rowKey);
-                            setPeoplePage(1);
-                            setSearch("");
-                          }}
+                          onClick={() => setSelector(r.rowKey)}
                         >
-                          개발자 선택
+                          {r.selected.length
+                            ? `선택된 개발자 ${r.selected.length}명`
+                            : "개발자 선택"}
                         </button>
-                        {r.selected.map((id) => (
-                          <span key={id}>
-                            {id}
-                            <button
-                              type="button"
-                              data-testid={`need-release-${r.rowKey}-${id.toLowerCase()}`}
-                              onClick={() =>
-                                changeRow(index, {
-                                  selected: r.selected.filter((v) => v !== id),
-                                })
-                              }
-                            >
-                              해제
-                            </button>
-                          </span>
-                        ))}
-                        {rowWarnings[r.rowKey]?.map((text, i) => (
-                          <p
-                            key={i}
-                            data-testid={`need-warning-${r.rowKey}-${i}`}
-                            className="sales-command-warning"
-                          >
-                            {text}
-                          </p>
-                        ))}
-                        {detail?.tentativeAssignments
-                          .filter(
-                            (t) =>
-                              t.status === "ACT" &&
-                              t.needSn === r.needSn &&
-                              r.selected.includes(t.developerId) &&
-                              r.startMonth &&
-                              r.months &&
-                              monthEnd(r.startMonth, r.months) < t.startMonth,
-                          )
-                          .map((t) => (
-                            <p key={t.id} className="sales-command-warning">
-                              {t.developerId} 해제 예정
-                            </p>
-                          ))}
+                        {r.selected.length !== (r.count ?? 0) && (
+                          <small className="sales-opportunity-selection-shortfall">
+                            {Math.abs((r.count ?? 0) - r.selected.length)}명{" "}
+                            {(r.count ?? 0) > r.selected.length ? "부족" : "초과"}
+                          </small>
+                        )}
                       </td>
                       <td>
                         <button
@@ -963,76 +869,18 @@ export function SalesOpportunityForm({
         >
           <p>저장하지 않은 내용은 사라집니다.</p>
         </Dialog>
-        <Dialog
-          open={!!selector}
-          title="개발자 선택"
-          confirmLabel="선택 완료"
-          onCancel={() => setSelector(undefined)}
-          onConfirm={() => setSelector(undefined)}
-        >
-          <div
-            className="sales-opportunity-developer-selector"
-            data-testid="opportunity-developer-selector"
-          >
-            <label>
-              개발자 검색
-              <input
-                data-testid="opportunity-developer-search"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPeoplePage(1);
-                }}
-              />
-            </label>
-            {peopleLoading && <ScreenLoading message="개발자를 불러오는 중입니다." />}
-            {peopleError != null && <SalesCommandError error={peopleError} />}
-            {!peopleLoading && !people.length && (
-              <p>선택할 개발자가 없습니다.</p>
-            )}
-            {people.length > 0 && (
-              <div
-                className="sales-opportunity-developer-options"
-                role="group"
-                aria-label="개발자 목록"
-              >
-                {people.map((p) => (
-                  <label key={p.id}>
-                    <input
-                      type="checkbox"
-                      data-testid={`opportunity-developer-${p.id.toLowerCase()}`}
-                      checked={
-                        rows
-                          .find((r) => r.rowKey === selector)
-                          ?.selected.includes(p.id) ?? false
-                      }
-                      onChange={() => selectDeveloper(p.id)}
-                    />
-                    {p.name}
-                  </label>
-                ))}
-              </div>
-            )}
-            <nav className="sicost-inline-pagination" aria-label="인력 선택 페이지">
-              <button
-                type="button"
-                data-testid="opportunity-people-previous"
-                disabled={peoplePage <= 1 || peopleLoading}
-                onClick={() => setPeoplePage((v) => v - 1)}
-              >
-                이전
-              </button>
-              <button
-                type="button"
-                data-testid="opportunity-people-next"
-                disabled={peoplePage * 20 >= peopleTotal || peopleLoading}
-                onClick={() => setPeoplePage((v) => v + 1)}
-              >
-                다음
-              </button>
-            </nav>
-          </div>
-        </Dialog>
+        {selectedRow && (
+          <OpportunityDeveloperPicker
+            key={selectedRow.rowKey}
+            selected={selectedRow.selected}
+            names={developerNames}
+            startMonth={selectedRow.startMonth ?? ""}
+            opportunityId={detail?.id}
+            scheduledReleases={scheduledReleases}
+            onToggle={selectDeveloper}
+            onClose={() => setSelector(undefined)}
+          />
+        )}
       </div>
     </section>
   );
