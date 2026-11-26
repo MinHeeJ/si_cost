@@ -7,7 +7,6 @@ import {
   useFieldErrorFocus,
 } from "../../shared/FieldErrors";
 import { NumericInput, sanitizeNumber } from "../../shared/NumericInput";
-import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
@@ -421,12 +420,10 @@ export function SalesOpportunityForm({
         close();
       }}
     >
-      <FormPage
-        title={detail ? "영업 기회 수정" : "영업 기회 등록"}
-        breadcrumb="인력 계획 › 영업 파이프라인"
-        screenId="UI-29"
-        actions={null}
-      >
+      <div>
+        <h2 className="sales-opportunity-form-title">
+          {detail ? "영업기회 수정" : "영업기회 등록"}
+        </h2>
         {loading && <ScreenLoading message="입력 기준을 불러오는 중입니다." />}
         {lookupError != null && (
           <>
@@ -1023,7 +1020,7 @@ export function SalesOpportunityForm({
             </nav>
           </div>
         </Dialog>
-      </FormPage>
+      </div>
     </section>
   );
 }

@@ -8,8 +8,15 @@
   display: grid;
   gap: 20px;
 }
-.sales-opportunity-form .sicost-form-page > header {
-  padding: 14px 0 18px;
+.sicost-screen[data-screen-id="SCR-UI-29"]:has(.sales-pipeline-editor:not([hidden]))
+  > .sicost-titlebar {
+  display: none;
+}
+.sales-opportunity-form-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 650;
 }
 .sales-opportunity-form-actions {
   display: flex;

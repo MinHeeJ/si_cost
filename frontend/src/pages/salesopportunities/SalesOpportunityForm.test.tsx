@@ -91,6 +91,7 @@ async function ready() {
 it("등록 폼에서 Escape를 누르면 미저장 입력의 나가기 여부를 확인한다", async () => {
   mount();
   await ready();
+  expect(screen.getByRole("heading", { name: "영업기회 등록" })).toBeVisible();
   const name = screen.getByTestId("opportunity-name");
   await userEvent.type(name, "초안 기회명");
   await userEvent.keyboard("{Escape}");

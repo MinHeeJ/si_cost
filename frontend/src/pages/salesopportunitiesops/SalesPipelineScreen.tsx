@@ -318,7 +318,7 @@ export function SalesPipelinePanel({
         aria-labelledby={`pipeline-tab-${tab.toLowerCase()}`}
       >
         {editing && (
-          <div hidden={tab !== "ING"}>
+          <div className="sales-pipeline-editor" hidden={tab !== "ING"}>
             <SalesOpportunityForm
               detail={editing === "new" ? undefined : editing}
               onClose={() => {
