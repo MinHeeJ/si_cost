@@ -1,5 +1,6 @@
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
+import { EditorFooter } from "../../shared/EditorFooter";
 import { useEffect, useRef, useState } from "react";
 import {
   errorOutsideFields,
@@ -931,7 +932,7 @@ export function SalesOpportunityForm({
             별개이며 자동으로 덮어쓰지 않습니다.
           </p>
           <SalesQuotePanel needs={needInputs} />
-          <footer className="sales-opportunity-footer">
+          <EditorFooter editorRef={editor} label="영업 기회 저장">
             <button
               type="button"
               data-testid="opportunity-form-cancel"
@@ -948,7 +949,7 @@ export function SalesOpportunityForm({
             >
               저장
             </button>
-          </footer>
+          </EditorFooter>
         </form>
         <Dialog
           open={leaving}

@@ -2,6 +2,7 @@
   display: grid;
   gap: 16px;
   min-width: 0;
+  padding-bottom: var(--sicost-editor-footer-space, 0px);
 }
 .sales-opportunity-form form {
   display: grid;
@@ -121,15 +122,11 @@
   outline: 2px solid var(--primary);
   background: var(--primary-bg);
 }
-.sales-opportunity-footer {
-  display: flex;
+.sales-opportunity-form .sicost-editor-footer {
   justify-content: flex-end;
-  gap: 12px;
-  position: sticky;
-  bottom: 0;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-top: 1px solid var(--divider);
+}
+.sales-opportunity-form .sicost-editor-footer > :first-child {
+  margin-inline-end: 0;
 }
 @media (max-width: 767px) {
   .sales-opportunity-fields {
