@@ -95,17 +95,16 @@
   border-top: 1px solid var(--divider);
 }
 .sales-opportunity-developer-search-row {
-  display: flex;
-  align-items: end;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
-.sales-opportunity-developer-search-row label {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
+.sales-opportunity-developer-search-row :is(label, button) {
+  white-space: nowrap;
 }
-.sales-opportunity-developer-search-row button {
-  flex-shrink: 0;
+.sales-opportunity-developer-search-row input {
+  min-width: 0;
 }
 .sicost-table.sales-opportunity-search-table :is(th, td),
 .sicost-table.sales-opportunity-selected-table th,

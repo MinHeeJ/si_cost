@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { BusinessName } from "../../shared/BusinessName";
 import { Dialog } from "../../shared/Dialog";
 import { Pagination } from "../../shared/Pagination";
@@ -28,6 +28,7 @@ export function OpportunityDeveloperPicker({
   onChangeSelection(people: { id: string; name?: string }[], checked: boolean): string | undefined;
   onClose(): void;
 }) {
+  const searchId = useId();
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState({ term: "" });
   const [page, setPage] = useState(1);
@@ -151,19 +152,18 @@ export function OpportunityDeveloperPicker({
         </section>
         <section className="sales-opportunity-developer-search">
           <div className="sales-opportunity-developer-search-row">
-            <label>
-              개발자 검색
-              <input
-                data-testid="opportunity-developer-search"
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
-                  event.preventDefault();
-                  searchPeople();
-                }}
-              />
-            </label>
+            <label htmlFor={searchId}>개발자 검색</label>
+            <input
+              id={searchId}
+              data-testid="opportunity-developer-search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+                event.preventDefault();
+                searchPeople();
+              }}
+            />
             <button type="button" onClick={searchPeople}>
               검색
             </button>
