@@ -53,7 +53,10 @@
     SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.clnt_id=#{id}<if test="lock"> FOR UPDATE</if>
   </select>
   <select id="byBusinessNo" resultType="com.sicost.clients.ClientDtos$Stored">
-    SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.biz_reg_no=#{businessNo}
+    SELECT <include refid="columns"/> FROM tb_bs_clnt c
+    WHERE c.biz_reg_no IN (#{businessNo}, replace(#{businessNo}, '-', ''))
+    ORDER BY c.reg_dttm, c.clnt_id
+    LIMIT 1
   </select>
   <select id="sameName" resultType="com.sicost.clients.ClientDtos$Stored">
     SELECT <include refid="columns"/> FROM tb_bs_clnt c WHERE c.clnt_nm=#{name}

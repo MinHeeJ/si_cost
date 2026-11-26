@@ -7,6 +7,21 @@
 .business-user-select > button {
   text-align: left;
 }
+.business-user-select-labeled > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding-inline: 10px;
+  font-weight: 400;
+  border-color: #e3e7ec;
+  background: #f6f7f9;
+}
+.business-user-select-labeled > button > svg {
+  flex-shrink: 0;
+  color: var(--text-sub);
+}
 .business-user-select-panel {
   padding: 16px;
   border: 1px solid var(--divider);

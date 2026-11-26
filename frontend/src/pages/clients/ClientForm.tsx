@@ -217,29 +217,27 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
       data-testid="client-form"
       data-screen-id="SCR-UI-15"
     >
-      <header
-        className={`clients-toolbar${client ? "" : " sicost-form-heading"}`}
-      >
-        <button
-          type="button"
-          data-testid="client-form-back"
-          disabled={pending}
-          onClick={close}
-        >
-          {client ? "취소" : "목록"}
-        </button>
-        {client ? (
+      {client ? (
+        <header className="clients-toolbar">
+          <button
+            type="button"
+            data-testid="client-form-back"
+            disabled={pending}
+            onClick={close}
+          >
+            취소
+          </button>
           <h2>기본 정보 수정</h2>
-        ) : (
-          <div>
-            <p className="sicost-breadcrumb">기준정보 › 거래처·영업 파트</p>
-            <div className="sicost-title-row">
-              <h1>거래처 등록</h1>
-              <small>UI-15</small>
-            </div>
+        </header>
+      ) : (
+        <header className="sicost-form-heading">
+          <p className="sicost-breadcrumb">기준정보 › 거래처·영업 파트</p>
+          <div className="sicost-title-row">
+            <h1>거래처 등록</h1>
+            <small>UI-15</small>
           </div>
-        )}
-      </header>
+        </header>
+      )}
       {codeError != null && (
         <ErrorBanner
           message="선택 항목을 불러오지 못했습니다."
@@ -257,6 +255,18 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
             error instanceof ApiError ? error.body.requestId : undefined
           }
         />
+      )}
+      {!client && (
+        <div className="clients-actions clients-form-actions">
+          <button
+            type="button"
+            data-testid="client-form-back"
+            disabled={pending}
+            onClick={close}
+          >
+            목록
+          </button>
+        </div>
       )}
       <form
         data-testid="client-edit-form"

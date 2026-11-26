@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { CodeSelect } from "../../shared/CodeSelect";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
+import { Icon } from "../../shared/Icon";
 import {
   businessUsersCommittedEvent,
   getBusinessUserOptions,
@@ -18,6 +19,7 @@ export type BusinessUserSelectProps = {
   value: string;
   onChange(userId: string): void;
   label?: string;
+  withFieldLabel?: boolean;
   selectedLabel?: string;
   required?: boolean;
   disabled?: boolean;
@@ -30,6 +32,7 @@ export function BusinessUserSelect({
   value,
   onChange,
   label = purpose === "PM" ? "PM" : "파트장",
+  withFieldLabel = false,
   selectedLabel,
   required,
   disabled = false,
@@ -37,6 +40,7 @@ export function BusinessUserSelect({
   refreshKey,
   onRegister,
 }: BusinessUserSelectProps) {
+  const buttonId = useId();
   const navigate = useNavigate(),
     location = useLocation(),
     panelId = useId();
@@ -88,18 +92,32 @@ export function BusinessUserSelect({
   }
   return (
     <section
-      className="business-user-select"
+      className={`business-user-select${withFieldLabel ? " sicost-field business-user-select-labeled" : ""}`}
       data-testid={`${purpose.toLowerCase().replace("_", "-")}-user-field`}
     >
+      {withFieldLabel && (
+        <label htmlFor={buttonId}>
+          {label}
+          {required && <span aria-hidden="true"> *</span>}
+        </label>
+      )}
       <button
+        id={buttonId}
         data-testid={`${purpose.toLowerCase().replace("_", "-")}-user-open`}
         type="button"
         aria-expanded={open && !disabled}
         aria-controls={panelId}
+        aria-label={
+          withFieldLabel ? `${label}: ${display || "선택해 주세요"}` : undefined
+        }
         disabled={disabled}
         onClick={() => setOpen((previous) => !previous)}
       >
-        {label}: {display || "선택해 주세요"}
+        {!withFieldLabel && `${label}: `}
+        {display || "선택해 주세요"}
+        {withFieldLabel && (
+          <Icon name={open ? "caretUp" : "caretDown"} size={14} />
+        )}
       </button>
       {fieldError && (
         <p role="alert" className="sicost-field-error">
