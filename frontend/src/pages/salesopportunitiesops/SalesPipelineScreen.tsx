@@ -1,9 +1,7 @@
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { recommendationEntryUrl } from "../workforcerecommendationsops/recommendationBrowseApi";
-import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { Pagination } from "../../shared/Pagination";
@@ -117,6 +115,7 @@ export function SalesPipelinePanel({
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const kanbanRef = useRef<HTMLDivElement>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
     const board = kanbanRef.current;
     if (!board) return;
@@ -291,16 +290,6 @@ export function SalesPipelinePanel({
       data-screen-id="SCR-UI-29"
       aria-busy={loading}
     >
-      {editing && (
-        <OpportunityModal>
-          <SalesOpportunityForm
-            detail={editing === "new" ? undefined : editing}
-            onClose={() => setEditing(undefined)}
-            onSaved={saved}
-            onDirtyChange={onDirtyChange}
-          />
-        </OpportunityModal>
-      )}
       <SegmentedTabList
         as="div"
         className="project-analysis-tabs"
@@ -328,9 +317,23 @@ export function SalesPipelinePanel({
         role="tabpanel"
         aria-labelledby={`pipeline-tab-${tab.toLowerCase()}`}
       >
+        {editing && (
+          <div hidden={tab !== "ING"}>
+            <SalesOpportunityForm
+              detail={editing === "new" ? undefined : editing}
+              onClose={() => {
+                setEditing(undefined);
+                if (editing === "new")
+                  requestAnimationFrame(() => createButton.current?.focus());
+              }}
+              onSaved={saved}
+              onDirtyChange={onDirtyChange}
+            />
+          </div>
+        )}
         {tab === "FORECAST" ? (
           <SalesForecastPanel />
-        ) : (
+        ) : tab === "ING" && editing ? null : (
           <>
             {tab === "CLOSED" ? (
               <div
@@ -425,6 +428,7 @@ export function SalesPipelinePanel({
                   <button
                     type="button"
                     className="sicost-primary"
+                    ref={createButton}
                     data-testid="pipeline-create-button"
                     onClick={() => setEditing("new")}
                   >
@@ -768,6 +772,7 @@ export function SalesPipelinePanel({
                 <button
                   data-testid="opportunity-edit-button"
                   onClick={() => {
+                    switchTab("ING");
                     setEditing(detail);
                     setSelectedId(undefined);
                   }}
@@ -925,64 +930,4 @@ function isStale(opportunity: api.Opportunity, today?: string) {
   const threshold = new Date(`${today}T00:00:00Z`);
   threshold.setUTCDate(threshold.getUTCDate() - 14);
   return timestamp.slice(0, 10) < threshold.toISOString().slice(0, 10);
-}
-
-function OpportunityModal({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const topmost = useOverlayLayer(ref, true, 55);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    if (topmost()) ref.current?.focus();
-    return () => previous?.focus();
-  }, []);
-  return createPortal(
-    <div className="sicost-scrim sales-opportunity-scrim">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-label="영업 기회 입력"
-        tabIndex={-1}
-        className="sicost-dialog sicost-dialog-page sales-opportunity-dialog"
-        onKeyDown={(event) => {
-          if (!topmost()) return;
-          if (!ref.current?.contains(event.target as Node)) return;
-          if (event.key === "Escape") {
-            event.preventDefault();
-            ref.current
-              ?.querySelector<HTMLButtonElement>(
-                '[data-testid="opportunity-form-back"]',
-              )
-              ?.click();
-          }
-          if (event.key === "Tab") {
-            const nodes = [
-              ...(ref.current?.querySelectorAll<HTMLElement>(
-                "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]",
-              ) ?? []),
-            ].filter((node) => node.getClientRects().length > 0);
-            const first = nodes[0],
-              last = nodes[nodes.length - 1];
-            if (!first) {
-              event.preventDefault();
-              ref.current?.focus();
-            } else if (
-              event.shiftKey &&
-              (document.activeElement === first ||
-                document.activeElement === ref.current)
-            ) {
-              event.preventDefault();
-              last?.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault();
-              first.focus();
-            }
-          }
-        }}
-      >
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
 }

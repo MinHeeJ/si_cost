@@ -88,6 +88,17 @@ async function ready() {
     expect(screen.getByTestId("opportunity-form-save")).toBeEnabled(),
   );
 }
+it("등록 폼에서 Escape를 누르면 미저장 입력의 나가기 여부를 확인한다", async () => {
+  mount();
+  await ready();
+  const name = screen.getByTestId("opportunity-name");
+  await userEvent.type(name, "초안 기회명");
+  await userEvent.keyboard("{Escape}");
+  const dialog = within(screen.getByRole("dialog", { name: "미저장 이동 확인" }));
+  await userEvent.click(dialog.getByRole("button", { name: "계속 작성" }));
+  expect(name).toHaveValue("초안 기회명");
+  expect(close).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getNeedWarnings).mockResolvedValue([]);

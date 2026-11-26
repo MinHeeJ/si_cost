@@ -6,7 +6,6 @@ import {
   useFieldErrorFocus,
 } from "../../shared/FieldErrors";
 import { NumericInput, sanitizeNumber } from "../../shared/NumericInput";
-import { useNavigate } from "react-router-dom";
 import { FormPage } from "../../shared/FormPage";
 import { Dialog } from "../../shared/Dialog";
 import { ApiError } from "../../shared/api";
@@ -67,8 +66,8 @@ export function SalesOpportunityForm({
   onSaved,
   onDirtyChange,
 }: Props) {
-  const navigate = useNavigate(),
-    sequence = useRef(0),
+  const sequence = useRef(0),
+    editor = useRef<HTMLElement>(null),
     node = useRef<HTMLFormElement>(null);
   const [form, setForm] = useState<api.OpportunityInput>(() => ({
     name: detail?.name ?? "",
@@ -167,8 +166,7 @@ export function SalesOpportunityForm({
     };
   }, [warningInputs, detail?.id]);
   useFieldErrorFocus(node, fields);
-  const destination = useRef<string>(),
-    { pending, message, commit } = useCommitRefresh(
+  const { pending, message, commit } = useCommitRefresh(
       "저장됐지만 다시 불러오지 못했습니다",
     );
   const set = <K extends keyof api.OpportunityInput>(
@@ -182,6 +180,9 @@ export function SalesOpportunityForm({
     onDirtyChange?.(dirty);
     return () => onDirtyChange?.(false);
   }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    editor.current?.focus();
+  }, []);
   useEffect(() => {
     let live = true;
     setLoading(true);
@@ -255,28 +256,9 @@ export function SalesOpportunityForm({
         e.returnValue = "";
       }
     };
-    const link = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
-      if (
-        !a ||
-        !dirty ||
-        committed ||
-        pending ||
-        !a.getAttribute("href")?.startsWith("/")
-      )
-        return;
-      e.preventDefault();
-      e.stopPropagation();
-      destination.current = a.getAttribute("href")!;
-      setLeaving(true);
-    };
     window.addEventListener("beforeunload", unload);
-    document.addEventListener("click", link, true);
-    return () => {
-      window.removeEventListener("beforeunload", unload);
-      document.removeEventListener("click", link, true);
-    };
-  }, [dirty, committed, pending]);
+    return () => window.removeEventListener("beforeunload", unload);
+  }, [dirty, committed]);
   useEffect(() => {
     if (!selector) return;
     let live = true;
@@ -421,24 +403,28 @@ export function SalesOpportunityForm({
   );
   return (
     <section
+      ref={editor}
+      tabIndex={-1}
       data-testid="sales-opportunity-form"
       data-screen-id="SCR-UI-29-FORM"
       className="sales-opportunity-form"
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Escape" ||
+          event.defaultPrevented ||
+          !event.currentTarget.contains(event.target as Node)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        close();
+      }}
     >
       <FormPage
         title={detail ? "영업 기회 수정" : "영업 기회 등록"}
         breadcrumb="인력 계획 › 영업 파이프라인"
         screenId="UI-29"
-        actions={
-          <button
-            type="button"
-            data-testid="opportunity-form-back"
-            disabled={pending}
-            onClick={close}
-          >
-            목록
-          </button>
-        }
+        actions={null}
       >
         {loading && <ScreenLoading message="입력 기준을 불러오는 중입니다." />}
         {lookupError != null && (
@@ -474,6 +460,16 @@ export function SalesOpportunityForm({
             </button>
           </div>
         )}
+        <div className="sales-opportunity-form-actions">
+          <button
+            type="button"
+            data-testid="opportunity-form-back"
+            disabled={pending}
+            onClick={close}
+          >
+            목록
+          </button>
+        </div>
         <form
           ref={node}
           noValidate
@@ -576,8 +572,8 @@ export function SalesOpportunityForm({
                 />
                 {field("probability")}
               </label>
-              <div>
-                <p>{form.manualProbability ? "수동 확률" : "기본 확률"}</p>
+              <div className="sales-opportunity-probability-default">
+                <span>{form.manualProbability ? "수동 확률" : "기본 확률"}</span>
                 <button
                   type="button"
                   data-testid="opportunity-default-probability"
@@ -959,14 +955,10 @@ export function SalesOpportunityForm({
           title="미저장 이동 확인"
           confirmLabel="나가기"
           cancelLabel="계속 작성"
-          onCancel={() => {
-            destination.current = undefined;
-            setLeaving(false);
-          }}
+          onCancel={() => setLeaving(false)}
           onConfirm={() => {
             setDirty(false);
-            if (destination.current) navigate(destination.current);
-            else onClose();
+            onClose();
           }}
         >
           <p>저장하지 않은 내용은 사라집니다.</p>
