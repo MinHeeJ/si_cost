@@ -8,21 +8,19 @@ import { Pagination } from "../../shared/Pagination";
 import { KpiStrip } from "../../shared/Surface";
 import { StatusBadge } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
-import { DetailDrawer } from "../../shared/DetailDrawer";
+import { SalesOpportunityDetail } from "./SalesOpportunityDetail";
 import {
   formatAmount,
   formatFixedDecimal,
-  formatShortDateTime,
   formatSummaryAmount,
   formatRate,
 } from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
 import { SALES_COMMITTED } from "../assignmentcandidatesops/assignmentCandidatesApi";
-import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
-import { SalesQuotePanel, SalesCommandError } from "./SalesQuotePanel";
+import { stageNames } from "./SalesOpportunityActions";
+import { SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { SalesOpportunityForm } from "../salesopportunities/SalesOpportunityForm";
-import { TentativeAssignmentsPanel } from "../tentativeassignmentsops/TentativeAssignmentsPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { useCodeNames } from "../../shared/codeNames";
 import { BusinessName } from "../../shared/BusinessName";
@@ -75,12 +73,9 @@ export function SalesPipelinePanel({
 }: { onDirtyChange?(dirty: boolean): void } = {}) {
   const name = useCodeNames(
     "JOB",
-    "GRADE",
     "APRV_STAT",
     "OPP_STAT",
     "LOSE_RSN",
-    "CTRT_TYPE",
-    "APRV_ACT",
   );
   const location = useLocation();
   const [editing, setEditing] = useState<"new" | api.Opportunity>(),
@@ -156,12 +151,10 @@ export function SalesPipelinePanel({
       new URLSearchParams(location.search).get("opportunityId");
     if (id) {
       setSelectedId(id);
-      setDetailTab("기본 정보");
     }
   }, [location.key, location.search]);
   const [detail, setDetail] = useState<api.Opportunity>(),
     [detailError, setDetailError] = useState<unknown>(),
-    [detailTab, setDetailTab] = useState("기본 정보"),
     [generation, setGeneration] = useState(0);
   useEffect(() => {
     if (tab === "FORECAST") {
@@ -490,10 +483,7 @@ export function SalesPipelinePanel({
                                     type="button"
                                     className="sicost-text-link"
                                     data-testid={`opportunity-open-${o.id.toLowerCase()}`}
-                                    onClick={() => {
-                                      setSelectedId(o.id);
-                                      setDetailTab("기본 정보");
-                                    }}
+                                    onClick={() => setSelectedId(o.id)}
                                   >
                                     {o.name}
                                   </button>
@@ -750,175 +740,19 @@ export function SalesPipelinePanel({
         )}
       </div>
       {selectedId && (
-        <DetailDrawer
-          title={detail?.name ?? "영업 기회 상세"}
-          testId="opportunity-detail-drawer"
+        <SalesOpportunityDetail
+          key={selectedId}
+          detail={detail?.id === selectedId ? detail : undefined}
+          error={detailError}
           onClose={() => setSelectedId(undefined)}
-        >
-          {detailError != null && (
-            <>
-              <SalesCommandError error={detailError} />
-              <button
-                data-testid="detail-retry-button"
-                onClick={() => setGeneration((v) => v + 1)}
-              >
-                재조회
-              </button>
-            </>
-          )}
-          {!detail && !detailError && (
-            <ScreenLoading message="상세를 불러오는 중입니다." />
-          )}
-          {detail && (
-            <>
-              {detail.status === "ING" && (
-                <button
-                  data-testid="opportunity-edit-button"
-                  onClick={() => {
-                    switchTab("ING");
-                    setEditing(detail);
-                    setSelectedId(undefined);
-                  }}
-                >
-                  수정
-                </button>
-              )}
-              <SalesOpportunityActions
-                key={detail.id}
-                opportunity={detail}
-                refresh={refresh}
-              />
-              <SegmentedTabList
-                as="div"
-                className="sales-command-tabs"
-                role="tablist"
-                aria-label="기회 상세 탭"
-              >
-                {["기본 정보", "필요 인력", "견적 점검/승인 이력"].map((t) => (
-                  <button
-                    role="tab"
-                    data-testid={`detail-tab-${t === "기본 정보" ? "base" : t === "필요 인력" ? "needs" : "quote"}`}
-                    key={t}
-                    aria-selected={detailTab === t}
-                    onClick={() => setDetailTab(t)}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </SegmentedTabList>
-              <div role="tabpanel" data-testid="opportunity-detail-panel">
-                {detailTab === "기본 정보" && (
-                  <>
-                    <p>
-                      고객 <BusinessName kind="client" id={detail.customerId} />{" "}
-                      · 영업파트 <BusinessName kind="part" id={detail.partId} />{" "}
-                      · {name("CTRT_TYPE", detail.contractType)}
-                    </p>
-                    <p>
-                      {detail.startMonth} · {detail.months ?? "–"}개월 ·{" "}
-                      {detail.workplace ?? "–"}
-                    </p>
-                    <p>{detail.memo}</p>
-                    {detail.approvalStatus === "REJ" && (
-                      <div className="sales-command-error">
-                        {
-                          detail.approvalHistory
-                            .filter((h) => h.action === "REJ")
-                            .at(-1)?.reason
-                        }
-                      </div>
-                    )}
-                  </>
-                )}
-                {detailTab === "필요 인력" && (
-                  <>
-                    <div className="sicost-table-viewport">
-                      <table
-                        className="sicost-table"
-                        data-testid="opportunity-needs-table"
-                      >
-                        <thead>
-                          <tr>
-                            {[
-                              "직무",
-                              "등급",
-                              "인원",
-                              "시작월",
-                              "개월",
-                              "월 MM",
-                              "예상 단가 (원)",
-                            ].map((label) => (
-                              <th key={label}>{label}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {detail.needs.map((n, i) => (
-                            <tr
-                              data-testid={`detail-need-${n.needSn ?? i}`}
-                              key={n.needSn ?? i}
-                            >
-                              <td>{name("JOB", n.jobCode)}</td>
-                              <td>
-                                {n.gradeCode
-                                  ? name("GRADE", n.gradeCode)
-                                  : "등급 미지정"}
-                              </td>
-                              <td>{n.count}</td>
-                              <td>{n.startMonth}</td>
-                              <td>{n.months}</td>
-                              <td>{formatFixedDecimal(n.monthlyMm, 2)}</td>
-                              <td>
-                                {n.expectedRate == null
-                                  ? "직무 기본단가"
-                                  : formatAmount(n.expectedRate, "원")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {detail.needs.length === 0 && (
-                        <p>필요 인력이 없습니다.</p>
-                      )}
-                    </div>
-                    <TentativeAssignmentsPanel
-                      items={detail.tentativeAssignments.filter(
-                        (t) => t.status === "ACT",
-                      )}
-                      needs={detail.needs}
-                      revision={detail.revision}
-                      opportunityStatus={detail.status}
-                      onRefresh={refresh}
-                    />
-                  </>
-                )}
-                {detailTab === "견적 점검/승인 이력" && (
-                  <>
-                    <SalesQuotePanel
-                      key={detail.revision}
-                      needs={detail.needs}
-                      initial={detail.quote}
-                    />
-                    <h3>승인 이력</h3>
-                    {detail.approvalHistory.length === 0 && (
-                      <p>승인 이력이 없습니다.</p>
-                    )}
-                    {detail.approvalHistory.map((h) => (
-                      <article
-                        data-testid={`approval-history-${h.histSn}`}
-                        key={h.histSn}
-                      >
-                        {formatShortDateTime(h.registeredAt)} ·{" "}
-                        {name("APRV_ACT", h.action)} · {h.profitRate}% ·{" "}
-                        {h.reason} · {h.registeredBy}
-                      </article>
-                    ))}
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </DetailDrawer>
+          onEdit={(opportunity) => {
+            switchTab("ING");
+            setEditing(opportunity);
+            setSelectedId(undefined);
+          }}
+          onRetry={() => setGeneration((value) => value + 1)}
+          refresh={refresh}
+        />
       )}
     </section>
   );

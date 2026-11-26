@@ -35,8 +35,7 @@
   padding-block: 6px;
   vertical-align: middle;
 }
-.sales-command-toolbar,
-.sales-command-tabs {
+.sales-command-toolbar {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -44,30 +43,6 @@
 }
 .sales-command-toolbar h2 {
   margin-right: auto;
-}
-.sales-command-tabs {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  border-bottom: 0;
-  background: #eceff3;
-  border-radius: 6px;
-  padding: 4px;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-}
-.sales-command-tabs button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  padding: 10px 16px;
-  background: transparent;
-}
-.sales-command-tabs button[aria-selected="true"] {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
 }
 .sales-command-summary {
   display: grid;
@@ -382,25 +357,58 @@
   padding: 18px 22px 17px;
 }
 
-.sales-command-tabs button {
-  height: 34px;
-  min-height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-sub);
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: none;
+.sales-opportunity-detail,
+.sales-opportunity-detail-panel:not([hidden]) {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
-.sales-command-tabs
-  :is([aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) {
-  background: var(--surface);
-  color: var(--text);
-  border: 0;
-  box-shadow:
-    0 1px 2px rgba(17, 24, 39, 0.1),
-    0 0 0 1px rgba(17, 24, 39, 0.04);
+.sales-opportunity-detail-tabs {
+  max-width: 100%;
+}
+.sales-opportunity-detail-panel h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.sales-opportunity-detail-panel [data-testid="tentative-assignments-panel"] h3 {
+  margin-bottom: 12px;
+}
+.sales-opportunity-detail-note {
+  white-space: pre-wrap;
+}
+.sicost-table.sales-opportunity-history td:nth-child(4) {
+  min-width: 10rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.sales-opportunity-management-card .sicost-section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.sales-opportunity-management-card label {
+  margin: 0;
+}
+.sales-opportunity-probability-editor {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.sales-opportunity-probability-editor label > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sales-opportunity-probability-mode {
+  align-self: end;
+  padding-block: 8px;
+  color: var(--text-sub);
+}
+.sales-opportunity-management-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sales-opportunity-management-buttons .sales-opportunity-management-danger:not(:disabled) {
+  color: var(--bad);
+  border-color: var(--bad);
 }
