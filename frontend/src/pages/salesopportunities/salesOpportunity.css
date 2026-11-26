@@ -64,6 +64,29 @@
   min-width: 0;
   font-size: 14px;
 }
+.sales-opportunity-field-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.sales-opportunity-developer-selector {
+  display: grid;
+  gap: 12px;
+}
+.sales-opportunity-developer-selector > label {
+  display: grid;
+  gap: 6px;
+}
+.sales-opportunity-developer-options {
+  display: grid;
+  gap: 6px;
+}
+.sales-opportunity-developer-options > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .sales-opportunity-probability-default > button {
   align-self: start;
   justify-self: start;
@@ -85,6 +108,10 @@
   .sales-opportunity-fields label > * {
     grid-column: 2;
     text-align: left;
+  }
+  .sales-opportunity-fields label > .sales-opportunity-field-caption {
+    grid-column: 1;
+    justify-self: end;
   }
   .sales-opportunity-probability-default > button {
     grid-column: 2;

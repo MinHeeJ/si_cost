@@ -648,8 +648,9 @@ export function SalesOpportunityForm({
                 </small>
               </label>
               <label>
-                근무지
-                <FieldHelp label="근무지" />
+                <span className="sales-opportunity-field-caption">
+                  근무지 <FieldHelp label="근무지" />
+                </span>
                 <input
                   data-testid="opportunity-workplace"
                   name="workplace"
@@ -669,8 +670,9 @@ export function SalesOpportunityForm({
                 {field("nextTask")}
               </label>
               <label>
-                기한
-                <FieldHelp label="기한" />
+                <span className="sales-opportunity-field-caption">
+                  기한 <FieldHelp label="기한" />
+                </span>
                 <input
                   data-testid="opportunity-next-due"
                   name="nextDue"
@@ -968,7 +970,10 @@ export function SalesOpportunityForm({
           onCancel={() => setSelector(undefined)}
           onConfirm={() => setSelector(undefined)}
         >
-          <div data-testid="opportunity-developer-selector">
+          <div
+            className="sales-opportunity-developer-selector"
+            data-testid="opportunity-developer-selector"
+          >
             <label>
               개발자 검색
               <input
@@ -985,21 +990,29 @@ export function SalesOpportunityForm({
             {!peopleLoading && !people.length && (
               <p>선택할 개발자가 없습니다.</p>
             )}
-            {people.map((p) => (
-              <label key={p.id}>
-                <input
-                  type="checkbox"
-                  data-testid={`opportunity-developer-${p.id.toLowerCase()}`}
-                  checked={
-                    rows
-                      .find((r) => r.rowKey === selector)
-                      ?.selected.includes(p.id) ?? false
-                  }
-                  onChange={() => selectDeveloper(p.id)}
-                />
-                {p.name}
-              </label>
-            ))}
+            {people.length > 0 && (
+              <div
+                className="sales-opportunity-developer-options"
+                role="group"
+                aria-label="개발자 목록"
+              >
+                {people.map((p) => (
+                  <label key={p.id}>
+                    <input
+                      type="checkbox"
+                      data-testid={`opportunity-developer-${p.id.toLowerCase()}`}
+                      checked={
+                        rows
+                          .find((r) => r.rowKey === selector)
+                          ?.selected.includes(p.id) ?? false
+                      }
+                      onChange={() => selectDeveloper(p.id)}
+                    />
+                    {p.name}
+                  </label>
+                ))}
+              </div>
+            )}
             <nav className="sicost-inline-pagination" aria-label="인력 선택 페이지">
               <button
                 type="button"
