@@ -52,6 +52,10 @@
 .sales-opportunity-form fieldset > legend + button {
   display: block;
   width: max-content;
+  margin-inline-start: auto;
+}
+.sales-opportunity-form fieldset > .sicost-table-viewport + p {
+  margin-block-start: 12px;
 }
 .sales-opportunity-fields :is(label, .sales-opportunity-probability-default) {
   display: flex;
