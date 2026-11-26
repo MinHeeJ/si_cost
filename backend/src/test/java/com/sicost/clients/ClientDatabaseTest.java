@@ -126,6 +126,19 @@ class ClientDatabaseTest {
         assertThatThrownBy(()->service.create(request(customer("다른상호","123-45-67890"),false))).isInstanceOfSatisfying(ApiException.class,e->assertThat(e.code()).isEqualTo("DUPLICATE_BUSINESS_NO"));
         assertThat(service.create(request(customer("동일상호","1234567891"),false)).warnings()).hasSize(1);
     }
+    @Test void digitsOnlyStoredBusinessNumberConflictsWithBothInputFormats() {
+        Client row = service.create(request(customer("기존거래처", "1234567890"), false)).client();
+        sql.update("UPDATE tb_bs_clnt SET biz_reg_no='1234567890' WHERE clnt_id=?", row.id());
+
+        for (String number : List.of("1234567890", "123-45-67890")) {
+            assertThatThrownBy(() -> service.create(request(customer("신규거래처", number), false)))
+                .isInstanceOfSatisfying(ApiException.class,
+                    error -> assertThat(error.code()).isEqualTo("DUPLICATE_BUSINESS_NO"));
+        }
+        assertThat(sql.queryForList(
+            "SELECT clnt_id FROM tb_bs_clnt WHERE biz_reg_no IN ('1234567890', '123-45-67890')",
+            String.class)).containsExactly(row.id());
+    }
     @Test void concurrentSameRevisionWritesOnce() throws Exception {
         Client row=service.create(request(customer("동시수정","1234567890"),false)).client();var body=edit(row);body.put("name","변경");Save request=request(body,true);CountDownLatch start=new CountDownLatch(1);
         var a=CompletableFuture.supplyAsync(()->writeAfter(start,row.id(),request));var b=CompletableFuture.supplyAsync(()->writeAfter(start,row.id(),request));start.countDown();

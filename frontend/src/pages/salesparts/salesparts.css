@@ -35,7 +35,50 @@
   min-width: 180px;
   max-width: 260px;
 }
-.sales-part-form,
+.sicost-dialog.sales-part-create-modal {
+  width: min(560px, 100%);
+}
+.sales-part-create-modal > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.sales-part-create-modal > .sicost-dialog-body {
+  padding-top: 16px;
+}
+.sales-part-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.sales-part-form > .sicost-feedback,
+.sales-part-form-full {
+  grid-column: 1 / -1;
+}
+.sales-part-form .sicost-field > label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  color: var(--text);
+}
+.sales-part-form .sicost-input-unit {
+  max-width: none;
+}
+.sales-part-form .sicost-field input {
+  width: 100%;
+}
+.sales-part-month-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+@media (max-width: 520px) {
+  .sales-part-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .sales-part-detail {
   display: grid;
   gap: 16px;

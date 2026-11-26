@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { Text } from "../../shared/Text";
 import { ApiError } from "../../shared/api";
-import { ErrorBanner } from "../../shared/Feedback";
+import { ErrorBanner, FeedbackNotice } from "../../shared/Feedback";
 import { compareDecimal, validMonth } from "../../shared/format";
 import { BusinessUserSelect } from "../businessusersops/BusinessUserSelect";
 import * as api from "./salesPartsApi";
@@ -123,6 +123,7 @@ export function SalesPartCreateDialog({
       <Dialog
         open
         title="영업 파트 추가"
+        className="sales-part-create-modal"
         pending={pending}
         confirmLabel="등록"
         onConfirm={save}
@@ -142,35 +143,51 @@ export function SalesPartCreateDialog({
               }
             />
           )}
-          {loading && <ScreenLoading message="기본값을 불러오는 중입니다." />}
-          {defaults?.defaultErrors.map((item) => (
-            <p className="sicost-banner sicost-tone-warn" key={item.source}>
-              {item.source}: {item.message} 수동 입력할 수 있습니다.
-            </p>
-          ))}
-          <Text
-            label="파트명"
-            data-testid="sales-part-name-input"
-            required
-            value={values.name}
-            onChange={(value) => change("name", value)}
-            error={fields.name}
-            disabled={pending}
-          />
-          <Text
-            label="적용 시작월"
-            data-testid="sales-part-month-input"
-            type="month"
-            required
-            min={defaults?.minMonth}
-            value={values.effectiveMonth}
-            onChange={(value) => change("effectiveMonth", value)}
-            error={fields.effectiveMonth}
-            disabled={pending}
-          />
-          {defaults && <p>최소 적용월: {defaults.minMonth}</p>}
+          {loading && (
+            <div className="sales-part-form-full">
+              <ScreenLoading inline message="기본값을 불러오는 중입니다." />
+            </div>
+          )}
+          {defaults && defaults.defaultErrors.length > 0 && (
+            <FeedbackNotice tone="warn" title="일부 기본값을 불러오지 못했습니다">
+              {defaults.defaultErrors.map((item) => (
+                <p key={item.source}>{item.source}: {item.message}</p>
+              ))}
+              <p>해당 항목은 직접 입력할 수 있습니다.</p>
+            </FeedbackNotice>
+          )}
+          <div className="sales-part-form-full">
+            <Text
+              label="파트명"
+              data-testid="sales-part-name-input"
+              required
+              value={values.name}
+              onChange={(value) => change("name", value)}
+              error={fields.name}
+              disabled={pending}
+            />
+          </div>
+          <div>
+            <Text
+              label="적용 시작월"
+              data-testid="sales-part-month-input"
+              type="month"
+              required
+              min={defaults?.minMonth}
+              value={values.effectiveMonth}
+              onChange={(value) => change("effectiveMonth", value)}
+              error={fields.effectiveMonth}
+              disabled={pending}
+            />
+            {defaults && (
+              <p className="sales-part-month-hint">
+                {defaults.minMonth}부터 선택할 수 있습니다.
+              </p>
+            )}
+          </div>
           <BusinessUserSelect
             purpose="PART_LEADER"
+            withFieldLabel
             value={values.leaderUserId}
             onChange={(value) => change("leaderUserId", value)}
             required
@@ -179,6 +196,7 @@ export function SalesPartCreateDialog({
           />
           <Text
             label="이익 배분율"
+            unit="%"
             data-testid="sales-part-rate-input"
             required
             inputMode="decimal"
@@ -188,7 +206,8 @@ export function SalesPartCreateDialog({
             disabled={pending}
           />
           <Text
-            label="공통관리비 (자사 인력 1인·월, 원)"
+            label="공통관리비 (자사 인력 1인·월)"
+            unit="원"
             data-testid="sales-part-expense-input"
             required
             inputMode="numeric"
