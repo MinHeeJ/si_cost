@@ -118,13 +118,11 @@
 .sales-opportunity-selected-table :is(th, td):nth-child(3) {
   min-width: 12rem;
 }
-.sales-opportunity-selected-scroll {
-  max-height: min(50vh, 26rem);
+.sales-opportunity-developer-selector .sales-opportunity-selected-viewport {
+  max-height: none;
 }
-.sales-opportunity-selected-scroll .sicost-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.sales-opportunity-developer-selector .sales-opportunity-selected-viewport.sales-opportunity-selected-scroll {
+  max-height: min(50vh, 26rem);
 }
 .sales-opportunity-developer-status {
   margin: 0;

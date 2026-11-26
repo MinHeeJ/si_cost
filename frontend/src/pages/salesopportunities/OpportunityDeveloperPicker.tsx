@@ -101,7 +101,7 @@ export function OpportunityDeveloperPicker({
         <section>
           <h3>선택된 개발자</h3>
           <div
-            className={`sicost-table-viewport${selected.length > DISPLAY_SIZE ? " sales-opportunity-selected-scroll" : ""}`}
+            className={`sicost-table-viewport sales-opportunity-selected-viewport${selected.length > DISPLAY_SIZE ? " sales-opportunity-selected-scroll" : ""}`}
           >
             <table
               className="sicost-table sales-opportunity-selected-table"
