@@ -1222,6 +1222,47 @@ describe("공식 진입점 합성", () => {
       applicationRoutes.some((route) => route.path?.includes("UI-10-")),
     ).toBe(false);
   });
+  it("재무 화면은 저장한 금액 단위를 사용하고 화면에서 바꾼 단위를 공통 설정에 저장한다", async () => {
+    const saved = preferences.find((item) => item.type === "AMT_UNIT")!;
+    Object.assign(saved, { value: "원", revision: "saved-unit", stored: true });
+    open("/UI-10");
+    const select = () => screen.getByTestId("financial-display-unit");
+    expect(await screen.findByTestId("financial-display-unit")).toHaveValue("원");
+    expect(screen.getByTestId("financial-tax-current-panel")).toHaveTextContent(
+      "선택월 법인세 (원)",
+    );
+
+    await userEvent.click(screen.getByTestId("financial-month-2026-10"));
+    await waitFor(() =>
+      expect(financial.getFinancialItems).toHaveBeenCalledWith(
+        "2026-10",
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(await screen.findByTestId("financial-display-unit")).toHaveValue("원");
+    await waitFor(() => expect(select()).toBeEnabled());
+    await userEvent.selectOptions(select(), "백만원");
+    await waitFor(() =>
+      expect(prefs.putPreference).toHaveBeenCalledWith(
+        "AMT_UNIT", "*", "백만원", "saved-unit",
+      ),
+    );
+    await waitFor(() => expect(select()).toHaveValue("백만원"));
+    expect(screen.getByTestId("financial-tax-current-panel")).toHaveTextContent(
+      "선택월 법인세 (백만원)",
+    );
+    expect(financial.saveFinancialItems).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "임시 관리자" }));
+    await userEvent.click(screen.getByRole("button", { name: "화면 설정" }));
+    const settingsUnit = within(
+      await screen.findByRole("dialog", { name: "화면 설정" }),
+    ).getByLabelText("금액 단위");
+    expect(settingsUnit).toHaveValue("백만원");
+    await waitFor(() => expect(settingsUnit).toBeEnabled());
+    await userEvent.selectOptions(settingsUnit, "원");
+    await waitFor(() => expect(select()).toHaveValue("원"));
+  }, 15000);
   it("재무 편집 중 셸 이동의 계속 편집은 초안과 화면을 유지한다", async () => {
     const confirm = vi.spyOn(window, "confirm");
     open("/UI-10");

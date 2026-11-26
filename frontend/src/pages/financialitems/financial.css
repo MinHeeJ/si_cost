@@ -307,6 +307,10 @@
   width: 100%;
   min-width: 0;
 }
+.financial-rows-items input[list="financial-sga-codes"]::-webkit-calendar-picker-indicator {
+  /* Keep the indicator hidden when Chromium finds matching suggestions. */
+  display: none !important;
+}
 .financial-editor .financial-section td[data-column="last4"] input {
   max-width: 84px;
   text-align: center;

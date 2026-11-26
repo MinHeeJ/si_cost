@@ -51,6 +51,9 @@ export type FinancialItemsScreenProps = {
   openTax?: boolean;
   initialMonth?: string;
   initialAdjustmentTargetMonth?: string;
+  amountUnit?: FinancialUnit;
+  amountUnitPending?: boolean;
+  onAmountUnitChange?(unit: FinancialUnit): Promise<void>;
 };
 export function FinancialItemsScreen(props: FinancialItemsScreenProps) {
   const location = useLocation();
@@ -96,6 +99,9 @@ export function FinancialItemsEditor({
   openTax,
   initialMonth,
   initialAdjustmentTargetMonth,
+  amountUnit,
+  amountUnitPending,
+  onAmountUnitChange,
 }: FinancialItemsScreenProps) {
   const canUpdate = usePermission("UI-10", "UPD"),
     canTaxConfirm = usePermission("UI-09", "CNFM");
@@ -108,7 +114,23 @@ export function FinancialItemsEditor({
     state.discard,
   );
   const [tab, setTab] = useState<"financial" | "cash">("financial");
-  const [unit, setUnit] = useState<FinancialUnit>("천원");
+  const [localUnit, setLocalUnit] = useState<FinancialUnit>("천원");
+  const [unitError, setUnitError] = useState("");
+  const unit = amountUnit ?? localUnit;
+  const changeUnit = async (value: FinancialUnit) => {
+    setUnitError("");
+    if (!onAmountUnitChange) {
+      setLocalUnit(value);
+      return;
+    }
+    try {
+      await onAmountUnitChange(value);
+    } catch (error) {
+      setUnitError(
+        error instanceof Error ? error.message : "금액 단위를 저장하지 못했습니다.",
+      );
+    }
+  };
   const [uploadOpen, setUploadOpen] = useState(false),
     [uploadOpening, setUploadOpening] = useState(false);
   const [payment, setPayment] = useState<CorporateTaxPayment>();
@@ -858,7 +880,8 @@ export function FinancialItemsEditor({
             data-testid="financial-display-unit"
             aria-label="표시 단위"
             value={unit}
-            onChange={(event) => setUnit(event.target.value as FinancialUnit)}
+            disabled={amountUnitPending}
+            onChange={(event) => void changeUnit(event.target.value as FinancialUnit)}
           >
             <option>원</option>
             <option>천원</option>
@@ -866,6 +889,7 @@ export function FinancialItemsEditor({
           </select>
         </label>
       </div>
+      {unitError && <ErrorBanner message={unitError} />}
       <div className="sicost-feedback-slot">
         {state.refreshFailed ? (
           <FeedbackNotice

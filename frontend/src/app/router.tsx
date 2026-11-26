@@ -1166,6 +1166,11 @@ function RegisteredApplication() {
     (dirty: boolean) => setStandardsDirty(dirty),
     [],
   );
+  const storedAmountUnit = preferences.get("AMT_UNIT")?.value;
+  const financialAmountUnit =
+    storedAmountUnit === "원" || storedAmountUnit === "백만원"
+      ? storedAmountUnit
+      : "천원";
   const adapter: SharedPreferenceAdapter = {
     items: preferences.items,
     loading: preferences.loading,
@@ -1238,7 +1243,16 @@ function RegisteredApplication() {
         ),
         "UI-12": <CloseLinkedAssignments onDirtyChange={onAssignmentsDirty} />,
         "UI-13": <BillingReceiptsScreen onDirtyChange={onBillingDirty} />,
-        "UI-10": <FinancialItemsScreen onDirtyChange={setFinancialDirty} />,
+        "UI-10": preferences.loading ? (
+          <p role="status">화면 설정을 불러오는 중입니다.</p>
+        ) : (
+          <FinancialItemsScreen
+            onDirtyChange={setFinancialDirty}
+            amountUnit={financialAmountUnit}
+            amountUnitPending={preferences.pending}
+            onAmountUnitChange={(value) => preferences.put("AMT_UNIT", "*", value)}
+          />
+        ),
         "UI-19": <SalesPartnerProfitScreen />,
         "UI-32": <RateRenegotiationsScreen />,
         "UI-30": <RegisteredWorkforceRecommendations />,
