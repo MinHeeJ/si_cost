@@ -75,7 +75,10 @@ const columns: Column<MasterHistoryEntry>[] = [
   {
     id: "actorName",
     label: "처리자",
-    render: (row) => `${row.actorName} (${row.actorId})`,
+    render: ({ actorName, actorId }) => {
+      const name = actorName.trim();
+      return name && name !== actorId ? `${name} (${actorId})` : actorId;
+    },
   },
 ];
 
