@@ -72,25 +72,59 @@
   gap: 4px;
   white-space: nowrap;
 }
+.sales-opportunity-developer-dialog > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.sales-opportunity-developer-dialog > .sicost-dialog-body {
+  padding-top: 14px;
+}
 .sales-opportunity-developer-selector {
   display: grid;
+  gap: 16px;
+}
+.sales-opportunity-developer-selector h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--text);
+}
+.sales-opportunity-developer-search {
+  display: grid;
   gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
 }
-.sales-opportunity-developer-selector > label {
-  display: grid;
-  gap: 6px;
-}
-.sales-opportunity-developer-options {
-  display: grid;
-  gap: 6px;
-}
-.sales-opportunity-developer-options > label {
+.sales-opportunity-developer-search-row {
   display: flex;
-  align-items: center;
+  align-items: end;
   gap: 8px;
 }
-.sales-opportunity-developer-selector .sicost-table :is(th, td):nth-child(3) {
+.sales-opportunity-developer-search-row label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.sales-opportunity-developer-search-row button {
+  flex-shrink: 0;
+}
+.sicost-table.sales-opportunity-search-table :is(th, td),
+.sicost-table.sales-opportunity-selected-table th,
+.sicost-table.sales-opportunity-selected-table td:not(:nth-child(3)) {
+  text-align: center;
+}
+.sales-opportunity-search-table th:first-child {
+  width: 44px;
+}
+.sales-opportunity-selected-table :is(th, td):nth-child(3) {
   min-width: 12rem;
+}
+.sales-opportunity-selected-scroll {
+  max-height: min(50vh, 26rem);
+}
+.sales-opportunity-selected-scroll .sicost-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .sales-opportunity-developer-status {
   margin: 0;

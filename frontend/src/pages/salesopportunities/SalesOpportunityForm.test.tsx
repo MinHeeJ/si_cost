@@ -378,12 +378,12 @@ it("개발자 검색 결과를 10명씩 탐색하며 선택 인원을 페이지�
   const dialog = within(screen.getByRole("dialog", { name: "개발자 선택" }));
   const selected = within(dialog.getByRole("table", { name: "선택된 개발자" }));
   const page = within(dialog.getByRole("navigation", { name: "인력 선택 페이지" }));
-  const options = within(await dialog.findByRole("group", { name: "개발자 목록" }));
-  expect(options.getAllByRole("checkbox")).toHaveLength(10);
+  const options = within(await dialog.findByRole("table", { name: "개발자 검색 결과" }));
+  expect(options.getAllByRole("checkbox")).toHaveLength(11);
   await userEvent.click(options.getByRole("checkbox", { name: "개발자 1" }));
   await userEvent.click(page.getByRole("button", { name: "2 페이지" }));
   expect(api.getDevelopers).toHaveBeenCalledTimes(1);
-  expect(options.getAllByRole("checkbox")).toHaveLength(10);
+  expect(options.getAllByRole("checkbox")).toHaveLength(11);
   await userEvent.click(options.getByRole("checkbox", { name: "개발자 11" }));
   await userEvent.click(page.getByRole("button", { name: "3 페이지" }));
   expect(await dialog.findByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
@@ -391,15 +391,20 @@ it("개발자 검색 결과를 10명씩 탐색하며 선택 인원을 페이지�
     expect.objectContaining({ page: 2, size: 20 }),
     expect.any(AbortSignal),
   );
-  expect((await dialog.findAllByRole("checkbox"))).toHaveLength(3);
+  expect(dialog.getAllByRole("checkbox")).toHaveLength(4);
   await userEvent.click(dialog.getByRole("checkbox", { name: "개발자 21" }));
   expect(await dialog.findByRole("alert")).toHaveTextContent("필요 인원수를 초과");
   const search = dialog.getByRole("textbox", { name: "개발자 검색" });
   await userEvent.type(search, "23");
+  expect(dialog.getByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "검색" }));
   expect(await dialog.findByRole("checkbox", { name: "개발자 23" })).toBeInTheDocument();
   expect(dialog.queryByRole("checkbox", { name: "개발자 21" })).not.toBeInTheDocument();
   expect(selected.getByText("개발자 1", { exact: true })).toBeInTheDocument();
   expect(selected.getByText("개발자 11", { exact: true })).toBeInTheDocument();
+  await userEvent.clear(search);
+  await userEvent.type(search, "21{Enter}");
+  expect(await dialog.findByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
   await userEvent.click(dialog.getByRole("button", { name: "선택 완료" }));
   const complete = screen.getByRole("button", { name: "선택된 개발자 2명" });
   expect(complete).toHaveClass("sicost-primary");
@@ -410,6 +415,48 @@ it("개발자 검색 결과를 10명씩 탐색하며 선택 인원을 페이지�
   expect(screen.getByRole("button", { name: "선택된 개발자 1명" })).toHaveClass(
     "sales-opportunity-developer-alert",
   );
+});
+it("현재 페이지 전체 선택과 해제는 다른 페이지를 유지하며 필요 인원수에 맞춘다", async () => {
+  const opportunity = detail();
+  opportunity.needs[0].count = 11;
+  opportunity.tentativeAssignments = [];
+  const items = Array.from({ length: 20 }, (_, i) => ({
+    id: `D-${i + 1}`,
+    name: `개발자 ${i + 1}`,
+  }));
+  vi.mocked(api.getDevelopers).mockResolvedValue({
+    items,
+    total: items.length,
+    page: 1,
+    size: 20,
+  } as Awaited<ReturnType<typeof api.getDevelopers>>);
+  mount(opportunity);
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
+  const dialog = within(screen.getByRole("dialog", { name: "개발자 선택" }));
+  const selectedTable = dialog.getByRole("table", { name: "선택된 개발자" });
+  const selected = within(selectedTable);
+  const page = within(await dialog.findByRole("navigation", { name: "인력 선택 페이지" }));
+  const selectPage = dialog.getByRole("checkbox", { name: "이 페이지 전체 선택" });
+
+  await userEvent.click(selectPage);
+  expect(selectPage).toBeChecked();
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(10);
+  expect(selectedTable.parentElement).not.toHaveClass("sales-opportunity-selected-scroll");
+  await userEvent.click(page.getByRole("button", { name: "2 페이지" }));
+  expect(selectPage).not.toBeChecked();
+  await userEvent.click(selectPage);
+  expect(selectPage).toBePartiallyChecked();
+  expect(dialog.getByRole("alert")).toHaveTextContent("1명만 추가로 선택했습니다");
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(11);
+  expect(selectedTable.parentElement).toHaveClass("sales-opportunity-selected-scroll");
+
+  await userEvent.click(page.getByRole("button", { name: "1 페이지" }));
+  expect(selectPage).toBeChecked();
+  await userEvent.click(selectPage);
+  expect(selectPage).not.toBeChecked();
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(1);
+  expect(selected.getByRole("button", { name: "개발자 11 선택 해제" })).toBeInTheDocument();
 });
 it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
   mount();

@@ -17,7 +17,7 @@ export function OpportunityDeveloperPicker({
   startMonth,
   opportunityId,
   scheduledReleases,
-  onToggle,
+  onChangeSelection,
   onClose,
 }: {
   selected: string[];
@@ -25,10 +25,11 @@ export function OpportunityDeveloperPicker({
   startMonth: string;
   opportunityId?: string;
   scheduledReleases: string[];
-  onToggle(id: string, name?: string): string | undefined;
+  onChangeSelection(people: { id: string; name?: string }[], checked: boolean): string | undefined;
   onClose(): void;
 }) {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState({ term: "" });
   const [page, setPage] = useState(1);
   const [people, setPeople] = useState<Developer[]>([]);
   const [total, setTotal] = useState(0);
@@ -39,6 +40,18 @@ export function OpportunityDeveloperPicker({
   const sourcePage = Math.ceil(page / PAGES_PER_RESULT);
   const first = ((page - 1) % PAGES_PER_RESULT) * DISPLAY_SIZE;
   const visiblePeople = people.slice(first, first + DISPLAY_SIZE);
+  const selectedOnPage = visiblePeople.filter((person) => selected.includes(person.id)).length;
+  const pageSelected = visiblePeople.length > 0 && selectedOnPage === visiblePeople.length;
+  const pagePartiallySelected = selectedOnPage > 0 && !pageSelected;
+
+  function searchPeople() {
+    setSelectionError(undefined);
+    setSearch({ term: searchInput.trim() });
+    setPage(1);
+  }
+  function updateSelection(items: { id: string; name?: string }[], checked: boolean) {
+    setSelectionError(onChangeSelection(items, checked));
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -47,7 +60,7 @@ export function OpportunityDeveloperPicker({
     void api
       .getDevelopers(
         {
-          q: search,
+          q: search.term,
           directClass: "DRCT",
           includeStopped: false,
           page: sourcePage,
@@ -76,6 +89,7 @@ export function OpportunityDeveloperPicker({
       open
       wide
       title="개발자 선택"
+      className="sales-opportunity-developer-dialog"
       confirmLabel="선택 완료"
       onCancel={onClose}
       onConfirm={onClose}
@@ -84,101 +98,151 @@ export function OpportunityDeveloperPicker({
         className="sales-opportunity-developer-selector"
         data-testid="opportunity-developer-selector"
       >
-        <div className="sicost-table-viewport">
-          <table className="sicost-table" aria-label="선택된 개발자">
-            <thead>
-              <tr>
-                <th scope="col">성명</th>
-                <th scope="col">아이디</th>
-                <th scope="col">현재 상태</th>
-                <th scope="col">해제</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selected.length === 0 && (
+        <section>
+          <h3>선택된 개발자</h3>
+          <div
+            className={`sicost-table-viewport${selected.length > DISPLAY_SIZE ? " sales-opportunity-selected-scroll" : ""}`}
+          >
+            <table
+              className="sicost-table sales-opportunity-selected-table"
+              aria-label="선택된 개발자"
+            >
+              <thead>
                 <tr>
-                  <td colSpan={4}>선택된 개발자가 없습니다.</td>
+                  <th scope="col">성명</th>
+                  <th scope="col">아이디</th>
+                  <th scope="col">현재 상태</th>
+                  <th scope="col">해제</th>
                 </tr>
-              )}
-              {selected.map((id) => (
-                <tr key={id}>
-                  <td>{names[id] ?? <BusinessName kind="developer" id={id} />}</td>
-                  <td>{id}</td>
-                  <td>
-                    <DeveloperStatus
-                      id={id}
-                      month={startMonth}
-                      opportunityId={opportunityId}
-                      scheduledRelease={scheduledReleases.includes(id)}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      type="button"
-                      className="sales-opportunity-developer-alert"
-                      aria-label={`${names[id] ?? id} 선택 해제`}
-                      onClick={() => setSelectionError(onToggle(id))}
-                    >
-                      해제
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <label>
-          개발자 검색
-          <input
-            data-testid="opportunity-developer-search"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-          />
-        </label>
-        {selectionError && (
-          <p role="alert" className="sicost-field-error">{selectionError}</p>
-        )}
-        {loading ? (
-          <ScreenLoading message="개발자를 불러오는 중입니다." />
-        ) : error != null ? (
-          <SalesCommandError error={error} />
-        ) : (
-          <>
-            {visiblePeople.length === 0 ? (
-              <p>선택할 개발자가 없습니다.</p>
-            ) : (
-              <div
-                className="sales-opportunity-developer-options"
-                role="group"
-                aria-label="개발자 목록"
-              >
-                {visiblePeople.map((person) => (
-                  <label key={person.id}>
-                    <input
-                      type="checkbox"
-                      data-testid={`opportunity-developer-${person.id.toLowerCase()}`}
-                      checked={selected.includes(person.id)}
-                      onChange={() => setSelectionError(onToggle(person.id, person.name))}
-                    />
-                    {person.name}
-                  </label>
+              </thead>
+              <tbody>
+                {selected.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>선택된 개발자가 없습니다.</td>
+                  </tr>
+                )}
+                {selected.map((id) => (
+                  <tr key={id}>
+                    <td>{names[id] ?? <BusinessName kind="developer" id={id} />}</td>
+                    <td>{id}</td>
+                    <td>
+                      <DeveloperStatus
+                        id={id}
+                        month={startMonth}
+                        opportunityId={opportunityId}
+                        scheduledRelease={scheduledReleases.includes(id)}
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="sales-opportunity-developer-alert"
+                        aria-label={`${names[id] ?? id} 선택 해제`}
+                        onClick={() => updateSelection([{ id }], false)}
+                      >
+                        해제
+                      </button>
+                    </td>
+                  </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className="sales-opportunity-developer-search">
+          <div className="sales-opportunity-developer-search-row">
+            <label>
+              개발자 검색
+              <input
+                data-testid="opportunity-developer-search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+                  event.preventDefault();
+                  searchPeople();
+                }}
+              />
+            </label>
+            <button type="button" onClick={searchPeople}>
+              검색
+            </button>
+          </div>
+          {selectionError && (
+            <p role="alert" className="sicost-field-error">{selectionError}</p>
+          )}
+          {loading ? (
+            <ScreenLoading message="개발자를 불러오는 중입니다." />
+          ) : error != null ? (
+            <SalesCommandError error={error} />
+          ) : (
+            <>
+              <div className="sicost-table-viewport">
+                <table
+                  className="sicost-table sales-opportunity-search-table"
+                  aria-label="개발자 검색 결과"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <input
+                          type="checkbox"
+                          aria-label="이 페이지 전체 선택"
+                          checked={pageSelected}
+                          disabled={visiblePeople.length === 0}
+                          ref={(input) => {
+                            if (input) input.indeterminate = pagePartiallySelected;
+                          }}
+                          onChange={(event) => {
+                            const { checked } = event.currentTarget;
+                            event.currentTarget.indeterminate = pagePartiallySelected;
+                            updateSelection(visiblePeople, checked);
+                          }}
+                        />
+                      </th>
+                      <th scope="col">사원명</th>
+                      <th scope="col">아이디</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visiblePeople.length === 0 && (
+                      <tr>
+                        <td colSpan={3}>선택할 개발자가 없습니다.</td>
+                      </tr>
+                    )}
+                    {visiblePeople.map((person) => (
+                      <tr key={person.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={person.name}
+                            data-testid={`opportunity-developer-${person.id.toLowerCase()}`}
+                            checked={selected.includes(person.id)}
+                            onChange={(event) => updateSelection([person], event.target.checked)}
+                          />
+                        </td>
+                        <td>{person.name}</td>
+                        <td>{person.id}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-            <Pagination
-              page={page}
-              size={DISPLAY_SIZE}
-              total={total}
-              unit="명"
-              onPageChange={setPage}
-              label="인력 선택 페이지"
-              testId="opportunity-people"
-            />
-          </>
-        )}
+              <Pagination
+                page={page}
+                size={DISPLAY_SIZE}
+                total={total}
+                unit="명"
+                onPageChange={(nextPage) => {
+                  setSelectionError(undefined);
+                  setPage(nextPage);
+                }}
+                label="인력 선택 페이지"
+                testId="opportunity-people"
+              />
+            </>
+          )}
+        </section>
       </div>
     </Dialog>
   );

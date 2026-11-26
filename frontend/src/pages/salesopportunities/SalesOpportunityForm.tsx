@@ -238,31 +238,42 @@ export function SalesOpportunityForm({
       previous.map((r, i) => (i === index ? { ...r, ...patch } : r)),
     );
   }
-  function selectDeveloper(id: string, name?: string) {
-    const target = selectedRow;
-    if (!target) return;
-    if (target.selected.includes(id)) {
-      changeRow(rows.indexOf(target), {
-        selected: target.selected.filter((v) => v !== id),
+  function changeDeveloperSelection(
+    people: { id: string; name?: string }[],
+    checked: boolean,
+  ) {
+    if (!selectedRow) return;
+    const ids = new Set(people.map((person) => person.id));
+    if (!checked) {
+      changeRow(rows.indexOf(selectedRow), {
+        selected: selectedRow.selected.filter((id) => !ids.has(id)),
       });
       return;
     }
-    if (target.selected.length >= (target.count ?? 0)) {
+    const candidates = people.filter((person) => !selectedRow.selected.includes(person.id));
+    const remaining = Math.max(0, (selectedRow.count ?? 0) - selectedRow.selected.length);
+    const added = candidates.slice(0, remaining);
+    if (added.length === 0)
       return "필요 인원수를 초과할 수 없습니다. 먼저 해제 대상을 골라 주세요.";
-    }
-    if (rows.some((r) => r.rowKey !== selector && r.selected.includes(id)))
+
+    const addedIds = new Set(added.map((person) => person.id));
+    if (rows.some((row) => row.rowKey !== selector && row.selected.some((id) => addedIds.has(id))))
       setWarning("중복 선택한 개발자를 마지막 선택행으로 이동했습니다.");
-    if (name) setDeveloperNames((previous) => ({ ...previous, [id]: name }));
+    setDeveloperNames((previous) => ({
+      ...previous,
+      ...Object.fromEntries(added.flatMap(({ id, name }) => (name ? [[id, name]] : []))),
+    }));
     setDirty(true);
     setRows((previous) =>
-      previous.map((r) => ({
-        ...r,
-        selected:
-          r.rowKey === selector
-            ? [...r.selected, id]
-            : r.selected.filter((v) => v !== id),
+      previous.map((row) => ({
+        ...row,
+        selected: row.rowKey === selector
+          ? [...row.selected, ...addedIds]
+          : row.selected.filter((id) => !addedIds.has(id)),
       })),
     );
+    if (added.length < candidates.length)
+      return `필요 인원 제한으로 이 페이지에서 ${added.length}명만 추가로 선택했습니다.`;
   }
   function field(key: string) {
     return fields[key] ? (
@@ -877,7 +888,7 @@ export function SalesOpportunityForm({
             startMonth={selectedRow.startMonth ?? ""}
             opportunityId={detail?.id}
             scheduledReleases={scheduledReleases}
-            onToggle={selectDeveloper}
+            onChangeSelection={changeDeveloperSelection}
             onClose={() => setSelector(undefined)}
           />
         )}
