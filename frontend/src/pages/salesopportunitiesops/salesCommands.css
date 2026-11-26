@@ -360,11 +360,14 @@
 .sales-opportunity-detail,
 .sales-opportunity-detail-panel:not([hidden]) {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-width: 0;
 }
-.sales-opportunity-detail-tabs {
-  max-width: 100%;
+@media (max-width: 480px) {
+  .sicost-segmented-tabs.sales-opportunity-detail-tabs button {
+    padding-inline: 8px;
+  }
 }
 .sales-opportunity-detail-panel h3 {
   margin: 0;
