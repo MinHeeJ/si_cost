@@ -302,6 +302,10 @@
   color: var(--bad);
   background: var(--bad-bg);
 }
+.sales-quote-save-steps {
+  margin: 6px 0;
+  padding-inline-start: 1.35rem;
+}
 .sales-command-empty {
   padding: 32px 12px;
   text-align: center;

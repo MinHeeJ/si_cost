@@ -117,7 +117,7 @@ export function SalesOpportunityActions({
   const [win, setWin] = useState(() => initialWin(o)),
     [stage, setStage] = useState(o.stage),
     [probability, setProbability] = useState(o.probability);
-  const { pending, message, commit } = useCommitRefresh(
+  const { pending, message, outcome, commit } = useCommitRefresh(
     "저장은 됐지만 다시 불러오지 못했습니다",
   );
   const [approvalFeedback, setApprovalFeedback] = useState(false);
@@ -219,7 +219,9 @@ export function SalesOpportunityActions({
   }
   const feedback = (
     <>
-      {message && <p role="status">{message}</p>}
+      {message && outcome?.kind !== "save-failed" && (
+        <p role="status">{message}</p>
+      )}
       {message === "저장은 됐지만 다시 불러오지 못했습니다" && (
         <button
           data-testid="command-refresh-retry-button"
@@ -447,6 +449,18 @@ export function SalesOpportunityActions({
           onCancel={() => setAction(undefined)}
           onConfirm={submit}
           pending={pending}
+          feedback={
+            error != null && (
+              <SalesCommandError
+                error={error}
+                quoteChangedTitle={
+                  action === "win"
+                    ? "수주 처리 전에 견적을 다시 저장해 주세요"
+                    : undefined
+                }
+              />
+            )
+          }
           confirmLabel={
             action === "win"
               ? "수주 확정"
@@ -463,7 +477,6 @@ export function SalesOpportunityActions({
         >
           <div data-testid={`sales-${action.toLowerCase()}-dialog`}>
             <h3>{o.name}</h3>
-            {error != null && <SalesCommandError error={error} />}
             {(action === "OK" || action === "REJ") && (
               <>
                 <p>

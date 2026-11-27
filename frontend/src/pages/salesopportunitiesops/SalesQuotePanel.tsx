@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
+import { FeedbackNotice } from "../../shared/Feedback";
 import { formatAmount, formatFixedDecimal } from "../../shared/format";
 import * as api from "./salesCommandsApi";
 import { useCodeNames } from "../../shared/codeNames";
@@ -173,19 +174,49 @@ export function SalesQuotePanel({
     </section>
   );
 }
-export function SalesCommandError({ error }: { error: unknown }) {
+export function SalesCommandError({
+  error,
+  quoteChangedTitle = "견적을 다시 저장해 주세요",
+}: {
+  error: unknown;
+  quoteChangedTitle?: string;
+}) {
+  if (error instanceof ApiError && error.body.code === "QUOTE_CHANGED") {
+    return (
+      <FeedbackNotice
+        tone="warn"
+        title={quoteChangedTitle}
+        testId="sales-quote-changed-notice"
+        focusOnShow
+      >
+        <p>
+          저장된 견적과 현재 기준으로 다시 계산한 결과가 달라 처리를
+          중단했습니다.
+        </p>
+        <ol className="sales-quote-save-steps">
+          <li>
+            이 창을 닫고 영업 기회 상세 상단의 <strong>수정</strong>을 누릅니다.
+          </li>
+          <li>
+            견적을 확인하고 <strong>저장</strong>한 뒤 다시 처리합니다. 기존
+            입력을 그대로 두고 저장해도 됩니다.
+          </li>
+        </ol>
+        {error.body.requestId && (
+          <small className="sicost-feedback-reference">
+            요청 ID {error.body.requestId}
+          </small>
+        )}
+      </FeedbackNotice>
+    );
+  }
   return (
     <div role="alert" className="sales-command-error">
       {error instanceof Error
         ? error.message
         : "처리하지 못했습니다. 다시 조회해 주세요."}
-      {error instanceof ApiError && (
-        <>
-          <p>요청 ID {error.body.requestId}</p>
-          {error.body.code === "QUOTE_CHANGED" && (
-            <p>견적을 갱신해 주세요. 수정 후 먼저 저장해야 합니다.</p>
-          )}
-        </>
+      {error instanceof ApiError && error.body.requestId && (
+        <p>요청 ID {error.body.requestId}</p>
       )}
     </div>
   );

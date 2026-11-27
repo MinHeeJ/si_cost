@@ -694,6 +694,38 @@ it("수주 모달은 서버 견적 수량의 직무합계와 큰 원정수 차�
     ),
   );
 });
+it("수주 중 견적 변경을 만나면 원인과 저장 경로를 한 번 안내하고 입력을 유지한다", async () => {
+  const o = opportunity();
+  o.approvalStatus = "OK";
+  vi.mocked(api.createSalesOpportunityWin).mockRejectedValueOnce(
+    new ApiError(409, {
+      success: false,
+      meta: {},
+      code: "QUOTE_CHANGED",
+      message: "견적을 갱신해 주세요. 먼저 기회를 저장해 주세요.",
+      requestId: "win-quote-trace",
+    }),
+  );
+  mount(o);
+  await userEvent.click(screen.getByTestId("win-open-button"));
+  const dialog = within(screen.getByRole("dialog", { name: "수주 처리" }));
+  const amount = dialog.getByTestId("win-amount-input");
+  await userEvent.clear(amount);
+  await userEvent.type(amount, "72000000");
+  await userEvent.click(dialog.getByRole("button", { name: "수주 확정" }));
+
+  const notice = await dialog.findByTestId("sales-quote-changed-notice");
+  expect(dialog.getAllByRole("alert")).toEqual([notice]);
+  expect(notice).toHaveTextContent("수주 처리 전에 견적을 다시 저장해 주세요");
+  expect(notice).toHaveTextContent("저장된 견적과 현재 기준으로 다시 계산한 결과가 달라");
+  expect(within(notice).getAllByRole("listitem")).toHaveLength(2);
+  expect(notice).toHaveTextContent("요청 ID win-quote-trace");
+  expect(screen.queryByText("견적을 갱신해 주세요. 먼저 기회를 저장해 주세요.")).not.toBeInTheDocument();
+  expect(amount).toHaveValue("72000000");
+  expect(api.createSalesOpportunityWin).toHaveBeenCalledTimes(1);
+  expect(refresh).not.toHaveBeenCalled();
+});
+
 it.each(["12,34", "1e6", "1000000000000000", "0", "-1"])(
   "수주 금액 잘못된 구분/경계 %s는 저장하지 않는다",
   async (amount) => {
