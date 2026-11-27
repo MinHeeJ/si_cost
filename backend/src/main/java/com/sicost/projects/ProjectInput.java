@@ -40,8 +40,8 @@ public final class ProjectInput {
     }
 
     public static PutProjectRequest update(JsonNode body) {
-        check(body,Set.of("expectedRevision"));
-        return new PutProjectRequest(year(body),ProjectInputPolicy.expectedRevision(text(body,"expectedRevision")),fields(body));
+        check(body,Set.of("expectedRevision","extensionReason"));
+        return new PutProjectRequest(year(body),ProjectInputPolicy.expectedRevision(text(body,"expectedRevision")),fields(body),optional(body,"extensionReason",300));
     }
     private static Fields fields(JsonNode body) {
         var start=ProjectInputPolicy.date(text(body,"startDate"),"startDate");

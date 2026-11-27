@@ -63,7 +63,7 @@ const workforceForecastGuide = (
     <div>
       <dt>월별 필요·가용 인력</dt>
       <dd>
-        필요 인력에는 영업 기회의 수요와 진행 프로젝트의 미충원분이 포함됩니다.
+        진행 프로젝트의 미충원분을 보여줍니다. 영업 기회 포함을 선택하면 수주 확률 조건에 맞는 필요 인력도 더합니다.
         차이는 가용 인력에서 필요 인력을 뺀 값입니다. 1 MM은 한 사람이 한 달간
         풀타임으로 일하는 양입니다.
       </dd>
@@ -81,6 +81,8 @@ const workforceForecastGuide = (
 export function WorkforceDemandForecastScreen() {
   const [context, setContext] = useState<PeriodContext>();
   const [year, setYear] = useState("");
+  const [opportunityFilter, setOpportunityFilter] = useState({ include: false, minimum: "0" });
+  const [minimumDraft, setMinimumDraft] = useState("0");
   const [preference, setPreference] = useState<SharedPreference>();
   const [error, setError] = useState<unknown>();
   const [reload, setReload] = useState(0);
@@ -162,6 +164,8 @@ export function WorkforceDemandForecastScreen() {
               ? 13 - Number(context.currentMonth.slice(5))
               : 12,
           includeUnfilled: true,
+          includeOpportunities: opportunityFilter.include,
+          minimumWinProbability: opportunityFilter.include ? opportunityFilter.minimum : undefined,
         }
       : undefined;
   return (
@@ -206,6 +210,29 @@ export function WorkforceDemandForecastScreen() {
         )}
         {!context && error == null && (
           <ScreenLoading message="기간을 불러오는 중입니다." />
+        )}
+        {context && query && (
+          <form className="workforce-forecast-opportunity-filter" onSubmit={(event) => {
+            event.preventDefault();
+            setOpportunityFilter({ include: true, minimum: minimumDraft || "0" });
+          }}>
+            <label>
+              <input type="checkbox" checked={opportunityFilter.include}
+                onChange={(event) => setOpportunityFilter({ include: event.target.checked, minimum: opportunityFilter.minimum })} />
+              영업 기회 포함
+            </label>
+            {opportunityFilter.include && (
+              <>
+                <label>
+                  수주 확률
+                  <input type="number" min="0" max="100" step="0.01" value={minimumDraft}
+                    onChange={(event) => setMinimumDraft(event.target.value)} />
+                  % 이상
+                </label>
+                <button type="submit">적용</button>
+              </>
+            )}
+          </form>
         )}
         {context && query && (
           <WorkforceForecastPanel
@@ -279,7 +306,7 @@ export function WorkforceForecastPanel({
     return () => {
       live = false;
     };
-  }, [query.from, query.months, query.includeUnfilled, reload]);
+  }, [query.from, query.months, query.includeUnfilled, query.includeOpportunities, query.minimumWinProbability, reload]);
   const download = async () => {
     if (
       downloadActive.current ||
@@ -477,7 +504,7 @@ export function WorkforceForecastPanel({
               </section>
             </>
           )}
-          <WorkforceForecastCalculation data={data} />
+          <WorkforceForecastCalculation data={data} includeOpportunities={query.includeOpportunities} />
         </>
       )}
     </section>
@@ -506,10 +533,23 @@ const workforceCalculationMethods = [
   },
 ] as const;
 
-function WorkforceForecastCalculation({ data }: { data: api.WorkforceForecast }) {
+function WorkforceForecastCalculation({ data, includeOpportunities }: {
+  data: api.WorkforceForecast;
+  includeOpportunities?: boolean;
+}) {
+  const methods = workforceCalculationMethods.map((entry) =>
+    includeOpportunities != null && entry.metric === "필요 인력"
+      ? {
+          ...entry,
+          formula: includeOpportunities
+            ? "수주 확률 조건을 충족한 영업 기회의 인원 × 월 MM + 진행 프로젝트 미충원 MM"
+            : "진행 프로젝트 미충원 MM",
+        }
+      : entry,
+  );
   return (
     <CalculationMethods
-      rows={workforceCalculationMethods}
+      rows={methods}
       testId="workforce-calculation-toggle"
     >
       <div className="workforce-calculation-detail">

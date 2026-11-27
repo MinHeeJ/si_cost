@@ -56,7 +56,7 @@ export const businessCapabilities: Capabilities = {
   scope: { all: true, partIds: [], projectIds: [] },
   sensitive: true,
   fields: {
-    "UI-02": ["id", "managementNo", "name", "companyId", "companyName", "employeeType", "grade", "job", "status", "useYn", "currentProjects", "withdrawalDate", "monthlyMm", "revision", "gradeCode", "jobCode", "subJobCode", "positionCode", "directClass", "partId", "hireDate", "homeAreaCode", "homeAddress", "skills", "priceHistory", "editPrice", "monthlyRate", "monthlyPay"],
+    "UI-02": ["id", "managementNo", "name", "companyId", "companyName", "employeeType", "grade", "job", "status", "useYn", "currentProjects", "withdrawalDate", "monthlyMm", "revision", "gradeCode", "jobCode", "subJobCode", "positionCode", "directClass", "partId", "hireDate", "homeAreaCode", "homeAddress", "skills", "priceHistory", "editPrice", "monthlyRate", "monthlyPay", "email"],
     "UI-12": ["id", "projectId", "projectName", "developerId", "developerName", "managementNo", "jobCode", "jobName", "startDate", "endDate", "contractMm", "inputType", "contractDeveloperId", "extensionPossibility", "extensionCount", "earlyWithdrawal", "assignmentStatus", "yearMm", "revision", "warnings", "protectedMonths", "month", "monthlyMm", "inputDays", "fixed", "billingUnitPrice", "appliedUnitPrice", "defaultUnitPrice", "salesAmount"],
     "UI-33": ["id", "name", "employeeType", "companyName", "job", "grade", "skills", "homeAddress", "availableDate", "contactStatus", "lastContactDate", "source", "revision", "companyId", "phone", "email", "consent", "jobCode", "subJobCode", "gradeCode", "homeAreaCode", "sourceCode", "memo", "consentUserId", "consentDate", "consentUserName", "addressPath", "desiredRate"],
     "UI-32": ["monthlyLaborCost", "employeeType"],

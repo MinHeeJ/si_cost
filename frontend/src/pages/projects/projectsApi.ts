@@ -76,6 +76,7 @@ export type ProjectHistory = {
   after: string | null;
   actor: string;
   registeredAt: string;
+  reason?: string | null;
 };
 export type ProjectDetail = {
   project: Project;
@@ -139,7 +140,7 @@ export type CreateProjectRequest = ProjectFields & {
   initialStatus: "ING" | "PRE";
   partId?: string | null;
 };
-export type PutProjectRequest = ProjectFields & { expectedRevision: string };
+export type PutProjectRequest = ProjectFields & { expectedRevision: string; extensionReason?: string };
 export type ProjectDefaults = {
   contractAmount: string;
   contractType: ContractType;

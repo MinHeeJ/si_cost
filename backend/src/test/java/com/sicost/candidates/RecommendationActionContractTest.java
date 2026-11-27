@@ -81,12 +81,12 @@ class RecommendationActionContractTest {
     @Test void resumedTargetRejectsOldRound()throws Exception{when(mapper.resumed(any())).thenReturn(row.registeredAt().plusDays(1));call("exclude",exclude()).andExpect(status().isConflict());noWrites();}
     @Test void validExclusionOnSameTargetAndJobPreventsSave()throws Exception{when(mapper.excluded(any())).thenReturn(true);call("tentative-assignment",tent()).andExpect(status().isConflict());noWrites();}
     @Test void tentativeUsesCurrentSeatAndKeepsOriginalNeed()throws Exception{mvc.perform(post("/api/workforce-recommendations/101/candidates/3/tentative-assignment").contentType("application/json").content(tent().toString())).andExpect(status().isOk()).andExpect(jsonPath("$.data.selection.finalNeedSn").value("2")).andExpect(jsonPath("$.data.message").value("추천 인력님을 「진행 기회」 2번 자리(프론트엔드 개발)에 가배정했습니다.")).andExpect(jsonPath("$.data.selection.tentativeAssignmentId").value("201"));assertThat(row.needSn()).isEqualTo("1");verify(tentative).create(argThat(i->i.needSn()==2&&i.sourceScreenId().equals("UI-30")&&i.startMonth().equals(YearMonth.of(2026,7))));}
-    @ParameterizedTest @ValueSource(strings={"AI","NEXT"}) void movingTentativeNamesPreviousOpportunityForBothSources(String type)throws Exception{
+    @ParameterizedTest @ValueSource(strings={"AI","NEXT"}) void otherOpportunityStaysAssignedForBothSources(String type)throws Exception{
         if(type.equals("NEXT"))next();
         when(tentatives.active(any())).thenReturn(List.of(new TentativeSelectionDtos.Active("old","O-OLD",1,"D-0101","202607","ACT")));
-        var body=tent().put("needSn",need.needSn());body.withArray("confirmedWarnings").add("TENTATIVE_MOVE");
-        call("tentative-assignment",body).andExpect(status().isOk()).andExpect(jsonPath("$.data.message").value("추천 인력님을 「진행 기회」 "+need.needSn()+"번 자리(프론트엔드 개발)에 가배정했습니다. (이전 가배정 「이전 기회」은 풀렸습니다)"));
-        verify(mapper).messageNames(new MessageContext("D-0101","FE","O-OLD"));
+        var body=tent().put("needSn",need.needSn());
+        call("tentative-assignment",body).andExpect(status().isOk()).andExpect(jsonPath("$.data.message").value("추천 인력님을 「진행 기회」 "+need.needSn()+"번 자리(프론트엔드 개발)에 가배정했습니다."));
+        verify(mapper).messageNames(new MessageContext("D-0101","FE",null));
     }
     @Test void tentativeRetryAfterChangedRevisionsUsesLinkedResult()throws Exception{var b=tent();call("tentative-assignment",b).andExpect(status().isOk());int size=values.size();when(mapper.snapshot(any())).thenReturn("later");call("tentative-assignment",b).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false));assertThat(values).hasSize(size);verify(tentative,times(1)).create(any());}
     @Test void selectedTentativeCannotBeExcluded()throws Exception{call("tentative-assignment",tent()).andExpect(status().isOk());call("exclude",exclude()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ACTION_ALREADY_TAKEN"));assertThat(row.actionCode()).isEqualTo("TENT");}

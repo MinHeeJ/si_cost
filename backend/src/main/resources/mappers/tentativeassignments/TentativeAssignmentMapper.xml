@@ -7,9 +7,6 @@
     FROM tb_sl_tent_asgn t JOIN tb_sl_opp o ON o.opp_id=t.opp_id
     WHERE t.tent_id=CAST(#{id} AS numeric)
   </select>
-  <select id="activeIds" resultType="string" useCache="false" flushCache="true">
-    SELECT tent_id::text FROM tb_sl_tent_asgn WHERE dev_id=#{developerId} AND tent_stat_cd='ACT' ORDER BY tent_id
-  </select>
   <update id="release">
     UPDATE tb_sl_tent_asgn SET tent_stat_cd='REL',proc_dttm=#{now},mod_user_id=#{actor},mod_dttm=#{now}
     WHERE tent_id=CAST(#{id} AS numeric) AND opp_id=#{opportunityId} AND tent_stat_cd='ACT'

@@ -12,6 +12,7 @@ export type DeveloperItem = {
   id: string;
   managementNo: string;
   name: string;
+  email?: string | null;
   companyId: string | null;
   companyName: string | null;
   employeeType: string;
@@ -48,6 +49,7 @@ export type DeveloperDetail = DeveloperItem & {
 };
 export type DeveloperFields = {
   name: string;
+  email?: string | null;
   employeeType: string;
   companyId: string | null;
   jobCode: string;

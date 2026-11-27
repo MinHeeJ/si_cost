@@ -573,6 +573,7 @@ export function ProjectDetailPanel({
                         </details>
                       ),
                     },
+                    { id: "reason", label: "사유", render: (h) => <span className="sicost-history-value project-history-reason">{h.reason || "–"}</span> },
                     { id: "actor", label: "처리자", render: (h) => h.actor },
                   ]}
                 />

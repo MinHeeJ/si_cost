@@ -12,14 +12,24 @@ export type WorkforceForecastQuery = {
   from: string;
   months: number;
   includeUnfilled: boolean;
+  includeOpportunities?: boolean;
+  minimumWinProbability?: string;
 };
 export type WorkforceAmountUnit = "WON" | "THOUSAND" | "MILLION";
-const parameters = (query: WorkforceForecastQuery) =>
-  new URLSearchParams({
+const parameters = (query: WorkforceForecastQuery) => {
+  const params = new URLSearchParams({
     from: query.from,
     months: String(query.months),
     includeUnfilled: String(query.includeUnfilled),
   });
+  if (query.includeOpportunities != null) {
+    params.set("includeOpportunities", String(query.includeOpportunities));
+    if (query.includeOpportunities && query.minimumWinProbability) {
+      params.set("minimumWinProbability", query.minimumWinProbability);
+    }
+  }
+  return params;
+};
 export const getWorkforceForecasts = (query: WorkforceForecastQuery) =>
   request<WorkforceForecast>(`/api/workforce-forecasts?${parameters(query)}`);
 export async function getWorkforceForecastExport(

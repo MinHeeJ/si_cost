@@ -5,7 +5,6 @@ import com.sicost.common.api.ApiException;
 import com.sicost.common.concurrent.CommitInvalidation;
 import com.sicost.common.history.ChangeHistoryWriter;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Repository;
 import static com.sicost.tentativeassignmentsops.TentativeAssignmentDtos.*;
 
@@ -27,11 +26,6 @@ public class TentativeAssignmentRepository {
     }
     public String revision(String opportunityId) { return candidates.revision(opportunityId); }
     public void requireRevision(String expected, String opportunityId) { candidates.requireRevision(expected, opportunityId); }
-    public void requireSingleActive(State row) {
-        List<String> ids=mapper.activeIds(row.developerId());
-        if(ids.size()>1) throw new ApiException(409,"INVALID_STATE","한 개발자의 활성 가배정이 여러 건입니다. 충돌 대상을 확인해 주세요.",
-            "developerId",Map.of("tentativeIds",ids));
-    }
     public void release(State before, Mutation mutation, String reason) {
         one(mapper.release(mutation));
         one(mapper.touchOpportunity(mutation));

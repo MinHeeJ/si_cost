@@ -87,7 +87,7 @@
   </select>
   <select id="history" resultType="com.sicost.projects.ProjectDtos$ProjectHistory">
     SELECT h.hist_sn AS "historySn",h.chg_dt AS date,h.chg_item_cd AS "itemCode",h.chg_item_nm AS "itemName",h.bfr_val AS before,h.aft_val AS after,
-      COALESCE(u.user_nm,h.reg_user_id) AS actor,to_char(h.reg_dttm,'YYYY-MM-DD HH24:MI:SS.US') AS "registeredAt"
+      COALESCE(u.user_nm,h.reg_user_id) AS actor,to_char(h.reg_dttm,'YYYY-MM-DD HH24:MI:SS.US') AS "registeredAt",h.chg_rsn AS reason
     FROM tb_pj_proj_chg h LEFT JOIN tb_sy_user u ON u.user_id=h.reg_user_id WHERE h.proj_id=#{id} ORDER BY h.reg_dttm DESC,h.hist_sn DESC
   </select>
   <select id="actualMmTotal" resultType="string">
@@ -113,5 +113,5 @@
       team_exps_amt=CAST(#{project.teamExpenseAmount} AS numeric),proj_exps_amt=CAST(#{project.projectExpenseAmount} AS numeric),mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{project.id}
   </update>
   <update id="moveInitialPart">UPDATE tb_pj_proj_part SET aply_bgn_ym=#{newMonth},mod_user_id=#{actor},mod_dttm=#{now} WHERE proj_id=#{id} AND aply_bgn_ym=#{oldMonth}</update>
-  <insert id="insertHistory">INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm) VALUES(#{id},#{sn},#{change.code},#{change.name},#{change.before},#{change.after},CAST(#{now} AS date),#{actor},#{now})</insert>
+  <insert id="insertHistory">INSERT INTO tb_pj_proj_chg(proj_id,hist_sn,chg_item_cd,chg_item_nm,bfr_val,aft_val,chg_dt,reg_user_id,reg_dttm,chg_rsn) VALUES(#{id},#{sn},#{change.code},#{change.name},#{change.before},#{change.after},CAST(#{now} AS date),#{actor},#{now},#{change.reason})</insert>
 </mapper>

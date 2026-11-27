@@ -38,7 +38,7 @@ vi.mock("../shared/FollowUpScreen", () => ({
     </section>
   ),
 }));
-const query = { from: "2026-10", months: 3, includeUnfilled: true };
+const query = { from: "2026-10", months: 3, includeUnfilled: true, includeOpportunities: false };
 function result(): api.WorkforceForecast {
   return {
     ...query,
@@ -203,6 +203,7 @@ it("next year saves existing preference then requests exactly January through De
       from: "2027-01",
       months: 12,
       includeUnfilled: true,
+      includeOpportunities: false,
     }),
   );
   expect(shared.putSharedPreference).toHaveBeenCalledWith(
@@ -232,6 +233,7 @@ it("stored next year is restored, while past years are not offered", async () =>
     from: "2027-01",
     months: 12,
     includeUnfilled: true,
+    includeOpportunities: false,
   });
   expect(
     screen.queryByRole("option", { name: "2025년" }),

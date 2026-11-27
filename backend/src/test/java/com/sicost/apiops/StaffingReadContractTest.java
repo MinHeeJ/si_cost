@@ -83,6 +83,23 @@ class StaffingReadContractTest {
         mvc.perform(get("/api/workforce-forecasts?from=2026-07&months=2&includeUnfilled=false")).andExpect(status().isOk()).andExpect(jsonPath("$.data.totals[0].supply").value("1.0")).andExpect(jsonPath("$.data.totals[0].opportunityDemand").value("0.5")).andExpect(jsonPath("$.data.totals[0].unfilledDemand").value("0.0")).andExpect(jsonPath("$.data.jobDiagnostics[0].month.rawOpportunityDemand").value("0.500"));
         verify(mapper,never()).tentatives();
     }
+    @Test void forecastThresholdIncludesAllTenPeopleAtAnExactTenPercent()throws Exception{
+        when(forecasts.opportunities()).thenReturn(List.of(
+            new SalesForecastSources.Opportunity("O-1","포함",null,"ING","202607",2,BigDecimal.ONE,new BigDecimal("10"),null),
+            new SalesForecastSources.Opportunity("O-2","미달",null,"ING","202607",2,BigDecimal.ONE,new BigDecimal("9.99"),null),
+            new SalesForecastSources.Opportunity("O-3","종료",null,"STOP","202607",2,BigDecimal.ONE,new BigDecimal("50"),null)));
+        when(forecasts.needs()).thenReturn(List.of(
+            new SalesForecastSources.Need("O-1",1,"DEV","202607",2,10,BigDecimal.ONE),
+            new SalesForecastSources.Need("O-2",1,"DEV","202607",2,5,BigDecimal.ONE),
+            new SalesForecastSources.Need("O-3",1,"DEV","202607",2,8,BigDecimal.ONE)));
+        String url="/api/workforce-forecasts?from=2026-07&months=1";
+        mvc.perform(get(url+"&includeOpportunities=false")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totals[0].opportunityDemand").value("0.0"));
+        mvc.perform(get(url+"&includeOpportunities=true&minimumWinProbability=10")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totals[0].opportunityDemand").value("10.0"));
+        mvc.perform(get(url+"&includeOpportunities=true&minimumWinProbability=10.01")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totals[0].opportunityDemand").value("0.0"));
+    }
     @Test void forecastAnyLeaveOverlapExcludesSupplyWithoutPayrollDependency()throws Exception{
         when(forecasts.people()).thenReturn(List.of(new SalesForecastSources.Person("D-1","DEV","Y","DRCT",day,null)));
         when(forecasts.leaves()).thenReturn(List.of(new SalesForecastSources.Leave("D-1",day.plusDays(10),day.plusDays(10))));

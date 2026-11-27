@@ -12,9 +12,8 @@ import com.sicost.salesopportunitiesops.SalesCommandDtos.DraftNeed;
 @Service
 public class SalesOpportunityTentatives {
     private final TentativeSelectionService selections;
-    private final TentativeSelectionMapper mapper;
     private final AssignmentCandidateRepository revisions;
-    public SalesOpportunityTentatives(TentativeSelectionService selections,TentativeSelectionMapper mapper,AssignmentCandidateRepository revisions){this.selections=selections;this.mapper=mapper;this.revisions=revisions;}
+    public SalesOpportunityTentatives(TentativeSelectionService selections,AssignmentCandidateRepository revisions){this.selections=selections;this.revisions=revisions;}
     public List<Selection> resolve(List<Selection> input,List<DraftNeed> needs){
         if(input==null)return null;var byPerson=new LinkedHashMap<String,Selection>();
         for(Selection s:input){Integer sn=s.needSn();if(sn==null){if(s.needIndex()>needs.size())throw SalesOpportunityInput.invalid("needIndex");sn=needs.get(s.needIndex()-1).needSn();}
@@ -41,9 +40,9 @@ public class SalesOpportunityTentatives {
     public boolean additions(List<Selection> selected,List<StoredTent> old){return selected!=null&&selected.stream().anyMatch(s->old.stream().noneMatch(t->t.status().equals("ACT")&&t.needSn()==s.needSn()&&t.developerId().equals(s.developerId())));}
     public List<String> apply(String id,List<Selection> selected){
         var warnings=new ArrayList<String>();if(selected==null)return warnings;
-        for(Selection s:selected){var active=mapper.active(s.developerId());if(active.size()>1)throw new ApiException(409,"INVALID_STATE","활성 가배정 충돌 대상을 확인해 주세요.","developerId",Map.of("tentativeIds",active.stream().map(TentativeSelectionDtos.Active::id).toList()));
-            String previous=active.isEmpty()||active.get(0).opportunityId().equals(id)?null:revisions.revision(active.get(0).opportunityId());
-            var result=selections.create(new TentativeSelectionInput.Create(id,s.needSn(),s.developerId(),YearMonth.parse(s.startMonth()),s.sourceScreenId(),revisions.revision(id),previous,true));warnings.addAll(result.warnings());
+        for(Selection s:selected){
+            var result=selections.create(new TentativeSelectionInput.Create(id,s.needSn(),s.developerId(),YearMonth.parse(s.startMonth()),s.sourceScreenId(),revisions.revision(id),null,true));
+            warnings.addAll(result.warnings());
         }return warnings;
     }
 }

@@ -27,7 +27,7 @@ export async function getNeedWarnings(
         )
       )
         messages.push(
-          `다른 기회(${opportunity.name})에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.`,
+          `다른 기회(${opportunity.name})에 가배정되어 있습니다. 이 기회에도 가배정할 수 있습니다.`,
         );
     }
     if (page * opportunities.size >= opportunities.total) break;

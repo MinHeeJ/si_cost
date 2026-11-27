@@ -54,6 +54,8 @@ export function ProjectForm({
     partId: "",
     startDate: p?.startDate ?? "",
     endDate: p?.endDate ?? "",
+    extension: false,
+    extensionReason: "",
     workplace: p?.workplace ?? "",
     feature: p?.feature ?? "",
     estimateAmount: p?.estimateAmount ?? "",
@@ -167,7 +169,7 @@ export function ProjectForm({
       live = false;
     };
   }, [form.contractAmount, form.contractType, internal]);
-  function change(key: keyof typeof form, value: string) {
+  function change<Key extends keyof typeof form>(key: Key, value: (typeof form)[Key]) {
     setForm((f) => ({
       ...f,
       [key]: value,
@@ -223,6 +225,10 @@ export function ProjectForm({
     if (!form.startDate) errors.startDate = "계약 시작일을 입력해 주세요.";
     if (!form.endDate || form.endDate < form.startDate)
       errors.endDate = "계약 종료일은 시작일 이후여야 합니다.";
+    if (p && form.extension) {
+      if (form.endDate <= p.endDate) errors.endDate = "연장 후 종료일은 기존 종료일보다 뒤여야 합니다.";
+      if (!form.extensionReason.trim()) errors.extensionReason = "연장 사유를 입력해 주세요.";
+    }
     if (!internal && !form.customerId)
       errors.customerId = "활성 고객사를 선택해 주세요.";
     if (!p && !internal && !form.partId)
@@ -277,6 +283,7 @@ export function ProjectForm({
           ? await api.putProject(p.id, {
               ...body,
               expectedRevision: detail.revision,
+              ...(form.extension ? { extensionReason: form.extensionReason.trim() } : {}),
             })
           : await api.createProject({
               ...body,
@@ -297,7 +304,7 @@ export function ProjectForm({
     }
   }
   const input = (
-    key: keyof typeof form,
+    key: Exclude<keyof typeof form, "extension">,
     label: string,
     options: { required?: boolean; type?: string; maxLength?: number } = {},
   ) => (
@@ -318,7 +325,7 @@ export function ProjectForm({
     />
   );
   const select = (
-    key: keyof typeof form,
+    key: Exclude<keyof typeof form, "extension">,
     label: string,
     options: { code: string; name: string }[],
   ) => (
@@ -426,6 +433,26 @@ export function ProjectForm({
               type: "date",
             })}
             {input("endDate", "계약 종료일", { required: true, type: "date" })}
+            {p && p.contractType !== "TK" && (
+              <div className="project-wide project-extension-fields">
+                <label>
+                  <input type="checkbox" checked={form.extension} onChange={(event) => change("extension", event.target.checked)} />
+                  계약 연장
+                </label>
+                {form.extension && (
+                  <label>
+                    연장 사유
+                    <textarea
+                      value={form.extensionReason}
+                      maxLength={300}
+                      onChange={(event) => change("extensionReason", event.target.value)}
+                      aria-invalid={Boolean(fields.extensionReason)}
+                    />
+                    {fields.extensionReason && <small role="alert">{fields.extensionReason}</small>}
+                  </label>
+                )}
+              </div>
+            )}
             {!p ? (
               select("initialStatus", "상태", codes.PROJ_STAT ?? [])
             ) : (

@@ -102,14 +102,14 @@ class RecommendationActionDatabaseTest {
         assertThat(sql.queryForObject("SELECT need_sn FROM tb_sl_rcmd_log WHERE rcmd_id=101 AND rank_ord=1",Integer.class)).isEqualTo(1);assertThat(sql.queryForObject("SELECT src_scrn_id FROM tb_sl_tent_asgn",String.class)).isEqualTo("UI-30");assertThat(count("tb_pj_asgn")).isZero();
         int audits=count("tb_sy_chg_hist");call("101",1,"tentative-assignment",b).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false));assertThat(count("tb_sl_tent_asgn")).isEqualTo(1);assertThat(count("tb_sy_chg_hist")).isEqualTo(audits);
     }
-    @Test void failedMoveRollsBackOldReleaseBothOpportunityTimestampsAndChoice()throws Exception{
+    @Test void failedSelectionPreservesOtherOpportunityAndChoice()throws Exception{
         active(previous,developer);var old=sql.queryForList("SELECT * FROM tb_sl_tent_asgn");var opportunities=sql.queryForList("SELECT * FROM tb_sl_opp ORDER BY opp_id");
-        sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_choice CHECK(chg_item_nm <> 'USER_ACT_CD')");var b=body("101",1,"tentative-assignment");b.putArray("confirmedWarnings").add("TENTATIVE_MOVE");
+        sql.execute("ALTER TABLE tb_sy_chg_hist ADD CONSTRAINT reject_choice CHECK(chg_item_nm <> 'USER_ACT_CD')");var b=body("101",1,"tentative-assignment");
         call("101",1,"tentative-assignment",b).andExpect(status().isInternalServerError());assertThat(sql.queryForList("SELECT * FROM tb_sl_tent_asgn")).isEqualTo(old);assertThat(sql.queryForList("SELECT * FROM tb_sl_opp ORDER BY opp_id")).isEqualTo(opportunities);assertThat(action()).isNull();assertThat(count("tb_sy_chg_hist")).isZero();
     }
-    @Test void confirmedMoveReleasesOnlyThisDeveloperAndKeepsOneActive()throws Exception{
-        active(previous,developer);var b=body("101",1,"tentative-assignment");b.putArray("confirmedWarnings").add("TENTATIVE_MOVE");call("101",1,"tentative-assignment",b).andExpect(status().isOk());
-        assertThat(sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE tent_stat_cd='ACT'",Integer.class)).isEqualTo(1);assertThat(sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE tent_stat_cd='REL'",Integer.class)).isEqualTo(1);assertThat(count("tb_pj_asgn")).isZero();
+    @Test void selectingAnotherOpportunityKeepsBothActive()throws Exception{
+        active(previous,developer);var b=body("101",1,"tentative-assignment");call("101",1,"tentative-assignment",b).andExpect(status().isOk());
+        assertThat(sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE tent_stat_cd='ACT'",Integer.class)).isEqualTo(2);assertThat(sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE tent_stat_cd='REL'",Integer.class)).isZero();assertThat(count("tb_pj_asgn")).isZero();
     }
     @Test void concurrentLastSlotHasExactlyOneWinnerAndSlotFullLoser()throws Exception{
         var a=body("101",1,"tentative-assignment");var b=body("101",3,"tentative-assignment");ExecutorService pool=Executors.newFixedThreadPool(2);CountDownLatch start=new CountDownLatch(1);

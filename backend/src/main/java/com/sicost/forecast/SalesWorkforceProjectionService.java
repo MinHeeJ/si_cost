@@ -21,6 +21,10 @@ public class SalesWorkforceProjectionService {
     }
     private static Quantity quantity(BigDecimal n) { return new Quantity(n, BigDecimal.ONE); }
     public Workforce calculate(Snapshot sources, LocalDate day, YearMonth from, int months, boolean includeUnfilled) {
+        return calculate(sources, day, from, months, includeUnfilled, null, null);
+    }
+    public Workforce calculate(Snapshot sources, LocalDate day, YearMonth from, int months, boolean includeUnfilled,
+                               Boolean includeOpportunities, BigDecimal minimumWinProbability) {
         if (months < 1 || months > 12 || from.isBefore(YearMonth.from(day)) || from.plusMonths(months-1).getYear() > 9999)
             throw new IllegalArgumentException("예측 기간을 확인해 주세요.");
         YearMonth current = YearMonth.from(day);
@@ -30,11 +34,15 @@ public class SalesWorkforceProjectionService {
         BigDecimal lead = standard(sources, "HIRE_LEAD_MON", true, issues);
         Map<String, Project> projects = new HashMap<>(); sources.projects().forEach(p -> projects.put(p.id(),p));
         Map<String, Opportunity> opportunities = new HashMap<>(); sources.opportunities().stream()
-            .filter(o -> activeOpportunity(sources,o)).forEach(o -> opportunities.put(o.id(),o));
+            .filter(o -> !Boolean.FALSE.equals(includeOpportunities) && activeOpportunity(sources,o))
+            .filter(o -> minimumWinProbability == null || o.probability().compareTo(minimumWinProbability) >= 0)
+            .forEach(o -> opportunities.put(o.id(),o));
         Map<String,Integer> order = new HashMap<>(); sources.jobs().forEach(j -> order.put(j.code(),j.sortOrder()));
         Set<String> jobs = new TreeSet<>(Comparator.comparingInt((String j) -> order.getOrDefault(j,Integer.MAX_VALUE)).thenComparing(j -> j));
-        sources.people().forEach(p -> jobs.add(p.jobCode())); sources.needs().forEach(n -> jobs.add(n.jobCode()));
+        sources.people().forEach(p -> jobs.add(p.jobCode())); sources.needs().stream().filter(n -> includeOpportunities == null || opportunities.containsKey(n.opportunityId())).forEach(n -> jobs.add(n.jobCode()));
         sources.plans().forEach(p -> jobs.add(p.jobCode()));
+        String basis = includeOpportunities == null ? "NEED 확률"
+            : includeOpportunities ? "수주 확률 조건 충족 기회의 필요 MM 전량" : "영업 기회 제외";
         List<JobMonth> diagnostics = new ArrayList<>();
         List<Hiring> hiring = new ArrayList<>();
         String mostJob = null; BigDecimal most = BigDecimal.ZERO;
@@ -65,8 +73,11 @@ public class SalesWorkforceProjectionService {
                 BigDecimal opportunity = BigDecimal.ZERO;
                 for (Need need : sources.needs()) {
                     Opportunity o=opportunities.get(need.opportunityId());
-                    if (o!=null && job.equals(need.jobCode()) && contains(month,parse(need.startMonth()),need.months()))
-                        opportunity=opportunity.add(need.monthlyMm().multiply(BigDecimal.valueOf(need.count())).multiply(o.probability()).movePointLeft(2));
+                    if (o!=null && job.equals(need.jobCode()) && contains(month,parse(need.startMonth()),need.months())) {
+                        BigDecimal required = need.monthlyMm().multiply(BigDecimal.valueOf(need.count()));
+                        if (includeOpportunities == null) required = required.multiply(o.probability()).movePointLeft(2);
+                        opportunity=opportunity.add(required);
+                    }
                 }
                 Quantity unfilled=quantity(BigDecimal.ZERO);
                 if (includeUnfilled) for (Plan plan : sources.plans()) {
@@ -87,7 +98,7 @@ public class SalesWorkforceProjectionService {
             }
             YearMonth first=null; BigDecimal maximum=BigDecimal.ZERO;
             for (WorkforceMonth value : vector) {
-                diagnostics.add(new JobMonth(job,value,"활성 직접 주직무 · 05 확정월MM · 종료후 연장 · NEED 확률 · 전체계약 미충원"));
+                diagnostics.add(new JobMonth(job,value,"활성 직접 주직무 · 05 확정월MM · 종료후 연장 · " + basis + " · 전체계약 미충원"));
                 if (value.difference()==null) continue;
                 BigDecimal missing=new BigDecimal(value.difference()).negate();
                 if (missing.compareTo(most)>0) {most=missing;mostJob=job;}

@@ -53,7 +53,7 @@ it("全ページの現行仮割当と指定月の実MMを集計し同じ機会�
     size: 50,
   } as Awaited<ReturnType<typeof getMonths>>);
   expect(await getNeedWarnings("D-1", "2026-12", "self")).toEqual([
-    "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
+    "다른 기회(영업기회03)에 가배정되어 있습니다. 이 기회에도 가배정할 수 있습니다.",
     "12월에 이미 1.00 MM 투입 중입니다.",
   ]);
   expect(getMonths).toHaveBeenCalledTimes(2);

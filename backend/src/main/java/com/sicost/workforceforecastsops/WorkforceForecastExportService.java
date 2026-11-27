@@ -34,14 +34,19 @@ public class WorkforceForecastExportService {
         var columns = List.of(text("metric", "전체 사람수(MM)"));
         String conditions = query.from() + " ~ " + query.from().plusMonths(query.months() - 1)
             + " · 미충원 포함=" + (query.includeUnfilled()?"예":"아니오") + " · 전체 직무/전체 월";
+        if (query.includeOpportunities() != null) conditions += " · " + opportunityFilter(query);
         return excel.generateWorkbook(new Specification("인력수요예측", null, columns, conditions, unit(query.amountUnit()), "UI-17"), () -> {
             LocalDate day = LocalDate.now(clock.withZone(TimeConfiguration.SEOUL));
             var snapshot = repository.load(YearMonth.from(day));
-            Workforce data = projections.calculate(snapshot, day, query.from(), query.months(), query.includeUnfilled());
-            return workbook(data, query.amountUnit());
+            Workforce data = projections.calculate(snapshot, day, query.from(), query.months(), query.includeUnfilled(), query.includeOpportunities(), query.minimumWinProbability());
+            return workbook(data, query.amountUnit(), query);
         }, request);
     }
     public WorkbookData workbook(Workforce data, String amountUnit) {
+        return workbook(data, amountUnit, null);
+    }
+
+    private WorkbookData workbook(Workforce data, String amountUnit, WorkforceForecastInput.Query query) {
         var jobs = labels.labels("JOB");
         List<Column> columns = new ArrayList<>(); columns.add(text("metric", "전체 사람수(MM)"));
         data.totals().forEach(m -> columns.add(number(m.month(), m.month())));
@@ -71,11 +76,25 @@ public class WorkforceForecastExportService {
         info.add(new Information("단위", unit(amountUnit))); info.add(new Information("인력 단위", "명(MM), 숫자셀은 화면 전체값"));
         info.add(new Information("필터", "전체 직무 · 미충원 포함=" + (data.includeUnfilled()?"예":"아니오")));
         info.add(new Information("원천", "개발자 · 근무 이력 · 투입 배정 · 영업 기회 · 인원 계획 · 운영 기준"));
-        info.add(new Information("계산 방법", "가용 인력에서 확정 투입과 예상 연장을 차감합니다. 기회 필요는 인원·월 MM·확률을 반영하고 미충원을 더합니다. 직무별 소수 첫째 자리 반올림 후 합산합니다."));
+        String demandFormula = "기회 필요는 인원·월 MM·확률을 반영하고 미충원을 더합니다.";
+        if (query != null && query.includeOpportunities() != null) {
+            info.add(new Information("영업 기회 필터", opportunityFilter(query)));
+            demandFormula = query.includeOpportunities()
+                ? "조건에 맞는 기회의 인원 × 월 MM과 프로젝트 미충원을 더합니다."
+                : "진행 중 프로젝트의 미충원을 합산합니다.";
+        }
+        info.add(new Information("계산 방법", "가용 인력에서 확정 투입과 예상 연장을 차감합니다. "
+            + demandFormula + " 직무별 소수 첫째 자리 반올림 후 합산합니다."));
         info.add(new Information("인원 계획", "추가 투입하지 않으면 PM이 인원 계획을 실제에 맞게 줄입니다."));
         info.add(new Information("미확인", data.issues().isEmpty() ? "없음" : "미확인 시트의 항목별 사유 참조; 빈셀은 0이 아닙니다."));
         return new WorkbookData(sheets, info, data.jobDiagnostics().size(), data.from().substring(0, 4));
     }
+    private String opportunityFilter(WorkforceForecastInput.Query query) {
+        if (!query.includeOpportunities()) return "영업 기회 제외";
+        if (query.minimumWinProbability() == null) return "영업 기회 전체";
+        return "영업 기회 " + query.minimumWinProbability().stripTrailingZeros().toPlainString() + "% 이상";
+    }
+
     private List<Object> metric(String label, List<String> values) {
         List<Object> row = new ArrayList<>(); row.add(label); values.forEach(v -> row.add(decimal(v))); return row;
     }

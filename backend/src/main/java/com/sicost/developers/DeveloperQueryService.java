@@ -76,7 +76,7 @@ public class DeveloperQueryService {
     private JsonNode view(DeveloperRepository.Snapshot snapshot,boolean detail) {
         Map<String,Object> row=snapshot.developer();String id=row.get("id").toString();DeveloperMapper m=repository.mapper();
         Map<String,Object> view=new LinkedHashMap<>();
-        for(String k:List.of("id","managementNo","name","companyId","employeeType","status","useYn"))view.put(k,row.get(k));
+        for(String k:List.of("id","managementNo","name","companyId","employeeType","status","useYn","email"))view.put(k,row.get(k));
         Map<String,Object> labels=m.labels(id);for(String k:List.of("companyName","grade","job"))view.put(k,labels.get(k));
         LocalDate retire=date(row.get("retireDate"));view.put("retireDate",retire);view.put("retirementScheduled",retire!=null&&!retire.isBefore(today()));
         List<Map<String,Object>> assignments=m.assignments(id,today(),month(today()));Map<String,Map<String,String>> projects=new LinkedHashMap<>();BigDecimal mm=BigDecimal.ZERO;LocalDate end=null;

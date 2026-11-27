@@ -59,7 +59,6 @@ class TentativeAssignmentContractTest {
         when(candidates.origin("101")).thenAnswer(c->new AssignmentCandidateDtos.Origin("101",row.opportunityId(),null,row.developerId(),"BE",row.status(),"Y",null,null,row.processedAt()));
         when(candidates.snapshot(anyString())).thenAnswer(c->row.toString());
         when(mapper.state("101")).thenAnswer(c->row);
-        when(mapper.activeIds("D-101")).thenReturn(List.of("101"));
         when(mapper.release(any())).thenAnswer(c->{Mutation m=c.getArgument(0);row=new State(row.id(),row.opportunityId(),row.developerId(),"REL",row.opportunityStatus(),m.now());return 1;});
         when(mapper.touchOpportunity(any())).thenReturn(1);
         when(audit.insert(any())).thenReturn(1);
@@ -98,10 +97,6 @@ class TentativeAssignmentContractTest {
     }
     @ParameterizedTest @ValueSource(strings={"WIN","LOSE","STOP"}) void nonProgressOpportunityCannotReleaseAct(String status) throws Exception {
         state("ACT",status);release(body()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_STATE"));noWrites();
-    }
-    @Test void historicalMultipleActIsReportedWithoutChoosingAWinner() throws Exception {
-        when(mapper.activeIds("D-101")).thenReturn(List.of("101","102"));
-        release(body()).andExpect(status().isConflict()).andExpect(jsonPath("$.details.tentativeIds[1]").value("102"));noWrites();
     }
     @Test void staleRevisionIsCheckedAfterLockAndBeforeBusinessWrites() throws Exception {
         release(body().put("expectedRevision","old")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));

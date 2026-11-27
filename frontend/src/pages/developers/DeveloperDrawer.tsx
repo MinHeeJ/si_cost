@@ -47,6 +47,7 @@ export function DeveloperDrawer({
 }) {
   const canRate = useFieldPermission("UI-02", "monthlyRate"),
     canPay = useFieldPermission("UI-02", "monthlyPay"),
+    canEmail = useFieldPermission("UI-02", "email"),
     canUpdate = usePermission("UI-02", "UPD");
   const [data, setData] = useState<api.DeveloperDetail>(),
     [error, setError] = useState<unknown>(),
@@ -208,6 +209,7 @@ export function DeveloperDrawer({
                 <dl className="developer-facts">
                   {Object.entries({
                     관리번호: data.managementNo,
+                    ...(canEmail ? { 이메일: data.email } : {}),
                     직원구분: label("EMP_TYPE", data.employeeType),
                     소속: data.companyName ?? "자사",
                     "주 직무": data.job,

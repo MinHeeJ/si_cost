@@ -66,6 +66,7 @@ public class PermissionService {
         Set<String> assignmentFields=new HashSet<>(Set.of("id","projectId","projectName","developerId","developerName","managementNo","jobCode","jobName","startDate","endDate","contractMm","inputType","contractDeveloperId","extensionPossibility","extensionCount","earlyWithdrawal","assignmentStatus","yearMm","revision","warnings","protectedMonths","month","monthlyMm","inputDays","fixed"));
         if(candidateRate(roles)) {developerFields.add("monthlyRate");assignmentFields.addAll(Set.of("billingUnitPrice","appliedUnitPrice","defaultUnitPrice","salesAmount"));}
         if(sensitive)developerFields.add("monthlyPay");
+        if(screens.getOrDefault("UI-02",Set.of()).contains("INQ"))developerFields.add("email");
         return new Capabilities(Collections.unmodifiableMap(screens),scope,sensitive,Map.of("UI-33",Set.copyOf(candidateFields),"UI-32",Set.copyOf(renegotiationFields),"UI-02",Set.copyOf(developerFields),"UI-12",Set.copyOf(assignmentFields)),Map.of("automationLogs",all && administrator,"analysisPanel",screens.getOrDefault("UI-26",Set.of()).contains("INQ"),"userAccessLogs",administrator && screens.containsKey("UI-23"),"roleStop",administrator && screens.getOrDefault("UI-24",Set.of()).contains("UPD"),"managePartners",roles.stream().anyMatch(role->Set.of("ADMIN","FIN").contains(role.roleId()))),Set.copyOf(pcOnlyScreens));
     }
     private int compareMenus(PermissionMapper.Menu left,PermissionMapper.Menu right,Map<String,PermissionMapper.Menu> rows) {

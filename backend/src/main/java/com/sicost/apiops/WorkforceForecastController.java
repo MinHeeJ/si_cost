@@ -15,7 +15,7 @@ public class WorkforceForecastController {
     public WorkforceForecastController(WorkforceForecastService service,Clock clock){this.service=service;this.clock=clock;}
     @GetMapping("/api/workforce-forecasts")
     public ApiResponse<Workforce> getWorkforceForecasts(@RequestParam MultiValueMap<String,String> query,@RequestBody(required=false) String body){
-        StaffingQueryInput.validate(query,Set.of("from","months","includeUnfilled"),body);
+        StaffingQueryInput.validate(query,Set.of("from","months","includeUnfilled","includeOpportunities","minimumWinProbability"),body);
         return ApiResponse.ok(service.forecast(WorkforceForecastInput.parse(query,body,clock)));
     }
 }

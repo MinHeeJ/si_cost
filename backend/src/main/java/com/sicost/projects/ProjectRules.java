@@ -48,12 +48,14 @@ public final class ProjectRules {
     }
     public static String money(BigDecimal value) { return ProjectInputPolicy.amountString(value); }
     public static BigDecimal number(String value) { return value==null?null:new BigDecimal(value); }
-    public static List<ProjectChange> changes(Project old,Project next,Reference oldCustomer,Reference nextCustomer) {
+    public static List<ProjectChange> changes(Project old,Project next,Reference oldCustomer,Reference nextCustomer,String extensionReason) {
         var result=new ArrayList<ProjectChange>();
         change(result,"ETC","프로젝트명",old.name(),next.name());
         if (!Objects.equals(old.customerId(),next.customerId())) change(result,"ETC","고객사",oldCustomer==null?null:oldCustomer.name(),nextCustomer==null?null:nextCustomer.name());
         change(result,"PERIOD","계약 시작일",old.startDate().toString(),next.startDate().toString());
-        change(result,"PERIOD","계약 종료일",old.endDate().toString(),next.endDate().toString());
+        if (extensionReason!=null)
+            result.add(new ProjectChange("PERIOD","계약 연장",old.endDate().toString(),next.endDate().toString(),extensionReason));
+        else change(result,"PERIOD","계약 종료일",old.endDate().toString(),next.endDate().toString());
         if (!Objects.equals(old.contractAmount(),next.contractAmount())) {
             boolean original=!Objects.equals(old.originalContractAmount(),next.originalContractAmount());
             change(result,"AMT","계약금액",old.contractAmount()+(original?" · 원 계약금액: "+Objects.toString(old.originalContractAmount(),old.contractAmount()):""),

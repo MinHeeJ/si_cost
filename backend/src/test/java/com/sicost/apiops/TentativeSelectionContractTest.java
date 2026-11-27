@@ -71,13 +71,18 @@ class TentativeSelectionContractTest {
     @ParameterizedTest @ValueSource(strings={"WIN","LOSE","STOP"}) void endedOpportunityCannotCreate(String state)throws Exception{doReturn(new Need("O-1",1,"202607",3,2,state)).when(mapper).need(any());post(body()).andExpect(status().isConflict());noWrites();}
     @Test void fullNeedCannotStealAnotherSelection()throws Exception{when(mapper.count(any())).thenReturn(2);post(body()).andExpect(status().isConflict());noWrites();}
     @Test void identicalReselectionIsNoOp()throws Exception{when(mapper.active("D-1")).thenReturn(List.of(new Active("7","O-1",1,"D-1","202607","ACT")));post(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false)).andExpect(jsonPath("$.data.tentativeId").value("7"));noWrites();}
-    @Test void moveAtomicallyReleasesPreviousAndTouchesBothOpportunities()throws Exception{
+    @Test void existingAssignmentInAnotherOpportunityIsPreserved()throws Exception{
         when(mapper.active("D-1")).thenReturn(List.of(new Active("7","O-2",1,"D-1","202607","ACT")));
-        post(body().put("previousOpportunityRevision",revision("O-2"))).andExpect(status().isOk()).andExpect(jsonPath("$.data.warnings[0]").isNotEmpty());
-        verify(mapper).release(argThat(w->w.id().equals("7")&&w.opportunityId().equals("O-2")));verify(mapper).touch(argThat(w->w.opportunityId().equals("O-2")));verify(mapper).touch(argThat(w->w.opportunityId().equals("O-1")));
+        post(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(true));
+        verify(mapper,never()).release(any());
+        verify(mapper,never()).touch(argThat(w->w.opportunityId().equals("O-2")));
+        verify(mapper).touch(argThat(w->w.opportunityId().equals("O-1")));
     }
-    @Test void previousRevisionRequiredBeforeMove()throws Exception{when(mapper.active("D-1")).thenReturn(List.of(new Active("7","O-2",1,"D-1","202607","ACT")));post(body()).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));noWrites();}
-    @Test void historicalDuplicatesAreReportedNeverChosen()throws Exception{when(mapper.active("D-1")).thenReturn(List.of(new Active("7","O-1",1,"D-1","202607","ACT"),new Active("8","O-2",1,"D-1","202607","ACT")));post(body()).andExpect(status().isConflict()).andExpect(jsonPath("$.details.tentativeIds.length()").value(2));noWrites();}
+    @Test void reselectingSameOpportunityIgnoresOtherActiveAssignments()throws Exception{
+        when(mapper.active("D-1")).thenReturn(List.of(new Active("7","O-1",1,"D-1","202607","ACT"),new Active("8","O-2",1,"D-1","202607","ACT")));
+        post(body()).andExpect(status().isOk()).andExpect(jsonPath("$.data.changed").value(false)).andExpect(jsonPath("$.data.tentativeId").value("7"));
+        noWrites();
+    }
     @Test void staleRevisionDoesNotWrite()throws Exception{post(body().put("expectedRevision","old")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STALE_WRITE"));noWrites();}
     @ParameterizedTest @ValueSource(strings={"2026-06","2026-10","0000-01","2026-13"}) void invalidStartDoesNotWrite(String value)throws Exception{post(body().put("startMonth",value)).andExpect(status().isBadRequest());noWrites();}
     @Test void followupCanUseComputedStartWithinNeed()throws Exception{post(body().put("sourceScreenId","UI-05").put("startMonth","2026-08")).andExpect(status().isOk());verify(mapper).insert(argThat(w->w.startMonth().equals("202608")));}

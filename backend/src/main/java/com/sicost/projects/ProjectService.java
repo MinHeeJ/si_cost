@@ -75,7 +75,10 @@ public class ProjectService implements org.springframework.context.ApplicationEv
                 move[0]=checkPeriod(before[0],after[0],standards[0],actor,now);
             Reference oldCustomer=before[0].customerId()==null?null:repository.customer(before[0].customerId());
             Reference newCustomer=after[0].customerId()==null?null:repository.customer(after[0].customerId());
-            changes.addAll(changes(before[0],after[0],oldCustomer,newCustomer));
+            if (input.extensionReason()!=null && ("TK".equals(before[0].contractType()) ||
+                !after[0].endDate().isAfter(before[0].endDate())))
+                throw new ApiException(400,"VALIDATION_ERROR","턴키를 제외한 프로젝트에서 계약 종료일을 늦출 때 연장 사유를 입력할 수 있습니다.","extensionReason",null);
+            changes.addAll(changes(before[0],after[0],oldCustomer,newCustomer,input.extensionReason()));
             if (move[0]!=null) changes.add(new ProjectChange("PART","영업 파트 시작월",apiMonth(move[0].oldMonth()),apiMonth(move[0].newMonth())));
             int greatest=repository.greatestHistorySn(id);
             if ((long)greatest+changes.size()>99999) ProjectInputPolicy.nextSerial(99999);
@@ -87,7 +90,7 @@ public class ProjectService implements org.springframework.context.ApplicationEv
             int sn=repository.greatestHistorySn(id);
             for (ProjectChange change:changes) {
                 repository.insertHistory(new HistoryWrite(id,ProjectInputPolicy.nextSerial(sn++),change,actor,now));
-                audit.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ",id,"UPD",change.name(),change.before(),change.after(),null));
+                audit.append(new ChangeHistoryWriter.Change("TB_PJ_PROJ",id,"UPD",change.name(),change.before(),change.after(),change.reason()));
             }
         });
         return result(repository.required(id),result,standards[0]);

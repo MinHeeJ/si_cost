@@ -564,6 +564,7 @@ const peopleColumns: Record<"developers" | "candidates", PreferenceColumn[]> = {
     { id: "currentProjects", label: "현재 프로젝트" },
     { id: "withdrawalDate", label: "철수 예정일" },
     { id: "monthlyRate", label: "월 단가" },
+    { id: "email", label: "이메일" },
   ],
   candidates: [
     { id: "name", label: "이름", required: true },

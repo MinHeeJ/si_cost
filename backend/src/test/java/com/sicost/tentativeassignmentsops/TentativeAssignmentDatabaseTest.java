@@ -136,10 +136,26 @@ class TentativeAssignmentDatabaseTest {
         mvc.perform(post(path()).contentType("application/json").content(body(revision()))).andExpect(status().isConflict());
         assertThat(tentative()).isEqualTo(original);assertThat(opportunity()).isEqualTo(parent);assertThat(audits()).isEmpty();
     }
-    @Test void historicalDuplicateActIsConflictWithoutArbitraryCleanup() throws Exception {
-        sql.update("INSERT INTO tb_sl_tent_asgn(opp_id,need_sn,dev_id,bgn_ym,tent_stat_cd,src_scrn_id,reg_user_id) VALUES (?,1,?,'208007','ACT','UI-30','admin')",opportunity,developer);
-        var before=sql.queryForList("SELECT * FROM tb_sl_tent_asgn ORDER BY tent_id");
-        mvc.perform(post(path()).contentType("application/json").content(body(revision()))).andExpect(status().isConflict()).andExpect(jsonPath("$.details.tentativeIds.length()").value(2));
-        assertThat(sql.queryForList("SELECT * FROM tb_sl_tent_asgn ORDER BY tent_id")).isEqualTo(before);assertThat(audits()).isEmpty();
+    @Test void releaseOnlyChangesTheSelectedOpportunity() throws Exception {
+        String other="O-other";
+        sql.update("""
+            INSERT INTO tb_sl_opp(opp_id,opp_nm,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,
+                bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id)
+            SELECT ?,?,cust_clnt_id,part_id,sales_step_cd,win_prbl_rt,expct_amt,
+                bgn_plan_ym,opp_stat_cd,aprv_stat_cd,reg_user_id FROM tb_sl_opp WHERE opp_id=?
+            """,other,other,opportunity);
+        sql.update("""
+            INSERT INTO tb_sl_opp_need(opp_id,need_sn,job_cd,need_cnt,bgn_ym,prd_mcnt,mon_mm,reg_user_id)
+            SELECT ?,need_sn,job_cd,need_cnt,bgn_ym,prd_mcnt,mon_mm,reg_user_id FROM tb_sl_opp_need WHERE opp_id=?
+            """,other,opportunity);
+        sql.update("""
+            INSERT INTO tb_sl_tent_asgn(opp_id,need_sn,dev_id,bgn_ym,tent_stat_cd,src_scrn_id,reg_user_id)
+            VALUES (?,1,?,'208007','ACT','UI-30','admin')
+            """,other,developer);
+        var otherBefore=sql.queryForMap("SELECT * FROM tb_sl_tent_asgn WHERE opp_id=?",other);
+
+        mvc.perform(post(path()).contentType("application/json").content(body(revision()))).andExpect(status().isOk());
+        assertThat(tentative()).containsEntry("tent_stat_cd","REL");
+        assertThat(sql.queryForMap("SELECT * FROM tb_sl_tent_asgn WHERE opp_id=?",other)).isEqualTo(otherBefore);
     }
 }

@@ -417,7 +417,9 @@ export function AssignmentsContent({
       id: "inputType",
       label: "투입 구분",
       render: (r) => (
-        <span className="sicost-kind-chip">{kindName(r.inputType)}</span>
+        <span className={r.inputType === "FREE" ? "sicost-badge sicost-tone-bad" : "sicost-kind-chip"}>
+          {kindName(r.inputType)}
+        </span>
       ),
     },
   ];

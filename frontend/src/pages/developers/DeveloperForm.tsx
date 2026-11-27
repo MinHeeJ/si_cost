@@ -45,9 +45,11 @@ export function DeveloperForm({
   onDirtyChange,
 }: Props) {
   const canRate = useFieldPermission("UI-02", "monthlyRate"),
-    canPay = useFieldPermission("UI-02", "monthlyPay");
+    canPay = useFieldPermission("UI-02", "monthlyPay"),
+    canEmail = useFieldPermission("UI-02", "email");
   const [form, setForm] = useState(() => ({
     name: developer?.name ?? "",
+    email: developer?.email ?? "",
     managementNo: developer?.managementNo ?? "",
     employeeType: developer?.employeeType ?? "FT",
     companyId: developer ? (developer.companyId ?? "__own__") : "",
@@ -175,6 +177,9 @@ export function DeveloperForm({
         hireDate: form.hireDate || null,
         homeAreaCode: form.homeAreaCode,
         skills: form.skills,
+        ...(canEmail && (!developer || form.email !== initial.current.email)
+          ? { email: form.email.trim() || null }
+          : {}),
         ...(canRate &&
         (!developer || form.monthlyRate !== initial.current.monthlyRate)
           ? { monthlyRate: form.monthlyRate || null }
@@ -211,7 +216,7 @@ export function DeveloperForm({
     }
   }
   function text(
-    key: "name" | "managementNo" | "hireDate",
+    key: "name" | "managementNo" | "hireDate" | "email",
     label: string,
     maxLength: number,
     required = false,
@@ -228,7 +233,7 @@ export function DeveloperForm({
         required={required}
         readOnly={key === "managementNo" && Boolean(developer)}
         disabled={pending}
-        type={key === "hireDate" ? "date" : "text"}
+        type={key === "hireDate" ? "date" : key === "email" ? "email" : "text"}
       />
     );
   }
@@ -328,6 +333,7 @@ export function DeveloperForm({
                   </p>
                 )}
               </div>
+              {canEmail && text("email", "이메일", 100)}
               {select("employeeType", "직원구분", codes.EMP_TYPE ?? [], true)}
               {select(
                 "companyId",

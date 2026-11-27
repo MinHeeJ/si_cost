@@ -5,11 +5,12 @@ import { HelpTooltip } from "../../shared/HelpTooltip";
 import { CompactPeriodSummary } from "../../shared/PeriodStatus";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { KpiStrip } from "../../shared/Surface";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { ErrorBanner } from "../../shared/Feedback";
 import { FilterBar } from "../../shared/FilterBar";
+import { Dialog } from "../../shared/Dialog";
 import { formatFixedDecimal, formatRate } from "../../shared/format";
 import { DeveloperDrawer } from "../developers/DeveloperDrawer";
 import { WorkforceForecastPanel } from "../workforceforecastsops/WorkforceDemandForecastScreen";
@@ -223,7 +224,13 @@ export function WorkforceCalendar({
   const [page, setPage] = useState(1),
     [size, setSize] = useState<20 | 50 | 100>(50);
   const [data, setData] = useState<api.CalendarPage>();
-  const viewport = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const viewport = useRef<HTMLDivElement | null>(null);
+  const normalScroll = useRef(0);
+  const setViewport = useCallback((node: HTMLDivElement | null) => {
+    viewport.current = node;
+    if (node) node.scrollLeft = normalScroll.current;
+  }, []);
   const scrolledPeriod = useRef<string>();
   useEffect(() => {
     const period = `${year}/${context.currentMonth}`;
@@ -245,6 +252,7 @@ export function WorkforceCalendar({
     ) {
       container.scrollLeft = Math.max(0, header.offsetLeft - fixedWidth);
     }
+    normalScroll.current = container.scrollLeft;
     scrolledPeriod.current = period;
   }, [data, year, context.currentMonth]);
   const [loading, setLoading] = useState(true),
@@ -341,6 +349,171 @@ export function WorkforceCalendar({
       setPending(false);
     }
   }
+  const calendar = data && (
+    <>
+      <div
+        className="sicost-table-viewport"
+        ref={expanded ? undefined : setViewport}
+        onScroll={expanded ? undefined : (event) => { normalScroll.current = event.currentTarget.scrollLeft; }}
+        data-testid="calendar-viewport"
+      >
+        <table className="sicost-table workforce-calendar-table">
+          <thead>
+            <tr>
+              <th
+                aria-sort={
+                  ordering.sort === "name"
+                    ? ordering.direction === "DESC"
+                      ? "descending"
+                      : "ascending"
+                    : "none"
+                }
+              >
+                <button
+                  data-testid="calendar-sort-name"
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    setOrdering({
+                      sort: "name",
+                      direction:
+                        ordering.sort === "name" &&
+                        ordering.direction === "ASC"
+                          ? "DESC"
+                          : "ASC",
+                    });
+                  }}
+                >
+                  이름{" "}
+                  {ordering.sort === "name"
+                    ? ordering.direction === "DESC"
+                      ? "↓"
+                      : "↑"
+                    : "↕"}
+                </button>
+              </th>
+              <th>
+                직무
+                <FieldHelp label="직무" kind="B" />
+              </th>
+              {Array.from({ length: 12 }, (_, i) => (
+                <th
+                  className={
+                    year === Number(context.currentMonth.slice(0, 4)) &&
+                    i + 1 === Number(context.currentMonth.slice(5))
+                      ? "calendar-current-month"
+                      : undefined
+                  }
+                  data-testid={`calendar-month-header-${i + 1}`}
+                  key={i}
+                >
+                  {i + 1}월
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((person) => (
+              <tr
+                key={person.developerId}
+                data-testid={`calendar-person-${person.developerId}`}
+              >
+                <th scope="row">
+                  <button
+                    data-testid={`calendar-developer-${person.developerId}`}
+                    type="button"
+                    onClick={() => {
+                      setExpanded(false);
+                      setSelected(person.developerId);
+                    }}
+                  >
+                    <span className="calendar-person-name">
+                      {person.name}
+                    </span>
+                    {person.managementNo && (
+                      <small>{person.managementNo}</small>
+                    )}
+                  </button>
+                </th>
+                <td>{lookup("jobCode", person.jobCode)}</td>
+                {person.cells.map((cell) => (
+                  <td
+                    data-testid={`calendar-person-month-${Array.from(String(person.developerId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                    key={cell.month}
+                  >
+                    <WorkforceCalendarCell
+                      cell={cell}
+                      personId={person.developerId}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {!data.items.length && (
+              <tr>
+                <td colSpan={14}>
+                  <p>조회된 인력이 없습니다.</p>
+                  <button
+                    data-testid="calendar-empty-reset"
+                    type="button"
+                    onClick={reset}
+                  >
+                    조건 초기화
+                  </button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colSpan={2}>
+                비는인원
+              </th>
+              {data.monthTotals.map((m) => (
+                <td
+                  data-testid={`calendar-available-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={m.month}
+                >
+                  {m.availablePeople ?? "–"}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row" colSpan={2}>
+                남는 MM
+              </th>
+              {data.monthTotals.map((m) => (
+                <td
+                  data-testid={`calendar-remaining-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
+                  key={m.month}
+                >
+                  {decimal(m.remainingMm)}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="sicost-footnote">
+        칸에 마우스를 올리거나 키보드로 선택하면 그 달의 프로젝트별 MM이
+        보입니다. 가배정은 확정 투입과 구분합니다.
+      </p>
+      <Pagination
+        page={page}
+        size={size}
+        total={data.total}
+        unit="명"
+        label="달력 페이지"
+        testId="calendar"
+        loading={loading}
+        onPageChange={setPage}
+        onSizeChange={(n) => {
+          setSize(n);
+          setPage(1);
+        }}
+      />
+    </>
+  );
   return (
     <section
       data-testid="workforce-calendar-content"
@@ -470,6 +643,9 @@ export function WorkforceCalendar({
           <span className="workforce-calendar-count">
             {loading && !data ? "조회 중…" : `총 ${data?.total ?? 0}명`}
           </span>
+          <button type="button" data-testid="calendar-expand" disabled={!data} onClick={() => setExpanded(true)}>
+            크게 보기
+          </button>
           <button
             className="sicost-download-button workforce-calendar-download"
             data-testid="calendar-download"
@@ -482,166 +658,13 @@ export function WorkforceCalendar({
       </div>
       {notice && <p role="status">{notice}</p>}
       {loading && <ScreenLoading message="달력을 불러오는 중입니다." />}
-      {data && (
-        <>
-          <div
-            className="sicost-table-viewport"
-            ref={viewport}
-            data-testid="calendar-viewport"
-          >
-            <table className="sicost-table workforce-calendar-table">
-              <thead>
-                <tr>
-                  <th
-                    aria-sort={
-                      ordering.sort === "name"
-                        ? ordering.direction === "DESC"
-                          ? "descending"
-                          : "ascending"
-                        : "none"
-                    }
-                  >
-                    <button
-                      data-testid="calendar-sort-name"
-                      type="button"
-                      onClick={() => {
-                        setPage(1);
-                        setOrdering({
-                          sort: "name",
-                          direction:
-                            ordering.sort === "name" &&
-                            ordering.direction === "ASC"
-                              ? "DESC"
-                              : "ASC",
-                        });
-                      }}
-                    >
-                      이름{" "}
-                      {ordering.sort === "name"
-                        ? ordering.direction === "DESC"
-                          ? "↓"
-                          : "↑"
-                        : "↕"}
-                    </button>
-                  </th>
-                  <th>
-                    직무
-                    <FieldHelp label="직무" kind="B" />
-                  </th>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <th
-                      className={
-                        year === Number(context.currentMonth.slice(0, 4)) &&
-                        i + 1 === Number(context.currentMonth.slice(5))
-                          ? "calendar-current-month"
-                          : undefined
-                      }
-                      data-testid={`calendar-month-header-${i + 1}`}
-                      key={i}
-                    >
-                      {i + 1}월
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((person) => (
-                  <tr
-                    key={person.developerId}
-                    data-testid={`calendar-person-${person.developerId}`}
-                  >
-                    <th scope="row">
-                      <button
-                        data-testid={`calendar-developer-${person.developerId}`}
-                        onClick={() => setSelected(person.developerId)}
-                      >
-                        <span className="calendar-person-name">
-                          {person.name}
-                        </span>
-                        {person.managementNo && (
-                          <small>{person.managementNo}</small>
-                        )}
-                      </button>
-                    </th>
-                    <td>{lookup("jobCode", person.jobCode)}</td>
-                    {person.cells.map((cell) => (
-                      <td
-                        data-testid={`calendar-person-month-${Array.from(String(person.developerId), (c) => c.codePointAt(0)!.toString(16)).join("-")}-${Array.from(cell.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                        key={cell.month}
-                      >
-                        <WorkforceCalendarCell
-                          cell={cell}
-                          personId={person.developerId}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                {!data.items.length && (
-                  <tr>
-                    <td colSpan={14}>
-                      <p>조회된 인력이 없습니다.</p>
-                      <button
-                        data-testid="calendar-empty-reset"
-                        type="button"
-                        onClick={reset}
-                      >
-                        조건 초기화
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row" colSpan={2}>
-                    비는인원
-                  </th>
-                  {data.monthTotals.map((m) => (
-                    <td
-                      data-testid={`calendar-available-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                      key={m.month}
-                    >
-                      {m.availablePeople ?? "–"}
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <th scope="row" colSpan={2}>
-                    남는 MM
-                  </th>
-                  {data.monthTotals.map((m) => (
-                    <td
-                      data-testid={`calendar-remaining-total-${Array.from(m.month, (c) => c.codePointAt(0)!.toString(16)).join("-")}`}
-                      key={m.month}
-                    >
-                      {decimal(m.remainingMm)}
-                    </td>
-                  ))}
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p className="sicost-footnote">
-            칸에 마우스를 올리거나 키보드로 선택하면 그 달의 프로젝트별 MM이
-            보입니다. 가배정은 확정 투입과 구분합니다.
-          </p>
-          <Pagination
-            page={page}
-            size={size}
-            total={data.total}
-            unit="명"
-            label="달력 페이지"
-            testId="calendar"
-            loading={loading}
-            onPageChange={setPage}
-            onSizeChange={(n) => {
-              setSize(n);
-              setPage(1);
-            }}
-          />
-        </>
-      )}
+      {expanded ? (
+        <Dialog open wide hideCancel title={`${year}년 인력 운영 보드`}
+          className="workforce-calendar-expanded" confirmLabel="닫기"
+          onConfirm={() => setExpanded(false)} onCancel={() => setExpanded(false)}>
+          <div className="workforce-calendar">{calendar}</div>
+        </Dialog>
+      ) : calendar}
       {selected && (
         <DeveloperDrawer id={selected} onClose={() => setSelected(undefined)} />
       )}

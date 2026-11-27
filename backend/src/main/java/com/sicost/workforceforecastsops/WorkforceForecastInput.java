@@ -2,6 +2,7 @@ package com.sicost.workforceforecastsops;
 
 import com.sicost.common.TimeConfiguration;
 import com.sicost.common.api.ApiException;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.YearMonth;
 import java.util.List;
@@ -11,11 +12,16 @@ import org.springframework.util.MultiValueMap;
 
 public final class WorkforceForecastInput {
     private WorkforceForecastInput() {}
-    public record Query(YearMonth from, int months, boolean includeUnfilled, String amountUnit) {}
+    public record Query(YearMonth from, int months, boolean includeUnfilled, String amountUnit,
+                        Boolean includeOpportunities, BigDecimal minimumWinProbability) {
+        public Query(YearMonth from, int months, boolean includeUnfilled, String amountUnit) {
+            this(from, months, includeUnfilled, amountUnit, null, null);
+        }
+    }
     public static Query parse(MultiValueMap<String,String> values, String body, Clock clock) {
         if (body != null && !body.isBlank()) throw invalid("body", "GET 요청에는 본문을 지정할 수 없습니다.", "UNKNOWN_FIELD");
         for (var entry : values.entrySet()) {
-            if (!Set.of("from", "months", "includeUnfilled", "amountUnit").contains(entry.getKey()))
+            if (!Set.of("from", "months", "includeUnfilled", "amountUnit", "includeOpportunities", "minimumWinProbability").contains(entry.getKey()))
                 throw invalid(entry.getKey(), "허용되지 않은 조회 항목입니다.", "UNKNOWN_FIELD");
             if (entry.getValue().size() != 1) throw invalid(entry.getKey(), "조회 항목은 한 번만 지정해 주세요.", "VALIDATION_ERROR");
         }
@@ -36,7 +42,15 @@ public final class WorkforceForecastInput {
         String unit = values.getFirst("amountUnit");
         if (unit != null && !Set.of("WON", "THOUSAND", "MILLION").contains(unit))
             throw invalid("amountUnit", "금액 단위를 확인해 주세요.", "VALIDATION_ERROR");
-        return new Query(start, count, include == null || Boolean.parseBoolean(include), unit == null ? "THOUSAND" : unit);
+        String opportunities = values.getFirst("includeOpportunities");
+        if (opportunities != null && !Set.of("true", "false").contains(opportunities))
+            throw invalid("includeOpportunities", "영업 기회 포함 여부는 true 또는 false입니다.", "VALIDATION_ERROR");
+        String probability = values.getFirst("minimumWinProbability");
+        if (probability != null && (!"true".equals(opportunities) ||
+            !probability.matches("(?:100(?:\\.0{1,2})?|(?:[0-9]|[1-9][0-9])(?:\\.[0-9]{1,2})?)")))
+            throw invalid("minimumWinProbability", "영업 기회를 포함할 때 수주 확률을 0~100%로 지정해 주세요.", "VALIDATION_ERROR");
+        return new Query(start, count, include == null || Boolean.parseBoolean(include), unit == null ? "THOUSAND" : unit,
+            opportunities == null ? null : Boolean.valueOf(opportunities), probability == null ? null : new BigDecimal(probability));
     }
     private static ApiException invalid(String field, String message, String code) {
         return new ApiException(400, code, message, field, Map.of("violations", List.of(Map.of("field", field, "message", message))));

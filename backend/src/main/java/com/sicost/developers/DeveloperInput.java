@@ -3,12 +3,13 @@ package com.sicost.developers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sicost.common.api.ApiException;
 import com.sicost.common.validation.*;
+import com.sicost.receivablesops.DunningDeliveryMail;
 import java.util.*;
 
 public final class DeveloperInput {
     private DeveloperInput() {}
     public static final Set<String> SORTS=Set.of("name","companyName","employeeType","grade","job","status","withdrawalDate","monthlyRate");
-    private static final Set<String> FIELDS=Set.of("name","employeeType","companyId","gradeCode","jobCode","subJobCode","positionCode","directClass","partId","hireDate","monthlyRate","monthlyPay","skills","homeAreaCode");
+    private static final Set<String> FIELDS=Set.of("name","employeeType","companyId","gradeCode","jobCode","subJobCode","positionCode","directClass","partId","hireDate","monthlyRate","monthlyPay","skills","homeAreaCode","email");
     public record Save(Map<String,Object> values,String managementNo,String expectedRevision) {}
     public record Query(Map<String,String> filters,String sort,String direction,int page,int size) {}
     public record Selection(Query query,String month,java.time.LocalDate today,long offset) {}
@@ -30,9 +31,10 @@ public final class DeveloperInput {
                 values.put(key,PeopleInputPolicy.skills(skills,false));continue;
             }
             boolean required=Set.of("name","employeeType","jobCode","directClass","partId").contains(key);
-            int max=key.equals("name")?50:key.equals("companyId")||key.equals("partId")?20: key.startsWith("monthly")?100:10;
+            int max=key.equals("name")?50:key.equals("companyId")||key.equals("partId")?20: (key.startsWith("monthly")||key.equals("email"))?100:10;
             String text=text(body,key,max,required);
             Object value=text;
+            if(key.equals("email")&&text!=null&&!DunningDeliveryMail.address(text))throw InputValidator.invalid(key);
             if(key.startsWith("monthly"))value=PeopleInputPolicy.amount(text,key);
             if(key.equals("hireDate")&&text!=null)value=PeopleInputPolicy.date(text,key);
             if(key.equals("employeeType"))MasterDataValidator.enumValue(text,Set.of("FT","CT","FL","OS"),key);

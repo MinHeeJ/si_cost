@@ -13,16 +13,17 @@ class SchemaInstallationTest {
         PostgreSqlDatabase db = new PostgreSqlDatabase(); db.install();
         // V9 adds the two automation/delivery tables (37 columns, 3 FKs, 9 checks, 1 unique, 2 PKs).
         // V8 also adds sq_tb_sl_opp_id, bringing the sequence count to 20.
+        // V10 and V11 add extension history, developer email, and the notification outbox.
         // The original catalog's per-column/default/key contract is still checked below.
         assertThat(db.sql.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema=? AND table_name IN ('tb_sy_automation_run','tb_sy_delivery_task') ORDER BY table_name",String.class,db.schema))
             .containsExactly("tb_sy_automation_run","tb_sy_delivery_task");
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(70);
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(873);
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(20);
-        for (var expected : java.util.Map.of("f",76L,"c",55L,"u",6L,"p",70L).entrySet()) {
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.tables WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(71);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name LIKE 'tb_%'", Long.class, db.schema)).isEqualTo(884);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=? AND c.relkind='S'", Long.class, db.schema)).isEqualTo(21);
+        for (var expected : java.util.Map.of("f",76L,"c",57L,"u",6L,"p",71L).entrySet()) {
             assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=? AND c.contype::text=? AND c.conrelid::regclass::text NOT LIKE '%flyway%'", Long.class, db.schema, expected.getKey())).isEqualTo(expected.getValue());
         }
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname=? AND indexname LIKE 'ix_tb_%'", Long.class, db.schema)).isEqualTo(78);
+        assertThat(db.sql.queryForObject("SELECT count(*) FROM pg_indexes WHERE schemaname=? AND indexname LIKE 'ix_tb_%'", Long.class, db.schema)).isEqualTo(79);
         JsonNode catalog = new ObjectMapper().readTree(new ClassPathResource("db/catalog.json").getInputStream());
         var tables = catalog.fields();
         while (tables.hasNext()) {
@@ -51,6 +52,10 @@ class SchemaInstallationTest {
         PostgreSqlDatabase db = new PostgreSqlDatabase(); db.install();
         var counts = java.util.Map.of("tb_sy_code_grp",64L,"tb_sy_code",391L,"tb_sy_oper_std",43L,"tb_sy_role",5L,"tb_sy_menu",40L,"tb_sy_role_menu_auth",150L,"tb_sy_user",1L,"tb_sy_user_role",1L,"tb_sy_calc_rule",94L,"tb_bs_part",1L);
         counts.forEach((table, count) -> assertThat(db.count(table)).as(table).isEqualTo(count));
+        assertThat(db.sql.queryForList("""
+                SELECT scrn_id FROM tb_sy_menu WHERE upper_menu_id='G003' ORDER BY sort_ord
+                """, String.class)).startsWith("UI-29", "UI-01");
+        assertThat(db.count("tb_sl_tent_mail_outbox")).isZero();
         assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_sy_code_grp WHERE sys_code_yn='Y'",Long.class)).isEqualTo(44);
         assertThat(db.sql.queryForObject("SELECT std_val::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_YM'",String.class)).isEqualTo("202601.0000");
         assertThat(db.sql.queryForObject("SELECT std_val::text FROM tb_sy_oper_std WHERE std_cd='CASH_BASE_AMT'",String.class)).isEqualTo("1150000000.0000");

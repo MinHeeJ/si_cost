@@ -60,12 +60,12 @@ public class DeveloperService {
         boolean priceChanged=!Objects.equals(rate,oldRate)||!Objects.equals(pay,oldPay);
         List<String> oldSkills=skillNames(snapshot.skills()),newSkills=input.values().containsKey("skills")?skills(row):oldSkills;
         boolean skillChanged=!newSkills.equals(oldSkills);
-        List<String> fields=List.of("name","employeeType","companyId","gradeCode","jobCode","subJobCode","positionCode","directClass","partId","hireDate","homeAreaCode","homeAddress");
+        List<String> fields=List.of("name","employeeType","companyId","gradeCode","jobCode","subJobCode","positionCode","directClass","partId","hireDate","homeAreaCode","homeAddress","email");
         List<String> changed=fields.stream().filter(k->!same(old.get(k),row.get(k))).toList();
         if(changed.isEmpty()&&!priceChanged&&!skillChanged)return queries.tree(Map.of("changed",false));
         if(priceChanged){mapper().lockClose();if(mapper().closed(month(queries.today())))throw new ApiException(409,"CLOSED_MONTH","현재월이 마감되어 금액을 변경할 수 없습니다.","monthlyRate",Map.of("blockingMonths",List.of(YearMonth.from(queries.today()).toString())));}
         row.put("modUserId",actor);row.put("modDttm",now());one(mapper().update(row));
-        for(String field:changed)append("TB_HR_DEV",id,"UPD",field,Objects.toString(old.get(field),null),Objects.toString(row.get(field),null));
+        for(String field:changed)append("TB_HR_DEV",id,"UPD",field.equals("email")?"EMAIL":field,Objects.toString(old.get(field),null),Objects.toString(row.get(field),null));
         if(skillChanged){replaceSkills(id,newSkills,actor);append("TB_HR_DEV",id,"UPD","보유 스킬",history.skillsJson(oldSkills),history.skillsJson(newSkills));}
         if(priceChanged)savePrice(id,snapshot.prices(),new PriceChange(rate,pay,oldRate,oldPay),actor);
         queries.synchronize(id,false);return queries.tree(Map.of("changed",true));

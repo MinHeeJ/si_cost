@@ -60,14 +60,15 @@ public class RecommendationActionService {
             ||"DP".equals(need.contractType())&&Set.of("FL","OS").contains(person.employeeType())
             ||person.joinDate()!=null&&person.joinDate().isAfter(start.atEndOfMonth())||person.retireDate()!=null&&person.retireDate().isBefore(start.atDay(1))
             ||mapper.leave(new RecommendationActionDtos.Period(row.developerId(),start.atDay(1),start.atEndOfMonth())))throw state("인력의 입퇴사·휴직·계약 자격을 확인해 주세요.");
-        var active=tentatives.active(row.developerId());if(active.size()>1)throw state("활성 가배정 충돌을 확인해 주세요.");
+        var active=tentatives.active(row.developerId()).stream().filter(t->t.opportunityId().equals(row.opportunityId())).toList();
+        if(active.size()>1)throw state("같은 기회의 활성 가배정 충돌을 확인해 주세요.");
         if("NEXT".equals(row.type()))requireNext(row,active.isEmpty());
-        boolean same=!active.isEmpty()&&active.get(0).opportunityId().equals(row.opportunityId())&&String.valueOf(active.get(0).needSn()).equals(input.needSn());
-        var common=new TentativeSelectionInput.Create(row.opportunityId(),Integer.parseInt(input.needSn()),row.developerId(),start,"NEXT".equals(row.type())?"UI-05":"UI-30",opportunities.revision(row.opportunityId()),active.isEmpty()?null:opportunities.revision(active.get(0).opportunityId()),true);
+        boolean same=!active.isEmpty()&&String.valueOf(active.get(0).needSn()).equals(input.needSn());
+        var common=new TentativeSelectionInput.Create(row.opportunityId(),Integer.parseInt(input.needSn()),row.developerId(),start,"NEXT".equals(row.type())?"UI-05":"UI-30",opportunities.revision(row.opportunityId()),null,true);
         if(!same&&tentatives.count(common)>=need.count())throw new ApiException(409,"SLOT_FULL","선택한 자리의 정원이 찼습니다. 다시 조회해 주세요.","needSn",null);
         repository.requireCurrent(row,new Revisions(input.expectedRevision(),input.targetRevision(),input.candidateRevision()));
         List<Warning> warnings=new ArrayList<>();
-        if(!same&&!active.isEmpty())warnings.add(new Warning("TENTATIVE_MOVE","다른 기회·자리의 가배정을 해제하고 현재 선택 자리로 이동합니다."));
+        if(!same&&!active.isEmpty())warnings.add(new Warning("TENTATIVE_MOVE","같은 기회의 기존 가배정을 현재 선택 자리로 이동합니다."));
         if(!row.jobCode().equals(need.jobCode())||!Objects.equals(person.jobCode(),need.jobCode()))warnings.add(new Warning("JOB_MISMATCH","인력의 주직무 또는 추천 적용 직무와 선택 자리 직무가 다릅니다. 추천 적용 직무와 점수는 변경하지 않습니다."));
         BigDecimal mm=BigDecimal.ZERO;
         for(String id:tentatives.assignmentIds(row.developerId())){

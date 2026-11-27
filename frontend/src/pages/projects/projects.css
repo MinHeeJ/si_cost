@@ -221,3 +221,20 @@ button.project-unassigned:hover {
     0 1px 2px rgba(17, 24, 39, 0.1),
     0 0 0 1px rgba(17, 24, 39, 0.04);
 }
+
+.project-extension-fields {
+  display: grid;
+  gap: 8px;
+}
+.project-extension-fields > label:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-extension-fields > label:has(textarea) {
+  display: grid;
+  gap: 6px;
+}
+.project-history-reason {
+  min-width: 10rem;
+}

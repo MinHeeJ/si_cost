@@ -53,18 +53,40 @@ class StaffingPersistenceTest {
         }
     }
     @AfterEach void cleanup(){if(db==null)return;String schema=db.sql.queryForObject("SELECT current_schema()",String.class);if(schema!=null&&schema.matches("sicost_test_[0-9a-f]+"))db.sql.execute("DROP SCHEMA "+schema+" CASCADE");}
-    TentativeSelectionInput.Create input(String id){return new TentativeSelectionInput.Create(id,1,"D-staff",YearMonth.of(2026,7),"UI-29",revisions.revision(id),revisions.revision("O-staff1"),false);}
-    @Test void realMapperCreatesMovesAndAuditsWithoutActualAssignmentWrites(){
+    TentativeSelectionInput.Create input(String id){return new TentativeSelectionInput.Create(id,1,"D-staff",YearMonth.of(2026,7),"UI-29",revisions.revision(id),null,false);}
+    @Test void realMapperKeepsBothOpportunitiesAndReleasesOnlyTheSelectedOne(){
         long assignments=db.count("tb_pj_asgn"),payroll=db.count("tb_hr_mon_pay");
         var first=tx.execute(s->selections.create(input("O-staff1")));
         assertThat(first.changed()).isTrue();
         tx.executeWithoutResult(s->assertThat(selections.create(input("O-staff1")).changed()).isFalse());
         tx.executeWithoutResult(s->selections.create(input("O-staff2")));
-        assertThat(db.sql.queryForObject("SELECT count(*) FROM tb_sl_tent_asgn WHERE dev_id='D-staff' AND tent_stat_cd='ACT'",Integer.class)).isEqualTo(1);
-        assertThat(db.sql.queryForObject("SELECT tent_stat_cd FROM tb_sl_tent_asgn WHERE tent_id=?::numeric",String.class,first.tentativeId())).isEqualTo("REL");
-        assertThat(db.sql.queryForObject("SELECT proc_dttm IS NOT NULL FROM tb_sl_tent_asgn WHERE tent_id=?::numeric",Boolean.class,first.tentativeId())).isTrue();
+        assertThat(db.sql.queryForList("SELECT opp_id FROM tb_sl_tent_asgn WHERE dev_id='D-staff' AND tent_stat_cd='ACT' ORDER BY opp_id",String.class)).containsExactly("O-staff1","O-staff2");
+        db.sql.update("UPDATE tb_sl_tent_asgn SET tent_stat_cd='REL' WHERE tent_id=?::numeric",first.tentativeId());
+        assertThat(db.sql.queryForList("SELECT opp_id FROM tb_sl_tent_asgn WHERE dev_id='D-staff' AND tent_stat_cd='ACT'",String.class)).containsExactly("O-staff2");
         assertThat(db.count("tb_pj_asgn")).isEqualTo(assignments);assertThat(db.count("tb_hr_mon_pay")).isEqualTo(payroll);
         assertThat(session.getMapper(StaffingReadMapper.class).tentatives()).anySatisfy(t->{assertThat(t.developerId()).isEqualTo("D-staff");assertThat(t.processedAt()).isNull();});
+    }
+    @Test void notificationQueueFollowsCommittedAssignmentReleaseAndProbabilityChanges(){
+        db.sql.update("UPDATE tb_hr_dev SET email_addr='staff@example.test' WHERE dev_id='D-staff'");
+        tx.executeWithoutResult(status -> {
+            selections.create(input("O-staff1"));
+            status.setRollbackOnly();
+        });
+        assertThat(db.count("tb_sl_tent_mail_outbox")).isZero();
+
+        var first=tx.execute(status->selections.create(input("O-staff1")));
+        tx.executeWithoutResult(status->selections.create(input("O-staff2")));
+        db.sql.update("UPDATE tb_sl_opp SET win_prbl_rt=50 WHERE opp_id='O-staff1'");
+        db.sql.update("UPDATE tb_sl_opp SET win_prbl_rt=55 WHERE opp_id='O-staff1'");
+        db.sql.update("UPDATE tb_sl_tent_asgn SET tent_stat_cd='REL' WHERE tent_id=?::numeric",first.tentativeId());
+        db.sql.update("UPDATE tb_sl_opp SET win_prbl_rt=60 WHERE opp_id='O-staff1'");
+        db.sql.update("UPDATE tb_sl_tent_asgn SET tent_stat_cd='CNVT' WHERE opp_id='O-staff2'");
+
+        assertThat(db.sql.queryForList("""
+            SELECT event_type || ':' || opp_nm || ':' || probability::text
+            FROM tb_sl_tent_mail_outbox ORDER BY mail_id
+            """,String.class)).containsExactly("ASSIGNED:O-staff1:50.00","ASSIGNED:O-staff2:50.00",
+                "PROBABILITY:O-staff1:55.00","RELEASED:O-staff1:55.00");
     }
     @Test void opportunityReadRevisionIsAcceptedByTentativeWrites(){
         var sales=session.getMapper(com.sicost.salesopportunitiesops.SalesCommandMapper.class);

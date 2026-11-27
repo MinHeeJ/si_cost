@@ -23,7 +23,7 @@ public final class ProjectDtos {
     public record ProjectAssignment(String assignmentId, String developerId, String managementNo, String name,
         String jobCode, String jobName, LocalDate startDate, LocalDate endDate, String contractMm, String monthlyMmTotal, String status) {}
     public record ProjectHistory(int historySn, LocalDate date, String itemCode, String itemName, String before, String after,
-        String actor, String registeredAt) {}
+        String actor, String registeredAt, String reason) {}
     public record ProjectDetail(Project project, String revision, String effectiveStatus, boolean readOnly,
         List<ProjectPart> parts, List<ProjectPm> pm, List<ProjectPlan> plans, List<ProjectAssignment> assignments,
         List<ProjectHistory> history, String actualMmTotal, String directExpenseTotal) {}
@@ -37,12 +37,16 @@ public final class ProjectDtos {
         String feature, BigDecimal estimateAmount, BigDecimal contractAmount, BigDecimal budgetAmount,
         BigDecimal teamExpenseAmount, BigDecimal projectExpenseAmount, String budgetMode) {}
     public record CreateProjectRequest(int year, String contractType, String initialStatus, String partId, Fields fields) {}
-    public record PutProjectRequest(int year, String expectedRevision, Fields fields) {}
+    public record PutProjectRequest(int year, String expectedRevision, Fields fields, String extensionReason) {}
     public record DefaultsRow(BigDecimal cashBase, BigDecimal marginRate, BigDecimal teamExpense, BigDecimal projectExpense) {}
     public record Reference(String id, String name, boolean active) {}
     public record Mutation(Project project, String actor, LocalDateTime now) {}
     public record HistoryWrite(String id, int sn, ProjectChange change, String actor, LocalDateTime now) {}
-    public record ProjectChange(String code, String name, String before, String after) {}
+    public record ProjectChange(String code, String name, String before, String after, String reason) {
+        public ProjectChange(String code, String name, String before, String after) {
+            this(code, name, before, after, null);
+        }
+    }
     public record PartMove(String id, String oldMonth, String newMonth, String actor, LocalDateTime now) {}
     public record PeriodCheck(String id, LocalDate startDate, LocalDate endDate, String firstMonth) {}
     public record PeriodUse(String target, String month) {}

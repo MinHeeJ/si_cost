@@ -248,3 +248,28 @@
   > :not(.workforce-calendar-summary) {
   order: 2;
 }
+
+.sicost-dialog.workforce-calendar-expanded {
+  width: min(1800px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+}
+.workforce-calendar-expanded .workforce-calendar-table {
+  min-width: 840px;
+  table-layout: fixed;
+}
+.workforce-calendar-expanded .workforce-calendar-table :is(th, td) {
+  min-width: 0;
+  padding-inline: 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.workforce-calendar-expanded .workforce-calendar-table th:first-child {
+  width: 104px;
+}
+.workforce-calendar-expanded .workforce-calendar-table :is(th, tbody td):nth-child(2) {
+  width: 64px;
+  left: 104px;
+}
+.workforce-calendar-expanded .workforce-calendar-cell > button {
+  height: auto;
+}

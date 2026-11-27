@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useFieldPermission } from "../../shared/permission/PermissionBoundary";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authenticatedFetch } from "../../shared/api";
 import { FilterBar } from "../../shared/FilterBar";
@@ -47,6 +48,7 @@ const columnsOrder = [
   "currentProjects",
   "withdrawalDate",
   "monthlyRate",
+  "email",
 ];
 const tones: Record<string, Tone> = {
   INPUT: "info",
@@ -67,6 +69,7 @@ export function DeveloperPoolScreen({
   renderActions,
 }: DeveloperPoolProps) {
   const location = useLocation();
+  const canEmail = useFieldPermission("UI-02", "email");
   const navigate = useNavigate();
   const [mobile, setMobile] = useState(
     () => window.matchMedia?.("(max-width: 767px)")?.matches ?? false,
@@ -291,7 +294,7 @@ export function DeveloperPoolScreen({
           sort,
           direction,
           columns: (columnView?.order ?? columnsOrder).filter(
-            (c) => c === "name" || !columnView?.hidden.includes(c),
+            (c) => c !== "email" && (c === "name" || !columnView?.hidden.includes(c)),
           ),
           amountUnit: "원",
         }),
@@ -399,6 +402,7 @@ export function DeveloperPoolScreen({
       label: "철수 예정일",
       render: (r) => r.withdrawalDate ?? "–",
     },
+    { id: "email", label: "이메일", render: (r) => r.email ?? "–" },
     {
       id: "monthlyRate",
       label: "월 단가",
@@ -423,7 +427,10 @@ export function DeveloperPoolScreen({
   const sortableCols = cols.map((c) =>
     sortableIds.has(c.id) ? { ...c, sortable: true } : c,
   );
-  const visible = (columnView?.order ?? columnsOrder)
+  const visible = (columnView
+    ? [...new Set([...columnView.order, "email"])]
+    : columnsOrder)
+    .filter((k) => k !== "email" || canEmail)
     .filter((k) => k === "name" || !columnView?.hidden.includes(k))
     .map((k) => sortableCols.find((c) => c.id === k))
     .filter((c): c is Column<api.DeveloperItem> => Boolean(c));

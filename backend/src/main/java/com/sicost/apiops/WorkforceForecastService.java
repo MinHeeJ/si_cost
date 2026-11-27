@@ -18,6 +18,6 @@ public class WorkforceForecastService {
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public SalesForecastDtos.Workforce forecast(WorkforceForecastInput.Query query){
         users.currentUser();LocalDate day=LocalDate.now(clock.withZone(TimeConfiguration.SEOUL));
-        return projections.calculate(repository.load(YearMonth.from(day)),day,query.from(),query.months(),query.includeUnfilled());
+        return projections.calculate(repository.load(YearMonth.from(day)),day,query.from(),query.months(),query.includeUnfilled(),query.includeOpportunities(),query.minimumWinProbability());
     }
 }

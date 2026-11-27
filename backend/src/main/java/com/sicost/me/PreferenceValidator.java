@@ -26,7 +26,7 @@ public class PreferenceValidator {
             Map.entry("history",List.of("occurredAt","target","groupId","entityKey","type","item","before","after","actor")),
             Map.entry("users",List.of("userId","name","email","roles","status","lastLoginAt","assignedParts")),
             Map.entry("clients",List.of("type","name","businessNo","ceo","industry","contactName","phone","taxEmail","account","projectCount","personCount","useYn")),
-            Map.entry("developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate")),
+            Map.entry("developers",List.of("name","companyName","employeeType","grade","job","status","currentProjects","withdrawalDate","monthlyRate","email")),
             Map.entry("candidates",List.of("name","employeeType","job","grade","skills","homeAddress","desiredRate","availableDate","contactStatus","lastContactDate","source")),
             Map.entry("individualProfitability",List.of("name","companyName","position","employeeType","hireDate","utilization","mm","revenue","pay","allowance","companyInsurance","retirementReserve","personalCost","teamExpense","projectExpense","totalCost","profit","profitRate","selfInsurance","withholdingTax","incomeTax","netPay")));
     private static final Map<String,List<String>> REQUIRED = Map.ofEntries(

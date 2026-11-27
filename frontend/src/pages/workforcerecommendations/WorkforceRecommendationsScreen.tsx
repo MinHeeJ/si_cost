@@ -83,7 +83,7 @@ export function RecommendationCards({
                 className="sicost-badge sicost-tone-warn"
                 key={t.tentativeAssignmentId}
               >
-                다른 기회 가배정: {t.opportunityName} · 이동 시 이전 가배정 해제
+                다른 기회 가배정: {t.opportunityName}
               </span>
             ))}
             <div className="recommendation-scores">

@@ -316,7 +316,7 @@ it("developer picker loads real direct active list and empty state; selection is
 
 it("다른 기회·월 투입 경고는 선택된 개발자의 현재 상태에 표시하고 저장을 막지 않는다", async () => {
   vi.mocked(api.getNeedWarnings).mockResolvedValue([
-    "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
+    "다른 기회(영업기회03)에 가배정되어 있습니다. 이 기회에도 가배정할 수 있습니다.",
     "8월에 이미 1.00 MM 투입 중입니다.",
   ]);
   const o = detail();
@@ -333,7 +333,7 @@ it("다른 기회·월 투입 경고는 선택된 개발자의 현재 상태에 
   await userEvent.click(await screen.findByTestId("opportunity-developer-d-a"));
   const selected = within(screen.getByRole("table", { name: "선택된 개발자" }));
   await selected.findByText(
-    "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
+    "다른 기회(영업기회03)에 가배정되어 있습니다. 이 기회에도 가배정할 수 있습니다.",
   );
   expect(selected.getByText("업로드03")).toBeInTheDocument();
   expect(selected.getByText("D-a")).toBeInTheDocument();
