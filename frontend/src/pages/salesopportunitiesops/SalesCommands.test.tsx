@@ -298,7 +298,10 @@ it("상태 버튼으로 견적 탭에 들어가 그 자리에서 승인하고 �
   const quotePanel = within(detail.getByRole("tabpanel", { name: "견적 점검/승인 이력" }));
   expect(within(quotePanel.getByRole("table", { name: "승인 이력" }))
     .getByRole("cell", { name: "견적 검토 요청" })).toBeVisible();
-  expect(quotePanel.getByRole("button", { name: "반려" })).toBeEnabled();
+  const rejectButton = quotePanel.getByRole("button", { name: "반려" });
+  expect(rejectButton).toBeEnabled();
+  const quoteTable = within(quotePanel.getByTestId("sales-quote-panel")).getByRole("table");
+  expect(rejectButton.compareDocumentPosition(quoteTable) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(quotePanel.queryByRole("button", { name: "실주 처리" })).not.toBeInTheDocument();
 
   await userEvent.keyboard("{ArrowRight}");

@@ -321,12 +321,14 @@ export function SalesOpportunityDetail({
                       key={detail.revision}
                       needs={detail.needs}
                       initial={detail.quote}
+                      approval={
+                        <div
+                          className="sales-opportunity-approval"
+                          ref={setApprovalTarget}
+                        />
+                      }
                     />
                   )}
-                  <div
-                    className="sales-opportunity-approval"
-                    ref={setApprovalTarget}
-                  />
                   <h3>승인 이력</h3>
                   <div className="sicost-table-viewport">
                     <table

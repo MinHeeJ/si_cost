@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ApiError } from "../../shared/api";
 import { formatAmount, formatFixedDecimal } from "../../shared/format";
 import * as api from "./salesCommandsApi";
@@ -15,7 +15,9 @@ export const judgementNames: Record<api.Quote["judgement"], string> = {
 export function SalesQuotePanel({
   needs,
   initial,
+  approval,
 }: {
+  approval?: ReactNode;
   needs: api.Need[];
   initial?: api.Quote;
 }) {
@@ -79,6 +81,7 @@ export function SalesQuotePanel({
               <dd>{quote.standardMonth}</dd>
             </div>
           </dl>
+          {approval}
           {quote.issues.map((issue, i) => (
             <p
               key={`${issue.needSn}:${issue.field}:${i}`}
