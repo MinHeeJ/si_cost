@@ -33,6 +33,7 @@ const tabs = [
 export function SalesOpportunityDetail({
   detail,
   error,
+  initialTab = "base",
   onClose,
   onEdit,
   onRetry,
@@ -40,12 +41,16 @@ export function SalesOpportunityDetail({
 }: {
   detail?: Opportunity;
   error: unknown;
+  initialTab?: "base" | "quote";
   onClose(): void;
   onEdit(detail: Opportunity): void;
   onRetry(): void;
   refresh(): Promise<void>;
 }) {
-  const [tab, setTab] = useState<(typeof tabs)[number][0]>("base");
+  const [tab, setTab] = useState<(typeof tabs)[number][0]>(initialTab);
+  const [approvalTarget, setApprovalTarget] = useState<HTMLDivElement | null>(
+    null,
+  );
   const id = useId();
   const name = useCodeNames(
     "JOB",
@@ -54,6 +59,7 @@ export function SalesOpportunityDetail({
     "LOSE_RSN",
     "CTRT_TYPE",
     "APRV_ACT",
+    "APRV_STAT",
   );
   return (
     <DetailDrawer
@@ -75,6 +81,18 @@ export function SalesOpportunityDetail({
                 ? stageNames[detail.stage]
                 : name("OPP_STAT", detail.status)}
             </StatusBadge>
+            {detail.approvalStatus !== "NONE" && (
+              <button
+                type="button"
+                className={`sales-command-badge sales-command-${detail.approvalStatus.toLowerCase()} sales-opportunity-approval-link`}
+                onClick={() => {
+                  setTab("quote");
+                  document.getElementById(`${id}-tab-quote`)?.focus();
+                }}
+              >
+                {name("APRV_STAT", detail.approvalStatus)}
+              </button>
+            )}
           </>
         )
       }
@@ -151,6 +169,7 @@ export function SalesOpportunityDetail({
                 <SalesOpportunityActions
                   opportunity={detail}
                   refresh={refresh}
+                  approvalTarget={approvalTarget}
                   showRejection={false}
                 />
               )}
@@ -295,12 +314,18 @@ export function SalesOpportunityDetail({
                   />
                 </>
               )}
-              {key === "quote" && tab === key && (
+              {key === "quote" && (
                 <>
-                  <SalesQuotePanel
-                    key={detail.revision}
-                    needs={detail.needs}
-                    initial={detail.quote}
+                  {tab === key && (
+                    <SalesQuotePanel
+                      key={detail.revision}
+                      needs={detail.needs}
+                      initial={detail.quote}
+                    />
+                  )}
+                  <div
+                    className="sales-opportunity-approval"
+                    ref={setApprovalTarget}
                   />
                   <h3>승인 이력</h3>
                   <div className="sicost-table-viewport">

@@ -145,11 +145,17 @@ export function SalesPipelinePanel({
       new URLSearchParams(location.search).get("opportunityId") ??
       undefined,
   );
+  const [detailEntryTab, setDetailEntryTab] = useState<"base" | "quote">("base");
+  function openOpportunity(id: string, initialTab: "base" | "quote" = "base") {
+    setDetailEntryTab(initialTab);
+    setSelectedId(id);
+  }
   useEffect(() => {
     const id =
       (location.state as { opportunityId?: string } | null)?.opportunityId ??
       new URLSearchParams(location.search).get("opportunityId");
     if (id) {
+      setDetailEntryTab("base");
       setSelectedId(id);
     }
   }, [location.key, location.search]);
@@ -483,17 +489,21 @@ export function SalesPipelinePanel({
                                     type="button"
                                     className="sicost-text-link"
                                     data-testid={`opportunity-open-${o.id.toLowerCase()}`}
-                                    onClick={() => setSelectedId(o.id)}
+                                    onClick={() => openOpportunity(o.id)}
                                   >
                                     {o.name}
                                   </button>
                                   <div className="sales-opportunity-status">
                                     {o.approvalStatus !== "NONE" && (
-                                      <span
-                                        className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()}`}
+                                      <button
+                                        type="button"
+                                        className={`sales-command-badge sales-command-${o.approvalStatus.toLowerCase()} sales-opportunity-approval-link`}
+                                        data-testid={`opportunity-approval-${o.id.toLowerCase()}`}
+                                        aria-label={`${o.name} · ${name("APRV_STAT", o.approvalStatus)} · 견적 점검`}
+                                        onClick={() => openOpportunity(o.id, "quote")}
                                       >
                                         {name("APRV_STAT", o.approvalStatus)}
-                                      </span>
+                                      </button>
                                     )}
                                     {isStale(o, today) && (
                                       <StatusBadge tone="warn">
@@ -675,7 +685,7 @@ export function SalesPipelinePanel({
                                   type="button"
                                   className="sicost-text-link"
                                   data-testid={`closed-open-${o.id.toLowerCase()}`}
-                                  onClick={() => setSelectedId(o.id)}
+                                  onClick={() => openOpportunity(o.id)}
                                 >
                                   {o.name}
                                 </button>
@@ -741,7 +751,8 @@ export function SalesPipelinePanel({
       </div>
       {selectedId && (
         <SalesOpportunityDetail
-          key={selectedId}
+          key={`${selectedId}:${detailEntryTab}`}
+          initialTab={detailEntryTab}
           detail={detail?.id === selectedId ? detail : undefined}
           error={detailError}
           onClose={() => setSelectedId(undefined)}

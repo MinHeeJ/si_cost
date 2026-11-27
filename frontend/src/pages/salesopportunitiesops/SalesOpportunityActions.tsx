@@ -1,12 +1,13 @@
 import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
 import { FeedbackNotice } from "../../shared/Feedback";
 import { SectionCard } from "../../shared/Surface";
 import { Dialog } from "../../shared/Dialog";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
-import { formatAmount, formatDecimal } from "../../shared/format";
+import { formatAmount, formatDecimal, formatRate } from "../../shared/format";
 import { SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { BusinessName } from "../../shared/BusinessName";
@@ -94,8 +95,10 @@ export function OpportunityRejectionNotice({
 export function SalesOpportunityActions({
   opportunity: o,
   refresh,
+  approvalTarget,
   showRejection = true,
 }: {
+  approvalTarget?: HTMLElement | null;
   showRejection?: boolean;
   opportunity: api.Opportunity;
   refresh(): Promise<unknown>;
@@ -117,6 +120,7 @@ export function SalesOpportunityActions({
   const { pending, message, commit } = useCommitRefresh(
     "저장은 됐지만 다시 불러오지 못했습니다",
   );
+  const [approvalFeedback, setApprovalFeedback] = useState(false);
   const [projectId, setProjectId] = useState<string>();
   useEffect(() => {
     setStage(o.stage);
@@ -159,6 +163,7 @@ export function SalesOpportunityActions({
     setWin(initialWin(o));
   }
   async function execute(save: () => Promise<unknown>, close = true) {
+    setApprovalFeedback(action === "OK" || action === "REJ");
     setError(undefined);
     setFields({});
     try {
@@ -212,12 +217,8 @@ export function SalesOpportunityActions({
       false,
     );
   }
-  return (
-    <section
-      className="sales-command-actions"
-      data-testid="sales-opportunity-actions"
-    >
-      {showRejection && <OpportunityRejectionNotice opportunity={o} />}
+  const feedback = (
+    <>
       {message && <p role="status">{message}</p>}
       {message === "저장은 됐지만 다시 불러오지 못했습니다" && (
         <button
@@ -230,6 +231,57 @@ export function SalesOpportunityActions({
         </button>
       )}
       {error != null && !action && <SalesCommandError error={error} />}
+    </>
+  );
+  const approval = (
+    <>
+      {approvalFeedback && feedback}
+      {editable && o.approvalStatus === "WAIT" && (
+        <SectionCard
+          title="견적 승인"
+          className="sales-opportunity-approval-card"
+        >
+          <p>
+            승인 대상 이익률{" "}
+            <strong>{formatRate(o.quote.storedProfitRate)}</strong>
+            {" · "}승인 기준 {formatRate(o.quote.approvalThreshold)}
+          </p>
+          {["UNKNOWN", "INCOMPLETE"].includes(o.quote.judgement) && (
+            <p>견적 원가가 확인되면 승인하거나 반려할 수 있습니다.</p>
+          )}
+          <div className="sales-opportunity-management-buttons">
+            <button
+              type="button"
+              className="sicost-primary"
+              data-testid="approve-open-button"
+              disabled={pending || !quoteKnown}
+              onClick={() => open("OK")}
+            >
+              승인
+            </button>
+            <button
+              type="button"
+              data-testid="reject-open-button"
+              disabled={pending || !quoteKnown}
+              onClick={() => open("REJ")}
+            >
+              반려
+            </button>
+          </div>
+        </SectionCard>
+      )}
+    </>
+  );
+  return (
+    <section
+      className="sales-command-actions"
+      data-testid="sales-opportunity-actions"
+    >
+      {showRejection && <OpportunityRejectionNotice opportunity={o} />}
+      {!approvalFeedback && feedback}
+      {approvalTarget === undefined
+        ? approval
+        : approvalTarget && createPortal(approval, approvalTarget)}
       {projectId && (
         <Link
           data-testid="win-project-link"
@@ -333,31 +385,6 @@ export function SalesOpportunityActions({
               견적 원가 미확인 또는 승인 대기/반려: 협상·계약 직전 신규 진입과
               수주를 할 수 없습니다. 현재 단계는 유지됩니다.
             </p>
-          )}
-          {o.approvalStatus === "WAIT" && (
-            <SectionCard
-              title="견적 승인"
-              className="sales-opportunity-management-card"
-            >
-              <div className="sales-opportunity-management-buttons">
-                <button
-                  type="button"
-                  data-testid="approve-open-button"
-                  disabled={pending || !quoteKnown}
-                  onClick={() => open("OK")}
-                >
-                  승인
-                </button>
-                <button
-                  type="button"
-                  data-testid="reject-open-button"
-                  disabled={pending || !quoteKnown}
-                  onClick={() => open("REJ")}
-                >
-                  반려
-                </button>
-              </div>
-            </SectionCard>
           )}
           <SectionCard
             title="기회 처리"

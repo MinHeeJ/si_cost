@@ -384,7 +384,8 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.sales-opportunity-management-card .sicost-section-heading h2 {
+.sales-opportunity-management-card .sicost-section-heading h2,
+.sales-opportunity-approval-card .sicost-section-heading h2 {
   margin: 0;
   font-size: 15px;
 }
@@ -414,4 +415,25 @@
 .sales-opportunity-management-buttons .sales-opportunity-management-danger:not(:disabled) {
   color: var(--bad);
   border-color: var(--bad);
+}
+
+.sales-opportunity-approval-link.sales-command-badge {
+  height: auto;
+  min-height: 28px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.sales-opportunity-approval-link.sales-command-badge:hover {
+  border-color: currentColor;
+}
+.sales-opportunity-approval {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.sales-opportunity-approval:empty {
+  display: none;
+}
+.sales-opportunity-approval-card p {
+  margin: 0;
 }

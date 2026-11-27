@@ -255,8 +255,15 @@ it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤�
   await within(table).findByText("가배정한 사람이 없습니다");
   expect(within(table).queryByText("업로드03")).not.toBeInTheDocument();
 });
-it("영업 기회 상세는 공통 헤더와 탭을 쓰고 관리 버튼과 승인 이력을 각 탭에서 제공한다", async () => {
+it("상태 버튼으로 견적 탭에 들어가 그 자리에서 승인하고 이력을 확인한다", async () => {
   const o = opportunity();
+  const lookup = vi.mocked(getSharedCodes).getMockImplementation()!;
+  vi.mocked(getSharedCodes).mockImplementation(async (group, ...args) => {
+    if (group !== "APRV_STAT") return lookup(group, ...args);
+    return { items: [
+      { code: "WAIT", name: "승인 대기", addVal1: null, addVal2: null, addVal3: null, codeVal: null, unitNm: null },
+    ] };
+  });
   o.nextTask = "제안서 전달";
   o.approvalHistory = [{
     histSn: 1,
@@ -285,21 +292,45 @@ it("영업 기회 상세는 공통 헤더와 탭을 쓰고 관리 버튼과 승�
   expect(within(basic).getByText("제안서 전달")).toBeVisible();
   expect(detail.queryByRole("button", { name: "실주 처리" })).not.toBeInTheDocument();
 
-  await userEvent.click(detail.getByRole("tab", { name: "견적 점검/승인 이력" }));
-  expect(within(detail.getByRole("table", { name: "승인 이력" }))
+  await userEvent.click(await within(header).findByRole("button", { name: "승인 대기" }));
+  const quoteTab = detail.getByRole("tab", { name: "견적 점검/승인 이력" });
+  expect(quoteTab).toHaveFocus();
+  const quotePanel = within(detail.getByRole("tabpanel", { name: "견적 점검/승인 이력" }));
+  expect(within(quotePanel.getByRole("table", { name: "승인 이력" }))
     .getByRole("cell", { name: "견적 검토 요청" })).toBeVisible();
+  expect(quotePanel.getByRole("button", { name: "반려" })).toBeEnabled();
+  expect(quotePanel.queryByRole("button", { name: "실주 처리" })).not.toBeInTheDocument();
+
   await userEvent.keyboard("{ArrowRight}");
   expect(detail.getByRole("tab", { name: "기회 관리" })).toHaveFocus();
   const management = within(detail.getByRole("tabpanel", { name: "기회 관리" }));
   expect(management.getByRole("combobox", { name: "단계 선택" })).toBeVisible();
   expect(management.getByRole("button", { name: "기본 확률 사용" })).toBeEnabled();
   expect(management.getByRole("button", { name: "수주 처리" })).toBeDisabled();
-  await userEvent.click(management.getByRole("button", { name: "승인" }));
-  const approval = within(screen.getByRole("dialog", { name: "견적 승인" }));
-  await userEvent.click(approval.getByRole("button", { name: "취소" }));
-  expect(management.getByRole("button", { name: "승인" })).toHaveFocus();
+  expect(management.queryByRole("button", { name: "승인" })).not.toBeInTheDocument();
   await userEvent.click(detail.getByRole("button", { name: "닫기" }));
   expect(opener).toHaveFocus();
+
+  const cardStatus = screen.getByTestId("opportunity-approval-o-0101");
+  await userEvent.click(cardStatus);
+  const reopened = within(await screen.findByRole("dialog", { name: o.name }));
+  expect(reopened.getByRole("tab", { name: "견적 점검/승인 이력" })).toHaveAttribute("aria-selected", "true");
+  vi.mocked(api.createSalesOpportunityApproval).mockImplementationOnce(async () => {
+    vi.mocked(api.getSalesOpportunity).mockResolvedValue({
+      ...o,
+      approvalStatus: "OK",
+      approvalHistory: [...o.approvalHistory, { ...o.approvalHistory[0], histSn: 2, action: "OK", reason: null }],
+    });
+    return saved;
+  });
+  await userEvent.click(reopened.getByRole("button", { name: "승인" }));
+  const approval = within(screen.getByRole("dialog", { name: "견적 승인" }));
+  await userEvent.click(approval.getByRole("button", { name: "확인" }));
+  expect(await reopened.findByTestId("approval-history-2")).toBeVisible();
+  expect(reopened.getByText("저장했습니다.")).toBeVisible();
+  expect(reopened.getByRole("tab", { name: "견적 점검/승인 이력" })).toHaveAttribute("aria-selected", "true");
+  expect(api.createSalesOpportunityApproval).toHaveBeenCalledTimes(1);
+
 });
 
 const saved = {
