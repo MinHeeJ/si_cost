@@ -283,7 +283,11 @@ function ClientDrawerContent({
                 </button>
               ))}
             </SegmentedTabList>
-            <section role="tabpanel" data-testid={`client-panel-${tab}`}>
+            <section
+              role="tabpanel"
+              data-testid={`client-panel-${tab}`}
+              className={tab === "history" ? "clients-history" : undefined}
+            >
               {tab === "basic" && (
                 <>
                   <p className="clients-status-line">

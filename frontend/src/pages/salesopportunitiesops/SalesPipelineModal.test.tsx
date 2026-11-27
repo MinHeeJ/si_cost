@@ -1,4 +1,3 @@
-import { createPortal } from "react-dom";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -18,11 +17,8 @@ vi.mock("../salesopportunities/SalesOpportunityForm", () => ({
     detail?: { name: string };
   }) => (
     <section>
-      {createPortal(
-        <button data-testid="picker-portal">개발자 선택창</button>,
-        document.body,
-      )}
       <span>{detail ? detail.name : "등록 초안"}</span>
+      <input aria-label="기회명 초안" />
       <button data-testid="opportunity-form-back" onClick={onClose}>
         목록
       </button>
@@ -45,7 +41,7 @@ beforeEach(() => {
     },
   });
 });
-it("등록 모달 뒤에 칸반과 탭을 유지하고 Escape 취소 뒤 목록으로 복귀한다", async () => {
+it("등록 화면에서는 파이프라인 탭을 숨기고 목록 복귀 시 복원한다", async () => {
   render(
     <MemoryRouter>
       <SalesPipelinePanel />
@@ -54,20 +50,16 @@ it("등록 모달 뒤에 칸반과 탭을 유지하고 Escape 취소 뒤 목록�
   await waitFor(() => expect(screen.getAllByText("기회 없음")).toHaveLength(4));
   const opener = screen.getByTestId("pipeline-create-button");
   await userEvent.click(opener);
-  const dialog = screen.getByRole("dialog", { name: "영업 기회 입력" });
-  expect(dialog).toHaveAttribute("aria-modal", "true");
-  expect(within(dialog).getByText("등록 초안")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "영업 기회 입력" })).not.toBeInTheDocument();
+  const draft = screen.getByRole("textbox", { name: "기회명 초안" });
+  await userEvent.type(draft, "저장 전 기회");
+  expect(screen.queryByRole("tablist", { name: "영업 파이프라인 보기" })).not.toBeInTheDocument();
+  expect(draft).toBeVisible();
+  expect(draft).toHaveValue("저장 전 기회");
+  await userEvent.click(screen.getByTestId("opportunity-form-back"));
+  expect(screen.getByRole("tablist", { name: "영업 파이프라인 보기" })).toBeVisible();
   expect(screen.getByTestId("pipeline-column-find")).toBeInTheDocument();
-  expect(
-    screen.getByRole("tab", { name: "매출·인력 예측" }),
-  ).toBeInTheDocument();
-  await userEvent.click(screen.getByTestId("picker-portal"));
-  await userEvent.keyboard("{Escape}");
-  expect(dialog).toBeInTheDocument();
-  dialog.focus();
-  await userEvent.keyboard("{Escape}");
-  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(opener).toHaveFocus();
+  await waitFor(() => expect(screen.getByTestId("pipeline-create-button")).toHaveFocus());
 });
 
 it("종료 목록은 변경된 조건을 바로 적용하고 한 곳에서 초기화한다", async () => {

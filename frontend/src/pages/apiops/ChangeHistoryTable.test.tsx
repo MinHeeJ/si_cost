@@ -27,6 +27,17 @@ const result = (
   total = items.length,
 ): MasterHistoryPage => ({ items, total, page: 1, size: 50 });
 beforeEach(() => vi.resetAllMocks());
+it("처리자 이름과 아이디가 같거나 이름이 비어 있으면 아이디를 한 번만 표시한다", async () => {
+  vi.mocked(getMasterHistory).mockResolvedValue(result([
+    row,
+    { ...row, historyId: 2, actorId: "DEMO_20261116", actorName: "DEMO_20261116" },
+    { ...row, historyId: 3, actorId: "import-job", actorName: "" },
+  ]));
+  render(<ChangeHistoryTable targetType="CLIENT" targetId="C-001" />);
+  expect(await screen.findByText("임시 관리자 (admin)")).toBeInTheDocument();
+  expect(screen.getByText("DEMO_20261116")).toBeInTheDocument();
+  expect(screen.getByText("import-job")).toBeInTheDocument();
+});
 it.each(["ROLE", "MENU"] as const)("%s 이력도 공통 조회 경로를 사용한다", async (targetType) => {
   vi.mocked(getMasterHistory).mockResolvedValue(result());
   render(<ChangeHistoryTable targetType={targetType} targetId="selected-target" />);

@@ -88,6 +88,18 @@ async function ready() {
     expect(screen.getByTestId("opportunity-form-save")).toBeEnabled(),
   );
 }
+it("등록 폼에서 Escape를 누르면 미저장 입력의 나가기 여부를 확인한다", async () => {
+  mount();
+  await ready();
+  expect(screen.getByRole("heading", { name: "영업기회 등록" })).toBeVisible();
+  const name = screen.getByTestId("opportunity-name");
+  await userEvent.type(name, "초안 기회명");
+  await userEvent.keyboard("{Escape}");
+  const dialog = within(screen.getByRole("dialog", { name: "미저장 이동 확인" }));
+  await userEvent.click(dialog.getByRole("button", { name: "계속 작성" }));
+  expect(name).toHaveValue("초안 기회명");
+  expect(close).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getNeedWarnings).mockResolvedValue([]);
@@ -180,7 +192,10 @@ it("cancellation and dirty continue editing never send writes or release tentati
   mount(detail());
   await ready();
   await userEvent.type(screen.getByTestId("opportunity-name"), " 변경");
-  await userEvent.click(screen.getByRole("button", { name: "해제" }));
+  await userEvent.click(screen.getByRole("button", { name: "선택된 개발자 1명" }));
+  const picker = within(screen.getByRole("dialog", { name: "개발자 선택" }));
+  await userEvent.click(picker.getByRole("button", { name: "D-a 선택 해제" }));
+  await userEvent.click(picker.getByRole("button", { name: "선택 완료" }));
   await userEvent.click(screen.getByRole("button", { name: "취소" }));
   expect(screen.getByRole("dialog")).toHaveTextContent("저장하지 않은 내용");
   await userEvent.click(screen.getByRole("button", { name: "계속 작성" }));
@@ -279,7 +294,7 @@ it("inactive existing references remain visible but selectable options are API b
 it("developer picker loads real direct active list and empty state; selection is only a local draft", async () => {
   mount(detail());
   await ready();
-  await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
+  await userEvent.click(screen.getByRole("button", { name: "선택된 개발자 1명" }));
   const dialog = screen.getByRole("dialog");
   expect(
     await within(dialog).findByText("선택할 개발자가 없습니다."),
@@ -289,7 +304,9 @@ it("developer picker loads real direct active list and empty state; selection is
       directClass: "DRCT",
       includeStopped: false,
       page: 1,
+      size: 20,
     }),
+    expect.any(AbortSignal),
   );
   await userEvent.click(
     within(dialog).getByRole("button", { name: "선택 완료" }),
@@ -297,7 +314,7 @@ it("developer picker loads real direct active list and empty state; selection is
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
 });
 
-it("다른 기회·월 투입 경고는 저장 전 해당 줄에 표시하고 저장을 막지 않는다", async () => {
+it("다른 기회·월 투입 경고는 선택된 개발자의 현재 상태에 표시하고 저장을 막지 않는다", async () => {
   vi.mocked(api.getNeedWarnings).mockResolvedValue([
     "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
     "8월에 이미 1.00 MM 투입 중입니다.",
@@ -314,12 +331,20 @@ it("다른 기회·월 투입 경고는 저장 전 해당 줄에 표시하고 �
   await ready();
   await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
   await userEvent.click(await screen.findByTestId("opportunity-developer-d-a"));
-  await userEvent.click(screen.getByRole("button", { name: "선택 완료" }));
-  const row = screen.getByTestId("opportunity-need-need-1");
-  await within(row).findByText(
+  const selected = within(screen.getByRole("table", { name: "선택된 개발자" }));
+  await selected.findByText(
     "다른 기회(영업기회03)에 가배정되어 있습니다. 저장하면 그 가배정은 풀립니다.",
   );
-  expect(row).toHaveTextContent("8월에 이미 1.00 MM 투입 중입니다.");
+  expect(selected.getByText("업로드03")).toBeInTheDocument();
+  expect(selected.getByText("D-a")).toBeInTheDocument();
+  expect(selected.getByText("8월에 이미 1.00 MM 투입 중입니다.")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "선택 완료" }));
+  const row = screen.getByTestId("opportunity-need-need-1");
+  expect(within(row).getByRole("button", { name: "선택된 개발자 1명" })).toHaveClass(
+    "sales-opportunity-developer-alert",
+  );
+  expect(row).toHaveTextContent("1명 부족");
+  expect(row).not.toHaveTextContent("8월에 이미 1.00 MM 투입 중입니다.");
   expect(api.putSalesOpportunity).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "저장" }));
   await waitFor(() =>
@@ -330,6 +355,108 @@ it("다른 기회·월 투입 경고는 저장 전 해당 줄에 표시하고 �
       }),
     ),
   );
+});
+it("개발자 검색 결과를 10명씩 탐색하며 선택 인원을 페이지와 검색 너머로 유지하고 해제한다", async () => {
+  const opportunity = detail();
+  opportunity.tentativeAssignments = [];
+  const people = Array.from({ length: 23 }, (_, i) => ({
+    id: `D-${i + 1}`,
+    name: `개발자 ${i + 1}`,
+  }));
+  vi.mocked(api.getDevelopers).mockImplementation(async ({ page, q }) => {
+    const matching = q ? people.filter((person) => person.name.includes(q)) : people;
+    return {
+      items: matching.slice((page - 1) * 20, page * 20),
+      total: matching.length,
+      page,
+      size: 20,
+    } as Awaited<ReturnType<typeof api.getDevelopers>>;
+  });
+  mount(opportunity);
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
+  const dialog = within(screen.getByRole("dialog", { name: "개발자 선택" }));
+  const selected = within(dialog.getByRole("table", { name: "선택된 개발자" }));
+  const page = within(dialog.getByRole("navigation", { name: "인력 선택 페이지" }));
+  const options = within(await dialog.findByRole("table", { name: "개발자 검색 결과" }));
+  expect(options.getAllByRole("checkbox")).toHaveLength(11);
+  await userEvent.click(options.getByRole("checkbox", { name: "개발자 1" }));
+  await userEvent.click(page.getByRole("button", { name: "2 페이지" }));
+  expect(api.getDevelopers).toHaveBeenCalledTimes(1);
+  expect(options.getAllByRole("checkbox")).toHaveLength(11);
+  await userEvent.click(options.getByRole("checkbox", { name: "개발자 11" }));
+  await userEvent.click(page.getByRole("button", { name: "3 페이지" }));
+  expect(await dialog.findByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
+  expect(api.getDevelopers).toHaveBeenLastCalledWith(
+    expect.objectContaining({ page: 2, size: 20 }),
+    expect.any(AbortSignal),
+  );
+  expect(dialog.getAllByRole("checkbox")).toHaveLength(4);
+  await userEvent.click(dialog.getByRole("checkbox", { name: "개발자 21" }));
+  expect(await dialog.findByRole("alert")).toHaveTextContent("필요 인원수를 초과");
+  const search = dialog.getByRole("textbox", { name: "개발자 검색" });
+  await userEvent.type(search, "23");
+  expect(dialog.getByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "검색" }));
+  expect(await dialog.findByRole("checkbox", { name: "개발자 23" })).toBeInTheDocument();
+  expect(dialog.queryByRole("checkbox", { name: "개발자 21" })).not.toBeInTheDocument();
+  expect(selected.getByText("개발자 1", { exact: true })).toBeInTheDocument();
+  expect(selected.getByText("개발자 11", { exact: true })).toBeInTheDocument();
+  await userEvent.clear(search);
+  await userEvent.type(search, "21{Enter}");
+  expect(await dialog.findByRole("checkbox", { name: "개발자 21" })).toBeInTheDocument();
+  await userEvent.click(dialog.getByRole("button", { name: "선택 완료" }));
+  const complete = screen.getByRole("button", { name: "선택된 개발자 2명" });
+  expect(complete).toHaveClass("sicost-primary");
+  await userEvent.click(complete);
+  const reopened = within(screen.getByRole("dialog", { name: "개발자 선택" }));
+  await userEvent.click(reopened.getByRole("button", { name: "개발자 11 선택 해제" }));
+  await userEvent.click(reopened.getByRole("button", { name: "선택 완료" }));
+  expect(screen.getByRole("button", { name: "선택된 개발자 1명" })).toHaveClass(
+    "sales-opportunity-developer-alert",
+  );
+});
+it("현재 페이지 전체 선택과 해제는 다른 페이지를 유지하며 필요 인원수에 맞춘다", async () => {
+  const opportunity = detail();
+  opportunity.needs[0].count = 11;
+  opportunity.tentativeAssignments = [];
+  const items = Array.from({ length: 20 }, (_, i) => ({
+    id: `D-${i + 1}`,
+    name: `개발자 ${i + 1}`,
+  }));
+  vi.mocked(api.getDevelopers).mockResolvedValue({
+    items,
+    total: items.length,
+    page: 1,
+    size: 20,
+  } as Awaited<ReturnType<typeof api.getDevelopers>>);
+  mount(opportunity);
+  await ready();
+  await userEvent.click(screen.getByRole("button", { name: "개발자 선택" }));
+  const dialog = within(screen.getByRole("dialog", { name: "개발자 선택" }));
+  const selectedTable = dialog.getByRole("table", { name: "선택된 개발자" });
+  const selected = within(selectedTable);
+  const page = within(await dialog.findByRole("navigation", { name: "인력 선택 페이지" }));
+  const selectPage = dialog.getByRole("checkbox", { name: "이 페이지 전체 선택" });
+
+  await userEvent.click(selectPage);
+  expect(selectPage).toBeChecked();
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(10);
+  expect(selectedTable.parentElement).not.toHaveClass("sales-opportunity-selected-scroll");
+  await userEvent.click(page.getByRole("button", { name: "2 페이지" }));
+  expect(selectPage).not.toBeChecked();
+  await userEvent.click(selectPage);
+  expect(selectPage).toBePartiallyChecked();
+  expect(dialog.getByRole("alert")).toHaveTextContent("1명만 추가로 선택했습니다");
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(11);
+  expect(selectedTable.parentElement).toHaveClass("sales-opportunity-selected-scroll");
+
+  await userEvent.click(page.getByRole("button", { name: "1 페이지" }));
+  expect(selectPage).toBeChecked();
+  await userEvent.click(selectPage);
+  expect(selectPage).not.toBeChecked();
+  expect(selected.getAllByRole("button", { name: /선택 해제/ })).toHaveLength(1);
+  expect(selected.getByRole("button", { name: "개발자 11 선택 해제" })).toBeInTheDocument();
 });
 it("저장 버튼은 공통 파란색·흰색 버튼 스타일을 사용한다", async () => {
   mount();

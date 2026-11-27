@@ -357,6 +357,9 @@ export function ClientsScreen({
             columnView.order.indexOf(a.id) - columnView.order.indexOf(b.id),
         )
     : [...sortableColumns];
+  const listSummary = (
+    <span>총 {data?.total ?? 0}건 · 기준일 {data?.basisDate ?? "–"}</span>
+  );
   return (
     <section
       className="clients-screen"
@@ -515,11 +518,12 @@ export function ClientsScreen({
             </p>
           )}
           <div className="clients-toolbar">
-            {!mobile && canBulkUpdate && selection.count > 0 ? (
+            {!mobile && canBulkUpdate ? (
               <ClientStatusToolbar
                 selection={selection}
                 rows={data?.items ?? []}
                 total={data?.total ?? 0}
+                emptySummary={listSummary}
                 onCommitted={async () => {
                   await load();
                 }}
@@ -527,11 +531,7 @@ export function ClientsScreen({
                   await load();
                 }}
               />
-            ) : (
-              <span>
-                총 {data?.total ?? 0}건 · 기준일 {data?.basisDate ?? "–"}
-              </span>
-            )}
+            ) : listSummary}
             <div className="clients-actions">
               {onColumnsChange && (
                 <button

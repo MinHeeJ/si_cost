@@ -1,30 +1,26 @@
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { recommendationEntryUrl } from "../workforcerecommendationsops/recommendationBrowseApi";
-import { useOverlayLayer } from "../../shared/useOverlayLayer";
 import { SegmentedTabList } from "../../shared/SegmentedTabs";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { SharedScreenFrame } from "../shared/FollowUpScreen";
 import { Pagination } from "../../shared/Pagination";
 import { KpiStrip } from "../../shared/Surface";
 import { StatusBadge } from "../../shared/Feedback";
 import { Icon } from "../../shared/Icon";
-import { DetailDrawer } from "../../shared/DetailDrawer";
+import { SalesOpportunityDetail } from "./SalesOpportunityDetail";
 import {
   formatAmount,
   formatFixedDecimal,
-  formatShortDateTime,
   formatSummaryAmount,
   formatRate,
 } from "../../shared/format";
 import { SalesForecastPanel } from "../forecast/SalesForecastScreen";
 import { SALES_COMMITTED } from "../assignmentcandidatesops/assignmentCandidatesApi";
-import { SalesOpportunityActions, stageNames } from "./SalesOpportunityActions";
-import { SalesQuotePanel, SalesCommandError } from "./SalesQuotePanel";
+import { stageNames } from "./SalesOpportunityActions";
+import { SalesCommandError } from "./SalesQuotePanel";
 import * as api from "./salesCommandsApi";
 import { SalesOpportunityForm } from "../salesopportunities/SalesOpportunityForm";
-import { TentativeAssignmentsPanel } from "../tentativeassignmentsops/TentativeAssignmentsPanel";
 import { getPeriodContext } from "../shared/sharedApi";
 import { useCodeNames } from "../../shared/codeNames";
 import { BusinessName } from "../../shared/BusinessName";
@@ -77,12 +73,9 @@ export function SalesPipelinePanel({
 }: { onDirtyChange?(dirty: boolean): void } = {}) {
   const name = useCodeNames(
     "JOB",
-    "GRADE",
     "APRV_STAT",
     "OPP_STAT",
     "LOSE_RSN",
-    "CTRT_TYPE",
-    "APRV_ACT",
   );
   const location = useLocation();
   const [editing, setEditing] = useState<"new" | api.Opportunity>(),
@@ -117,6 +110,7 @@ export function SalesPipelinePanel({
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>();
   const kanbanRef = useRef<HTMLDivElement>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
     const board = kanbanRef.current;
     if (!board) return;
@@ -157,12 +151,10 @@ export function SalesPipelinePanel({
       new URLSearchParams(location.search).get("opportunityId");
     if (id) {
       setSelectedId(id);
-      setDetailTab("기본 정보");
     }
   }, [location.key, location.search]);
   const [detail, setDetail] = useState<api.Opportunity>(),
     [detailError, setDetailError] = useState<unknown>(),
-    [detailTab, setDetailTab] = useState("기본 정보"),
     [generation, setGeneration] = useState(0);
   useEffect(() => {
     if (tab === "FORECAST") {
@@ -291,46 +283,53 @@ export function SalesPipelinePanel({
       data-screen-id="SCR-UI-29"
       aria-busy={loading}
     >
-      {editing && (
-        <OpportunityModal>
-          <SalesOpportunityForm
-            detail={editing === "new" ? undefined : editing}
-            onClose={() => setEditing(undefined)}
-            onSaved={saved}
-            onDirtyChange={onDirtyChange}
-          />
-        </OpportunityModal>
+      {editing !== "new" && (
+        <SegmentedTabList
+          as="div"
+          className="project-analysis-tabs"
+          role="tablist"
+          aria-label="영업 파이프라인 보기"
+        >
+          {pipelineTabs.map(([value, label]) => (
+            <button
+              type="button"
+              id={`pipeline-tab-${value.toLowerCase()}`}
+              data-testid={`pipeline-${value.toLowerCase()}-tab`}
+              key={value}
+              role="tab"
+              aria-controls="pipeline-tab-content"
+              aria-selected={tab === value}
+              onClick={() => switchTab(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </SegmentedTabList>
       )}
-      <SegmentedTabList
-        as="div"
-        className="project-analysis-tabs"
-        role="tablist"
-        aria-label="영업 파이프라인 보기"
-      >
-        {pipelineTabs.map(([value, label]) => (
-          <button
-            type="button"
-            id={`pipeline-tab-${value.toLowerCase()}`}
-            data-testid={`pipeline-${value.toLowerCase()}-tab`}
-            key={value}
-            role="tab"
-            aria-controls="pipeline-tab-content"
-            aria-selected={tab === value}
-            onClick={() => switchTab(value)}
-          >
-            {label}
-          </button>
-        ))}
-      </SegmentedTabList>
       <div
         className="sales-pipeline-content"
         id="pipeline-tab-content"
         role="tabpanel"
-        aria-labelledby={`pipeline-tab-${tab.toLowerCase()}`}
+        aria-label={editing === "new" ? "영업기회 등록" : undefined}
+        aria-labelledby={editing === "new" ? undefined : `pipeline-tab-${tab.toLowerCase()}`}
       >
+        {editing && (
+          <div className="sales-pipeline-editor" hidden={tab !== "ING"}>
+            <SalesOpportunityForm
+              detail={editing === "new" ? undefined : editing}
+              onClose={() => {
+                setEditing(undefined);
+                if (editing === "new")
+                  requestAnimationFrame(() => createButton.current?.focus());
+              }}
+              onSaved={saved}
+              onDirtyChange={onDirtyChange}
+            />
+          </div>
+        )}
         {tab === "FORECAST" ? (
           <SalesForecastPanel />
-        ) : (
+        ) : tab === "ING" && editing ? null : (
           <>
             {tab === "CLOSED" ? (
               <div
@@ -425,6 +424,7 @@ export function SalesPipelinePanel({
                   <button
                     type="button"
                     className="sicost-primary"
+                    ref={createButton}
                     data-testid="pipeline-create-button"
                     onClick={() => setEditing("new")}
                   >
@@ -483,10 +483,7 @@ export function SalesPipelinePanel({
                                     type="button"
                                     className="sicost-text-link"
                                     data-testid={`opportunity-open-${o.id.toLowerCase()}`}
-                                    onClick={() => {
-                                      setSelectedId(o.id);
-                                      setDetailTab("기본 정보");
-                                    }}
+                                    onClick={() => setSelectedId(o.id)}
                                   >
                                     {o.name}
                                   </button>
@@ -743,174 +740,19 @@ export function SalesPipelinePanel({
         )}
       </div>
       {selectedId && (
-        <DetailDrawer
-          title={detail?.name ?? "영업 기회 상세"}
-          testId="opportunity-detail-drawer"
+        <SalesOpportunityDetail
+          key={selectedId}
+          detail={detail?.id === selectedId ? detail : undefined}
+          error={detailError}
           onClose={() => setSelectedId(undefined)}
-        >
-          {detailError != null && (
-            <>
-              <SalesCommandError error={detailError} />
-              <button
-                data-testid="detail-retry-button"
-                onClick={() => setGeneration((v) => v + 1)}
-              >
-                재조회
-              </button>
-            </>
-          )}
-          {!detail && !detailError && (
-            <ScreenLoading message="상세를 불러오는 중입니다." />
-          )}
-          {detail && (
-            <>
-              {detail.status === "ING" && (
-                <button
-                  data-testid="opportunity-edit-button"
-                  onClick={() => {
-                    setEditing(detail);
-                    setSelectedId(undefined);
-                  }}
-                >
-                  수정
-                </button>
-              )}
-              <SalesOpportunityActions
-                key={detail.id}
-                opportunity={detail}
-                refresh={refresh}
-              />
-              <SegmentedTabList
-                as="div"
-                className="sales-command-tabs"
-                role="tablist"
-                aria-label="기회 상세 탭"
-              >
-                {["기본 정보", "필요 인력", "견적 점검/승인 이력"].map((t) => (
-                  <button
-                    role="tab"
-                    data-testid={`detail-tab-${t === "기본 정보" ? "base" : t === "필요 인력" ? "needs" : "quote"}`}
-                    key={t}
-                    aria-selected={detailTab === t}
-                    onClick={() => setDetailTab(t)}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </SegmentedTabList>
-              <div role="tabpanel" data-testid="opportunity-detail-panel">
-                {detailTab === "기본 정보" && (
-                  <>
-                    <p>
-                      고객 <BusinessName kind="client" id={detail.customerId} />{" "}
-                      · 영업파트 <BusinessName kind="part" id={detail.partId} />{" "}
-                      · {name("CTRT_TYPE", detail.contractType)}
-                    </p>
-                    <p>
-                      {detail.startMonth} · {detail.months ?? "–"}개월 ·{" "}
-                      {detail.workplace ?? "–"}
-                    </p>
-                    <p>{detail.memo}</p>
-                    {detail.approvalStatus === "REJ" && (
-                      <div className="sales-command-error">
-                        {
-                          detail.approvalHistory
-                            .filter((h) => h.action === "REJ")
-                            .at(-1)?.reason
-                        }
-                      </div>
-                    )}
-                  </>
-                )}
-                {detailTab === "필요 인력" && (
-                  <>
-                    <div className="sicost-table-viewport">
-                      <table
-                        className="sicost-table"
-                        data-testid="opportunity-needs-table"
-                      >
-                        <thead>
-                          <tr>
-                            {[
-                              "직무",
-                              "등급",
-                              "인원",
-                              "시작월",
-                              "개월",
-                              "월 MM",
-                              "예상 단가 (원)",
-                            ].map((label) => (
-                              <th key={label}>{label}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {detail.needs.map((n, i) => (
-                            <tr
-                              data-testid={`detail-need-${n.needSn ?? i}`}
-                              key={n.needSn ?? i}
-                            >
-                              <td>{name("JOB", n.jobCode)}</td>
-                              <td>
-                                {n.gradeCode
-                                  ? name("GRADE", n.gradeCode)
-                                  : "등급 미지정"}
-                              </td>
-                              <td>{n.count}</td>
-                              <td>{n.startMonth}</td>
-                              <td>{n.months}</td>
-                              <td>{formatFixedDecimal(n.monthlyMm, 2)}</td>
-                              <td>
-                                {n.expectedRate == null
-                                  ? "직무 기본단가"
-                                  : formatAmount(n.expectedRate, "원")}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {detail.needs.length === 0 && (
-                        <p>필요 인력이 없습니다.</p>
-                      )}
-                    </div>
-                    <TentativeAssignmentsPanel
-                      items={detail.tentativeAssignments.filter(
-                        (t) => t.status === "ACT",
-                      )}
-                      needs={detail.needs}
-                      revision={detail.revision}
-                      opportunityStatus={detail.status}
-                      onRefresh={refresh}
-                    />
-                  </>
-                )}
-                {detailTab === "견적 점검/승인 이력" && (
-                  <>
-                    <SalesQuotePanel
-                      key={detail.revision}
-                      needs={detail.needs}
-                      initial={detail.quote}
-                    />
-                    <h3>승인 이력</h3>
-                    {detail.approvalHistory.length === 0 && (
-                      <p>승인 이력이 없습니다.</p>
-                    )}
-                    {detail.approvalHistory.map((h) => (
-                      <article
-                        data-testid={`approval-history-${h.histSn}`}
-                        key={h.histSn}
-                      >
-                        {formatShortDateTime(h.registeredAt)} ·{" "}
-                        {name("APRV_ACT", h.action)} · {h.profitRate}% ·{" "}
-                        {h.reason} · {h.registeredBy}
-                      </article>
-                    ))}
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </DetailDrawer>
+          onEdit={(opportunity) => {
+            switchTab("ING");
+            setEditing(opportunity);
+            setSelectedId(undefined);
+          }}
+          onRetry={() => setGeneration((value) => value + 1)}
+          refresh={refresh}
+        />
       )}
     </section>
   );
@@ -925,64 +767,4 @@ function isStale(opportunity: api.Opportunity, today?: string) {
   const threshold = new Date(`${today}T00:00:00Z`);
   threshold.setUTCDate(threshold.getUTCDate() - 14);
   return timestamp.slice(0, 10) < threshold.toISOString().slice(0, 10);
-}
-
-function OpportunityModal({ children }: { children: React.ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const topmost = useOverlayLayer(ref, true, 55);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    if (topmost()) ref.current?.focus();
-    return () => previous?.focus();
-  }, []);
-  return createPortal(
-    <div className="sicost-scrim sales-opportunity-scrim">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-label="영업 기회 입력"
-        tabIndex={-1}
-        className="sicost-dialog sicost-dialog-page sales-opportunity-dialog"
-        onKeyDown={(event) => {
-          if (!topmost()) return;
-          if (!ref.current?.contains(event.target as Node)) return;
-          if (event.key === "Escape") {
-            event.preventDefault();
-            ref.current
-              ?.querySelector<HTMLButtonElement>(
-                '[data-testid="opportunity-form-back"]',
-              )
-              ?.click();
-          }
-          if (event.key === "Tab") {
-            const nodes = [
-              ...(ref.current?.querySelectorAll<HTMLElement>(
-                "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href]",
-              ) ?? []),
-            ].filter((node) => node.getClientRects().length > 0);
-            const first = nodes[0],
-              last = nodes[nodes.length - 1];
-            if (!first) {
-              event.preventDefault();
-              ref.current?.focus();
-            } else if (
-              event.shiftKey &&
-              (document.activeElement === first ||
-                document.activeElement === ref.current)
-            ) {
-              event.preventDefault();
-              last?.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-              event.preventDefault();
-              first.focus();
-            }
-          }
-        }}
-      >
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
 }

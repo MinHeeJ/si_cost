@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "../../shared/Dialog";
 import { DataTable } from "../../shared/DataTable";
 import type { ClientSelectionState } from "./useClientSelection";
@@ -14,54 +14,62 @@ export function ClientStatusToolbar({
   selection,
   rows,
   total,
+  emptySummary,
   onCommitted,
   onRefresh,
 }: {
   selection: ClientSelectionState;
   rows: ClientStatusRow[];
   total: number;
+  emptySummary?: ReactNode;
   onCommitted(): void | Promise<void>;
   onRefresh(): void | Promise<void>;
 }) {
+  const showSelection = selection.count > 0 || emptySummary === undefined;
   return (
     <section
-      className="client-bulk-toolbar"
+      className={showSelection ? "client-bulk-toolbar" : undefined}
       data-testid="client-status-toolbar"
       aria-label="거래처 선택 작업"
     >
-      <button
-        data-testid="client-select-page"
-        type="button"
-        disabled={selection.loading}
-        onClick={() => selection.selectPage(rows, true)}
-      >
-        페이지 전체 선택
-      </button>
-      <button
-        data-testid="client-select-all"
-        type="button"
-        disabled={selection.loading}
-        onClick={() => void selection.selectAll()}
-      >
-        조회된 {total}건 모두 선택
-      </button>
-      <button
-        data-testid="client-selection-clear"
-        type="button"
-        onClick={selection.clear}
-      >
-        선택 해제
-      </button>
-      <span role="status">선택 {selection.count}건</span>
-      {selection.error && (
-        <p role="alert" className="sicost-field-error">
-          {selection.error}
-        </p>
-      )}
+      {showSelection ? (
+        <>
+          <button
+            data-testid="client-select-page"
+            type="button"
+            disabled={selection.loading}
+            onClick={() => selection.selectPage(rows, true)}
+          >
+            페이지 전체 선택
+          </button>
+          <button
+            data-testid="client-select-all"
+            type="button"
+            disabled={selection.loading}
+            onClick={() => void selection.selectAll()}
+          >
+            조회된 {total}건 모두 선택
+          </button>
+          <button
+            data-testid="client-selection-clear"
+            type="button"
+            onClick={selection.clear}
+          >
+            선택 해제
+          </button>
+          <span role="status">선택 {selection.count}건</span>
+          {selection.error && (
+            <p role="alert" className="sicost-field-error">
+              {selection.error}
+            </p>
+          )}
+        </>
+      ) : emptySummary}
       <ClientStatusAction
         targets={selection.targets}
         selectionContext={selection.context}
         disabled={selection.loading}
+        showButtons={showSelection}
         onCommitted={async () => {
           selection.clear();
           await onCommitted();
@@ -99,6 +107,7 @@ function ClientStatusAction({
   selectionContext,
   onlyTarget,
   disabled = false,
+  showButtons = true,
   onCommitted,
   onRefresh,
 }: {
@@ -106,6 +115,7 @@ function ClientStatusAction({
   selectionContext: string;
   onlyTarget?: "Y" | "N";
   disabled?: boolean;
+  showButtons?: boolean;
   onCommitted(): void | Promise<void>;
   onRefresh(): void | Promise<void>;
 }) {
@@ -196,26 +206,27 @@ function ClientStatusAction({
     target === "N" ? "사용 중지" : "다시 사용";
   return (
     <div className="client-status-actions" data-testid="client-status-actions">
-      {(["N", "Y"] as const)
-        .filter((target) => !onlyTarget || target === onlyTarget)
-        .map((target) => (
-          <button
-            key={target}
-            type="button"
-            data-testid={`client-status-${target.toLowerCase()}`}
-            disabled={disabled || pending || refreshRequired || !targets.length}
-            onClick={() => {
-              setError("");
-              setConfirm({
-                target,
-                items: targets.map((item) => ({ ...item })),
-                context: selectionContext,
-              });
-            }}
-          >
-            {label(target)}
-          </button>
-        ))}
+      {showButtons &&
+        (["N", "Y"] as const)
+          .filter((target) => !onlyTarget || target === onlyTarget)
+          .map((target) => (
+            <button
+              key={target}
+              type="button"
+              data-testid={`client-status-${target.toLowerCase()}`}
+              disabled={disabled || pending || refreshRequired || !targets.length}
+              onClick={() => {
+                setError("");
+                setConfirm({
+                  target,
+                  items: targets.map((item) => ({ ...item })),
+                  context: selectionContext,
+                });
+              }}
+            >
+              {label(target)}
+            </button>
+          ))}
       {error && (
         <p role="alert" className="sicost-field-error">
           {error}
@@ -244,8 +255,8 @@ function ClientStatusAction({
           {confirm ? label(confirm.target) : "변경"}하시겠습니까?
         </p>
         <p className="client-secondary">
-          연결 자료는 삭제되지 않습니다. 처리할 수 없는 항목은 사유를 확인해
-          주세요.
+          처리 가능한 거래처의 상태를 변경합니다. 처리 결과에서 거래처별 사유를
+          확인할 수 있습니다.
         </p>
       </Dialog>
       <Dialog

@@ -2,10 +2,28 @@
   display: grid;
   gap: 16px;
   min-width: 0;
+  padding-bottom: var(--sicost-editor-footer-space, 0px);
 }
 .sales-opportunity-form form {
   display: grid;
   gap: 20px;
+}
+.sicost-screen[data-screen-id="SCR-UI-29"]:has(.sales-pipeline-editor:not([hidden]))
+  > .sicost-titlebar {
+  display: none;
+}
+.sales-opportunity-form-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.sales-opportunity-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 .sales-opportunity-form fieldset {
   border: 0;
@@ -36,20 +54,101 @@
 .sales-opportunity-form fieldset > legend + button {
   display: block;
   width: max-content;
+  margin-inline-start: auto;
 }
-.sales-opportunity-fields label {
+.sales-opportunity-form fieldset > .sicost-table-viewport + p {
+  margin-block-start: 12px;
+}
+.sales-opportunity-fields :is(label, .sales-opportunity-probability-default) {
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
   font-size: 14px;
 }
+.sales-opportunity-field-caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.sales-opportunity-developer-dialog > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.sales-opportunity-developer-dialog > .sicost-dialog-body {
+  padding-top: 14px;
+}
+.sales-opportunity-developer-selector {
+  display: grid;
+  gap: 16px;
+}
+.sales-opportunity-developer-selector h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--text);
+}
+.sales-opportunity-developer-search {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+.sales-opportunity-developer-search-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.sales-opportunity-developer-search-row :is(label, button) {
+  white-space: nowrap;
+}
+.sales-opportunity-developer-search-row input {
+  min-width: 0;
+}
+.sicost-table.sales-opportunity-search-table :is(th, td),
+.sicost-table.sales-opportunity-selected-table th,
+.sicost-table.sales-opportunity-selected-table td:not(:nth-child(3)) {
+  text-align: center;
+}
+.sales-opportunity-search-table th:first-child {
+  width: 44px;
+}
+.sales-opportunity-selected-table :is(th, td):nth-child(3) {
+  min-width: 12rem;
+}
+.sales-opportunity-developer-selector .sales-opportunity-selected-viewport {
+  max-height: none;
+}
+.sales-opportunity-developer-selector .sales-opportunity-selected-viewport.sales-opportunity-selected-scroll {
+  max-height: min(50vh, 26rem);
+}
+.sales-opportunity-developer-status {
+  margin: 0;
+  padding-inline-start: 1.25em;
+}
+.sales-opportunity-developer-selector button.sales-opportunity-developer-alert,
+.sales-opportunity-form button.sales-opportunity-developer-alert {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: var(--surface);
+}
+.sales-opportunity-selection-shortfall {
+  display: block;
+  color: var(--bad);
+  margin-top: 4px;
+}
+.sales-opportunity-probability-default > button {
+  align-self: start;
+  justify-self: start;
+  min-height: 38px;
+}
 .sales-opportunity-fields > label:has([name="name"]),
 .sales-opportunity-fields > label:has([name="workplace"]) {
   grid-column: 1 / -1;
 }
 @media (min-width: 1001px) {
-  .sales-opportunity-fields label {
+  .sales-opportunity-fields :is(label, .sales-opportunity-probability-default) {
     display: grid;
     grid-template-columns: 120px minmax(0, 1fr);
     align-items: center;
@@ -60,6 +159,13 @@
   .sales-opportunity-fields label > * {
     grid-column: 2;
     text-align: left;
+  }
+  .sales-opportunity-fields label > .sales-opportunity-field-caption {
+    grid-column: 1;
+    justify-self: end;
+  }
+  .sales-opportunity-probability-default > button {
+    grid-column: 2;
   }
   .sales-opportunity-fields label > :is(input, select) {
     max-width: 240px;
@@ -105,15 +211,11 @@
   outline: 2px solid var(--primary);
   background: var(--primary-bg);
 }
-.sales-opportunity-footer {
-  display: flex;
+.sales-opportunity-form .sicost-editor-footer {
   justify-content: flex-end;
-  gap: 12px;
-  position: sticky;
-  bottom: 0;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-top: 1px solid var(--divider);
+}
+.sales-opportunity-form .sicost-editor-footer > :first-child {
+  margin-inline-end: 0;
 }
 @media (max-width: 767px) {
   .sales-opportunity-fields {
@@ -122,24 +224,4 @@
   .sales-opportunity-form fieldset {
     padding: 16px;
   }
-}
-
-.sicost-scrim.sales-opportunity-scrim {
-  z-index: 55;
-}
-.sicost-dialog.sales-opportunity-dialog {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  padding: 0 24px;
-  box-shadow: none;
-}
-.sales-opportunity-dialog .sicost-form-page > header {
-  padding: 24px 0 8px;
-}
-.sales-opportunity-dialog .sales-opportunity-footer {
-  bottom: 0;
-  margin: 0 -24px;
-  padding: 14px 24px;
-  z-index: 2;
 }

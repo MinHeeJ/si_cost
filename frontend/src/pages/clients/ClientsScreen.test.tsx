@@ -14,7 +14,12 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { ClientsScreen } from "./ClientsScreen";
 import { clientFixture, pageFixture } from "./clientsFixtures";
 import * as api from "./clientsApi";
+import * as statusApi from "../clientsops/clientActionsApi";
 vi.mock("./clientsApi");
+vi.mock("../clientsops/clientActionsApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof statusApi>()),
+  saveClientBulkStatus: vi.fn(),
+}));
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.getClients).mockResolvedValue(pageFixture);
@@ -271,6 +276,66 @@ it("단건 중지는 bulk-status 한항목만 보내고 취소는 요청하지 �
   dialog = screen.getByRole("dialog", { name: "거래처 중지" });
   await userEvent.click(within(dialog).getByRole("button", { name: "확인" }));
   await waitFor(() => expect(api.setClientStatus).toHaveBeenCalledOnce());
+});
+it("일괄 중지 후 선택을 해제하고 목록을 갱신해도 거래처별 결과와 사유를 보여 준다", async () => {
+  const blocked = { ...clientFixture, id: "C-902", name: "연결된 거래처" };
+  vi.mocked(api.getClients).mockResolvedValue({
+    ...pageFixture,
+    items: [clientFixture, blocked],
+    total: 2,
+  });
+  vi.mocked(statusApi.saveClientBulkStatus).mockResolvedValue({
+    applied: 1,
+    noChange: 0,
+    rejected: 1,
+    items: [
+      { id: clientFixture.id, name: clientFixture.name, result: "applied" },
+      {
+        id: blocked.id,
+        name: blocked.name,
+        result: "rejected",
+        error: {
+          success: false,
+          meta: {},
+          code: "REFERENCE_IN_USE",
+          message: "소속 개발자가 있어 사용을 중지할 수 없습니다.",
+          requestId: "test-request",
+          details: { references: [{ type: "DEVELOPER", count: 2 }] },
+        },
+      },
+    ],
+  });
+  render(<ClientsScreen />);
+  await userEvent.click(
+    await screen.findByRole("checkbox", { name: "이 페이지 전체 선택" }),
+  );
+  await userEvent.click(screen.getByTestId("client-status-n"));
+  vi.mocked(api.getClients).mockResolvedValue({
+    ...pageFixture,
+    items: [blocked],
+  });
+  await userEvent.click(screen.getByRole("button", { name: "확인" }));
+  const result = within(
+    await screen.findByRole("dialog", { name: "거래처 처리 결과" }),
+  );
+  expect(statusApi.saveClientBulkStatus).toHaveBeenCalledWith("N", [
+    { id: clientFixture.id, expectedRevision: clientFixture.revision },
+    { id: blocked.id, expectedRevision: blocked.revision },
+  ]);
+  expect(screen.queryByTestId("client-status-n")).not.toBeInTheDocument();
+  expect(
+    result.getByText("적용 1건 · 변경 없음 0건 · 거부 1건"),
+  ).toBeInTheDocument();
+  const rejected = within(result.getByRole("row", { name: /연결된 거래처/ }));
+  expect(
+    rejected.getByText(/소속 개발자가 있어 사용을 중지할 수 없습니다/),
+  ).toBeInTheDocument();
+  expect(rejected.getByText("개발자 2건")).toBeInTheDocument();
+  await userEvent.click(result.getByRole("button", { name: "닫기" }));
+  expect(
+    screen.queryByTestId(`client-${clientFixture.id}-open`),
+  ).not.toBeInTheDocument();
+  expect(screen.getByTestId(`client-${blocked.id}-open`)).toBeInTheDocument();
 });
 it("선택 열설정을 반영하지만 필수상호는 숨기지 않는다", async () => {
   render(

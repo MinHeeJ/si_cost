@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { getClient } from "../pages/clients/clientsApi";
 import { getSalesPartOptions } from "../pages/salespartsops/partStandardsApi";
 import { getProject } from "../pages/projects/projectsApi";
+import { getDeveloper } from "../pages/developers/peopleClient";
 import { getSalesOpportunity } from "../pages/salesopportunitiesops/salesCommandsApi";
 
-export type BusinessNameKind = "client" | "part" | "project" | "opportunity";
+export type BusinessNameKind = "client" | "part" | "project" | "opportunity" | "developer";
 /** Business IDs are not common codes. Resolve through the existing domain read APIs. */
 export function BusinessName({
   kind,
@@ -33,6 +34,8 @@ export function BusinessName({
           return (await getProject(id)).project.name;
         case "opportunity":
           return (await getSalesOpportunity(id)).name;
+        case "developer":
+          return (await getDeveloper(id)).name;
       }
     };
     void load()

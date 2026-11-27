@@ -180,6 +180,10 @@ body:has(.sicost-sidebar.folded)
 .sicost-drawer [role="tabpanel"] {
   padding: 16px 0;
 }
+.clients-history [data-header-column="reason"],
+.clients-history [data-column="reason"] {
+  min-inline-size: 10rem;
+}
 .clients-details {
   margin: 16px 0;
 }

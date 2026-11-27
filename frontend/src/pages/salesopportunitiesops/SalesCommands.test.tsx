@@ -191,9 +191,11 @@ it.each(["단가가 원가보다 낮음", null])(
       },
     ];
     mount(o);
-    expect(screen.getByTestId("quote-rejection-banner").textContent).toBe(
-      `견적 반려 (11-16)${reason ? ` · 사유: ${reason}` : ""}`,
-    );
+    const notice = within(screen.getByTestId("quote-rejection-banner"));
+    expect(notice.getByText("견적 반려 (11-16)")).toBeVisible();
+    expect(notice.queryByText("사유: 이전 사유")).not.toBeInTheDocument();
+    if (reason) expect(notice.getByText(`사유: ${reason}`)).toBeVisible();
+    else expect(notice.queryByText(/^사유:/)).not.toBeInTheDocument();
   },
 );
 it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤트 후 이전 기회에서 제거한다", async () => {
@@ -253,6 +255,53 @@ it("필요 인력 표와 현재 가배정 정보를 표시하고 이동 이벤�
   await within(table).findByText("가배정한 사람이 없습니다");
   expect(within(table).queryByText("업로드03")).not.toBeInTheDocument();
 });
+it("영업 기회 상세는 공통 헤더와 탭을 쓰고 관리 버튼과 승인 이력을 각 탭에서 제공한다", async () => {
+  const o = opportunity();
+  o.nextTask = "제안서 전달";
+  o.approvalHistory = [{
+    histSn: 1,
+    action: "REQ",
+    profitRate: "10.00",
+    reason: "견적 검토 요청",
+    registeredAt: "2026-11-26T08:00:00+09:00",
+    registeredBy: "TEAM01",
+  }];
+  vi.mocked(api.getSalesOpportunities).mockResolvedValue({
+    items: [o], total: 1, page: 1, size: 50, stageTotals: [],
+    summary: { opportunityCount: 1, staleCount: 0, amount: o.amount,
+      weightedAmount: "0", weightedPeople: "0" },
+  });
+  vi.mocked(api.getSalesOpportunity).mockResolvedValue(o);
+  render(<MemoryRouter><SalesPipelinePanel /></MemoryRouter>);
+
+  const opener = await screen.findByTestId("opportunity-open-o-0101");
+  await userEvent.click(opener);
+  const drawer = await screen.findByRole("dialog", { name: o.name });
+  const detail = within(drawer);
+  const header = drawer.querySelector("header")!;
+  expect(within(header).getByRole("button", { name: "수정" })).toBeVisible();
+  expect(within(header).getByRole("button", { name: "닫기" })).toBeVisible();
+  const basic = detail.getByRole("tabpanel", { name: "기본 정보" });
+  expect(within(basic).getByText("제안서 전달")).toBeVisible();
+  expect(detail.queryByRole("button", { name: "실주 처리" })).not.toBeInTheDocument();
+
+  await userEvent.click(detail.getByRole("tab", { name: "견적 점검/승인 이력" }));
+  expect(within(detail.getByRole("table", { name: "승인 이력" }))
+    .getByRole("cell", { name: "견적 검토 요청" })).toBeVisible();
+  await userEvent.keyboard("{ArrowRight}");
+  expect(detail.getByRole("tab", { name: "기회 관리" })).toHaveFocus();
+  const management = within(detail.getByRole("tabpanel", { name: "기회 관리" }));
+  expect(management.getByRole("combobox", { name: "단계 선택" })).toBeVisible();
+  expect(management.getByRole("button", { name: "기본 확률 사용" })).toBeEnabled();
+  expect(management.getByRole("button", { name: "수주 처리" })).toBeDisabled();
+  await userEvent.click(management.getByRole("button", { name: "승인" }));
+  const approval = within(screen.getByRole("dialog", { name: "견적 승인" }));
+  await userEvent.click(approval.getByRole("button", { name: "취소" }));
+  expect(management.getByRole("button", { name: "승인" })).toHaveFocus();
+  await userEvent.click(detail.getByRole("button", { name: "닫기" }));
+  expect(opener).toHaveFocus();
+});
+
 const saved = {
   changed: true,
   revision: "new-revision",

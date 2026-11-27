@@ -2,6 +2,8 @@ import { FieldHelp } from "../../shared/FieldHelp";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../shared/api";
+import { FeedbackNotice } from "../../shared/Feedback";
+import { SectionCard } from "../../shared/Surface";
 import { Dialog } from "../../shared/Dialog";
 import { useCommitRefresh } from "../../shared/useCommitRefresh";
 import { formatAmount, formatDecimal } from "../../shared/format";
@@ -64,10 +66,37 @@ function quotePlans(quote: api.Quote) {
     mm: `${value / 100n}.${String(value % 100n).padStart(2, "0")}`,
   }));
 }
+export function OpportunityRejectionNotice({
+  opportunity,
+}: {
+  opportunity: api.Opportunity;
+}) {
+  if (opportunity.approvalStatus !== "REJ") return null;
+  const rejection = opportunity.approvalHistory
+    .filter((entry) => entry.action === "REJ")
+    .sort((a, b) => b.histSn - a.histSn)[0];
+
+  return (
+    <FeedbackNotice
+      tone="warn"
+      title={
+        rejection
+          ? `견적 반려 (${rejection.registeredAt.slice(5, 10)})`
+          : "견적 반려"
+      }
+      testId="quote-rejection-banner"
+    >
+      {rejection?.reason?.trim() ? `사유: ${rejection.reason}` : undefined}
+    </FeedbackNotice>
+  );
+}
+
 export function SalesOpportunityActions({
   opportunity: o,
   refresh,
+  showRejection = true,
 }: {
+  showRejection?: boolean;
   opportunity: api.Opportunity;
   refresh(): Promise<unknown>;
 }) {
@@ -120,12 +149,6 @@ export function SalesOpportunityActions({
     o.quote.storedProfitRate != null &&
     !["UNKNOWN", "INCOMPLETE"].includes(o.quote.judgement);
   const canAdvance = quoteKnown && !["WAIT", "REJ"].includes(o.approvalStatus);
-  const rejection =
-    o.approvalStatus === "REJ"
-      ? [...o.approvalHistory]
-          .filter((h) => h.action === "REJ")
-          .sort((a, b) => b.histSn - a.histSn)[0]
-      : undefined;
   function open(next: Action) {
     setAction(next);
     setError(undefined);
@@ -194,16 +217,7 @@ export function SalesOpportunityActions({
       className="sales-command-actions"
       data-testid="sales-opportunity-actions"
     >
-      {o.approvalStatus === "REJ" && (
-        <p
-          className="sales-command-warning"
-          data-testid="quote-rejection-banner"
-        >
-          견적 반려
-          {rejection ? ` (${rejection.registeredAt.slice(5, 10)})` : ""}
-          {rejection?.reason?.trim() ? ` · 사유: ${rejection.reason}` : ""}
-        </p>
-      )}
+      {showRejection && <OpportunityRejectionNotice opportunity={o} />}
       {message && <p role="status">{message}</p>}
       {message === "저장은 됐지만 다시 불러오지 못했습니다" && (
         <button
@@ -226,7 +240,10 @@ export function SalesOpportunityActions({
       )}
       {editable && (
         <>
-          <div className="sales-command-toolbar">
+          <SectionCard
+            title="단계·수주 확률"
+            className="sales-opportunity-management-card"
+          >
             <label>
               단계 선택{" "}
               <select
@@ -250,67 +267,81 @@ export function SalesOpportunityActions({
                 ))}
               </select>
             </label>
-            <label>
-              수주 확률
-              <FieldHelp label="수주 확률" />{" "}
-              <NumericInput
-                data-testid="opportunity-probability-input"
-                value={probability}
-                onChange={(e) => setProbability(e.target.value)}
-                inputMode="decimal"
+            <div className="sales-opportunity-probability-editor">
+              <label>
+                <span>
+                  수주 확률 <FieldHelp label="수주 확률" />
+                </span>
+                <NumericInput
+                  data-testid="opportunity-probability-input"
+                  value={probability}
+                  onChange={(e) => setProbability(e.target.value)}
+                  inputMode="decimal"
+                  disabled={pending}
+                />
+              </label>
+              <span className="sales-opportunity-probability-mode">
+                {o.manualProbability ? "수동" : "기본"}
+              </span>
+            </div>
+            <div className="sales-opportunity-management-buttons">
+              <button
+                type="button"
+                className="sicost-primary"
+                data-testid="manual-probability-button"
+                disabled={
+                  pending ||
+                  !/^(100(\.0{1,2})?|([0-9]|[1-9][0-9])(\.[0-9]{1,2})?)$/.test(
+                    probability,
+                  )
+                }
+                onClick={() =>
+                  void execute(
+                    () =>
+                      api.saveSalesOpportunityStage(o, {
+                        stage: o.stage,
+                        probability,
+                        manualProbability: true,
+                      }),
+                    false,
+                  )
+                }
+              >
+                확률 직접 변경
+              </button>
+              <button
+                type="button"
+                data-testid="default-probability-button"
                 disabled={pending}
-              />
-            </label>
-            <button
-              data-testid="manual-probability-button"
-              disabled={
-                pending ||
-                !/^(100(\.0{1,2})?|([0-9]|[1-9][0-9])(\.[0-9]{1,2})?)$/.test(
-                  probability,
-                )
-              }
-              onClick={() =>
-                void execute(
-                  () =>
-                    api.saveSalesOpportunityStage(o, {
-                      stage: o.stage,
-                      probability,
-                      manualProbability: true,
-                    }),
-                  false,
-                )
-              }
-            >
-              확률 직접 변경
-            </button>
-            <button
-              data-testid="default-probability-button"
-              disabled={pending}
-              onClick={() =>
-                void execute(
-                  () =>
-                    api.saveSalesOpportunityStage(o, {
-                      stage: o.stage,
-                      manualProbability: false,
-                    }),
-                  false,
-                )
-              }
-            >
-              기본 확률 사용
-            </button>
-            <span>{o.manualProbability ? "수동" : "기본"}</span>
-          </div>
+                onClick={() =>
+                  void execute(
+                    () =>
+                      api.saveSalesOpportunityStage(o, {
+                        stage: o.stage,
+                        manualProbability: false,
+                      }),
+                    false,
+                  )
+                }
+              >
+                기본 확률 사용
+              </button>
+            </div>
+          </SectionCard>
           {!canAdvance && (
             <p className="sales-command-warning">
               견적 원가 미확인 또는 승인 대기/반려: 협상·계약 직전 신규 진입과
               수주를 할 수 없습니다. 현재 단계는 유지됩니다.
             </p>
           )}
-          <div className="sales-command-toolbar">
-            {o.approvalStatus === "WAIT" && (
-              <>
+          {o.approvalStatus === "WAIT" && (
+            <SectionCard
+              title="견적 승인"
+              className="sales-opportunity-management-card"
+            >
+              <div className="sales-opportunity-management-buttons">
                 <button
+                  type="button"
                   data-testid="approve-open-button"
                   disabled={pending || !quoteKnown}
                   onClick={() => open("OK")}
@@ -318,46 +349,66 @@ export function SalesOpportunityActions({
                   승인
                 </button>
                 <button
+                  type="button"
                   data-testid="reject-open-button"
                   disabled={pending || !quoteKnown}
                   onClick={() => open("REJ")}
                 >
                   반려
                 </button>
-              </>
-            )}
-            <button
-              data-testid="win-open-button"
-              disabled={pending || !canAdvance}
-              onClick={() => open("win")}
-            >
-              수주 처리
-            </button>
-            <button
-              data-testid="lose-open-button"
-              disabled={pending}
-              onClick={() => open("lose")}
-            >
-              실주 처리
-            </button>
-            <button
-              data-testid="stop-open-button"
-              disabled={pending}
-              onClick={() => open("stop")}
-            >
-              삭제
-            </button>
-          </div>
+              </div>
+            </SectionCard>
+          )}
+          <SectionCard
+            title="기회 처리"
+            className="sales-opportunity-management-card"
+          >
+            <div className="sales-opportunity-management-buttons">
+              <button
+                type="button"
+                data-testid="win-open-button"
+                disabled={pending || !canAdvance}
+                onClick={() => open("win")}
+              >
+                수주 처리
+              </button>
+              <button
+                type="button"
+                data-testid="lose-open-button"
+                disabled={pending}
+                onClick={() => open("lose")}
+              >
+                실주 처리
+              </button>
+              <button
+                type="button"
+                className="sales-opportunity-management-danger"
+                data-testid="stop-open-button"
+                disabled={pending}
+                onClick={() => open("stop")}
+              >
+                삭제
+              </button>
+            </div>
+          </SectionCard>
         </>
       )}
       {o.status === "STOP" && (
-        <button
-          data-testid="resume-open-button"
-          disabled={pending}
-          onClick={() => open("resume")}
+        <SectionCard
+          title="기회 처리"
+          className="sales-opportunity-management-card"
         >
-          다시 사용
-        </button>
+          <div className="sales-opportunity-management-buttons">
+            <button
+              type="button"
+              data-testid="resume-open-button"
+              disabled={pending}
+              onClick={() => open("resume")}
+            >
+              다시 사용
+            </button>
+          </div>
+        </SectionCard>
       )}
       {["WIN", "LOSE"].includes(o.status) && (
         <p>종료 기회는 읽기 전용입니다. 다시 열 수 없습니다.</p>
