@@ -411,6 +411,7 @@ export function ProjectsScreen({
     <section
       className="projects-screen"
       data-testid="projects-screen"
+      data-registering={active && form && !form.detail ? true : undefined}
       data-screen-id="SCR-UI-01"
       hidden={!active}
     >

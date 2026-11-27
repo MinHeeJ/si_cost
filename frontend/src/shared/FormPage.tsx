@@ -2,11 +2,27 @@ import { useSharedScreen } from "../pages/shared/SharedScreenContext";
 import { Icon } from "./Icon";
 import type { ReactNode } from "react";
 
+export function FormPageHeader({
+  title,
+  actions,
+}: {
+  title: string;
+  actions: ReactNode;
+}) {
+  return (
+    <header className="sicost-editor-heading">
+      <h1>{title}</h1>
+      <div className="sicost-editor-heading-actions">{actions}</div>
+    </header>
+  );
+}
+
 export function FormPage({
   title,
   children,
   actions,
   showHeader = true,
+  compactHeader = false,
   breadcrumb,
   screenId,
 }: {
@@ -14,13 +30,17 @@ export function FormPage({
   children: ReactNode;
   actions: ReactNode;
   showHeader?: boolean;
+  compactHeader?: boolean;
   breadcrumb?: string;
   screenId?: string;
 }) {
   const shared = useSharedScreen(screenId ?? "");
   return (
     <section className="sicost-form-page" data-testid="people-form-page">
-      {showHeader && (
+      {showHeader && compactHeader && (
+        <FormPageHeader title={title} actions={actions} />
+      )}
+      {showHeader && !compactHeader && (
         <header className="developer-toolbar sicost-form-heading">
           {actions}
           <div>

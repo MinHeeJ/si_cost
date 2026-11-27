@@ -856,6 +856,12 @@ it("등록 모달 뒤 목록을 유지하고 Escape 취소에서 미저장 확�
   await screen.findByTestId("project-open-p-0042");
   await userEvent.click(screen.getByTestId("project-create"));
   const dialog = screen.getByRole("dialog", { name: "프로젝트 등록" });
+  const heading = within(dialog).getByRole("heading", { name: "프로젝트 등록" });
+  const header = within(heading.closest("header")!);
+  expect(header.getByRole("button", { name: "목록" })).toBeVisible();
+  expect(header.queryByText("UI-01")).not.toBeInTheDocument();
+  expect(header.queryByRole("button", { name: /즐겨찾기/ })).not.toBeInTheDocument();
+  expect(screen.getByTestId("projects-screen")).toHaveAttribute("data-registering", "true");
   expect(screen.getByTestId("project-open-p-0042")).toBeVisible();
   expect(dialog).toContainElement(screen.getByTestId("project-form"));
   await formReady();

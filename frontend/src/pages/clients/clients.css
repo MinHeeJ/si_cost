@@ -95,12 +95,7 @@
 .sicost-screen:has(.clients-form-page) > .sicost-titlebar {
   display: none;
 }
-.clients-form-page > .sicost-form-heading {
-  padding: 14px 0 18px;
-  margin: 0;
-}
-.clients-form-actions {
-  justify-content: flex-end;
+.clients-form-page > .sicost-editor-heading {
   margin-bottom: 8px;
 }
 .clients-form-guidance {

@@ -12,17 +12,7 @@
   > .sicost-titlebar {
   display: none;
 }
-.sales-opportunity-form-title {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.4;
-  font-weight: 650;
-}
-.sales-opportunity-form-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.sales-opportunity-form .sicost-editor-heading {
   margin-bottom: 8px;
 }
 .sales-opportunity-form fieldset {

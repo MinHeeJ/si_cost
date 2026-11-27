@@ -1,3 +1,4 @@
+import { FormPageHeader } from "../../shared/FormPage";
 import { useClientWriteScope } from "./clientPermissions";
 import { useEffect, useRef, useState } from "react";
 import { Text } from "../../shared/Text";
@@ -230,13 +231,19 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
           <h2>기본 정보 수정</h2>
         </header>
       ) : (
-        <header className="sicost-form-heading">
-          <p className="sicost-breadcrumb">기준정보 › 거래처·영업 파트</p>
-          <div className="sicost-title-row">
-            <h1>거래처 등록</h1>
-            <small>UI-15</small>
-          </div>
-        </header>
+        <FormPageHeader
+          title="거래처 등록"
+          actions={
+            <button
+              type="button"
+              data-testid="client-form-back"
+              disabled={pending}
+              onClick={close}
+            >
+              목록
+            </button>
+          }
+        />
       )}
       {codeError != null && (
         <ErrorBanner
@@ -255,18 +262,6 @@ export function ClientForm({ client, onClose, onSaved, onDirtyChange }: Props) {
             error instanceof ApiError ? error.body.requestId : undefined
           }
         />
-      )}
-      {!client && (
-        <div className="clients-actions clients-form-actions">
-          <button
-            type="button"
-            data-testid="client-form-back"
-            disabled={pending}
-            onClick={close}
-          >
-            목록
-          </button>
-        </div>
       )}
       <form
         data-testid="client-edit-form"

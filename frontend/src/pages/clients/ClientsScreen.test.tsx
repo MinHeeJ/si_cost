@@ -213,6 +213,11 @@ it("신규등록은 별도경로가 아닌 전체폼이며 필터 밖 등록도 
   expect(screen.getByTestId("client-form")).toHaveClass("clients-form-page");
   await screen.findByRole("option", { name: "고객사" });
   const form = within(screen.getByTestId("client-form"));
+  const heading = form.getByRole("heading", { name: "거래처 등록" });
+  const header = within(heading.closest("header")!);
+  expect(header.getByRole("button", { name: "목록" })).toBeVisible();
+  expect(header.queryByText("UI-15")).not.toBeInTheDocument();
+  expect(header.queryByRole("button", { name: /즐겨찾기/ })).not.toBeInTheDocument();
   await userEvent.selectOptions(form.getByLabelText("구분"), "CUST");
   await userEvent.type(form.getByLabelText(/상호/), "새거래처");
   await userEvent.type(form.getByLabelText(/사업자번호/), "1234567890");

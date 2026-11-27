@@ -68,7 +68,11 @@ button.project-unassigned:hover {
   font-weight: 700;
   padding: 0 8px;
 }
-.project-form-dialog .sicost-form-page > header {
+.sicost-screen[data-screen-id="SCR-UI-01"]:has(.projects-screen[data-registering])
+  > .sicost-titlebar {
+  display: none;
+}
+.project-form-dialog .sicost-form-page > .sicost-form-heading {
   padding: 0 0 16px;
 }
 .project-form-dialog .project-toolbar {

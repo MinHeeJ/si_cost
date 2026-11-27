@@ -1033,6 +1033,31 @@ button.sicost-download-button::before {
   gap: 20px;
   min-width: 0;
 }
+.sicost-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.sicost-editor-heading > h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.sicost-editor-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.sicost-editor-heading-actions > button {
+  white-space: nowrap;
+}
 .sicost-form-page > .sicost-form-heading,
 .sicost-dialog-page > header {
   display: flex;

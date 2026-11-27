@@ -1,3 +1,4 @@
+import { FormPageHeader } from "../../shared/FormPage";
 import { ScreenLoading } from "../../shared/ScreenLoading";
 import { FieldHelp } from "../../shared/FieldHelp";
 import { EditorFooter } from "../../shared/EditorFooter";
@@ -367,19 +368,19 @@ export function SalesOpportunityForm({
       }}
     >
       <div>
-        <div className="sales-opportunity-form-actions">
-          <h2 className="sales-opportunity-form-title">
-            {detail ? "영업기회 수정" : "영업기회 등록"}
-          </h2>
-          <button
-            type="button"
-            data-testid="opportunity-form-back"
-            disabled={pending}
-            onClick={close}
-          >
-            목록
-          </button>
-        </div>
+        <FormPageHeader
+          title={detail ? "영업기회 수정" : "영업기회 등록"}
+          actions={
+            <button
+              type="button"
+              data-testid="opportunity-form-back"
+              disabled={pending}
+              onClick={close}
+            >
+              목록
+            </button>
+          }
+        />
         {loading && <ScreenLoading message="입력 기준을 불러오는 중입니다." />}
         {lookupError != null && (
           <>

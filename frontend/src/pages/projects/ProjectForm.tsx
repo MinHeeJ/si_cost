@@ -340,6 +340,7 @@ export function ProjectForm({
   const content = (
     <FormPage
       title={p ? "프로젝트 수정" : "프로젝트 등록"}
+      compactHeader={!p}
       breadcrumb="프로젝트·투입 › 프로젝트"
       screenId="UI-01"
       actions={
@@ -349,7 +350,7 @@ export function ProjectForm({
           disabled={pending}
           onClick={close}
         >
-          ‹ 목록
+          {p ? "‹ 목록" : "목록"}
         </button>
       }
     >
