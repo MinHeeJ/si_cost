@@ -109,6 +109,11 @@
   width: min(350px, calc(100vw - 32px));
   pointer-events: none;
 }
+.sicost-toast-stack:is(#sicost-toast-stack, .sicost-floating-toast-stack) {
+  inset-block-start: auto;
+  inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: min(400px, calc(100vw - 32px));
+}
 .sicost-toast-stack .sicost-feedback {
   box-shadow: var(--shadow-lg);
   animation: sicost-toast-in 180ms ease-out;

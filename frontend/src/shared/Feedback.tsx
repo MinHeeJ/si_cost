@@ -152,5 +152,8 @@ export function FloatingToast({
   const stack = document.getElementById("sicost-toast-stack");
   return stack
     ? createPortal(content, stack)
-    : createPortal(<div className="sicost-toast-stack">{content}</div>, document.body);
+    : createPortal(
+        <div className="sicost-toast-stack sicost-floating-toast-stack">{content}</div>,
+        document.body,
+      );
 }
