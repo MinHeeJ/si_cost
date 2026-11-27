@@ -97,6 +97,9 @@
   gap: 12px;
   min-width: 0;
 }
+.sales-part-detail .sicost-history :is([data-header-column="reason"], [data-column="reason"]) {
+  min-inline-size: 12rem;
+}
 .sales-part-cards {
   display: grid;
   gap: 12px;
