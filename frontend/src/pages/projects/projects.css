@@ -72,6 +72,9 @@ button.project-unassigned:hover {
   > .sicost-titlebar {
   display: none;
 }
+.project-form-dialog .sicost-editor-heading {
+  padding: 0;
+}
 .project-form-dialog .sicost-form-page > .sicost-form-heading {
   padding: 0 0 16px;
 }
