@@ -65,6 +65,7 @@ public class ProjectCostCalculation {
         Fraction margin=percent(profit,revenue),usage=internal?null:percent(cost,budget);
         BigDecimal target=standard(sources,"TGT_MRGN_RT",end);if(target!=null&&(target.signum()<0||target.compareTo(BigDecimal.valueOf(100))>0))target=null;
         Fraction forecast=null,monthly=null;
+        ForecastEvidence forecastEvidence=null;
         if(!internal&&!tk) {
             var selected=rows.stream().filter(r->end.equals(r.month())).toList();
             BigDecimal mc=sum(selected,MonthlyCostRow::totalCost),mr=sum(selected.stream().filter(r->!"FREE".equals(r.inputType())).toList(),MonthlyCostRow::personalRevenue);
@@ -73,8 +74,11 @@ public class ProjectCostCalculation {
             monthly=complete&&mc!=null&&mr!=null?percent(mr.subtract(mc),mr):null;
         }
         if(tk&&"ING".equals(project.status())&&!project.toDate().isBefore(month.atEndOfMonth())&&cost!=null&&contract!=null&&contract.signum()>0) {
-            BigDecimal remaining=forecast(snapshot,project,month,issues);
-            if(remaining!=null)forecast=percent(contract.subtract(cost).subtract(remaining),contract);
+            var remaining=forecast(snapshot,project,month,issues);
+            if(remaining.missingPeople().isEmpty())
+                forecast=percent(contract.subtract(cost).subtract(remaining.knownCost()),contract);
+            else forecastEvidence=new ForecastEvidence(remaining.personCount(),remaining.mm().setScale(2).toPlainString(),
+                amount(remaining.knownCost()),remaining.missingPeople().size(),remaining.missingPeople());
         }
         Fraction comparison=tk?forecast:monthly;
         Fraction gap=comparison==null||target==null?null:comparison.subtract(target);
@@ -97,7 +101,7 @@ public class ProjectCostCalculation {
             "originalContractAmount",internal?null:amount(evidence==null?null:evidence.originalAmount()),"contractAmount",internal?null:amount(contract),
             "planMm",evidence==null||evidence.planMm()==null?null:evidence.planMm().setScale(2).toPlainString(),"actualMm",mm.setScale(2).toPlainString(),
             "cumulativeRevenue",amount(revenue),"cumulativeCost",amount(cost),"cumulativeProfit",amount(profit),"cumulativeMargin",rate(margin),"forecastMargin",rate(forecast),
-            "monthlyMargin",rate(monthly),"targetMargin",internal||target==null?null:target.setScale(1,RoundingMode.HALF_UP).toPlainString(),"targetGap",rate(gap),
+            "forecastEvidence",forecastEvidence,"monthlyMargin",rate(monthly),"targetMargin",internal||target==null?null:target.setScale(1,RoundingMode.HALF_UP).toPlainString(),"targetGap",rate(gap),
             "budgetAmount",internal?null:amount(budget),"budgetUsage",rate(usage),"pricePerMm",amount(price),"costPerMm",internal?null:amount(unitCost),
             "profitPerMm",price==null||unitCost==null?null:amount(price.subtract(unitCost)),"freeMm",free.setScale(2).toPlainString(),"freeLaborCost",internal?null:amount(freeCost),
             "alertCount",alerts.size(),"alerts",List.copyOf(alerts),"budgetWarning",internal?null:budgetWarning,"primaryCause",primaryCause,"completeness",completeness);
@@ -118,12 +122,15 @@ public class ProjectCostCalculation {
             case "EXCESS_MM" -> "투입이 계획보다 많음";case "OVER_UNIT_COST" -> "원가가 단가 기준을 넘음";default -> "무상지원";
         }).orElse(values.showUnexplained()?"위 세 가지로 설명되지 않습니다":fallback);
     }
-    private BigDecimal forecast(Snapshot snapshot,Project project,YearMonth selected,List<MissingReason> issues) {
+    private record RemainingForecast(BigDecimal knownCost, BigDecimal mm, int personCount, List<String> missingPeople) {}
+    private RemainingForecast forecast(Snapshot snapshot,Project project,YearMonth selected,List<MissingReason> issues) {
         var byPerson=new TreeMap<String,List<ForecastMonth>>();snapshot.future().stream().filter(f->project.projectId().equals(f.projectId())&&f.mm().signum()>0)
             .forEach(f->byPerson.computeIfAbsent(f.personId(),k->new ArrayList<>()).add(f));
-        BigDecimal total=BigDecimal.ZERO;boolean complete=true;String end=selected.toString().replace("-","");
+        BigDecimal total=BigDecimal.ZERO,totalMm=BigDecimal.ZERO;String end=selected.toString().replace("-","");
+        List<String> missingPeople=new ArrayList<>();
         for(var entry:byPerson.entrySet()) {
             String person=entry.getKey();BigDecimal mm=entry.getValue().stream().map(ForecastMonth::mm).reduce(BigDecimal.ZERO,BigDecimal::add);
+            totalMm=totalMm.add(mm);
             var latest=snapshot.costs().items().stream().filter(p->person.equals(p.personId())&&p.month().compareTo(end)<=0&&p.completeness().costComplete()&&p.laborSource()!=null&&p.laborSource().laborCost()!=null)
                 .filter(p->Set.of("FT","CT").contains(p.laborSource().employeeType())||snapshot.sources().assignments().stream().anyMatch(a->person.equals(a.personId())&&end.equals(a.month())&&a.assignmentMm().signum()>0))
                 .max(Comparator.comparing(MonthlyPersonCost::month));
@@ -143,10 +150,14 @@ public class ProjectCostCalculation {
                 if(budget==null) {BigDecimal target=standard(snapshot.sources(),"TGT_MRGN_RT",end);if(target!=null&&target.signum()>=0&&target.compareTo(BigDecimal.valueOf(100))<=0&&v!=null)budget=v.multiply(BigDecimal.valueOf(100).subtract(target)).divide(BigDecimal.valueOf(100),0,RoundingMode.DOWN);}
                 if(present&&budget!=null&&budget.signum()>0&&v!=null&&v.signum()>0)unit=new Fraction(remaining.multiply(budget),mm.multiply(v));
             }
-            if(unit==null) {complete=false;issues.add(new MissingReason("UNIT_COST","단가 없음: 최근 완전한 월인건비·기본지급·배분 근거를 확인하세요.",selected.toString(),person,null,"forecastMargin"));}
+            if(unit==null) {
+                issues.add(new MissingReason("UNIT_COST","단가 없음: 최근 완전한 월인건비·기본지급·배분 근거를 확인하세요.",selected.toString(),person,null,"forecastMargin"));
+                missingPeople.add(snapshot.sources().people().stream().filter(p->person.equals(p.personId()))
+                    .map(Person::name).findFirst().orElse(person));
+            }
             else total=total.add(unit.multiply(mm).display(0,RoundingMode.DOWN));
         }
-        return complete?total:null;
+        return new RemainingForecast(total,totalMm,byPerson.size(),List.copyOf(missingPeople));
     }
     public static BigDecimal standard(Sources sources,String code,String month) {return sources.standards().stream().filter(s->code.equals(s.code())&&s.fromMonth().compareTo(month)<=0)
         .max(Comparator.comparing(Standard::fromMonth)).map(Standard::value).orElse(null);}

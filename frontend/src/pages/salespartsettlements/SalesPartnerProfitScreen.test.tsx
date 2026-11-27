@@ -156,19 +156,21 @@ it("renders server whole-population summary, exact columns, original project nam
     "settlement-negative",
   );
   expect(screen.getByRole("columnheader", { name: /비용 계/ })).toBeVisible();
-  await userEvent.click(screen.getByRole("button", { name: /실제 인력/ }));
+  await userEvent.click(screen.getByTestId("settlement-person-actual"));
   expect(person).toHaveBeenCalledWith("actual");
-  const remark = screen
-    .getByText("월 급여 없음(시작 달 급여 0)")
-    .closest(".settlement-remark")!;
-  expect(remark.querySelector("details")).toBeNull();
-  expect(remark.getAttribute("title")).toContain(
+  const remarkHelp = screen.getByRole("button", { name: /^실제 인력 비고/ });
+  await userEvent.hover(remarkHelp);
+  const tooltip = await screen.findByRole("tooltip");
+  expect(tooltip).toHaveTextContent(
     "급여 원천: START_MONTH_MISSING_ZERO",
   );
-  expect(remark.getAttribute("title")).toContain(
+  expect(tooltip).toHaveTextContent(
     "최초 투입 2026-07-02 · 시작일수 30/31 · 기본급 –",
   );
-  expect(remark.getAttribute("title")).toContain("TK project: PLAN");
+  expect(tooltip).toHaveTextContent("TK project: PLAN");
+  await userEvent.keyboard("{Escape}");
+  expect(remarkHelp).toHaveFocus();
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "계산 방법 도움말" }));
   const guide = screen.getByRole("table", { name: "계산 방법" });
   expect(

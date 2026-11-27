@@ -192,14 +192,24 @@ export function financialPayload(
       (old) => old.id === row.id && row.id !== undefined,
     );
     if (!original) {
-      if (
-        !row.values.cardName?.trim() ||
-        !/^\d{4}$/.test(row.values.last4 ?? "")
-      )
-        throw new Error("카드 이름과 끝 4자리를 확인해 주세요.");
+      const name = row.values.cardName?.trim();
+      if (!name)
+        throw new FinancialFieldError(
+          "cards",
+          row.key,
+          "cardName",
+          "카드 이름을 입력해 주세요.",
+        );
+      if (!/^[0-9]{4}$/.test(row.values.last4 ?? ""))
+        throw new FinancialFieldError(
+          "cards",
+          row.key,
+          "last4",
+          "끝 4자리는 숫자 4개를 입력해 주세요.",
+        );
       cards.add.push({
         clientKey: row.key,
-        cardName: row.values.cardName.trim(),
+        cardName: name,
         last4: row.values.last4,
         amount: requiredMoney("cards", row.key, "amount", row.values.amount),
       });

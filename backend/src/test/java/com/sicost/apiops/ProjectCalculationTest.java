@@ -59,10 +59,15 @@ class ProjectCalculationTest {
         assertThat(((Completeness)row.get("completeness")).issues()).isEmpty();
     }
     @Test void unpricedPersonNullsFinalForecastWhileKeepingKnownCostAndReason() {
-        var project=project("TK");var future=List.of(new ForecastMonth("project","a","missing-person","2026-02",n("1.00")));
+        var project=project("TK");var future=List.of(
+            new ForecastMonth("project","a","missing-person","2026-02",n("1.00")),
+            new ForecastMonth("project","b","missing-person","2026-03",n("2.00")),
+            new ForecastMonth("project","c","actual","2026-02",n("4.00")));
         var row=costs.row(snapshot(project,List.of(person("202601","actual","100","0")),future,List.of(),List.of(),List.of()),project,selected);
         assertThat(row.get("forecastMargin")).isNull();assertThat(row.get("cumulativeCost")).isEqualTo("107");
-        assertThat(((Completeness)row.get("completeness")).issues()).anyMatch(i->"missing-person".equals(i.personId())&&"forecastMargin".equals(i.metric()));
+        assertThat(row.get("targetGap")).isNull();
+        assertThat(row.get("forecastEvidence")).isEqualTo(new ForecastEvidence(2,"7.00","400",1,List.of("missing-person")));
+        assertThat(((Completeness)row.get("completeness")).issues()).anyMatch(i->"UNIT_COST".equals(i.code())&&"missing-person".equals(i.personId())&&"forecastMargin".equals(i.metric()));
     }
     @Test void signalsRoundBeforeThresholdAndMemoNullRetainsPreviousActualAndDateUsesLatestWriting() {
         var project=new Project("project","프로젝트","TK","ING",null,LocalDate.of(2026,1,12),LocalDate.of(2026,4,21),n("1000"),n("800"),n("0"),n("0"));

@@ -866,15 +866,15 @@ it("shows actual missing tax months and locks annual editing, retaining unknown 
 it("rejects a blank card amount with focus but accepts explicit zero", async () => {
   await ready();
   await userEvent.click(screen.getByTestId("financial-tab-cash"));
+  await userEvent.click(screen.getByTestId("financial-card-add"));
   await userEvent.type(
-    screen.getByTestId("financial-card-new-name"),
+    screen.getByTestId("financial-card-new-card-1-card-name"),
     "시험 카드",
   );
   await userEvent.type(
-    screen.getByTestId("financial-card-new-last-four"),
+    screen.getByTestId("financial-card-new-card-1-last4"),
     "1234",
   );
-  await userEvent.click(screen.getByTestId("financial-card-add"));
   const amount = screen.getByTestId("financial-card-new-card-1-amount");
   await userEvent.clear(amount);
   await userEvent.click(screen.getByTestId("financial-save"));
@@ -884,41 +884,55 @@ it("rejects a blank card amount with focus but accepts explicit zero", async () 
   await userEvent.type(amount, "0");
   await userEvent.click(screen.getByTestId("financial-save"));
   await waitFor(() => expect(writes()).toHaveLength(1));
-  expect(JSON.parse(String(writes()[0][1]?.body)).cards.add[0].amount).toBe(
-    "0",
-  );
+  expect(JSON.parse(String(writes()[0][1]?.body)).cards.add).toEqual([
+    { clientKey: "new-card-1", cardName: "시험 카드", last4: "1234", amount: "0" },
+  ]);
 });
-it("validates inline card entry, marks new cards unsaved, and places server totals inside both tables", async () => {
+it("adds an editable card row from the header and validates its fields at save", async () => {
   await ready();
   await userEvent.click(screen.getByTestId("financial-tab-cash"));
-  await userEvent.click(screen.getByTestId("financial-card-add"));
+  const panel = screen.getByTestId("financial-cards-panel");
+  const table = screen.getByTestId("financial-cards-table");
+  const add = within(panel).getByRole("button", { name: "카드 추가" });
+  expect(add.closest("header")).not.toBeNull();
+  expect(within(table).queryByRole("button", { name: "카드 추가" })).toBeNull();
+  expect(screen.queryByRole("textbox", { name: "새 카드 이름" })).toBeNull();
+
+  await userEvent.click(add);
+  const row = screen.getByTestId("financial-cards-table-row-new-card-1");
+  const name = within(row).getByRole("textbox", { name: "새 카드 이름" });
+  const last4 = within(row).getByRole("textbox", { name: "새 카드 끝 4자리" });
+  expect(name).toHaveFocus();
+  expect(name).toHaveValue("");
+  expect(last4).toHaveValue("");
+  expect(row).toHaveTextContent("새 카드");
+  expect(row).toHaveTextContent("저장 전");
+  expect(screen.getByTestId("financial-tab-cash")).toHaveTextContent("저장 전");
+  expect(writes()).toHaveLength(0);
+
+  await userEvent.click(screen.getByTestId("financial-save"));
+  await waitFor(() => expect(name).toHaveFocus());
+  expect(name).toHaveAttribute("aria-invalid", "true");
   expect(
     screen.getAllByText("카드 이름을 입력해 주세요.").length,
   ).toBeGreaterThan(0);
-  await userEvent.type(
-    screen.getByTestId("financial-card-new-name"),
-    "영업 4팀 카드",
-  );
-  await userEvent.type(
-    screen.getByTestId("financial-card-new-last-four"),
-    "12ab",
-  );
-  await userEvent.click(screen.getByTestId("financial-card-add"));
+  await userEvent.type(name, "영업 4팀 카드");
+  await userEvent.type(last4, "12ab");
+  await userEvent.click(screen.getByTestId("financial-save"));
+  await waitFor(() => expect(last4).toHaveFocus());
+  expect(last4).toHaveAttribute("aria-invalid", "true");
   expect(
     screen.getAllByText("끝 4자리는 숫자 4개를 입력해 주세요.").length,
   ).toBeGreaterThan(0);
-  fireEvent.change(screen.getByTestId("financial-card-new-last-four"), {
+  fireEvent.change(last4, {
     target: { value: "1234" },
   });
-  await userEvent.click(screen.getByTestId("financial-card-add"));
-  const card = screen.getByTestId("financial-cards-table-row-new-card-1");
-  expect(card).toHaveTextContent("새 카드");
-  expect(card).toHaveTextContent("저장 전");
-  expect(
-    within(screen.getByTestId("financial-cards-table")).getByTestId(
-      "financial-card-add",
-    ),
-  ).toBeVisible();
+  await userEvent.click(add);
+  expect(screen.getByTestId("financial-card-new-card-2-card-name")).toHaveFocus();
+  await userEvent.click(screen.getByTestId("financial-card-new-card-2-state"));
+  expect(screen.queryByTestId("financial-cards-table-row-new-card-2")).toBeNull();
+  expect(name).toHaveValue("영업 4팀 카드");
+  expect(last4).toHaveValue("1234");
   expect(
     screen.getByTestId("financial-cards-table-row-card-total"),
   ).toHaveTextContent("1장");

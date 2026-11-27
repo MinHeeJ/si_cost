@@ -32,6 +32,9 @@ public class RateRenegotiationService {
         snapshot.costs().items().stream().filter(p -> dbMonth.equals(p.month())).flatMap(p -> p.rows().stream()).forEach(r -> costs.put(r.key(), r));
         BigDecimal target = s.standards().stream().filter(v -> "TGT_MRGN_RT".equals(v.code()) && v.fromMonth().compareTo(dbMonth) <= 0)
             .max(Comparator.comparing(Standard::fromMonth)).map(Standard::value).orElse(null);
+        // Keep the workbook's existing notes when generating the full export.
+        String targetMessage = allRows ? "목표 이익률로 단가를 계산할 수 없습니다"
+            : "목표 이익률 값이 없거나 100% 이상이라 목표 단가를 계산할 수 없습니다. 기준정보 › 운영 기준값을 확인해 주세요.";
         List<Row> rows = new ArrayList<>(); List<Issue> unevaluated = new ArrayList<>();
         for (var candidate : snapshot.candidates()) {
             var a = candidate.source(); var m = candidate.month(); var p = projects.get(a.projectId()); var person = people.get(a.developerId());
@@ -50,13 +53,16 @@ public class RateRenegotiationService {
             BigDecimal labor = cost == null ? null : decimal(cost.laborAllocated());
             if (!positive(mm) || !positive(unit) || !positive(revenue) || labor == null) {
                 String field = !positive(mm) ? "monthlyMm" : !positive(unit) ? "unitPrice" : !positive(revenue) ? "monthlyRevenue" : "monthlyLaborCost";
-                unevaluated.add(new Issue("SOURCE_UNKNOWN", person.name() + " / " + p.name() + ": 배정 계산 원천을 확인할 수 없습니다.", field,
+                String message = allRows ? "배정 계산 원천을 확인할 수 없습니다."
+                    : field.equals("monthlyLaborCost") ? MISSING_INPUT_MESSAGE
+                    : "이 투입의 단가나 투입량을 찾지 못했습니다. 투입 배정을 확인해 주세요.";
+                unevaluated.add(new Issue("SOURCE_UNKNOWN", person.name() + " / " + p.name() + ": " + message, field,
                     a.developerId(), a.id(), a.projectId(), month, field.equals("monthlyLaborCost") ? "TB_CO_MON_COST" : "TB_PJ_ASGN_MON", true));
                 continue;
             }
             if (!calculator.marginBelow(revenue, labor, q.marginBelow())) continue;
             var metrics = calculator.calculate(new Amounts(revenue, labor, unit, mm, decimal(m.contractMm()), target, q.increaseRate()));
-            List<Issue> issues = validTarget(target) ? List.of() : List.of(new Issue("TARGET_UNAVAILABLE", "목표 이익률로 단가를 계산할 수 없습니다", "targetMarginRate",
+            List<Issue> issues = validTarget(target) ? List.of() : List.of(new Issue("TARGET_UNAVAILABLE", targetMessage, "targetMarginRate",
                 a.developerId(), a.id(), a.projectId(), month, "TB_SY_OPER_STD", false));
             rows.add(new Row(a.id(), a.developerId(), person.name(), person.managementNo(), employee, p.projectId(), p.name(),
                 a.endDate().toString(), days, a.startDate().isAfter(s.asOfDate()), m.contractMm(), m.monthlyMm(), whole(unit), whole(revenue), whole(labor),
@@ -69,7 +75,7 @@ public class RateRenegotiationService {
             : List.copyOf(rows.subList((int) offset, (int) Math.min(offset + q.size(), total)));
         return new Result(month, s.period().calculatedAt(), q.increaseRate().toPlainString(), target == null ? null : target.toPlainString(),
             summary, page, new Page(q.page(), q.size(), total), unevaluated.size(), List.copyOf(unevaluated),
-            validTarget(target) ? List.of() : List.of(new Issue("TARGET_UNAVAILABLE", "목표 이익률로 단가를 계산할 수 없습니다", "targetMarginRate", null, null, null, month, "TB_SY_OPER_STD", false)));
+            validTarget(target) ? List.of() : List.of(new Issue("TARGET_UNAVAILABLE", targetMessage, "targetMarginRate", null, null, null, month, "TB_SY_OPER_STD", false)));
     }
     private static Comparator<Row> comparator(RateRenegotiationInput.Query q) {
         Comparator<Row> primary = (a, b) -> {

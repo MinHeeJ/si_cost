@@ -39,7 +39,7 @@ public class ExcelExportService {
     public ExcelExportService(CurrentUserProvider users, AccessLogWriter logs, Clock clock, PlatformTransactionManager transactions) {
         this.users = users; this.logs = logs; this.clock = clock; this.transactions = transactions;
     }
-    public enum CellType { TEXT, NUMBER, MASKED_ACCOUNT, DATE }
+    public enum CellType { TEXT, NUMBER, NUMBER_OR_TEXT, MASKED_ACCOUNT, DATE }
     private com.sicost.shared.SharedQueriesMapper menuQueries;
     @org.springframework.beans.factory.annotation.Autowired(required=false)
     public void setMenuQueries(com.sicost.shared.SharedQueriesMapper queries) { this.menuQueries = queries; }
@@ -325,7 +325,8 @@ public class ExcelExportService {
                         dateStyle.setDataFormat(workbook.createDataFormat().getFormat("yyyy-mm-dd"));
                     }
                     cell.setCellValue(date.atStartOfDay()); cell.setCellStyle(dateStyle);
-                } else if (column.type() == CellType.NUMBER) {
+                } else if (column.type() == CellType.NUMBER ||
+                        (column.type() == CellType.NUMBER_OR_TEXT && value instanceof Number)) {
                     BigDecimal decimal = value instanceof BigDecimal number ? number : new BigDecimal(value.toString());
                     if (numericOnly && !Double.isFinite(decimal.doubleValue())) throw InputValidator.invalid("number");
                     if (!numericOnly && (decimal.stripTrailingZeros().precision() > 15 || !Double.isFinite(decimal.doubleValue())

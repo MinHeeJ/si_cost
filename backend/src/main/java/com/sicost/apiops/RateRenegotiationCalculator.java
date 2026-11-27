@@ -9,13 +9,15 @@ import static com.sicost.apiops.RateRenegotiationDtos.*;
 @Component
 public class RateRenegotiationCalculator {
     private static final BigDecimal HUNDRED = new BigDecimal("100");
+    static final String MISSING_INPUT_MESSAGE =
+        "계산에 필요한 값(단가, 투입량, 월 원가)이 없어 계산하지 못했습니다. 투입 배정과 급여 업로드를 확인해 주세요.";
     public record Amounts(BigDecimal revenue, BigDecimal labor, BigDecimal unitPrice, BigDecimal monthlyMm,
                           BigDecimal contractMm, BigDecimal target, BigDecimal increase) {}
     public record Metrics(String marginRate, String targetUnitPrice, String requiredIncreaseRate,
                           String annualGain, String targetAnnualGain) {}
     public Metrics calculate(Amounts a) {
         if (!positive(a.revenue()) || !positive(a.unitPrice()) || !positive(a.monthlyMm()) || a.labor() == null || a.contractMm() == null)
-            throw new IllegalArgumentException("재협상 계산 원천을 확인해 주세요.");
+            throw new IllegalArgumentException(MISSING_INPUT_MESSAGE);
         String margin = percent(a.revenue().subtract(a.labor()), a.revenue());
         String annual = whole(a.unitPrice().multiply(a.increase()).multiply(a.contractMm()).multiply(new BigDecimal("12")).divide(HUNDRED));
         if (!validTarget(a.target())) return new Metrics(margin, null, null, annual, null);

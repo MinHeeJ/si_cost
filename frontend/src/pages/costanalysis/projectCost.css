@@ -241,3 +241,6 @@
   text-align: left;
   overflow-wrap: anywhere;
 }
+.cost-tooltip-line {
+  display: block;
+}

@@ -69,6 +69,26 @@ class ProjectCostExportTest {
         verify(costs).getProjectCosts(argThat(q->"TK".equals(q.value("contractType"))&&"projectName".equals(q.sort())&&"DESC".equals(q.direction())));
     }
     static org.apache.poi.ss.usermodel.Cell info(XSSFWorkbook book,String label){for(var row:book.getSheet("다운로드정보"))if(row.getCell(0).getStringCellValue().equals(label))return row.getCell(1);throw new AssertionError(label);}
+    @Test void onlyMissingForecastUnitCostIsExportedAsText() throws Exception {
+        var data=page(4);
+        var forecastIssue=new ProjectAnalysisDtos.MissingReason("UNIT_COST","누락","2026-06","DEV-1",null,"forecastMargin");
+        var otherIssue=new ProjectAnalysisDtos.MissingReason("UNIT_COST","누락","2026-06","DEV-1",null,"cumulativeCost");
+        data.items().get(0).put("completeness",new ProjectAnalysisDtos.Completeness(true,true,false,List.of(forecastIssue),0,"2025-01","2026-06",null));
+        data.items().get(0).put("targetGap",null);
+        data.items().get(1).put("forecastMargin","67.9");
+        data.items().get(2).put("contractType","MO");
+        data.items().get(3).put("completeness",new ProjectAnalysisDtos.Completeness(false,true,false,List.of(otherIssue),1,"2025-01","2026-06",null));
+        doReturn(data).when(costs).getProjectCosts(any());
+        try(var book=new XSSFWorkbook(new ByteArrayInputStream(download("")))) {
+            var sheet=book.getSheetAt(0);
+            int margin=ProjectCostExportInput.COLUMNS.indexOf("forecastMargin");
+            assertThat(sheet.getRow(1).getCell(margin).getStringCellValue()).isEqualTo("단가 없음");
+            assertThat(sheet.getRow(1).getCell(ProjectCostExportInput.COLUMNS.indexOf("targetGap")).getCellType()).isEqualTo(CellType.BLANK);
+            assertThat(sheet.getRow(2).getCell(margin).getNumericCellValue()).isEqualTo(67.9);
+            assertThat(sheet.getRow(3).getCell(margin).getCellType()).isEqualTo(CellType.BLANK);
+            assertThat(sheet.getRow(4).getCell(margin).getCellType()).isEqualTo(CellType.BLANK);
+        }
+    }
     @Test void snapshotThenIndependentServerActorAuditCommitBeforeTransfer()throws Exception {
         download("");var order=inOrder(transactions,costs,logs,preferences);
         order.verify(transactions).getTransaction(argThat(d->d.isReadOnly()&&d.getIsolationLevel()==TransactionDefinition.ISOLATION_REPEATABLE_READ));order.verify(preferences).getPreferences();order.verify(costs).getProjectCosts(any());order.verify(transactions).commit(any());

@@ -126,7 +126,7 @@ test("UI-04 목록 배치·네 설명·단위·세로 정렬·행 클릭과 Ente
   await expect(row.locator('[data-column="targetGap"]')).toHaveText(
     project.targetGap == null
       ? "–"
-      : `${formatDecimal(String(project.targetGap))}%p`,
+      : `${Number(project.targetGap) > 0 ? "+" : ""}${formatDecimal(String(project.targetGap))}%p`,
   );
   for (const cell of await row.locator("td").all())
     await expect(cell).toHaveCSS("vertical-align", "middle");

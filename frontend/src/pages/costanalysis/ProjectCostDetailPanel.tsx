@@ -31,6 +31,11 @@ const causeNames = {
   OVER_UNIT_COST: "원가가 단가 기준을 넘음",
   FREE_SUPPORT: "무상지원",
 };
+const unitCostSourceLabels = new Map([
+  ["MONTHLY_COST", "최근 월 인건비"],
+  ["BASE_PAY", "기본 월 급여"],
+  ["DISTRIBUTION", "턴키 배분표"],
+]);
 function CostCauseBars({
   value,
   unit,
@@ -472,8 +477,19 @@ export function ProjectCostDetailPanel({
                     key={p.personId}
                     data-testid={`cost-forecast-${p.personId.toLowerCase()}`}
                   >
-                    {p.personName} · {p.remainingMm} MM · {p.unitCostSource} ·{" "}
-                    {p.sourceMonth} · {money(p.contribution)}
+                    {p.personName} · {p.remainingMm} MM ·{" "}
+                    {p.unitCostSource === "MISSING" ? (
+                      <StatusBadge tone="warn">단가 없음</StatusBadge>
+                    ) : (
+                      [
+                        unitCostSourceLabels.get(p.unitCostSource) ??
+                          p.unitCostSource,
+                        p.sourceMonth,
+                        money(p.contribution),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    )}
                   </li>
                 ))}
               </ul>

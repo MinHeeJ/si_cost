@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.util.LinkedMultiValueMap;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -89,7 +90,21 @@ class RateRenegotiationQueryTest {
         add("b", 20, "1.00", null, "ACT", "ADD");
         mvc.perform(get("/api/rate-renegotiations")).andExpect(jsonPath("$.data.items.length()").value(1))
             .andExpect(jsonPath("$.data.unevaluatedCount").value(1)).andExpect(jsonPath("$.data.unevaluatedAssignments[0].assignmentId").value("b"))
-            .andExpect(jsonPath("$.data.unevaluatedAssignments[0].field").value("monthlyLaborCost"));
+            .andExpect(jsonPath("$.data.unevaluatedAssignments[0].field").value("monthlyLaborCost"))
+            .andExpect(jsonPath("$.data.unevaluatedAssignments[0].message").value("인력 / 프로젝트: 계산에 필요한 값(단가, 투입량, 월 원가)이 없어 계산하지 못했습니다. 투입 배정과 급여 업로드를 확인해 주세요."));
+    }
+    @Test void screenExplainsMissingAssignmentWhileExportKeepsExistingNotes() throws Exception {
+        add("b", 20, null, "5400000", "ACT", "ADD");
+        target = null;
+        mvc.perform(get("/api/rate-renegotiations"))
+            .andExpect(jsonPath("$.data.unevaluatedAssignments[0].message").value("인력 / 프로젝트: 이 투입의 단가나 투입량을 찾지 못했습니다. 투입 배정을 확인해 주세요."))
+            .andExpect(jsonPath("$.data.issues[0].message").value("목표 이익률 값이 없거나 100% 이상이라 목표 단가를 계산할 수 없습니다. 기준정보 › 운영 기준값을 확인해 주세요."))
+            .andExpect(jsonPath("$.data.items[0].issues[0].message").value("목표 이익률 값이 없거나 100% 이상이라 목표 단가를 계산할 수 없습니다. 기준정보 › 운영 기준값을 확인해 주세요."));
+        var exported = service.export(RateRenegotiationInput.query(new LinkedMultiValueMap<>()));
+        assertThat(exported.unevaluatedAssignments()).extracting(RateRenegotiationDtos.Issue::message)
+            .containsExactly("인력 / 프로젝트: 배정 계산 원천을 확인할 수 없습니다.");
+        assertThat(exported.issues()).extracting(RateRenegotiationDtos.Issue::message)
+            .containsExactly("목표 이익률로 단가를 계산할 수 없습니다");
     }
     @ParameterizedTest @ValueSource(strings={"100", "101", "-1"})
     void unavailableTargetPreservesCurrentAndSimulation(String value) throws Exception {

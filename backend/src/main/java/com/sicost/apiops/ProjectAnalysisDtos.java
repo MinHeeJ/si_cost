@@ -25,6 +25,8 @@ public final class ProjectAnalysisDtos {
         List<ProjectManager> managers, List<ForecastMonth> future, List<StageTemplate> templates) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record MissingReason(String code, String message, String month, String personId, String assignmentId, String metric) {}
+    public record ForecastEvidence(int personCount, String remainingMm, String knownRemainingCost,
+        int missingUnitCostPersonCount, List<String> missingUnitCostPersonNames) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Completeness(boolean costComplete, boolean revenueComplete, boolean estimated,
         List<MissingReason> issues, int unknownProjectCount, String rangeStartMonth, String rangeEndMonth, String missingBeforeMonth) {}

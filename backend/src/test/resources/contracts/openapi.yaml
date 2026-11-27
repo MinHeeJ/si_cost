@@ -62771,6 +62771,28 @@ components:
           anyOf:
           - $ref: '#/components/schemas/ProjectCostRate'
           - type: 'null'
+        forecastEvidence:
+          description: 목록에서 단가 누락으로 예상 최종 마진율을 표시할 수 없을 때 제공하는 근거.
+          anyOf:
+          - type: object
+            additionalProperties: false
+            properties:
+              personCount: *id006
+              remainingMm: *id005
+              knownRemainingCost:
+                $ref: '#/components/schemas/ProjectCostDecimal'
+              missingUnitCostPersonCount: *id006
+              missingUnitCostPersonNames:
+                type: array
+                items:
+                  type: string
+            required:
+            - personCount
+            - remainingMm
+            - knownRemainingCost
+            - missingUnitCostPersonCount
+            - missingUnitCostPersonNames
+          - type: 'null'
         monthlyMargin:
           anyOf:
           - $ref: '#/components/schemas/ProjectCostRate'

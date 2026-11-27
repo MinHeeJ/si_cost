@@ -136,6 +136,43 @@ beforeEach(() => {
   } as Awaited<ReturnType<typeof getProjects>>);
 });
 describe("단가 재협상 대상", () => {
+  it("일곱 열의 도움말과 계산 방법에 같은 설명을 쓰고 예시와 요약을 쉽게 표시한다", async () => {
+    mount();
+    await screen.findByText("1명");
+    const guide = screen.getByTestId("renegotiation-guide");
+    await userEvent.click(within(guide).getByText("계산 방법"));
+    const rows = within(guide).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(7);
+    const headers = [
+      ["갱신일", "이 사람의 투입이 끝나는 날입니다"],
+      ["MM", "1.00 = 한 달 내내, 0.50 = 절반"],
+      ["월 원가(기준월)", "기준월에 이 사람에게 이 프로젝트 몫으로 든 돈입니다"],
+      ["이익률", "반올림 전 값으로 고르므로"],
+      ["목표 단가 (20.0%)", "목표 이익률(지금 20%)을 맞추려면"],
+      ["필요 인상률", "이미 목표 이상이면 0%입니다"],
+      ["5% 올리면 연 이익", "현재 단가 × 인상률 × 계약 투입량 × 12개월"],
+    ];
+    for (const [index, [label, copy]] of headers.entries()) {
+      const info = screen.getByRole("button", { name: `${label} 도움말` });
+      fireEvent.focus(info);
+      const tooltip = screen.getByRole("tooltip");
+      expect(tooltip).toHaveTextContent(copy);
+      expect(tooltip.textContent).toBe(within(rows[index]).getAllByRole("cell")[1].textContent);
+      fireEvent.blur(info);
+    }
+    expect(guide).toHaveTextContent("기준월 2080-07 기준입니다. 목표 이익률 20%는 기준정보 › 운영 기준값");
+    expect(guide).toHaveTextContent("[예시] 이저마진");
+    for (const value of ["-2.1%", "8,940,000원", "27.7%", "4,200,000원", "23,280,000원"])
+      expect(guide).toHaveTextContent(value);
+    expect(guide).not.toHaveTextContent(/DEV|PROJ|ASGN|LABOR_ALLOC_AMT|TGT_MRGN_RT|DOWN\(|max\(|서버|원천|\bDB\b/);
+    const simulation = screen.getByRole("button", { name: "단가 인상 시뮬레이션 도움말" });
+    fireEvent.focus(simulation);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("저장되지 않고 실제 단가도 바뀌지 않습니다.");
+    expect(screen.getByRole("heading", { name: "5% 올리면 연 이익" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "목표 단가까지 올리면 연 이익" })).toBeVisible();
+    expect(screen.getByText("받는 돈이 큰 사람일수록 크게 반영한 평균")).toBeVisible();
+  });
+
   it("shows server month four whole-population summaries eleven columns distinct assignments and two MM values", async () => {
     mount();
     const period = await screen.findByRole("group", { name: "조회 기간 상태" });
@@ -148,10 +185,10 @@ describe("단가 재협상 대상", () => {
     const table = screen.getByTestId("renegotiation-table");
     expect(within(table).getAllByRole("columnheader")).toHaveLength(11);
     expect(within(table).getAllByText("1.00")).toHaveLength(2);
-    const mmHelp=screen.getAllByRole("button", {name:"계약 MM 도움말"});
+    const mmHelp = screen.getAllByRole("button", { name: "계약 투입량 도움말" });
     expect(mmHelp).toHaveLength(2);
     await userEvent.click(mmHelp[0]);
-    expect(screen.getByRole("tooltip")).toHaveTextContent("계약 MM 1.00 / 기준월 월 MM 0.52");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("계약 투입량 1.00 / 이번 달 실제 투입량 0.52");
     await userEvent.keyboard("{Escape}");
     expect(screen.getByText("D-0")).toHaveClass("sicost-tone-bad");
     expect(screen.getByText("D-31")).toHaveClass("sicost-tone-warn");
@@ -326,12 +363,12 @@ describe("단가 재협상 대상", () => {
       {
         ...result.unevaluatedAssignments[0],
         code: "TARGET_UNAVAILABLE",
-        message: "목표 이익률로 단가를 계산할 수 없습니다",
+        message: "목표 이익률 값이 없거나 100% 이상이라 목표 단가를 계산할 수 없습니다. 기준정보 › 운영 기준값을 확인해 주세요.",
       },
     ];
     vi.mocked(api.getRateRenegotiations).mockResolvedValue(result);
     mount();
-    await screen.findByText("목표 이익률로 단가를 계산할 수 없습니다");
+    await screen.findByText(/기준정보 › 운영 기준값을 확인해 주세요/);
     expect(screen.getAllByText("10.0%").length).toBeGreaterThan(0);
     expect(screen.getByTestId("renegotiation-table")).toHaveTextContent(
       "3,600",

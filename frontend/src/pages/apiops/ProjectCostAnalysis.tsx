@@ -65,21 +65,37 @@ const columnDescriptions: Record<string, string> = {
   budgetUsage:
     "원가 누계 ÷ 예산(프로젝트별 입력값, 기본값 계약금액 × (1 − 목표 마진율))",
 };
-function CostColumnHelp({ id, label }: { id: string; label: string }) {
+function CostValueHelp({
+  label,
+  testId,
+  trigger,
+  children,
+}: {
+  label: string;
+  testId?: string;
+  trigger: ReactNode;
+  children: ReactNode;
+}) {
   const tooltipId = useId();
   const [position, setPosition] = useState<{ left: number; top: number }>();
-  const description = columnDescriptions[id];
   useEffect(() => {
     if (!position) return;
     const dismiss = () => setPosition(undefined);
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        dismiss();
+      }
+    };
     window.addEventListener("scroll", dismiss, true);
     window.addEventListener("resize", dismiss);
+    window.addEventListener("keydown", onEscape, true);
     return () => {
       window.removeEventListener("scroll", dismiss, true);
       window.removeEventListener("resize", dismiss);
+      window.removeEventListener("keydown", onEscape, true);
     };
   }, [position]);
-  if (!description) return <>{label}</>;
   const show = (target: HTMLElement) => {
     const rect = target.getBoundingClientRect();
     setPosition({
@@ -88,40 +104,84 @@ function CostColumnHelp({ id, label }: { id: string; label: string }) {
     });
   };
   return (
+    <span
+      className="cost-column-help"
+      data-testid={testId}
+      tabIndex={0}
+      aria-label={label}
+      aria-describedby={position ? tooltipId : undefined}
+      onMouseEnter={(event) => show(event.currentTarget)}
+      onMouseLeave={() => setPosition(undefined)}
+      onFocus={(event) => show(event.currentTarget)}
+      onBlur={() => setPosition(undefined)}
+    >
+      {trigger}
+      {position &&
+        createPortal(
+          <span
+            id={tooltipId}
+            role="tooltip"
+            className="cost-column-tooltip"
+            style={position}
+          >
+            {children}
+          </span>,
+          document.body,
+        )}
+    </span>
+  );
+}
+function CostColumnHelp({ id, label }: { id: string; label: string }) {
+  const description = columnDescriptions[id];
+  if (!description) return <>{label}</>;
+  return (
     <>
       {label}{" "}
-      <span
-        className="cost-column-help"
-        data-testid={`project-cost-help-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
-        tabIndex={0}
-        aria-label={`${label} 설명`}
-        aria-describedby={position ? tooltipId : undefined}
-        onMouseEnter={(event) => show(event.currentTarget)}
-        onMouseLeave={() => setPosition(undefined)}
-        onFocus={(event) => show(event.currentTarget)}
-        onBlur={() => setPosition(undefined)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            setPosition(undefined);
-          }
-        }}
+      <CostValueHelp
+        label={`${label} 설명`}
+        testId={`project-cost-help-${id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`}
+        trigger="ⓘ"
       >
-        ⓘ
-        {position &&
-          createPortal(
-            <span
-              id={tooltipId}
-              role="tooltip"
-              className="cost-column-tooltip"
-              style={position}
-            >
-              {description}
-            </span>,
-            document.body,
-          )}
-      </span>
+        {description}
+      </CostValueHelp>
     </>
+  );
+}
+function ForecastMarginCell({
+  row,
+  unit,
+}: {
+  row: api.CostRow;
+  unit: AnalysisUnit;
+}) {
+  const issues = row.completeness.issues.filter(
+    (issue) => issue.code === "UNIT_COST" && issue.metric === "forecastMargin",
+  );
+  if (row.forecastMargin != null || issues.length === 0)
+    return analysisDisplay(row.forecastMargin, "rate");
+  const evidence = row.forecastEvidence;
+  return (
+    <CostValueHelp
+      label="단가 없음"
+      trigger={<StatusBadge tone="warn">단가 없음</StatusBadge>}
+    >
+      <strong>남은 예상 원가 근거</strong>
+      {evidence && (
+        <span className="cost-tooltip-line">
+          {evidence.personCount}명 · {evidence.remainingMm} MM · 알려진 금액{" "}
+          {analysisDisplay(evidence.knownRemainingCost, "amount", unit)} · 단가
+          없음 {evidence.missingUnitCostPersonCount}명
+        </span>
+      )}
+      <span className="cost-tooltip-line">
+        {evidence
+          ? `단가 없음: ${evidence.missingUnitCostPersonNames.join(", ")}`
+          : issues.map((issue) => issue.message).join(" · ")}
+      </span>
+      <span className="cost-tooltip-line">
+        자세한 내용은 행을 눌러 상세 창에서 확인
+      </span>
+    </CostValueHelp>
   );
 }
 const sorts = new Set([
@@ -399,13 +459,15 @@ export function ProjectCostAnalysis({
                   )}
                 </>
               )
+            ) : id === "forecastMargin" ? (
+              <ForecastMarginCell row={row} unit={unit} />
             ) : id === "planMm" && row[id] == null ? (
               "계획 없음"
             ) : id === "targetGap" ? (
               row[id] == null ? (
                 "–"
               ) : (
-                `${analysisDisplay(row[id])}%p`
+                `${Number(row[id]) > 0 ? "+" : ""}${analysisDisplay(row[id])}%p`
               )
             ) : (
               analysisDisplay(

@@ -195,6 +195,48 @@ function panel(tab = "months", close = vi.fn()) {
     </MemoryRouter>,
   );
 }
+it("남은 예상 원가 근거에서 출처, 기준월, 단가 누락을 읽을 수 있게 표시한다", async () => {
+  const data = detail();
+  data.forecast = {
+    personCount: 5,
+    remainingMm: "10.00",
+    knownRemainingCost: "24000000",
+    missingUnitCostPersonCount: 1,
+    complete: false,
+    issues: [{
+      code: "UNIT_COST_MISSING",
+      metric: "forecastMargin",
+      message: "단가 출처를 확인해 주세요.",
+      month: "2026-11",
+      personId: "missing",
+      assignmentId: null,
+    }],
+    people: ([
+      ["monthly", "[예시4] 턴키투입", "4.00", "MONTHLY_COST", "2026-11", "24000000"],
+      ["missing", "[예시4] 단가없음", "3.00", "MISSING", null, "0"],
+      ["base", "기본 지급", "1.00", "BASE_PAY", "2026-12", "0"],
+      ["distribution", "배분 대상", "1.00", "DISTRIBUTION", "2026-11", "0"],
+      ["unknown", "새 출처", "1.00", "NEW_SOURCE", null, "0"],
+    ] as const).map(([personId, personName, remainingMm, unitCostSource, sourceMonth, contribution]) => ({
+      personId, personName, remainingMm, unitCostSource, sourceMonth, contribution,
+    })),
+  };
+  vi.mocked(api.getProjectCostAnalysis).mockResolvedValue(data);
+  panel();
+  fireEvent.click(await screen.findByText("남은 예상 원가 근거"));
+  expect(screen.getByText("5명 · 10.00 MM · 알려진 금액 24,000,000 · 단가 없음 1명")).toBeVisible();
+  expect(screen.getByText(/단가 출처를 확인해 주세요/)).toBeVisible();
+  expect(screen.getByTestId("cost-forecast-monthly")).toHaveTextContent(
+    "[예시4] 턴키투입 · 4.00 MM · 최근 월 인건비 · 2026-11 · 24,000,000",
+  );
+  const missing = screen.getByTestId("cost-forecast-missing");
+  expect(missing).toHaveTextContent(/^\[예시4\] 단가없음 · 3\.00 MM · 단가 없음$/);
+  expect(within(missing).getByText("단가 없음")).toHaveClass("sicost-tone-warn");
+  expect(screen.getByTestId("cost-forecast-base")).toHaveTextContent("기본 월 급여 · 2026-12 · 0");
+  expect(screen.getByTestId("cost-forecast-distribution")).toHaveTextContent("턴키 배분표 · 2026-11 · 0");
+  expect(screen.getByTestId("cost-forecast-unknown")).toHaveTextContent("NEW_SOURCE · 0");
+});
+
 it("renders the cross-year monthly source and preserves a zero reference instead of recalculating", async () => {
   panel();
   const table = await screen.findByTestId("cost-months");

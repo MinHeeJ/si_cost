@@ -956,7 +956,6 @@ export function FinancialItemsEditor({
           readOnly={!canUpdate || !editor.editable}
           setDraft={state.setDraft}
           violations={state.violations}
-          onError={state.setError}
         />
         {panel("transfers")}
         {panel("loans")}

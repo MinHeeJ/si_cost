@@ -60,11 +60,11 @@ test("상단 버튼과 계산 방법 표·비고 근거는 실제 정산 응답�
       .getByTestId(`settlement-person-${id}`)
       .locator("xpath=ancestor::tr")
       .locator(".settlement-remark");
-    await expect(remark.locator("details")).toHaveCount(0);
-    await expect(remark).toHaveAttribute(
-      "title",
-      new RegExp(`급여 원천: ${row.basis.paySource}`),
-    );
+    await remark.getByRole("button").hover();
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toContainText(`급여 원천: ${row.basis.paySource}`);
+    await page.keyboard.press("Escape");
+    await expect(tooltip).toHaveCount(0);
     if (row.basis.firstMonthMissingPay)
       await expect(remark).toContainText("⚠ 월 급여 없음(시작 달 급여 0)");
   }
